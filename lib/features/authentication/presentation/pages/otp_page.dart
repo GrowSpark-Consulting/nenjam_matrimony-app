@@ -1,13 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/buttons/primary_button.dart';
+import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/inputs/otp_input.dart';
 
-/// OTP Verification Page.
+/// OTP Verification Page with countdown timer and profile review navigation.
 class OtpPage extends StatefulWidget {
   const OtpPage({super.key});
 
@@ -18,6 +19,32 @@ class OtpPage extends StatefulWidget {
 class _OtpPageState extends State<OtpPage> {
   String _otp = '';
   bool _isLoading = false;
+  int _secondsRemaining = 30;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    setState(() => _secondsRemaining = 30);
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining > 0) {
+        setState(() => _secondsRemaining--);
+      } else {
+        timer.cancel();
+      }
+    });
+  }
 
   void _onVerify() {
     if (_otp.length == 6) {
@@ -25,7 +52,7 @@ class _OtpPageState extends State<OtpPage> {
       Future.delayed(const Duration(milliseconds: 1000), () {
         if (mounted) {
           setState(() => _isLoading = false);
-          context.go(RouteNames.home);
+          context.go(RouteNames.profileReview);
         }
       });
     }
@@ -34,6 +61,8 @@ class _OtpPageState extends State<OtpPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final extraPhone = GoRouterState.of(context).extra as String?;
+    final phone = extraPhone ?? 'your mobile number';
 
     return Scaffold(
       appBar: AppBar(
@@ -45,7 +74,7 @@ class _OtpPageState extends State<OtpPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               Text(
                 'Enter Verification\nCode',
                 style: AppTypography.headlineLarge.copyWith(
@@ -54,7 +83,7 @@ class _OtpPageState extends State<OtpPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'We have sent a 6-digit verification code to your mobile number.',
+                'We have sent a 6-digit verification code to +91 $phone.',
                 style: AppTypography.bodyMedium.copyWith(
                   color: isDark
                       ? AppColors.textSecondaryDark
@@ -68,26 +97,36 @@ class _OtpPageState extends State<OtpPage> {
                   _otp = value;
                   _onVerify();
                 },
-                onChanged: (value) => _otp = value,
+                onChanged: (value) => setState(() => _otp = value),
               ),
               const SizedBox(height: 40),
-              NmPrimaryButton(
+              NmGradientButton(
                 label: 'Verify & Continue',
+                icon: Icons.check_circle_outline_rounded,
                 onPressed: _otp.length == 6 ? _onVerify : null,
                 isLoading: _isLoading,
               ),
               const SizedBox(height: 32),
               Center(
-                child: TextButton(
-                  onPressed: () {},
-                  child: Text(
-                    'Resend OTP Code',
-                    style: AppTypography.labelLarge.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+                child: _secondsRemaining > 0
+                    ? Text(
+                        'Resend OTP in ${_secondsRemaining.toString().padLeft(2, '0')}s',
+                        style: AppTypography.labelLarge.copyWith(
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
+                      )
+                    : TextButton(
+                        onPressed: _startTimer,
+                        child: Text(
+                          'Resend OTP Code',
+                          style: AppTypography.labelLarge.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
               ),
             ],
           ),

@@ -210,15 +210,23 @@ abstract final class AppTheme {
 
         // Chip
         chipTheme: ChipThemeData(
-          backgroundColor: AppColors.surfaceVariantLight,
+          backgroundColor: const Color(0xFFE2E8F0),
           selectedColor: AppColors.primarySurface,
-          disabledColor: AppColors.surfaceVariantLight,
-          labelStyle: AppTypography.labelMedium,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          disabledColor: const Color(0xFFE2E8F0),
+          checkmarkColor: AppColors.primary,
+          labelStyle: AppTypography.labelMedium.copyWith(
+            color: AppColors.textPrimaryLight,
+            fontWeight: FontWeight.w700,
+          ),
+          secondaryLabelStyle: AppTypography.labelMedium.copyWith(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w800,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFF94A3B8), width: 1.2),
           ),
-          side: BorderSide.none,
         ),
 
         // Divider
@@ -515,15 +523,23 @@ abstract final class AppTheme {
 
         // Chip
         chipTheme: ChipThemeData(
-          backgroundColor: AppColors.surfaceVariantDark,
+          backgroundColor: const Color(0xFF242836),
           selectedColor: const Color(0xFF1B2B4B),
-          disabledColor: AppColors.surfaceVariantDark,
-          labelStyle: AppTypography.labelMedium,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          disabledColor: const Color(0xFF242836),
+          checkmarkColor: const Color(0xFF7B9AD6),
+          labelStyle: AppTypography.labelMedium.copyWith(
+            color: AppColors.textPrimaryDark,
+            fontWeight: FontWeight.w700,
+          ),
+          secondaryLabelStyle: AppTypography.labelMedium.copyWith(
+            color: const Color(0xFFD6E3FF),
+            fontWeight: FontWeight.w800,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFF475569), width: 1.2),
           ),
-          side: BorderSide.none,
         ),
 
         // Divider

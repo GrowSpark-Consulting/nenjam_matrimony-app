@@ -10,8 +10,7 @@ import 'core/router/app_router.dart';
 import 'core/services/storage_service.dart';
 import 'core/theme/app_theme.dart';
 
-/// Global storage service instance.
-final storageService = StorageService();
+export 'core/services/storage_service.dart' show storageService;
 
 /// Global app config instance.
 final appConfig = AppConfig();

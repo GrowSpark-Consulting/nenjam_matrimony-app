@@ -108,7 +108,7 @@ class _LoginPageState extends State<LoginPage> {
                       Text('New to Nenjam Matrimony? ',
                           style: AppTypography.bodyMedium),
                       GestureDetector(
-                        onTap: () => context.push(RouteNames.registration),
+                        onTap: () => context.push(RouteNames.createProfileFor),
                         child: Text(
                           'Register Now',
                           style: AppTypography.bodyMedium.copyWith(

@@ -12,6 +12,9 @@ import '../../features/notifications/presentation/pages/notifications_page.dart'
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/premium/presentation/pages/premium_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
+import '../../features/registration/presentation/pages/create_profile_for_page.dart';
+import '../../features/registration/presentation/pages/profile_review_page.dart';
+import '../../features/registration/presentation/pages/profile_wizard_page.dart';
 import '../../features/registration/presentation/pages/registration_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
@@ -67,6 +70,21 @@ GoRouter createRouter() => GoRouter(
           path: RouteNames.registration,
           name: RouteNames.registrationName,
           builder: (context, state) => const RegistrationPage(),
+        ),
+        GoRoute(
+          path: RouteNames.createProfileFor,
+          name: RouteNames.createProfileForName,
+          builder: (context, state) => const CreateProfileForPage(),
+        ),
+        GoRoute(
+          path: RouteNames.registrationWizard,
+          name: RouteNames.registrationWizardName,
+          builder: (context, state) => const ProfileWizardPage(),
+        ),
+        GoRoute(
+          path: RouteNames.profileReview,
+          name: RouteNames.profileReviewName,
+          builder: (context, state) => const ProfileReviewPage(),
         ),
         GoRoute(
           path: RouteNames.premium,

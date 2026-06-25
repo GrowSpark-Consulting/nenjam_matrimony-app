@@ -21,22 +21,22 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   static const _slides = [
     _OnboardingSlide(
-      icon: Icons.favorite_rounded,
-      title: 'Find Your Perfect Match',
+      icon: Icons.workspace_premium_rounded,
+      title: 'Find Your Forever',
       description:
-          'Discover compatible profiles powered by AI-driven matching that understands your preferences deeply.',
-    ),
-    _OnboardingSlide(
-      icon: Icons.verified_user_rounded,
-      title: '100% Verified Profiles',
-      description:
-          'Every profile is verified with ID proof and photo verification for your safety and trust.',
+          'Experience a luxury matrimonial journey curated exclusively for discerning individuals seeking lifelong companionship.',
     ),
     _OnboardingSlide(
       icon: Icons.auto_awesome_rounded,
-      title: 'AI-Powered Compatibility',
+      title: 'AI Smart Matchmaking',
       description:
-          'Our advanced algorithm analyzes horoscope, interests, and values for the best match recommendations.',
+          'Our proprietary artificial intelligence evaluates personality, lifestyle, values, and astrological compatibility deeply.',
+    ),
+    _OnboardingSlide(
+      icon: Icons.verified_user_rounded,
+      title: 'Verified Profiles',
+      description:
+          'Every member undergoes strict government ID and biometric face verification to ensure supreme trust and authenticity.',
     ),
   ];
 
@@ -60,7 +60,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () => context.go(RouteNames.login),
+                  onPressed: () => context.go(RouteNames.createProfileFor),
                   child: Text(
                     'Skip',
                     style: AppTypography.labelLarge.copyWith(
@@ -154,7 +154,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     : 'Next',
                 onPressed: () {
                   if (_currentPage == _slides.length - 1) {
-                    context.go(RouteNames.login);
+                    context.go(RouteNames.createProfileFor);
                   } else {
                     _controller.nextPage(
                       duration: const Duration(milliseconds: 400),

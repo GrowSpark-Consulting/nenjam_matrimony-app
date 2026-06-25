@@ -9,6 +9,9 @@ abstract final class RouteNames {
   static const String login = '/login';
   static const String otp = '/otp';
   static const String registration = '/registration';
+  static const String createProfileFor = '/create-profile-for';
+  static const String registrationWizard = '/registration/wizard';
+  static const String profileReview = '/profile-review';
   static const String home = '/home';
   static const String search = '/search';
   static const String matches = '/matches';
@@ -30,6 +33,9 @@ abstract final class RouteNames {
   static const String loginName = 'login';
   static const String otpName = 'otp';
   static const String registrationName = 'registration';
+  static const String createProfileForName = 'createProfileFor';
+  static const String registrationWizardName = 'registrationWizard';
+  static const String profileReviewName = 'profileReview';
   static const String homeName = 'home';
   static const String searchName = 'search';
   static const String matchesName = 'matches';

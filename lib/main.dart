@@ -7,9 +7,7 @@ import 'core/constants/app_constants.dart';
 import 'core/router/app_router.dart';
 import 'core/services/storage_service.dart';
 import 'core/theme/app_theme.dart';
-
-/// Singleton instance of storage service initialized before runApp.
-final storageService = StorageService();
+export 'core/services/storage_service.dart' show storageService;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

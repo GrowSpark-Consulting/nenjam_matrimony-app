@@ -115,3 +115,6 @@ class StorageService {
     ]);
   }
 }
+
+/// Global storage service instance.
+final storageService = StorageService();
