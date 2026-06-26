@@ -22,13 +22,7 @@ class _LanguagePageState extends State<LanguagePage> {
     _Language('en', 'English', 'English'),
     _Language('ta', 'தமிழ்', 'Tamil'),
     _Language('te', 'తెలుగు', 'Telugu'),
-    _Language('ml', 'മലയാളം', 'Malayalam'),
-    _Language('kn', 'ಕನ್ನಡ', 'Kannada'),
     _Language('hi', 'हिन्दी', 'Hindi'),
-    _Language('mr', 'മറാഠി / मराठी', 'Marathi'),
-    _Language('bn', 'বাংলা', 'Bengali'),
-    _Language('gu', 'ગુજરાતી', 'Gujarati'),
-    _Language('ur', 'اردو', 'Urdu'),
   ];
 
   @override
@@ -147,7 +141,7 @@ class _LanguagePageState extends State<LanguagePage> {
                 onPressed: () async {
                   await storageService.setLanguage(_selectedLanguage);
                   if (context.mounted) {
-                    context.go(RouteNames.onboarding);
+                    context.go(RouteNames.authSelection);
                   }
                 },
               ),

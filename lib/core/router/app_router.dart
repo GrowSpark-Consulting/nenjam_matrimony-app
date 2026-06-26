@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/authentication/presentation/pages/auth_selection_page.dart';
 import '../../features/authentication/presentation/pages/login_page.dart';
 import '../../features/authentication/presentation/pages/otp_page.dart';
 import '../../features/chat/presentation/pages/chat_page.dart';
@@ -52,6 +53,11 @@ GoRouter createRouter() => GoRouter(
           builder: (context, state) => const LanguagePage(),
         ),
         GoRoute(
+          path: RouteNames.authSelection,
+          name: RouteNames.authSelectionName,
+          builder: (context, state) => const AuthSelectionPage(),
+        ),
+        GoRoute(
           path: RouteNames.onboarding,
           name: RouteNames.onboardingName,
           builder: (context, state) => const OnboardingPage(),
@@ -59,7 +65,18 @@ GoRouter createRouter() => GoRouter(
         GoRoute(
           path: RouteNames.login,
           name: RouteNames.loginName,
-          builder: (context, state) => const LoginPage(),
+          builder: (context, state) {
+            final extra = state.extra;
+            int initialTab = 0;
+            if (extra is Map) {
+              if (extra['tab'] is int) {
+                initialTab = extra['tab'] as int;
+              } else if (extra['initialTab'] is int) {
+                initialTab = extra['initialTab'] as int;
+              }
+            }
+            return LoginPage(initialTab: initialTab);
+          },
         ),
         GoRoute(
           path: RouteNames.otp,

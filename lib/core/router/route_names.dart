@@ -5,6 +5,7 @@ abstract final class RouteNames {
   // ─── Route Paths ─────────────────────────────────────────────────
   static const String splash = '/';
   static const String language = '/language';
+  static const String authSelection = '/auth-selection';
   static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String otp = '/otp';
@@ -29,6 +30,7 @@ abstract final class RouteNames {
   // ─── Named Routes ───────────────────────────────────────────────
   static const String splashName = 'splash';
   static const String languageName = 'language';
+  static const String authSelectionName = 'authSelection';
   static const String onboardingName = 'onboarding';
   static const String loginName = 'login';
   static const String otpName = 'otp';
