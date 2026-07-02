@@ -38,7 +38,7 @@ abstract final class Validators {
       return 'Please enter your phone number';
     }
     final cleaned = value.replaceAll(RegExp(r'[\s\-\+]'), '');
-    if (!RegExp(r'^[6-9]\d{9}$').hasMatch(cleaned)) {
+    if (cleaned.length != 10 || !RegExp(r'^\d{10}$').hasMatch(cleaned)) {
       return 'Please enter a valid 10-digit mobile number';
     }
     return null;

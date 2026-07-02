@@ -21,8 +21,6 @@ class _LanguagePageState extends State<LanguagePage> {
   static const _languages = [
     _Language('en', 'English', 'English'),
     _Language('ta', 'தமிழ்', 'Tamil'),
-    _Language('te', 'తెలుగు', 'Telugu'),
-    _Language('hi', 'हिन्दी', 'Hindi'),
   ];
 
   @override

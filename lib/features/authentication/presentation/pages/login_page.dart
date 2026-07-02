@@ -7,8 +7,14 @@ import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/utils/validators.dart';
+import '../../../../core/widgets/buttons/primary_button.dart';
+import '../../../../core/widgets/buttons/social_button.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../core/widgets/inputs/password_field.dart';
+import '../../../../core/widgets/inputs/phone_field.dart';
+import '../../../../core/widgets/layout/curved_header.dart';
+import '../../../../core/widgets/layout/or_divider.dart';
+import '../../../registration/presentation/providers/registration_provider.dart';
 import '../providers/create_account_provider.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -40,6 +46,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
   // Sign Up controllers (reading from Riverpod provider for state, but
   // we keep controllers for text field binding)
+  final _signUpFormKey = GlobalKey<FormState>();
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
@@ -90,76 +97,94 @@ class _LoginPageState extends ConsumerState<LoginPage>
   }
 
   void _onCreateAccount() {
+    if (!(_signUpFormKey.currentState?.validate() ?? false)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter valid 10-digit mobile number and details')),
+      );
+      return;
+    }
+
+    final createAccountState = ref.read(createAccountProvider);
+    final regNotifier = ref.read(registrationProvider.notifier);
+    regNotifier.goToStep(0);
+    if (createAccountState.registeringFor.isNotEmpty) {
+      regNotifier.setProfileCreatedFor(createAccountState.registeringFor);
+    }
+
     final notifier = ref.read(createAccountProvider.notifier);
     notifier.createAccount().then((_) {
-      if (mounted) context.go(RouteNames.profile);
+      if (mounted) context.go(RouteNames.registrationWizard);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final isSignUp = _currentTab == 1;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: const Color(0xFF1B2B4B),
-        body: Column(
-          children: [
-            // ─── Dynamic Navy Header ──────────────────────────────
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 320),
-              transitionBuilder: (child, anim) => FadeTransition(
-                opacity: anim,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.08),
-                    end: Offset.zero,
-                  ).animate(anim),
-                  child: child,
-                ),
-              ),
-              child: isSignUp
-                  ? const _SignUpHeader(key: ValueKey('signup'))
-                  : const _LoginHeader(key: ValueKey('login')),
-            ),
-
-            // ─── Scrollable Content Card ───────────────────────────
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                child: Column(
-                  children: [
-                    // Floating tab card
-                    _AuthCard(
-                      tabController: _tabController,
-                      loginContent: _LoginForm(
-                        formKey: _loginFormKey,
-                        phoneCtrl: _loginPhoneCtrl,
-                        emailCtrl: _loginEmailCtrl,
-                        passwordCtrl: _loginPasswordCtrl,
-                        isLoading: _loginLoading,
-                        onSendOtp: _onLoginWithOtp,
-                        onSignUpTap: () => _tabController.animateTo(1),
-                      ),
-                      signUpContent: _SignUpForm(
-                        phoneCtrl: _phoneCtrl,
-                        emailCtrl: _emailCtrl,
-                        passwordCtrl: _passwordCtrl,
-                        onCreateAccount: _onCreateAccount,
-                        onLoginTap: () => _tabController.animateTo(0),
-                      ),
+        backgroundColor:
+            isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+        body: NestedScrollView(
+          headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+            return [
+              SliverToBoxAdapter(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 320),
+                  transitionBuilder: (child, anim) => FadeTransition(
+                    opacity: anim,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.08),
+                        end: Offset.zero,
+                      ).animate(anim),
+                      child: child,
                     ),
-
-                    // ─── Trust Indicators ────────────────────────
-                    const SizedBox(height: 4),
-                    const _TrustBadges(),
-                    const SizedBox(height: 24),
-                  ],
+                  ),
+                  child: isSignUp
+                      ? const _SignUpHeader(key: ValueKey('signup'))
+                      : const _LoginHeader(key: ValueKey('login')),
                 ),
               ),
-            ),
-          ],
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _StickyTabBarDelegate(
+                  tabController: _tabController,
+                  isDark: isDark,
+                ),
+              ),
+            ];
+          },
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              _TabFormCard(
+                isDark: isDark,
+                child: _LoginForm(
+                  formKey: _loginFormKey,
+                  phoneCtrl: _loginPhoneCtrl,
+                  emailCtrl: _loginEmailCtrl,
+                  passwordCtrl: _loginPasswordCtrl,
+                  isLoading: _loginLoading,
+                  onSendOtp: _onLoginWithOtp,
+                  onSignUpTap: () => _tabController.animateTo(1),
+                ),
+              ),
+              _TabFormCard(
+                isDark: isDark,
+                child: _SignUpForm(
+                  formKey: _signUpFormKey,
+                  phoneCtrl: _phoneCtrl,
+                  emailCtrl: _emailCtrl,
+                  passwordCtrl: _passwordCtrl,
+                  onCreateAccount: _onCreateAccount,
+                  onLoginTap: () => _tabController.animateTo(0),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -175,48 +200,10 @@ class _LoginHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 28, 24, 36),
-        child: Column(
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.accentGold.withValues(alpha: 0.45),
-                  width: 1.5,
-                ),
-              ),
-              child: const Icon(
-                Icons.favorite_rounded,
-                size: 26,
-                color: AppColors.accentGold,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Welcome Back',
-              style: AppTypography.headlineMedium.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Sign in to continue your journey',
-              style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withValues(alpha: 0.6),
-                letterSpacing: 0.3,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return const NmCurvedHeader(
+      title: 'Nenjam Matrimony',
+      subtitle: 'Welcome Back',
+      badgeIcon: Icons.favorite_rounded,
     );
   }
 }
@@ -226,53 +213,16 @@ class _SignUpHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 28, 24, 36),
-        child: Column(
-          children: [
-            // Infinity symbol badge
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.accentGold.withValues(alpha: 0.45),
-                  width: 1.5,
-                ),
-              ),
-              child: const Center(
-                child: Text(
-                  '∞',
-                  style: TextStyle(
-                    color: AppColors.accentGold,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w300,
-                    height: 1,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Create Account',
-              style: AppTypography.headlineMedium.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              "Join Nenjam Matrimony's Elite Community",
-              style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withValues(alpha: 0.6),
-                letterSpacing: 0.3,
-              ),
-            ),
-          ],
+    return const NmCurvedHeader(
+      title: 'Create Account',
+      subtitle: "Join Nenjam Matrimony's Elite Community",
+      badgeChild: Text(
+        '∞',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 26,
+          fontWeight: FontWeight.w400,
+          height: 1,
         ),
       ),
     );
@@ -280,42 +230,60 @@ class _SignUpHeader extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Auth Card with Tabs
+// Sticky Tab Bar Delegate & Card Content
 // ═══════════════════════════════════════════════════════════════════════════
 
-class _AuthCard extends StatelessWidget {
+class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabController tabController;
-  final Widget loginContent;
-  final Widget signUpContent;
+  final bool isDark;
 
-  const _AuthCard({
+  _StickyTabBarDelegate({
     required this.tabController,
-    required this.loginContent,
-    required this.signUpContent,
+    required this.isDark,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      transform: Matrix4.translationValues(0, -24, 0),
+  double get minExtent => 62.0;
+  @override
+  double get maxExtent => 62.0;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final isPinned = shrinkOffset > 0;
+    final cardBg = isDark ? AppColors.surfaceDark : Colors.white;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      margin: EdgeInsets.symmetric(horizontal: isPinned ? 0 : 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
+        color: cardBg,
+        borderRadius: isPinned
+            ? BorderRadius.zero
+            : const BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1B2B4B).withValues(alpha: 0.18),
-            blurRadius: 32,
-            offset: const Offset(0, 12),
-          ),
+          if (isPinned)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            )
+          else
+            BoxShadow(
+              color: const Color(0xFF1B2B4B).withValues(alpha: 0.12),
+              blurRadius: 24,
+              offset: const Offset(0, -4),
+            ),
         ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // ─── Tab Bar ──────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: TabBar(
               controller: tabController,
               labelColor: AppColors.primary,
@@ -344,16 +312,55 @@ class _AuthCard extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(height: 1, thickness: 1, color: Color(0xFFF0EEE9)),
-
-          // ─── Tab Content ─────────────────────────────────────
-          SizedBox(
-            height: 620,
-            child: TabBarView(
-              controller: tabController,
-              children: [loginContent, signUpContent],
-            ),
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: isDark ? AppColors.borderDark : const Color(0xFFF0EEE9),
           ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_StickyTabBarDelegate oldDelegate) {
+    return tabController != oldDelegate.tabController ||
+        isDark != oldDelegate.isDark;
+  }
+}
+
+class _TabFormCard extends StatelessWidget {
+  final bool isDark;
+  final Widget child;
+
+  const _TabFormCard({required this.isDark, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const ClampingScrollPhysics(),
+      child: Column(
+        children: [
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : Colors.white,
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(28),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF1B2B4B).withValues(alpha: 0.12),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: child,
+          ),
+          const SizedBox(height: 16),
+          const _TrustBadges(),
+          const SizedBox(height: 32),
         ],
       ),
     );
@@ -458,7 +465,10 @@ class _LoginFormState extends State<_LoginForm> {
             if (isMobile) ...[
               Text('Phone Number', style: AppTypography.labelLarge),
               const SizedBox(height: 8),
-              _PhoneInputRow(controller: widget.phoneCtrl),
+              NmPhoneNumberField(
+                controller: widget.phoneCtrl,
+                validator: Validators.phone,
+              ),
             ] else ...[
               Text('Email Address', style: AppTypography.labelLarge),
               const SizedBox(height: 8),
@@ -485,7 +495,7 @@ class _LoginFormState extends State<_LoginForm> {
                 child: Text(
                   'Forgot Password?',
                   style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.primary,
+                    color: AppColors.accentGold,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -493,30 +503,17 @@ class _LoginFormState extends State<_LoginForm> {
             ),
             const SizedBox(height: 24),
 
-            _PrimaryButton(
-              label: 'Login',
+            NmPrimaryButton(
+              label: 'Login with OTP',
               isLoading: widget.isLoading,
               onPressed: () => widget.onSendOtp(_channel),
             ),
-            const SizedBox(height: 12),
 
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: OutlinedButton(
-                onPressed: () => widget.onSendOtp(_channel),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.primary, width: 1.5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                child: Text(
-                  'Continue with OTP',
-                  style: AppTypography.titleMedium.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+            const NmOrDivider(label: 'or continue with'),
+
+            NmSocialButton(
+              label: 'Sign in with Google',
+              onPressed: () => context.go(RouteNames.home),
             ),
             const SizedBox(height: 24),
 
@@ -525,16 +522,17 @@ class _LoginFormState extends State<_LoginForm> {
                 alignment: WrapAlignment.center,
                 children: [
                   Text(
-                    "Don't have an account? ",
-                    style: AppTypography.bodySmall
-                        .copyWith(color: AppColors.textSecondaryLight),
+                    'New here? ',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondaryLight,
+                    ),
                   ),
                   GestureDetector(
                     onTap: widget.onSignUpTap,
                     child: Text(
                       'Create Account',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.primary,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.accentGold,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -550,10 +548,11 @@ class _LoginFormState extends State<_LoginForm> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Sign Up Form
+// Sign Up Form (Stitch Pixel-Perfect & Responsive Implementation)
 // ═══════════════════════════════════════════════════════════════════════════
 
 class _SignUpForm extends ConsumerWidget {
+  final GlobalKey<FormState> formKey;
   final TextEditingController phoneCtrl;
   final TextEditingController emailCtrl;
   final TextEditingController passwordCtrl;
@@ -561,6 +560,7 @@ class _SignUpForm extends ConsumerWidget {
   final VoidCallback onLoginTap;
 
   const _SignUpForm({
+    required this.formKey,
     required this.phoneCtrl,
     required this.emailCtrl,
     required this.passwordCtrl,
@@ -574,7 +574,6 @@ class _SignUpForm extends ConsumerWidget {
     'Daughter',
     'Brother',
     'Sister',
-    'Relative',
     'Friend',
   ];
 
@@ -582,58 +581,77 @@ class _SignUpForm extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(createAccountProvider);
     final notifier = ref.read(createAccountProvider.notifier);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final labelColor = isDark ? Colors.white70 : AppColors.textSecondaryLight;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ─── Mobile Number ──────────────────────────────────
-          Text('Mobile Number', style: AppTypography.labelLarge),
-          const SizedBox(height: 8),
-          _OtpSendRow(
-            onSend: () {
-              notifier.setPhone(phoneCtrl.text.trim());
-              notifier.sendMobileOtp();
-            },
-            alreadySent: state.mobileSentOtp,
-            child: _PhoneInputRow(
-              controller: phoneCtrl,
-              onChanged: notifier.setPhone,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // ─── Email Address ──────────────────────────────────
-          Text('Email Address', style: AppTypography.labelLarge),
-          const SizedBox(height: 8),
-          _OtpSendRow(
-            onSend: () {
-              notifier.setEmail(emailCtrl.text.trim());
-              notifier.sendEmailOtp();
-            },
-            alreadySent: state.emailSentOtp,
-            child: Expanded(
-              child: NmTextField(
-                controller: emailCtrl,
-                hint: 'name@example.com',
-                keyboardType: TextInputType.emailAddress,
-                validator: Validators.email,
-                onChanged: notifier.setEmail,
+    return Form(
+      key: formKey,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ─── Mobile Number ──────────────────────────────────
+            Text(
+              'Mobile Number',
+              style: AppTypography.labelSmall.copyWith(
+                color: labelColor,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ),
+            const SizedBox(height: 8),
+            _StitchPhoneInput(
+              controller: phoneCtrl,
+              onChanged: notifier.setPhone,
+              onSendOtp: () {
+                final phoneError = Validators.phone(phoneCtrl.text.trim());
+                if (phoneError != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(phoneError)),
+                  );
+                  return;
+                }
+                notifier.setPhone(phoneCtrl.text.trim());
+                notifier.sendMobileOtp();
+              },
+              isSent: state.mobileSentOtp,
+            ),
+            const SizedBox(height: 16),
+
+            // ─── Email Address ──────────────────────────────────
+            Text(
+              'Email Address',
+              style: AppTypography.labelSmall.copyWith(
+                color: labelColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _StitchEmailInput(
+              controller: emailCtrl,
+              onChanged: notifier.setEmail,
+              onSendOtp: () {
+                final emailError = Validators.email(emailCtrl.text.trim());
+                if (emailError != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(emailError)),
+                  );
+                  return;
+                }
+                notifier.setEmail(emailCtrl.text.trim());
+                notifier.sendEmailOtp();
+              },
+              isSent: state.emailSentOtp,
+            ),
           const SizedBox(height: 16),
 
-          // ─── Mobile OTP ─────────────────────────────────────
+          // ─── OTP Input Section (Responsive Cards) ───────────
           _OtpSection(
             title: 'Enter Mobile OTP',
             onCompleted: notifier.setMobileOtp,
             onChanged: notifier.setMobileOtp,
           ),
-          const SizedBox(height: 12),
-
-          // ─── Email OTP ──────────────────────────────────────
+          const SizedBox(height: 14),
           _OtpSection(
             title: 'Enter Email OTP',
             onCompleted: notifier.setEmailOtp,
@@ -642,16 +660,28 @@ class _SignUpForm extends ConsumerWidget {
           const SizedBox(height: 16),
 
           // ─── Password ───────────────────────────────────────
-          NmPasswordField(
+          Text(
+            'Password',
+            style: AppTypography.labelSmall.copyWith(
+              color: labelColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _StitchPasswordInput(
             controller: passwordCtrl,
-            label: 'Password',
-            hint: '••••••••',
             onChanged: notifier.setPassword,
           ),
           const SizedBox(height: 16),
 
           // ─── Registering For ────────────────────────────────
-          Text('Registering for', style: AppTypography.labelLarge),
+          Text(
+            'Registering for',
+            style: AppTypography.labelSmall.copyWith(
+              color: labelColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -673,7 +703,7 @@ class _SignUpForm extends ConsumerWidget {
             isLoading: state.isLoading,
             onPressed: onCreateAccount,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
           // ─── Login Link ─────────────────────────────────────
           Center(
@@ -682,16 +712,15 @@ class _SignUpForm extends ConsumerWidget {
               children: [
                 Text(
                   'Already have an account? ',
-                  style: AppTypography.bodySmall
-                      .copyWith(color: AppColors.textSecondaryLight),
+                  style: AppTypography.bodyMedium.copyWith(color: labelColor),
                 ),
                 GestureDetector(
                   onTap: onLoginTap,
                   child: Text(
                     'Login',
-                    style: AppTypography.bodySmall.copyWith(
+                    style: AppTypography.bodyMedium.copyWith(
                       color: AppColors.primary,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -700,103 +729,125 @@ class _SignUpForm extends ConsumerWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Reusable Sub-Widgets (private to this file)
+// Reusable Sub-Widgets (Stitch Specific Implementation)
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Phone number input row: [🇮🇳 +91] [phone input]
-class _PhoneInputRow extends StatelessWidget {
-  final TextEditingController? controller;
+/// Stitch pixel-perfect phone input: rounded container with embedded prefix & action button.
+class _StitchPhoneInput extends StatefulWidget {
+  final TextEditingController controller;
   final ValueChanged<String>? onChanged;
+  final VoidCallback onSendOtp;
+  final bool isSent;
 
-  const _PhoneInputRow({this.controller, this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Row(
-        children: [
-          // Country Picker
-          Container(
-            height: 52,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceVariantLight,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.borderLight),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('🇮🇳', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 4),
-                Text(
-                  '+91',
-                  style: AppTypography.labelMedium.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimaryLight,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: NmTextField(
-              controller: controller,
-              hint: '9876543210',
-              keyboardType: TextInputType.phone,
-              validator: Validators.phone,
-              onChanged: onChanged,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A row that wraps [child] and adds a gold "Send OTP" button on the right.
-class _OtpSendRow extends StatelessWidget {
-  final Widget child;
-  final VoidCallback onSend;
-  final bool alreadySent;
-
-  const _OtpSendRow({
-    required this.child,
-    required this.onSend,
-    required this.alreadySent,
+  const _StitchPhoneInput({
+    required this.controller,
+    this.onChanged,
+    required this.onSendOtp,
+    required this.isSent,
   });
 
   @override
+  State<_StitchPhoneInput> createState() => _StitchPhoneInputState();
+}
+
+class _StitchPhoneInputState extends State<_StitchPhoneInput> {
+  CountryInfo _selectedCountry = kCountryCodes.first;
+
+  @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor =
+        isDark ? AppColors.surfaceVariantDark : const Color(0xFFF5F3EE);
+    final borderColor = isDark
+        ? AppColors.borderDark.withValues(alpha: 0.5)
+        : const Color(0xFFC5C6CF).withValues(alpha: 0.4);
+    final textColor = isDark ? Colors.white : AppColors.textPrimaryLight;
+
     return Container(
-      height: 52,
+      height: 56,
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariantLight,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderLight),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
-          child,
-          GestureDetector(
-            onTap: alreadySent ? null : onSend,
+          InkWell(
+            onTap: () => showCountryPickerSheet(context, onSelect: (c) {
+              setState(() => _selectedCountry = c);
+            }),
+            borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
             child: Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: Text(
-                alreadySent ? 'Sent ✓' : 'Send OTP',
-                style: AppTypography.labelMedium.copyWith(
-                  color: alreadySent
-                      ? AppColors.success
-                      : AppColors.accentGold,
-                  fontWeight: FontWeight.w700,
+              padding: const EdgeInsets.only(left: 16, right: 12, top: 16, bottom: 16),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_selectedCountry.flag, style: const TextStyle(fontSize: 18)),
+                  const SizedBox(width: 6),
+                  Text(
+                    _selectedCountry.code,
+                    style: AppTypography.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.arrow_drop_down_rounded, size: 20, color: textColor.withValues(alpha: 0.6)),
+                  const SizedBox(width: 6),
+                  Container(
+                    width: 1,
+                    height: 24,
+                    color: borderColor,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: TextFormField(
+              controller: widget.controller,
+              validator: Validators.phone,
+              keyboardType: TextInputType.phone,
+              onChanged: widget.onChanged,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
+              style: AppTypography.bodyLarge.copyWith(color: textColor),
+              decoration: InputDecoration(
+                hintText: '9876543210',
+                hintStyle: AppTypography.bodyLarge.copyWith(
+                  color: isDark ? Colors.white38 : AppColors.textTertiaryLight,
+                ),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+          ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: widget.isSent ? null : widget.onSendOtp,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+                child: Text(
+                  widget.isSent ? 'Sent ✓' : 'Send OTP',
+                  style: AppTypography.labelMedium.copyWith(
+                    color: widget.isSent ? AppColors.success : AppColors.accentGold,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -807,7 +858,164 @@ class _OtpSendRow extends StatelessWidget {
   }
 }
 
-/// OTP section: labeled gray container with 6 individual input cells.
+/// Stitch pixel-perfect email input with integrated Send OTP action button.
+class _StitchEmailInput extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String>? onChanged;
+  final VoidCallback onSendOtp;
+  final bool isSent;
+
+  const _StitchEmailInput({
+    required this.controller,
+    this.onChanged,
+    required this.onSendOtp,
+    required this.isSent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor =
+        isDark ? AppColors.surfaceVariantDark : const Color(0xFFF5F3EE);
+    final borderColor = isDark
+        ? AppColors.borderDark.withValues(alpha: 0.5)
+        : const Color(0xFFC5C6CF).withValues(alpha: 0.4);
+    final textColor = isDark ? Colors.white : AppColors.textPrimaryLight;
+
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextFormField(
+              controller: controller,
+              validator: Validators.email,
+              keyboardType: TextInputType.emailAddress,
+              onChanged: onChanged,
+              style: AppTypography.bodyLarge.copyWith(color: textColor),
+              decoration: InputDecoration(
+                hintText: 'name@example.com',
+                hintStyle: AppTypography.bodyLarge.copyWith(
+                  color: isDark ? Colors.white38 : AppColors.textTertiaryLight,
+                ),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.only(
+                  left: 16,
+                  top: 16,
+                  bottom: 16,
+                ),
+              ),
+            ),
+          ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: isSent ? null : onSendOtp,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+                child: Text(
+                  isSent ? 'Sent ✓' : 'Send OTP',
+                  style: AppTypography.labelMedium.copyWith(
+                    color: isSent ? AppColors.success : AppColors.accentGold,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Stitch pixel-perfect password field inside rounded container.
+class _StitchPasswordInput extends StatefulWidget {
+  final TextEditingController controller;
+  final ValueChanged<String>? onChanged;
+
+  const _StitchPasswordInput({
+    required this.controller,
+    this.onChanged,
+  });
+
+  @override
+  State<_StitchPasswordInput> createState() => _StitchPasswordInputState();
+}
+
+class _StitchPasswordInputState extends State<_StitchPasswordInput> {
+  bool _obscure = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor =
+        isDark ? AppColors.surfaceVariantDark : const Color(0xFFF5F3EE);
+    final borderColor = isDark
+        ? AppColors.borderDark.withValues(alpha: 0.5)
+        : const Color(0xFFC5C6CF).withValues(alpha: 0.4);
+    final textColor = isDark ? Colors.white : AppColors.textPrimaryLight;
+
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextFormField(
+              controller: widget.controller,
+              obscureText: _obscure,
+              onChanged: widget.onChanged,
+              style: AppTypography.bodyLarge.copyWith(color: textColor),
+              decoration: InputDecoration(
+                hintText: '••••••••',
+                hintStyle: AppTypography.bodyLarge.copyWith(
+                  color: isDark ? Colors.white38 : AppColors.textTertiaryLight,
+                ),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.only(
+                  left: 16,
+                  top: 16,
+                  bottom: 16,
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: Icon(
+              _obscure
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined,
+              color: isDark ? Colors.white60 : AppColors.textSecondaryLight,
+              size: 20,
+            ),
+            onPressed: () => setState(() => _obscure = !_obscure),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+    );
+  }
+}
+
+/// OTP section: labeled card container with 6 responsive individual input cells.
 class _OtpSection extends StatefulWidget {
   final String title;
   final ValueChanged<String> onCompleted;
@@ -850,7 +1058,6 @@ class _OtpSectionState extends State<_OtpSection> {
 
   void _onCellChanged(int index, String value) {
     if (value.length > 1) {
-      // Paste support — distribute across cells
       final digits = value.replaceAll(RegExp(r'\D'), '');
       for (int i = 0; i < _length; i++) {
         _controllers[i].text = i < digits.length ? digits[i] : '';
@@ -880,72 +1087,96 @@ class _OtpSectionState extends State<_OtpSection> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark
+        ? AppColors.surfaceVariantDark.withValues(alpha: 0.3)
+        : const Color(0xFFF0EEE9).withValues(alpha: 0.45);
+    final borderColor = isDark
+        ? AppColors.borderDark.withValues(alpha: 0.5)
+        : const Color(0xFFC5C6CF).withValues(alpha: 0.35);
+    final inputBg = isDark ? AppColors.surfaceDark : Colors.white;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariantLight,
-        borderRadius: BorderRadius.circular(14),
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             widget.title,
-            style: AppTypography.labelLarge.copyWith(
-              color: AppColors.textSecondaryLight,
+            style: AppTypography.labelMedium.copyWith(
+              color: isDark ? Colors.white70 : AppColors.textSecondaryLight,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(_length, (index) {
-              return SizedBox(
-                width: 42,
-                height: 44,
-                child: KeyboardListener(
-                  focusNode: FocusNode(),
-                  onKeyEvent: (e) => _onKeyDown(index, e),
-                  child: TextFormField(
-                    controller: _controllers[index],
-                    focusNode: _focusNodes[index],
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    maxLength: _length, // allow paste
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimaryLight,
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const gap = 6.0;
+              final totalGap = gap * (_length - 1);
+              final availableWidth = constraints.maxWidth - totalGap;
+              final cellWidth = (availableWidth / _length).clamp(30.0, 48.0);
+              final cellHeight = (cellWidth * 1.15).clamp(40.0, 56.0);
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(_length, (index) {
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      right: index < _length - 1 ? gap : 0,
                     ),
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(
-                      counterText: '',
-                      contentPadding: EdgeInsets.zero,
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: AppColors.borderLight,
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: AppColors.borderLight,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: AppColors.primary,
-                          width: 1.8,
+                    child: SizedBox(
+                      width: cellWidth,
+                      height: cellHeight,
+                      child: KeyboardListener(
+                        focusNode: FocusNode(),
+                        onKeyEvent: (e) => _onKeyDown(index, e),
+                        child: TextFormField(
+                          controller: _controllers[index],
+                          focusNode: _focusNodes[index],
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          maxLength: _length,
+                          style: AppTypography.titleMedium.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : AppColors.textPrimaryLight,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          decoration: InputDecoration(
+                            counterText: '',
+                            contentPadding: EdgeInsets.zero,
+                            filled: true,
+                            fillColor: inputBg,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: AppColors.primary,
+                                width: 1.8,
+                              ),
+                            ),
+                          ),
+                          onChanged: (v) => _onCellChanged(index, v),
                         ),
                       ),
                     ),
-                    onChanged: (v) => _onCellChanged(index, v),
-                  ),
-                ),
+                  );
+                }),
               );
-            }),
+            },
           ),
         ],
       ),
@@ -1043,69 +1274,6 @@ class _PrimaryButton extends StatelessWidget {
   }
 }
 
-/// "or continue with" divider.
-class _OrDivider extends StatelessWidget {
-  const _OrDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Expanded(child: Divider(color: Color(0xFFE4E1DA))),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            'or continue with',
-            style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textTertiaryLight,
-            ),
-          ),
-        ),
-        const Expanded(child: Divider(color: Color(0xFFE4E1DA))),
-      ],
-    );
-  }
-}
-
-/// Google sign-in button.
-class _GoogleButton extends StatelessWidget {
-  const _GoogleButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: OutlinedButton(
-        onPressed: () {},
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.textPrimaryLight,
-          backgroundColor: Colors.white,
-          side: const BorderSide(color: Color(0xFFDDD9D0), width: 1.2),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.g_mobiledata_rounded,
-                size: 24, color: Color(0xFF4285F4)),
-            const SizedBox(width: 8),
-            Text(
-              'Sign in with Google',
-              style: AppTypography.labelLarge.copyWith(
-                color: AppColors.textPrimaryLight,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 // Trust Badges Footer
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1142,17 +1310,18 @@ class _TrustItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon,
-            size: 13,
-            color: Colors.white.withValues(alpha: 0.55)),
+        Icon(icon, size: 13, color: color),
         const SizedBox(width: 4),
         Text(
           label,
           style: AppTypography.labelSmall.copyWith(
-            color: Colors.white.withValues(alpha: 0.55),
+            color: color,
             fontSize: 10,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.8,
@@ -1168,12 +1337,17 @@ class _TrustDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = isDark
+        ? AppColors.textSecondaryDark.withValues(alpha: 0.5)
+        : AppColors.textSecondaryLight.withValues(alpha: 0.5);
+
     return Container(
       width: 3,
       height: 3,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white.withValues(alpha: 0.35),
+        color: color,
       ),
     );
   }

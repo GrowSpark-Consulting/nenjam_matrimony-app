@@ -61,7 +61,7 @@ class _OtpPageState extends State<OtpPage> {
         if (mounted) {
           setState(() => _isLoading = false);
           if (flow == 'signup') {
-            context.go(RouteNames.profile);
+            context.go(RouteNames.registrationWizard);
           } else {
             context.go(RouteNames.home);
           }

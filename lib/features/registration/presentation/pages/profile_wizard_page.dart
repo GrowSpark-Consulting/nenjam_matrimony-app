@@ -51,7 +51,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     if (draft.currentStep < ProfileDraft.totalSteps - 1) {
       ref.read(registrationProvider.notifier).nextStep();
     } else {
-      context.push(RouteNames.login);
+      context.go(RouteNames.profileReview);
     }
   }
 
