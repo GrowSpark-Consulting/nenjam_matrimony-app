@@ -59,10 +59,7 @@ flutter:
   generate: true
 
   assets:
-    - .env.dev
-    - .env.qa
-    - .env.staging
-    - .env.production
+  - .env
     - assets/icons/
     - assets/images/
     - assets/svg/

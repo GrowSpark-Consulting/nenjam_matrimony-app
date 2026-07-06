@@ -15,14 +15,7 @@ class AppConfig {
   /// Initialize AppConfig by loading the appropriate flavor .env file.
   Future<void> init(AppEnvironment env) async {
     environment = env;
-    final envFileName = switch (env) {
-      AppEnvironment.dev => '.env.dev',
-      AppEnvironment.qa => '.env.qa',
-      AppEnvironment.staging => '.env.staging',
-      AppEnvironment.production => '.env.production',
-    };
-
-    await dotenv.load(fileName: envFileName);
+    await dotenv.load(fileName: '.env');
 
     envConfig = EnvConfig(
       apiBaseUrl: dotenv.env['API_BASE_URL'] ?? 'https://api.nenjammatrimony.com/v1',
