@@ -1,0 +1,54 @@
+import 'package:flutter/material.dart';
+
+import '../../theme/app_typography.dart';
+
+/// Outlined border button.
+class NmOutlinedButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+  final IconData? icon;
+  final double? width;
+  final double height;
+
+  const NmOutlinedButton({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.isLoading = false,
+    this.icon,
+    this.width,
+    this.height = 56,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width ?? double.infinity,
+      height: height,
+      child: OutlinedButton(
+        onPressed: isLoading ? null : onPressed,
+        child: isLoading
+            ? SizedBox(
+                height: 22,
+                width: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, size: 20),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(label, style: AppTypography.button),
+                ],
+              ),
+      ),
+    );
+  }
+}
