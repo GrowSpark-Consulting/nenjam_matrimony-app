@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 
 /// Step 12 — Verification Badges & Trust
@@ -18,6 +19,7 @@ class StepVerification extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
@@ -26,14 +28,14 @@ class StepVerification extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Verification & Trust',
+            l10n.registrationVerificationTitle,
             style: AppTypography.headlineSmall.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            'Get verified badges to build trust with matches',
+            l10n.registrationVerificationSubtitle,
             style: AppTypography.bodyMedium.copyWith(
               color: isDark
                   ? AppColors.textSecondaryDark
@@ -42,8 +44,9 @@ class StepVerification extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           _VerificationCard(
-            title: 'Mobile Number Verification',
-            subtitle: 'Mandatory for contacting profiles',
+            title: l10n.registrationVerifyMobileTitle,
+            subtitle: l10n.registrationVerifyMobileSubtitle,
+            verifyLabel: l10n.registrationVerifyButton,
             icon: Icons.phone_android_rounded,
             isVerified: true, // Automatically verified during signup/login
             isDark: isDark,
@@ -51,8 +54,9 @@ class StepVerification extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _VerificationCard(
-            title: 'Email Verification',
-            subtitle: 'Receive match alerts and account updates',
+            title: l10n.registrationVerifyEmailTitle,
+            subtitle: l10n.registrationVerifyEmailSubtitle,
+            verifyLabel: l10n.registrationVerifyButton,
             icon: Icons.email_outlined,
             isVerified: status.emailVerified,
             isDark: isDark,
@@ -62,8 +66,9 @@ class StepVerification extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _VerificationCard(
-            title: 'AI Face Selfie Verification',
-            subtitle: 'Get a blue tick badge on your profile photo',
+            title: l10n.registrationVerifyFaceTitle,
+            subtitle: l10n.registrationVerifyFaceSubtitle,
+            verifyLabel: l10n.registrationVerifyButton,
             icon: Icons.face_retouching_natural_rounded,
             isVerified: status.faceVerified,
             isDark: isDark,
@@ -73,8 +78,9 @@ class StepVerification extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _VerificationCard(
-            title: 'Government ID / Aadhaar',
-            subtitle: 'Verify your age and identity securely',
+            title: l10n.registrationVerifyIdTitle,
+            subtitle: l10n.registrationVerifyIdSubtitle,
+            verifyLabel: l10n.registrationVerifyButton,
             icon: Icons.verified_user_outlined,
             isVerified: status.aadhaarVerified || status.govIdVerified,
             isDark: isDark,
@@ -101,7 +107,7 @@ class StepVerification extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '100% Privacy Guaranteed',
+                        l10n.registrationPrivacyTitle,
                         style: AppTypography.titleSmall.copyWith(
                           color: AppColors.success,
                           fontWeight: FontWeight.w700,
@@ -109,7 +115,7 @@ class StepVerification extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Your identity documents are encrypted and never shown publicly to any user.',
+                        l10n.registrationPrivacySubtitle,
                         style: AppTypography.bodySmall.copyWith(
                           color: isDark
                               ? AppColors.textSecondaryDark
@@ -132,6 +138,7 @@ class StepVerification extends StatelessWidget {
 class _VerificationCard extends StatelessWidget {
   final String title;
   final String subtitle;
+  final String verifyLabel;
   final IconData icon;
   final bool isVerified;
   final bool isDark;
@@ -140,6 +147,7 @@ class _VerificationCard extends StatelessWidget {
   const _VerificationCard({
     required this.title,
     required this.subtitle,
+    required this.verifyLabel,
     required this.icon,
     required this.isVerified,
     required this.isDark,
@@ -215,7 +223,7 @@ class _VerificationCard extends StatelessWidget {
                 foregroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
-              child: const Text('Verify', style: TextStyle(fontWeight: FontWeight.w600)),
+              child: Text(verifyLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
             ),
         ],
       ),

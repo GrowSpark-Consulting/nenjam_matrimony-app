@@ -4,6 +4,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/cards/profile_card.dart';
 import '../../../../core/widgets/chips/info_chip.dart';
 import '../../../../core/widgets/inputs/search_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Search and Discovery screen with filter chips and profile grid.
 class SearchPage extends StatelessWidget {
@@ -11,8 +12,9 @@ class SearchPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Discover Profiles')),
+      appBar: AppBar(title: Text(l10n.searchTitle)),
       body: SafeArea(
         child: Column(
           children: [
@@ -27,14 +29,14 @@ class SearchPage extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 scrollDirection: Axis.horizontal,
-                children: const [
-                  NmInfoChip(label: 'Verified Only', isSelected: true),
-                  SizedBox(width: 8),
-                  NmInfoChip(label: 'Near Me'),
-                  SizedBox(width: 8),
-                  NmInfoChip(label: 'Doctor'),
-                  SizedBox(width: 8),
-                  NmInfoChip(label: 'Engineer'),
+                children: [
+                  NmInfoChip(label: l10n.searchFilterVerifiedOnly, isSelected: true),
+                  const SizedBox(width: 8),
+                  NmInfoChip(label: l10n.searchFilterNearMe),
+                  const SizedBox(width: 8),
+                  NmInfoChip(label: l10n.searchFilterDoctor),
+                  const SizedBox(width: 8),
+                  NmInfoChip(label: l10n.searchFilterEngineer),
                 ],
               ),
             ),
@@ -46,11 +48,12 @@ class SearchPage extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Showing 1,240 Matches', style: AppTypography.titleSmall),
+                  Text(l10n.searchShowingMatches('1,240'),
+                      style: AppTypography.titleSmall),
                   TextButton.icon(
                     onPressed: () {},
                     icon: const Icon(Icons.sort_rounded, size: 18),
-                    label: const Text('Sort'),
+                    label: Text(l10n.searchSortButton),
                   ),
                 ],
               ),

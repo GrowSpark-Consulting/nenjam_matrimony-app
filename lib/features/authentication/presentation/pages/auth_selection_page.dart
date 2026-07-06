@@ -7,6 +7,7 @@ import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/buttons/outlined_button.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Authentication Selection Hub Page.
 ///
@@ -17,6 +18,7 @@ class AuthSelectionPage extends StatelessWidget {
   const AuthSelectionPage({super.key});
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -65,7 +67,7 @@ class AuthSelectionPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Nenjam Matrimony',
+                      l10n.appName,
                       style: AppTypography.headlineLarge.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
@@ -74,7 +76,7 @@ class AuthSelectionPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'FIND YOUR FOREVER',
+                      l10n.authTagline,
                       style: AppTypography.labelMedium.copyWith(
                         color: AppColors.accentGold,
                         letterSpacing: 3,
@@ -87,53 +89,56 @@ class AuthSelectionPage extends StatelessWidget {
             ),
             // ─── Content & Decision Buttons ───────────────────────
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Welcome to Nenjam Matrimony',
-                      style: AppTypography.headlineMedium.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              child: Center(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        l10n.authWelcomeTitle,
+                        style: AppTypography.headlineMedium.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Experience a premier matrimonial journey curated exclusively for discerning individuals seeking lifelong companionship.',
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                        height: 1.6,
+                      const SizedBox(height: 12),
+                      Text(
+                        l10n.authWelcomeSubtitle,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          height: 1.6,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const Spacer(),
-                    // Login Button
-                    NmGradientButton(
-                      label: 'Login',
-                      icon: Icons.login_rounded,
-                      onPressed: () => context.push(
-                        RouteNames.login,
-                        extra: {'tab': 0},
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Create Account Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: NmOutlinedButton(
-                        label: 'Create Account',
-                        icon: Icons.person_add_alt_1_rounded,
+                      const SizedBox(height: 32),
+                      // Login Button
+                      NmGradientButton(
+                        label: l10n.authLogin,
+                        icon: Icons.login_rounded,
                         onPressed: () => context.push(
                           RouteNames.login,
-                          extra: {'tab': 1},
+                          extra: {'tab': 0},
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+                      const SizedBox(height: 16),
+                      // Create Account Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: NmOutlinedButton(
+                          label: l10n.authCreateAccount,
+                          icon: Icons.person_add_alt_1_rounded,
+                          onPressed: () => context.push(
+                            RouteNames.login,
+                            extra: {'tab': 1},
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

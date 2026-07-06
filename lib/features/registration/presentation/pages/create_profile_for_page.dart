@@ -8,6 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../providers/registration_provider.dart';
 
 /// "Who are you creating this profile for?" selection screen.
@@ -32,8 +33,32 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
     _ProfileForOption('Friend', Icons.handshake_rounded, 'Finding a match for a friend'),
   ];
 
+  /// Localized display label for a stored relation value (value stays English).
+  String _relationLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Myself' => l10n.authRegForMyself,
+        'Son' => l10n.authRegForSon,
+        'Daughter' => l10n.authRegForDaughter,
+        'Brother' => l10n.authRegForBrother,
+        'Sister' => l10n.authRegForSister,
+        'Relative' => l10n.profileForRelative,
+        'Friend' => l10n.authRegForFriend,
+        _ => v,
+      };
+
+  String _relationSubtitle(AppLocalizations l10n, String v) => switch (v) {
+        'Myself' => l10n.profileForMyselfSub,
+        'Son' => l10n.profileForSonSub,
+        'Daughter' => l10n.profileForDaughterSub,
+        'Brother' => l10n.profileForBrotherSub,
+        'Sister' => l10n.profileForSisterSub,
+        'Relative' => l10n.profileForRelativeSub,
+        'Friend' => l10n.profileForFriendSub,
+        _ => v,
+      };
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -45,14 +70,14 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
             children: [
               const SizedBox(height: 20),
               Text(
-                'Who are you\ncreating this\nprofile for?',
+                l10n.registrationProfileForTitle,
                 style: AppTypography.headlineLarge.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Select the relationship',
+                l10n.registrationProfileForSubtitle,
                 style: AppTypography.bodyMedium.copyWith(
                   color: isDark
                       ? AppColors.textSecondaryDark
@@ -70,6 +95,8 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
                     final isSelected = _selected == opt.label;
                     return _ProfileForCard(
                       option: opt,
+                      label: _relationLabel(l10n, opt.label),
+                      subtitle: _relationSubtitle(l10n, opt.label),
                       isSelected: isSelected,
                       isDark: isDark,
                       onTap: () => setState(() => _selected = opt.label),
@@ -79,7 +106,7 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
               ),
               const SizedBox(height: 16),
               NmGradientButton(
-                label: 'Continue',
+                label: l10n.commonContinue,
                 icon: Icons.arrow_forward_rounded,
                 onPressed: () {
                   ref
@@ -99,12 +126,16 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
 
 class _ProfileForCard extends StatelessWidget {
   final _ProfileForOption option;
+  final String label;
+  final String subtitle;
   final bool isSelected;
   final bool isDark;
   final VoidCallback onTap;
 
   const _ProfileForCard({
     required this.option,
+    required this.label,
+    required this.subtitle,
     required this.isSelected,
     required this.isDark,
     required this.onTap,
@@ -148,7 +179,7 @@ class _ProfileForCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    option.label,
+                    label,
                     style: AppTypography.titleMedium.copyWith(
                       fontWeight:
                           isSelected ? FontWeight.w700 : FontWeight.w600,
@@ -157,7 +188,7 @@ class _ProfileForCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    option.subtitle,
+                    subtitle,
                     style: AppTypography.bodySmall.copyWith(
                       color: isDark
                           ? AppColors.textTertiaryDark

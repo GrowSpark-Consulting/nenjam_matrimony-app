@@ -14,6 +14,7 @@ import '../../../../core/widgets/inputs/password_field.dart';
 import '../../../../core/widgets/inputs/phone_field.dart';
 import '../../../../core/widgets/layout/curved_header.dart';
 import '../../../../core/widgets/layout/or_divider.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../registration/presentation/providers/registration_provider.dart';
 import '../providers/create_account_provider.dart';
 
@@ -99,7 +100,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
   void _onCreateAccount() {
     if (!(_signUpFormKey.currentState?.validate() ?? false)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter valid 10-digit mobile number and details')),
+        SnackBar(content: Text(AppLocalizations.of(context).authErrorValidMobile)),
       );
       return;
     }
@@ -200,9 +201,10 @@ class _LoginHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const NmCurvedHeader(
-      title: 'Nenjam Matrimony',
-      subtitle: 'Welcome Back',
+    final l10n = AppLocalizations.of(context);
+    return NmCurvedHeader(
+      title: l10n.appName,
+      subtitle: l10n.authWelcomeBack,
       badgeIcon: Icons.favorite_rounded,
     );
   }
@@ -213,10 +215,11 @@ class _SignUpHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const NmCurvedHeader(
-      title: 'Create Account',
-      subtitle: "Join Nenjam Matrimony's Elite Community",
-      badgeChild: Text(
+    final l10n = AppLocalizations.of(context);
+    return NmCurvedHeader(
+      title: l10n.authCreateAccount,
+      subtitle: l10n.authJoinCommunity,
+      badgeChild: const Text(
         '∞',
         style: TextStyle(
           color: Colors.white,
@@ -306,9 +309,9 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
               dividerColor: Colors.transparent,
               splashFactory: NoSplash.splashFactory,
               overlayColor: WidgetStateProperty.all(Colors.transparent),
-              tabs: const [
-                Tab(text: 'Login'),
-                Tab(text: 'Sign Up'),
+              tabs: [
+                Tab(text: AppLocalizations.of(context).authLogin),
+                Tab(text: AppLocalizations.of(context).authSignUp),
               ],
             ),
           ),
@@ -399,6 +402,7 @@ class _LoginFormState extends State<_LoginForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isMobile = _channel == 'Mobile';
 
     return Form(
@@ -428,7 +432,7 @@ class _LoginFormState extends State<_LoginForm> {
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          'Mobile',
+                          l10n.authChannelMobile,
                           style: AppTypography.labelMedium.copyWith(
                             color: isMobile ? Colors.white : AppColors.textSecondaryLight,
                             fontWeight: FontWeight.w600,
@@ -448,7 +452,7 @@ class _LoginFormState extends State<_LoginForm> {
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          'Email',
+                          l10n.authChannelEmail,
                           style: AppTypography.labelMedium.copyWith(
                             color: !isMobile ? Colors.white : AppColors.textSecondaryLight,
                             fontWeight: FontWeight.w600,
@@ -463,14 +467,14 @@ class _LoginFormState extends State<_LoginForm> {
             const SizedBox(height: 20),
 
             if (isMobile) ...[
-              Text('Phone Number', style: AppTypography.labelLarge),
+              Text(l10n.authPhoneNumber, style: AppTypography.labelLarge),
               const SizedBox(height: 8),
               NmPhoneNumberField(
                 controller: widget.phoneCtrl,
                 validator: Validators.phone,
               ),
             ] else ...[
-              Text('Email Address', style: AppTypography.labelLarge),
+              Text(l10n.authEmailAddress, style: AppTypography.labelLarge),
               const SizedBox(height: 8),
               NmTextField(
                 controller: widget.emailCtrl,
@@ -483,7 +487,7 @@ class _LoginFormState extends State<_LoginForm> {
 
             NmPasswordField(
               controller: widget.passwordCtrl,
-              label: 'Password',
+              label: l10n.authPassword,
               hint: '••••••••',
             ),
             const SizedBox(height: 10),
@@ -493,7 +497,7 @@ class _LoginFormState extends State<_LoginForm> {
               child: GestureDetector(
                 onTap: () {},
                 child: Text(
-                  'Forgot Password?',
+                  l10n.authForgotPassword,
                   style: AppTypography.labelMedium.copyWith(
                     color: AppColors.accentGold,
                     fontWeight: FontWeight.w600,
@@ -504,15 +508,15 @@ class _LoginFormState extends State<_LoginForm> {
             const SizedBox(height: 24),
 
             NmPrimaryButton(
-              label: 'Login with OTP',
+              label: l10n.authLoginWithOtp,
               isLoading: widget.isLoading,
               onPressed: () => widget.onSendOtp(_channel),
             ),
 
-            const NmOrDivider(label: 'or continue with'),
+            NmOrDivider(label: l10n.authOrContinueWith),
 
             NmSocialButton(
-              label: 'Sign in with Google',
+              label: l10n.authSignInWithGoogle,
               onPressed: () => context.go(RouteNames.home),
             ),
             const SizedBox(height: 24),
@@ -522,7 +526,7 @@ class _LoginFormState extends State<_LoginForm> {
                 alignment: WrapAlignment.center,
                 children: [
                   Text(
-                    'New here? ',
+                    l10n.authNewHere,
                     style: AppTypography.bodyMedium.copyWith(
                       color: AppColors.textSecondaryLight,
                     ),
@@ -530,7 +534,7 @@ class _LoginFormState extends State<_LoginForm> {
                   GestureDetector(
                     onTap: widget.onSignUpTap,
                     child: Text(
-                      'Create Account',
+                      l10n.authCreateAccount,
                       style: AppTypography.bodyMedium.copyWith(
                         color: AppColors.accentGold,
                         fontWeight: FontWeight.w700,
@@ -577,8 +581,30 @@ class _SignUpForm extends ConsumerWidget {
     'Friend',
   ];
 
+  /// Maps a stored registering-for value to its localized display label.
+  /// The value passed to the provider stays English (backend-facing).
+  String _registeringForLabel(AppLocalizations l10n, String value) {
+    switch (value) {
+      case 'Myself':
+        return l10n.authRegForMyself;
+      case 'Son':
+        return l10n.authRegForSon;
+      case 'Daughter':
+        return l10n.authRegForDaughter;
+      case 'Brother':
+        return l10n.authRegForBrother;
+      case 'Sister':
+        return l10n.authRegForSister;
+      case 'Friend':
+        return l10n.authRegForFriend;
+      default:
+        return value;
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final state = ref.watch(createAccountProvider);
     final notifier = ref.read(createAccountProvider.notifier);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -593,7 +619,7 @@ class _SignUpForm extends ConsumerWidget {
           children: [
             // ─── Mobile Number ──────────────────────────────────
             Text(
-              'Mobile Number',
+              l10n.authMobileNumber,
               style: AppTypography.labelSmall.copyWith(
                 color: labelColor,
                 fontWeight: FontWeight.w600,
@@ -620,7 +646,7 @@ class _SignUpForm extends ConsumerWidget {
 
             // ─── Email Address ──────────────────────────────────
             Text(
-              'Email Address',
+              l10n.authEmailAddress,
               style: AppTypography.labelSmall.copyWith(
                 color: labelColor,
                 fontWeight: FontWeight.w600,
@@ -647,13 +673,13 @@ class _SignUpForm extends ConsumerWidget {
 
           // ─── OTP Input Section (Responsive Cards) ───────────
           _OtpSection(
-            title: 'Enter Mobile OTP',
+            title: l10n.authEnterMobileOtp,
             onCompleted: notifier.setMobileOtp,
             onChanged: notifier.setMobileOtp,
           ),
           const SizedBox(height: 14),
           _OtpSection(
-            title: 'Enter Email OTP',
+            title: l10n.authEnterEmailOtp,
             onCompleted: notifier.setEmailOtp,
             onChanged: notifier.setEmailOtp,
           ),
@@ -661,7 +687,7 @@ class _SignUpForm extends ConsumerWidget {
 
           // ─── Password ───────────────────────────────────────
           Text(
-            'Password',
+            l10n.authPassword,
             style: AppTypography.labelSmall.copyWith(
               color: labelColor,
               fontWeight: FontWeight.w600,
@@ -676,7 +702,7 @@ class _SignUpForm extends ConsumerWidget {
 
           // ─── Registering For ────────────────────────────────
           Text(
-            'Registering for',
+            l10n.authRegisteringForLabel,
             style: AppTypography.labelSmall.copyWith(
               color: labelColor,
               fontWeight: FontWeight.w600,
@@ -689,7 +715,7 @@ class _SignUpForm extends ConsumerWidget {
             children: _registeringForOptions.map((option) {
               final isSelected = state.registeringFor == option;
               return _RegisterChip(
-                label: option,
+                label: _registeringForLabel(l10n, option),
                 isSelected: isSelected,
                 onTap: () => notifier.setRegisteringFor(option),
               );
@@ -699,7 +725,7 @@ class _SignUpForm extends ConsumerWidget {
 
           // ─── Create Account Button ──────────────────────────
           _PrimaryButton(
-            label: 'Create Account',
+            label: l10n.authCreateAccount,
             isLoading: state.isLoading,
             onPressed: onCreateAccount,
           ),
@@ -711,13 +737,13 @@ class _SignUpForm extends ConsumerWidget {
               alignment: WrapAlignment.center,
               children: [
                 Text(
-                  'Already have an account? ',
+                  l10n.authAlreadyHaveAccount,
                   style: AppTypography.bodyMedium.copyWith(color: labelColor),
                 ),
                 GestureDetector(
                   onTap: onLoginTap,
                   child: Text(
-                    'Login',
+                    l10n.authLogin,
                     style: AppTypography.bodyMedium.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w700,
@@ -761,6 +787,7 @@ class _StitchPhoneInputState extends State<_StitchPhoneInput> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor =
         isDark ? AppColors.surfaceVariantDark : const Color(0xFFF5F3EE);
@@ -843,7 +870,7 @@ class _StitchPhoneInputState extends State<_StitchPhoneInput> {
                   vertical: 16,
                 ),
                 child: Text(
-                  widget.isSent ? 'Sent ✓' : 'Send OTP',
+                  widget.isSent ? '${l10n.authSentStatus} ✓' : l10n.authSendOtp,
                   style: AppTypography.labelMedium.copyWith(
                     color: widget.isSent ? AppColors.success : AppColors.accentGold,
                     fontWeight: FontWeight.w700,
@@ -874,6 +901,7 @@ class _StitchEmailInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor =
         isDark ? AppColors.surfaceVariantDark : const Color(0xFFF5F3EE);
@@ -925,7 +953,7 @@ class _StitchEmailInput extends StatelessWidget {
                   vertical: 16,
                 ),
                 child: Text(
-                  isSent ? 'Sent ✓' : 'Send OTP',
+                  isSent ? '${l10n.authSentStatus} ✓' : l10n.authSendOtp,
                   style: AppTypography.labelMedium.copyWith(
                     color: isSent ? AppColors.success : AppColors.accentGold,
                     fontWeight: FontWeight.w700,
@@ -1117,7 +1145,7 @@ class _OtpSectionState extends State<_OtpSection> {
           LayoutBuilder(
             builder: (context, constraints) {
               const gap = 6.0;
-              final totalGap = gap * (_length - 1);
+              const totalGap = gap * (_length - 1);
               final availableWidth = constraints.maxWidth - totalGap;
               final cellWidth = (availableWidth / _length).clamp(30.0, 48.0);
               final cellHeight = (cellWidth * 1.15).clamp(40.0, 56.0);
@@ -1283,20 +1311,18 @@ class _TrustBadges extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 16,
+        runSpacing: 8,
         children: [
-          _TrustItem(icon: Icons.shield_outlined, label: 'SECURE'),
-          SizedBox(width: 4),
-          _TrustDot(),
-          SizedBox(width: 4),
-          _TrustItem(icon: Icons.lock_outline_rounded, label: 'PRIVATE'),
-          SizedBox(width: 4),
-          _TrustDot(),
-          SizedBox(width: 4),
-          _TrustItem(icon: Icons.verified_outlined, label: 'VERIFIED'),
+          _TrustItem(icon: Icons.shield_outlined, label: l10n.authTrustSecure),
+          _TrustItem(icon: Icons.lock_outline_rounded, label: l10n.authTrustPrivate),
+          _TrustItem(icon: Icons.verified_outlined, label: l10n.authTrustVerified),
         ],
       ),
     );
@@ -1328,27 +1354,6 @@ class _TrustItem extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _TrustDot extends StatelessWidget {
-  const _TrustDot();
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = isDark
-        ? AppColors.textSecondaryDark.withValues(alpha: 0.5)
-        : AppColors.textSecondaryLight.withValues(alpha: 0.5);
-
-    return Container(
-      width: 3,
-      height: 3,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-      ),
     );
   }
 }

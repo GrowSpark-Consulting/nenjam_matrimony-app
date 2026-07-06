@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
@@ -37,6 +38,7 @@ class NmProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
@@ -163,7 +165,7 @@ class NmProfileCard extends StatelessWidget {
                     _ActionIcon(
                       icon: Icons.bookmark_border_rounded,
                       onTap: onShortlistTap!,
-                      tooltip: 'Shortlist',
+                      tooltip: l10n.profileCardShortlist,
                     ),
                   if (onLikeTap != null) ...[
                     const SizedBox(width: 4),
@@ -171,7 +173,7 @@ class NmProfileCard extends StatelessWidget {
                       icon: Icons.favorite_border_rounded,
                       onTap: onLikeTap!,
                       color: AppColors.liked,
-                      tooltip: 'Like',
+                      tooltip: l10n.profileCardLike,
                     ),
                   ],
                 ],

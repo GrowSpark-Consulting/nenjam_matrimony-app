@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 
 /// Step 9 — Horoscope Details
@@ -65,19 +66,48 @@ class _StepHoroscopeState extends State<StepHoroscope> {
     }
   }
 
-  Widget _chipSection(String title, List<String> opts, String selected, void Function(String) onSelect) {
+  /// Chip section with an optional value->label mapper (values stay English).
+  Widget _chipSection(String title, List<String> opts, String selected,
+      void Function(String) onSelect,
+      {String Function(String)? labelOf}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: AppTypography.labelLarge),
         const SizedBox(height: 8),
-        Wrap(spacing: 8, runSpacing: 8, children: opts.map((o) { final sel = selected == o; return ChoiceChip(label: Text(o, style: const TextStyle(fontSize: 13)), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { onSelect(o); _emit(); }); }).toList()),
+        Wrap(spacing: 8, runSpacing: 8, children: opts.map((o) { final sel = selected == o; return ChoiceChip(label: Text(labelOf?.call(o) ?? o, style: const TextStyle(fontSize: 13)), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { onSelect(o); _emit(); }); }).toList()),
       ],
     );
   }
 
+  String _rashiLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Mesha' => l10n.rashiMesha,
+        'Vrishabha' => l10n.rashiVrishabha,
+        'Mithuna' => l10n.rashiMithuna,
+        'Kataka' => l10n.rashiKataka,
+        'Simha' => l10n.rashiSimha,
+        'Kanya' => l10n.rashiKanya,
+        'Tula' => l10n.rashiTula,
+        'Vrischika' => l10n.rashiVrischika,
+        'Dhanu' => l10n.rashiDhanu,
+        'Makara' => l10n.rashiMakara,
+        'Kumbha' => l10n.rashiKumbha,
+        'Meena' => l10n.rashiMeena,
+        'Don\'t Know' => l10n.commonDontKnow,
+        _ => v,
+      };
+
+  /// Yes / No / Don't Know for Manglik and Dosham.
+  String _ynLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Yes' => l10n.commonYes,
+        'No' => l10n.commonNo,
+        'Don\'t Know' => l10n.commonDontKnow,
+        _ => v,
+      };
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
@@ -85,13 +115,13 @@ class _StepHoroscopeState extends State<StepHoroscope> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Horoscope', style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
+          Text(l10n.registrationHoroscopeTitle, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text('Astrological information (optional)', style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationHoroscopeSubtitle, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
           const SizedBox(height: 24),
           Row(
             children: [
-              Expanded(child: Text('Horoscope Available?', style: AppTypography.bodyLarge)),
+              Expanded(child: Text(l10n.registrationHoroscopeAvailable, style: AppTypography.bodyLarge)),
               Switch.adaptive(value: _horoscopeAvailable, onChanged: (v) { setState(() => _horoscopeAvailable = v); _emit(); }, activeThumbColor: AppColors.primary),
             ],
           ),
@@ -99,21 +129,23 @@ class _StepHoroscopeState extends State<StepHoroscope> {
           GestureDetector(
             onTap: _pickTime,
             child: AbsorbPointer(
-              child: NmTextField(label: 'Birth Time', hint: 'Tap to select', controller: _birthTimeCtrl, readOnly: true, suffix: const Icon(Icons.access_time_rounded, size: 20)),
+              child: NmTextField(label: l10n.registrationBirthTimeLabel, hint: l10n.registrationBirthTimeHint, controller: _birthTimeCtrl, readOnly: true, suffix: const Icon(Icons.access_time_rounded, size: 20)),
             ),
           ),
           const SizedBox(height: 16),
-          NmTextField(label: 'Birth Place', hint: 'e.g., Chennai', controller: _birthPlaceCtrl, onChanged: (_) => _emit()),
+          NmTextField(label: l10n.registrationBirthPlaceLabel, hint: l10n.registrationBirthPlaceHint, controller: _birthPlaceCtrl, onChanged: (_) => _emit()),
           const SizedBox(height: 20),
-          _chipSection('Rashi (Moon Sign)', _rashis, _rashi, (v) => setState(() => _rashi = v)),
+          _chipSection(l10n.registrationRashiLabel, _rashis, _rashi, (v) => setState(() => _rashi = v), labelOf: (v) => _rashiLabel(l10n, v)),
           const SizedBox(height: 20),
-          _chipSection('Nakshatra', _nakshatras, _nakshatra, (v) => setState(() => _nakshatra = v)),
+          // Nakshatra & Star names are specialized astrological proper nouns;
+          // kept in their existing form pending a native astrology review.
+          _chipSection(l10n.registrationNakshatraLabel, _nakshatras, _nakshatra, (v) => setState(() => _nakshatra = v)),
           const SizedBox(height: 20),
-          _chipSection('Star', _stars, _star, (v) => setState(() => _star = v)),
+          _chipSection(l10n.registrationStarLabel, _stars, _star, (v) => setState(() => _star = v)),
           const SizedBox(height: 20),
-          _chipSection('Manglik / Sevvai', _manglikOpts, _manglik, (v) => setState(() => _manglik = v)),
+          _chipSection(l10n.registrationManglikLabel, _manglikOpts, _manglik, (v) => setState(() => _manglik = v), labelOf: (v) => _ynLabel(l10n, v)),
           const SizedBox(height: 20),
-          _chipSection('Dosham', _doshamOpts, _dosham, (v) => setState(() => _dosham = v)),
+          _chipSection(l10n.registrationDoshamLabel, _doshamOpts, _dosham, (v) => setState(() => _dosham = v), labelOf: (v) => _ynLabel(l10n, v)),
           const SizedBox(height: 32),
         ],
       ),

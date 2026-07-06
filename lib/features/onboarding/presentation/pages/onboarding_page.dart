@@ -1,13 +1,23 @@
+import 'dart:math' as math;
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/router/route_names.dart';
+import '../../../../core/services/storage_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
+import '../../../../l10n/app_localizations.dart';
 
-/// Onboarding page with swipeable slides.
+/// Onboarding page with 3 swipeable slides matching the Stitch MCP design.
+///
+/// Flow: Language → Onboarding (AI → Verified → Astro) → Auth Selection.
+/// Back button from slide 1 returns to Language.
+/// Persists `onboarding_completed` via [StorageService].
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
 
@@ -15,155 +25,796 @@ class OnboardingPage extends StatefulWidget {
   State<OnboardingPage> createState() => _OnboardingPageState();
 }
 
-class _OnboardingPageState extends State<OnboardingPage> {
+class _OnboardingPageState extends State<OnboardingPage>
+    with TickerProviderStateMixin {
   final _controller = PageController();
   int _currentPage = 0;
 
-  static const _slides = [
-    _OnboardingSlide(
-      icon: Icons.workspace_premium_rounded,
-      title: 'Find Your Forever',
-      description:
-          'Experience a luxury matrimonial journey curated exclusively for discerning individuals seeking lifelong companionship.',
-    ),
-    _OnboardingSlide(
-      icon: Icons.auto_awesome_rounded,
-      title: 'AI Smart Matchmaking',
-      description:
-          'Our proprietary artificial intelligence evaluates personality, lifestyle, values, and astrological compatibility deeply.',
-    ),
-    _OnboardingSlide(
-      icon: Icons.verified_user_rounded,
-      title: 'Verified Profiles',
-      description:
-          'Every member undergoes strict government ID and biometric face verification to ensure supreme trust and authenticity.',
-    ),
-  ];
+  late final AnimationController _floatController;
+  late final AnimationController _entryController;
+  late final Animation<double> _entryFade;
+  late final Animation<Offset> _entrySlide;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Floating badge animation (infinite loop)
+    _floatController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
+
+    // Entry animation
+    _entryController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _entryFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _entryController, curve: Curves.easeOut),
+    );
+
+    _entrySlide = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic),
+    );
+
+    _entryController.forward();
+  }
 
   @override
   void dispose() {
     _controller.dispose();
+    _floatController.dispose();
+    _entryController.dispose();
     super.dispose();
+  }
+
+  void _onSkip() {
+    storageService.setOnboardingDone();
+    context.go(RouteNames.authSelection);
+  }
+
+  void _onNext() {
+    if (_currentPage < 2) {
+      _controller.nextPage(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      storageService.setOnboardingDone();
+      context.go(RouteNames.authSelection);
+    }
+  }
+
+  void _onBack() {
+    if (_currentPage > 0) {
+      _controller.previousPage(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      context.go(RouteNames.language);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              // Skip
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => context.go(RouteNames.createProfileFor),
-                  child: Text(
-                    'Skip',
-                    style: AppTypography.labelLarge.copyWith(
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _onBack();
+      },
+      child: Scaffold(
+        backgroundColor:
+            isDark ? AppColors.surfaceDark : AppColors.backgroundLight,
+        body: SafeArea(
+          child: FadeTransition(
+            opacity: _entryFade,
+            child: SlideTransition(
+              position: _entrySlide,
+              child: Column(
+                children: [
+                  // ─── Top Bar ────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
-                  ),
-                ),
-              ),
-
-              // Pages
-              Expanded(
-                child: PageView.builder(
-                  controller: _controller,
-                  onPageChanged: (i) => setState(() => _currentPage = i),
-                  itemCount: _slides.length,
-                  itemBuilder: (context, index) {
-                    final slide = _slides[index];
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            gradient: AppGradients.primary,
-                            borderRadius: BorderRadius.circular(32),
-                          ),
-                          child: Icon(
-                            slide.icon,
-                            size: 56,
-                            color: AppColors.accentGold,
+                        // Back button
+                        IconButton(
+                          onPressed: _onBack,
+                          icon: Icon(
+                            Icons.arrow_back_rounded,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.primary,
                           ),
                         ),
-                        const SizedBox(height: 48),
+                        // App name
                         Text(
-                          slide.title,
-                          style: AppTypography.headlineMedium.copyWith(
+                          AppConstants.appName,
+                          style: AppTypography.titleLarge.copyWith(
                             fontWeight: FontWeight.w700,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.primary,
                           ),
-                          textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                        // Skip button
+                        TextButton(
+                          onPressed: _onSkip,
                           child: Text(
-                            slide.description,
-                            style: AppTypography.bodyLarge.copyWith(
+                            l10n.onboardingSkip,
+                            style: AppTypography.labelLarge.copyWith(
                               color: isDark
                                   ? AppColors.textSecondaryDark
                                   : AppColors.textSecondaryLight,
-                              height: 1.6,
                             ),
-                            textAlign: TextAlign.center,
                           ),
                         ),
                       ],
-                    );
-                  },
-                ),
-              ),
+                    ),
+                  ),
 
-              // Dots
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  _slides.length,
-                  (i) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: i == _currentPage ? 32 : 8,
-                    height: 8,
+                  // ─── Page Indicators (bar style) ───────────────
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(3, (i) {
+                        final isActive = i == _currentPage;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          width: isActive ? 32 : 20,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? AppColors.accentGold
+                                : (isDark
+                                    ? AppColors.surfaceVariantDark
+                                    : AppColors.dividerLight),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ─── PageView ──────────────────────────────────
+                  Expanded(
+                    child: PageView(
+                      controller: _controller,
+                      onPageChanged: (i) =>
+                          setState(() => _currentPage = i),
+                      children: [
+                        _AiMatchmakingSlide(
+                          l10n: l10n,
+                          isDark: isDark,
+                          floatController: _floatController,
+                        ),
+                        _VerifiedProfilesSlide(
+                          l10n: l10n,
+                          isDark: isDark,
+                          floatController: _floatController,
+                        ),
+                        _AstroCompatibilitySlide(
+                          l10n: l10n,
+                          isDark: isDark,
+                          floatController: _floatController,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ─── Bottom CTA ────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                    child: NmGradientButton(
+                      label: _currentPage == 2
+                          ? l10n.onboardingGetStarted
+                          : l10n.onboardingNext,
+                      icon: Icons.arrow_forward_rounded,
+                      onPressed: _onNext,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 1 — AI Matchmaking
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _AiMatchmakingSlide extends StatelessWidget {
+  final AppLocalizations l10n;
+  final bool isDark;
+  final AnimationController floatController;
+
+  const _AiMatchmakingSlide({
+    required this.l10n,
+    required this.isDark,
+    required this.floatController,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        children: [
+          const SizedBox(height: 24),
+
+          // Hero visual container
+          SizedBox(
+            height: 280,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Background glow blobs
+                Positioned(
+                  top: 20,
+                  left: 0,
+                  child: Container(
+                    width: 160,
+                    height: 160,
                     decoration: BoxDecoration(
-                      color: i == _currentPage
-                          ? AppColors.primary
-                          : (isDark
-                              ? AppColors.surfaceVariantDark
-                              : AppColors.dividerLight),
-                      borderRadius: BorderRadius.circular(4),
+                      shape: BoxShape.circle,
+                      color: AppColors.accentGoldSurface
+                          .withValues(alpha: isDark ? 0.15 : 0.4),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 32),
+                Positioned(
+                  bottom: 10,
+                  right: 0,
+                  child: Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.primarySurface
+                          .withValues(alpha: isDark ? 0.15 : 0.3),
+                    ),
+                  ),
+                ),
 
-              // CTA Button
-              NmGradientButton(
-                label: _currentPage == _slides.length - 1
-                    ? 'Get Started'
-                    : 'Next',
-                onPressed: () {
-                  if (_currentPage == _slides.length - 1) {
-                    context.go(RouteNames.createProfileFor);
-                  } else {
-                    _controller.nextPage(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeOutCubic,
+                // Main glassmorphic hero card
+                Container(
+                  width: 220,
+                  height: 220,
+                  decoration: BoxDecoration(
+                    gradient: AppGradients.primary,
+                    borderRadius: BorderRadius.circular(40),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.25),
+                        blurRadius: 40,
+                        offset: const Offset(0, 16),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 80,
+                    color: AppColors.accentGold,
+                  ),
+                ),
+
+                // Floating badge
+                AnimatedBuilder(
+                  animation: floatController,
+                  builder: (context, child) {
+                    final offset = math.sin(floatController.value * math.pi) * 10;
+                    return Positioned(
+                      bottom: 30,
+                      right: 20,
+                      child: Transform.translate(
+                        offset: Offset(0, offset),
+                        child: child,
+                      ),
                     );
-                  }
-                },
+                  },
+                  child: _GlassBadge(
+                    isDark: isDark,
+                    icon: Icons.auto_awesome,
+                    iconColor: AppColors.accentGold,
+                    label: l10n.onboardingAiBadge,
+                    subtitle: l10n.onboardingAiBadgeSub,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 40),
+
+          // Title
+          Text(
+            l10n.onboardingAiTitle,
+            style: AppTypography.headlineLarge.copyWith(
+              fontWeight: FontWeight.w700,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.primary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+
+          // Description
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              l10n.onboardingAiDescription,
+              style: AppTypography.bodyMedium.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+                height: 1.6,
               ),
-              const SizedBox(height: 16),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 2 — Verified Profiles
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _VerifiedProfilesSlide extends StatelessWidget {
+  final AppLocalizations l10n;
+  final bool isDark;
+  final AnimationController floatController;
+
+  const _VerifiedProfilesSlide({
+    required this.l10n,
+    required this.isDark,
+    required this.floatController,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        children: [
+          const SizedBox(height: 24),
+
+          // Hero visual — Shield
+          SizedBox(
+            height: 280,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Background glow
+                Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.accentGoldSurface
+                        .withValues(alpha: isDark ? 0.2 : 0.5),
+                  ),
+                ),
+
+                // Shield container with glassmorphism
+                Container(
+                  width: 180,
+                  height: 180,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isDark
+                        ? AppColors.cardDark.withValues(alpha: 0.6)
+                        : Colors.white.withValues(alpha: 0.6),
+                    border: Border.all(
+                      color: AppColors.accentGold.withValues(alpha: 0.2),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.accentGold.withValues(alpha: 0.15),
+                        blurRadius: 50,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.verified_user_rounded,
+                    size: 80,
+                    color: AppColors.accentGold,
+                  ),
+                ),
+
+                // Floating check badge (top-right)
+                AnimatedBuilder(
+                  animation: floatController,
+                  builder: (context, child) {
+                    final offset =
+                        math.sin(floatController.value * math.pi) * 8;
+                    return Positioned(
+                      top: 20,
+                      right: 40,
+                      child: Transform.translate(
+                        offset: Offset(0, offset),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: _GlassChip(
+                    isDark: isDark,
+                    icon: Icons.check_circle,
+                    iconColor: AppColors.success,
+                  ),
+                ),
+
+                // Floating secure badge (bottom-left)
+                AnimatedBuilder(
+                  animation: floatController,
+                  builder: (context, child) {
+                    final offset =
+                        math.cos(floatController.value * math.pi) * 8;
+                    return Positioned(
+                      bottom: 30,
+                      left: 30,
+                      child: Transform.translate(
+                        offset: Offset(0, offset),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: _GlassBadge(
+                    isDark: isDark,
+                    icon: Icons.lock_rounded,
+                    iconColor: AppColors.primary,
+                    label: l10n.onboardingVerifiedBadge,
+                    iconSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 40),
+
+          // Title
+          Text(
+            l10n.onboardingVerifiedTitle,
+            style: AppTypography.headlineLarge.copyWith(
+              fontWeight: FontWeight.w700,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.primary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+
+          // Description
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              l10n.onboardingVerifiedDescription,
+              style: AppTypography.bodyMedium.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+                height: 1.6,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 3 — Astro Compatibility
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _AstroCompatibilitySlide extends StatelessWidget {
+  final AppLocalizations l10n;
+  final bool isDark;
+  final AnimationController floatController;
+
+  const _AstroCompatibilitySlide({
+    required this.l10n,
+    required this.isDark,
+    required this.floatController,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        children: [
+          const SizedBox(height: 24),
+
+          // Hero visual — Astro mandala
+          SizedBox(
+            height: 280,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Rotating mandala background
+                AnimatedBuilder(
+                  animation: floatController,
+                  builder: (context, child) {
+                    return Transform.rotate(
+                      angle: floatController.value * math.pi * 0.1,
+                      child: child,
+                    );
+                  },
+                  child: Container(
+                    width: 260,
+                    height: 260,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.accentGold.withValues(alpha: 0.1),
+                        width: 1,
+                      ),
+                    ),
+                    child: Container(
+                      margin: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color:
+                              AppColors.accentGold.withValues(alpha: 0.15),
+                          width: 1,
+                        ),
+                      ),
+                      child: Container(
+                        margin: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color:
+                                AppColors.accentGold.withValues(alpha: 0.2),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Central focal point
+                Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isDark
+                        ? AppColors.cardDark.withValues(alpha: 0.7)
+                        : Colors.white.withValues(alpha: 0.7),
+                    border: Border.all(
+                      color: AppColors.accentGold.withValues(alpha: 0.2),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.05),
+                        blurRadius: 30,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome,
+                        size: 36,
+                        color: AppColors.accentGold,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        l10n.onboardingAstroSync,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.accentGold,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Floating Guna badge (top-left)
+                AnimatedBuilder(
+                  animation: floatController,
+                  builder: (context, child) {
+                    final offset =
+                        math.sin(floatController.value * math.pi) * 6;
+                    return Positioned(
+                      top: 40,
+                      left: 10,
+                      child: Transform.translate(
+                        offset: Offset(0, offset),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: _GlassPill(
+                    isDark: isDark,
+                    icon: Icons.stars_rounded,
+                    label: l10n.onboardingAstroBadgeGuna,
+                  ),
+                ),
+
+                // Floating Kundli badge (bottom-right)
+                AnimatedBuilder(
+                  animation: floatController,
+                  builder: (context, child) {
+                    final offset =
+                        math.cos(floatController.value * math.pi) * 6;
+                    return Positioned(
+                      bottom: 40,
+                      right: 10,
+                      child: Transform.translate(
+                        offset: Offset(0, offset),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: _GlassPill(
+                    isDark: isDark,
+                    icon: Icons.balance_rounded,
+                    label: l10n.onboardingAstroBadgeKundli,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 40),
+
+          // Title with gold highlight
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: l10n.onboardingAstroTitle,
+                  style: AppTypography.headlineLarge.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+
+          // Description
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              l10n.onboardingAstroDescription,
+              style: AppTypography.bodyMedium.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+                height: 1.6,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared Glassmorphic Widgets
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Glassmorphic badge with icon, label, and optional subtitle.
+class _GlassBadge extends StatelessWidget {
+  final bool isDark;
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String? subtitle;
+  final double iconSize;
+
+  const _GlassBadge({
+    required this.isDark,
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    this.subtitle,
+    this.iconSize = 24,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.white.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : AppColors.primary.withValues(alpha: 0.1),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: iconSize, color: iconColor),
+              const SizedBox(width: 8),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: AppTypography.labelMedium.copyWith(
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle!,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
         ),
@@ -172,13 +823,107 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 }
 
-class _OnboardingSlide {
+/// Small glassmorphic chip with just an icon.
+class _GlassChip extends StatelessWidget {
+  final bool isDark;
   final IconData icon;
-  final String title;
-  final String description;
-  const _OnboardingSlide({
+  final Color iconColor;
+
+  const _GlassChip({
+    required this.isDark,
     required this.icon,
-    required this.title,
-    required this.description,
+    required this.iconColor,
   });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.white.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : AppColors.primary.withValues(alpha: 0.1),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Icon(icon, size: 22, color: iconColor),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pill-shaped glassmorphic badge with icon and text.
+class _GlassPill extends StatelessWidget {
+  final bool isDark;
+  final IconData icon;
+  final String label;
+
+  const _GlassPill({
+    required this.isDark,
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.white.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : AppColors.primary.withValues(alpha: 0.1),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: AppColors.accentGold),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: AppTypography.labelMedium.copyWith(
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

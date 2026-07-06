@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 
 /// Step 1 — Basic Information
@@ -90,8 +91,25 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
     return years;
   }
 
+  /// Localized display label for a stored gender value (value stays English).
+  String _genderLabel(AppLocalizations l10n, String value) => switch (value) {
+        'Male' => l10n.genderMale,
+        'Female' => l10n.genderFemale,
+        _ => value,
+      };
+
+  /// Localized display label for a stored marital-status value.
+  String _maritalLabel(AppLocalizations l10n, String value) => switch (value) {
+        'Never Married' => l10n.maritalNeverMarried,
+        'Divorced' => l10n.maritalDivorced,
+        'Widowed' => l10n.maritalWidowed,
+        'Awaiting Divorce' => l10n.maritalAwaitingDivorce,
+        _ => value,
+      };
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
@@ -99,42 +117,43 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Basic Information',
+          Text(l10n.registrationBasicInfoTitle,
               style: AppTypography.headlineSmall
                   .copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text('Tell us about yourself',
+          Text(l10n.registrationBasicInfoSubtitle,
               style: AppTypography.bodyMedium.copyWith(
                   color: isDark
                       ? AppColors.textSecondaryDark
                       : AppColors.textSecondaryLight)),
           const SizedBox(height: 24),
           NmTextField(
-            label: 'First Name',
-            hint: 'Enter first name',
+            label: l10n.registrationFirstNameLabel,
+            hint: l10n.registrationFirstNameHint,
             controller: _firstNameCtrl,
             validator: Validators.name,
             onChanged: (_) => _emit(),
           ),
           const SizedBox(height: 16),
           NmTextField(
-            label: 'Last Name',
-            hint: 'Enter last name',
+            label: l10n.registrationLastNameLabel,
+            hint: l10n.registrationLastNameHint,
             controller: _lastNameCtrl,
             validator: Validators.name,
             onChanged: (_) => _emit(),
           ),
           const SizedBox(height: 20),
-          Text('Gender', style: AppTypography.labelLarge),
+          Text(l10n.registrationGenderLabel, style: AppTypography.labelLarge),
           const SizedBox(height: 8),
           Row(
+            // Values stay English (stored/emitted); only the label is localized.
             children: ['Male', 'Female'].map((g) {
               final sel = _gender == g;
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: ChoiceChip(
-                    label: Center(child: Text(g)),
+                    label: Center(child: Text(_genderLabel(l10n, g))),
                     selected: sel,
                     selectedColor: AppColors.primarySurface,
                     onSelected: (_) {
@@ -151,8 +170,8 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
             onTap: _pickDob,
             child: AbsorbPointer(
               child: NmTextField(
-                label: 'Date of Birth',
-                hint: 'DD / MM / YYYY',
+                label: l10n.registrationDobLabel,
+                hint: l10n.registrationDobHint,
                 readOnly: true,
                 controller: TextEditingController(
                   text: _dob != null
@@ -161,22 +180,24 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
                 ),
                 suffix: const Icon(Icons.calendar_today_rounded, size: 20),
                 validator: (v) =>
-                    _dob == null ? 'Please select date of birth' : null,
+                    _dob == null ? l10n.registrationDobError : null,
               ),
             ),
           ),
           if (_age != null) ...[
             const SizedBox(height: 8),
-            Text('Age: $_age years',
+            Text(l10n.registrationAgeYears(_age!),
                 style: AppTypography.labelMedium.copyWith(
                     color: AppColors.primary, fontWeight: FontWeight.w600)),
           ],
           const SizedBox(height: 20),
-          Text('Marital Status', style: AppTypography.labelLarge),
+          Text(l10n.registrationMaritalStatusLabel,
+              style: AppTypography.labelLarge),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
+            // Values stay English (stored/emitted); only the label is localized.
             children: [
               'Never Married',
               'Divorced',
@@ -185,7 +206,7 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
             ].map((s) {
               final sel = _maritalStatus == s;
               return ChoiceChip(
-                label: Text(s),
+                label: Text(_maritalLabel(l10n, s)),
                 selected: sel,
                 selectedColor: AppColors.primarySurface,
                 onSelected: (_) {

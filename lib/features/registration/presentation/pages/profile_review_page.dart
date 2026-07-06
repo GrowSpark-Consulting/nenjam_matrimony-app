@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../providers/registration_provider.dart';
 
 /// Summary review screen displaying all 12 wizard sections before entering Home.
@@ -18,6 +19,7 @@ class ProfileReviewPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final draft = ref.watch(registrationProvider);
     final notifier = ref.read(registrationProvider.notifier);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -30,7 +32,7 @@ class ProfileReviewPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Review Your Profile'),
+        title: Text(l10n.registrationReviewTitle),
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
@@ -60,7 +62,7 @@ class ProfileReviewPage extends ConsumerWidget {
                     const SizedBox(height: 24),
 
                     Text(
-                      'Profile Summary',
+                      l10n.registrationProfileSummary,
                       style: AppTypography.headlineSmall
                           .copyWith(fontWeight: FontWeight.w700),
                     ),
@@ -68,7 +70,7 @@ class ProfileReviewPage extends ConsumerWidget {
 
                     // ─── Step 1: Basic Details ────────────────────
                     _ReviewSection(
-                      title: 'Basic Details',
+                      title: l10n.profileBasicDetailsTitle,
                       icon: Icons.person_rounded,
                       stepIndex: 0,
                       isDark: isDark,
@@ -92,7 +94,7 @@ class ProfileReviewPage extends ConsumerWidget {
 
                     // ─── Step 2: Religion ─────────────────────────
                     _ReviewSection(
-                      title: 'Religion & Community',
+                      title: l10n.registrationReligionTitle,
                       icon: Icons.temple_hindu_rounded,
                       stepIndex: 1,
                       isDark: isDark,
@@ -109,7 +111,7 @@ class ProfileReviewPage extends ConsumerWidget {
 
                     // ─── Step 3: Languages ────────────────────────
                     _ReviewSection(
-                      title: 'Languages',
+                      title: l10n.registrationLanguagesTitle,
                       icon: Icons.translate_rounded,
                       stepIndex: 2,
                       isDark: isDark,
@@ -125,7 +127,7 @@ class ProfileReviewPage extends ConsumerWidget {
 
                     // ─── Step 4: Location ─────────────────────────
                     _ReviewSection(
-                      title: 'Location',
+                      title: l10n.registrationLocationTitle,
                       icon: Icons.location_on_rounded,
                       stepIndex: 3,
                       isDark: isDark,
@@ -143,7 +145,7 @@ class ProfileReviewPage extends ConsumerWidget {
 
                     // ─── Step 5: Education ────────────────────────
                     _ReviewSection(
-                      title: 'Education & Career',
+                      title: l10n.registrationEducationTitle,
                       icon: Icons.school_rounded,
                       stepIndex: 4,
                       isDark: isDark,
@@ -163,7 +165,7 @@ class ProfileReviewPage extends ConsumerWidget {
 
                     // ─── Step 6: Physical ─────────────────────────
                     _ReviewSection(
-                      title: 'Physical Details',
+                      title: l10n.registrationPhysicalTitle,
                       icon: Icons.accessibility_new_rounded,
                       stepIndex: 5,
                       isDark: isDark,
@@ -181,7 +183,7 @@ class ProfileReviewPage extends ConsumerWidget {
 
                     // ─── Step 7: Lifestyle ────────────────────────
                     _ReviewSection(
-                      title: 'Lifestyle',
+                      title: l10n.registrationLifestyleTitle,
                       icon: Icons.favorite_rounded,
                       stepIndex: 6,
                       isDark: isDark,
@@ -200,7 +202,7 @@ class ProfileReviewPage extends ConsumerWidget {
 
                     // ─── Step 8: Family ───────────────────────────
                     _ReviewSection(
-                      title: 'Family Details',
+                      title: l10n.registrationFamilyTitle,
                       icon: Icons.family_restroom_rounded,
                       stepIndex: 7,
                       isDark: isDark,
@@ -222,7 +224,7 @@ class ProfileReviewPage extends ConsumerWidget {
 
                     // ─── Step 9: Horoscope ────────────────────────
                     _ReviewSection(
-                      title: 'Horoscope',
+                      title: l10n.registrationHoroscopeTitle,
                       icon: Icons.stars_rounded,
                       stepIndex: 8,
                       isDark: isDark,
@@ -241,7 +243,7 @@ class ProfileReviewPage extends ConsumerWidget {
 
                     // ─── Step 10: Partner Preferences ─────────────
                     _ReviewSection(
-                      title: 'Partner Preferences',
+                      title: l10n.registrationPartnerTitle,
                       icon: Icons.handshake_rounded,
                       stepIndex: 9,
                       isDark: isDark,
@@ -264,7 +266,7 @@ class ProfileReviewPage extends ConsumerWidget {
 
                     // ─── Step 11: Photos ──────────────────────────
                     _ReviewSection(
-                      title: 'Photos',
+                      title: l10n.registrationPhotosTitle,
                       icon: Icons.photo_library_rounded,
                       stepIndex: 10,
                       isDark: isDark,
@@ -282,7 +284,7 @@ class ProfileReviewPage extends ConsumerWidget {
 
                     // ─── Step 12: Verification ────────────────────
                     _ReviewSection(
-                      title: 'Verification',
+                      title: l10n.registrationStepVerification,
                       icon: Icons.verified_rounded,
                       stepIndex: 11,
                       isDark: isDark,
@@ -322,7 +324,7 @@ class ProfileReviewPage extends ConsumerWidget {
                 ],
               ),
               child: NmGradientButton(
-                label: 'Enter Nenjam Matrimony',
+                label: l10n.registrationEnterApp,
                 useGoldGradient: true,
                 icon: Icons.favorite_rounded,
                 onPressed: () => context.go(RouteNames.home),
@@ -387,7 +389,7 @@ class _ReviewSection extends StatelessWidget {
               TextButton.icon(
                 onPressed: onEdit,
                 icon: const Icon(Icons.edit_rounded, size: 14),
-                label: const Text('Edit'),
+                label: Text(AppLocalizations.of(context).registrationEditButton),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.primary,
                   visualDensity: VisualDensity.compact,
@@ -431,7 +433,7 @@ class _ReviewSection extends StatelessWidget {
               ),
           if (items.every((it) => it.value.trim().isEmpty))
             Text(
-              'No information added yet.',
+              AppLocalizations.of(context).registrationNoInfoYet,
               style: AppTypography.bodySmall.copyWith(
                 color: isDark
                     ? AppColors.textTertiaryDark
@@ -453,6 +455,7 @@ class _CompletionBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: AppDecorations.premiumCard,
@@ -474,7 +477,7 @@ class _CompletionBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Profile $completion% Complete',
+                  l10n.registrationProfileCompletePct(completion),
                   style: AppTypography.titleLarge.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
@@ -483,8 +486,8 @@ class _CompletionBanner extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   completion >= 80
-                      ? 'Excellent! Your profile is ready to find matches.'
-                      : 'Complete more sections to attract better matches.',
+                      ? l10n.registrationCompleteExcellent
+                      : l10n.registrationCompleteMore,
                   style: AppTypography.bodySmall.copyWith(
                     color: Colors.white.withValues(alpha: 0.8),
                   ),

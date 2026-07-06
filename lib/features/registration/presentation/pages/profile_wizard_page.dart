@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/buttons/outlined_button.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 import '../providers/registration_provider.dart';
 import '../widgets/step_basic_info.dart';
@@ -31,20 +32,21 @@ class ProfileWizardPage extends ConsumerStatefulWidget {
 }
 
 class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
-  static const _stepTitles = [
-    'Basic Info',
-    'Religion',
-    'Language',
-    'Location',
-    'Education',
-    'Physical',
-    'Lifestyle',
-    'Family',
-    'Horoscope',
-    'Preferences',
-    'Photos',
-    'Verification',
-  ];
+  /// Localized step titles, index-aligned with [_buildStepContent].
+  List<String> _stepTitles(AppLocalizations l10n) => [
+        l10n.registrationStepBasicInfo,
+        l10n.registrationStepReligion,
+        l10n.registrationStepLanguage,
+        l10n.registrationStepLocation,
+        l10n.registrationStepEducation,
+        l10n.registrationStepPhysical,
+        l10n.registrationStepLifestyle,
+        l10n.registrationStepFamily,
+        l10n.registrationStepHoroscope,
+        l10n.registrationStepPreferences,
+        l10n.registrationStepPhotos,
+        l10n.registrationStepVerification,
+      ];
 
   void _onNext() {
     final draft = ref.read(registrationProvider);
@@ -66,6 +68,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final draft = ref.watch(registrationProvider);
     final notifier = ref.read(registrationProvider.notifier);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -75,14 +78,15 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       appBar: AppBar(
         leading: BackButton(onPressed: _onBack),
         title: Text(
-          'Step ${stepIndex + 1} of ${ProfileDraft.totalSteps}',
+          l10n.registrationStepIndicator(
+              stepIndex + 1, ProfileDraft.totalSteps),
           style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
         ),
         actions: [
           TextButton(
             onPressed: () => context.push(RouteNames.login),
             child: Text(
-              'Save & Exit',
+              l10n.registrationSaveExit,
               style: AppTypography.labelLarge.copyWith(color: AppColors.primary),
             ),
           ),
@@ -109,11 +113,12 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    _stepTitles[stepIndex],
+                    _stepTitles(l10n)[stepIndex],
                     style: AppTypography.titleSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
                   ),
                   Text(
-                    '${draft.completionPercentage.toInt()}% Completed',
+                    l10n.registrationPercentCompleted(
+                        draft.completionPercentage.toInt()),
                     style: AppTypography.labelSmall.copyWith(fontWeight: FontWeight.w600),
                   ),
                 ],
@@ -148,7 +153,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                     Expanded(
                       flex: 1,
                       child: NmOutlinedButton(
-                        label: 'Back',
+                        label: l10n.registrationBack,
                         onPressed: _onBack,
                       ),
                     ),
@@ -157,7 +162,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                   Expanded(
                     flex: 2,
                     child: NmGradientButton(
-                      label: stepIndex == ProfileDraft.totalSteps - 1 ? 'Finish & Login' : 'Continue',
+                      label: stepIndex == ProfileDraft.totalSteps - 1 ? l10n.registrationFinishLogin : l10n.commonContinue,
                       icon: stepIndex == ProfileDraft.totalSteps - 1 ? Icons.check_rounded : Icons.arrow_forward_rounded,
                       onPressed: _onNext,
                     ),

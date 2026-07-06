@@ -1,26 +1,33 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_gradients.dart';
 import '../../theme/app_typography.dart';
 
 /// Premium banner card for upgrade CTA.
+///
+/// String props are optional; when null, localized defaults are used.
 class NmPremiumBanner extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String actionLabel;
+  final String? title;
+  final String? subtitle;
+  final String? actionLabel;
   final VoidCallback? onTap;
 
   const NmPremiumBanner({
     super.key,
-    this.title = 'Upgrade to Premium',
-    this.subtitle = 'Get unlimited access to profiles & AI matching',
-    this.actionLabel = 'Explore Plans',
+    this.title,
+    this.subtitle,
+    this.actionLabel,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final title = this.title ?? l10n.premiumBannerTitle;
+    final subtitle = this.subtitle ?? l10n.premiumBannerSubtitle;
+    final actionLabel = this.actionLabel ?? l10n.premiumBannerCta;
     return GestureDetector(
       onTap: onTap,
       child: Container(

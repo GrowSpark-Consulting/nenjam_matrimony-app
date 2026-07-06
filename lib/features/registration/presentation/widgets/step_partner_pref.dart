@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 
 /// Step 10 — Partner Preferences
@@ -57,19 +58,84 @@ class _StepPartnerPrefState extends State<StepPartnerPref> {
     widget.onChanged(PartnerPreference(preferredAgeRange: _ageRange, preferredHeightRange: _heightRange, religionPref: _religionPref, castePref: _castePref, educationPref: _educationPref, occupationPref: _occupationPref, incomePref: _incomePref, locationPref: _locationPref, motherTonguePref: _motherTonguePref, maritalStatusPref: _maritalStatusPref));
   }
 
-  Widget _section(String title, List<String> opts, String selected, void Function(String) onSelect) {
+  /// Chip section with an optional value->label mapper (values stay English).
+  Widget _section(String title, List<String> opts, String selected,
+      void Function(String) onSelect,
+      {String Function(String)? labelOf}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: AppTypography.labelLarge),
         const SizedBox(height: 8),
-        Wrap(spacing: 8, runSpacing: 8, children: opts.map((o) { final sel = selected == o; return ChoiceChip(label: Text(o), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { onSelect(o); _emit(); }); }).toList()),
+        Wrap(spacing: 8, runSpacing: 8, children: opts.map((o) { final sel = selected == o; return ChoiceChip(label: Text(labelOf?.call(o) ?? o), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { onSelect(o); _emit(); }); }).toList()),
       ],
     );
   }
 
+  String _religionLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Hindu' => l10n.religionHindu,
+        'Christian' => l10n.religionChristian,
+        'Muslim' => l10n.religionMuslim,
+        'Jain' => l10n.religionJain,
+        'Sikh' => l10n.religionSikh,
+        'Any' => l10n.commonAny,
+        _ => v,
+      };
+
+  String _casteLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Same Caste' => l10n.prefCasteSame,
+        'Any Caste' => l10n.prefCasteAny,
+        'Inter-Caste OK' => l10n.prefCasteInter,
+        _ => v,
+      };
+
+  String _educationLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Any Degree' => l10n.prefEduAnyDegree,
+        'Any' => l10n.commonAny,
+        _ => v, // degree acronyms stay English
+      };
+
+  String _occupationLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Software / IT' => l10n.prefOccSoftwareIt,
+        'Doctor' => l10n.occDoctor,
+        'Government' => l10n.empGovernment,
+        'Business' => l10n.empBusiness,
+        'Any' => l10n.commonAny,
+        _ => v,
+      };
+
+  String _locationLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Same City' => l10n.prefLocSameCity,
+        'Same State' => l10n.prefLocSameState,
+        'Anywhere in India' => l10n.prefLocAnywhereIndia,
+        'NRI OK' => l10n.prefLocNri,
+        'Any' => l10n.commonAny,
+        _ => v,
+      };
+
+  String _tongueLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Same Mother Tongue' => l10n.prefTongueSame,
+        'Tamil' => l10n.langTamil,
+        'Telugu' => l10n.langTelugu,
+        'Hindi' => l10n.langHindi,
+        'Any' => l10n.commonAny,
+        _ => v,
+      };
+
+  String _maritalLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Never Married' => l10n.maritalNeverMarried,
+        'Doesn\'t Matter' => l10n.prefMaritalDoesntMatter,
+        'Any' => l10n.commonAny,
+        _ => v,
+      };
+
+  /// 'Any' -> localized, numeric ranges kept as-is.
+  String _anyOrSelf(AppLocalizations l10n, String v) =>
+      v == 'Any' ? l10n.commonAny : v;
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
@@ -77,29 +143,30 @@ class _StepPartnerPrefState extends State<StepPartnerPref> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Partner Preferences', style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
+          Text(l10n.registrationPartnerTitle, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text('What are you looking for in a partner?', style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationPartnerSubtitle, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
           const SizedBox(height: 24),
-          _section('Preferred Age Range', _ageRanges, _ageRange, (v) => setState(() => _ageRange = v)),
+          // Numeric age/height/income ranges kept as-is (only 'Any' localized).
+          _section(l10n.registrationPrefAgeLabel, _ageRanges, _ageRange, (v) => setState(() => _ageRange = v), labelOf: (v) => _anyOrSelf(l10n, v)),
           const SizedBox(height: 20),
-          _section('Preferred Height', _heightRanges, _heightRange, (v) => setState(() => _heightRange = v)),
+          _section(l10n.registrationPrefHeightLabel, _heightRanges, _heightRange, (v) => setState(() => _heightRange = v), labelOf: (v) => _anyOrSelf(l10n, v)),
           const SizedBox(height: 20),
-          _section('Religion', _religions, _religionPref, (v) => setState(() => _religionPref = v)),
+          _section(l10n.registrationPrefReligionLabel, _religions, _religionPref, (v) => setState(() => _religionPref = v), labelOf: (v) => _religionLabel(l10n, v)),
           const SizedBox(height: 20),
-          _section('Caste', _castes, _castePref, (v) => setState(() => _castePref = v)),
+          _section(l10n.registrationPrefCasteLabel, _castes, _castePref, (v) => setState(() => _castePref = v), labelOf: (v) => _casteLabel(l10n, v)),
           const SizedBox(height: 20),
-          _section('Education', _educations, _educationPref, (v) => setState(() => _educationPref = v)),
+          _section(l10n.registrationPrefEducationLabel, _educations, _educationPref, (v) => setState(() => _educationPref = v), labelOf: (v) => _educationLabel(l10n, v)),
           const SizedBox(height: 20),
-          _section('Occupation', _occupations, _occupationPref, (v) => setState(() => _occupationPref = v)),
+          _section(l10n.registrationPrefOccupationLabel, _occupations, _occupationPref, (v) => setState(() => _occupationPref = v), labelOf: (v) => _occupationLabel(l10n, v)),
           const SizedBox(height: 20),
-          _section('Annual Income', _incomes, _incomePref, (v) => setState(() => _incomePref = v)),
+          _section(l10n.registrationPrefIncomeLabel, _incomes, _incomePref, (v) => setState(() => _incomePref = v), labelOf: (v) => _anyOrSelf(l10n, v)),
           const SizedBox(height: 20),
-          _section('Location', _locations, _locationPref, (v) => setState(() => _locationPref = v)),
+          _section(l10n.registrationPrefLocationLabel, _locations, _locationPref, (v) => setState(() => _locationPref = v), labelOf: (v) => _locationLabel(l10n, v)),
           const SizedBox(height: 20),
-          _section('Mother Tongue', _tongues, _motherTonguePref, (v) => setState(() => _motherTonguePref = v)),
+          _section(l10n.registrationPrefMotherTongueLabel, _tongues, _motherTonguePref, (v) => setState(() => _motherTonguePref = v), labelOf: (v) => _tongueLabel(l10n, v)),
           const SizedBox(height: 20),
-          _section('Marital Status', _maritalStatuses, _maritalStatusPref, (v) => setState(() => _maritalStatusPref = v)),
+          _section(l10n.registrationPrefMaritalLabel, _maritalStatuses, _maritalStatusPref, (v) => setState(() => _maritalStatusPref = v), labelOf: (v) => _maritalLabel(l10n, v)),
           const SizedBox(height: 32),
         ],
       ),

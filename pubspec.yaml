@@ -55,6 +55,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  # Enable code generation for localization (flutter gen-l10n)
+  generate: true
+
   assets:
     - .env.dev
     - .env.qa

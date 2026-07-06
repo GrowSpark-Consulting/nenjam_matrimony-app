@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 
 /// Step 2 — Religion Details
@@ -58,8 +59,22 @@ class _StepReligionState extends State<StepReligion> {
     ));
   }
 
+  /// Localized display label for a stored religion value (value stays English).
+  String _religionLabel(AppLocalizations l10n, String value) => switch (value) {
+        'Hindu' => l10n.religionHindu,
+        'Christian' => l10n.religionChristian,
+        'Muslim' => l10n.religionMuslim,
+        'Jain' => l10n.religionJain,
+        'Sikh' => l10n.religionSikh,
+        'Buddhist' => l10n.religionBuddhist,
+        'Inter-Religion' => l10n.religionInterReligion,
+        'Other' => l10n.religionOther,
+        _ => value,
+      };
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
@@ -67,30 +82,31 @@ class _StepReligionState extends State<StepReligion> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Religion & Community', style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
+          Text(l10n.registrationReligionTitle, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text('Your religious background', style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationReligionSubtitle, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
           const SizedBox(height: 24),
-          Text('Religion', style: AppTypography.labelLarge),
+          Text(l10n.registrationReligionLabel, style: AppTypography.labelLarge),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
+            // Values stay English (stored/emitted); only the label is localized.
             children: _religions.map((r) {
               final sel = _religion == r;
-              return ChoiceChip(label: Text(r), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _religion = r); _emit(); });
+              return ChoiceChip(label: Text(_religionLabel(l10n, r)), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _religion = r); _emit(); });
             }).toList(),
           ),
           const SizedBox(height: 20),
-          NmTextField(label: 'Caste', hint: 'e.g., Iyer, Iyengar, Mudaliar', controller: _casteCtrl, onChanged: (_) => _emit()),
+          NmTextField(label: l10n.registrationCasteLabel, hint: l10n.registrationCasteHint, controller: _casteCtrl, onChanged: (_) => _emit()),
           const SizedBox(height: 16),
-          NmTextField(label: 'Sub Caste (Optional)', hint: 'Enter sub caste', controller: _subCasteCtrl, onChanged: (_) => _emit()),
+          NmTextField(label: l10n.registrationSubCasteLabel, hint: l10n.registrationSubCasteHint, controller: _subCasteCtrl, onChanged: (_) => _emit()),
           const SizedBox(height: 16),
-          NmTextField(label: 'Gothra (Optional)', hint: 'Enter gothra', controller: _gothraCtrl, onChanged: (_) => _emit()),
+          NmTextField(label: l10n.registrationGothraLabel, hint: l10n.registrationGothraHint, controller: _gothraCtrl, onChanged: (_) => _emit()),
           const SizedBox(height: 16),
-          NmTextField(label: 'Denomination (Optional)', hint: 'Enter denomination', controller: _denominationCtrl, onChanged: (_) => _emit()),
+          NmTextField(label: l10n.registrationDenominationLabel, hint: l10n.registrationDenominationHint, controller: _denominationCtrl, onChanged: (_) => _emit()),
           const SizedBox(height: 16),
-          NmTextField(label: 'Community', hint: 'e.g., Tamil, Telugu, Kannada', controller: _communityCtrl, onChanged: (_) => _emit()),
+          NmTextField(label: l10n.registrationCommunityLabel, hint: l10n.registrationCommunityHint, controller: _communityCtrl, onChanged: (_) => _emit()),
           const SizedBox(height: 32),
         ],
       ),

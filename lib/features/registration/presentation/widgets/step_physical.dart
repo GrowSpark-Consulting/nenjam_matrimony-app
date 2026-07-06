@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 
 /// Step 6 — Physical Details
@@ -45,19 +46,49 @@ class _StepPhysicalState extends State<StepPhysical> {
     widget.onChanged(PhysicalDetails(height: _height, weight: _weight, bodyType: _bodyType, complexion: _complexion, bloodGroup: _bloodGroup, disability: _disability));
   }
 
-  Widget _buildChipSection(String title, List<String> options, String selected, void Function(String) onSelect) {
+  /// Chip section with an optional value->label mapper (values stay English).
+  Widget _buildChipSection(String title, List<String> options, String selected,
+      void Function(String) onSelect,
+      {String Function(String)? labelOf}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: AppTypography.labelLarge),
         const SizedBox(height: 8),
-        Wrap(spacing: 8, runSpacing: 8, children: options.map((o) { final sel = selected == o; return ChoiceChip(label: Text(o), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { onSelect(o); _emit(); }); }).toList()),
+        Wrap(spacing: 8, runSpacing: 8, children: options.map((o) { final sel = selected == o; return ChoiceChip(label: Text(labelOf?.call(o) ?? o), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { onSelect(o); _emit(); }); }).toList()),
       ],
     );
   }
 
+  String _bodyTypeLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Slim' => l10n.bodySlim,
+        'Average' => l10n.bodyAverage,
+        'Athletic' => l10n.bodyAthletic,
+        'Heavy' => l10n.bodyHeavy,
+        _ => v,
+      };
+
+  String _complexionLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Very Fair' => l10n.complexionVeryFair,
+        'Fair' => l10n.complexionFair,
+        'Wheatish' => l10n.complexionWheatish,
+        'Dark' => l10n.complexionDark,
+        _ => v,
+      };
+
+  String _disabilityLabel(AppLocalizations l10n, String v) => switch (v) {
+        'None' => l10n.disabilityNone,
+        'Physical' => l10n.disabilityPhysical,
+        'Hearing' => l10n.disabilityHearing,
+        'Visual' => l10n.disabilityVisual,
+        'Speech' => l10n.disabilitySpeech,
+        'Other' => l10n.disabilityOther,
+        _ => v,
+      };
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
@@ -65,21 +96,22 @@ class _StepPhysicalState extends State<StepPhysical> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Physical Details', style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
+          Text(l10n.registrationPhysicalTitle, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text('Describe your appearance', style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationPhysicalSubtitle, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
           const SizedBox(height: 24),
-          _buildChipSection('Height', _heights, _height, (v) => setState(() => _height = v)),
+          // Height/weight/blood group use universal notation (kept as-is).
+          _buildChipSection(l10n.registrationHeightLabel, _heights, _height, (v) => setState(() => _height = v)),
           const SizedBox(height: 20),
-          _buildChipSection('Weight', _weights, _weight, (v) => setState(() => _weight = v)),
+          _buildChipSection(l10n.registrationWeightLabel, _weights, _weight, (v) => setState(() => _weight = v)),
           const SizedBox(height: 20),
-          _buildChipSection('Body Type', _bodyTypes, _bodyType, (v) => setState(() => _bodyType = v)),
+          _buildChipSection(l10n.registrationBodyTypeLabel, _bodyTypes, _bodyType, (v) => setState(() => _bodyType = v), labelOf: (v) => _bodyTypeLabel(l10n, v)),
           const SizedBox(height: 20),
-          _buildChipSection('Complexion', _complexions, _complexion, (v) => setState(() => _complexion = v)),
+          _buildChipSection(l10n.registrationComplexionLabel, _complexions, _complexion, (v) => setState(() => _complexion = v), labelOf: (v) => _complexionLabel(l10n, v)),
           const SizedBox(height: 20),
-          _buildChipSection('Blood Group', _bloodGroups, _bloodGroup, (v) => setState(() => _bloodGroup = v)),
+          _buildChipSection(l10n.registrationBloodGroupLabel, _bloodGroups, _bloodGroup, (v) => setState(() => _bloodGroup = v)),
           const SizedBox(height: 20),
-          _buildChipSection('Disability', _disabilities, _disability, (v) => setState(() => _disability = v)),
+          _buildChipSection(l10n.registrationDisabilityLabel, _disabilities, _disability, (v) => setState(() => _disability = v), labelOf: (v) => _disabilityLabel(l10n, v)),
           const SizedBox(height: 32),
         ],
       ),

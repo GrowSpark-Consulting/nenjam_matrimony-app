@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/cards/match_card.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Matches tab displaying AI curated matches, shortlists, and mutual likes.
 class MatchesPage extends StatelessWidget {
@@ -8,16 +9,17 @@ class MatchesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('My Matches'),
-          bottom: const TabBar(
+          title: Text(l10n.matchesTitle),
+          bottom: TabBar(
             tabs: [
-              Tab(text: 'New (24)'),
-              Tab(text: 'Shortlisted'),
-              Tab(text: 'Mutual'),
+              Tab(text: l10n.matchesTabNew('24')),
+              Tab(text: l10n.matchesTabShortlisted),
+              Tab(text: l10n.matchesTabMutual),
             ],
           ),
         ),
@@ -40,10 +42,10 @@ class MatchesPage extends StatelessWidget {
               ),
 
               // Shortlisted Tab
-              const Center(child: Text('Shortlisted Profiles')),
+              Center(child: Text(l10n.matchesShortlistedEmpty)),
 
               // Mutual Likes Tab
-              const Center(child: Text('Mutual Likes')),
+              Center(child: Text(l10n.matchesMutualEmpty)),
             ],
           ),
         ),

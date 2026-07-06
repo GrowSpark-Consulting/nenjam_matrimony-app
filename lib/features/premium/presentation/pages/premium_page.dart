@@ -7,6 +7,7 @@ import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/cards/subscription_card.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Premium plans showcase page.
 class PremiumPage extends StatelessWidget {
@@ -14,8 +15,9 @@ class PremiumPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Upgrade to Luxury Premium')),
+      appBar: AppBar(title: Text(l10n.premiumTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -33,7 +35,7 @@ class PremiumPage extends StatelessWidget {
                         size: 48, color: AppColors.accentGold),
                     const SizedBox(height: 16),
                     Text(
-                      'Unlock Unlimited Matches',
+                      l10n.premiumHeroTitle,
                       style: AppTypography.headlineSmall.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
@@ -42,7 +44,7 @@ class PremiumPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Get access to verified contacts, AI matchmaking & horoscope details.',
+                      l10n.premiumHeroSubtitle,
                       style: AppTypography.bodyMedium.copyWith(
                         color: Colors.white70,
                       ),
@@ -83,7 +85,7 @@ class PremiumPage extends StatelessWidget {
 
               // Proceed CTA
               NmGradientButton(
-                label: 'Proceed to Payment',
+                label: l10n.premiumProceedToPayment,
                 useGoldGradient: true,
                 onPressed: () => context.push(RouteNames.subscription),
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
@@ -7,19 +8,23 @@ import '../../theme/app_typography.dart';
 /// Profile completion progress card.
 class NmProfileCompletionCard extends StatelessWidget {
   final int percentage;
-  final String nextStep;
+
+  /// Next step copy. When null, a localized default is shown.
+  final String? nextStep;
   final VoidCallback? onTap;
 
   const NmProfileCompletionCard({
     super.key,
     required this.percentage,
-    this.nextStep = 'Add profile photo',
+    this.nextStep,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final step = nextStep ?? l10n.homeStepAddPhoto;
 
     return GestureDetector(
       onTap: onTap,
@@ -34,7 +39,7 @@ class NmProfileCompletionCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Complete Your Profile',
+                  l10n.homeCompleteProfileTitle,
                   style: AppTypography.titleSmall.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -74,7 +79,7 @@ class NmProfileCompletionCard extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'Next: $nextStep',
+                    l10n.homeProfileNextStep(step),
                     style: AppTypography.bodySmall.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w500,

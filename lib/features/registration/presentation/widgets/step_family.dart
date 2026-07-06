@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 
 /// Step 8 — Family Details
@@ -91,8 +92,30 @@ class _StepFamilyState extends State<StepFamily> {
     );
   }
 
+  String _familyTypeLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Joint Family' => l10n.famJoint,
+        'Nuclear Family' => l10n.famNuclear,
+        _ => v,
+      };
+
+  String _familyValuesLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Traditional' => l10n.famTraditional,
+        'Moderate' => l10n.famModerate,
+        'Liberal' => l10n.famLiberal,
+        _ => v,
+      };
+
+  String _familyStatusLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Middle Class' => l10n.famMiddleClass,
+        'Upper Middle Class' => l10n.famUpperMiddleClass,
+        'Rich' => l10n.famRich,
+        'Affluent' => l10n.famAffluent,
+        _ => v,
+      };
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
@@ -100,32 +123,32 @@ class _StepFamilyState extends State<StepFamily> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Family Details', style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
+          Text(l10n.registrationFamilyTitle, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text('Tell us about your family', style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationFamilySubtitle, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
           const SizedBox(height: 24),
-          NmTextField(label: 'Father\'s Name (Optional)', hint: 'Enter father\'s name', controller: _fatherNameCtrl, onChanged: (_) => _emit(), inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z\s'-]"))]),
+          NmTextField(label: l10n.registrationFatherNameLabel, hint: l10n.registrationFatherNameHint, controller: _fatherNameCtrl, onChanged: (_) => _emit(), inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z\s'-]"))]),
           const SizedBox(height: 16),
-          NmTextField(label: 'Father\'s Occupation (Optional)', hint: 'e.g., Retired Government Officer', controller: _fatherOccCtrl, onChanged: (_) => _emit()),
+          NmTextField(label: l10n.registrationFatherOccLabel, hint: l10n.registrationFatherOccHint, controller: _fatherOccCtrl, onChanged: (_) => _emit()),
           const SizedBox(height: 16),
-          NmTextField(label: 'Mother\'s Name (Optional)', hint: 'Enter mother\'s name', controller: _motherNameCtrl, onChanged: (_) => _emit(), inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z\s'-]"))]),
+          NmTextField(label: l10n.registrationMotherNameLabel, hint: l10n.registrationMotherNameHint, controller: _motherNameCtrl, onChanged: (_) => _emit(), inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z\s'-]"))]),
           const SizedBox(height: 16),
-          NmTextField(label: 'Mother\'s Occupation (Optional)', hint: 'e.g., Homemaker', controller: _motherOccCtrl, onChanged: (_) => _emit()),
+          NmTextField(label: l10n.registrationMotherOccLabel, hint: l10n.registrationMotherOccHint, controller: _motherOccCtrl, onChanged: (_) => _emit()),
           const SizedBox(height: 20),
-          Text('Family Type', style: AppTypography.labelLarge),
+          Text(l10n.registrationFamilyTypeLabel, style: AppTypography.labelLarge),
           const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: _familyTypes.map((t) { final sel = _familyType == t; return ChoiceChip(label: Text(t), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _familyType = t); _emit(); }); }).toList()),
+          Wrap(spacing: 8, runSpacing: 8, children: _familyTypes.map((t) { final sel = _familyType == t; return ChoiceChip(label: Text(_familyTypeLabel(l10n, t)), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _familyType = t); _emit(); }); }).toList()),
           const SizedBox(height: 20),
-          Text('Family Values', style: AppTypography.labelLarge),
+          Text(l10n.registrationFamilyValuesLabel, style: AppTypography.labelLarge),
           const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: _familyValuesList.map((v) { final sel = _familyValues == v; return ChoiceChip(label: Text(v), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _familyValues = v); _emit(); }); }).toList()),
+          Wrap(spacing: 8, runSpacing: 8, children: _familyValuesList.map((v) { final sel = _familyValues == v; return ChoiceChip(label: Text(_familyValuesLabel(l10n, v)), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _familyValues = v); _emit(); }); }).toList()),
           const SizedBox(height: 20),
-          Text('Family Status', style: AppTypography.labelLarge),
+          Text(l10n.registrationFamilyStatusLabel, style: AppTypography.labelLarge),
           const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: _familyStatuses.map((s) { final sel = _familyStatus == s; return ChoiceChip(label: Text(s), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _familyStatus = s); _emit(); }); }).toList()),
+          Wrap(spacing: 8, runSpacing: 8, children: _familyStatuses.map((s) { final sel = _familyStatus == s; return ChoiceChip(label: Text(_familyStatusLabel(l10n, s)), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _familyStatus = s); _emit(); }); }).toList()),
           const SizedBox(height: 20),
-          _counterRow('No. of Brothers', _brothers, (v) => setState(() => _brothers = v)),
-          _counterRow('No. of Sisters', _sisters, (v) => setState(() => _sisters = v)),
+          _counterRow(l10n.registrationBrothersLabel, _brothers, (v) => setState(() => _brothers = v)),
+          _counterRow(l10n.registrationSistersLabel, _sisters, (v) => setState(() => _sisters = v)),
           const SizedBox(height: 32),
         ],
       ),

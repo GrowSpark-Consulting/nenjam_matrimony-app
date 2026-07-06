@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Trust & Verification center screen.
 class VerificationPage extends StatelessWidget {
@@ -10,55 +12,63 @@ class VerificationPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Get Verified')),
+      appBar: AppBar(
+        leading: BackButton(onPressed: () => context.pop()),
+        title: Text(l10n.registrationVerificationTitle),
+      ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Center(
-                child: Icon(Icons.verified_rounded,
-                    size: 72, color: AppColors.verified),
-              ),
-              const SizedBox(height: 24),
-              Center(
-                child: Text(
-                  'Build Trust with a\nVerified Badge',
-                  style: AppTypography.headlineSmall.copyWith(
-                    fontWeight: FontWeight.w700,
+        child: Center(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Center(
+                  child: Icon(Icons.verified_rounded,
+                      size: 72, color: AppColors.verified),
+                ),
+                const SizedBox(height: 24),
+                Center(
+                  child: Text(
+                    l10n.registrationVerificationSubtitle,
+                    style: AppTypography.headlineSmall.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 12),
-              Center(
-                child: Text(
-                  'Verified profiles get 3x more match requests and higher visibility.',
-                  style: AppTypography.bodyMedium,
-                  textAlign: TextAlign.center,
+                const SizedBox(height: 12),
+                Center(
+                  child: Text(
+                    l10n.registrationPrivacySubtitle,
+                    style: AppTypography.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 40),
-              const _VerifyStep(
-                icon: Icons.badge_outlined,
-                title: 'Government ID Proof',
-                subtitle: 'Aadhaar, PAN, Passport, or Driving License',
-              ),
-              const SizedBox(height: 20),
-              const _VerifyStep(
-                icon: Icons.camera_front_outlined,
-                title: 'Live Selfie Check',
-                subtitle: 'Take a live selfie to match your ID photo',
-              ),
-              const Spacer(),
-              NmPrimaryButton(
-                label: 'Start Verification',
-                onPressed: () => Navigator.pop(context),
-              ),
-              const SizedBox(height: 16),
-            ],
+                const SizedBox(height: 36),
+                _VerifyStep(
+                  icon: Icons.badge_outlined,
+                  title: l10n.registrationVerifyIdTitle,
+                  subtitle: l10n.registrationVerifyIdSubtitle,
+                ),
+                const SizedBox(height: 20),
+                _VerifyStep(
+                  icon: Icons.camera_front_outlined,
+                  title: l10n.registrationVerifyFaceTitle,
+                  subtitle: l10n.registrationVerifyFaceSubtitle,
+                ),
+                const SizedBox(height: 36),
+                NmPrimaryButton(
+                  label: l10n.registrationVerifyButton,
+                  onPressed: () => context.pop(),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       ),

@@ -38,8 +38,19 @@ class StorageService {
   }
 
   // ─── Language ────────────────────────────────────────────────────
-  String get language =>
-      _prefs.getString(AppConstants.keyLanguage) ?? 'en';
+  /// The user's explicitly selected language code, or `null` if the user
+  /// has not chosen one yet. Backed by the `selected_language` key.
+  String? get selectedLanguage {
+    final value = _prefs.getString(AppConstants.keyLanguage);
+    return (value != null && value.isNotEmpty) ? value : null;
+  }
+
+  /// Whether the user has completed the language-selection step.
+  bool get hasSelectedLanguage => selectedLanguage != null;
+
+  /// The active language code, falling back to the default when unset.
+  /// Safe for locale resolution (never null).
+  String get language => selectedLanguage ?? AppConstants.defaultLanguage;
 
   Future<void> setLanguage(String languageCode) async {
     await _prefs.setString(AppConstants.keyLanguage, languageCode);

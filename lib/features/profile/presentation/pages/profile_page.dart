@@ -8,6 +8,7 @@ import '../../../../core/widgets/badges/premium_badge.dart';
 import '../../../../core/widgets/badges/verification_badge.dart';
 import '../../../../core/widgets/cards/horoscope_card.dart';
 import '../../../../core/widgets/chips/info_chip.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// User Profile Page with horoscope match, bio, and preferences.
 class ProfilePage extends StatelessWidget {
@@ -15,11 +16,12 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Profile'),
+        title: Text(l10n.profileTitle),
         actions: [
           IconButton(
             onPressed: () => context.push(RouteNames.settings),
@@ -70,7 +72,7 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 24),
 
               // About Me
-              Text('About Me', style: AppTypography.titleMedium),
+              Text(l10n.profileAboutMeTitle, style: AppTypography.titleMedium),
               const SizedBox(height: 8),
               Text(
                 'Senior Product Designer based in Chennai. Passionate about art, traveling, and building meaningful relationships grounded in mutual respect.',
@@ -84,7 +86,7 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 24),
 
               // Basic Details Chips
-              Text('Basic Details', style: AppTypography.titleMedium),
+              Text(l10n.profileBasicDetailsTitle, style: AppTypography.titleMedium),
               const SizedBox(height: 12),
               const Wrap(
                 spacing: 8,

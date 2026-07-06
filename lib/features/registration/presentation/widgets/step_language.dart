@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 
 /// Step 3 — Language Details
@@ -33,8 +34,27 @@ class _StepLanguageState extends State<StepLanguage> {
     widget.onChanged(LanguageDetails(motherTongue: _motherTongue, languagesKnown: List.from(_languagesKnown)));
   }
 
+  /// Localized display label for a stored language value (value stays English).
+  String _langLabel(AppLocalizations l10n, String value) => switch (value) {
+        'Tamil' => l10n.langTamil,
+        'Telugu' => l10n.langTelugu,
+        'Malayalam' => l10n.langMalayalam,
+        'Kannada' => l10n.langKannada,
+        'Hindi' => l10n.langHindi,
+        'English' => l10n.langEnglish,
+        'Marathi' => l10n.langMarathi,
+        'Bengali' => l10n.langBengali,
+        'Gujarati' => l10n.langGujarati,
+        'Urdu' => l10n.langUrdu,
+        'French' => l10n.langFrench,
+        'German' => l10n.langGerman,
+        'Arabic' => l10n.langArabic,
+        _ => value,
+      };
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
@@ -42,22 +62,23 @@ class _StepLanguageState extends State<StepLanguage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Languages', style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
+          Text(l10n.registrationLanguagesTitle, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text('Your language preferences', style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationLanguagesSubtitle, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
           const SizedBox(height: 24),
-          Text('Mother Tongue', style: AppTypography.labelLarge),
+          Text(l10n.registrationMotherTongueLabel, style: AppTypography.labelLarge),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
+            // Values stay English (stored/emitted); only the label is localized.
             children: _tongues.map((t) {
               final sel = _motherTongue == t;
-              return ChoiceChip(label: Text(t), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _motherTongue = t); _emit(); });
+              return ChoiceChip(label: Text(_langLabel(l10n, t)), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _motherTongue = t); _emit(); });
             }).toList(),
           ),
           const SizedBox(height: 24),
-          Text('Languages Known', style: AppTypography.labelLarge),
+          Text(l10n.registrationLanguagesKnownLabel, style: AppTypography.labelLarge),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -65,7 +86,7 @@ class _StepLanguageState extends State<StepLanguage> {
             children: _languages.map((l) {
               final sel = _languagesKnown.contains(l);
               return FilterChip(
-                label: Text(l),
+                label: Text(_langLabel(l10n, l)),
                 selected: sel,
                 selectedColor: AppColors.primarySurface,
                 checkmarkColor: AppColors.primary,

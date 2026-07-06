@@ -6,6 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// User Registration Page foundation.
 class RegistrationPage extends StatefulWidget {
@@ -43,10 +44,20 @@ class _RegistrationPageState extends State<RegistrationPage> {
     }
   }
 
+  String _relationLabel(AppLocalizations l10n, String v) => switch (v) {
+        'Self' => l10n.relationSelf,
+        'Son' => l10n.authRegForSon,
+        'Daughter' => l10n.authRegForDaughter,
+        'Brother' => l10n.authRegForBrother,
+        'Sister' => l10n.authRegForSister,
+        _ => v,
+      };
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Account')),
+      appBar: AppBar(title: Text(l10n.authCreateAccount)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -56,7 +67,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Profile Created For',
+                  l10n.registrationProfileCreatedForLabel,
                   style: AppTypography.labelLarge,
                 ),
                 const SizedBox(height: 12),
@@ -65,7 +76,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       .map((relation) => Padding(
                             padding: const EdgeInsets.only(right: 8),
                             child: ChoiceChip(
-                              label: Text(relation),
+                              label: Text(_relationLabel(l10n, relation)),
                               selected: relation == 'Self',
                               onSelected: (_) {},
                             ),
@@ -74,14 +85,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 ),
                 const SizedBox(height: 24),
                 NmTextField(
-                  label: 'Full Name',
-                  hint: 'Enter full name',
+                  label: l10n.registrationFullNameLabel,
+                  hint: l10n.registrationFullNameHint,
                   controller: _nameController,
                   validator: Validators.name,
                 ),
                 const SizedBox(height: 16),
                 NmTextField(
-                  label: 'Email Address',
+                  label: l10n.authEmailAddress,
                   hint: 'name@example.com',
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -89,14 +100,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 ),
                 const SizedBox(height: 16),
                 NmTextField(
-                  label: 'Mobile Number',
+                  label: l10n.authMobileNumber,
                   hint: '98765 43210',
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   validator: Validators.phone,
                 ),
                 const SizedBox(height: 24),
-                Text('Gender', style: AppTypography.labelLarge),
+                Text(l10n.registrationGenderLabel, style: AppTypography.labelLarge),
                 const SizedBox(height: 8),
                 Row(
                   children: ['Male', 'Female'].map((gender) {
@@ -105,7 +116,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: ChoiceChip(
-                          label: Center(child: Text(gender)),
+                          label: Center(child: Text(gender == 'Male' ? l10n.genderMale : l10n.genderFemale)),
                           selected: isSelected,
                           onSelected: (_) => setState(() => _selectedGender = gender),
                         ),
@@ -115,7 +126,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 ),
                 const SizedBox(height: 32),
                 NmPrimaryButton(
-                  label: 'Register & Continue',
+                  label: l10n.registrationRegisterContinue,
                   onPressed: _onRegister,
                   isLoading: _isLoading,
                 ),

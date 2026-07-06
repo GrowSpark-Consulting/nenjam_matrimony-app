@@ -46,11 +46,18 @@ abstract final class AppConstants {
   static const String keyRefreshToken = 'refresh_token';
   static const String keyUserId = 'user_id';
   static const String keyThemeMode = 'theme_mode';
-  static const String keyLanguage = 'language';
+  static const String keyLanguage = 'selected_language';
   static const String keyOnboardingDone = 'onboarding_done';
   static const String keyNotificationsEnabled = 'notifications_enabled';
 
-  // ─── Supported Languages ─────────────────────────────────────────
+  // ─── Localization ────────────────────────────────────────────────
+  /// Default language used until the user makes an explicit selection.
+  static const String defaultLanguage = 'en';
+
+  /// Languages the app currently ships translations for.
+  static const List<String> activeLanguages = ['en', 'ta'];
+
+  /// Supported Languages roadmap (translations rolled out incrementally).
   static const List<String> supportedLanguages = [
     'en', 'ta', 'hi', 'gu', 'te', 'kn', 'ml', 'mr', 'bn', 'ar',
   ];

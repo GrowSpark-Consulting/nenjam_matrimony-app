@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/inputs/otp_input.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// OTP Verification Page.
 ///
@@ -85,14 +86,6 @@ class _OtpPageState extends State<OtpPage> {
     return {'identifier': 'your number', 'channel': 'phone', 'flow': 'login'};
   }
 
-  String _channelDescription(
-      String channel, String identifier, bool isDark) {
-    if (channel == 'email') {
-      return 'We sent a 6-digit code to $identifier';
-    }
-    return 'We sent a 6-digit code to +91 $identifier';
-  }
-
   IconData _channelIcon(String channel) =>
       channel == 'email' ? Icons.mail_outline_rounded : Icons.phone_rounded;
 
@@ -102,16 +95,19 @@ class _OtpPageState extends State<OtpPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final extra = _parseExtra(context);
     final identifier = extra['identifier'] ?? 'your number';
     final channel = extra['channel'] ?? 'phone';
+    final isEmail = channel == 'email';
+    final otpTarget = isEmail ? identifier : '+91 $identifier';
 
     return Scaffold(
       appBar: AppBar(
         leading: BackButton(onPressed: () => context.pop()),
         title: Text(
-          'Verify ${channel == 'email' ? 'Email' : 'Mobile'}',
+          isEmail ? l10n.authVerifyEmail : l10n.authVerifyMobile,
           style: AppTypography.titleMedium
               .copyWith(fontWeight: FontWeight.w600),
         ),
@@ -126,7 +122,7 @@ class _OtpPageState extends State<OtpPage> {
 
               // ─── Headline ──────────────────────────────────────
               Text(
-                'Enter Verification\nCode',
+                l10n.authEnterVerificationCode,
                 style: AppTypography.headlineLarge.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -153,7 +149,7 @@ class _OtpPageState extends State<OtpPage> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        _channelDescription(channel, identifier, isDark),
+                        l10n.authOtpSentTo(otpTarget),
                         style: AppTypography.bodySmall.copyWith(
                           color: isDark
                               ? AppColors.textSecondaryDark
@@ -179,7 +175,7 @@ class _OtpPageState extends State<OtpPage> {
 
               // ─── Verify Button ─────────────────────────────────
               NmGradientButton(
-                label: 'Verify & Continue',
+                label: l10n.authVerifyAndContinue,
                 icon: Icons.check_circle_outline_rounded,
                 onPressed: _otp.length == 6 ? _onVerify : null,
                 isLoading: _isLoading,
@@ -192,7 +188,7 @@ class _OtpPageState extends State<OtpPage> {
                     ? Column(
                         children: [
                           Text(
-                            'Resend OTP in',
+                            l10n.authResendOtpIn,
                             style: AppTypography.bodySmall.copyWith(
                               color: isDark
                                   ? AppColors.textTertiaryDark
@@ -214,7 +210,7 @@ class _OtpPageState extends State<OtpPage> {
                         onPressed: _startTimer,
                         icon: const Icon(
                             Icons.refresh_rounded, size: 18),
-                        label: const Text('Resend OTP'),
+                        label: Text(l10n.authResendOtp),
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.primary,
                           textStyle: AppTypography.labelLarge.copyWith(

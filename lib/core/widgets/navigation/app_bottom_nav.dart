@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../router/route_names.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_shadows.dart';
@@ -12,12 +13,21 @@ class AppBottomNavShell extends StatelessWidget {
   const AppBottomNavShell({super.key, required this.child});
 
   static const _tabs = [
-    _NavTab(RouteNames.home, Icons.home_rounded, Icons.home_outlined, 'Home'),
-    _NavTab(RouteNames.search, Icons.search_rounded, Icons.search_rounded, 'Search'),
-    _NavTab(RouteNames.matches, Icons.favorite_rounded, Icons.favorite_border_rounded, 'Matches'),
-    _NavTab(RouteNames.chat, Icons.chat_bubble_rounded, Icons.chat_bubble_outline_rounded, 'Chat'),
-    _NavTab(RouteNames.profile, Icons.person_rounded, Icons.person_outline_rounded, 'Profile'),
+    _NavTab(RouteNames.home, Icons.home_rounded, Icons.home_outlined),
+    _NavTab(RouteNames.search, Icons.search_rounded, Icons.search_rounded),
+    _NavTab(RouteNames.matches, Icons.favorite_rounded, Icons.favorite_border_rounded),
+    _NavTab(RouteNames.chat, Icons.chat_bubble_rounded, Icons.chat_bubble_outline_rounded),
+    _NavTab(RouteNames.profile, Icons.person_rounded, Icons.person_outline_rounded),
   ];
+
+  /// Localized labels, index-aligned with [_tabs].
+  List<String> _labels(AppLocalizations l10n) => [
+        l10n.navHome,
+        l10n.navSearch,
+        l10n.navMatches,
+        l10n.navChat,
+        l10n.navProfile,
+      ];
 
   int _currentIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
@@ -31,6 +41,7 @@ class AppBottomNavShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentIndex = _currentIndex(context);
+    final labels = _labels(AppLocalizations.of(context));
 
     return Scaffold(
       body: child,
@@ -47,11 +58,12 @@ class AppBottomNavShell extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: List.generate(_tabs.length, (index) {
                 final tab = _tabs[index];
+                final label = labels[index];
                 final isActive = index == currentIndex;
 
                 return Expanded(
                   child: Semantics(
-                    label: tab.label,
+                    label: label,
                     selected: isActive,
                     child: InkWell(
                       onTap: () => context.go(tab.path),
@@ -73,7 +85,7 @@ class AppBottomNavShell extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            tab.label,
+                            label,
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: isActive
@@ -104,7 +116,6 @@ class _NavTab {
   final String path;
   final IconData activeIcon;
   final IconData icon;
-  final String label;
 
-  const _NavTab(this.path, this.activeIcon, this.icon, this.label);
+  const _NavTab(this.path, this.activeIcon, this.icon);
 }

@@ -5,6 +5,7 @@ import '../../../../core/widgets/cards/ai_recommendation_card.dart';
 import '../../../../core/widgets/cards/premium_banner.dart';
 import '../../../../core/widgets/cards/profile_card.dart';
 import '../../../../core/widgets/cards/profile_completion_card.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Main Home Page with AI recommendations, profile completion, and discovery grid.
 class HomePage extends StatelessWidget {
@@ -12,9 +13,10 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nenjam Matrimony'),
+        title: Text(l10n.appName),
         actions: [
           IconButton(
             onPressed: () {},
@@ -29,11 +31,11 @@ class HomePage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Profile completion CTA
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: NmProfileCompletionCard(
                   percentage: 65,
-                  nextStep: 'Upload Horoscope',
+                  nextStep: l10n.homeStepUploadHoroscope,
                 ),
               ),
               const SizedBox(height: 24),
@@ -53,7 +55,7 @@ class HomePage extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        'AI Match Recommendations',
+                        l10n.homeAiRecommendationsTitle,
                         style: AppTypography.titleLarge,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -61,7 +63,7 @@ class HomePage extends StatelessWidget {
                     ),
                     TextButton(
                       onPressed: () {},
-                      child: const Text('See All'),
+                      child: Text(l10n.homeSeeAllButton),
                     ),
                   ],
                 ),
@@ -88,7 +90,7 @@ class HomePage extends StatelessWidget {
               // Recently Joined Profiles
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text('Recently Joined', style: AppTypography.titleLarge),
+                child: Text(l10n.homeRecentlyJoinedTitle, style: AppTypography.titleLarge),
               ),
               const SizedBox(height: 16),
               GridView.builder(

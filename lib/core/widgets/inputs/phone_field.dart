@@ -38,7 +38,7 @@ const kCountryCodes = [
 /// Shows a searchable country picker bottom sheet.
 void showCountryPickerSheet(BuildContext context, {required ValueChanged<CountryInfo> onSelect}) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
-  showModalBottomSheet(
+  showModalBottomSheet<void>(
     context: context,
     backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
     shape: const RoundedRectangleBorder(

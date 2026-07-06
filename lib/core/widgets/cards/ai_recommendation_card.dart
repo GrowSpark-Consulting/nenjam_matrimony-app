@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
@@ -23,6 +24,7 @@ class NmAiRecommendationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
@@ -66,7 +68,7 @@ class NmAiRecommendationCard extends StatelessWidget {
                               size: 12, color: AppColors.accentGold),
                           const SizedBox(width: 4),
                           Text(
-                            'AI Pick',
+                            l10n.homeAiPickBadge,
                             style: AppTypography.labelSmall.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
@@ -88,7 +90,7 @@ class NmAiRecommendationCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 4),
                   Text(
-                    '$compatibility% match • $reason',
+                    '$compatibility% ${l10n.homeAiMatchLabel} • $reason',
                     style: AppTypography.labelSmall.copyWith(
                       color: isDark
                           ? AppColors.textTertiaryDark
