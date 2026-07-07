@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/authentication/presentation/pages/auth_selection_page.dart';
+import '../../features/authentication/presentation/pages/email_verify_screen.dart';
+import '../../features/authentication/presentation/pages/forgot_password_page.dart';
+import '../../features/authentication/presentation/pages/login_otp_screen.dart';
 import '../../features/authentication/presentation/pages/login_page.dart';
 import '../../features/authentication/presentation/pages/otp_page.dart';
+import '../../features/authentication/presentation/pages/phone_verify_screen.dart';
 import '../../features/chat/presentation/pages/chat_page.dart';
 import '../../features/help/presentation/pages/help_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
@@ -82,6 +86,26 @@ GoRouter createRouter() => GoRouter(
           path: RouteNames.otp,
           name: RouteNames.otpName,
           builder: (context, state) => const OtpPage(),
+        ),
+        GoRoute(
+          path: RouteNames.loginOtp,
+          name: RouteNames.loginOtpName,
+          builder: (context, state) => const LoginOtpScreen(),
+        ),
+        GoRoute(
+          path: RouteNames.verifyEmail,
+          name: RouteNames.verifyEmailName,
+          builder: (context, state) => const EmailVerifyScreen(),
+        ),
+        GoRoute(
+          path: RouteNames.verifyPhone,
+          name: RouteNames.verifyPhoneName,
+          builder: (context, state) => const PhoneVerifyScreen(),
+        ),
+        GoRoute(
+          path: RouteNames.forgotPassword,
+          name: RouteNames.forgotPasswordName,
+          builder: (context, state) => const ForgotPasswordPage(),
         ),
         GoRoute(
           path: RouteNames.registration,

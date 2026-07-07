@@ -392,6 +392,162 @@ abstract class AppLocalizations {
   /// **'Resend OTP'**
   String get authResendOtp;
 
+  /// No description provided for @authUsername.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get authUsername;
+
+  /// No description provided for @authUsernameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. arun_kumar'**
+  String get authUsernameHint;
+
+  /// No description provided for @authPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Min 8 chars with upper, lower, number & symbol'**
+  String get authPasswordHint;
+
+  /// No description provided for @authPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your password'**
+  String get authPasswordRequired;
+
+  /// No description provided for @authComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get authComingSoon;
+
+  /// No description provided for @authGenericError.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get authGenericError;
+
+  /// No description provided for @authLogoutConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to log out?'**
+  String get authLogoutConfirm;
+
+  /// No description provided for @commonCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get commonCancel;
+
+  /// No description provided for @authVerifyEmailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your email'**
+  String get authVerifyEmailTitle;
+
+  /// No description provided for @authVerifyEmailSentTo.
+  ///
+  /// In en, this message translates to:
+  /// **'We sent a verification link to {email}'**
+  String authVerifyEmailSentTo(String email);
+
+  /// No description provided for @authVerifyEmailInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the link in your inbox to verify your email, then come back here.'**
+  String get authVerifyEmailInstruction;
+
+  /// No description provided for @authIveVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ve verified'**
+  String get authIveVerified;
+
+  /// No description provided for @authResendEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend email'**
+  String get authResendEmail;
+
+  /// No description provided for @authResendEmailIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend email in {seconds}s'**
+  String authResendEmailIn(String seconds);
+
+  /// No description provided for @authEmailNotVerifiedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Email not verified yet. Please tap the link in your inbox.'**
+  String get authEmailNotVerifiedYet;
+
+  /// No description provided for @authEmailVerifiedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Email verified!'**
+  String get authEmailVerifiedSuccess;
+
+  /// No description provided for @authVerificationEmailSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification email sent.'**
+  String get authVerificationEmailSent;
+
+  /// No description provided for @authVerifyPhoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your phone'**
+  String get authVerifyPhoneTitle;
+
+  /// No description provided for @authSendingOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending OTP…'**
+  String get authSendingOtp;
+
+  /// No description provided for @authPhoneVerifiedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone verified!'**
+  String get authPhoneVerifiedSuccess;
+
+  /// No description provided for @authForgotPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot Password'**
+  String get authForgotPasswordTitle;
+
+  /// No description provided for @authForgotPasswordSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your registered email and we\'ll send you a link to reset your password.'**
+  String get authForgotPasswordSubtitle;
+
+  /// No description provided for @authSendResetLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Reset Link'**
+  String get authSendResetLink;
+
+  /// No description provided for @authBackToLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to login'**
+  String get authBackToLogin;
+
+  /// No description provided for @authResetEmailSentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your email'**
+  String get authResetEmailSentTitle;
+
+  /// No description provided for @authResetEmailSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Password reset link has been sent to your email'**
+  String get authResetEmailSent;
+
   /// No description provided for @navHome.
   ///
   /// In en, this message translates to:

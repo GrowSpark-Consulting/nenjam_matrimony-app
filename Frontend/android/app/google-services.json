@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "1060875646049",
+    "project_id": "matrimony-platform-30b50",
+    "storage_bucket": "matrimony-platform-30b50.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1060875646049:android:d50390358c5a10ff4ca620",
+        "android_client_info": {
+          "package_name": "com.example.nenjam_matrimony"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1060875646049-lj6dfvsbb05o7jpi70jma08m5iv2nat3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2tPUqfWpUYymcLk4UQZj64urZeA54D3E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1060875646049-lj6dfvsbb05o7jpi70jma08m5iv2nat3.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1060875646049-q6mdnrf9cdj9ttfs6li4845trtgff1sp.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.nenjamMatrimony"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

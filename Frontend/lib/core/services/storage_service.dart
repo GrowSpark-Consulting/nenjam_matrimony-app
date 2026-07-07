@@ -97,6 +97,20 @@ class StorageService {
     await _prefs.setString(AppConstants.keyUserId, id);
   }
 
+  // ─── Pending signup phone (transient, local-only) ────────────────
+  String? get pendingPhone {
+    final value = _prefs.getString(AppConstants.keyPendingPhone);
+    return (value != null && value.isNotEmpty) ? value : null;
+  }
+
+  Future<void> setPendingPhone(String e164Phone) async {
+    await _prefs.setString(AppConstants.keyPendingPhone, e164Phone);
+  }
+
+  Future<void> clearPendingPhone() async {
+    await _prefs.remove(AppConstants.keyPendingPhone);
+  }
+
   // ─── Onboarding ──────────────────────────────────────────────────
   bool get isOnboardingDone =>
       _prefs.getBool(AppConstants.keyOnboardingDone) ?? false;

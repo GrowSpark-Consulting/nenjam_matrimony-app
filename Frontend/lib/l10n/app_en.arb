@@ -60,6 +60,42 @@
   "authResendOtpIn": "Resend OTP in",
   "authResendOtp": "Resend OTP",
 
+  "authUsername": "Username",
+  "authUsernameHint": "e.g. arun_kumar",
+  "authPasswordHint": "Min 8 chars with upper, lower, number & symbol",
+  "authPasswordRequired": "Please enter your password",
+  "authComingSoon": "Coming soon",
+  "authGenericError": "Something went wrong. Please try again.",
+  "authLogoutConfirm": "Are you sure you want to log out?",
+  "commonCancel": "Cancel",
+
+  "authVerifyEmailTitle": "Verify your email",
+  "authVerifyEmailSentTo": "We sent a verification link to {email}",
+  "@authVerifyEmailSentTo": {
+    "placeholders": { "email": { "type": "String" } }
+  },
+  "authVerifyEmailInstruction": "Open the link in your inbox to verify your email, then come back here.",
+  "authIveVerified": "I've verified",
+  "authResendEmail": "Resend email",
+  "authResendEmailIn": "Resend email in {seconds}s",
+  "@authResendEmailIn": {
+    "placeholders": { "seconds": { "type": "String" } }
+  },
+  "authEmailNotVerifiedYet": "Email not verified yet. Please tap the link in your inbox.",
+  "authEmailVerifiedSuccess": "Email verified!",
+  "authVerificationEmailSent": "Verification email sent.",
+
+  "authVerifyPhoneTitle": "Verify your phone",
+  "authSendingOtp": "Sending OTP…",
+  "authPhoneVerifiedSuccess": "Phone verified!",
+
+  "authForgotPasswordTitle": "Forgot Password",
+  "authForgotPasswordSubtitle": "Enter your registered email and we'll send you a link to reset your password.",
+  "authSendResetLink": "Send Reset Link",
+  "authBackToLogin": "Back to login",
+  "authResetEmailSentTitle": "Check your email",
+  "authResetEmailSent": "Password reset link has been sent to your email",
+
   "navHome": "Home",
   "navSearch": "Search",
   "navMatches": "Matches",

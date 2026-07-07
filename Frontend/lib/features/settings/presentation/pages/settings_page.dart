@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../authentication/presentation/providers/auth_providers.dart';
 
 /// App settings screen.
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     // Reflect the currently active locale in the Language row subtitle.
     final activeLanguage = Localizations.localeOf(context).languageCode == 'ta'
@@ -66,11 +68,44 @@ class SettingsPage extends StatelessWidget {
               leading: const Icon(Icons.logout_rounded, color: AppColors.error),
               title: Text(l10n.settingsLogout,
                   style: AppTypography.bodyLarge.copyWith(color: AppColors.error)),
-              onTap: () => context.go(RouteNames.login),
+              onTap: () => _confirmAndLogout(context, ref, l10n),
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Confirms, signs out of Firebase, and returns to the login screen with a
+  /// cleared navigation stack.
+  Future<void> _confirmAndLogout(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.settingsLogout),
+        content: Text(l10n.authLogoutConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.commonCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text(l10n.settingsLogout),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await ref.read(authRepositoryProvider).logout();
+    if (!context.mounted) return;
+    // Clear the stack so back can't return into the authed app.
+    context.go(RouteNames.login);
   }
 }

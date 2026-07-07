@@ -161,6 +161,93 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authResendOtp => 'Resend OTP';
 
   @override
+  String get authUsername => 'Username';
+
+  @override
+  String get authUsernameHint => 'e.g. arun_kumar';
+
+  @override
+  String get authPasswordHint =>
+      'Min 8 chars with upper, lower, number & symbol';
+
+  @override
+  String get authPasswordRequired => 'Please enter your password';
+
+  @override
+  String get authComingSoon => 'Coming soon';
+
+  @override
+  String get authGenericError => 'Something went wrong. Please try again.';
+
+  @override
+  String get authLogoutConfirm => 'Are you sure you want to log out?';
+
+  @override
+  String get commonCancel => 'Cancel';
+
+  @override
+  String get authVerifyEmailTitle => 'Verify your email';
+
+  @override
+  String authVerifyEmailSentTo(String email) {
+    return 'We sent a verification link to $email';
+  }
+
+  @override
+  String get authVerifyEmailInstruction =>
+      'Open the link in your inbox to verify your email, then come back here.';
+
+  @override
+  String get authIveVerified => 'I\'ve verified';
+
+  @override
+  String get authResendEmail => 'Resend email';
+
+  @override
+  String authResendEmailIn(String seconds) {
+    return 'Resend email in ${seconds}s';
+  }
+
+  @override
+  String get authEmailNotVerifiedYet =>
+      'Email not verified yet. Please tap the link in your inbox.';
+
+  @override
+  String get authEmailVerifiedSuccess => 'Email verified!';
+
+  @override
+  String get authVerificationEmailSent => 'Verification email sent.';
+
+  @override
+  String get authVerifyPhoneTitle => 'Verify your phone';
+
+  @override
+  String get authSendingOtp => 'Sending OTP…';
+
+  @override
+  String get authPhoneVerifiedSuccess => 'Phone verified!';
+
+  @override
+  String get authForgotPasswordTitle => 'Forgot Password';
+
+  @override
+  String get authForgotPasswordSubtitle =>
+      'Enter your registered email and we\'ll send you a link to reset your password.';
+
+  @override
+  String get authSendResetLink => 'Send Reset Link';
+
+  @override
+  String get authBackToLogin => 'Back to login';
+
+  @override
+  String get authResetEmailSentTitle => 'Check your email';
+
+  @override
+  String get authResetEmailSent =>
+      'Password reset link has been sent to your email';
+
+  @override
   String get navHome => 'Home';
 
   @override

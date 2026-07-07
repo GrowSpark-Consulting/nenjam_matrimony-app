@@ -11,21 +11,20 @@ import '../../../../core/widgets/buttons/primary_button.dart';
 import '../../../../core/widgets/buttons/social_button.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../core/widgets/inputs/password_field.dart';
-import '../../../../core/widgets/inputs/phone_field.dart';
 import '../../../../core/widgets/layout/curved_header.dart';
 import '../../../../core/widgets/layout/or_divider.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../registration/presentation/providers/registration_provider.dart';
-import '../providers/create_account_provider.dart';
+import '../controllers/login_controller.dart';
+import '../controllers/phone_auth_controller.dart';
+import '../controllers/signup_controller.dart';
+import '../providers/auth_providers.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Login Page (Root)
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Authentication entry point — Login and Sign Up tabs.
-///
-/// Design: Navy gradient hero that dynamically switches header copy
-/// based on active tab (heart/"Welcome Back" vs infinity/"Create Account").
+/// Authentication entry point — Login and Sign Up tabs, backed by Firebase.
 class LoginPage extends ConsumerStatefulWidget {
   final int initialTab;
   const LoginPage({super.key, this.initialTab = 0});
@@ -38,16 +37,15 @@ class _LoginPageState extends ConsumerState<LoginPage>
     with TickerProviderStateMixin {
   late final TabController _tabController;
 
-  // Login form state (local — no Riverpod needed for simple login)
+  // Login form
   final _loginFormKey = GlobalKey<FormState>();
   final _loginPhoneCtrl = TextEditingController();
   final _loginEmailCtrl = TextEditingController();
   final _loginPasswordCtrl = TextEditingController();
-  bool _loginLoading = false;
 
-  // Sign Up controllers (reading from Riverpod provider for state, but
-  // we keep controllers for text field binding)
+  // Sign Up form
   final _signUpFormKey = GlobalKey<FormState>();
+  final _usernameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
@@ -58,7 +56,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
   void initState() {
     super.initState();
     _currentTab = widget.initialTab;
-    _tabController = TabController(length: 2, vsync: this, initialIndex: _currentTab);
+    _tabController =
+        TabController(length: 2, vsync: this, initialIndex: _currentTab);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() => _currentTab = _tabController.index);
@@ -69,59 +68,94 @@ class _LoginPageState extends ConsumerState<LoginPage>
   @override
   void dispose() {
     _tabController.dispose();
-    _loginFormKey.currentState?.dispose();
     _loginPhoneCtrl.dispose();
     _loginEmailCtrl.dispose();
     _loginPasswordCtrl.dispose();
+    _usernameCtrl.dispose();
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
 
-  void _onLoginWithOtp(String channel) {
-    if (_loginFormKey.currentState?.validate() ?? false) {
-      setState(() => _loginLoading = true);
-      final isMobile = channel == 'Mobile';
-      final identifier = isMobile ? _loginPhoneCtrl.text.trim() : _loginEmailCtrl.text.trim();
-      Future.delayed(const Duration(milliseconds: 900), () {
-        if (mounted) {
-          setState(() => _loginLoading = false);
-          context.push(RouteNames.otp, extra: {
-            'identifier': identifier.isEmpty ? '9876543210' : identifier,
-            'channel': isMobile ? 'phone' : 'email',
-            'flow': 'login',
-          });
-        }
-      });
-    }
+  void _snack(String message, {Color? color}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
   }
 
-  void _onCreateAccount() {
-    if (!(_signUpFormKey.currentState?.validate() ?? false)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).authErrorValidMobile)),
-      );
+  // ─── Login: Email + Password ───────────────────────────────────────
+  Future<void> _onLoginEmail() async {
+    if (!(_loginFormKey.currentState?.validate() ?? false)) return;
+    final result = await ref.read(loginControllerProvider.notifier).loginWithEmail(
+          email: _loginEmailCtrl.text.trim(),
+          password: _loginPasswordCtrl.text,
+        );
+    if (!mounted) return;
+    if (!result.success) {
+      _snack(result.errorMessage ?? AppLocalizations.of(context).authGenericError);
       return;
     }
+    _routeAfterLogin(result.needsVerification);
+  }
 
-    final createAccountState = ref.read(createAccountProvider);
+  // ─── Login: Mobile OTP ─────────────────────────────────────────────
+  Future<void> _onLoginMobile() async {
+    if (!(_loginFormKey.currentState?.validate() ?? false)) return;
+    final phone = '+91${_loginPhoneCtrl.text.trim()}';
+    await ref.read(phoneAuthControllerProvider.notifier).sendCode(phone);
+    if (!mounted) return;
+    context.push(RouteNames.loginOtp, extra: {'phone': phone});
+  }
+
+  void _routeAfterLogin(bool needsVerification) {
+    if (!needsVerification) {
+      context.go(RouteNames.home);
+      return;
+    }
+    // Send the user to whichever verification step is still outstanding.
+    final emailVerified =
+        ref.read(firebaseAuthServiceProvider).currentUser?.emailVerified ??
+            false;
+    context.go(emailVerified ? RouteNames.verifyPhone : RouteNames.verifyEmail);
+  }
+
+  // ─── Sign Up ───────────────────────────────────────────────────────
+  Future<void> _onCreateAccount() async {
+    if (!(_signUpFormKey.currentState?.validate() ?? false)) return;
+
+    final notifier = ref.read(signupControllerProvider.notifier);
+    notifier
+      ..setUsername(_usernameCtrl.text.trim())
+      ..setEmail(_emailCtrl.text.trim())
+      ..setPassword(_passwordCtrl.text)
+      ..setPhone(_phoneCtrl.text.trim());
+
+    // Carry the "registering for" choice into the profile wizard.
     final regNotifier = ref.read(registrationProvider.notifier);
     regNotifier.goToStep(0);
-    if (createAccountState.registeringFor.isNotEmpty) {
-      regNotifier.setProfileCreatedFor(createAccountState.registeringFor);
+    final registeringFor = ref.read(signupControllerProvider).registeringFor;
+    if (registeringFor.isNotEmpty) {
+      regNotifier.setProfileCreatedFor(registeringFor);
     }
 
-    final notifier = ref.read(createAccountProvider.notifier);
-    notifier.createAccount().then((_) {
-      if (mounted) context.go(RouteNames.registrationWizard);
-    });
+    final ok = await notifier.submit();
+    if (!mounted) return;
+    if (!ok) {
+      _snack(ref.read(signupControllerProvider).errorMessage ??
+          AppLocalizations.of(context).authGenericError);
+      return;
+    }
+    // Account created + verification email sent → verify email.
+    context.go(RouteNames.verifyEmail);
   }
 
   @override
   Widget build(BuildContext context) {
     final isSignUp = _currentTab == 1;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final loginLoading = ref.watch(loginControllerProvider);
+    final signupLoading = ref.watch(signupControllerProvider).isSubmitting;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -129,7 +163,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
         backgroundColor:
             isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
         body: NestedScrollView(
-          headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+          headerSliverBuilder: (context, innerBoxIsScrolled) {
             return [
               SliverToBoxAdapter(
                 child: AnimatedSwitcher(
@@ -168,8 +202,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   phoneCtrl: _loginPhoneCtrl,
                   emailCtrl: _loginEmailCtrl,
                   passwordCtrl: _loginPasswordCtrl,
-                  isLoading: _loginLoading,
-                  onSendOtp: _onLoginWithOtp,
+                  isLoading: loginLoading,
+                  onLoginEmail: _onLoginEmail,
+                  onLoginMobile: _onLoginMobile,
                   onSignUpTap: () => _tabController.animateTo(1),
                 ),
               ),
@@ -177,9 +212,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
                 isDark: isDark,
                 child: _SignUpForm(
                   formKey: _signUpFormKey,
+                  usernameCtrl: _usernameCtrl,
                   phoneCtrl: _phoneCtrl,
                   emailCtrl: _emailCtrl,
                   passwordCtrl: _passwordCtrl,
+                  isLoading: signupLoading,
                   onCreateAccount: _onCreateAccount,
                   onLoginTap: () => _tabController.animateTo(0),
                 ),
@@ -198,7 +235,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
 class _LoginHeader extends StatelessWidget {
   const _LoginHeader({super.key});
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -212,7 +248,6 @@ class _LoginHeader extends StatelessWidget {
 
 class _SignUpHeader extends StatelessWidget {
   const _SignUpHeader({super.key});
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -240,10 +275,7 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabController tabController;
   final bool isDark;
 
-  _StickyTabBarDelegate({
-    required this.tabController,
-    required this.isDark,
-  });
+  _StickyTabBarDelegate({required this.tabController, required this.isDark});
 
   @override
   double get minExtent => 62.0;
@@ -251,11 +283,7 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => 62.0;
 
   @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     final isPinned = shrinkOffset > 0;
     final cardBg = isDark ? AppColors.surfaceDark : Colors.white;
 
@@ -291,18 +319,13 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
               controller: tabController,
               labelColor: AppColors.primary,
               unselectedLabelColor: AppColors.textTertiaryLight,
-              labelStyle: AppTypography.titleSmall.copyWith(
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
-              unselectedLabelStyle: AppTypography.titleSmall.copyWith(
-                fontWeight: FontWeight.w400,
-              ),
+              labelStyle: AppTypography.titleSmall
+                  .copyWith(fontWeight: FontWeight.w700, fontSize: 15),
+              unselectedLabelStyle:
+                  AppTypography.titleSmall.copyWith(fontWeight: FontWeight.w400),
               indicator: UnderlineTabIndicator(
-                borderSide: const BorderSide(
-                  color: AppColors.accentGold,
-                  width: 2.5,
-                ),
+                borderSide:
+                    const BorderSide(color: AppColors.accentGold, width: 2.5),
                 borderRadius: BorderRadius.circular(2),
               ),
               indicatorSize: TabBarIndicatorSize.label,
@@ -335,7 +358,6 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
 class _TabFormCard extends StatelessWidget {
   final bool isDark;
   final Widget child;
-
   const _TabFormCard({required this.isDark, required this.child});
 
   @override
@@ -348,9 +370,8 @@ class _TabFormCard extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : Colors.white,
-              borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(28),
-              ),
+              borderRadius:
+                  const BorderRadius.vertical(bottom: Radius.circular(28)),
               boxShadow: [
                 BoxShadow(
                   color: const Color(0xFF1B2B4B).withValues(alpha: 0.12),
@@ -380,7 +401,8 @@ class _LoginForm extends StatefulWidget {
   final TextEditingController emailCtrl;
   final TextEditingController passwordCtrl;
   final bool isLoading;
-  final void Function(String channel) onSendOtp;
+  final VoidCallback onLoginEmail;
+  final VoidCallback onLoginMobile;
   final VoidCallback onSignUpTap;
 
   const _LoginForm({
@@ -389,7 +411,8 @@ class _LoginForm extends StatefulWidget {
     required this.emailCtrl,
     required this.passwordCtrl,
     required this.isLoading,
-    required this.onSendOtp,
+    required this.onLoginEmail,
+    required this.onLoginMobile,
     required this.onSignUpTap,
   });
 
@@ -421,45 +444,15 @@ class _LoginFormState extends State<_LoginForm> {
               ),
               child: Row(
                 children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _channel = 'Mobile'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isMobile ? AppColors.primary : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          l10n.authChannelMobile,
-                          style: AppTypography.labelMedium.copyWith(
-                            color: isMobile ? Colors.white : AppColors.textSecondaryLight,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
+                  _SegmentTab(
+                    label: l10n.authChannelMobile,
+                    selected: isMobile,
+                    onTap: () => setState(() => _channel = 'Mobile'),
                   ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _channel = 'Email'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: !isMobile ? AppColors.primary : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          l10n.authChannelEmail,
-                          style: AppTypography.labelMedium.copyWith(
-                            color: !isMobile ? Colors.white : AppColors.textSecondaryLight,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
+                  _SegmentTab(
+                    label: l10n.authChannelEmail,
+                    selected: !isMobile,
+                    onTap: () => setState(() => _channel = 'Email'),
                   ),
                 ],
               ),
@@ -469,9 +462,15 @@ class _LoginFormState extends State<_LoginForm> {
             if (isMobile) ...[
               Text(l10n.authPhoneNumber, style: AppTypography.labelLarge),
               const SizedBox(height: 8),
-              NmPhoneNumberField(
+              _Fixed91PhoneField(
                 controller: widget.phoneCtrl,
                 validator: Validators.phone,
+              ),
+              const SizedBox(height: 24),
+              NmPrimaryButton(
+                label: l10n.authLoginWithOtp,
+                isLoading: widget.isLoading,
+                onPressed: widget.onLoginMobile,
               ),
             ] else ...[
               Text(l10n.authEmailAddress, style: AppTypography.labelLarge),
@@ -482,42 +481,46 @@ class _LoginFormState extends State<_LoginForm> {
                 keyboardType: TextInputType.emailAddress,
                 validator: Validators.email,
               ),
-            ],
-            const SizedBox(height: 20),
-
-            NmPasswordField(
-              controller: widget.passwordCtrl,
-              label: l10n.authPassword,
-              hint: '••••••••',
-            ),
-            const SizedBox(height: 10),
-
-            Align(
-              alignment: Alignment.centerRight,
-              child: GestureDetector(
-                onTap: () {},
-                child: Text(
-                  l10n.authForgotPassword,
-                  style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.accentGold,
-                    fontWeight: FontWeight.w600,
+              const SizedBox(height: 20),
+              NmPasswordField(
+                controller: widget.passwordCtrl,
+                label: l10n.authPassword,
+                hint: '••••••••',
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? l10n.authPasswordRequired : null,
+              ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: () => context.push(
+                    RouteNames.forgotPassword,
+                    extra: {'email': widget.emailCtrl.text.trim()},
+                  ),
+                  child: Text(
+                    l10n.authForgotPassword,
+                    style: AppTypography.labelMedium.copyWith(
+                      color: AppColors.accentGold,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-
-            NmPrimaryButton(
-              label: l10n.authLoginWithOtp,
-              isLoading: widget.isLoading,
-              onPressed: () => widget.onSendOtp(_channel),
-            ),
+              const SizedBox(height: 24),
+              NmPrimaryButton(
+                label: l10n.authLogin,
+                isLoading: widget.isLoading,
+                onPressed: widget.onLoginEmail,
+              ),
+            ],
 
             NmOrDivider(label: l10n.authOrContinueWith),
 
             NmSocialButton(
               label: l10n.authSignInWithGoogle,
-              onPressed: () => context.go(RouteNames.home),
+              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.authComingSoon)),
+              ),
             ),
             const SizedBox(height: 24),
 
@@ -527,9 +530,8 @@ class _LoginFormState extends State<_LoginForm> {
                 children: [
                   Text(
                     l10n.authNewHere,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textSecondaryLight,
-                    ),
+                    style: AppTypography.bodyMedium
+                        .copyWith(color: AppColors.textSecondaryLight),
                   ),
                   GestureDetector(
                     onTap: widget.onSignUpTap,
@@ -551,38 +553,70 @@ class _LoginFormState extends State<_LoginForm> {
   }
 }
 
+class _SegmentTab extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _SegmentTab({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: AppTypography.labelMedium.copyWith(
+              color: selected ? Colors.white : AppColors.textSecondaryLight,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
-// Sign Up Form (Stitch Pixel-Perfect & Responsive Implementation)
+// Sign Up Form
 // ═══════════════════════════════════════════════════════════════════════════
 
 class _SignUpForm extends ConsumerWidget {
   final GlobalKey<FormState> formKey;
+  final TextEditingController usernameCtrl;
   final TextEditingController phoneCtrl;
   final TextEditingController emailCtrl;
   final TextEditingController passwordCtrl;
+  final bool isLoading;
   final VoidCallback onCreateAccount;
   final VoidCallback onLoginTap;
 
   const _SignUpForm({
     required this.formKey,
+    required this.usernameCtrl,
     required this.phoneCtrl,
     required this.emailCtrl,
     required this.passwordCtrl,
+    required this.isLoading,
     required this.onCreateAccount,
     required this.onLoginTap,
   });
 
   static const List<String> _registeringForOptions = [
-    'Myself',
-    'Son',
-    'Daughter',
-    'Brother',
-    'Sister',
-    'Friend',
+    'Myself', 'Son', 'Daughter', 'Brother', 'Sister', 'Friend',
   ];
 
-  /// Maps a stored registering-for value to its localized display label.
-  /// The value passed to the provider stays English (backend-facing).
   String _registeringForLabel(AppLocalizations l10n, String value) {
     switch (value) {
       case 'Myself':
@@ -605,8 +639,9 @@ class _SignUpForm extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final state = ref.watch(createAccountProvider);
-    final notifier = ref.read(createAccountProvider.notifier);
+    final registeringFor =
+        ref.watch(signupControllerProvider.select((s) => s.registeringFor));
+    final notifier = ref.read(signupControllerProvider.notifier);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final labelColor = isDark ? Colors.white70 : AppColors.textSecondaryLight;
 
@@ -617,177 +652,135 @@ class _SignUpForm extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ─── Mobile Number ──────────────────────────────────
-            Text(
-              l10n.authMobileNumber,
-              style: AppTypography.labelSmall.copyWith(
-                color: labelColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            // ─── Username ───────────────────────────────────────
+            _FieldLabel(l10n.authUsername, color: labelColor),
             const SizedBox(height: 8),
-            _StitchPhoneInput(
-              controller: phoneCtrl,
-              onChanged: notifier.setPhone,
-              onSendOtp: () {
-                final phoneError = Validators.phone(phoneCtrl.text.trim());
-                if (phoneError != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(phoneError)),
-                  );
-                  return;
-                }
-                notifier.setPhone(phoneCtrl.text.trim());
-                notifier.sendMobileOtp();
-              },
-              isSent: state.mobileSentOtp,
+            NmTextField(
+              controller: usernameCtrl,
+              hint: l10n.authUsernameHint,
+              keyboardType: TextInputType.text,
+              validator: Validators.username,
             ),
             const SizedBox(height: 16),
 
-            // ─── Email Address ──────────────────────────────────
+            // ─── Email ──────────────────────────────────────────
+            _FieldLabel(l10n.authEmailAddress, color: labelColor),
+            const SizedBox(height: 8),
+            NmTextField(
+              controller: emailCtrl,
+              hint: 'name@example.com',
+              keyboardType: TextInputType.emailAddress,
+              validator: Validators.email,
+            ),
+            const SizedBox(height: 16),
+
+            // ─── Password ───────────────────────────────────────
+            _FieldLabel(l10n.authPassword, color: labelColor),
+            const SizedBox(height: 8),
+            NmPasswordField(
+              controller: passwordCtrl,
+              label: '',
+              hint: '••••••••',
+              validator: Validators.password,
+            ),
+            const SizedBox(height: 6),
             Text(
-              l10n.authEmailAddress,
+              l10n.authPasswordHint,
               style: AppTypography.labelSmall.copyWith(
-                color: labelColor,
-                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
               ),
             ),
+            const SizedBox(height: 16),
+
+            // ─── Mobile Number ──────────────────────────────────
+            _FieldLabel(l10n.authMobileNumber, color: labelColor),
             const SizedBox(height: 8),
-            _StitchEmailInput(
-              controller: emailCtrl,
-              onChanged: notifier.setEmail,
-              onSendOtp: () {
-                final emailError = Validators.email(emailCtrl.text.trim());
-                if (emailError != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(emailError)),
-                  );
-                  return;
-                }
-                notifier.setEmail(emailCtrl.text.trim());
-                notifier.sendEmailOtp();
-              },
-              isSent: state.emailSentOtp,
+            _Fixed91PhoneField(
+              controller: phoneCtrl,
+              validator: Validators.phone,
             ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-          // ─── OTP Input Section (Responsive Cards) ───────────
-          _OtpSection(
-            title: l10n.authEnterMobileOtp,
-            onCompleted: notifier.setMobileOtp,
-            onChanged: notifier.setMobileOtp,
-          ),
-          const SizedBox(height: 14),
-          _OtpSection(
-            title: l10n.authEnterEmailOtp,
-            onCompleted: notifier.setEmailOtp,
-            onChanged: notifier.setEmailOtp,
-          ),
-          const SizedBox(height: 16),
-
-          // ─── Password ───────────────────────────────────────
-          Text(
-            l10n.authPassword,
-            style: AppTypography.labelSmall.copyWith(
-              color: labelColor,
-              fontWeight: FontWeight.w600,
+            // ─── Registering For ────────────────────────────────
+            _FieldLabel(l10n.authRegisteringForLabel, color: labelColor),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _registeringForOptions.map((option) {
+                return _RegisterChip(
+                  label: _registeringForLabel(l10n, option),
+                  isSelected: registeringFor == option,
+                  onTap: () => notifier.setRegisteringFor(option),
+                );
+              }).toList(),
             ),
-          ),
-          const SizedBox(height: 8),
-          _StitchPasswordInput(
-            controller: passwordCtrl,
-            onChanged: notifier.setPassword,
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 24),
 
-          // ─── Registering For ────────────────────────────────
-          Text(
-            l10n.authRegisteringForLabel,
-            style: AppTypography.labelSmall.copyWith(
-              color: labelColor,
-              fontWeight: FontWeight.w600,
+            _PrimaryButton(
+              label: l10n.authCreateAccount,
+              isLoading: isLoading,
+              onPressed: onCreateAccount,
             ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _registeringForOptions.map((option) {
-              final isSelected = state.registeringFor == option;
-              return _RegisterChip(
-                label: _registeringForLabel(l10n, option),
-                isSelected: isSelected,
-                onTap: () => notifier.setRegisteringFor(option),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-          // ─── Create Account Button ──────────────────────────
-          _PrimaryButton(
-            label: l10n.authCreateAccount,
-            isLoading: state.isLoading,
-            onPressed: onCreateAccount,
-          ),
-          const SizedBox(height: 20),
-
-          // ─── Login Link ─────────────────────────────────────
-          Center(
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              children: [
-                Text(
-                  l10n.authAlreadyHaveAccount,
-                  style: AppTypography.bodyMedium.copyWith(color: labelColor),
-                ),
-                GestureDetector(
-                  onTap: onLoginTap,
-                  child: Text(
-                    l10n.authLogin,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
+            Center(
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                children: [
+                  Text(
+                    l10n.authAlreadyHaveAccount,
+                    style: AppTypography.bodyMedium.copyWith(color: labelColor),
+                  ),
+                  GestureDetector(
+                    onTap: onLoginTap,
+                    child: Text(
+                      l10n.authLogin,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
+    );
+  }
+}
+
+class _FieldLabel extends StatelessWidget {
+  final String text;
+  final Color color;
+  const _FieldLabel(this.text, {required this.color});
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: AppTypography.labelSmall
+          .copyWith(color: color, fontWeight: FontWeight.w600),
     );
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Reusable Sub-Widgets (Stitch Specific Implementation)
+// Reusable Sub-Widgets
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Stitch pixel-perfect phone input: rounded container with embedded prefix & action button.
-class _StitchPhoneInput extends StatefulWidget {
+/// Phone field with a fixed +91 (India) prefix and 10-digit limit.
+class _Fixed91PhoneField extends StatelessWidget {
   final TextEditingController controller;
-  final ValueChanged<String>? onChanged;
-  final VoidCallback onSendOtp;
-  final bool isSent;
+  final String? Function(String?)? validator;
 
-  const _StitchPhoneInput({
-    required this.controller,
-    this.onChanged,
-    required this.onSendOtp,
-    required this.isSent,
-  });
-
-  @override
-  State<_StitchPhoneInput> createState() => _StitchPhoneInputState();
-}
-
-class _StitchPhoneInputState extends State<_StitchPhoneInput> {
-  CountryInfo _selectedCountry = kCountryCodes.first;
+  const _Fixed91PhoneField({required this.controller, this.validator});
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor =
         isDark ? AppColors.surfaceVariantDark : const Color(0xFFF5F3EE);
@@ -797,7 +790,7 @@ class _StitchPhoneInputState extends State<_StitchPhoneInput> {
     final textColor = isDark ? Colors.white : AppColors.textPrimaryLight;
 
     return Container(
-      height: 56,
+      constraints: const BoxConstraints(minHeight: 56),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(16),
@@ -805,43 +798,30 @@ class _StitchPhoneInputState extends State<_StitchPhoneInput> {
       ),
       child: Row(
         children: [
-          InkWell(
-            onTap: () => showCountryPickerSheet(context, onSelect: (c) {
-              setState(() => _selectedCountry = c);
-            }),
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
-            child: Padding(
-              padding: const EdgeInsets.only(left: 16, right: 12, top: 16, bottom: 16),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(_selectedCountry.flag, style: const TextStyle(fontSize: 18)),
-                  const SizedBox(width: 6),
-                  Text(
-                    _selectedCountry.code,
-                    style: AppTypography.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: textColor,
-                    ),
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🇮🇳', style: TextStyle(fontSize: 18)),
+                const SizedBox(width: 6),
+                Text(
+                  '+91',
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
                   ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.arrow_drop_down_rounded, size: 20, color: textColor.withValues(alpha: 0.6)),
-                  const SizedBox(width: 6),
-                  Container(
-                    width: 1,
-                    height: 24,
-                    color: borderColor,
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 10),
+                Container(width: 1, height: 24, color: borderColor),
+              ],
             ),
           ),
           Expanded(
             child: TextFormField(
-              controller: widget.controller,
-              validator: Validators.phone,
+              controller: controller,
+              validator: validator,
               keyboardType: TextInputType.phone,
-              onChanged: widget.onChanged,
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(10),
@@ -855,365 +835,18 @@ class _StitchPhoneInputState extends State<_StitchPhoneInput> {
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
+                errorStyle: const TextStyle(height: 0.8),
                 contentPadding: const EdgeInsets.symmetric(vertical: 16),
               ),
             ),
           ),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: widget.isSent ? null : widget.onSendOtp,
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-                child: Text(
-                  widget.isSent ? '${l10n.authSentStatus} ✓' : l10n.authSendOtp,
-                  style: AppTypography.labelMedium.copyWith(
-                    color: widget.isSent ? AppColors.success : AppColors.accentGold,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 }
 
-/// Stitch pixel-perfect email input with integrated Send OTP action button.
-class _StitchEmailInput extends StatelessWidget {
-  final TextEditingController controller;
-  final ValueChanged<String>? onChanged;
-  final VoidCallback onSendOtp;
-  final bool isSent;
-
-  const _StitchEmailInput({
-    required this.controller,
-    this.onChanged,
-    required this.onSendOtp,
-    required this.isSent,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor =
-        isDark ? AppColors.surfaceVariantDark : const Color(0xFFF5F3EE);
-    final borderColor = isDark
-        ? AppColors.borderDark.withValues(alpha: 0.5)
-        : const Color(0xFFC5C6CF).withValues(alpha: 0.4);
-    final textColor = isDark ? Colors.white : AppColors.textPrimaryLight;
-
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextFormField(
-              controller: controller,
-              validator: Validators.email,
-              keyboardType: TextInputType.emailAddress,
-              onChanged: onChanged,
-              style: AppTypography.bodyLarge.copyWith(color: textColor),
-              decoration: InputDecoration(
-                hintText: 'name@example.com',
-                hintStyle: AppTypography.bodyLarge.copyWith(
-                  color: isDark ? Colors.white38 : AppColors.textTertiaryLight,
-                ),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: const EdgeInsets.only(
-                  left: 16,
-                  top: 16,
-                  bottom: 16,
-                ),
-              ),
-            ),
-          ),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: isSent ? null : onSendOtp,
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-                child: Text(
-                  isSent ? '${l10n.authSentStatus} ✓' : l10n.authSendOtp,
-                  style: AppTypography.labelMedium.copyWith(
-                    color: isSent ? AppColors.success : AppColors.accentGold,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Stitch pixel-perfect password field inside rounded container.
-class _StitchPasswordInput extends StatefulWidget {
-  final TextEditingController controller;
-  final ValueChanged<String>? onChanged;
-
-  const _StitchPasswordInput({
-    required this.controller,
-    this.onChanged,
-  });
-
-  @override
-  State<_StitchPasswordInput> createState() => _StitchPasswordInputState();
-}
-
-class _StitchPasswordInputState extends State<_StitchPasswordInput> {
-  bool _obscure = true;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor =
-        isDark ? AppColors.surfaceVariantDark : const Color(0xFFF5F3EE);
-    final borderColor = isDark
-        ? AppColors.borderDark.withValues(alpha: 0.5)
-        : const Color(0xFFC5C6CF).withValues(alpha: 0.4);
-    final textColor = isDark ? Colors.white : AppColors.textPrimaryLight;
-
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextFormField(
-              controller: widget.controller,
-              obscureText: _obscure,
-              onChanged: widget.onChanged,
-              style: AppTypography.bodyLarge.copyWith(color: textColor),
-              decoration: InputDecoration(
-                hintText: '••••••••',
-                hintStyle: AppTypography.bodyLarge.copyWith(
-                  color: isDark ? Colors.white38 : AppColors.textTertiaryLight,
-                ),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: const EdgeInsets.only(
-                  left: 16,
-                  top: 16,
-                  bottom: 16,
-                ),
-              ),
-            ),
-          ),
-          IconButton(
-            icon: Icon(
-              _obscure
-                  ? Icons.visibility_off_outlined
-                  : Icons.visibility_outlined,
-              color: isDark ? Colors.white60 : AppColors.textSecondaryLight,
-              size: 20,
-            ),
-            onPressed: () => setState(() => _obscure = !_obscure),
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
-    );
-  }
-}
-
-/// OTP section: labeled card container with 6 responsive individual input cells.
-class _OtpSection extends StatefulWidget {
-  final String title;
-  final ValueChanged<String> onCompleted;
-  final ValueChanged<String>? onChanged;
-
-  const _OtpSection({
-    required this.title,
-    required this.onCompleted,
-    this.onChanged,
-  });
-
-  @override
-  State<_OtpSection> createState() => _OtpSectionState();
-}
-
-class _OtpSectionState extends State<_OtpSection> {
-  static const int _length = 6;
-  late final List<TextEditingController> _controllers;
-  late final List<FocusNode> _focusNodes;
-
-  @override
-  void initState() {
-    super.initState();
-    _controllers = List.generate(_length, (_) => TextEditingController());
-    _focusNodes = List.generate(_length, (_) => FocusNode());
-  }
-
-  @override
-  void dispose() {
-    for (final c in _controllers) {
-      c.dispose();
-    }
-    for (final f in _focusNodes) {
-      f.dispose();
-    }
-    super.dispose();
-  }
-
-  String get _otp => _controllers.map((c) => c.text).join();
-
-  void _onCellChanged(int index, String value) {
-    if (value.length > 1) {
-      final digits = value.replaceAll(RegExp(r'\D'), '');
-      for (int i = 0; i < _length; i++) {
-        _controllers[i].text = i < digits.length ? digits[i] : '';
-      }
-      final last = (digits.length - 1).clamp(0, _length - 1);
-      _focusNodes[last].requestFocus();
-      setState(() {});
-    } else {
-      if (value.length == 1 && index < _length - 1) {
-        _focusNodes[index + 1].requestFocus();
-      }
-    }
-    final otp = _otp;
-    widget.onChanged?.call(otp);
-    if (otp.length == _length) widget.onCompleted(otp);
-  }
-
-  void _onKeyDown(int index, KeyEvent event) {
-    if (event is KeyDownEvent &&
-        event.logicalKey == LogicalKeyboardKey.backspace &&
-        _controllers[index].text.isEmpty &&
-        index > 0) {
-      _controllers[index - 1].clear();
-      _focusNodes[index - 1].requestFocus();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark
-        ? AppColors.surfaceVariantDark.withValues(alpha: 0.3)
-        : const Color(0xFFF0EEE9).withValues(alpha: 0.45);
-    final borderColor = isDark
-        ? AppColors.borderDark.withValues(alpha: 0.5)
-        : const Color(0xFFC5C6CF).withValues(alpha: 0.35);
-    final inputBg = isDark ? AppColors.surfaceDark : Colors.white;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            widget.title,
-            style: AppTypography.labelMedium.copyWith(
-              color: isDark ? Colors.white70 : AppColors.textSecondaryLight,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 14),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              const gap = 6.0;
-              const totalGap = gap * (_length - 1);
-              final availableWidth = constraints.maxWidth - totalGap;
-              final cellWidth = (availableWidth / _length).clamp(30.0, 48.0);
-              final cellHeight = (cellWidth * 1.15).clamp(40.0, 56.0);
-
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_length, (index) {
-                  return Padding(
-                    padding: EdgeInsets.only(
-                      right: index < _length - 1 ? gap : 0,
-                    ),
-                    child: SizedBox(
-                      width: cellWidth,
-                      height: cellHeight,
-                      child: KeyboardListener(
-                        focusNode: FocusNode(),
-                        onKeyEvent: (e) => _onKeyDown(index, e),
-                        child: TextFormField(
-                          controller: _controllers[index],
-                          focusNode: _focusNodes[index],
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.center,
-                          maxLength: _length,
-                          style: AppTypography.titleMedium.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : AppColors.textPrimaryLight,
-                          ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                          decoration: InputDecoration(
-                            counterText: '',
-                            contentPadding: EdgeInsets.zero,
-                            filled: true,
-                            fillColor: inputBg,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: borderColor),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: borderColor),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: AppColors.primary,
-                                width: 1.8,
-                              ),
-                            ),
-                          ),
-                          onChanged: (v) => _onCellChanged(index, v),
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// "Registering for" chip — dark navy filled when selected, outlined otherwise.
-/// Uses custom styling instead of NmFilterChip for this specific design.
+/// "Registering for" chip.
 class _RegisterChip extends StatelessWidget {
   final String label;
   final bool isSelected;
@@ -1337,7 +970,8 @@ class _TrustItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final color =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
