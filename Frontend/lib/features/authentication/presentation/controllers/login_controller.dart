@@ -39,10 +39,12 @@ class LoginController extends Notifier<bool> {
             password: password,
           );
       state = false;
+      // Email/password login does NOT require phone OTP — only the email
+      // verification link gates entry.
       return LoginResult(
         success: true,
         user: user,
-        needsVerification: !user.isFullyVerified,
+        needsVerification: !user.emailVerified,
       );
     } on FirebaseAuthException catch (e) {
       state = false;

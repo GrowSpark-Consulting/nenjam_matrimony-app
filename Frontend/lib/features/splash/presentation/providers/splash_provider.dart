@@ -27,15 +27,10 @@ class SplashController extends Notifier<void> {
     }
 
     try {
-      // Reload from Firebase, then derive verification purely from the auth
-      // record (no database): phone is verified once it's linked.
+      // Phone OTP verification is disabled for now — gate entry on email
+      // verification only.
       final emailVerified = await repo.checkEmailVerified();
-      final phoneVerified = repo.currentAuthUser?.phoneVerified ?? false;
-
-      if (emailVerified && phoneVerified) {
-        return RouteNames.home;
-      }
-      return emailVerified ? RouteNames.verifyPhone : RouteNames.verifyEmail;
+      return emailVerified ? RouteNames.home : RouteNames.verifyEmail;
     } catch (_) {
       // Network hiccup while refreshing — fall back to the verify-email step
       // rather than blocking the user at the splash.

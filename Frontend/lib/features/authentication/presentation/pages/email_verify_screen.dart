@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/route_names.dart';
+import '../../../../core/services/storage_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../controllers/signup_controller.dart';
 import '../providers/auth_providers.dart';
 
 /// Email Verification screen.
@@ -70,6 +72,10 @@ class _EmailVerifyScreenState extends ConsumerState<EmailVerifyScreen> {
     if (!silent) setState(() => _checking = false);
     if (verified) {
       _pollTimer?.cancel();
+      // Phone OTP verification is disabled for now — go straight into the app
+      // once the email is verified.
+      storageService.clearPendingPhone();
+      ref.read(signupControllerProvider.notifier).reset();
       final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -77,7 +83,7 @@ class _EmailVerifyScreenState extends ConsumerState<EmailVerifyScreen> {
           backgroundColor: AppColors.success,
         ),
       );
-      context.go(RouteNames.verifyPhone);
+      context.go(RouteNames.registrationWizard);
     } else if (!silent) {
       final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
