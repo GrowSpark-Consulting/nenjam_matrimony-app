@@ -33,7 +33,13 @@
       "@app/cache": ["libs/cache/src"],
       "@app/cache/*": ["libs/cache/src/*"],
       "@app/search": ["libs/search/src"],
-      "@app/search/*": ["libs/search/src/*"]
+      "@app/search/*": ["libs/search/src/*"],
+      "@app/queue": ["libs/queue/src"],
+      "@app/queue/*": ["libs/queue/src/*"],
+      "@app/firebase": ["libs/firebase/src"],
+      "@app/firebase/*": ["libs/firebase/src/*"],
+      "@app/storage": ["libs/storage/src"],
+      "@app/storage/*": ["libs/storage/src/*"]
     }
   }
 }

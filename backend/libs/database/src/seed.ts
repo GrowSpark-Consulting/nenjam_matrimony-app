@@ -1,5 +1,10 @@
-import 'dotenv/config';
+import { config } from 'dotenv';
 import { PrismaPg } from '@prisma/adapter-pg';
+
+// Same precedence as AppConfigModule and prisma.config.ts: .env.local
+// (gitignored, real secrets) must override .env (committed, placeholders).
+config({ path: '.env' });
+config({ path: '.env.local', override: true });
 import { PrismaClient } from '../generated/client';
 
 const prisma = new PrismaClient({
