@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/astro/presentation/pages/astro_page.dart';
 import '../../features/authentication/presentation/pages/auth_selection_page.dart';
 import '../../features/authentication/presentation/pages/email_verify_screen.dart';
 import '../../features/authentication/presentation/pages/forgot_password_page.dart';
@@ -9,6 +10,7 @@ import '../../features/authentication/presentation/pages/login_page.dart';
 import '../../features/authentication/presentation/pages/otp_page.dart';
 import '../../features/authentication/presentation/pages/phone_verify_screen.dart';
 import '../../features/chat/presentation/pages/chat_page.dart';
+import '../../features/discover/presentation/pages/discover_page.dart';
 import '../../features/help/presentation/pages/help_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/language/presentation/pages/language_page.dart';
@@ -128,15 +130,6 @@ GoRouter createRouter() => GoRouter(
           builder: (context, state) => const ProfileReviewPage(),
         ),
         GoRoute(
-          path: RouteNames.premium,
-          name: RouteNames.premiumName,
-          pageBuilder: (context, state) => CustomTransitionPage(
-            key: state.pageKey,
-            child: const PremiumPage(),
-            transitionsBuilder: _slideUpTransition,
-          ),
-        ),
-        GoRoute(
           path: RouteNames.settings,
           name: RouteNames.settingsName,
           builder: (context, state) => const SettingsPage(),
@@ -167,6 +160,13 @@ GoRouter createRouter() => GoRouter(
           builder: (context, state, child) => AppBottomNavShell(child: child),
           routes: [
             GoRoute(
+              path: RouteNames.discover,
+              name: RouteNames.discoverName,
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: DiscoverPage(),
+              ),
+            ),
+            GoRoute(
               path: RouteNames.home,
               name: RouteNames.homeName,
               pageBuilder: (context, state) => const NoTransitionPage(
@@ -188,8 +188,8 @@ GoRouter createRouter() => GoRouter(
               ),
             ),
             GoRoute(
-              path: RouteNames.chat,
-              name: RouteNames.chatName,
+              path: RouteNames.messages,
+              name: RouteNames.messagesName,
               pageBuilder: (context, state) => const NoTransitionPage(
                 child: ChatPage(),
               ),
@@ -206,6 +206,20 @@ GoRouter createRouter() => GoRouter(
               name: RouteNames.profileName,
               pageBuilder: (context, state) => const NoTransitionPage(
                 child: ProfilePage(),
+              ),
+            ),
+            GoRoute(
+              path: RouteNames.premium,
+              name: RouteNames.premiumName,
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: PremiumPage(),
+              ),
+            ),
+            GoRoute(
+              path: RouteNames.astro,
+              name: RouteNames.astroName,
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: AstroPage(),
               ),
             ),
           ],

@@ -632,6 +632,180 @@ abstract class AppLocalizations {
   /// **'match'**
   String get homeAiMatchLabel;
 
+  /// No description provided for @homeNewTodayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New Today'**
+  String get homeNewTodayLabel;
+
+  /// No description provided for @homeVerifiedProfilesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified Profiles'**
+  String get homeVerifiedProfilesTitle;
+
+  /// No description provided for @homeNearYouTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Near You'**
+  String get homeNearYouTitle;
+
+  /// No description provided for @homePremiumMembersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium Members'**
+  String get homePremiumMembersTitle;
+
+  /// No description provided for @homeSearchingMoreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching for more souls…'**
+  String get homeSearchingMoreLabel;
+
+  /// No description provided for @homeVerifiedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get homeVerifiedLabel;
+
+  /// No description provided for @homePremiumLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium'**
+  String get homePremiumLabel;
+
+  /// No description provided for @homePsychologyCompletedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Psychology Completed'**
+  String get homePsychologyCompletedLabel;
+
+  /// No description provided for @homeChipVerifiedIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified Identity'**
+  String get homeChipVerifiedIdentity;
+
+  /// No description provided for @homeChipPremiumPlus.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium Plus'**
+  String get homeChipPremiumPlus;
+
+  /// No description provided for @homeChipNri.
+  ///
+  /// In en, this message translates to:
+  /// **'NRI'**
+  String get homeChipNri;
+
+  /// No description provided for @homePhotoProtectedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo Protected'**
+  String get homePhotoProtectedLabel;
+
+  /// No description provided for @homeInterestSentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Interest Sent'**
+  String get homeInterestSentLabel;
+
+  /// No description provided for @homeAiMatchScoreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Match'**
+  String get homeAiMatchScoreLabel;
+
+  /// No description provided for @homeAstroMatchScoreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Astro Match'**
+  String get homeAstroMatchScoreLabel;
+
+  /// No description provided for @homePsychologyMatchScoreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Psychology Match'**
+  String get homePsychologyMatchScoreLabel;
+
+  /// No description provided for @homeCompatibilityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Compatibility'**
+  String get homeCompatibilityLabel;
+
+  /// No description provided for @actionInterested.
+  ///
+  /// In en, this message translates to:
+  /// **'Interested'**
+  String get actionInterested;
+
+  /// No description provided for @actionViewProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'View Profile'**
+  String get actionViewProfile;
+
+  /// No description provided for @actionShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get actionShare;
+
+  /// No description provided for @homeFilterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter'**
+  String get homeFilterLabel;
+
+  /// No description provided for @homeProfileDetailsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get homeProfileDetailsLabel;
+
+  /// No description provided for @navDiscover.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover'**
+  String get navDiscover;
+
+  /// No description provided for @navMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Inbox'**
+  String get navMessages;
+
+  /// No description provided for @navAstro.
+  ///
+  /// In en, this message translates to:
+  /// **'Astro'**
+  String get navAstro;
+
+  /// No description provided for @navPremium.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium'**
+  String get navPremium;
+
+  /// No description provided for @discoverForYouTab.
+  ///
+  /// In en, this message translates to:
+  /// **'For You'**
+  String get discoverForYouTab;
+
+  /// No description provided for @discoverNearMeTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Near Me'**
+  String get discoverNearMeTab;
+
+  /// No description provided for @discoverNewTab.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get discoverNewTab;
+
   /// No description provided for @premiumBannerTitle.
   ///
   /// In en, this message translates to:

@@ -61,12 +61,19 @@ class NmProfileCard extends StatelessWidget {
                         ? AppColors.surfaceVariantDark
                         : AppColors.surfaceVariantLight,
                     child: imageUrl != null
-                        ? Image.network(
-                            imageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                _buildPlaceholder(isDark),
-                          )
+                        ? (imageUrl!.startsWith('assets/')
+                            ? Image.asset(
+                                imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _buildPlaceholder(isDark),
+                              )
+                            : Image.network(
+                                imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _buildPlaceholder(isDark),
+                              ))
                         : _buildPlaceholder(isDark),
                   ),
 

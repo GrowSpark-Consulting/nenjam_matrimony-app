@@ -294,6 +294,93 @@ class AppLocalizationsTa extends AppLocalizations {
   String get homeAiMatchLabel => 'பொருத்தம்';
 
   @override
+  String get homeNewTodayLabel => 'இன்று புதியவர்கள்';
+
+  @override
+  String get homeVerifiedProfilesTitle => 'சரிபார்க்கப்பட்ட சுயவிவரங்கள்';
+
+  @override
+  String get homeNearYouTitle => 'உங்களுக்கு அருகில்';
+
+  @override
+  String get homePremiumMembersTitle => 'பிரீமியம் உறுப்பினர்கள்';
+
+  @override
+  String get homeSearchingMoreLabel => 'மேலும் இதயங்களைத் தேடுகிறோம்…';
+
+  @override
+  String get homeVerifiedLabel => 'சரிபார்க்கப்பட்டது';
+
+  @override
+  String get homePremiumLabel => 'பிரீமியம்';
+
+  @override
+  String get homePsychologyCompletedLabel => 'உளவியல் மதிப்பீடு முடிந்தது';
+
+  @override
+  String get homeChipVerifiedIdentity => 'சரிபார்க்கப்பட்ட அடையாளம்';
+
+  @override
+  String get homeChipPremiumPlus => 'பிரீமியம் பிளஸ்';
+
+  @override
+  String get homeChipNri => 'என்.ஆர்.ஐ';
+
+  @override
+  String get homePhotoProtectedLabel => 'புகைப்படம் பாதுகாக்கப்பட்டது';
+
+  @override
+  String get homeInterestSentLabel => 'ஆர்வம் அனுப்பப்பட்டது';
+
+  @override
+  String get homeAiMatchScoreLabel => 'AI பொருத்தம்';
+
+  @override
+  String get homeAstroMatchScoreLabel => 'ஜோதிட பொருத்தம்';
+
+  @override
+  String get homePsychologyMatchScoreLabel => 'உளவியல் பொருத்தம்';
+
+  @override
+  String get homeCompatibilityLabel => 'பொருத்தம்';
+
+  @override
+  String get actionInterested => 'ஆர்வம்';
+
+  @override
+  String get actionViewProfile => 'சுயவிவரத்தைப் பார்';
+
+  @override
+  String get actionShare => 'பகிர்';
+
+  @override
+  String get homeFilterLabel => 'வடிகட்டி';
+
+  @override
+  String get homeProfileDetailsLabel => 'விவரங்கள்';
+
+  @override
+  String get navDiscover => 'கண்டறி';
+
+  @override
+  String get navMessages => 'இன்பாக்ஸ்';
+
+  @override
+  String get navAstro => 'ஜோதிடம்';
+
+  @override
+  String get navPremium => 'பிரீமியம்';
+
+  @override
+  String get discoverForYouTab => 'உங்களுக்காக';
+
+  @override
+  String get discoverNearMeTab => 'என் அருகில்';
+
+  @override
+  String get discoverNewTab => 'புதியவை';
+
+  @override
   String get premiumBannerTitle => 'பிரீமியத்திற்கு மேம்படுத்தவும்';
 
   @override

@@ -27,11 +27,17 @@ class NmCircleAvatar extends StatelessWidget {
         decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.primarySurface),
         clipBehavior: Clip.antiAlias,
         child: imageUrl != null && imageUrl!.isNotEmpty
-            ? CachedNetworkImage(
-                imageUrl: imageUrl!,
-                fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => _fallback(),
-              )
+            ? (imageUrl!.startsWith('assets/')
+                ? Image.asset(
+                    imageUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _fallback(),
+                  )
+                : CachedNetworkImage(
+                    imageUrl: imageUrl!,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => _fallback(),
+                  ))
             : _fallback(),
       ),
     );

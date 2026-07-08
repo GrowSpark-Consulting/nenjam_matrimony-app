@@ -18,9 +18,11 @@ abstract final class RouteNames {
   static const String registrationWizard = '/registration/wizard';
   static const String profileReview = '/profile-review';
   static const String home = '/home';
+  static const String discover = '/discover';
+  static const String astro = '/astro';
   static const String search = '/search';
   static const String matches = '/matches';
-  static const String chat = '/chat';
+  static const String messages = '/messages';
   static const String notifications = '/notifications';
   static const String profile = '/profile';
   static const String premium = '/premium';
@@ -47,9 +49,11 @@ abstract final class RouteNames {
   static const String registrationWizardName = 'registrationWizard';
   static const String profileReviewName = 'profileReview';
   static const String homeName = 'home';
+  static const String discoverName = 'discover';
+  static const String astroName = 'astro';
   static const String searchName = 'search';
   static const String matchesName = 'matches';
-  static const String chatName = 'chat';
+  static const String messagesName = 'messages';
   static const String notificationsName = 'notifications';
   static const String profileName = 'profile';
   static const String premiumName = 'premium';

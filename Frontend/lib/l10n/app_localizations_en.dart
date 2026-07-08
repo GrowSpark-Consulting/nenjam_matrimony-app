@@ -292,6 +292,93 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeAiMatchLabel => 'match';
 
   @override
+  String get homeNewTodayLabel => 'New Today';
+
+  @override
+  String get homeVerifiedProfilesTitle => 'Verified Profiles';
+
+  @override
+  String get homeNearYouTitle => 'Near You';
+
+  @override
+  String get homePremiumMembersTitle => 'Premium Members';
+
+  @override
+  String get homeSearchingMoreLabel => 'Searching for more souls…';
+
+  @override
+  String get homeVerifiedLabel => 'Verified';
+
+  @override
+  String get homePremiumLabel => 'Premium';
+
+  @override
+  String get homePsychologyCompletedLabel => 'Psychology Completed';
+
+  @override
+  String get homeChipVerifiedIdentity => 'Verified Identity';
+
+  @override
+  String get homeChipPremiumPlus => 'Premium Plus';
+
+  @override
+  String get homeChipNri => 'NRI';
+
+  @override
+  String get homePhotoProtectedLabel => 'Photo Protected';
+
+  @override
+  String get homeInterestSentLabel => 'Interest Sent';
+
+  @override
+  String get homeAiMatchScoreLabel => 'AI Match';
+
+  @override
+  String get homeAstroMatchScoreLabel => 'Astro Match';
+
+  @override
+  String get homePsychologyMatchScoreLabel => 'Psychology Match';
+
+  @override
+  String get homeCompatibilityLabel => 'Compatibility';
+
+  @override
+  String get actionInterested => 'Interested';
+
+  @override
+  String get actionViewProfile => 'View Profile';
+
+  @override
+  String get actionShare => 'Share';
+
+  @override
+  String get homeFilterLabel => 'Filter';
+
+  @override
+  String get homeProfileDetailsLabel => 'Details';
+
+  @override
+  String get navDiscover => 'Discover';
+
+  @override
+  String get navMessages => 'Inbox';
+
+  @override
+  String get navAstro => 'Astro';
+
+  @override
+  String get navPremium => 'Premium';
+
+  @override
+  String get discoverForYouTab => 'For You';
+
+  @override
+  String get discoverNearMeTab => 'Near Me';
+
+  @override
+  String get discoverNewTab => 'New';
+
+  @override
   String get premiumBannerTitle => 'Upgrade to Premium';
 
   @override
