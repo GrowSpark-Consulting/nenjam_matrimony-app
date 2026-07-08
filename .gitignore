@@ -7,3 +7,4 @@ Thumbs.db
 # Safety net: never commit machine-local secret overrides from anywhere in the repo
 .env.local
 .env.*.local
+node_modules
