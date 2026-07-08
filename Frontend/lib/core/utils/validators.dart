@@ -20,6 +20,26 @@ abstract final class Validators {
     return null;
   }
 
+  // ─── Username ────────────────────────────────────────────────────
+  /// Username rules: minimum 3 characters, letters/numbers/underscore only,
+  /// no spaces or other special symbols. Must start with a letter.
+  static String? username(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter a username';
+    }
+    final v = value.trim();
+    if (v.length < 3) {
+      return 'Username must be at least 3 characters';
+    }
+    if (v.length > 20) {
+      return 'Username must be less than 20 characters';
+    }
+    if (!RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*$').hasMatch(v)) {
+      return 'Use letters, numbers, or underscore (start with a letter)';
+    }
+    return null;
+  }
+
   // ─── Email ───────────────────────────────────────────────────────
   static String? email(String? value) {
     if (value == null || value.trim().isEmpty) {

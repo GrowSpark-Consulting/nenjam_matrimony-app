@@ -50,6 +50,10 @@ abstract final class AppConstants {
   static const String keyOnboardingDone = 'onboarding_done';
   static const String keyNotificationsEnabled = 'notifications_enabled';
 
+  /// Phone number captured during signup, held locally only until the number
+  /// is verified and linked to the Firebase account. Not a profile store.
+  static const String keyPendingPhone = 'pending_signup_phone';
+
   // ─── Localization ────────────────────────────────────────────────
   /// Default language used until the user makes an explicit selection.
   static const String defaultLanguage = 'en';

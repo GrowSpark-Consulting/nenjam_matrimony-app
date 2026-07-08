@@ -9,6 +9,10 @@ abstract final class RouteNames {
   static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String otp = '/otp';
+  static const String loginOtp = '/login-otp';
+  static const String verifyEmail = '/verify-email';
+  static const String verifyPhone = '/verify-phone';
+  static const String forgotPassword = '/forgot-password';
   static const String registration = '/registration';
   static const String createProfileFor = '/create-profile-for';
   static const String registrationWizard = '/registration/wizard';
@@ -34,6 +38,10 @@ abstract final class RouteNames {
   static const String onboardingName = 'onboarding';
   static const String loginName = 'login';
   static const String otpName = 'otp';
+  static const String loginOtpName = 'loginOtp';
+  static const String verifyEmailName = 'verifyEmail';
+  static const String verifyPhoneName = 'verifyPhone';
+  static const String forgotPasswordName = 'forgotPassword';
   static const String registrationName = 'registration';
   static const String createProfileForName = 'createProfileFor';
   static const String registrationWizardName = 'registrationWizard';

@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_constants.dart';
-import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../providers/splash_provider.dart';
 
 /// Splash screen with animated logo and gradient background.
-class SplashPage extends StatefulWidget {
+class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage>
+class _SplashPageState extends ConsumerState<SplashPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _fadeAnimation;
@@ -39,12 +40,17 @@ class _SplashPageState extends State<SplashPage>
 
     _controller.forward();
 
-    // Navigate after splash duration
-    Future.delayed(AppConstants.splashDuration, () {
-      if (mounted) {
-        context.go(RouteNames.language);
-      }
-    });
+    _navigateAfterSplash();
+  }
+
+  /// Waits out the splash animation, then routes based on session state.
+  Future<void> _navigateAfterSplash() async {
+    final results = await Future.wait<Object?>([
+      Future<void>.delayed(AppConstants.splashDuration),
+      ref.read(splashControllerProvider.notifier).resolveInitialRoute(),
+    ]);
+    if (!mounted) return;
+    context.go(results[1] as String);
   }
 
   @override

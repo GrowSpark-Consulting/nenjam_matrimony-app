@@ -57,6 +57,42 @@
   "authResendOtpIn": "OTP ஐ மீண்டும் அனுப்ப",
   "authResendOtp": "OTP ஐ மீண்டும் அனுப்பு",
 
+  "authUsername": "பயனர்பெயர்",
+  "authUsernameHint": "எ.கா. arun_kumar",
+  "authPasswordHint": "குறைந்தது 8 எழுத்துகள் — பெரிய, சிறிய எழுத்து, எண் மற்றும் சிறப்பு எழுத்துடன்",
+  "authPasswordRequired": "உங்கள் கடவுச்சொல்லை உள்ளிடவும்",
+  "authComingSoon": "விரைவில் வருகிறது",
+  "authGenericError": "ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.",
+  "authLogoutConfirm": "நிச்சயமாக வெளியேற விரும்புகிறீர்களா?",
+  "commonCancel": "ரத்து செய்",
+
+  "authVerifyEmailTitle": "உங்கள் மின்னஞ்சலைச் சரிபார்க்கவும்",
+  "authVerifyEmailSentTo": "{email} க்கு சரிபார்ப்பு இணைப்பை அனுப்பியுள்ளோம்",
+  "@authVerifyEmailSentTo": {
+    "placeholders": { "email": { "type": "String" } }
+  },
+  "authVerifyEmailInstruction": "உங்கள் மின்னஞ்சலில் உள்ள இணைப்பைத் திறந்து சரிபார்த்த பிறகு இங்கு திரும்பவும்.",
+  "authIveVerified": "நான் சரிபார்த்துவிட்டேன்",
+  "authResendEmail": "மின்னஞ்சலை மீண்டும் அனுப்பு",
+  "authResendEmailIn": "{seconds}வி இல் மீண்டும் அனுப்பு",
+  "@authResendEmailIn": {
+    "placeholders": { "seconds": { "type": "String" } }
+  },
+  "authEmailNotVerifiedYet": "மின்னஞ்சல் இன்னும் சரிபார்க்கப்படவில்லை. உங்கள் மின்னஞ்சலில் உள்ள இணைப்பைத் தட்டவும்.",
+  "authEmailVerifiedSuccess": "மின்னஞ்சல் சரிபார்க்கப்பட்டது!",
+  "authVerificationEmailSent": "சரிபார்ப்பு மின்னஞ்சல் அனுப்பப்பட்டது.",
+
+  "authVerifyPhoneTitle": "உங்கள் தொலைபேசியைச் சரிபார்க்கவும்",
+  "authSendingOtp": "OTP அனுப்பப்படுகிறது…",
+  "authPhoneVerifiedSuccess": "தொலைபேசி சரிபார்க்கப்பட்டது!",
+
+  "authForgotPasswordTitle": "கடவுச்சொல்லை மறந்தீர்களா",
+  "authForgotPasswordSubtitle": "உங்கள் பதிவு செய்யப்பட்ட மின்னஞ்சலை உள்ளிடவும், கடவுச்சொல்லை மீட்டமைக்க இணைப்பை அனுப்புவோம்.",
+  "authSendResetLink": "மீட்டமைப்பு இணைப்பை அனுப்பு",
+  "authBackToLogin": "உள்நுழைவுக்குத் திரும்பு",
+  "authResetEmailSentTitle": "உங்கள் மின்னஞ்சலைச் சரிபார்க்கவும்",
+  "authResetEmailSent": "கடவுச்சொல் மீட்டமைப்பு இணைப்பு உங்கள் மின்னஞ்சலுக்கு அனுப்பப்பட்டது",
+
   "navHome": "முகப்பு",
   "navSearch": "தேடல்",
   "navMatches": "பொருத்தங்கள்",

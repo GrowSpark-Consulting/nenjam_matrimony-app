@@ -162,6 +162,94 @@ class AppLocalizationsTa extends AppLocalizations {
   String get authResendOtp => 'OTP ஐ மீண்டும் அனுப்பு';
 
   @override
+  String get authUsername => 'பயனர்பெயர்';
+
+  @override
+  String get authUsernameHint => 'எ.கா. arun_kumar';
+
+  @override
+  String get authPasswordHint =>
+      'குறைந்தது 8 எழுத்துகள் — பெரிய, சிறிய எழுத்து, எண் மற்றும் சிறப்பு எழுத்துடன்';
+
+  @override
+  String get authPasswordRequired => 'உங்கள் கடவுச்சொல்லை உள்ளிடவும்';
+
+  @override
+  String get authComingSoon => 'விரைவில் வருகிறது';
+
+  @override
+  String get authGenericError => 'ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get authLogoutConfirm => 'நிச்சயமாக வெளியேற விரும்புகிறீர்களா?';
+
+  @override
+  String get commonCancel => 'ரத்து செய்';
+
+  @override
+  String get authVerifyEmailTitle => 'உங்கள் மின்னஞ்சலைச் சரிபார்க்கவும்';
+
+  @override
+  String authVerifyEmailSentTo(String email) {
+    return '$email க்கு சரிபார்ப்பு இணைப்பை அனுப்பியுள்ளோம்';
+  }
+
+  @override
+  String get authVerifyEmailInstruction =>
+      'உங்கள் மின்னஞ்சலில் உள்ள இணைப்பைத் திறந்து சரிபார்த்த பிறகு இங்கு திரும்பவும்.';
+
+  @override
+  String get authIveVerified => 'நான் சரிபார்த்துவிட்டேன்';
+
+  @override
+  String get authResendEmail => 'மின்னஞ்சலை மீண்டும் அனுப்பு';
+
+  @override
+  String authResendEmailIn(String seconds) {
+    return '$secondsவி இல் மீண்டும் அனுப்பு';
+  }
+
+  @override
+  String get authEmailNotVerifiedYet =>
+      'மின்னஞ்சல் இன்னும் சரிபார்க்கப்படவில்லை. உங்கள் மின்னஞ்சலில் உள்ள இணைப்பைத் தட்டவும்.';
+
+  @override
+  String get authEmailVerifiedSuccess => 'மின்னஞ்சல் சரிபார்க்கப்பட்டது!';
+
+  @override
+  String get authVerificationEmailSent =>
+      'சரிபார்ப்பு மின்னஞ்சல் அனுப்பப்பட்டது.';
+
+  @override
+  String get authVerifyPhoneTitle => 'உங்கள் தொலைபேசியைச் சரிபார்க்கவும்';
+
+  @override
+  String get authSendingOtp => 'OTP அனுப்பப்படுகிறது…';
+
+  @override
+  String get authPhoneVerifiedSuccess => 'தொலைபேசி சரிபார்க்கப்பட்டது!';
+
+  @override
+  String get authForgotPasswordTitle => 'கடவுச்சொல்லை மறந்தீர்களா';
+
+  @override
+  String get authForgotPasswordSubtitle =>
+      'உங்கள் பதிவு செய்யப்பட்ட மின்னஞ்சலை உள்ளிடவும், கடவுச்சொல்லை மீட்டமைக்க இணைப்பை அனுப்புவோம்.';
+
+  @override
+  String get authSendResetLink => 'மீட்டமைப்பு இணைப்பை அனுப்பு';
+
+  @override
+  String get authBackToLogin => 'உள்நுழைவுக்குத் திரும்பு';
+
+  @override
+  String get authResetEmailSentTitle => 'உங்கள் மின்னஞ்சலைச் சரிபார்க்கவும்';
+
+  @override
+  String get authResetEmailSent =>
+      'கடவுச்சொல் மீட்டமைப்பு இணைப்பு உங்கள் மின்னஞ்சலுக்கு அனுப்பப்பட்டது';
+
+  @override
   String get navHome => 'முகப்பு';
 
   @override

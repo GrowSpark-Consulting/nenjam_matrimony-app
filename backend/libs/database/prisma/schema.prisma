@@ -1,3 +1,10 @@
+// ─────────────────────────────────────────────────────────────
+// Nenjam Matrimony — Prisma Schema
+// 30 models across 9 domain groups
+// Driver : @prisma/adapter-pg  (PostgreSQL via node-postgres)
+// Output : ../generated/client
+// ─────────────────────────────────────────────────────────────
+
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/client"
@@ -7,14 +14,851 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+// ══════════════════════════════════════════════════════════════
+// ENUMS
+// ══════════════════════════════════════════════════════════════
 
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+  SUPPORT
+
+  @@map("user_role")
+}
+
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+  BANNED
+
+  @@map("user_status")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+
+  @@map("gender")
+}
+
+enum MaritalStatus {
+  NEVER_MARRIED
+  DIVORCED
+  WIDOWED
+  AWAITING_DIVORCE
+
+  @@map("marital_status")
+}
+
+enum DoshamType {
+  NONE
+  CHEVVAI
+  RAHU_KETHU
+  SARPA
+
+  @@map("dosham_type")
+}
+
+enum InterestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+
+  @@map("interest_status")
+}
+
+enum OceanDomain {
+  O // Openness
+  C // Conscientiousness
+  E // Extraversion
+  A // Agreeableness
+  N // Neuroticism
+
+  @@map("ocean_domain")
+}
+
+enum SubscriptionPlanName {
+  FREE
+  SILVER
+  GOLD
+
+  @@map("subscription_plan_name")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING
+
+  @@map("subscription_status")
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+
+  @@map("payment_status")
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+
+  @@map("message_type")
+}
+
+enum KycDocType {
+  AADHAAR
+  PAN
+  PASSPORT
+  VOTER_ID
+  DRIVING_LICENCE
+
+  @@map("kyc_doc_type")
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("verification_status")
+}
+
+enum NotificationType {
+  INTEREST_RECEIVED
+  INTEREST_ACCEPTED
+  INTEREST_DECLINED
+  NEW_MESSAGE
+  PROFILE_VIEW
+  SHORTLIST_ADDED
+  SUBSCRIPTION_EXPIRING
+  SUBSCRIPTION_RENEWED
+  KYC_APPROVED
+  KYC_REJECTED
+  SYSTEM
+
+  @@map("notification_type")
+}
+
+enum DevicePlatform {
+  ANDROID
+  IOS
+
+  @@map("device_platform")
+}
+
+enum ReportReason {
+  FAKE_PROFILE
+  INAPPROPRIATE_CONTENT
+  HARASSMENT
+  SPAM
+  OTHER
+
+  @@map("report_reason")
+}
+
+enum ReportStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+
+  @@map("report_status")
+}
+
+enum SupportStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+
+  @@map("support_status")
+}
+
+// ══════════════════════════════════════════════════════════════
+// GROUP 1 — IDENTITY & AUTH  (3 models)
+// ══════════════════════════════════════════════════════════════
+
+/// Core user identity record. firebaseUid is the primary link to
+/// Firebase Authentication — every API request is verified against it.
+model User {
+  id          String     @id @default(uuid())
+  firebaseUid String     @unique @map("firebase_uid")
+  email       String     @unique
+  phone       String?    @unique
+  role        UserRole   @default(USER)
+  status      UserStatus @default(PENDING_VERIFICATION)
+  trustScore  Int        @default(0) @map("trust_score")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  deletedAt   DateTime?  @map("deleted_at")
+
+  // Relations
+  profile           UserProfile?
+  partnerPreference PartnerPreference?
+  registrationStep  RegistrationStep?
+  astrologyProfile  AstrologyProfile?
+  photos            ProfilePhoto[]
+  refreshTokens     RefreshToken[]
+  adminAccount      AdminAccount?
+
+  sentInterests     ExpressInterest[] @relation("SentInterests")
+  receivedInterests ExpressInterest[] @relation("ReceivedInterests")
+  shortlists        Shortlist[]       @relation("UserShortlists")
+  shortlistedBy     Shortlist[]       @relation("ShortlistedByUsers")
+  profileViews      ProfileView[]     @relation("ViewerViews")
+  viewedBy          ProfileView[]     @relation("ViewedByUsers")
+
+  quizResponses     UserQuizResponse[]
+  subscriptions     UserSubscription[]
+  payments          PaymentTransaction[]
+
+  sentMessages      ChatMessage[]     @relation("SentMessages")
+  chatRoomsAsUser1  ChatRoom[]        @relation("ChatUser1")
+  chatRoomsAsUser2  ChatRoom[]        @relation("ChatUser2")
+  messageReactions  MessageReaction[]
+
+  kycVerifications  KycVerification[]
+  faceVerification  FaceVerification?
+  trustScoreLogs    TrustScoreLog[]
+
+  notifications     Notification[]
+  deviceTokens      DevicePushToken[]
+  reportsMade       UserReport[]      @relation("ReportsMade")
+  reportsAgainst    UserReport[]      @relation("ReportsAgainst")
+  blocksMade        UserBlock[]       @relation("BlocksMade")
+  blocksReceived    UserBlock[]       @relation("BlocksReceived")
+  supportTickets    SupportTicket[]
+
+  horoscopeRequests HoroscopeMatch[]  @relation("HoroscopeRequester")
+  horoscopeTargets  HoroscopeMatch[]  @relation("HoroscopeTarget")
+
+  @@index([firebaseUid])
+  @@index([email])
+  @@index([phone])
+  @@index([status])
+  @@index([role])
   @@index([deletedAt])
   @@index([createdAt])
   @@map("users")
+}
+
+/// JWT refresh token store. Each token is single-use and hashed.
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  token     String    @unique
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+/// Extended admin metadata — one-to-one extension of User (role=ADMIN).
+model AdminAccount {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  department  String   @default("PLATFORM")
+  permissions Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admin_accounts")
+}
+
+// ══════════════════════════════════════════════════════════════
+// GROUP 2 — PROFILE & REGISTRATION  (4 models)
+// ══════════════════════════════════════════════════════════════
+
+/// Full matrimonial profile — the searchable core of each member.
+model UserProfile {
+  id                 String        @id @default(uuid())
+  userId             String        @unique @map("user_id")
+  firstName          String        @map("first_name")
+  lastName           String        @map("last_name")
+  dob                DateTime
+  gender             Gender
+  maritalStatus      MaritalStatus @default(NEVER_MARRIED) @map("marital_status")
+  religion           String
+  caste              String
+  subCaste           String?       @map("sub_caste")
+  motherTongue       String        @map("mother_tongue")
+  heightCm           Int           @map("height_cm")
+  weightKg           Int?          @map("weight_kg")
+  annualIncomeLakhs  Decimal?      @map("annual_income_lakhs") @db.Decimal(10, 2)
+  highestEducation   String        @map("highest_education")
+  educationDetails   String?       @map("education_details")
+  profession         String
+  employerName       String?       @map("employer_name")
+  currentCity        String        @map("current_city")
+  currentState       String        @map("current_state")
+  nativeCity         String?       @map("native_city")
+  bio                String?       @db.Text
+  dietaryHabits      String?       @map("dietary_habits")
+  smokingHabits      String?       @map("smoking_habits")
+  drinkingHabits     String?       @map("drinking_habits")
+  physicalStatus     String?       @map("physical_status")
+  familyType         String?       @map("family_type")
+  familyStatus       String?       @map("family_status")
+  fatherOccupation   String?       @map("father_occupation")
+  motherOccupation   String?       @map("mother_occupation")
+  siblings           Int?
+  isProfileComplete  Boolean       @default(false) @map("is_profile_complete")
+  profileCompletePct Int           @default(0) @map("profile_complete_pct")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([gender])
+  @@index([religion])
+  @@index([caste])
+  @@index([heightCm])
+  @@index([annualIncomeLakhs])
+  @@index([currentCity])
+  @@index([currentState])
+  @@index([gender, religion, caste, annualIncomeLakhs])
+  @@map("user_profiles")
+}
+
+/// Profile photo gallery. Primary photo drives discovery cards.
+model ProfilePhoto {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  s3Key      String   @map("s3_key")
+  cdnUrl     String   @map("cdn_url")
+  isPrimary  Boolean  @default(false) @map("is_primary")
+  order      Int      @default(0)
+  isApproved Boolean  @default(false) @map("is_approved")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isPrimary])
+  @@map("profile_photos")
+}
+
+/// Partner preference criteria used for AI matching and search filters.
+model PartnerPreference {
+  id                  String   @id @default(uuid())
+  userId              String   @unique @map("user_id")
+  minAge              Int      @default(18) @map("min_age")
+  maxAge              Int      @default(45) @map("max_age")
+  minHeightCm         Int      @default(140) @map("min_height_cm")
+  maxHeightCm         Int      @default(210) @map("max_height_cm")
+  preferredReligions  Json     @default("[]") @map("preferred_religions")
+  preferredCastes     Json     @default("[]") @map("preferred_castes")
+  minIncomeLakhs      Decimal? @map("min_income_lakhs") @db.Decimal(10, 2)
+  preferredCities     Json     @default("[]") @map("preferred_cities")
+  preferredStates     Json     @default("[]") @map("preferred_states")
+  preferredEducation  Json     @default("[]") @map("preferred_education")
+  maritalStatusPref   Json     @default("[]") @map("marital_status_pref")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("partner_preferences")
+}
+
+/// Tracks which of the 12 registration steps a user has completed.
+model RegistrationStep {
+  id             String   @id @default(uuid())
+  userId         String   @unique @map("user_id")
+  currentStep    Int      @default(1) @map("current_step")
+  totalSteps     Int      @default(12) @map("total_steps")
+  completedSteps Json     @default("[]") @map("completed_steps")
+  lastSavedAt    DateTime @default(now()) @map("last_saved_at")
+  isComplete     Boolean  @default(false) @map("is_complete")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("registration_steps")
+}
+
+// ══════════════════════════════════════════════════════════════
+// GROUP 3 — ASTROLOGY  (2 models)
+// ══════════════════════════════════════════════════════════════
+
+/// Horoscope details for traditional Porutham / Koota matching.
+model AstrologyProfile {
+  id         String     @id @default(uuid())
+  userId     String     @unique @map("user_id")
+  birthDate  DateTime   @map("birth_date")
+  birthTime  String?    @map("birth_time")
+  birthPlace String?    @map("birth_place")
+  birthLat   Decimal?   @map("birth_lat") @db.Decimal(10, 7)
+  birthLng   Decimal?   @map("birth_lng") @db.Decimal(10, 7)
+  rasi       String?
+  nakshatra  String?
+  lagnam     String?
+  gotram     String?
+  dosham     DoshamType @default(NONE)
+  rawChart   Json?      @map("raw_chart")
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("astrology_profiles")
+}
+
+/// Result cache for 10-Porutham compatibility calculations.
+model HoroscopeMatch {
+  id               String   @id @default(uuid())
+  requesterId      String   @map("requester_id")
+  targetId         String   @map("target_id")
+  poruthamScore    Int      @map("porutham_score")
+  poruthamDetails  Json     @map("porutham_details")
+  calculatedAt     DateTime @default(now()) @map("calculated_at")
+
+  requester User @relation("HoroscopeRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  target    User @relation("HoroscopeTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, targetId])
+  @@index([requesterId])
+  @@index([targetId])
+  @@map("horoscope_matches")
+}
+
+// ══════════════════════════════════════════════════════════════
+// GROUP 4 — DISCOVERY & INTERESTS  (3 models)
+// ══════════════════════════════════════════════════════════════
+
+/// Express interest (like / send interest) between two members.
+model ExpressInterest {
+  id          String         @id @default(uuid())
+  senderId    String         @map("sender_id")
+  receiverId  String         @map("receiver_id")
+  status      InterestStatus @default(PENDING)
+  royalNote   String?        @map("royal_note") @db.Text
+  respondedAt DateTime?      @map("responded_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  sender   User @relation("SentInterests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedInterests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+  @@map("express_interests")
+}
+
+/// Saved / shortlisted profiles (like a favourites list).
+model Shortlist {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  targetUserId String   @map("target_user_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user       User @relation("UserShortlists", fields: [userId], references: [id], onDelete: Cascade)
+  targetUser User @relation("ShortlistedByUsers", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetUserId])
+  @@index([userId])
+  @@index([targetUserId])
+  @@map("shortlists")
+}
+
+/// Profile view event log — "who viewed my profile".
+model ProfileView {
+  id           String   @id @default(uuid())
+  viewerId     String   @map("viewer_id")
+  viewedUserId String   @map("viewed_user_id")
+  viewedAt     DateTime @default(now()) @map("viewed_at")
+
+  viewer     User @relation("ViewerViews", fields: [viewerId], references: [id], onDelete: Cascade)
+  viewedUser User @relation("ViewedByUsers", fields: [viewedUserId], references: [id], onDelete: Cascade)
+
+  @@index([viewedUserId])
+  @@index([viewerId])
+  @@index([viewedAt])
+  @@map("profile_views")
+}
+
+// ══════════════════════════════════════════════════════════════
+// GROUP 5 — AI & PSYCHOLOGY QUIZ  (3 models)
+// ══════════════════════════════════════════════════════════════
+
+/// OCEAN quiz definition (versioned, one active quiz at a time).
+model PsychologyQuiz {
+  id          String          @id @default(uuid())
+  title       String
+  description String?         @db.Text
+  version     String          @default("1.0")
+  isActive    Boolean         @default(true) @map("is_active")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  questions QuizQuestion[]
+  responses UserQuizResponse[]
+
+  @@map("psychology_quizzes")
+}
+
+/// Individual OCEAN quiz question with domain tagging.
+model QuizQuestion {
+  id            String      @id @default(uuid())
+  quizId        String      @map("quiz_id")
+  oceanDomain   OceanDomain @map("ocean_domain")
+  questionText  String      @map("question_text") @db.Text
+  reverseScored Boolean     @default(false) @map("reverse_scored")
+  order         Int
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  quiz PsychologyQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId])
+  @@index([oceanDomain])
+  @@map("quiz_questions")
+}
+
+/// A user's completed quiz submission with computed OCEAN scores.
+model UserQuizResponse {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  quizId      String   @map("quiz_id")
+  /// Raw answers: { questionId: score (1-5) }
+  answers     Json
+  /// Computed scores: { O: 0-100, C: 0-100, E: 0-100, A: 0-100, N: 0-100 }
+  oceanScore  Json     @map("ocean_score")
+  completedAt DateTime @default(now()) @map("completed_at")
+
+  user User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz PsychologyQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, quizId])
+  @@index([userId])
+  @@map("user_quiz_responses")
+}
+
+// ══════════════════════════════════════════════════════════════
+// GROUP 6 — SUBSCRIPTIONS & PAYMENTS  (3 models)
+// ══════════════════════════════════════════════════════════════
+
+/// Subscription plan catalogue (Silver, Gold). Prices in paise (₹1 = 100 paise).
+model SubscriptionPlan {
+  id          String               @id @default(uuid())
+  name        SubscriptionPlanName @unique
+  displayName String               @map("display_name")
+  /// Price in paise: ₹499 → 49900, ₹999 → 99900
+  priceInr    Int                  @map("price_inr")
+  durationDays Int                 @map("duration_days")
+  /// Human-readable feature list
+  features    Json                 @default("[]")
+  /// Machine-readable limits: { contactsPerMonth: 10, expressInterestsPerDay: 5, photoUploads: 4 }
+  limits      Json                 @default("{}")
+  isActive    Boolean              @default(true) @map("is_active")
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
+
+  subscriptions UserSubscription[]
+
+  @@map("subscription_plans")
+}
+
+/// A user's active or historical subscription to a plan.
+model UserSubscription {
+  id              String             @id @default(uuid())
+  userId          String             @map("user_id")
+  planId          String             @map("plan_id")
+  status          SubscriptionStatus @default(PENDING)
+  startDate       DateTime           @map("start_date")
+  endDate         DateTime           @map("end_date")
+  razorpaySubId   String?            @map("razorpay_sub_id")
+  autoRenew       Boolean            @default(false) @map("auto_renew")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan     SubscriptionPlan @relation(fields: [planId], references: [id])
+  payments PaymentTransaction[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([endDate])
+  @@map("user_subscriptions")
+}
+
+/// Individual Razorpay payment transaction records.
+model PaymentTransaction {
+  id                String        @id @default(uuid())
+  userId            String        @map("user_id")
+  subscriptionId    String        @map("subscription_id")
+  razorpayOrderId   String?       @unique @map("razorpay_order_id")
+  razorpayPaymentId String?       @unique @map("razorpay_payment_id")
+  /// Amount in paise
+  amountInr         Int           @map("amount_inr")
+  status            PaymentStatus @default(PENDING)
+  paidAt            DateTime?     @map("paid_at")
+  failureReason     String?       @map("failure_reason") @db.Text
+  metadata          Json?
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription UserSubscription @relation(fields: [subscriptionId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([paidAt])
+  @@map("payment_transactions")
+}
+
+// ══════════════════════════════════════════════════════════════
+// GROUP 7 — CHAT & MESSAGING  (3 models)
+// ══════════════════════════════════════════════════════════════
+
+/// A private chat room between exactly two users (mutual match).
+model ChatRoom {
+  id            String    @id @default(uuid())
+  user1Id       String    @map("user1_id")
+  user2Id       String    @map("user2_id")
+  isActive      Boolean   @default(true) @map("is_active")
+  lastMessageAt DateTime? @map("last_message_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user1    User          @relation("ChatUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2    User          @relation("ChatUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@unique([user1Id, user2Id])
+  @@index([user1Id])
+  @@index([user2Id])
+  @@index([lastMessageAt])
+  @@map("chat_rooms")
+}
+
+/// Individual chat message within a room.
+model ChatMessage {
+  id        String      @id @default(uuid())
+  roomId    String      @map("room_id")
+  senderId  String      @map("sender_id")
+  content   String      @db.Text
+  type      MessageType @default(TEXT)
+  mediaUrl  String?     @map("media_url")
+  isRead    Boolean     @default(false) @map("is_read")
+  readAt    DateTime?   @map("read_at")
+  deletedAt DateTime?   @map("deleted_at")
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  room      ChatRoom          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender    User              @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  reactions MessageReaction[]
+
+  @@index([roomId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("chat_messages")
+}
+
+/// Emoji reactions on a chat message.
+model MessageReaction {
+  id        String   @id @default(uuid())
+  messageId String   @map("message_id")
+  userId    String   @map("user_id")
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@map("message_reactions")
+}
+
+// ══════════════════════════════════════════════════════════════
+// GROUP 8 — VERIFICATION & TRUST  (3 models)
+// ══════════════════════════════════════════════════════════════
+
+/// Government ID document verification (Aadhaar, PAN, Passport, etc.).
+model KycVerification {
+  id               String             @id @default(uuid())
+  userId           String             @map("user_id")
+  docType          KycDocType         @map("doc_type")
+  /// Stored encrypted — never log or expose in plaintext
+  docNumber        String             @map("doc_number")
+  s3DocKey         String             @map("s3_doc_key")
+  status           VerificationStatus @default(PENDING)
+  verifiedAt       DateTime?          @map("verified_at")
+  rejectionReason  String?            @map("rejection_reason") @db.Text
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("kyc_verifications")
+}
+
+/// Facial biometric verification against the KYC document selfie.
+model FaceVerification {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  selfieS3Key     String   @map("selfie_s3_key")
+  isVerified      Boolean  @default(false) @map("is_verified")
+  confidenceScore Decimal? @map("confidence_score") @db.Decimal(5, 2)
+  verifiedAt      DateTime? @map("verified_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("face_verifications")
+}
+
+/// Audit trail for trust score changes (reasons: KYC, face verify, report, etc.).
+model TrustScoreLog {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  delta     Int
+  reason    String
+  newScore  Int      @map("new_score")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("trust_score_logs")
+}
+
+// ══════════════════════════════════════════════════════════════
+// GROUP 9 — NOTIFICATIONS, REPORTS & SUPPORT  (6 models)
+// ══════════════════════════════════════════════════════════════
+
+/// In-app notification records (also triggers FCM push via DevicePushToken).
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  isRead    Boolean          @default(false) @map("is_read")
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+/// FCM device tokens for push notification delivery.
+model DevicePushToken {
+  id        String         @id @default(uuid())
+  userId    String         @map("user_id")
+  fcmToken  String         @unique @map("fcm_token")
+  platform  DevicePlatform
+  isActive  Boolean        @default(true) @map("is_active")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_push_tokens")
+}
+
+/// Member-submitted reports of fake profiles, harassment, spam, etc.
+model UserReport {
+  id             String       @id @default(uuid())
+  reporterId     String       @map("reporter_id")
+  reportedUserId String       @map("reported_user_id")
+  reason         ReportReason
+  description    String?      @db.Text
+  status         ReportStatus @default(OPEN)
+  adminNote      String?      @map("admin_note") @db.Text
+  resolvedAt     DateTime?    @map("resolved_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  reporter     User @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser User @relation("ReportsAgainst", fields: [reportedUserId], references: [id], onDelete: Cascade)
+
+  @@index([reporterId])
+  @@index([reportedUserId])
+  @@index([status])
+  @@map("user_reports")
+}
+
+/// User-level blocks — blocked user cannot view or contact blocker.
+model UserBlock {
+  id            String   @id @default(uuid())
+  blockerId     String   @map("blocker_id")
+  blockedUserId String   @map("blocked_user_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  blocker     User @relation("BlocksMade", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedUser User @relation("BlocksReceived", fields: [blockedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedUserId])
+  @@index([blockerId])
+  @@index([blockedUserId])
+  @@map("user_blocks")
+}
+
+/// Customer support tickets.
+model SupportTicket {
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  subject       String
+  body          String        @db.Text
+  status        SupportStatus @default(OPEN)
+  adminResponse String?       @map("admin_response") @db.Text
+  resolvedAt    DateTime?     @map("resolved_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("support_tickets")
+}
+
+/// Immutable audit log for all sensitive admin and system actions.
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String?  @map("actor_id")
+  action    String
+  entity    String
+  entityId  String?  @map("entity_id")
+  metadata  Json?
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([actorId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

@@ -99,6 +99,33 @@
       "compilerOptions": {
         "tsConfigPath": "libs/search/tsconfig.lib.json"
       }
+    },
+    "queue": {
+      "type": "library",
+      "root": "libs/queue",
+      "entryFile": "index",
+      "sourceRoot": "libs/queue/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/queue/tsconfig.lib.json"
+      }
+    },
+    "firebase": {
+      "type": "library",
+      "root": "libs/firebase",
+      "entryFile": "index",
+      "sourceRoot": "libs/firebase/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/firebase/tsconfig.lib.json"
+      }
+    },
+    "storage": {
+      "type": "library",
+      "root": "libs/storage",
+      "entryFile": "index",
+      "sourceRoot": "libs/storage/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/storage/tsconfig.lib.json"
+      }
     }
   }
 }

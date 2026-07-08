@@ -1,9 +1,11 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'core/config/app_config.dart';
+import 'firebase_options.dart';
 import 'core/config/app_environment.dart';
 import 'core/constants/app_constants.dart';
 import 'core/providers/locale_provider.dart';
@@ -29,6 +31,11 @@ Future<void> bootstrap(AppEnvironment environment) async {
 
   // Load environment variables (.env) and set config
   await appConfig.init(environment);
+
+  // Initialize Firebase (Auth, Firestore, etc.)
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Initialize storage
   await storageService.init();
