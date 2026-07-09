@@ -26,6 +26,14 @@ export const validationSchema = Joi.object({
 
   JWT_SECRET: Joi.string().min(16).required(),
 
+  // Optional: Firebase Admin SDK service-account credentials, used by
+  // FirebaseAuthGuard to verify client ID tokens. Left unset, the app still
+  // boots (other modules don't need Firebase); any request hitting a
+  // Firebase-guarded endpoint will get a clear 500 explaining it's missing.
+  FIREBASE_PROJECT_ID: Joi.string().allow('').optional(),
+  FIREBASE_CLIENT_EMAIL: Joi.string().allow('').optional(),
+  FIREBASE_PRIVATE_KEY: Joi.string().allow('').optional(),
+
   LOG_LEVEL: Joi.string()
     .valid('error', 'warn', 'info', 'debug', 'verbose')
     .default('info'),

@@ -49,6 +49,23 @@ class BasicDetails {
       profileCreatedFor: profileCreatedFor ?? this.profileCreatedFor,
     );
   }
+
+  /// Maps this screen's display values ("Male", "Never Married") to the
+  /// backend's enum values ("MALE", "NEVER_MARRIED") — see
+  /// backend/apps/api/src/modules/profiles/dto/basic-details.dto.ts.
+  static String _toEnumValue(String value) =>
+      value.toUpperCase().replaceAll(' ', '_');
+
+  Map<String, dynamic> toJson() => {
+        if (firstName.isNotEmpty) 'firstName': firstName,
+        if (lastName.isNotEmpty) 'lastName': lastName,
+        if (gender.isNotEmpty) 'gender': _toEnumValue(gender),
+        if (dob != null) 'dob': dob!.toIso8601String(),
+        if (maritalStatus.isNotEmpty)
+          'maritalStatus': _toEnumValue(maritalStatus),
+        if (profileCreatedFor.isNotEmpty)
+          'profileCreatedFor': profileCreatedFor,
+      };
 }
 
 // ─── Religion Details (Step 2) ───────────────────────────────────────
@@ -86,6 +103,15 @@ class ReligionDetails {
       community: community ?? this.community,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        if (religion.isNotEmpty) 'religion': religion,
+        if (caste.isNotEmpty) 'caste': caste,
+        if (subCaste.isNotEmpty) 'subCaste': subCaste,
+        if (gothra.isNotEmpty) 'gothra': gothra,
+        if (denomination.isNotEmpty) 'denomination': denomination,
+        if (community.isNotEmpty) 'community': community,
+      };
 }
 
 // ─── Language Details (Step 3) ───────────────────────────────────────
@@ -107,6 +133,11 @@ class LanguageDetails {
       languagesKnown: languagesKnown ?? this.languagesKnown,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        if (motherTongue.isNotEmpty) 'motherTongue': motherTongue,
+        if (languagesKnown.isNotEmpty) 'languagesKnown': languagesKnown,
+      };
 }
 
 // ─── Location Details (Step 4) ───────────────────────────────────────
@@ -144,6 +175,15 @@ class LocationDetails {
       nativePlace: nativePlace ?? this.nativePlace,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        if (country.isNotEmpty) 'country': country,
+        if (state.isNotEmpty) 'state': state,
+        if (city.isNotEmpty) 'city': city,
+        if (area.isNotEmpty) 'area': area,
+        if (pinCode.isNotEmpty) 'pinCode': pinCode,
+        if (nativePlace.isNotEmpty) 'nativePlace': nativePlace,
+      };
 }
 
 // ─── Education Details (Step 5) ──────────────────────────────────────
@@ -185,6 +225,16 @@ class EducationDetails {
       workLocation: workLocation ?? this.workLocation,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        if (qualification.isNotEmpty) 'qualification': qualification,
+        if (college.isNotEmpty) 'college': college,
+        if (occupation.isNotEmpty) 'occupation': occupation,
+        if (company.isNotEmpty) 'company': company,
+        if (employmentType.isNotEmpty) 'employmentType': employmentType,
+        if (annualIncome.isNotEmpty) 'annualIncome': annualIncome,
+        if (workLocation.isNotEmpty) 'workLocation': workLocation,
+      };
 }
 
 // ─── Physical Details (Step 6) ───────────────────────────────────────
@@ -222,6 +272,15 @@ class PhysicalDetails {
       disability: disability ?? this.disability,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        if (height.isNotEmpty) 'height': height,
+        if (weight.isNotEmpty) 'weight': weight,
+        if (bodyType.isNotEmpty) 'bodyType': bodyType,
+        if (complexion.isNotEmpty) 'complexion': complexion,
+        if (bloodGroup.isNotEmpty) 'bloodGroup': bloodGroup,
+        if (disability.isNotEmpty) 'disability': disability,
+      };
 }
 
 // ─── Lifestyle Details (Step 7) ──────────────────────────────────────
@@ -259,6 +318,15 @@ class LifestyleDetails {
       aboutMe: aboutMe ?? this.aboutMe,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        if (eatingHabit.isNotEmpty) 'eatingHabit': eatingHabit,
+        if (smoking.isNotEmpty) 'smoking': smoking,
+        if (drinking.isNotEmpty) 'drinking': drinking,
+        if (fitness.isNotEmpty) 'fitness': fitness,
+        if (hobbies.isNotEmpty) 'hobbies': hobbies,
+        if (aboutMe.isNotEmpty) 'aboutMe': aboutMe,
+      };
 }
 
 // ─── Family Details (Step 8) ─────────────────────────────────────────
@@ -308,6 +376,18 @@ class FamilyDetails {
       sisters: sisters ?? this.sisters,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        if (fatherName.isNotEmpty) 'fatherName': fatherName,
+        if (fatherOccupation.isNotEmpty) 'fatherOccupation': fatherOccupation,
+        if (motherName.isNotEmpty) 'motherName': motherName,
+        if (motherOccupation.isNotEmpty) 'motherOccupation': motherOccupation,
+        if (familyType.isNotEmpty) 'familyType': familyType,
+        if (familyValues.isNotEmpty) 'familyValues': familyValues,
+        if (familyStatus.isNotEmpty) 'familyStatus': familyStatus,
+        'brothers': brothers,
+        'sisters': sisters,
+      };
 }
 
 // ─── Horoscope Details (Step 9) ──────────────────────────────────────
@@ -353,6 +433,17 @@ class HoroscopeDetails {
       horoscopeAvailable: horoscopeAvailable ?? this.horoscopeAvailable,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        if (birthTime.isNotEmpty) 'birthTime': birthTime,
+        if (birthPlace.isNotEmpty) 'birthPlace': birthPlace,
+        if (rashi.isNotEmpty) 'rashi': rashi,
+        if (nakshatra.isNotEmpty) 'nakshatra': nakshatra,
+        if (star.isNotEmpty) 'star': star,
+        if (manglik.isNotEmpty) 'manglik': manglik,
+        if (dosham.isNotEmpty) 'dosham': dosham,
+        'horoscopeAvailable': horoscopeAvailable,
+      };
 }
 
 // ─── Partner Preference (Step 10) ────────────────────────────────────
@@ -406,6 +497,22 @@ class PartnerPreference {
       maritalStatusPref: maritalStatusPref ?? this.maritalStatusPref,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        if (preferredAgeRange.isNotEmpty)
+          'preferredAgeRange': preferredAgeRange,
+        if (preferredHeightRange.isNotEmpty)
+          'preferredHeightRange': preferredHeightRange,
+        if (religionPref.isNotEmpty) 'religionPref': religionPref,
+        if (castePref.isNotEmpty) 'castePref': castePref,
+        if (educationPref.isNotEmpty) 'educationPref': educationPref,
+        if (occupationPref.isNotEmpty) 'occupationPref': occupationPref,
+        if (incomePref.isNotEmpty) 'incomePref': incomePref,
+        if (locationPref.isNotEmpty) 'locationPref': locationPref,
+        if (motherTonguePref.isNotEmpty) 'motherTonguePref': motherTonguePref,
+        if (maritalStatusPref.isNotEmpty)
+          'maritalStatusPref': maritalStatusPref,
+      };
 }
 
 // ─── Photo Gallery (Step 11) ─────────────────────────────────────────

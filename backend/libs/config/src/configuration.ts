@@ -26,6 +26,11 @@ export interface AppConfig {
   jwt: {
     secret: string;
   };
+  firebase: {
+    projectId?: string;
+    clientEmail?: string;
+    privateKey?: string;
+  };
   logLevel: string;
 }
 
@@ -56,6 +61,14 @@ export default (): AppConfig => ({
   },
   jwt: {
     secret: process.env.JWT_SECRET ?? '',
+  },
+  firebase: {
+    projectId: process.env.FIREBASE_PROJECT_ID || undefined,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL || undefined,
+    // Env files commonly store the PEM key with literal "\n" sequences
+    // instead of real newlines — Firebase Admin's cert() requires real ones.
+    privateKey:
+      process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n') || undefined,
   },
   logLevel: process.env.LOG_LEVEL ?? 'info',
 });

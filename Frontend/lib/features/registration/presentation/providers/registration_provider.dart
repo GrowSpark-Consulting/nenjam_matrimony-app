@@ -1,6 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_providers.dart';
+import '../../data/repositories/registration_repository.dart';
 import '../../domain/models/profile_draft.dart';
+
+/// Wraps the shared [apiClientProvider] (Firebase-token-authenticated).
+final registrationRepositoryProvider = Provider<RegistrationRepository>(
+  (ref) => RegistrationRepository(ref.watch(apiClientProvider)),
+);
 
 /// Riverpod provider for the registration wizard state.
 ///
@@ -14,6 +21,56 @@ final registrationProvider =
 class RegistrationNotifier extends Notifier<ProfileDraft> {
   @override
   ProfileDraft build() => const ProfileDraft();
+
+  // ─── Backend sync ────────────────────────────────────────────────────
+  //
+  // Called from ProfileWizardPage's "Continue" button — sends whichever
+  // step's data was just filled in. Steps 10 (photos) and 11 (verification)
+  // aren't sent here: photo upload isn't wired to S3 yet, and verification
+  // status is read-only, reflecting other modules.
+  Future<void> syncCurrentStepToBackend() async {
+    final repo = ref.read(registrationRepositoryProvider);
+    switch (state.currentStep) {
+      case 0:
+        await repo.updateBasicDetails(state.basicDetails);
+        return;
+      case 1:
+        await repo.updateReligionDetails(state.religionDetails);
+        return;
+      case 2:
+        await repo.updateLanguageDetails(state.languageDetails);
+        return;
+      case 3:
+        await repo.updateLocationDetails(state.locationDetails);
+        return;
+      case 4:
+        await repo.updateEducationDetails(state.educationDetails);
+        return;
+      case 5:
+        await repo.updatePhysicalDetails(state.physicalDetails);
+        return;
+      case 6:
+        await repo.updateLifestyleDetails(state.lifestyleDetails);
+        return;
+      case 7:
+        await repo.updateFamilyDetails(state.familyDetails);
+        return;
+      case 8:
+        await repo.updateHoroscopeDetails(state.horoscopeDetails);
+        return;
+      case 9:
+        await repo.updatePartnerPreference(state.partnerPreference);
+        return;
+      default:
+        // Steps 10-11: nothing to sync.
+        return;
+    }
+  }
+
+  /// Maps the accumulated draft into the finalized backend profile. Call
+  /// from the Profile Review screen's "Enter App" button.
+  Future<void> finalizeToBackend() =>
+      ref.read(registrationRepositoryProvider).finalizeProfile();
 
   // ─── Step Navigation ───────────────────────────────────────────────
   void goToStep(int step) {

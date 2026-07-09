@@ -387,6 +387,11 @@ model RegistrationStep {
   currentStep    Int      @default(1) @map("current_step")
   totalSteps     Int      @default(12) @map("total_steps")
   completedSteps Json     @default("[]") @map("completed_steps")
+  /// Accumulating wizard state, one JSON key per step (basicDetails,
+  /// religionDetails, ...), until finalize() maps it into UserProfile /
+  /// AstrologyProfile / PartnerPreference. Staging storage only — never
+  /// queried directly.
+  draftData      Json     @default("{}") @map("draft_data")
   lastSavedAt    DateTime @default(now()) @map("last_saved_at")
   isComplete     Boolean  @default(false) @map("is_complete")
   createdAt      DateTime @default(now()) @map("created_at")

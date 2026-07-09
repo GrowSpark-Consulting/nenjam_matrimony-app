@@ -1,4 +1,6 @@
 allowBuilds:
+  '@firebase/util': false
   '@prisma/engines': true
   prisma: true
+  protobufjs: false
   unrs-resolver: true

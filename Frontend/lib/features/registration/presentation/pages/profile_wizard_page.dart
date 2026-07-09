@@ -8,6 +8,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/buttons/outlined_button.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../data/repositories/registration_repository.dart';
 import '../../domain/models/profile_draft.dart';
 import '../providers/registration_provider.dart';
 import '../widgets/step_basic_info.dart';
@@ -32,6 +33,8 @@ class ProfileWizardPage extends ConsumerStatefulWidget {
 }
 
 class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
+  bool _isSaving = false;
+
   /// Localized step titles, index-aligned with [_buildStepContent].
   List<String> _stepTitles(AppLocalizations l10n) => [
         l10n.registrationStepBasicInfo,
@@ -48,10 +51,35 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
         l10n.registrationStepVerification,
       ];
 
-  void _onNext() {
+  Future<void> _onNext() async {
     final draft = ref.read(registrationProvider);
+    final notifier = ref.read(registrationProvider.notifier);
+
+    setState(() => _isSaving = true);
+    try {
+      await notifier.syncCurrentStepToBackend();
+    } on RegistrationApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save this step: ${e.message}')),
+      );
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save this step. Check your connection.'),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+
     if (draft.currentStep < ProfileDraft.totalSteps - 1) {
-      ref.read(registrationProvider.notifier).nextStep();
+      notifier.nextStep();
     } else {
       context.go(RouteNames.profileReview);
     }
@@ -154,7 +182,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                       flex: 1,
                       child: NmOutlinedButton(
                         label: l10n.registrationBack,
-                        onPressed: _onBack,
+                        onPressed: _isSaving ? null : _onBack,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -164,7 +192,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                     child: NmGradientButton(
                       label: stepIndex == ProfileDraft.totalSteps - 1 ? l10n.registrationFinishLogin : l10n.commonContinue,
                       icon: stepIndex == ProfileDraft.totalSteps - 1 ? Icons.check_rounded : Icons.arrow_forward_rounded,
-                      onPressed: _onNext,
+                      isLoading: _isSaving,
+                      onPressed: _isSaving ? null : _onNext,
                     ),
                   ),
                 ],

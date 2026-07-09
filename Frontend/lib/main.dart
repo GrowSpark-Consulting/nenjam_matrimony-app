@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import 'core/config/app_config.dart';
+import 'core/config/app_environment.dart';
 import 'core/constants/app_constants.dart';
 import 'firebase_options.dart';
 import 'core/providers/locale_provider.dart';
@@ -26,6 +28,11 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Load environment variables (.env.dev) and set config. Without this,
+  // AppConfig().envConfig is never assigned and any code that touches it
+  // (e.g. ApiClient's base URL) throws a LateInitializationError.
+  await AppConfig().init(AppEnvironment.dev);
 
   // Initialize local storage wrapper
   await storageService.init();

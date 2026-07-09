@@ -12,7 +12,23 @@ abstract final class ApiEndpoints {
   static const String forgotPassword = '/auth/forgot-password';
   static const String resetPassword = '/auth/reset-password';
 
-  // ─── Profile ─────────────────────────────────────────────────────
+  // ─── Registration wizard (implemented — matches backend/apps/api/src/
+  // modules/profiles) ────────────────────────────────────────────────
+  static const String profileDraft = '/profiles/draft';
+  static const String profileDraftBasicDetails = '/profiles/draft/basic-details';
+  static const String profileDraftReligionDetails = '/profiles/draft/religion-details';
+  static const String profileDraftLanguageDetails = '/profiles/draft/language-details';
+  static const String profileDraftLocationDetails = '/profiles/draft/location-details';
+  static const String profileDraftEducationDetails = '/profiles/draft/education-details';
+  static const String profileDraftPhysicalDetails = '/profiles/draft/physical-details';
+  static const String profileDraftLifestyleDetails = '/profiles/draft/lifestyle-details';
+  static const String profileDraftFamilyDetails = '/profiles/draft/family-details';
+  static const String profileDraftHoroscopeDetails = '/profiles/draft/horoscope-details';
+  static const String profileDraftPartnerPreference = '/profiles/draft/partner-preference';
+  static const String profileFinalize = '/profiles/finalize';
+  static const String profileMe = '/profiles/me';
+
+  // ─── Profile (not yet implemented on the backend) ─────────────────
   static const String profile = '/profile';
   static const String profileUpdate = '/profile/update';
   static const String profilePhotos = '/profile/photos';

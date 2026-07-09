@@ -8,17 +8,51 @@ import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../data/repositories/registration_repository.dart';
 import '../providers/registration_provider.dart';
 
 /// Summary review screen displaying all 12 wizard sections before entering Home.
 ///
 /// Displays the profile completion percentage and allows editing any section
 /// by jumping back to the correct wizard step.
-class ProfileReviewPage extends ConsumerWidget {
+class ProfileReviewPage extends ConsumerStatefulWidget {
   const ProfileReviewPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileReviewPage> createState() => _ProfileReviewPageState();
+}
+
+class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
+  bool _isSaving = false;
+
+  Future<void> _onEnterApp() async {
+    setState(() => _isSaving = true);
+    try {
+      await ref.read(registrationProvider.notifier).finalizeToBackend();
+    } on RegistrationApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save your profile: ${e.message}')),
+      );
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Could not save your profile. Check your connection.'),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    context.go(RouteNames.home);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final draft = ref.watch(registrationProvider);
     final notifier = ref.read(registrationProvider.notifier);
@@ -327,7 +361,8 @@ class ProfileReviewPage extends ConsumerWidget {
                 label: l10n.registrationEnterApp,
                 useGoldGradient: true,
                 icon: Icons.favorite_rounded,
-                onPressed: () => context.go(RouteNames.home),
+                isLoading: _isSaving,
+                onPressed: _isSaving ? null : _onEnterApp,
               ),
             ),
           ],

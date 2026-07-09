@@ -53,6 +53,10 @@ export class AppConfigService implements OnModuleInit {
     return this.configService.get('jwt', { infer: true });
   }
 
+  get firebase(): AppConfig['firebase'] {
+    return this.configService.get('firebase', { infer: true });
+  }
+
   get logLevel(): string {
     return this.configService.get('logLevel', { infer: true });
   }
