@@ -1,8 +1,8 @@
 import 'discovery_profile_entity.dart';
 import 'story_entity.dart';
 
-/// Aggregate root for everything the Home Feed screen renders.
-class HomeFeedEntity {
+/// Aggregate root for everything the Discover feed screen renders.
+class DiscoverFeedEntity {
   final List<StoryEntity> stories;
   final int profileCompletionPercent;
   final List<DiscoveryProfileEntity> aiRecommended;
@@ -11,7 +11,7 @@ class HomeFeedEntity {
   final List<DiscoveryProfileEntity> nearYou;
   final List<DiscoveryProfileEntity> premiumMembers;
 
-  const HomeFeedEntity({
+  const DiscoverFeedEntity({
     required this.stories,
     required this.profileCompletionPercent,
     required this.aiRecommended,

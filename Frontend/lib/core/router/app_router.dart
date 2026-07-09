@@ -12,7 +12,6 @@ import '../../features/authentication/presentation/pages/phone_verify_screen.dar
 import '../../features/chat/presentation/pages/chat_page.dart';
 import '../../features/discover/presentation/pages/discover_page.dart';
 import '../../features/help/presentation/pages/help_page.dart';
-import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/language/presentation/pages/language_page.dart';
 import '../../features/matches/presentation/pages/matches_page.dart';
 import '../../features/notifications/presentation/pages/notifications_page.dart';
@@ -164,13 +163,6 @@ GoRouter createRouter() => GoRouter(
               name: RouteNames.discoverName,
               pageBuilder: (context, state) => const NoTransitionPage(
                 child: DiscoverPage(),
-              ),
-            ),
-            GoRoute(
-              path: RouteNames.home,
-              name: RouteNames.homeName,
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: HomePage(),
               ),
             ),
             GoRoute(

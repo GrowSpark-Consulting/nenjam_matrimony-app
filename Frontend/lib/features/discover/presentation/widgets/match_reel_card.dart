@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
-import '../../../home/domain/entities/discovery_profile_entity.dart';
+import '../../domain/entities/discovery_profile_entity.dart';
 import 'compatibility_badge.dart';
 import 'discover_action_rail.dart';
 import 'profile_info_overlay.dart';

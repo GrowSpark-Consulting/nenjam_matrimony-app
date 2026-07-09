@@ -578,24 +578,6 @@ abstract class AppLocalizations {
   /// **'Profile'**
   String get navProfile;
 
-  /// No description provided for @homeSeeAllButton.
-  ///
-  /// In en, this message translates to:
-  /// **'See All'**
-  String get homeSeeAllButton;
-
-  /// No description provided for @homeAiRecommendationsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'AI Match Recommendations'**
-  String get homeAiRecommendationsTitle;
-
-  /// No description provided for @homeRecentlyJoinedTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Recently Joined'**
-  String get homeRecentlyJoinedTitle;
-
   /// No description provided for @homeCompleteProfileTitle.
   ///
   /// In en, this message translates to:
@@ -607,12 +589,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Next: {step}'**
   String homeProfileNextStep(String step);
-
-  /// No description provided for @homeStepUploadHoroscope.
-  ///
-  /// In en, this message translates to:
-  /// **'Upload Horoscope'**
-  String get homeStepUploadHoroscope;
 
   /// No description provided for @homeStepAddPhoto.
   ///
@@ -626,53 +602,35 @@ abstract class AppLocalizations {
   /// **'AI Pick'**
   String get homeAiPickBadge;
 
-  /// No description provided for @homeAiMatchLabel.
+  /// No description provided for @discoverAiMatchLabel.
   ///
   /// In en, this message translates to:
   /// **'match'**
-  String get homeAiMatchLabel;
+  String get discoverAiMatchLabel;
 
-  /// No description provided for @homeNewTodayLabel.
+  /// No description provided for @discoverNewTodayLabel.
   ///
   /// In en, this message translates to:
   /// **'New Today'**
-  String get homeNewTodayLabel;
+  String get discoverNewTodayLabel;
 
-  /// No description provided for @homeVerifiedProfilesTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Verified Profiles'**
-  String get homeVerifiedProfilesTitle;
-
-  /// No description provided for @homeNearYouTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Near You'**
-  String get homeNearYouTitle;
-
-  /// No description provided for @homePremiumMembersTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Premium Members'**
-  String get homePremiumMembersTitle;
-
-  /// No description provided for @homeSearchingMoreLabel.
+  /// No description provided for @discoverSearchingMoreLabel.
   ///
   /// In en, this message translates to:
   /// **'Searching for more souls…'**
-  String get homeSearchingMoreLabel;
+  String get discoverSearchingMoreLabel;
 
-  /// No description provided for @homeVerifiedLabel.
+  /// No description provided for @discoverVerifiedLabel.
   ///
   /// In en, this message translates to:
   /// **'Verified'**
-  String get homeVerifiedLabel;
+  String get discoverVerifiedLabel;
 
-  /// No description provided for @homePremiumLabel.
+  /// No description provided for @discoverPremiumLabel.
   ///
   /// In en, this message translates to:
   /// **'Premium'**
-  String get homePremiumLabel;
+  String get discoverPremiumLabel;
 
   /// No description provided for @homePsychologyCompletedLabel.
   ///
@@ -680,23 +638,23 @@ abstract class AppLocalizations {
   /// **'Psychology Completed'**
   String get homePsychologyCompletedLabel;
 
-  /// No description provided for @homeChipVerifiedIdentity.
+  /// No description provided for @discoverChipVerifiedIdentity.
   ///
   /// In en, this message translates to:
   /// **'Verified Identity'**
-  String get homeChipVerifiedIdentity;
+  String get discoverChipVerifiedIdentity;
 
-  /// No description provided for @homeChipPremiumPlus.
+  /// No description provided for @discoverChipPremiumPlus.
   ///
   /// In en, this message translates to:
   /// **'Premium Plus'**
-  String get homeChipPremiumPlus;
+  String get discoverChipPremiumPlus;
 
-  /// No description provided for @homeChipNri.
+  /// No description provided for @discoverChipNri.
   ///
   /// In en, this message translates to:
   /// **'NRI'**
-  String get homeChipNri;
+  String get discoverChipNri;
 
   /// No description provided for @homePhotoProtectedLabel.
   ///
@@ -704,11 +662,11 @@ abstract class AppLocalizations {
   /// **'Photo Protected'**
   String get homePhotoProtectedLabel;
 
-  /// No description provided for @homeInterestSentLabel.
+  /// No description provided for @discoverInterestSentLabel.
   ///
   /// In en, this message translates to:
   /// **'Interest Sent'**
-  String get homeInterestSentLabel;
+  String get discoverInterestSentLabel;
 
   /// No description provided for @homeAiMatchScoreLabel.
   ///
@@ -728,11 +686,11 @@ abstract class AppLocalizations {
   /// **'Psychology Match'**
   String get homePsychologyMatchScoreLabel;
 
-  /// No description provided for @homeCompatibilityLabel.
+  /// No description provided for @discoverCompatibilityLabel.
   ///
   /// In en, this message translates to:
   /// **'Compatibility'**
-  String get homeCompatibilityLabel;
+  String get discoverCompatibilityLabel;
 
   /// No description provided for @actionInterested.
   ///
@@ -752,11 +710,11 @@ abstract class AppLocalizations {
   /// **'Share'**
   String get actionShare;
 
-  /// No description provided for @homeFilterLabel.
+  /// No description provided for @discoverFilterLabel.
   ///
   /// In en, this message translates to:
   /// **'Filter'**
-  String get homeFilterLabel;
+  String get discoverFilterLabel;
 
   /// No description provided for @homeProfileDetailsLabel.
   ///
@@ -805,6 +763,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New'**
   String get discoverNewTab;
+
+  /// No description provided for @appNameShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Nenjam'**
+  String get appNameShort;
+
+  /// No description provided for @discoverSearchTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get discoverSearchTooltip;
+
+  /// No description provided for @discoverAiRecommendedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Recommended'**
+  String get discoverAiRecommendedTitle;
+
+  /// No description provided for @discoverRecentlyJoinedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently Joined'**
+  String get discoverRecentlyJoinedTitle;
+
+  /// No description provided for @discoverVerifiedProfilesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified Profiles'**
+  String get discoverVerifiedProfilesTitle;
+
+  /// No description provided for @discoverNearYouTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Near You'**
+  String get discoverNearYouTitle;
+
+  /// No description provided for @discoverPremiumMembersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium Members'**
+  String get discoverPremiumMembersTitle;
+
+  /// No description provided for @discoverViewAllButton.
+  ///
+  /// In en, this message translates to:
+  /// **'View All'**
+  String get discoverViewAllButton;
+
+  /// No description provided for @discoverStatMatchLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Match'**
+  String get discoverStatMatchLabel;
+
+  /// No description provided for @discoverStatAstroLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Astro'**
+  String get discoverStatAstroLabel;
+
+  /// No description provided for @discoverStatTrustLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Trust'**
+  String get discoverStatTrustLabel;
+
+  /// No description provided for @discoverUpgradeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade'**
+  String get discoverUpgradeButton;
+
+  /// No description provided for @discoverEliteMemberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Elite Member'**
+  String get discoverEliteMemberLabel;
+
+  /// No description provided for @discoverConnectButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get discoverConnectButton;
+
+  /// No description provided for @matchesEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches yet'**
+  String get matchesEmptyTitle;
+
+  /// No description provided for @matchesEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Check back soon for new profiles'**
+  String get matchesEmptySubtitle;
+
+  /// No description provided for @discoverKmAwaySuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'km away'**
+  String get discoverKmAwaySuffix;
 
   /// No description provided for @premiumBannerTitle.
   ///

@@ -1,8 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/config/app_config.dart';
-import '../../../../core/config/dev_user.dart';
 import '../../data/models/auth_user.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/services/auth_token_service.dart';
@@ -44,22 +42,7 @@ final authStateChangesProvider = StreamProvider<User?>(
 );
 
 /// The current signed-in user as a local [AuthUser], rebuilt on auth changes.
-///
-/// DEVELOPMENT ONLY: while [AppConfig.devBypassAuth] is on, this hands out a
-/// synthetic [DevUser]-backed session instead of reading Firebase, so any
-/// screen that already depends on "the current user" keeps working without
-/// a real login. Production (flag off) is untouched.
 final currentAuthUserProvider = Provider<AuthUser?>((ref) {
-  if (AppConfig.devBypassAuth) {
-    return const AuthUser(
-      uid: DevUser.id,
-      username: DevUser.name,
-      email: 'dev@nenjam.local',
-      emailVerified: true,
-      phoneVerified: true,
-    );
-  }
-
   final async = ref.watch(authStateChangesProvider);
   final user = async.valueOrNull;
   return user == null ? null : AuthUser.fromFirebase(user);

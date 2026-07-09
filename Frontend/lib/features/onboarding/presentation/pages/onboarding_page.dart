@@ -4,7 +4,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/config/app_config.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/services/storage_service.dart';
@@ -91,11 +90,8 @@ class _OnboardingPageState extends State<OnboardingPage>
     }
   }
 
-  /// DEVELOPMENT ONLY: [AppConfig.devBypassAuth] skips straight to Home
-  /// instead of the Firebase login/signup flow. Production behavior
-  /// (→ auth selection) is unchanged when the flag is off.
   void _goPastOnboarding() {
-    context.go(AppConfig.devBypassAuth ? RouteNames.home : RouteNames.authSelection);
+    context.go(RouteNames.authSelection);
   }
 
   void _onBack() {

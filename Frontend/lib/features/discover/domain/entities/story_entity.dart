@@ -1,4 +1,4 @@
-/// A "New Today" story avatar shown at the top of the Home Feed.
+/// A "New Today" story avatar shown at the top of the Discover feed.
 class StoryEntity {
   final String id;
   final String name;

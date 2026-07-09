@@ -3,12 +3,12 @@ import '../../domain/entities/compatibility_entity.dart';
 import '../models/discovery_profile_model.dart';
 import '../models/story_model.dart';
 
-/// In-memory stand-in for a future `GET /api/home-feed` call. Every method
-/// returns the same shape a Dio-backed datasource would — callers never
-/// know the difference. Photos intentionally point at the bundled
+/// In-memory stand-in for a future `GET /api/discover-feed` call. Every
+/// method returns the same shape a Dio-backed datasource would — callers
+/// never know the difference. Photos intentionally point at the bundled
 /// [AssetPaths.imgPlaceholder] rather than any external/network URL until
 /// real profile photography is wired up.
-class HomeMockDataSource {
+class DiscoverMockDataSource {
   Future<List<StoryModel>> fetchStories() async {
     await Future<void>.delayed(const Duration(milliseconds: 300));
     return const [

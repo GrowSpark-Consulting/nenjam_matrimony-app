@@ -126,6 +126,7 @@ class _NavItem extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: isActive ? AppColors.accentGold : Colors.transparent,
+                  boxShadow: isActive ? AppShadows.goldGlow : null,
                 ),
                 child: Center(
                   child: AnimatedSwitcher(
@@ -150,8 +151,26 @@ class _NavItem extends StatelessWidget {
                       color: isActive ? activeLabelColor : inactiveColor,
                       fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                     ),
-                    child: Text(label, maxLines: 1),
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs2),
+              // Gold active indicator bar — same visual language as the
+              // tab-chip underline used elsewhere (discover top bar, matches
+              // header), so the active tab reads clearly at a glance.
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
+                width: isActive ? AppSpacing.md : 0,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: AppColors.accentGold,
+                  borderRadius: BorderRadius.circular(AppSpacing.xs2),
                 ),
               ),
             ],

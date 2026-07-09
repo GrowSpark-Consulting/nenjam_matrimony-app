@@ -48,7 +48,7 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
       return;
     }
     if (!mounted) return;
-    context.go(RouteNames.home);
+    context.go(RouteNames.discover);
   }
 
   @override

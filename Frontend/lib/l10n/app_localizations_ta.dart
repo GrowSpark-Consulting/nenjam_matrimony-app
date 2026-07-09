@@ -265,15 +265,6 @@ class AppLocalizationsTa extends AppLocalizations {
   String get navProfile => 'சுயவிவரம்';
 
   @override
-  String get homeSeeAllButton => 'அனைத்தையும் பார்';
-
-  @override
-  String get homeAiRecommendationsTitle => 'AI பொருத்தப் பரிந்துரைகள்';
-
-  @override
-  String get homeRecentlyJoinedTitle => 'சமீபத்தில் சேர்ந்தவர்கள்';
-
-  @override
   String get homeCompleteProfileTitle => 'உங்கள் சுயவிவரத்தை முழுமையாக்குங்கள்';
 
   @override
@@ -282,55 +273,43 @@ class AppLocalizationsTa extends AppLocalizations {
   }
 
   @override
-  String get homeStepUploadHoroscope => 'ஜாதகத்தைப் பதிவேற்றவும்';
-
-  @override
   String get homeStepAddPhoto => 'சுயவிவரப் புகைப்படத்தைச் சேர்க்கவும்';
 
   @override
   String get homeAiPickBadge => 'AI தேர்வு';
 
   @override
-  String get homeAiMatchLabel => 'பொருத்தம்';
+  String get discoverAiMatchLabel => 'பொருத்தம்';
 
   @override
-  String get homeNewTodayLabel => 'இன்று புதியவர்கள்';
+  String get discoverNewTodayLabel => 'இன்று புதியவர்கள்';
 
   @override
-  String get homeVerifiedProfilesTitle => 'சரிபார்க்கப்பட்ட சுயவிவரங்கள்';
+  String get discoverSearchingMoreLabel => 'மேலும் இதயங்களைத் தேடுகிறோம்…';
 
   @override
-  String get homeNearYouTitle => 'உங்களுக்கு அருகில்';
+  String get discoverVerifiedLabel => 'சரிபார்க்கப்பட்டது';
 
   @override
-  String get homePremiumMembersTitle => 'பிரீமியம் உறுப்பினர்கள்';
-
-  @override
-  String get homeSearchingMoreLabel => 'மேலும் இதயங்களைத் தேடுகிறோம்…';
-
-  @override
-  String get homeVerifiedLabel => 'சரிபார்க்கப்பட்டது';
-
-  @override
-  String get homePremiumLabel => 'பிரீமியம்';
+  String get discoverPremiumLabel => 'பிரீமியம்';
 
   @override
   String get homePsychologyCompletedLabel => 'உளவியல் மதிப்பீடு முடிந்தது';
 
   @override
-  String get homeChipVerifiedIdentity => 'சரிபார்க்கப்பட்ட அடையாளம்';
+  String get discoverChipVerifiedIdentity => 'சரிபார்க்கப்பட்ட அடையாளம்';
 
   @override
-  String get homeChipPremiumPlus => 'பிரீமியம் பிளஸ்';
+  String get discoverChipPremiumPlus => 'பிரீமியம் பிளஸ்';
 
   @override
-  String get homeChipNri => 'என்.ஆர்.ஐ';
+  String get discoverChipNri => 'என்.ஆர்.ஐ';
 
   @override
   String get homePhotoProtectedLabel => 'புகைப்படம் பாதுகாக்கப்பட்டது';
 
   @override
-  String get homeInterestSentLabel => 'ஆர்வம் அனுப்பப்பட்டது';
+  String get discoverInterestSentLabel => 'ஆர்வம் அனுப்பப்பட்டது';
 
   @override
   String get homeAiMatchScoreLabel => 'AI பொருத்தம்';
@@ -342,7 +321,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get homePsychologyMatchScoreLabel => 'உளவியல் பொருத்தம்';
 
   @override
-  String get homeCompatibilityLabel => 'பொருத்தம்';
+  String get discoverCompatibilityLabel => 'பொருத்தம்';
 
   @override
   String get actionInterested => 'ஆர்வம்';
@@ -354,7 +333,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get actionShare => 'பகிர்';
 
   @override
-  String get homeFilterLabel => 'வடிகட்டி';
+  String get discoverFilterLabel => 'வடிகட்டி';
 
   @override
   String get homeProfileDetailsLabel => 'விவரங்கள்';
@@ -379,6 +358,58 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get discoverNewTab => 'புதியவை';
+
+  @override
+  String get appNameShort => 'நெஞ்சம்';
+
+  @override
+  String get discoverSearchTooltip => 'தேடல்';
+
+  @override
+  String get discoverAiRecommendedTitle => 'AI பரிந்துரை';
+
+  @override
+  String get discoverRecentlyJoinedTitle => 'சமீபத்தில் சேர்ந்தவர்கள்';
+
+  @override
+  String get discoverVerifiedProfilesTitle => 'சரிபார்க்கப்பட்ட சுயவிவரங்கள்';
+
+  @override
+  String get discoverNearYouTitle => 'உங்களுக்கு அருகில்';
+
+  @override
+  String get discoverPremiumMembersTitle => 'பிரீமியம் உறுப்பினர்கள்';
+
+  @override
+  String get discoverViewAllButton => 'அனைத்தையும் காண்க';
+
+  @override
+  String get discoverStatMatchLabel => 'பொருத்தம்';
+
+  @override
+  String get discoverStatAstroLabel => 'ஜோதிடம்';
+
+  @override
+  String get discoverStatTrustLabel => 'நம்பிக்கை';
+
+  @override
+  String get discoverUpgradeButton => 'மேம்படுத்து';
+
+  @override
+  String get discoverEliteMemberLabel => 'உயரடுக்கு உறுப்பினர்';
+
+  @override
+  String get discoverConnectButton => 'இணை';
+
+  @override
+  String get matchesEmptyTitle => 'இன்னும் பொருத்தங்கள் இல்லை';
+
+  @override
+  String get matchesEmptySubtitle =>
+      'புதிய சுயவிவரங்களுக்கு விரைவில் மீண்டும் பார்க்கவும்';
+
+  @override
+  String get discoverKmAwaySuffix => 'கி.மீ தொலைவில்';
 
   @override
   String get premiumBannerTitle => 'பிரீமியத்திற்கு மேம்படுத்தவும்';

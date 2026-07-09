@@ -49,8 +49,8 @@ class SubscriptionPage extends StatelessWidget {
                 NmPrimaryButton(
                   label: l10n.premiumProceedToPayment,
                   onPressed: () {
-                    // Show success and go home
-                    context.go(RouteNames.home);
+                    // Show success and return to Discover
+                    context.go(RouteNames.discover);
                   },
                   icon: Icons.lock_outline_rounded,
                 ),

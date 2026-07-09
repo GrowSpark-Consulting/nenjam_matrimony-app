@@ -2,7 +2,7 @@ import '../../domain/entities/compatibility_entity.dart';
 import '../../domain/entities/discovery_profile_entity.dart';
 
 /// Wire model for [DiscoveryProfileEntity]. `fromJson`/`toJson` are the seam
-/// a real `GET /api/home-feed` response will plug into — nothing else in
+/// a real `GET /api/discover-feed` response will plug into — nothing else in
 /// the feature needs to change when the mock datasource is swapped for Dio.
 class DiscoveryProfileModel extends DiscoveryProfileEntity {
   const DiscoveryProfileModel({

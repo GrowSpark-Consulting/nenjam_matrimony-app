@@ -1,11 +1,76 @@
-# OS / editor noise at the monorepo root (Frontend/ and backend/ have their own .gitignore for their own tooling)
+# OS / editor noise
 .DS_Store
 Thumbs.db
-.vscode/
+
+# IDEs
+.vscode/*
+!.vscode/settings.json.example
 .idea/
-# Safety net: never commit machine-local secret overrides from anywhere in the repo
-.env.local
-.env.*.local
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Firebase secrets
+serviceAccountKey.json
+*serviceAccount*.json
+firebase-adminsdk*.json
+firebase/*.json
+backend/firebase/*.json
+
+# Private keys
+*.pem
+*.key
+*.p12
+*.crt
+
+# Node / NestJS
+node_modules/
+dist/
+build/
+coverage/
+.nest/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Prisma
+generated/
+.prisma/
+
+# Flutter
+Frontend/build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+coverage/
+
+# Android
+*.apk
+*.aab
+android/local.properties
+android/.gradle/
+android/app/debug/
+android/app/profile/
+android/app/release/
+**/android/local.properties
+**/android/.gradle/
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
 
 # UI prototypes / design assets
 nenjam ui/

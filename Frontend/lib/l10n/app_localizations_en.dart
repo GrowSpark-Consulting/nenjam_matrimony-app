@@ -263,15 +263,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navProfile => 'Profile';
 
   @override
-  String get homeSeeAllButton => 'See All';
-
-  @override
-  String get homeAiRecommendationsTitle => 'AI Match Recommendations';
-
-  @override
-  String get homeRecentlyJoinedTitle => 'Recently Joined';
-
-  @override
   String get homeCompleteProfileTitle => 'Complete Your Profile';
 
   @override
@@ -280,55 +271,43 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get homeStepUploadHoroscope => 'Upload Horoscope';
-
-  @override
   String get homeStepAddPhoto => 'Add profile photo';
 
   @override
   String get homeAiPickBadge => 'AI Pick';
 
   @override
-  String get homeAiMatchLabel => 'match';
+  String get discoverAiMatchLabel => 'match';
 
   @override
-  String get homeNewTodayLabel => 'New Today';
+  String get discoverNewTodayLabel => 'New Today';
 
   @override
-  String get homeVerifiedProfilesTitle => 'Verified Profiles';
+  String get discoverSearchingMoreLabel => 'Searching for more souls…';
 
   @override
-  String get homeNearYouTitle => 'Near You';
+  String get discoverVerifiedLabel => 'Verified';
 
   @override
-  String get homePremiumMembersTitle => 'Premium Members';
-
-  @override
-  String get homeSearchingMoreLabel => 'Searching for more souls…';
-
-  @override
-  String get homeVerifiedLabel => 'Verified';
-
-  @override
-  String get homePremiumLabel => 'Premium';
+  String get discoverPremiumLabel => 'Premium';
 
   @override
   String get homePsychologyCompletedLabel => 'Psychology Completed';
 
   @override
-  String get homeChipVerifiedIdentity => 'Verified Identity';
+  String get discoverChipVerifiedIdentity => 'Verified Identity';
 
   @override
-  String get homeChipPremiumPlus => 'Premium Plus';
+  String get discoverChipPremiumPlus => 'Premium Plus';
 
   @override
-  String get homeChipNri => 'NRI';
+  String get discoverChipNri => 'NRI';
 
   @override
   String get homePhotoProtectedLabel => 'Photo Protected';
 
   @override
-  String get homeInterestSentLabel => 'Interest Sent';
+  String get discoverInterestSentLabel => 'Interest Sent';
 
   @override
   String get homeAiMatchScoreLabel => 'AI Match';
@@ -340,7 +319,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homePsychologyMatchScoreLabel => 'Psychology Match';
 
   @override
-  String get homeCompatibilityLabel => 'Compatibility';
+  String get discoverCompatibilityLabel => 'Compatibility';
 
   @override
   String get actionInterested => 'Interested';
@@ -352,7 +331,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionShare => 'Share';
 
   @override
-  String get homeFilterLabel => 'Filter';
+  String get discoverFilterLabel => 'Filter';
 
   @override
   String get homeProfileDetailsLabel => 'Details';
@@ -377,6 +356,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discoverNewTab => 'New';
+
+  @override
+  String get appNameShort => 'Nenjam';
+
+  @override
+  String get discoverSearchTooltip => 'Search';
+
+  @override
+  String get discoverAiRecommendedTitle => 'AI Recommended';
+
+  @override
+  String get discoverRecentlyJoinedTitle => 'Recently Joined';
+
+  @override
+  String get discoverVerifiedProfilesTitle => 'Verified Profiles';
+
+  @override
+  String get discoverNearYouTitle => 'Near You';
+
+  @override
+  String get discoverPremiumMembersTitle => 'Premium Members';
+
+  @override
+  String get discoverViewAllButton => 'View All';
+
+  @override
+  String get discoverStatMatchLabel => 'Match';
+
+  @override
+  String get discoverStatAstroLabel => 'Astro';
+
+  @override
+  String get discoverStatTrustLabel => 'Trust';
+
+  @override
+  String get discoverUpgradeButton => 'Upgrade';
+
+  @override
+  String get discoverEliteMemberLabel => 'Elite Member';
+
+  @override
+  String get discoverConnectButton => 'Connect';
+
+  @override
+  String get matchesEmptyTitle => 'No matches yet';
+
+  @override
+  String get matchesEmptySubtitle => 'Check back soon for new profiles';
+
+  @override
+  String get discoverKmAwaySuffix => 'km away';
 
   @override
   String get premiumBannerTitle => 'Upgrade to Premium';

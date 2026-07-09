@@ -45,7 +45,8 @@ app.*.map.json
 /android/app/release
 
 # Environment Secrets & Local Config
-.env*
+.env
+.env.*
 !.env.example
 *.g.dart
 *.freezed.dart

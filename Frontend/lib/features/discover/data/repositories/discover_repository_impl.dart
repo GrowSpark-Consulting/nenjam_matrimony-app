@@ -1,14 +1,14 @@
-import '../../domain/entities/home_feed_entity.dart';
-import '../../domain/repositories/home_repository.dart';
-import '../datasources/home_mock_datasource.dart';
+import '../../domain/entities/discover_feed_entity.dart';
+import '../../domain/repositories/discover_repository.dart';
+import '../datasources/discover_mock_datasource.dart';
 
-class HomeRepositoryImpl implements HomeRepository {
-  HomeRepositoryImpl(this._dataSource);
+class DiscoverRepositoryImpl implements DiscoverRepository {
+  DiscoverRepositoryImpl(this._dataSource);
 
-  final HomeMockDataSource _dataSource;
+  final DiscoverMockDataSource _dataSource;
 
   @override
-  Future<HomeFeedEntity> getHomeFeed() async {
+  Future<DiscoverFeedEntity> getDiscoverFeed() async {
     // Kick off every call before awaiting so the mock latency overlaps
     // instead of stacking — mirrors how parallel REST/GraphQL calls would
     // be fired against a real backend.
@@ -20,7 +20,7 @@ class HomeRepositoryImpl implements HomeRepository {
     final premiumMembersFuture = _dataSource.fetchPremiumMembers();
     final completionFuture = _dataSource.fetchProfileCompletionPercent();
 
-    return HomeFeedEntity(
+    return DiscoverFeedEntity(
       stories: await storiesFuture,
       aiRecommended: await aiRecommendedFuture,
       recentlyJoined: await recentlyJoinedFuture,

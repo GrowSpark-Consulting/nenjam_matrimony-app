@@ -17,7 +17,6 @@ abstract final class RouteNames {
   static const String createProfileFor = '/create-profile-for';
   static const String registrationWizard = '/registration/wizard';
   static const String profileReview = '/profile-review';
-  static const String home = '/home';
   static const String discover = '/discover';
   static const String astro = '/astro';
   static const String search = '/search';
@@ -48,7 +47,6 @@ abstract final class RouteNames {
   static const String createProfileForName = 'createProfileFor';
   static const String registrationWizardName = 'registrationWizard';
   static const String profileReviewName = 'profileReview';
-  static const String homeName = 'home';
   static const String discoverName = 'discover';
   static const String astroName = 'astro';
   static const String searchName = 'search';

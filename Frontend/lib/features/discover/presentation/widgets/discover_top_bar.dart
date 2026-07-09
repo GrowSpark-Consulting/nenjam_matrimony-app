@@ -90,7 +90,7 @@ class DiscoverTopBar extends ConsumerWidget {
           // ── Avatar / filter ──────────────────────────────────────
           Semantics(
             button: true,
-            label: l10n.homeFilterLabel,
+            label: l10n.discoverFilterLabel,
             child: const NmCircleAvatar(size: 36),
           ),
         ],

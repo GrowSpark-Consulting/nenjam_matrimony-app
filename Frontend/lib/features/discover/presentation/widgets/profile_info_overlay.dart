@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../../home/domain/entities/discovery_profile_entity.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../domain/entities/discovery_profile_entity.dart';
 
 /// Bottom-of-card profile information overlay for the Discover reel.
 ///
@@ -20,6 +21,8 @@ class ProfileInfoOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -81,7 +84,9 @@ class ProfileInfoOverlay extends StatelessWidget {
           Wrap(
             spacing: 6,
             runSpacing: 5,
-            children: _tagPills.map((tag) => _TagPill(label: tag)).toList(),
+            children: _tagPills
+                .map((tag) => _TagPill(label: _localizedTag(l10n, tag)))
+                .toList(),
           ),
         ],
       ],
@@ -103,6 +108,23 @@ class ProfileInfoOverlay extends StatelessWidget {
       pills.add('Premium Plus');
     }
     return pills.take(4).toList(); // cap at 4 to avoid runaway wrapping
+  }
+}
+
+/// Maps the fixed set of known raw tag values (mock data content) to their
+/// localized display text. Unrecognized/custom tags pass through unchanged.
+String _localizedTag(AppLocalizations l10n, String tag) {
+  switch (tag) {
+    case 'NRI':
+      return l10n.discoverChipNri;
+    case 'Verified Identity':
+      return l10n.discoverChipVerifiedIdentity;
+    case 'Premium Plus':
+      return l10n.discoverChipPremiumPlus;
+    case 'Verified':
+      return l10n.discoverVerifiedLabel;
+    default:
+      return tag;
   }
 }
 

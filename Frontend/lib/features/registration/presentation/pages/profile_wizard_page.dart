@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -65,7 +66,28 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
         SnackBar(content: Text('Could not save this step: ${e.message}')),
       );
       return;
-    } catch (_) {
+    } on DioException catch (e) {
+      // TEMPORARY DEBUG LOGGING — real diagnostic detail for the
+      // registration-save connection issue. Remove once PATCH
+      // /profiles/draft/* is confirmed reaching the backend.
+      debugPrint(
+        '[RegistrationSave] DioException'
+        '\n  type       : ${e.type}'
+        '\n  requestUrl : ${e.requestOptions.uri}'
+        '\n  statusCode : ${e.response?.statusCode}'
+        '\n  responseBody: ${e.response?.data}'
+        '\n  message    : ${e.message}',
+      );
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save this step. Check your connection.'),
+        ),
+      );
+      return;
+    } catch (e) {
+      debugPrint('[RegistrationSave] Unexpected error: $e');
       if (!mounted) return;
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(

@@ -1,6 +1,6 @@
 import 'compatibility_entity.dart';
 
-/// A discoverable matrimony profile shown in the Home Feed.
+/// A discoverable matrimony profile shown in the Discover feed.
 ///
 /// Named `Discovery*` (not `Profile*`) so it doesn't collide with the
 /// separate `features/profile` module's own profile model — this entity

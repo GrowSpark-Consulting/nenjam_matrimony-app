@@ -9,17 +9,6 @@ class AppConfig {
   factory AppConfig() => _instance;
   AppConfig._internal();
 
-  /// DEVELOPMENT ONLY. Firebase Auth is temporarily unavailable (suspended
-  /// API key) — when true, [SplashController] and [OnboardingPage] skip the
-  /// login/signup/email-OTP/phone-OTP flow entirely and route straight to
-  /// Home (after language + onboarding) using [DevUser] as the session.
-  ///
-  /// This is a static const so it works even from the plain `main.dart`
-  /// entry point, which never calls `AppConfig().init(...)`. Flip it back
-  /// to `false` to restore the normal Firebase-gated flow — every call site
-  /// only ever branches on this flag, nothing else was touched or deleted.
-  static const bool devBypassAuth = true;
-
   late final AppEnvironment environment;
   late final EnvConfig envConfig;
 

@@ -5,8 +5,9 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
-import '../../../home/domain/entities/discovery_profile_entity.dart';
-import '../../../home/presentation/providers/home_providers.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../../discover/domain/entities/discovery_profile_entity.dart';
+import '../../../discover/presentation/providers/discover_providers.dart';
 
 /// Nenjam Matches — Instagram Reels-style vertical swipeable feed.
 ///
@@ -41,7 +42,7 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final feedAsync = ref.watch(homeFeedProvider);
+    final feedAsync = ref.watch(discoverFeedProvider);
 
     return Scaffold(
       backgroundColor: AppColors.primary,
@@ -66,7 +67,7 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
         },
         loading: () => const _ReelLoading(),
         error: (_, __) => Center(
-          child: NmErrorWidget(onRetry: () => ref.invalidate(homeFeedProvider)),
+          child: NmErrorWidget(onRetry: () => ref.invalidate(discoverFeedProvider)),
         ),
       ),
     );
@@ -137,10 +138,13 @@ class _ReelHeader extends StatelessWidget {
     required this.onTabChanged,
   });
 
-  static const _tabs = ['For You', 'Near Me', 'New'];
+  List<String> _tabs(AppLocalizations l10n) =>
+      [l10n.discoverForYouTab, l10n.discoverNearMeTab, l10n.discoverNewTab];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final tabs = _tabs(l10n);
     final top = MediaQuery.paddingOf(context).top;
 
     return Container(
@@ -170,7 +174,7 @@ class _ReelHeader extends StatelessWidget {
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
-                    MediaQuery.sizeOf(context).width < 375 ? 'Nenjam' : 'Nenjam Matrimony',
+                    MediaQuery.sizeOf(context).width < 375 ? l10n.appNameShort : l10n.appName,
                     style: AppTypography.titleMedium.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
@@ -185,44 +189,55 @@ class _ReelHeader extends StatelessWidget {
 
           const SizedBox(width: 8),
 
-          // ── Tab pills: For You / Near Me / New ─────────────────────
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: List.generate(_tabs.length, (i) {
-              final active = selectedTab == i;
-              return GestureDetector(
-                onTap: () => onTabChanged(i),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 200),
-                    style: AppTypography.labelMedium.copyWith(
-                      color: active
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.55),
-                      fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                      fontSize: 12,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(_tabs[i]),
-                        const SizedBox(height: 2),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          height: 2,
-                          width: active ? 20 : 0,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFED977), // secondary-container
-                            borderRadius: BorderRadius.circular(2),
-                          ),
+          // ── Tab pills: For You / Near Me / New (scrollable so long
+          // translations — e.g. Tamil — never overflow) ───────────────
+          Flexible(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(tabs.length, (i) {
+                  final active = selectedTab == i;
+                  return GestureDetector(
+                    onTap: () => onTabChanged(i),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 200),
+                        style: AppTypography.labelMedium.copyWith(
+                          color: active
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.55),
+                          fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                          fontSize: 12,
                         ),
-                      ],
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              tabs[i],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              height: 2,
+                              width: active ? 20 : 0,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFED977), // secondary-container
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              );
-            }),
+                  );
+                }),
+              ),
+            ),
           ),
 
           const SizedBox(width: 8),
@@ -421,12 +436,14 @@ class _ActionColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         _ActionButton(
           icon: Icons.favorite_rounded,
-          label: 'Interested',
+          label: l10n.actionInterested,
           active: interested,
           activeColor: const Color(0xFFFED977),
           onTap: onInterested,
@@ -434,7 +451,7 @@ class _ActionColumn extends StatelessWidget {
         const SizedBox(height: 24),
         _ActionButton(
           icon: Icons.star_rounded,
-          label: 'Shortlist',
+          label: l10n.profileCardShortlist,
           active: shortlisted,
           activeColor: const Color(0xFFFED977),
           onTap: onShortlist,
@@ -442,7 +459,7 @@ class _ActionColumn extends StatelessWidget {
         const SizedBox(height: 24),
         _ActionButton(
           icon: Icons.share_rounded,
-          label: 'Share',
+          label: l10n.actionShare,
           onTap: onShare,
         ),
         const SizedBox(height: 24),
@@ -504,16 +521,22 @@ class _ActionButton extends StatelessWidget {
           ),
           if (label.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(
-              label.toUpperCase(),
-              style: AppTypography.labelSmall.copyWith(
-                color: Colors.white,
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                shadows: const [
-                  Shadow(blurRadius: 10, color: Colors.black54),
-                ],
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 64),
+              child: Text(
+                label.toUpperCase(),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.labelSmall.copyWith(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  shadows: const [
+                    Shadow(blurRadius: 10, color: Colors.black54),
+                  ],
+                ),
               ),
             ),
           ],
@@ -534,6 +557,8 @@ class _ProfileInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -561,12 +586,16 @@ class _ProfileInfo extends StatelessWidget {
                   color: Color(0xFF785D00), // on-secondary-container
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  '${profile.compatibility.aiMatchPercent}% Match',
-                  style: AppTypography.labelMedium.copyWith(
-                    color: const Color(0xFF785D00),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
+                Flexible(
+                  child: Text(
+                    '${profile.compatibility.aiMatchPercent}% ${l10n.discoverStatMatchLabel}',
+                    style: AppTypography.labelMedium.copyWith(
+                      color: const Color(0xFF785D00),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -751,25 +780,32 @@ class _EmptyReel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.favorite_border_rounded,
-              size: 64, color: Color(0xFFFED977)),
-          const SizedBox(height: 16),
-          Text(
-            'No matches yet',
-            style: AppTypography.titleMedium.copyWith(color: Colors.white),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Check back soon for new profiles',
-            style: AppTypography.bodyMedium.copyWith(
-              color: Colors.white.withValues(alpha: 0.6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.favorite_border_rounded,
+                size: 64, color: Color(0xFFFED977)),
+            const SizedBox(height: 16),
+            Text(
+              l10n.matchesEmptyTitle,
+              textAlign: TextAlign.center,
+              style: AppTypography.titleMedium.copyWith(color: Colors.white),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              l10n.matchesEmptySubtitle,
+              textAlign: TextAlign.center,
+              style: AppTypography.bodyMedium.copyWith(
+                color: Colors.white.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

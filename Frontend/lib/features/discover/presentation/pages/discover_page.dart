@@ -7,10 +7,11 @@ import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
-import '../../../home/domain/entities/discovery_profile_entity.dart';
-import '../../../home/domain/entities/home_feed_entity.dart';
-import '../../../home/domain/entities/story_entity.dart';
-import '../../../home/presentation/providers/home_providers.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../domain/entities/discovery_profile_entity.dart';
+import '../../domain/entities/discover_feed_entity.dart';
+import '../../domain/entities/story_entity.dart';
+import '../providers/discover_providers.dart';
 import '../widgets/compatibility_badge.dart';
 
 /// Nenjam Discover Page — pixel-faithful Flutter translation of the
@@ -29,7 +30,7 @@ class DiscoverPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final feedAsync = ref.watch(homeFeedProvider);
+    final feedAsync = ref.watch(discoverFeedProvider);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
@@ -37,7 +38,7 @@ class DiscoverPage extends ConsumerWidget {
         data: (feed) => _DiscoverFeedView(feed: feed),
         loading: () => const _DiscoverLoading(),
         error: (error, _) => Center(
-          child: NmErrorWidget(onRetry: () => ref.invalidate(homeFeedProvider)),
+          child: NmErrorWidget(onRetry: () => ref.invalidate(discoverFeedProvider)),
         ),
       ),
     );
@@ -74,15 +75,17 @@ class _DiscoverLoading extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _DiscoverFeedView extends ConsumerWidget {
-  final HomeFeedEntity feed;
+  final DiscoverFeedEntity feed;
 
   const _DiscoverFeedView({required this.feed});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+
     return RefreshIndicator(
       color: AppColors.accentGold,
-      onRefresh: () => ref.refresh(homeFeedProvider.future),
+      onRefresh: () => ref.refresh(discoverFeedProvider.future),
       child: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -98,7 +101,7 @@ class _DiscoverFeedView extends ConsumerWidget {
             SliverToBoxAdapter(
               child: _SectionPadding(
                 child: _FeedSection(
-                  title: 'AI Recommended',
+                  title: l10n.discoverAiRecommendedTitle,
                   icon: Icons.auto_awesome_rounded,
                   iconColor: AppColors.accentGold,
                   child: _LargeProfileCard(
@@ -114,7 +117,7 @@ class _DiscoverFeedView extends ConsumerWidget {
             SliverToBoxAdapter(
               child: _SectionPadding(
                 child: _FeedSection(
-                  title: 'Recently Joined',
+                  title: l10n.discoverRecentlyJoinedTitle,
                   child: _HorizontalCompactCards(
                     profiles: feed.recentlyJoined,
                   ),
@@ -127,7 +130,7 @@ class _DiscoverFeedView extends ConsumerWidget {
             SliverToBoxAdapter(
               child: _SectionPadding(
                 child: _FeedSection(
-                  title: 'Verified Profiles',
+                  title: l10n.discoverVerifiedProfilesTitle,
                   icon: Icons.verified_rounded,
                   iconColor: AppColors.verifiedBlue,
                   child: _LargeProfileCard(
@@ -143,7 +146,7 @@ class _DiscoverFeedView extends ConsumerWidget {
             SliverToBoxAdapter(
               child: _SectionPadding(
                 child: _FeedSection(
-                  title: 'Near You',
+                  title: l10n.discoverNearYouTitle,
                   icon: Icons.location_on_rounded,
                   iconColor: AppColors.accentGold,
                   child: _NearYouGrid(profiles: feed.nearYou),
@@ -178,6 +181,8 @@ class _DiscoverAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return SliverAppBar(
       pinned: true,
       floating: false,
@@ -222,7 +227,7 @@ class _DiscoverAppBar extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Nenjam Matrimony',
+              l10n.appNameShort,
               style: AppTypography.titleLarge.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w700,
@@ -238,7 +243,7 @@ class _DiscoverAppBar extends StatelessWidget {
         IconButton(
           onPressed: () {},
           icon: const Icon(Icons.search_rounded, color: AppColors.primary),
-          tooltip: 'Search',
+          tooltip: l10n.discoverSearchTooltip,
         ),
         Stack(
           clipBehavior: Clip.none,
@@ -249,7 +254,7 @@ class _DiscoverAppBar extends StatelessWidget {
                 Icons.notifications_none_rounded,
                 color: AppColors.primary,
               ),
-              tooltip: 'Notifications',
+              tooltip: l10n.notificationsTitle,
             ),
             Positioned(
               top: 8,
@@ -282,6 +287,8 @@ class _NewTodaySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, AppSpacing.sm, 0, 0),
       child: Column(
@@ -290,17 +297,19 @@ class _NewTodaySection extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
             child: Text(
-              'NEW TODAY',
+              l10n.discoverNewTodayLabel.toUpperCase(),
               style: AppTypography.labelMedium.copyWith(
                 color: AppColors.textSecondaryLight,
                 letterSpacing: 1.2,
                 fontSize: 11,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           SizedBox(
-            height: 92,
+            height: 112,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
@@ -328,9 +337,9 @@ class _StoryBubble extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 64,
-          height: 64,
-          padding: const EdgeInsets.all(2),
+          width: 76,
+          height: 76,
+          padding: const EdgeInsets.all(2.5),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: story.hasNewStory
@@ -363,15 +372,19 @@ class _StoryBubble extends StatelessWidget {
                   ),
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          story.name,
-          style: AppTypography.labelSmall.copyWith(
-            color: AppColors.textPrimaryLight,
-            fontSize: 11,
+        const SizedBox(height: AppSpacing.xs),
+        SizedBox(
+          width: 76,
+          child: Text(
+            story.name,
+            textAlign: TextAlign.center,
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.textPrimaryLight,
+              fontSize: 11,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
@@ -412,6 +425,8 @@ class _FeedSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -446,11 +461,13 @@ class _FeedSection extends StatelessWidget {
               TextButton(
                 onPressed: () {},
                 child: Text(
-                  'VIEW ALL',
+                  l10n.discoverViewAllButton.toUpperCase(),
                   style: AppTypography.labelSmall.copyWith(
                     color: AppColors.accentGold,
                     fontWeight: FontWeight.w700,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -479,6 +496,7 @@ class _LargeProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final cardHeight = MediaQuery.sizeOf(context).height * 0.72;
 
     return Padding(
@@ -577,16 +595,16 @@ class _LargeProfileCard extends StatelessWidget {
                       // Stats row (Match / Astro / Trust) for verified card
                       if (showStats && profile.compatibility.aiMatchPercent > 0) ...[
                         const SizedBox(height: AppSpacing.sm),
-                        _StatsRow(compatibility: profile.compatibility),
+                        _StatsRow(l10n: l10n, compatibility: profile.compatibility),
                       ],
 
                       // Tag pills
-                      if (_tagPills(profile).isNotEmpty) ...[
+                      if (_tagPills(l10n, profile).isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.sm),
                         Wrap(
                           spacing: 6,
                           runSpacing: 5,
-                          children: _tagPills(profile)
+                          children: _tagPills(l10n, profile)
                               .map((t) => _TagPill(label: t))
                               .toList(),
                         ),
@@ -607,32 +625,62 @@ class _LargeProfileCard extends StatelessWidget {
     );
   }
 
-  List<String> _tagPills(DiscoveryProfileEntity p) {
+  List<String> _tagPills(AppLocalizations l10n, DiscoveryProfileEntity p) {
     final list = <String>[...p.tags];
     if (p.isVerified && !list.contains('Verified')) list.insert(0, 'Verified Identity');
     if (p.isPremium && !list.contains('Premium Plus')) list.add('Premium Plus');
-    return list.take(4).toList();
+    return list.take(4).map((tag) => _localizedTag(l10n, tag)).toList();
+  }
+}
+
+/// Maps the fixed set of known raw tag values (mock data content) to their
+/// localized display text. Unrecognized/custom tags pass through unchanged.
+String _localizedTag(AppLocalizations l10n, String tag) {
+  switch (tag) {
+    case 'NRI':
+      return l10n.discoverChipNri;
+    case 'Verified Identity':
+      return l10n.discoverChipVerifiedIdentity;
+    case 'Premium Plus':
+      return l10n.discoverChipPremiumPlus;
+    default:
+      return tag;
   }
 }
 
 /// Match / Astro / Trust stats row shown on verified profiles card.
 class _StatsRow extends StatelessWidget {
+  final AppLocalizations l10n;
   final dynamic compatibility;
 
-  const _StatsRow({required this.compatibility});
+  const _StatsRow({required this.l10n, required this.compatibility});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _Stat(label: 'Match', value: '${compatibility.aiMatchPercent}%', isGold: true),
+        Flexible(
+          child: _Stat(
+            label: l10n.discoverStatMatchLabel,
+            value: '${compatibility.aiMatchPercent}%',
+            isGold: true,
+          ),
+        ),
         _Divider(),
-        _Stat(label: 'Astro', value: '${compatibility.astroMatchPercent}%', isGold: true),
+        Flexible(
+          child: _Stat(
+            label: l10n.discoverStatAstroLabel,
+            value: '${compatibility.astroMatchPercent}%',
+            isGold: true,
+          ),
+        ),
         _Divider(),
-        _Stat(
-          label: 'Trust',
-          value: '${compatibility.overallCompatibility}/100',
-          isGold: false,
+        Flexible(
+          child: _Stat(
+            label: l10n.discoverStatTrustLabel,
+            value: '${compatibility.overallCompatibility}/100',
+            isGold: false,
+          ),
         ),
       ],
     );
@@ -650,6 +698,7 @@ class _Stat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label.toUpperCase(),
@@ -658,6 +707,8 @@ class _Stat extends StatelessWidget {
             fontSize: 10,
             fontWeight: FontWeight.w700,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         Text(
           value,
@@ -666,6 +717,8 @@ class _Stat extends StatelessWidget {
             fontWeight: FontWeight.w700,
             fontSize: 14,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
@@ -698,6 +751,8 @@ class _CardButtonsState extends State<_CardButtons> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -736,12 +791,16 @@ class _CardButtonsState extends State<_CardButtons> {
                       color: _sent ? Colors.white : const Color(0xFF241A00),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      _sent ? 'Interest Sent' : 'Interested',
-                      style: AppTypography.button.copyWith(
-                        color: _sent ? Colors.white : const Color(0xFF241A00),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
+                    Flexible(
+                      child: Text(
+                        _sent ? l10n.discoverInterestSentLabel : l10n.actionInterested,
+                        style: AppTypography.button.copyWith(
+                          color: _sent ? Colors.white : const Color(0xFF241A00),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -758,7 +817,7 @@ class _CardButtonsState extends State<_CardButtons> {
             Expanded(
               child: _GlassBtn(
                 icon: _shortlisted ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-                label: 'Shortlist',
+                label: l10n.profileCardShortlist,
                 onTap: () => setState(() => _shortlisted = !_shortlisted),
                 iconColor: _shortlisted ? AppColors.accentGoldLight : Colors.white,
               ),
@@ -767,7 +826,7 @@ class _CardButtonsState extends State<_CardButtons> {
             Expanded(
               child: _GlassBtn(
                 icon: Icons.person_rounded,
-                label: 'View Profile',
+                label: l10n.actionViewProfile,
                 onTap: () {},
               ),
             ),
@@ -894,6 +953,8 @@ class _CompactProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Container(
       width: 176,
       decoration: BoxDecoration(
@@ -920,30 +981,37 @@ class _CompactProfileCard extends StatelessWidget {
                   Positioned(
                     bottom: 8,
                     left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.bolt_rounded,
-                              size: 10, color: Color(0xFFFFE08F)),
-                          const SizedBox(width: 3),
-                          Text(
-                            '${profile.compatibility.aiMatchPercent}% Match',
-                            style: AppTypography.labelSmall.copyWith(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 160),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.bolt_rounded,
+                                size: 10, color: Color(0xFFFFE08F)),
+                            const SizedBox(width: 3),
+                            Flexible(
+                              child: Text(
+                                '${profile.compatibility.aiMatchPercent}% ${l10n.discoverStatMatchLabel}',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -995,11 +1063,13 @@ class _CompactProfileCard extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      'Interested',
+                      l10n.actionInterested,
                       style: AppTypography.labelSmall.copyWith(
                         fontWeight: FontWeight.w700,
                         fontSize: 11,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
@@ -1049,6 +1119,8 @@ class _NearYouCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surfaceVariantLight,
@@ -1079,7 +1151,7 @@ class _NearYouCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   profile.distanceKm != null
-                      ? '${profile.distanceKm!.toStringAsFixed(1)} km away • ${profile.education}'
+                      ? '${profile.distanceKm!.toStringAsFixed(1)} ${l10n.discoverKmAwaySuffix} • ${profile.education}'
                       : profile.profession,
                   style: AppTypography.labelSmall.copyWith(
                     color: AppColors.textSecondaryLight,
@@ -1104,11 +1176,13 @@ class _NearYouCard extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      'Interested',
+                      l10n.actionInterested,
                       style: AppTypography.labelSmall.copyWith(
                         fontWeight: FontWeight.w700,
                         fontSize: 10,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
@@ -1132,6 +1206,8 @@ class _PremiumMembersSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.xl2),
       child: Container(
@@ -1148,31 +1224,39 @@ class _PremiumMembersSection extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.workspace_premium_rounded,
-                      color: Color(0xFFFFE08F),
-                      size: 20,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      'Premium Members',
-                      style: AppTypography.titleMedium.copyWith(
-                        color: const Color(0xFFFFE08F),
-                        fontWeight: FontWeight.w600,
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.workspace_premium_rounded,
+                        color: Color(0xFFFFE08F),
+                        size: 20,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: AppSpacing.sm),
+                      Flexible(
+                        child: Text(
+                          l10n.discoverPremiumMembersTitle,
+                          style: AppTypography.titleMedium.copyWith(
+                            color: const Color(0xFFFFE08F),
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 TextButton(
                   onPressed: () {},
                   child: Text(
-                    'UPGRADE',
+                    l10n.discoverUpgradeButton.toUpperCase(),
                     style: AppTypography.labelSmall.copyWith(
                       color: const Color(0xFFFFE08F),
                       fontWeight: FontWeight.w700,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -1204,6 +1288,8 @@ class _PremiumMemberCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return SizedBox(
       width: 260,
       child: Container(
@@ -1237,13 +1323,15 @@ class _PremiumMemberCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'ELITE MEMBER',
+                    l10n.discoverEliteMemberLabel.toUpperCase(),
                     style: AppTypography.labelSmall.copyWith(
                       color: const Color(0xFFFFE08F),
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -1272,11 +1360,13 @@ class _PremiumMemberCard extends StatelessWidget {
                               padding: EdgeInsets.zero,
                             ),
                             child: Text(
-                              'Connect',
+                              l10n.discoverConnectButton,
                               style: AppTypography.labelSmall.copyWith(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 12,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ),
@@ -1318,8 +1408,10 @@ class _FeedFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl3),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base, vertical: AppSpacing.xl3),
       child: Column(
         children: [
           Icon(
@@ -1329,7 +1421,8 @@ class _FeedFooter extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Searching for more souls...',
+            l10n.discoverSearchingMoreLabel,
+            textAlign: TextAlign.center,
             style: AppTypography.labelSmall.copyWith(
               color: AppColors.textTertiaryLight.withValues(alpha: 0.4),
               fontStyle: FontStyle.italic,

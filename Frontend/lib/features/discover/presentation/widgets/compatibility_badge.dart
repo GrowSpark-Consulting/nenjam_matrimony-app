@@ -4,7 +4,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../home/domain/entities/compatibility_entity.dart';
+import '../../domain/entities/compatibility_entity.dart';
 
 /// Compact "87% match" pill — used inline next to the name row (single badge).
 class CompatibilityBadge extends StatelessWidget {
@@ -22,7 +22,7 @@ class CompatibilityBadge extends StatelessWidget {
       child: _GlassBadge(
         icon: Icons.bolt_rounded,
         iconColor: AppColors.accentGoldLight,
-        label: '${compatibility.aiMatchPercent}% ${l10n.homeAiMatchLabel}',
+        label: '${compatibility.aiMatchPercent}% ${l10n.discoverAiMatchLabel}',
       ),
     );
   }
@@ -54,7 +54,7 @@ class CompatibilityBadgeRow extends StatelessWidget {
       badges.add(_GlassBadge(
         icon: Icons.bolt_rounded,
         iconColor: AppColors.accentGoldLight,
-        label: '${compatibility.aiMatchPercent}% ${l10n.homeAiMatchLabel}',
+        label: '${compatibility.aiMatchPercent}% ${l10n.discoverAiMatchLabel}',
       ));
     }
 
@@ -62,7 +62,7 @@ class CompatibilityBadgeRow extends StatelessWidget {
       badges.add(_GlassBadge(
         icon: Icons.auto_awesome_rounded,
         iconColor: AppColors.accentGoldLight,
-        label: '${compatibility.astroMatchPercent}% Astro',
+        label: '${compatibility.astroMatchPercent}% ${l10n.discoverStatAstroLabel}',
       ));
     }
 
@@ -70,15 +70,15 @@ class CompatibilityBadgeRow extends StatelessWidget {
       badges.add(_GlassBadge(
         icon: Icons.shield_rounded,
         iconColor: AppColors.faceVerificationGreen,
-        label: '${compatibility.overallCompatibility} Trust',
+        label: '${compatibility.overallCompatibility} ${l10n.discoverStatTrustLabel}',
       ));
     }
 
     if (isVerified && badges.isEmpty) {
-      badges.add(const _GlassBadge(
+      badges.add(_GlassBadge(
         icon: Icons.task_alt_rounded,
         iconColor: AppColors.faceVerificationGreen,
-        label: 'VERIFIED',
+        label: l10n.discoverVerifiedLabel.toUpperCase(),
       ));
     }
 

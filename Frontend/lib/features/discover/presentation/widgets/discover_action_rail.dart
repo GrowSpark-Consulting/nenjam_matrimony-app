@@ -87,7 +87,7 @@ class _DiscoverActionRailState extends State<DiscoverActionRail>
             sent: _interestSent,
             onTap: _handleInterested,
             label: _interestSent
-                ? l10n.homeInterestSentLabel
+                ? l10n.discoverInterestSentLabel
                 : l10n.actionInterested,
           ),
         ),
@@ -112,7 +112,7 @@ class _DiscoverActionRailState extends State<DiscoverActionRail>
             Expanded(
               child: _GlassButton(
                 icon: Icons.person_rounded,
-                label: 'View Profile',
+                label: l10n.actionViewProfile,
                 onTap: widget.onShare, // wired to share/view callback
               ),
             ),

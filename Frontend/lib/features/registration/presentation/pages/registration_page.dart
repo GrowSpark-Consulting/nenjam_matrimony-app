@@ -38,7 +38,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
       Future.delayed(const Duration(milliseconds: 1000), () {
         if (mounted) {
           setState(() => _isLoading = false);
-          context.go(RouteNames.home);
+          context.go(RouteNames.discover);
         }
       });
     }
