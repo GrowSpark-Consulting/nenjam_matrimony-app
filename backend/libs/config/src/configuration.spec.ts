@@ -54,6 +54,21 @@ describe('configuration', () => {
     expect(config.jwt.secret).toBe('a-very-long-secret-value');
   });
 
+  it('decodes escaped newlines in the Firebase private key', () => {
+    process.env.FIREBASE_PROJECT_ID = 'demo-project';
+    process.env.FIREBASE_CLIENT_EMAIL =
+      'sa@demo-project.iam.gserviceaccount.com';
+    process.env.FIREBASE_PRIVATE_KEY =
+      '-----BEGIN PRIVATE KEY-----\\nMOCKKEY\\n-----END PRIVATE KEY-----\\n';
+
+    const config = configuration();
+
+    expect(config.firebase.projectId).toBe('demo-project');
+    expect(config.firebase.privateKey).toBe(
+      '-----BEGIN PRIVATE KEY-----\nMOCKKEY\n-----END PRIVATE KEY-----\n',
+    );
+  });
+
   it('parses numeric env vars as numbers, not strings', () => {
     process.env.PORT = '4000';
     process.env.DATABASE_PORT = '5432';

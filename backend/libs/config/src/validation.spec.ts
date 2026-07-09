@@ -17,6 +17,11 @@ describe('validationSchema', () => {
     SMTP_HOST: 'localhost',
     SMTP_PORT: '1025',
     JWT_SECRET: 'a-very-long-secret-value',
+    FIREBASE_PROJECT_ID: 'demo-project',
+    FIREBASE_CLIENT_EMAIL:
+      'firebase-adminsdk@demo-project.iam.gserviceaccount.com',
+    FIREBASE_PRIVATE_KEY:
+      '-----BEGIN PRIVATE KEY-----\\nMOCKKEY\\n-----END PRIVATE KEY-----\\n',
     LOG_LEVEL: 'debug',
   };
 
@@ -47,6 +52,9 @@ describe('validationSchema', () => {
     'SMTP_HOST',
     'SMTP_PORT',
     'JWT_SECRET',
+    'FIREBASE_PROJECT_ID',
+    'FIREBASE_CLIENT_EMAIL',
+    'FIREBASE_PRIVATE_KEY',
   ])('fails when required variable %s is missing', (key) => {
     const env = { ...validEnv };
     delete (env as Record<string, string>)[key];

@@ -18,6 +18,8 @@ export const validationSchema = Joi.object({
   REDIS_PASSWORD: Joi.string().allow('').optional(),
 
   ELASTICSEARCH_NODE: Joi.string().uri().required(),
+ELASTICSEARCH_USERNAME: Joi.string().required(),
+ELASTICSEARCH_PASSWORD: Joi.string().required(),
 
   SMTP_HOST: Joi.string().required(),
   SMTP_PORT: Joi.number().port().required(),
@@ -25,6 +27,10 @@ export const validationSchema = Joi.object({
   SMTP_PASSWORD: Joi.string().allow('').optional(),
 
   JWT_SECRET: Joi.string().min(16).required(),
+
+  FIREBASE_PROJECT_ID: Joi.string().required(),
+  FIREBASE_CLIENT_EMAIL: Joi.string().required(),
+  FIREBASE_PRIVATE_KEY: Joi.string().required(),
 
   LOG_LEVEL: Joi.string()
     .valid('error', 'warn', 'info', 'debug', 'verbose')

@@ -20,6 +20,12 @@ describe('AppConfigService', () => {
     elasticsearch: { node: 'http://localhost:9200' },
     smtp: { host: 'localhost', port: 1025, user: '', password: '' },
     jwt: { secret: 'a-very-long-secret-value' },
+    firebase: {
+      projectId: 'demo-project',
+      clientEmail: 'firebase-adminsdk@demo-project.iam.gserviceaccount.com',
+      privateKey:
+        '-----BEGIN PRIVATE KEY-----\nMOCKKEY\n-----END PRIVATE KEY-----\n',
+    },
     logLevel: 'debug',
   };
 

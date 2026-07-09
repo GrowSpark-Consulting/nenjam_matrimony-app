@@ -15,8 +15,10 @@ export interface AppConfig {
     password?: string;
   };
   elasticsearch: {
-    node: string;
-  };
+  node: string;
+  username: string;
+  password: string;
+};
   smtp: {
     host: string;
     port: number;
@@ -25,6 +27,11 @@ export interface AppConfig {
   };
   jwt: {
     secret: string;
+  };
+  firebase: {
+    projectId: string;
+    clientEmail: string;
+    privateKey: string;
   };
   logLevel: string;
 }
@@ -46,8 +53,10 @@ export default (): AppConfig => ({
     password: process.env.REDIS_PASSWORD || undefined,
   },
   elasticsearch: {
-    node: process.env.ELASTICSEARCH_NODE ?? 'http://localhost:9200',
-  },
+  node: process.env.ELASTICSEARCH_NODE ?? 'http://localhost:9200',
+  username: process.env.ELASTICSEARCH_USERNAME ?? '',
+  password: process.env.ELASTICSEARCH_PASSWORD ?? '',
+},
   smtp: {
     host: process.env.SMTP_HOST ?? 'localhost',
     port: parseInt(process.env.SMTP_PORT ?? '1025', 10),
@@ -56,6 +65,13 @@ export default (): AppConfig => ({
   },
   jwt: {
     secret: process.env.JWT_SECRET ?? '',
+  },
+  firebase: {
+    projectId: process.env.FIREBASE_PROJECT_ID ?? '',
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL ?? '',
+    // Env vars can't hold real newlines, so the PEM key is stored with
+    // literal "\n" sequences and decoded back into a real multi-line key here.
+    privateKey: (process.env.FIREBASE_PRIVATE_KEY ?? '').replace(/\\n/g, '\n'),
   },
   logLevel: process.env.LOG_LEVEL ?? 'info',
 });

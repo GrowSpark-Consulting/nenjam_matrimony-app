@@ -14,10 +14,17 @@ import { ElasticsearchHealthService } from './elasticsearch.health';
       inject: [AppConfigService],
       useFactory: (configService: AppConfigService) =>
         new Client({
-          node: configService.elasticsearch.node,
-          requestTimeout: 5000,
-          maxRetries: 0,
-        }),
+  node: configService.elasticsearch.node,
+  auth: {
+    username: configService.elasticsearch.username,
+    password: configService.elasticsearch.password,
+  },
+  ssl: {
+  rejectUnauthorized: false,
+},
+  requestTimeout: 5000,
+  maxRetries: 0,
+})
     },
     ElasticsearchService,
     ElasticsearchHealthService,

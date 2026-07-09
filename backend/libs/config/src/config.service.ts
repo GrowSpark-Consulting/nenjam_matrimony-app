@@ -53,6 +53,10 @@ export class AppConfigService implements OnModuleInit {
     return this.configService.get('jwt', { infer: true });
   }
 
+  get firebase(): AppConfig['firebase'] {
+    return this.configService.get('firebase', { infer: true });
+  }
+
   get logLevel(): string {
     return this.configService.get('logLevel', { infer: true });
   }
@@ -66,6 +70,11 @@ export class AppConfigService implements OnModuleInit {
       elasticsearch: Boolean(this.elasticsearch?.node),
       smtp: Boolean(this.smtp?.host),
       jwt: Boolean(this.jwt?.secret),
+      firebase: Boolean(
+        this.firebase?.projectId &&
+        this.firebase?.clientEmail &&
+        this.firebase?.privateKey,
+      ),
     };
 
     const status = Object.values(details).every(Boolean) ? 'ok' : 'error';
@@ -85,6 +94,7 @@ export class AppConfigService implements OnModuleInit {
       `Redis       : ${this.redis.host}:${this.redis.port}`,
       `Elastic     : ${this.elasticsearch.node}`,
       `SMTP        : ${this.smtp.host}:${this.smtp.port}`,
+      `Firebase    : ${this.firebase.projectId || 'not configured'}`,
       '',
       `Configuration Validation ${health.status === 'ok' ? '✔' : '✘'}`,
       '=====================================',
