@@ -12,19 +12,26 @@ import { ElasticsearchHealthService } from './elasticsearch.health';
     {
       provide: ELASTICSEARCH_CLIENT,
       inject: [AppConfigService],
-      useFactory: (configService: AppConfigService) =>
-        new Client({
-  node: configService.elasticsearch.node,
-  auth: {
-    username: configService.elasticsearch.username,
-    password: configService.elasticsearch.password,
-  },
-  ssl: {
-  rejectUnauthorized: false,
+      useFactory: (configService: AppConfigService) => {
+  const auth =
+    configService.elasticsearch.username &&
+    configService.elasticsearch.password
+      ? {
+          username: configService.elasticsearch.username,
+          password: configService.elasticsearch.password,
+        }
+      : undefined;
+
+  return new Client({
+    node: configService.elasticsearch.node,
+    auth,
+    ssl: {
+      rejectUnauthorized: false,
+    },
+    requestTimeout: 5000,
+    maxRetries: 0,
+  });
 },
-  requestTimeout: 5000,
-  maxRetries: 0,
-})
     },
     ElasticsearchService,
     ElasticsearchHealthService,

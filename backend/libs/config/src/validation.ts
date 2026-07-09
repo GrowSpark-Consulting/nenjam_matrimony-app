@@ -18,9 +18,9 @@ export const validationSchema = Joi.object({
   REDIS_PASSWORD: Joi.string().allow('').optional(),
 
   ELASTICSEARCH_NODE: Joi.string().uri().required(),
-ELASTICSEARCH_USERNAME: Joi.string().required(),
-ELASTICSEARCH_PASSWORD: Joi.string().required(),
+ELASTICSEARCH_USERNAME: Joi.string().allow('').optional(),
 
+ELASTICSEARCH_PASSWORD: Joi.string().allow('').optional(),
   SMTP_HOST: Joi.string().required(),
   SMTP_PORT: Joi.number().port().required(),
   SMTP_USER: Joi.string().allow('').optional(),

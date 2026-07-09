@@ -34,6 +34,8 @@ describe('configuration', () => {
     process.env.REDIS_HOST = 'redis.internal';
     process.env.REDIS_PORT = '6380';
     process.env.ELASTICSEARCH_NODE = 'http://es.internal:9200';
+    process.env.ELASTICSEARCH_USERNAME = '';
+process.env.ELASTICSEARCH_PASSWORD = '';
     process.env.SMTP_HOST = 'smtp.internal';
     process.env.SMTP_PORT = '2525';
     process.env.JWT_SECRET = 'a-very-long-secret-value';
@@ -48,7 +50,11 @@ describe('configuration', () => {
       name: 'app_db',
     });
     expect(config.redis).toEqual({ host: 'redis.internal', port: 6380 });
-    expect(config.elasticsearch).toEqual({ node: 'http://es.internal:9200' });
+    expect(config.elasticsearch).toEqual({
+  node: 'http://es.internal:9200',
+  username: '',
+  password: '',
+});
     expect(config.smtp.host).toBe('smtp.internal');
     expect(config.smtp.port).toBe(2525);
     expect(config.jwt.secret).toBe('a-very-long-secret-value');
