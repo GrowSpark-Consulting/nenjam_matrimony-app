@@ -119,12 +119,67 @@ class StorageService {
     await _prefs.setBool(AppConstants.keyOnboardingDone, true);
   }
 
+  // ─── Improve Profile prompt (Relationship Intelligence hub) ──────
+  bool get hasSeenImproveProfilePrompt =>
+      _prefs.getBool(AppConstants.keyImproveProfilePromptSeen) ?? false;
+
+  Future<void> setImproveProfilePromptSeen() async {
+    await _prefs.setBool(AppConstants.keyImproveProfilePromptSeen, true);
+  }
+
   // ─── Notifications ──────────────────────────────────────────────
   bool get notificationsEnabled =>
       _prefs.getBool(AppConstants.keyNotificationsEnabled) ?? true;
 
   Future<void> setNotificationsEnabled(bool enabled) async {
     await _prefs.setBool(AppConstants.keyNotificationsEnabled, enabled);
+  }
+
+  // ─── Navigation / App State Restoration ───────────────────────────
+  String? get lastRoute => _prefs.getString(AppConstants.keyLastRoute);
+
+  int? get savedRegistrationStep =>
+      _prefs.getInt(AppConstants.keyRegistrationStep);
+
+  String? get savedProfileFlowMode =>
+      _prefs.getString(AppConstants.keyProfileFlowMode);
+
+  String? get savedProfileDraftJson =>
+      _prefs.getString(AppConstants.keyProfileDraftJson);
+
+  /// Snapshots "where the user currently is" on every app pause, so a cold
+  /// start after the OS kills the process (e.g. backgrounded to verify an
+  /// email in Gmail) can resume the same screen. [registrationStep],
+  /// [profileFlowMode] and [profileDraftJson] should only be passed when
+  /// [route] is the registration wizard or profile review — passing null
+  /// clears them, which is what stops CREATE/EDIT state leaking into an
+  /// unrelated later screen.
+  Future<void> saveNavState({
+    required String route,
+    int? registrationStep,
+    String? profileFlowMode,
+    String? profileDraftJson,
+  }) async {
+    final futures = <Future<bool>>[_prefs.setString(AppConstants.keyLastRoute, route)];
+    futures.add(registrationStep != null
+        ? _prefs.setInt(AppConstants.keyRegistrationStep, registrationStep)
+        : _prefs.remove(AppConstants.keyRegistrationStep));
+    futures.add(profileFlowMode != null
+        ? _prefs.setString(AppConstants.keyProfileFlowMode, profileFlowMode)
+        : _prefs.remove(AppConstants.keyProfileFlowMode));
+    futures.add(profileDraftJson != null
+        ? _prefs.setString(AppConstants.keyProfileDraftJson, profileDraftJson)
+        : _prefs.remove(AppConstants.keyProfileDraftJson));
+    await Future.wait(futures);
+  }
+
+  Future<void> clearNavState() async {
+    await Future.wait([
+      _prefs.remove(AppConstants.keyLastRoute),
+      _prefs.remove(AppConstants.keyRegistrationStep),
+      _prefs.remove(AppConstants.keyProfileFlowMode),
+      _prefs.remove(AppConstants.keyProfileDraftJson),
+    ]);
   }
 
   // ─── Clear All ───────────────────────────────────────────────────

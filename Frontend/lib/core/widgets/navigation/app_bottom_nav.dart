@@ -47,36 +47,51 @@ class AppBottomNavShell extends StatelessWidget {
     final currentIndex = _currentIndex(context);
     final labels = _labels(AppLocalizations.of(context));
 
-    return Scaffold(
-      body: child,
-      bottomNavigationBar: SafeArea(
-        top: false,
-        minimum: const EdgeInsets.fromLTRB(
-          AppSpacing.base, 0, AppSpacing.base, AppSpacing.sm,
-        ),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-            borderRadius: AppRadius.pill,
-            boxShadow: AppShadows.floatingLight,
+    // Android/iOS back button: only the Discover tab is a true "root" —
+    // every other tab was reached via context.go() (a stack replace, not a
+    // push), so there's nothing underneath it to pop back to. Intercept
+    // the back gesture there and return to Discover instead of letting the
+    // OS close the app; only allow the real pop (app exit) from Discover
+    // itself. Routes pushed on top of any tab (Edit Profile, wizard steps,
+    // ...) are unaffected — they live above this in the Navigator stack,
+    // so the OS back button already pops them first as normal.
+    return PopScope(
+      canPop: currentIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        context.go(RouteNames.discover);
+      },
+      child: Scaffold(
+        body: child,
+        bottomNavigationBar: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(
+            AppSpacing.base, 0, AppSpacing.base, AppSpacing.sm,
           ),
-          // No fixed height — the bar sizes itself to each _NavItem's
-          // intrinsic content (icon badge + label), so it can never clip
-          // at large text-scale settings the way a hardcoded height did.
-          child: Row(
-            children: List.generate(_tabs.length, (index) {
-              final tab = _tabs[index];
-              return Expanded(
-                child: _NavItem(
-                  icon: tab.icon,
-                  activeIcon: tab.activeIcon,
-                  label: labels[index],
-                  isActive: index == currentIndex,
-                  onTap: () => context.go(tab.path),
-                ),
-              );
-            }),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+              borderRadius: AppRadius.pill,
+              boxShadow: AppShadows.floatingLight,
+            ),
+            // No fixed height — the bar sizes itself to each _NavItem's
+            // intrinsic content (icon badge + label), so it can never clip
+            // at large text-scale settings the way a hardcoded height did.
+            child: Row(
+              children: List.generate(_tabs.length, (index) {
+                final tab = _tabs[index];
+                return Expanded(
+                  child: _NavItem(
+                    icon: tab.icon,
+                    activeIcon: tab.activeIcon,
+                    label: labels[index],
+                    isActive: index == currentIndex,
+                    onTap: () => context.go(tab.path),
+                  ),
+                );
+              }),
+            ),
           ),
         ),
       ),

@@ -10,6 +10,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/inputs/otp_input.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../registration/presentation/providers/registration_provider.dart';
 import '../controllers/phone_auth_controller.dart';
 import '../controllers/signup_controller.dart';
 import '../providers/auth_providers.dart';
@@ -101,6 +102,9 @@ class _PhoneVerifyScreenState extends ConsumerState<PhoneVerifyScreen> {
     ref.read(signupControllerProvider.notifier).reset();
     storageService.clearPendingPhone();
     // Account fully created + verified → build the matrimony profile.
+    // Always CREATE MODE here — guarantees no stale draft/mode leaks in
+    // from a previous session (e.g. a prior user's edit on a shared device).
+    ref.read(registrationProvider.notifier).startCreateMode();
     context.go(RouteNames.registrationWizard);
   }
 

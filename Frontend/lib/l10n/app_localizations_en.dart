@@ -1533,4 +1533,61 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingAstroSync => 'Astro Sync';
+
+  @override
+  String get drawerProfile => 'My Profile';
+
+  @override
+  String get drawerEditProfile => 'Edit Profile';
+
+  @override
+  String get drawerVerificationCenter => 'Verification Center';
+
+  @override
+  String get drawerTrustScore => 'Trust Score';
+
+  @override
+  String get drawerVisitors => 'Visitors';
+
+  @override
+  String get drawerInterestSent => 'Interests Sent';
+
+  @override
+  String get drawerInterestReceived => 'Interests Received';
+
+  @override
+  String get drawerShortlist => 'Shortlisted Profiles';
+
+  @override
+  String get drawerLanguage => 'Language';
+
+  @override
+  String get drawerSettings => 'Account Settings';
+
+  @override
+  String get drawerPrivacy => 'Privacy & Safety';
+
+  @override
+  String get drawerHelp => 'Help & Support';
+
+  @override
+  String get drawerLogout => 'Logout';
+
+  @override
+  String get drawerProfileStrength => 'Profile Strength';
+
+  @override
+  String get drawerCompleteProfile => 'Complete Profile';
+
+  @override
+  String get drawerPremiumTitle => 'Nenjam Premium';
+
+  @override
+  String get drawerPremiumSubtitle => 'Get 5x more visibility';
+
+  @override
+  String get drawerUpgrade => 'Upgrade Now';
+
+  @override
+  String get drawerVersionLabel => 'Nenjam Matrimony';
 }

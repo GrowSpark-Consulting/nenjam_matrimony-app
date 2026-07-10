@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/router/route_names.dart';
+import '../../../../core/services/storage_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../authentication/presentation/providers/auth_providers.dart';
+import '../../../registration/presentation/providers/registration_provider.dart';
 import '../../domain/entities/discovery_profile_entity.dart';
 import '../../domain/entities/discover_feed_entity.dart';
 import '../../domain/entities/story_entity.dart';
 import '../providers/discover_providers.dart';
 import '../widgets/compatibility_badge.dart';
+import '../widgets/nenjam_navigation_drawer.dart';
 
 /// Nenjam Discover Page — pixel-faithful Flutter translation of the
 /// "Nenjam Home Feed" Stitch screen.
@@ -25,6 +31,18 @@ import '../widgets/compatibility_badge.dart';
 ///   5. Verified Profiles — full-height card with stats
 ///   6. Near You — 2-column grid
 ///   7. Premium Members — dark navy section
+/// One-time "Improve Profile" nudge — checks (and atomically marks) a
+/// device-local flag so [DiscoverPage] can offer the Profile Intelligence
+/// hub exactly once, the first time a user lands here. Deliberately
+/// decoupled from registration/profile-draft state — see
+/// StorageService.hasSeenImproveProfilePrompt.
+final _shouldShowImproveProfilePromptProvider =
+    FutureProvider.autoDispose<bool>((ref) async {
+  if (storageService.hasSeenImproveProfilePrompt) return false;
+  await storageService.setImproveProfilePromptSeen();
+  return true;
+});
+
 class DiscoverPage extends ConsumerWidget {
   const DiscoverPage({super.key});
 
@@ -32,8 +50,38 @@ class DiscoverPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final feedAsync = ref.watch(discoverFeedProvider);
 
+    ref.listen(_shouldShowImproveProfilePromptProvider, (previous, next) {
+      next.whenData((shouldShow) {
+        if (!shouldShow) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) context.push(RouteNames.profileIntelligence);
+        });
+      });
+    });
+
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
+      drawer: NenjamNavigationDrawer(
+        onMyProfileTap: () => context.push(RouteNames.profile),
+        onEditProfileTap: () => _openEditProfile(context, ref),
+        onProfileIntelligenceTap: () =>
+            context.push(RouteNames.profileIntelligence),
+        onVerificationCenterTap: () =>
+            _openEditProfile(context, ref, wizardStep: 11),
+        onTrustScoreTap: () => context.push(RouteNames.trustScore),
+        onVisitorsTap: () => context.push(RouteNames.visitors),
+        onInterestSentTap: () => context.push(RouteNames.interestsSent),
+        onInterestReceivedTap: () =>
+            context.push(RouteNames.interestsReceived),
+        onShortlistTap: () => context.push(RouteNames.shortlisted),
+        onLanguageTap: () => context.push(RouteNames.language),
+        onSettingsTap: () => context.push(RouteNames.settings),
+        onPrivacyTap: () => context.push(RouteNames.privacy),
+        onHelpTap: () => context.push(RouteNames.help),
+        onLogoutTap: () => _confirmAndLogoutFromDrawer(context, ref),
+        onUpgradeTap: () => context.go(RouteNames.premium),
+        onCompleteProfileTap: () => _openEditProfile(context, ref),
+      ),
       body: feedAsync.when(
         data: (feed) => _DiscoverFeedView(feed: feed),
         loading: () => const _DiscoverLoading(),
@@ -43,6 +91,79 @@ class DiscoverPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Switches the registration provider into EDIT MODE, fetches the logged-in
+/// user's saved profile (`GET /profiles/draft`), then opens either the
+/// review summary (Edit Profile) or a specific wizard step (e.g.
+/// Verification Center) pre-populated with that data. A blocking loader
+/// covers the fetch since it's a network round-trip.
+Future<void> _openEditProfile(
+  BuildContext context,
+  WidgetRef ref, {
+  int? wizardStep,
+}) async {
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const Center(child: CircularProgressIndicator()),
+  );
+
+  try {
+    await ref.read(registrationProvider.notifier).startEditMode();
+  } catch (_) {
+    if (!context.mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // dismiss loader
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Could not load your profile. Check your connection.'),
+      ),
+    );
+    return;
+  }
+
+  if (!context.mounted) return;
+  Navigator.of(context, rootNavigator: true).pop(); // dismiss loader
+
+  if (wizardStep != null) {
+    ref.read(registrationProvider.notifier).goToStep(wizardStep);
+    context.push(RouteNames.registrationWizard);
+  } else {
+    context.push(RouteNames.profileReview);
+  }
+}
+
+/// Confirms, signs out of Firebase, and returns to login with a cleared
+/// navigation stack. Mirrors SettingsPage's logout flow so both entry
+/// points share the same auth/session-clear behavior.
+Future<void> _confirmAndLogoutFromDrawer(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final l10n = AppLocalizations.of(context);
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(l10n.settingsLogout),
+      content: Text(l10n.authLogoutConfirm),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: Text(l10n.commonCancel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          style: TextButton.styleFrom(foregroundColor: AppColors.error),
+          child: Text(l10n.settingsLogout),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+
+  await ref.read(authRepositoryProvider).logout();
+  if (!context.mounted) return;
+  context.go(RouteNames.login);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -207,21 +328,24 @@ class _DiscoverAppBar extends StatelessWidget {
       title: Row(
         children: [
           // User avatar
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.borderLight.withValues(alpha: 0.3),
+          GestureDetector(
+            onTap: () => Scaffold.of(context).openDrawer(),
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.borderLight.withValues(alpha: 0.3),
+                ),
+                color: AppColors.primarySurface,
               ),
-              color: AppColors.primarySurface,
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: const Icon(
-              Icons.person_rounded,
-              size: 20,
-              color: AppColors.primary,
+              clipBehavior: Clip.antiAlias,
+              child: const Icon(
+                Icons.person_rounded,
+                size: 20,
+                color: AppColors.primary,
+              ),
             ),
           ),
           const SizedBox(width: 10),

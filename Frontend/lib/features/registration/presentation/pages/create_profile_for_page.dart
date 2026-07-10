@@ -109,9 +109,11 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
                 label: l10n.commonContinue,
                 icon: Icons.arrow_forward_rounded,
                 onPressed: () {
-                  ref
-                      .read(registrationProvider.notifier)
-                      .setProfileCreatedFor(_selected);
+                  // Always CREATE MODE here — guarantees no stale
+                  // draft/mode leaks in from a previous session.
+                  final notifier = ref.read(registrationProvider.notifier);
+                  notifier.startCreateMode();
+                  notifier.setProfileCreatedFor(_selected);
                   context.go(RouteNames.registrationWizard);
                 },
               ),

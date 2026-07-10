@@ -50,9 +50,25 @@ abstract final class AppConstants {
   static const String keyOnboardingDone = 'onboarding_done';
   static const String keyNotificationsEnabled = 'notifications_enabled';
 
+  /// One-time "Improve Profile" nudge (Relationship Intelligence hub) shown
+  /// after a user first lands on Discover — device-local only, deliberately
+  /// decoupled from registration/profile-draft state.
+  static const String keyImproveProfilePromptSeen =
+      'improve_profile_prompt_seen';
+
   /// Phone number captured during signup, held locally only until the number
   /// is verified and linked to the Firebase account. Not a profile store.
   static const String keyPendingPhone = 'pending_signup_phone';
+
+  // ─── Navigation / App State Restoration ───────────────────────────
+  //
+  // Snapshotted on AppLifecycleState.paused, consumed once by
+  // SplashController.resolveInitialRoute() after a cold start (e.g. the OS
+  // killed the process while the user was mid-registration in another app).
+  static const String keyLastRoute = 'nav_last_route';
+  static const String keyRegistrationStep = 'nav_registration_step';
+  static const String keyProfileFlowMode = 'nav_profile_flow_mode';
+  static const String keyProfileDraftJson = 'nav_profile_draft_json';
 
   // ─── Localization ────────────────────────────────────────────────
   /// Default language used until the user makes an explicit selection.

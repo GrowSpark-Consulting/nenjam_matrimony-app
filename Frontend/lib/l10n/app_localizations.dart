@@ -3055,6 +3055,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Astro Sync'**
   String get onboardingAstroSync;
+
+  /// No description provided for @drawerProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'My Profile'**
+  String get drawerProfile;
+
+  /// No description provided for @drawerEditProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Profile'**
+  String get drawerEditProfile;
+
+  /// No description provided for @drawerVerificationCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification Center'**
+  String get drawerVerificationCenter;
+
+  /// No description provided for @drawerTrustScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Trust Score'**
+  String get drawerTrustScore;
+
+  /// No description provided for @drawerVisitors.
+  ///
+  /// In en, this message translates to:
+  /// **'Visitors'**
+  String get drawerVisitors;
+
+  /// No description provided for @drawerInterestSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Interests Sent'**
+  String get drawerInterestSent;
+
+  /// No description provided for @drawerInterestReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Interests Received'**
+  String get drawerInterestReceived;
+
+  /// No description provided for @drawerShortlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortlisted Profiles'**
+  String get drawerShortlist;
+
+  /// No description provided for @drawerLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get drawerLanguage;
+
+  /// No description provided for @drawerSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Settings'**
+  String get drawerSettings;
+
+  /// No description provided for @drawerPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy & Safety'**
+  String get drawerPrivacy;
+
+  /// No description provided for @drawerHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & Support'**
+  String get drawerHelp;
+
+  /// No description provided for @drawerLogout.
+  ///
+  /// In en, this message translates to:
+  /// **'Logout'**
+  String get drawerLogout;
+
+  /// No description provided for @drawerProfileStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Strength'**
+  String get drawerProfileStrength;
+
+  /// No description provided for @drawerCompleteProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete Profile'**
+  String get drawerCompleteProfile;
+
+  /// No description provided for @drawerPremiumTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nenjam Premium'**
+  String get drawerPremiumTitle;
+
+  /// No description provided for @drawerPremiumSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get 5x more visibility'**
+  String get drawerPremiumSubtitle;
+
+  /// No description provided for @drawerUpgrade.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade Now'**
+  String get drawerUpgrade;
+
+  /// No description provided for @drawerVersionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Nenjam Matrimony'**
+  String get drawerVersionLabel;
 }
 
 class _AppLocalizationsDelegate

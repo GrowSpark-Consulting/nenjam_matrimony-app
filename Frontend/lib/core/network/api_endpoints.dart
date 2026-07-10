@@ -28,6 +28,16 @@ abstract final class ApiEndpoints {
   static const String profileFinalize = '/profiles/finalize';
   static const String profileMe = '/profiles/me';
 
+  // ─── Relationship Intelligence (Prompts / Psychology / Horoscope Compat) ──
+  static const String profilePromptsBank = '/profiles/prompts/bank';
+  static const String profilePromptsMe = '/profiles/prompts/me';
+  static const String psychologyQuizActive = '/psychology/quiz/active';
+  static const String psychologyQuizMe = '/psychology/quiz/me';
+  static const String psychologyQuizSubmit = '/psychology/quiz/submit';
+  static const String astroProfileMe = '/astro/profile/me';
+  static String astroCompatibility(String targetUserId) =>
+      '/astro/compatibility/$targetUserId';
+
   // ─── Profile (not yet implemented on the backend) ─────────────────
   static const String profile = '/profile';
   static const String profileUpdate = '/profile/update';

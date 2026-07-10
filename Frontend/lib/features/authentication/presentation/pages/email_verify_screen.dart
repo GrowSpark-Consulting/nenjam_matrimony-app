@@ -10,6 +10,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../registration/presentation/providers/registration_provider.dart';
 import '../controllers/signup_controller.dart';
 import '../providers/auth_providers.dart';
 
@@ -83,6 +84,9 @@ class _EmailVerifyScreenState extends ConsumerState<EmailVerifyScreen> {
           backgroundColor: AppColors.success,
         ),
       );
+      // Always CREATE MODE here — guarantees no stale draft/mode leaks in
+      // from a previous session (e.g. a prior user's edit on a shared device).
+      ref.read(registrationProvider.notifier).startCreateMode();
       context.go(RouteNames.registrationWizard);
     } else if (!silent) {
       final l10n = AppLocalizations.of(context);

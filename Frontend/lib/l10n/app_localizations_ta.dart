@@ -1542,4 +1542,61 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get onboardingAstroSync => 'ஜோதிட ஒத்திசைவு';
+
+  @override
+  String get drawerProfile => 'என் சுயவிவரம்';
+
+  @override
+  String get drawerEditProfile => 'சுயவிவரம் திருத்து';
+
+  @override
+  String get drawerVerificationCenter => 'சரிபார்ப்பு மையம்';
+
+  @override
+  String get drawerTrustScore => 'நம்பிக்கை மதிப்பெண்';
+
+  @override
+  String get drawerVisitors => 'பார்வையாளர்கள்';
+
+  @override
+  String get drawerInterestSent => 'அனுப்பிய விருப்பங்கள்';
+
+  @override
+  String get drawerInterestReceived => 'பெற்ற விருப்பங்கள்';
+
+  @override
+  String get drawerShortlist => 'சேமித்த சுயவிவரங்கள்';
+
+  @override
+  String get drawerLanguage => 'மொழி';
+
+  @override
+  String get drawerSettings => 'கணக்கு அமைப்புகள்';
+
+  @override
+  String get drawerPrivacy => 'தனியுரிமை & பாதுகாப்பு';
+
+  @override
+  String get drawerHelp => 'உதவி & ஆதரவு';
+
+  @override
+  String get drawerLogout => 'வெளியேறு';
+
+  @override
+  String get drawerProfileStrength => 'சுயவிவர வலிமை';
+
+  @override
+  String get drawerCompleteProfile => 'சுயவிவரம் முடிக்கவும்';
+
+  @override
+  String get drawerPremiumTitle => 'நெஞ்சம் பிரீமியம்';
+
+  @override
+  String get drawerPremiumSubtitle => '5 மடங்கு அதிக பார்வை பெறுங்கள்';
+
+  @override
+  String get drawerUpgrade => 'மேம்படுத்து';
+
+  @override
+  String get drawerVersionLabel => 'நெஞ்சம் மேட்ரிமோனி';
 }
