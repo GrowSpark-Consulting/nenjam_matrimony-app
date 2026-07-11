@@ -51,13 +51,9 @@ ELASTICSEARCH_PASSWORD: '',
     'REDIS_HOST',
     'REDIS_PORT',
     'ELASTICSEARCH_NODE',
-'SMTP_HOST',
     'SMTP_HOST',
     'SMTP_PORT',
     'JWT_SECRET',
-    'FIREBASE_PROJECT_ID',
-    'FIREBASE_CLIENT_EMAIL',
-    'FIREBASE_PRIVATE_KEY',
   ])('fails when required variable %s is missing', (key) => {
     const env = { ...validEnv };
     delete (env as Record<string, string>)[key];
@@ -66,7 +62,19 @@ ELASTICSEARCH_PASSWORD: '',
     expect(error).toBeDefined();
     expect(error?.message).toContain(key);
   });
+  it('allows Firebase credentials to be omitted', () => {
+  const env = { ...validEnv };
 
+  delete (env as Record<string, string>).FIREBASE_PROJECT_ID;
+  delete (env as Record<string, string>).FIREBASE_CLIENT_EMAIL;
+  delete (env as Record<string, string>).FIREBASE_PRIVATE_KEY;
+
+  const { error } = validationSchema.validate(env, {
+    abortEarly: false,
+  });
+
+  expect(error).toBeUndefined();
+});
   it('fails when JWT_SECRET is shorter than 16 characters', () => {
     const { error } = validationSchema.validate(
       { ...validEnv, JWT_SECRET: 'short' },

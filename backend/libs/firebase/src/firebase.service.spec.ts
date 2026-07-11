@@ -85,18 +85,27 @@ describe('FirebaseService', () => {
     logSpy.mockRestore();
   });
 
-  it('throws when Firebase credentials are missing', async () => {
-    const emptyConfig = {
-      firebase: { projectId: '', clientEmail: '', privateKey: '' },
-    } as unknown as AppConfigService;
-    const service = await buildService(emptyConfig);
-    const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+  it('logs a warning when Firebase credentials are missing', async () => {
+  const emptyConfig = {
+    firebase: {
+      projectId: '',
+      clientEmail: '',
+      privateKey: '',
+    },
+  } as unknown as AppConfigService;
 
-    expect(() => service.onModuleInit()).toThrow(/credentials are missing/i);
+  const service = await buildService(emptyConfig);
 
-    errorSpy.mockRestore();
-  });
+  const warnSpy = jest
+    .spyOn(Logger.prototype, 'warn')
+    .mockImplementation();
 
+  expect(() => service.onModuleInit()).not.toThrow();
+
+  expect(warnSpy).toHaveBeenCalled();
+
+  warnSpy.mockRestore();
+});
   it('verifies an ID token via the Auth client', async () => {
     const decoded = { uid: 'abc', email: 'a@b.com' };
     mockAuth.verifyIdToken.mockResolvedValue(decoded);

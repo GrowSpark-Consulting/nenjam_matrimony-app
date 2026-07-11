@@ -12,7 +12,8 @@ datasource db {
 model User {
   id                String               @id @default(uuid())
   firebaseUid       String               @unique @map("firebase_uid")
-  email             String               @unique
+  email             String?               @unique
+  emailVerified     Boolean              @default(false) @map("email_verified")
   phone             String?              @unique
   role              UserRole             @default(USER)
   status            UserStatus           @default(PENDING_VERIFICATION)
