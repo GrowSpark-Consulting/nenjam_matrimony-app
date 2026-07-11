@@ -7,21 +7,76 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
+import '../../../../core/widgets/relationship_intelligence/horoscope_compatibility_section.dart';
+import '../../../../core/widgets/relationship_intelligence/profile_prompt_section.dart';
+import '../../../../core/widgets/relationship_intelligence/psychology_section.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../astro/presentation/providers/compatibility_provider.dart';
+import '../../../profile_prompts/presentation/providers/profile_prompt_provider.dart';
+import '../../../psychology/domain/models/personality_result.dart';
+import '../../../psychology/presentation/providers/personality_provider.dart';
+import '../../data/repositories/registration_repository.dart';
+import '../../domain/models/profile_flow_mode.dart';
 import '../providers/registration_provider.dart';
 
 /// Summary review screen displaying all 12 wizard sections before entering Home.
 ///
 /// Displays the profile completion percentage and allows editing any section
 /// by jumping back to the correct wizard step.
-class ProfileReviewPage extends ConsumerWidget {
+class ProfileReviewPage extends ConsumerStatefulWidget {
   const ProfileReviewPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileReviewPage> createState() => _ProfileReviewPageState();
+}
+
+class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
+  bool _isSaving = false;
+
+  Future<void> _onEnterApp() async {
+    final mode = ref.read(profileFlowModeProvider);
+    setState(() => _isSaving = true);
+    try {
+      await ref.read(registrationProvider.notifier).finalizeToBackend();
+    } on RegistrationApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save your profile: ${e.message}')),
+      );
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Could not save your profile. Check your connection.'),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+
+    // EDIT MODE: publish confirmation, reset to CREATE for hygiene, and
+    // return to Discover — never back into onboarding/registration.
+    if (mode == ProfileFlowMode.edit) {
+      ref.read(registrationProvider.notifier).startCreateMode();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated successfully')),
+      );
+    }
+    context.go(RouteNames.discover);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final draft = ref.watch(registrationProvider);
     final notifier = ref.read(registrationProvider.notifier);
+    final mode = ref.watch(profileFlowModeProvider);
+    final isEditMode = mode == ProfileFlowMode.edit;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final completion = draft.completionPercentage.toInt();
 
@@ -32,7 +87,7 @@ class ProfileReviewPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.registrationReviewTitle),
+        title: Text(isEditMode ? 'Edit Profile' : l10n.registrationReviewTitle),
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
@@ -304,6 +359,78 @@ class ProfileReviewPage extends ConsumerWidget {
                             : 'Pending'),
                       ],
                     ),
+                    // ─── Profile Intelligence (EDIT MODE ONLY) ─────
+                    //
+                    // Registration mode never shows this — new users are
+                    // never blocked by missing prompts/personality/
+                    // horoscope-compatibility, since Relationship
+                    // Intelligence is optional profile enrichment, not
+                    // registration data. Sourced entirely from independent
+                    // providers (profile_prompts / psychology / astro
+                    // features) — never from ProfileDraft, registrationProvider
+                    // or RegistrationRepository.
+                    if (isEditMode) ...[
+                      const SizedBox(height: 24),
+                      Text(
+                        'Profile Intelligence',
+                        style: AppTypography.headlineSmall
+                            .copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Optional enrichment — add anytime to help us find better matches.',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Consumer(builder: (context, ref, _) {
+                        final promptsAsync = ref.watch(myPromptsProvider);
+                        final prompts = promptsAsync.value ?? const [];
+                        return ProfilePromptSection(
+                          prompts: prompts,
+                          editable: true,
+                          onEditTap: () async {
+                            await context.push(RouteNames.choosePrompt,
+                                extra: prompts);
+                            ref.invalidate(myPromptsProvider);
+                          },
+                        );
+                      }),
+                      const SizedBox(height: 16),
+                      Consumer(builder: (context, ref, _) {
+                        final personalityAsync =
+                            ref.watch(myPersonalityResultProvider);
+                        return PsychologySection(
+                          result: personalityAsync.value ??
+                              const PersonalityResult(),
+                          onTakeQuizTap: () async {
+                            await context.push(RouteNames.psychologyQuiz);
+                            ref.invalidate(myPersonalityResultProvider);
+                          },
+                        );
+                      }),
+                      const SizedBox(height: 16),
+                      Consumer(builder: (context, ref, _) {
+                        final horoscopeAsync =
+                            ref.watch(myHoroscopeSummaryProvider);
+                        final summary = horoscopeAsync.value;
+                        return GestureDetector(
+                          onTap: () async {
+                            await context.push(RouteNames.horoscopeMatching);
+                            ref.invalidate(myHoroscopeSummaryProvider);
+                          },
+                          child: HoroscopeCompatibilitySection(
+                            rasi: summary?.rasi,
+                            nakshatra: summary?.nakshatra,
+                            dosham: summary?.dosham,
+                            matchingEnabled: summary?.matchingEnabled ?? true,
+                          ),
+                        );
+                      }),
+                    ],
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -324,10 +451,11 @@ class ProfileReviewPage extends ConsumerWidget {
                 ],
               ),
               child: NmGradientButton(
-                label: l10n.registrationEnterApp,
+                label: isEditMode ? 'Save Changes' : l10n.registrationEnterApp,
                 useGoldGradient: true,
                 icon: Icons.favorite_rounded,
-                onPressed: () => context.go(RouteNames.home),
+                isLoading: _isSaving,
+                onPressed: _isSaving ? null : _onEnterApp,
               ),
             ),
           ],

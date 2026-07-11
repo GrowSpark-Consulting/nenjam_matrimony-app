@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
 import { App, cert, getApps, initializeApp } from 'firebase-admin/app';
 import { Auth, DecodedIdToken, getAuth } from 'firebase-admin/auth';
 import { AppConfigService } from '@app/config';
@@ -6,7 +11,8 @@ import { AppConfigService } from '@app/config';
 @Injectable()
 export class FirebaseService implements OnModuleInit {
   private readonly logger = new Logger(FirebaseService.name);
-  private app!: App;
+
+  private app: App | null = null;
 
   constructor(private readonly configService: AppConfigService) {}
 
@@ -14,11 +20,12 @@ export class FirebaseService implements OnModuleInit {
     const { projectId, clientEmail, privateKey } = this.configService.firebase;
 
     if (!projectId || !clientEmail || !privateKey) {
-      const message =
-        'Firebase Admin credentials are missing. Set FIREBASE_PROJECT_ID, ' +
-        'FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY.';
-      this.logger.error(message);
-      throw new Error(message);
+      this.logger.warn(
+        'Firebase Admin SDK not configured (FIREBASE_PROJECT_ID / ' +
+          'FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY missing) — ' +
+          'endpoints behind FirebaseAuthGuard will fail until these are set.',
+      );
+      return;
     }
 
     const existingApps = getApps();
@@ -51,6 +58,12 @@ export class FirebaseService implements OnModuleInit {
   }
 
   getAuth(): Auth {
+    if (!this.app) {
+      throw new InternalServerErrorException(
+        'Firebase Admin SDK is not configured on this server.',
+      );
+    }
+
     return getAuth(this.app);
   }
 
@@ -65,7 +78,10 @@ export class FirebaseService implements OnModuleInit {
     }
   }
 
-  async createCustomToken(uid: string, claims?: object): Promise<string> {
+  async createCustomToken(
+    uid: string,
+    claims?: object,
+  ): Promise<string> {
     try {
       return await this.getAuth().createCustomToken(uid, claims);
     } catch (error) {
@@ -76,8 +92,6 @@ export class FirebaseService implements OnModuleInit {
     }
   }
 
-  // Firebase Auth errors carry a stable "auth/..." code — classify the ones
-  // callers are most likely to hit so logs stay actionable.
   private describeError(error: unknown): string {
     const err = error as { code?: string; message?: string } | undefined;
 

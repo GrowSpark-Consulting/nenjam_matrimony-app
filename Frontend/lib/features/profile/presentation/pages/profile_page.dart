@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/route_names.dart';
@@ -6,18 +7,30 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/badges/premium_badge.dart';
 import '../../../../core/widgets/badges/verification_badge.dart';
-import '../../../../core/widgets/cards/horoscope_card.dart';
 import '../../../../core/widgets/chips/info_chip.dart';
+import '../../../../core/widgets/relationship_intelligence/horoscope_compatibility_section.dart';
+import '../../../../core/widgets/relationship_intelligence/profile_prompt_section.dart';
+import '../../../../core/widgets/relationship_intelligence/psychology_section.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../astro/presentation/providers/compatibility_provider.dart';
+import '../../../profile_prompts/presentation/providers/profile_prompt_provider.dart';
+import '../../../psychology/domain/models/personality_result.dart';
+import '../../../psychology/presentation/providers/personality_provider.dart';
 
-/// User Profile Page with horoscope match, bio, and preferences.
-class ProfilePage extends StatelessWidget {
+/// User Profile Page with horoscope match, bio, and preferences. The
+/// Relationship Intelligence sections (Prompts / Personality / Horoscope
+/// Compatibility) are sourced from their own independent providers —
+/// entirely decoupled from registration state.
+class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final promptsAsync = ref.watch(myPromptsProvider);
+    final personalityAsync = ref.watch(myPersonalityResultProvider);
+    final horoscopeAsync = ref.watch(myHoroscopeSummaryProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -64,13 +77,6 @@ class ProfilePage extends StatelessWidget {
               ),
               const SizedBox(height: 32),
 
-              // Horoscope Card
-              const NmHoroscopeCard(
-                partnerName: 'Perfect Compatibility',
-                gunaScore: 32,
-              ),
-              const SizedBox(height: 24),
-
               // About Me
               Text(l10n.profileAboutMeTitle, style: AppTypography.titleMedium),
               const SizedBox(height: 8),
@@ -97,6 +103,44 @@ class ProfilePage extends StatelessWidget {
                   NmInfoChip(label: '5 ft 10 in'),
                   NmInfoChip(label: 'Never Married'),
                 ],
+              ),
+              const SizedBox(height: 24),
+
+              // ─── Relationship Intelligence ─────────────────────
+              // Each section is independently async — a slow/failed one
+              // never blocks the others, unlike the old single aggregate
+              // call this replaced.
+              horoscopeAsync.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (summary) => HoroscopeCompatibilitySection(
+                  rasi: summary.rasi,
+                  nakshatra: summary.nakshatra,
+                  dosham: summary.dosham,
+                  matchingEnabled: summary.matchingEnabled,
+                ),
+              ),
+              const SizedBox(height: 24),
+              personalityAsync.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (result) =>
+                    PsychologySection(result: result ?? const PersonalityResult()),
+              ),
+              const SizedBox(height: 24),
+              promptsAsync.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (prompts) => ProfilePromptSection(prompts: prompts),
               ),
             ],
           ),

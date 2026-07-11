@@ -100,6 +100,7 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "transformIgnorePatterns": ["node_modules/\\.pnpm/(?!(jose|jwks-rsa)@)"],
     "moduleNameMapper": {
       "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
       "^@app/config(|/.*)$": "<rootDir>/libs/config/src/$1",

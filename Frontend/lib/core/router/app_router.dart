@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/astro/presentation/pages/astro_page.dart';
+import '../../features/astro/presentation/pages/horoscope_matching_page.dart';
 import '../../features/authentication/presentation/pages/auth_selection_page.dart';
 import '../../features/authentication/presentation/pages/email_verify_screen.dart';
 import '../../features/authentication/presentation/pages/forgot_password_page.dart';
@@ -9,23 +11,33 @@ import '../../features/authentication/presentation/pages/login_page.dart';
 import '../../features/authentication/presentation/pages/otp_page.dart';
 import '../../features/authentication/presentation/pages/phone_verify_screen.dart';
 import '../../features/chat/presentation/pages/chat_page.dart';
+import '../../features/discover/presentation/pages/discover_page.dart';
 import '../../features/help/presentation/pages/help_page.dart';
-import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/interests/presentation/pages/interests_received_page.dart';
+import '../../features/interests/presentation/pages/interests_sent_page.dart';
 import '../../features/language/presentation/pages/language_page.dart';
 import '../../features/matches/presentation/pages/matches_page.dart';
 import '../../features/notifications/presentation/pages/notifications_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/premium/presentation/pages/premium_page.dart';
+import '../../features/privacy/presentation/pages/privacy_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
+import '../../features/profile_intelligence/presentation/pages/profile_intelligence_page.dart';
+import '../../features/profile_prompts/domain/models/prompt_bank_item.dart';
+import '../../features/profile_prompts/presentation/pages/choose_prompt_page.dart';
+import '../../features/psychology/presentation/pages/psychology_quiz_page.dart';
 import '../../features/registration/presentation/pages/create_profile_for_page.dart';
 import '../../features/registration/presentation/pages/profile_review_page.dart';
 import '../../features/registration/presentation/pages/profile_wizard_page.dart';
 import '../../features/registration/presentation/pages/registration_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
+import '../../features/shortlist/presentation/pages/shortlisted_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 import '../../features/subscription/presentation/pages/subscription_page.dart';
+import '../../features/trust_score/presentation/pages/trust_score_page.dart';
 import '../../features/verification/presentation/pages/verification_page.dart';
+import '../../features/visitors/presentation/pages/visitors_page.dart';
 import '../widgets/navigation/app_bottom_nav.dart';
 import 'route_names.dart';
 
@@ -35,13 +47,25 @@ import 'route_names.dart';
 /// - Shell route for bottom navigation
 /// - Smooth page transitions
 /// - Named routes for type-safe navigation
-final GlobalKey<NavigatorState> _rootNavigatorKey =
+///
+/// [createRouter] must be called exactly once and the resulting [GoRouter]
+/// instance kept alive for the app's lifetime (see `main.dart`'s
+/// `late final router = createRouter();`). Calling it again would build a
+/// second [GoRouter] that reuses [rootNavigatorKey] — two Navigators can't
+/// share one GlobalKey — and would silently drop the entire in-memory
+/// navigation stack (back to `initialLocation`), which looks exactly like
+/// "the app forgot where I was" even though the process never died.
+final GlobalKey<NavigatorState> rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'root');
 final GlobalKey<NavigatorState> _shellNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'shell');
 
-GoRouter createRouter() => GoRouter(
-      navigatorKey: _rootNavigatorKey,
+GoRouter createRouter() {
+  // TEMPORARY DIAGNOSTIC — remove after the resume/reload investigation.
+  // ignore: avoid_print
+  print('ROUTER CREATED');
+  return GoRouter(
+      navigatorKey: rootNavigatorKey,
       initialLocation: RouteNames.splash,
       debugLogDiagnostics: true,
       routes: [
@@ -123,18 +147,35 @@ GoRouter createRouter() => GoRouter(
           builder: (context, state) => const ProfileWizardPage(),
         ),
         GoRoute(
+          path: RouteNames.psychologyQuiz,
+          name: RouteNames.psychologyQuizName,
+          builder: (context, state) => const PsychologyQuizPage(),
+        ),
+        // ─── Relationship Intelligence (independent of registration) ──
+        GoRoute(
+          path: RouteNames.profileIntelligence,
+          name: RouteNames.profileIntelligenceName,
+          builder: (context, state) => const ProfileIntelligencePage(),
+        ),
+        GoRoute(
+          path: RouteNames.choosePrompt,
+          name: RouteNames.choosePromptName,
+          builder: (context, state) {
+            final extra = state.extra;
+            final selection =
+                extra is List<PromptAnswer> ? extra : const <PromptAnswer>[];
+            return ChoosePromptPage(currentSelection: selection);
+          },
+        ),
+        GoRoute(
+          path: RouteNames.horoscopeMatching,
+          name: RouteNames.horoscopeMatchingName,
+          builder: (context, state) => const HoroscopeMatchingPage(),
+        ),
+        GoRoute(
           path: RouteNames.profileReview,
           name: RouteNames.profileReviewName,
           builder: (context, state) => const ProfileReviewPage(),
-        ),
-        GoRoute(
-          path: RouteNames.premium,
-          name: RouteNames.premiumName,
-          pageBuilder: (context, state) => CustomTransitionPage(
-            key: state.pageKey,
-            child: const PremiumPage(),
-            transitionsBuilder: _slideUpTransition,
-          ),
         ),
         GoRoute(
           path: RouteNames.settings,
@@ -160,6 +201,36 @@ GoRouter createRouter() => GoRouter(
           name: RouteNames.helpName,
           builder: (context, state) => const HelpPage(),
         ),
+        GoRoute(
+          path: RouteNames.privacy,
+          name: RouteNames.privacyName,
+          builder: (context, state) => const PrivacyPage(),
+        ),
+        GoRoute(
+          path: RouteNames.trustScore,
+          name: RouteNames.trustScoreName,
+          builder: (context, state) => const TrustScorePage(),
+        ),
+        GoRoute(
+          path: RouteNames.visitors,
+          name: RouteNames.visitorsName,
+          builder: (context, state) => const VisitorsPage(),
+        ),
+        GoRoute(
+          path: RouteNames.interestsSent,
+          name: RouteNames.interestsSentName,
+          builder: (context, state) => const InterestsSentPage(),
+        ),
+        GoRoute(
+          path: RouteNames.interestsReceived,
+          name: RouteNames.interestsReceivedName,
+          builder: (context, state) => const InterestsReceivedPage(),
+        ),
+        GoRoute(
+          path: RouteNames.shortlisted,
+          name: RouteNames.shortlistedName,
+          builder: (context, state) => const ShortlistedPage(),
+        ),
 
         // ─── Shell Route with Bottom Navigation ───────────────────
         ShellRoute(
@@ -167,10 +238,10 @@ GoRouter createRouter() => GoRouter(
           builder: (context, state, child) => AppBottomNavShell(child: child),
           routes: [
             GoRoute(
-              path: RouteNames.home,
-              name: RouteNames.homeName,
+              path: RouteNames.discover,
+              name: RouteNames.discoverName,
               pageBuilder: (context, state) => const NoTransitionPage(
-                child: HomePage(),
+                child: DiscoverPage(),
               ),
             ),
             GoRoute(
@@ -188,8 +259,8 @@ GoRouter createRouter() => GoRouter(
               ),
             ),
             GoRoute(
-              path: RouteNames.chat,
-              name: RouteNames.chatName,
+              path: RouteNames.messages,
+              name: RouteNames.messagesName,
               pageBuilder: (context, state) => const NoTransitionPage(
                 child: ChatPage(),
               ),
@@ -208,10 +279,25 @@ GoRouter createRouter() => GoRouter(
                 child: ProfilePage(),
               ),
             ),
+            GoRoute(
+              path: RouteNames.premium,
+              name: RouteNames.premiumName,
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: PremiumPage(),
+              ),
+            ),
+            GoRoute(
+              path: RouteNames.astro,
+              name: RouteNames.astroName,
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: AstroPage(),
+              ),
+            ),
           ],
         ),
       ],
     );
+}
 
 // ─── Custom Transitions ────────────────────────────────────────────
 

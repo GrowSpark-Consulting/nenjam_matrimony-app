@@ -265,15 +265,6 @@ class AppLocalizationsTa extends AppLocalizations {
   String get navProfile => 'சுயவிவரம்';
 
   @override
-  String get homeSeeAllButton => 'அனைத்தையும் பார்';
-
-  @override
-  String get homeAiRecommendationsTitle => 'AI பொருத்தப் பரிந்துரைகள்';
-
-  @override
-  String get homeRecentlyJoinedTitle => 'சமீபத்தில் சேர்ந்தவர்கள்';
-
-  @override
   String get homeCompleteProfileTitle => 'உங்கள் சுயவிவரத்தை முழுமையாக்குங்கள்';
 
   @override
@@ -282,16 +273,143 @@ class AppLocalizationsTa extends AppLocalizations {
   }
 
   @override
-  String get homeStepUploadHoroscope => 'ஜாதகத்தைப் பதிவேற்றவும்';
-
-  @override
   String get homeStepAddPhoto => 'சுயவிவரப் புகைப்படத்தைச் சேர்க்கவும்';
 
   @override
   String get homeAiPickBadge => 'AI தேர்வு';
 
   @override
-  String get homeAiMatchLabel => 'பொருத்தம்';
+  String get discoverAiMatchLabel => 'பொருத்தம்';
+
+  @override
+  String get discoverNewTodayLabel => 'இன்று புதியவர்கள்';
+
+  @override
+  String get discoverSearchingMoreLabel => 'மேலும் இதயங்களைத் தேடுகிறோம்…';
+
+  @override
+  String get discoverVerifiedLabel => 'சரிபார்க்கப்பட்டது';
+
+  @override
+  String get discoverPremiumLabel => 'பிரீமியம்';
+
+  @override
+  String get homePsychologyCompletedLabel => 'உளவியல் மதிப்பீடு முடிந்தது';
+
+  @override
+  String get discoverChipVerifiedIdentity => 'சரிபார்க்கப்பட்ட அடையாளம்';
+
+  @override
+  String get discoverChipPremiumPlus => 'பிரீமியம் பிளஸ்';
+
+  @override
+  String get discoverChipNri => 'என்.ஆர்.ஐ';
+
+  @override
+  String get homePhotoProtectedLabel => 'புகைப்படம் பாதுகாக்கப்பட்டது';
+
+  @override
+  String get discoverInterestSentLabel => 'ஆர்வம் அனுப்பப்பட்டது';
+
+  @override
+  String get homeAiMatchScoreLabel => 'AI பொருத்தம்';
+
+  @override
+  String get homeAstroMatchScoreLabel => 'ஜோதிட பொருத்தம்';
+
+  @override
+  String get homePsychologyMatchScoreLabel => 'உளவியல் பொருத்தம்';
+
+  @override
+  String get discoverCompatibilityLabel => 'பொருத்தம்';
+
+  @override
+  String get actionInterested => 'ஆர்வம்';
+
+  @override
+  String get actionViewProfile => 'சுயவிவரத்தைப் பார்';
+
+  @override
+  String get actionShare => 'பகிர்';
+
+  @override
+  String get discoverFilterLabel => 'வடிகட்டி';
+
+  @override
+  String get homeProfileDetailsLabel => 'விவரங்கள்';
+
+  @override
+  String get navDiscover => 'கண்டறி';
+
+  @override
+  String get navMessages => 'இன்பாக்ஸ்';
+
+  @override
+  String get navAstro => 'ஜோதிடம்';
+
+  @override
+  String get navPremium => 'பிரீமியம்';
+
+  @override
+  String get discoverForYouTab => 'உங்களுக்காக';
+
+  @override
+  String get discoverNearMeTab => 'என் அருகில்';
+
+  @override
+  String get discoverNewTab => 'புதியவை';
+
+  @override
+  String get appNameShort => 'நெஞ்சம்';
+
+  @override
+  String get discoverSearchTooltip => 'தேடல்';
+
+  @override
+  String get discoverAiRecommendedTitle => 'AI பரிந்துரை';
+
+  @override
+  String get discoverRecentlyJoinedTitle => 'சமீபத்தில் சேர்ந்தவர்கள்';
+
+  @override
+  String get discoverVerifiedProfilesTitle => 'சரிபார்க்கப்பட்ட சுயவிவரங்கள்';
+
+  @override
+  String get discoverNearYouTitle => 'உங்களுக்கு அருகில்';
+
+  @override
+  String get discoverPremiumMembersTitle => 'பிரீமியம் உறுப்பினர்கள்';
+
+  @override
+  String get discoverViewAllButton => 'அனைத்தையும் காண்க';
+
+  @override
+  String get discoverStatMatchLabel => 'பொருத்தம்';
+
+  @override
+  String get discoverStatAstroLabel => 'ஜோதிடம்';
+
+  @override
+  String get discoverStatTrustLabel => 'நம்பிக்கை';
+
+  @override
+  String get discoverUpgradeButton => 'மேம்படுத்து';
+
+  @override
+  String get discoverEliteMemberLabel => 'உயரடுக்கு உறுப்பினர்';
+
+  @override
+  String get discoverConnectButton => 'இணை';
+
+  @override
+  String get matchesEmptyTitle => 'இன்னும் பொருத்தங்கள் இல்லை';
+
+  @override
+  String get matchesEmptySubtitle =>
+      'புதிய சுயவிவரங்களுக்கு விரைவில் மீண்டும் பார்க்கவும்';
+
+  @override
+  String get discoverKmAwaySuffix => 'கி.மீ தொலைவில்';
 
   @override
   String get premiumBannerTitle => 'பிரீமியத்திற்கு மேம்படுத்தவும்';
@@ -1424,4 +1542,61 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get onboardingAstroSync => 'ஜோதிட ஒத்திசைவு';
+
+  @override
+  String get drawerProfile => 'என் சுயவிவரம்';
+
+  @override
+  String get drawerEditProfile => 'சுயவிவரம் திருத்து';
+
+  @override
+  String get drawerVerificationCenter => 'சரிபார்ப்பு மையம்';
+
+  @override
+  String get drawerTrustScore => 'நம்பிக்கை மதிப்பெண்';
+
+  @override
+  String get drawerVisitors => 'பார்வையாளர்கள்';
+
+  @override
+  String get drawerInterestSent => 'அனுப்பிய விருப்பங்கள்';
+
+  @override
+  String get drawerInterestReceived => 'பெற்ற விருப்பங்கள்';
+
+  @override
+  String get drawerShortlist => 'சேமித்த சுயவிவரங்கள்';
+
+  @override
+  String get drawerLanguage => 'மொழி';
+
+  @override
+  String get drawerSettings => 'கணக்கு அமைப்புகள்';
+
+  @override
+  String get drawerPrivacy => 'தனியுரிமை & பாதுகாப்பு';
+
+  @override
+  String get drawerHelp => 'உதவி & ஆதரவு';
+
+  @override
+  String get drawerLogout => 'வெளியேறு';
+
+  @override
+  String get drawerProfileStrength => 'சுயவிவர வலிமை';
+
+  @override
+  String get drawerCompleteProfile => 'சுயவிவரம் முடிக்கவும்';
+
+  @override
+  String get drawerPremiumTitle => 'நெஞ்சம் பிரீமியம்';
+
+  @override
+  String get drawerPremiumSubtitle => '5 மடங்கு அதிக பார்வை பெறுங்கள்';
+
+  @override
+  String get drawerUpgrade => 'மேம்படுத்து';
+
+  @override
+  String get drawerVersionLabel => 'நெஞ்சம் மேட்ரிமோனி';
 }

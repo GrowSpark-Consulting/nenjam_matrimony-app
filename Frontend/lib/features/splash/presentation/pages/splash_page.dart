@@ -25,6 +25,9 @@ class _SplashPageState extends ConsumerState<SplashPage>
   @override
   void initState() {
     super.initState();
+    // TEMPORARY DIAGNOSTIC — remove after the resume/reload investigation.
+    // ignore: avoid_print
+    print('SPLASH INIT');
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -50,6 +53,9 @@ class _SplashPageState extends ConsumerState<SplashPage>
       ref.read(splashControllerProvider.notifier).resolveInitialRoute(),
     ]);
     if (!mounted) return;
+    // TEMPORARY DIAGNOSTIC — remove after the resume/reload investigation.
+    // ignore: avoid_print
+    print('SPLASH REDIRECT -> ${results[1]}');
     context.go(results[1] as String);
   }
 

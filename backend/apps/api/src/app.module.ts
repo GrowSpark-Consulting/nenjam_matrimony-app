@@ -7,6 +7,7 @@ import { FirebaseModule } from '@app/firebase';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
+import { ProfilesModule } from './modules/profiles/profiles.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AuthModule } from './modules/auth/auth.module';
     ElasticsearchModule,
     FirebaseModule,
     AuthModule,
+    ProfilesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

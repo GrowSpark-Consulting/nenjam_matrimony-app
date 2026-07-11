@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +9,9 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/buttons/outlined_button.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../data/repositories/registration_repository.dart';
 import '../../domain/models/profile_draft.dart';
+import '../../domain/models/profile_flow_mode.dart';
 import '../providers/registration_provider.dart';
 import '../widgets/step_basic_info.dart';
 import '../widgets/step_education.dart';
@@ -32,6 +35,8 @@ class ProfileWizardPage extends ConsumerStatefulWidget {
 }
 
 class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
+  bool _isSaving = false;
+
   /// Localized step titles, index-aligned with [_buildStepContent].
   List<String> _stepTitles(AppLocalizations l10n) => [
         l10n.registrationStepBasicInfo,
@@ -48,10 +53,71 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
         l10n.registrationStepVerification,
       ];
 
-  void _onNext() {
+  Future<void> _onNext() async {
     final draft = ref.read(registrationProvider);
+    final notifier = ref.read(registrationProvider.notifier);
+
+    // EDIT MODE: this is a single-section quick edit (opened from the
+    // drawer via Edit Profile / Verification Center) — save just this
+    // section, republish the finalized profile, and go straight back to
+    // Discover. Never advance through the remaining wizard steps or
+    // restart registration/onboarding.
+    if (ref.read(profileFlowModeProvider) == ProfileFlowMode.edit) {
+      setState(() => _isSaving = true);
+      final ok = await _saveAndFinalizeForEdit(notifier);
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      if (!ok) return;
+      _exitEditModeToDiscover(notifier);
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    try {
+      await notifier.syncCurrentStepToBackend();
+    } on RegistrationApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save this step: ${e.message}')),
+      );
+      return;
+    } on DioException catch (e) {
+      // TEMPORARY DEBUG LOGGING — real diagnostic detail for the
+      // registration-save connection issue. Remove once PATCH
+      // /profiles/draft/* is confirmed reaching the backend.
+      debugPrint(
+        '[RegistrationSave] DioException'
+        '\n  type       : ${e.type}'
+        '\n  requestUrl : ${e.requestOptions.uri}'
+        '\n  statusCode : ${e.response?.statusCode}'
+        '\n  responseBody: ${e.response?.data}'
+        '\n  message    : ${e.message}',
+      );
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save this step. Check your connection.'),
+        ),
+      );
+      return;
+    } catch (e) {
+      debugPrint('[RegistrationSave] Unexpected error: $e');
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save this step. Check your connection.'),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+
     if (draft.currentStep < ProfileDraft.totalSteps - 1) {
-      ref.read(registrationProvider.notifier).nextStep();
+      notifier.nextStep();
     } else {
       context.go(RouteNames.profileReview);
     }
@@ -64,6 +130,58 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     } else {
       context.pop();
     }
+  }
+
+  /// CREATE MODE: unchanged — leaves the wizard to sign in later.
+  /// EDIT MODE: saves the section being edited and returns to Discover.
+  Future<void> _onSaveExit() async {
+    if (ref.read(profileFlowModeProvider) != ProfileFlowMode.edit) {
+      context.push(RouteNames.login);
+      return;
+    }
+    final notifier = ref.read(registrationProvider.notifier);
+    setState(() => _isSaving = true);
+    final ok = await _saveAndFinalizeForEdit(notifier);
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+    if (!ok) return;
+    _exitEditModeToDiscover(notifier);
+  }
+
+  /// EDIT MODE only — persists the section currently open and re-finalizes
+  /// the profile (idempotent) so Discover/Matches reflect the change.
+  /// Returns false and shows an error snackbar on failure.
+  Future<bool> _saveAndFinalizeForEdit(RegistrationNotifier notifier) async {
+    try {
+      await notifier.syncCurrentStepToBackend();
+      await notifier.finalizeToBackend();
+      return true;
+    } on RegistrationApiException catch (e) {
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save your changes: ${e.message}')),
+      );
+      return false;
+    } catch (_) {
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save your changes. Check your connection.'),
+        ),
+      );
+      return false;
+    }
+  }
+
+  /// EDIT MODE only — resets the flow back to CREATE for hygiene, shows
+  /// the success confirmation, and returns to Discover (never onboarding).
+  void _exitEditModeToDiscover(RegistrationNotifier notifier) {
+    notifier.startCreateMode();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Profile updated successfully')),
+    );
+    context.go(RouteNames.discover);
   }
 
   @override
@@ -84,7 +202,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => context.push(RouteNames.login),
+            onPressed: _isSaving ? null : _onSaveExit,
             child: Text(
               l10n.registrationSaveExit,
               style: AppTypography.labelLarge.copyWith(color: AppColors.primary),
@@ -154,7 +272,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                       flex: 1,
                       child: NmOutlinedButton(
                         label: l10n.registrationBack,
-                        onPressed: _onBack,
+                        onPressed: _isSaving ? null : _onBack,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -164,7 +282,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                     child: NmGradientButton(
                       label: stepIndex == ProfileDraft.totalSteps - 1 ? l10n.registrationFinishLogin : l10n.commonContinue,
                       icon: stepIndex == ProfileDraft.totalSteps - 1 ? Icons.check_rounded : Icons.arrow_forward_rounded,
-                      onPressed: _onNext,
+                      isLoading: _isSaving,
+                      onPressed: _isSaving ? null : _onNext,
                     ),
                   ),
                 ],

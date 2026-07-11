@@ -19,7 +19,6 @@ export const validationSchema = Joi.object({
 
   ELASTICSEARCH_NODE: Joi.string().uri().required(),
 ELASTICSEARCH_USERNAME: Joi.string().allow('').optional(),
-
 ELASTICSEARCH_PASSWORD: Joi.string().allow('').optional(),
   SMTP_HOST: Joi.string().required(),
   SMTP_PORT: Joi.number().port().required(),
@@ -28,9 +27,13 @@ ELASTICSEARCH_PASSWORD: Joi.string().allow('').optional(),
 
   JWT_SECRET: Joi.string().min(16).required(),
 
-  FIREBASE_PROJECT_ID: Joi.string().required(),
-  FIREBASE_CLIENT_EMAIL: Joi.string().required(),
-  FIREBASE_PRIVATE_KEY: Joi.string().required(),
+  // Optional: Firebase Admin SDK service-account credentials, used by
+  // FirebaseAuthGuard to verify client ID tokens. Left unset, the app still
+  // boots (other modules don't need Firebase); any request hitting a
+  // Firebase-guarded endpoint will get a clear 500 explaining it's missing.
+  FIREBASE_PROJECT_ID: Joi.string().allow('').optional(),
+  FIREBASE_CLIENT_EMAIL: Joi.string().allow('').optional(),
+  FIREBASE_PRIVATE_KEY: Joi.string().allow('').optional(),
 
   LOG_LEVEL: Joi.string()
     .valid('error', 'warn', 'info', 'debug', 'verbose')

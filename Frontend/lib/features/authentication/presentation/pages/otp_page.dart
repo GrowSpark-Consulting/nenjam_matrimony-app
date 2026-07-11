@@ -64,7 +64,7 @@ class _OtpPageState extends State<OtpPage> {
           if (flow == 'signup') {
             context.go(RouteNames.registrationWizard);
           } else {
-            context.go(RouteNames.home);
+            context.go(RouteNames.discover);
           }
         }
       });

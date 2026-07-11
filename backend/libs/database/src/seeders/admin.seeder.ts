@@ -81,12 +81,8 @@ export async function seedAdmin(prisma: PrismaClient): Promise<void> {
 
   console.log(`  📋  Permissions granted:\n${permSummary}`);
   console.log('');
-  console.log(
-    '  ⚠️   Remember: create the Firebase Auth account for',
-  );
-  console.log(
-    `       ${ADMIN_EMAIL} in the Firebase Console and update`,
-  );
+  console.log('  ⚠️   Remember: create the Firebase Auth account for');
+  console.log(`       ${ADMIN_EMAIL} in the Firebase Console and update`);
   console.log(
     '       ADMIN_FIREBASE_UID in admin.seeder.ts before production.',
   );

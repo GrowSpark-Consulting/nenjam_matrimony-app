@@ -90,7 +90,7 @@ class NmAiRecommendationCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 4),
                   Text(
-                    '$compatibility% ${l10n.homeAiMatchLabel} • $reason',
+                    '$compatibility% ${l10n.discoverAiMatchLabel} • $reason',
                     style: AppTypography.labelSmall.copyWith(
                       color: isDark
                           ? AppColors.textTertiaryDark

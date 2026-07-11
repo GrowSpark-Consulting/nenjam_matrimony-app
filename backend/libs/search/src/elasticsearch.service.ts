@@ -28,10 +28,8 @@ export class ElasticsearchService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.client.ping();
     } catch (error) {
-      this.logger.error(
-        `Elasticsearch connection failed: ${this.describeConnectionError(error)}`,
-      );
-      throw error;
+      this.handleStartupFailure(error);
+      return;
     }
 
     const latencyMs = Date.now() - start;
@@ -48,6 +46,24 @@ export class ElasticsearchService implements OnModuleInit, OnModuleDestroy {
         '=====================================',
       ].join('\n'),
     );
+  }
+
+  // In development, Elasticsearch (search/discovery indexing) is a
+  // nice-to-have, not a hard dependency — a developer without it running
+  // locally shouldn't be blocked from starting the API. Production keeps
+  // the original fail-fast behavior.
+  private handleStartupFailure(error: unknown): void {
+    const description = this.describeConnectionError(error);
+
+    if (this.configService.isDevelopment) {
+      this.logger.warn(
+        `Elasticsearch unavailable — continuing without it (development only): ${description}`,
+      );
+      return;
+    }
+
+    this.logger.error(`Elasticsearch connection failed: ${description}`);
+    throw error;
   }
 
   async onModuleDestroy(): Promise<void> {

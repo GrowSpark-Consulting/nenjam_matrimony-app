@@ -4,6 +4,24 @@
 /// Plain Dart — no Flutter dependency, no code generation required.
 library;
 
+/// Reads a nested JSON object safely — the draft endpoint omits keys for
+/// sections the user hasn't reached yet.
+Map<String, dynamic> _section(Map<String, dynamic> data, String key) {
+  final value = data[key];
+  return value is Map ? value.cast<String, dynamic>() : <String, dynamic>{};
+}
+
+List<String> _stringList(dynamic value) =>
+    value is List ? value.map((e) => e.toString()).toList() : const [];
+
+/// Reverses [BasicDetails._toEnumValue] — maps a backend enum value
+/// ("MALE", "NEVER_MARRIED") back to this app's display value ("Male",
+/// "Never Married"). Falls back to the raw value for anything unmapped.
+String _fromEnumValue(String? raw, Map<String, String> reverseMap) {
+  if (raw == null || raw.isEmpty) return '';
+  return reverseMap[raw] ?? raw;
+}
+
 // ─── Basic Details (Step 1) ──────────────────────────────────────────
 class BasicDetails {
   final String firstName;
@@ -49,6 +67,44 @@ class BasicDetails {
       profileCreatedFor: profileCreatedFor ?? this.profileCreatedFor,
     );
   }
+
+  /// Maps this screen's display values ("Male", "Never Married") to the
+  /// backend's enum values ("MALE", "NEVER_MARRIED") — see
+  /// backend/apps/api/src/modules/profiles/dto/basic-details.dto.ts.
+  static String _toEnumValue(String value) =>
+      value.toUpperCase().replaceAll(' ', '_');
+
+  static const _genderReverseMap = {'MALE': 'Male', 'FEMALE': 'Female'};
+  static const _maritalStatusReverseMap = {
+    'NEVER_MARRIED': 'Never Married',
+    'DIVORCED': 'Divorced',
+    'WIDOWED': 'Widowed',
+    'AWAITING_DIVORCE': 'Awaiting Divorce',
+  };
+
+  factory BasicDetails.fromJson(Map<String, dynamic> json) => BasicDetails(
+        firstName: json['firstName'] as String? ?? '',
+        lastName: json['lastName'] as String? ?? '',
+        gender: _fromEnumValue(json['gender'] as String?, _genderReverseMap),
+        dob: json['dob'] != null
+            ? DateTime.tryParse(json['dob'] as String)
+            : null,
+        maritalStatus: _fromEnumValue(
+            json['maritalStatus'] as String?, _maritalStatusReverseMap),
+        profileCreatedFor:
+            json['profileCreatedFor'] as String? ?? 'Myself',
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (firstName.isNotEmpty) 'firstName': firstName,
+        if (lastName.isNotEmpty) 'lastName': lastName,
+        if (gender.isNotEmpty) 'gender': _toEnumValue(gender),
+        if (dob != null) 'dob': dob!.toIso8601String(),
+        if (maritalStatus.isNotEmpty)
+          'maritalStatus': _toEnumValue(maritalStatus),
+        if (profileCreatedFor.isNotEmpty)
+          'profileCreatedFor': profileCreatedFor,
+      };
 }
 
 // ─── Religion Details (Step 2) ───────────────────────────────────────
@@ -86,6 +142,25 @@ class ReligionDetails {
       community: community ?? this.community,
     );
   }
+
+  factory ReligionDetails.fromJson(Map<String, dynamic> json) =>
+      ReligionDetails(
+        religion: json['religion'] as String? ?? '',
+        caste: json['caste'] as String? ?? '',
+        subCaste: json['subCaste'] as String? ?? '',
+        gothra: json['gothra'] as String? ?? '',
+        denomination: json['denomination'] as String? ?? '',
+        community: json['community'] as String? ?? '',
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (religion.isNotEmpty) 'religion': religion,
+        if (caste.isNotEmpty) 'caste': caste,
+        if (subCaste.isNotEmpty) 'subCaste': subCaste,
+        if (gothra.isNotEmpty) 'gothra': gothra,
+        if (denomination.isNotEmpty) 'denomination': denomination,
+        if (community.isNotEmpty) 'community': community,
+      };
 }
 
 // ─── Language Details (Step 3) ───────────────────────────────────────
@@ -107,6 +182,17 @@ class LanguageDetails {
       languagesKnown: languagesKnown ?? this.languagesKnown,
     );
   }
+
+  factory LanguageDetails.fromJson(Map<String, dynamic> json) =>
+      LanguageDetails(
+        motherTongue: json['motherTongue'] as String? ?? '',
+        languagesKnown: _stringList(json['languagesKnown']),
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (motherTongue.isNotEmpty) 'motherTongue': motherTongue,
+        if (languagesKnown.isNotEmpty) 'languagesKnown': languagesKnown,
+      };
 }
 
 // ─── Location Details (Step 4) ───────────────────────────────────────
@@ -144,6 +230,25 @@ class LocationDetails {
       nativePlace: nativePlace ?? this.nativePlace,
     );
   }
+
+  factory LocationDetails.fromJson(Map<String, dynamic> json) =>
+      LocationDetails(
+        country: json['country'] as String? ?? 'India',
+        state: json['state'] as String? ?? '',
+        city: json['city'] as String? ?? '',
+        area: json['area'] as String? ?? '',
+        pinCode: json['pinCode'] as String? ?? '',
+        nativePlace: json['nativePlace'] as String? ?? '',
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (country.isNotEmpty) 'country': country,
+        if (state.isNotEmpty) 'state': state,
+        if (city.isNotEmpty) 'city': city,
+        if (area.isNotEmpty) 'area': area,
+        if (pinCode.isNotEmpty) 'pinCode': pinCode,
+        if (nativePlace.isNotEmpty) 'nativePlace': nativePlace,
+      };
 }
 
 // ─── Education Details (Step 5) ──────────────────────────────────────
@@ -185,6 +290,27 @@ class EducationDetails {
       workLocation: workLocation ?? this.workLocation,
     );
   }
+
+  factory EducationDetails.fromJson(Map<String, dynamic> json) =>
+      EducationDetails(
+        qualification: json['qualification'] as String? ?? '',
+        college: json['college'] as String? ?? '',
+        occupation: json['occupation'] as String? ?? '',
+        company: json['company'] as String? ?? '',
+        employmentType: json['employmentType'] as String? ?? '',
+        annualIncome: json['annualIncome'] as String? ?? '',
+        workLocation: json['workLocation'] as String? ?? '',
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (qualification.isNotEmpty) 'qualification': qualification,
+        if (college.isNotEmpty) 'college': college,
+        if (occupation.isNotEmpty) 'occupation': occupation,
+        if (company.isNotEmpty) 'company': company,
+        if (employmentType.isNotEmpty) 'employmentType': employmentType,
+        if (annualIncome.isNotEmpty) 'annualIncome': annualIncome,
+        if (workLocation.isNotEmpty) 'workLocation': workLocation,
+      };
 }
 
 // ─── Physical Details (Step 6) ───────────────────────────────────────
@@ -222,6 +348,25 @@ class PhysicalDetails {
       disability: disability ?? this.disability,
     );
   }
+
+  factory PhysicalDetails.fromJson(Map<String, dynamic> json) =>
+      PhysicalDetails(
+        height: json['height'] as String? ?? '',
+        weight: json['weight'] as String? ?? '',
+        bodyType: json['bodyType'] as String? ?? '',
+        complexion: json['complexion'] as String? ?? '',
+        bloodGroup: json['bloodGroup'] as String? ?? '',
+        disability: json['disability'] as String? ?? 'None',
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (height.isNotEmpty) 'height': height,
+        if (weight.isNotEmpty) 'weight': weight,
+        if (bodyType.isNotEmpty) 'bodyType': bodyType,
+        if (complexion.isNotEmpty) 'complexion': complexion,
+        if (bloodGroup.isNotEmpty) 'bloodGroup': bloodGroup,
+        if (disability.isNotEmpty) 'disability': disability,
+      };
 }
 
 // ─── Lifestyle Details (Step 7) ──────────────────────────────────────
@@ -259,6 +404,25 @@ class LifestyleDetails {
       aboutMe: aboutMe ?? this.aboutMe,
     );
   }
+
+  factory LifestyleDetails.fromJson(Map<String, dynamic> json) =>
+      LifestyleDetails(
+        eatingHabit: json['eatingHabit'] as String? ?? '',
+        smoking: json['smoking'] as String? ?? '',
+        drinking: json['drinking'] as String? ?? '',
+        fitness: json['fitness'] as String? ?? '',
+        hobbies: _stringList(json['hobbies']),
+        aboutMe: json['aboutMe'] as String? ?? '',
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (eatingHabit.isNotEmpty) 'eatingHabit': eatingHabit,
+        if (smoking.isNotEmpty) 'smoking': smoking,
+        if (drinking.isNotEmpty) 'drinking': drinking,
+        if (fitness.isNotEmpty) 'fitness': fitness,
+        if (hobbies.isNotEmpty) 'hobbies': hobbies,
+        if (aboutMe.isNotEmpty) 'aboutMe': aboutMe,
+      };
 }
 
 // ─── Family Details (Step 8) ─────────────────────────────────────────
@@ -308,6 +472,30 @@ class FamilyDetails {
       sisters: sisters ?? this.sisters,
     );
   }
+
+  factory FamilyDetails.fromJson(Map<String, dynamic> json) => FamilyDetails(
+        fatherName: json['fatherName'] as String? ?? '',
+        fatherOccupation: json['fatherOccupation'] as String? ?? '',
+        motherName: json['motherName'] as String? ?? '',
+        motherOccupation: json['motherOccupation'] as String? ?? '',
+        familyType: json['familyType'] as String? ?? '',
+        familyValues: json['familyValues'] as String? ?? '',
+        familyStatus: json['familyStatus'] as String? ?? '',
+        brothers: (json['brothers'] as num?)?.toInt() ?? 0,
+        sisters: (json['sisters'] as num?)?.toInt() ?? 0,
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (fatherName.isNotEmpty) 'fatherName': fatherName,
+        if (fatherOccupation.isNotEmpty) 'fatherOccupation': fatherOccupation,
+        if (motherName.isNotEmpty) 'motherName': motherName,
+        if (motherOccupation.isNotEmpty) 'motherOccupation': motherOccupation,
+        if (familyType.isNotEmpty) 'familyType': familyType,
+        if (familyValues.isNotEmpty) 'familyValues': familyValues,
+        if (familyStatus.isNotEmpty) 'familyStatus': familyStatus,
+        'brothers': brothers,
+        'sisters': sisters,
+      };
 }
 
 // ─── Horoscope Details (Step 9) ──────────────────────────────────────
@@ -353,6 +541,29 @@ class HoroscopeDetails {
       horoscopeAvailable: horoscopeAvailable ?? this.horoscopeAvailable,
     );
   }
+
+  factory HoroscopeDetails.fromJson(Map<String, dynamic> json) =>
+      HoroscopeDetails(
+        birthTime: json['birthTime'] as String? ?? '',
+        birthPlace: json['birthPlace'] as String? ?? '',
+        rashi: json['rashi'] as String? ?? '',
+        nakshatra: json['nakshatra'] as String? ?? '',
+        star: json['star'] as String? ?? '',
+        manglik: json['manglik'] as String? ?? '',
+        dosham: json['dosham'] as String? ?? '',
+        horoscopeAvailable: json['horoscopeAvailable'] as bool? ?? false,
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (birthTime.isNotEmpty) 'birthTime': birthTime,
+        if (birthPlace.isNotEmpty) 'birthPlace': birthPlace,
+        if (rashi.isNotEmpty) 'rashi': rashi,
+        if (nakshatra.isNotEmpty) 'nakshatra': nakshatra,
+        if (star.isNotEmpty) 'star': star,
+        if (manglik.isNotEmpty) 'manglik': manglik,
+        if (dosham.isNotEmpty) 'dosham': dosham,
+        'horoscopeAvailable': horoscopeAvailable,
+      };
 }
 
 // ─── Partner Preference (Step 10) ────────────────────────────────────
@@ -406,6 +617,36 @@ class PartnerPreference {
       maritalStatusPref: maritalStatusPref ?? this.maritalStatusPref,
     );
   }
+
+  factory PartnerPreference.fromJson(Map<String, dynamic> json) =>
+      PartnerPreference(
+        preferredAgeRange: json['preferredAgeRange'] as String? ?? '',
+        preferredHeightRange: json['preferredHeightRange'] as String? ?? '',
+        religionPref: json['religionPref'] as String? ?? '',
+        castePref: json['castePref'] as String? ?? '',
+        educationPref: json['educationPref'] as String? ?? '',
+        occupationPref: json['occupationPref'] as String? ?? '',
+        incomePref: json['incomePref'] as String? ?? '',
+        locationPref: json['locationPref'] as String? ?? '',
+        motherTonguePref: json['motherTonguePref'] as String? ?? '',
+        maritalStatusPref: json['maritalStatusPref'] as String? ?? '',
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (preferredAgeRange.isNotEmpty)
+          'preferredAgeRange': preferredAgeRange,
+        if (preferredHeightRange.isNotEmpty)
+          'preferredHeightRange': preferredHeightRange,
+        if (religionPref.isNotEmpty) 'religionPref': religionPref,
+        if (castePref.isNotEmpty) 'castePref': castePref,
+        if (educationPref.isNotEmpty) 'educationPref': educationPref,
+        if (occupationPref.isNotEmpty) 'occupationPref': occupationPref,
+        if (incomePref.isNotEmpty) 'incomePref': incomePref,
+        if (locationPref.isNotEmpty) 'locationPref': locationPref,
+        if (motherTonguePref.isNotEmpty) 'motherTonguePref': motherTonguePref,
+        if (maritalStatusPref.isNotEmpty)
+          'maritalStatusPref': maritalStatusPref,
+      };
 }
 
 // ─── Photo Gallery (Step 11) ─────────────────────────────────────────
@@ -427,6 +668,18 @@ class PhotoGallery {
       galleryPaths: galleryPaths ?? this.galleryPaths,
     );
   }
+
+  // Not part of the /profiles/draft response (photos are handled by
+  // PhotoController) — kept for forward-compatibility with ProfileDraft.
+  factory PhotoGallery.fromJson(Map<String, dynamic> json) => PhotoGallery(
+        primaryPhotoPath: json['primaryPhotoPath'] as String?,
+        galleryPaths: _stringList(json['galleryPaths']),
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (primaryPhotoPath != null) 'primaryPhotoPath': primaryPhotoPath,
+        if (galleryPaths.isNotEmpty) 'galleryPaths': galleryPaths,
+      };
 }
 
 // ─── Verification Status (Step 12) ───────────────────────────────────
@@ -460,6 +713,27 @@ class VerificationStatus {
       govIdVerified: govIdVerified ?? this.govIdVerified,
     );
   }
+
+  // Not part of the /profiles/draft response — there is no verification
+  // status endpoint yet (see backend/apps/api/src/modules/verification,
+  // currently a stub). Defaults preserve today's behavior (mobile
+  // auto-verified at signup/login) until that module is implemented.
+  factory VerificationStatus.fromJson(Map<String, dynamic> json) =>
+      VerificationStatus(
+        mobileVerified: json['mobileVerified'] as bool? ?? true,
+        emailVerified: json['emailVerified'] as bool? ?? false,
+        faceVerified: json['faceVerified'] as bool? ?? false,
+        aadhaarVerified: json['aadhaarVerified'] as bool? ?? false,
+        govIdVerified: json['govIdVerified'] as bool? ?? false,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'mobileVerified': mobileVerified,
+        'emailVerified': emailVerified,
+        'faceVerified': faceVerified,
+        'aadhaarVerified': aadhaarVerified,
+        'govIdVerified': govIdVerified,
+      };
 }
 
 // ─── Profile Draft (Aggregate Root) ──────────────────────────────────
@@ -495,6 +769,54 @@ class ProfileDraft {
   });
 
   static const int totalSteps = 12;
+
+  /// Hydrates a draft from `GET /profiles/draft`'s response shape:
+  /// `{ currentStep, totalSteps, completedSteps, isComplete,
+  ///   completionPercentage, data: { basicDetails: {...}, ... } }`.
+  /// Also accepts a bare `data` map directly, for flexibility.
+  factory ProfileDraft.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] is Map
+        ? (json['data'] as Map).cast<String, dynamic>()
+        : json;
+    return ProfileDraft(
+      basicDetails: BasicDetails.fromJson(_section(data, 'basicDetails')),
+      religionDetails:
+          ReligionDetails.fromJson(_section(data, 'religionDetails')),
+      languageDetails:
+          LanguageDetails.fromJson(_section(data, 'languageDetails')),
+      locationDetails:
+          LocationDetails.fromJson(_section(data, 'locationDetails')),
+      educationDetails:
+          EducationDetails.fromJson(_section(data, 'educationDetails')),
+      physicalDetails:
+          PhysicalDetails.fromJson(_section(data, 'physicalDetails')),
+      lifestyleDetails:
+          LifestyleDetails.fromJson(_section(data, 'lifestyleDetails')),
+      familyDetails: FamilyDetails.fromJson(_section(data, 'familyDetails')),
+      horoscopeDetails:
+          HoroscopeDetails.fromJson(_section(data, 'horoscopeDetails')),
+      partnerPreference:
+          PartnerPreference.fromJson(_section(data, 'partnerPreference')),
+      photoGallery: PhotoGallery.fromJson(_section(data, 'photoGallery')),
+      verificationStatus:
+          VerificationStatus.fromJson(_section(data, 'verificationStatus')),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'basicDetails': basicDetails.toJson(),
+        'religionDetails': religionDetails.toJson(),
+        'languageDetails': languageDetails.toJson(),
+        'locationDetails': locationDetails.toJson(),
+        'educationDetails': educationDetails.toJson(),
+        'physicalDetails': physicalDetails.toJson(),
+        'lifestyleDetails': lifestyleDetails.toJson(),
+        'familyDetails': familyDetails.toJson(),
+        'horoscopeDetails': horoscopeDetails.toJson(),
+        'partnerPreference': partnerPreference.toJson(),
+        'photoGallery': photoGallery.toJson(),
+        'verificationStatus': verificationStatus.toJson(),
+      };
 
   double get completionPercentage {
     int filled = 0;

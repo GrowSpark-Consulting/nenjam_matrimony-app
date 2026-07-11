@@ -16,11 +16,13 @@ abstract final class RouteNames {
   static const String registration = '/registration';
   static const String createProfileFor = '/create-profile-for';
   static const String registrationWizard = '/registration/wizard';
+  static const String psychologyQuiz = '/registration/psychology-quiz';
   static const String profileReview = '/profile-review';
-  static const String home = '/home';
+  static const String discover = '/discover';
+  static const String astro = '/astro';
   static const String search = '/search';
   static const String matches = '/matches';
-  static const String chat = '/chat';
+  static const String messages = '/messages';
   static const String notifications = '/notifications';
   static const String profile = '/profile';
   static const String premium = '/premium';
@@ -30,6 +32,16 @@ abstract final class RouteNames {
   static const String help = '/help';
   static const String privacy = '/privacy';
   static const String about = '/about';
+  static const String trustScore = '/trust-score';
+  static const String visitors = '/visitors';
+  static const String interestsSent = '/interests-sent';
+  static const String interestsReceived = '/interests-received';
+  static const String shortlisted = '/shortlisted';
+
+  // ─── Relationship Intelligence (independent of registration) ──────
+  static const String profileIntelligence = '/profile-intelligence';
+  static const String choosePrompt = '/profile-prompts/choose';
+  static const String horoscopeMatching = '/horoscope-matching';
 
   // ─── Named Routes ───────────────────────────────────────────────
   static const String splashName = 'splash';
@@ -45,11 +57,13 @@ abstract final class RouteNames {
   static const String registrationName = 'registration';
   static const String createProfileForName = 'createProfileFor';
   static const String registrationWizardName = 'registrationWizard';
+  static const String psychologyQuizName = 'psychologyQuiz';
   static const String profileReviewName = 'profileReview';
-  static const String homeName = 'home';
+  static const String discoverName = 'discover';
+  static const String astroName = 'astro';
   static const String searchName = 'search';
   static const String matchesName = 'matches';
-  static const String chatName = 'chat';
+  static const String messagesName = 'messages';
   static const String notificationsName = 'notifications';
   static const String profileName = 'profile';
   static const String premiumName = 'premium';
@@ -59,4 +73,13 @@ abstract final class RouteNames {
   static const String helpName = 'help';
   static const String privacyName = 'privacy';
   static const String aboutName = 'about';
+  static const String trustScoreName = 'trustScore';
+  static const String visitorsName = 'visitors';
+  static const String interestsSentName = 'interestsSent';
+  static const String interestsReceivedName = 'interestsReceived';
+  static const String shortlistedName = 'shortlisted';
+
+  static const String profileIntelligenceName = 'profileIntelligence';
+  static const String choosePromptName = 'choosePrompt';
+  static const String horoscopeMatchingName = 'horoscopeMatching';
 }

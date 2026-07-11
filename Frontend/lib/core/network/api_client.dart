@@ -32,6 +32,18 @@ class ApiClient {
     // Add interceptors in order
     _dio.interceptors.addAll([
       LoggingInterceptor(),
+      // TEMPORARY DEBUG LOGGING — prints full request/response/error detail
+      // (URL, headers, body, status code) to diagnose the registration-save
+      // connection issue. Remove once PATCH /profiles/draft/* is confirmed
+      // reaching the backend.
+      LogInterceptor(
+        request: true,
+        requestHeader: true,
+        requestBody: true,
+        responseHeader: false,
+        responseBody: true,
+        error: true,
+      ),
       ErrorInterceptor(),
       // AuthInterceptor will be added when storage service is ready
     ]);
@@ -65,6 +77,21 @@ class ApiClient {
     CancelToken? cancelToken,
   }) =>
       _dio.post<T>(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken,
+      );
+
+  Future<Response<T>> patch<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+  }) =>
+      _dio.patch<T>(
         path,
         data: data,
         queryParameters: queryParameters,

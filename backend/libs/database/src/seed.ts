@@ -35,7 +35,10 @@ async function main(): Promise<void> {
   console.log('═══════════════════════════════════════════════════════');
   console.log('  Nenjam Matrimony — Database Seeder');
   console.log('  Environment :', process.env.NODE_ENV ?? 'development');
-  console.log('  Database    :', process.env.DATABASE_NAME ?? 'nenjam_matrimony');
+  console.log(
+    '  Database    :',
+    process.env.DATABASE_NAME ?? 'nenjam_matrimony',
+  );
   console.log('═══════════════════════════════════════════════════════');
 
   // 1. Subscription plans

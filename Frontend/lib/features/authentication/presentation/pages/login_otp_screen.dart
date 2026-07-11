@@ -1,13 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/network/api_providers.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/inputs/otp_input.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../data/services/backend_sync_service.dart';
 import '../controllers/login_controller.dart';
 import '../controllers/phone_auth_controller.dart';
 import '../providers/auth_providers.dart';
@@ -61,13 +65,17 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
       );
       return;
     }
+    // Best-effort: mirrors this Firebase session into the NestJS + Postgres
+    // backend. Never awaited — must not block or fail the navigation below.
+    unawaited(syncUserWithBackend(ref.read(apiClientProvider)));
+
     if (result.needsVerification) {
       final emailVerified =
           ref.read(firebaseAuthServiceProvider).currentUser?.emailVerified ??
               false;
       context.go(emailVerified ? RouteNames.verifyPhone : RouteNames.verifyEmail);
     } else {
-      context.go(RouteNames.home);
+      context.go(RouteNames.discover);
     }
   }
 

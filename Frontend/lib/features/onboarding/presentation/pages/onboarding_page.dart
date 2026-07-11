@@ -75,7 +75,7 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   void _onSkip() {
     storageService.setOnboardingDone();
-    context.go(RouteNames.authSelection);
+    _goPastOnboarding();
   }
 
   void _onNext() {
@@ -86,8 +86,12 @@ class _OnboardingPageState extends State<OnboardingPage>
       );
     } else {
       storageService.setOnboardingDone();
-      context.go(RouteNames.authSelection);
+      _goPastOnboarding();
     }
+  }
+
+  void _goPastOnboarding() {
+    context.go(RouteNames.authSelection);
   }
 
   void _onBack() {

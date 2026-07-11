@@ -37,7 +37,8 @@ const QUESTIONS: QuestionDefinition[] = [
   },
   {
     oceanDomain: OceanDomain.O,
-    questionText: 'I am genuinely curious about many different topics and subjects.',
+    questionText:
+      'I am genuinely curious about many different topics and subjects.',
     reverseScored: false,
     order: 4,
   },
@@ -45,7 +46,8 @@ const QUESTIONS: QuestionDefinition[] = [
   // ── C · Conscientiousness (questions 5-8) ────────────────
   {
     oceanDomain: OceanDomain.C,
-    questionText: 'I keep my personal belongings and workspaces neat and organised.',
+    questionText:
+      'I keep my personal belongings and workspaces neat and organised.',
     reverseScored: false,
     order: 5,
   },
@@ -57,13 +59,15 @@ const QUESTIONS: QuestionDefinition[] = [
   },
   {
     oceanDomain: OceanDomain.C,
-    questionText: 'I often find it difficult to stick to plans and commitments.',
+    questionText:
+      'I often find it difficult to stick to plans and commitments.',
     reverseScored: true,
     order: 7,
   },
   {
     oceanDomain: OceanDomain.C,
-    questionText: 'I set clear long-term goals and work diligently to achieve them.',
+    questionText:
+      'I set clear long-term goals and work diligently to achieve them.',
     reverseScored: false,
     order: 8,
   },
@@ -71,25 +75,29 @@ const QUESTIONS: QuestionDefinition[] = [
   // ── E · Extraversion (questions 9-12) ────────────────────
   {
     oceanDomain: OceanDomain.E,
-    questionText: 'I feel comfortable and energised around many different people.',
+    questionText:
+      'I feel comfortable and energised around many different people.',
     reverseScored: false,
     order: 9,
   },
   {
     oceanDomain: OceanDomain.E,
-    questionText: 'I am talkative and enjoy striking up conversations with strangers.',
+    questionText:
+      'I am talkative and enjoy striking up conversations with strangers.',
     reverseScored: false,
     order: 10,
   },
   {
     oceanDomain: OceanDomain.E,
-    questionText: 'I prefer spending quiet time alone rather than attending social events.',
+    questionText:
+      'I prefer spending quiet time alone rather than attending social events.',
     reverseScored: true,
     order: 11,
   },
   {
     oceanDomain: OceanDomain.E,
-    questionText: 'I find parties and large social gatherings exciting and energising.',
+    questionText:
+      'I find parties and large social gatherings exciting and energising.',
     reverseScored: false,
     order: 12,
   },
@@ -97,25 +105,28 @@ const QUESTIONS: QuestionDefinition[] = [
   // ── A · Agreeableness (questions 13-16) ──────────────────
   {
     oceanDomain: OceanDomain.A,
-    questionText: 'I genuinely care about others\' feelings and well-being.',
+    questionText: "I genuinely care about others' feelings and well-being.",
     reverseScored: false,
     order: 13,
   },
   {
     oceanDomain: OceanDomain.A,
-    questionText: 'I try to avoid conflicts and work towards keeping the peace.',
+    questionText:
+      'I try to avoid conflicts and work towards keeping the peace.',
     reverseScored: false,
     order: 14,
   },
   {
     oceanDomain: OceanDomain.A,
-    questionText: 'I can be critical, argumentative, or harsh towards others at times.',
+    questionText:
+      'I can be critical, argumentative, or harsh towards others at times.',
     reverseScored: true,
     order: 15,
   },
   {
     oceanDomain: OceanDomain.A,
-    questionText: 'I am willing to compromise my own interests to help others succeed.',
+    questionText:
+      'I am willing to compromise my own interests to help others succeed.',
     reverseScored: false,
     order: 16,
   },
@@ -123,7 +134,8 @@ const QUESTIONS: QuestionDefinition[] = [
   // ── N · Neuroticism (questions 17-20) ────────────────────
   {
     oceanDomain: OceanDomain.N,
-    questionText: 'I often feel anxious or worried even without a clear reason.',
+    questionText:
+      'I often feel anxious or worried even without a clear reason.',
     reverseScored: false,
     order: 17,
   },
@@ -135,13 +147,15 @@ const QUESTIONS: QuestionDefinition[] = [
   },
   {
     oceanDomain: OceanDomain.N,
-    questionText: 'I remain calm and emotionally stable when facing stressful situations.',
+    questionText:
+      'I remain calm and emotionally stable when facing stressful situations.',
     reverseScored: true,
     order: 19,
   },
   {
     oceanDomain: OceanDomain.N,
-    questionText: 'I rarely experience intense feelings of sadness, worry, or irritability.',
+    questionText:
+      'I rarely experience intense feelings of sadness, worry, or irritability.',
     reverseScored: true,
     order: 20,
   },
@@ -179,7 +193,9 @@ export async function seedQuiz(prisma: PrismaClient): Promise<void> {
     },
   });
 
-  console.log(`  ✅  Quiz created: "${quiz.title}" v${quiz.version}  [id: ${quiz.id}]`);
+  console.log(
+    `  ✅  Quiz created: "${quiz.title}" v${quiz.version}  [id: ${quiz.id}]`,
+  );
 
   // Upsert each question by its deterministic id
   let upsertCount = 0;

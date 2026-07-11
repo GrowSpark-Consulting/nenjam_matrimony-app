@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/network/api_providers.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -15,6 +18,7 @@ import '../../../../core/widgets/layout/curved_header.dart';
 import '../../../../core/widgets/layout/or_divider.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../registration/presentation/providers/registration_provider.dart';
+import '../../data/services/backend_sync_service.dart';
 import '../controllers/login_controller.dart';
 import '../controllers/phone_auth_controller.dart';
 import '../controllers/signup_controller.dart';
@@ -109,8 +113,12 @@ class _LoginPageState extends ConsumerState<LoginPage>
   }
 
   void _routeAfterLogin(bool needsVerification) {
+    // Best-effort: mirrors this Firebase session into the NestJS + Postgres
+    // backend. Never awaited — must not block or fail the navigation below.
+    unawaited(syncUserWithBackend(ref.read(apiClientProvider)));
+
     if (!needsVerification) {
-      context.go(RouteNames.home);
+      context.go(RouteNames.discover);
       return;
     }
     // Send the user to whichever verification step is still outstanding.
@@ -146,6 +154,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
           AppLocalizations.of(context).authGenericError);
       return;
     }
+    // Best-effort: mirrors this new Firebase account into the NestJS +
+    // Postgres backend. Never awaited — must not block or fail navigation.
+    unawaited(syncUserWithBackend(ref.read(apiClientProvider)));
+
     // Account created + verification email sent → verify email.
     context.go(RouteNames.verifyEmail);
   }

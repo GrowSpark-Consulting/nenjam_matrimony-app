@@ -263,15 +263,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navProfile => 'Profile';
 
   @override
-  String get homeSeeAllButton => 'See All';
-
-  @override
-  String get homeAiRecommendationsTitle => 'AI Match Recommendations';
-
-  @override
-  String get homeRecentlyJoinedTitle => 'Recently Joined';
-
-  @override
   String get homeCompleteProfileTitle => 'Complete Your Profile';
 
   @override
@@ -280,16 +271,142 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get homeStepUploadHoroscope => 'Upload Horoscope';
-
-  @override
   String get homeStepAddPhoto => 'Add profile photo';
 
   @override
   String get homeAiPickBadge => 'AI Pick';
 
   @override
-  String get homeAiMatchLabel => 'match';
+  String get discoverAiMatchLabel => 'match';
+
+  @override
+  String get discoverNewTodayLabel => 'New Today';
+
+  @override
+  String get discoverSearchingMoreLabel => 'Searching for more souls…';
+
+  @override
+  String get discoverVerifiedLabel => 'Verified';
+
+  @override
+  String get discoverPremiumLabel => 'Premium';
+
+  @override
+  String get homePsychologyCompletedLabel => 'Psychology Completed';
+
+  @override
+  String get discoverChipVerifiedIdentity => 'Verified Identity';
+
+  @override
+  String get discoverChipPremiumPlus => 'Premium Plus';
+
+  @override
+  String get discoverChipNri => 'NRI';
+
+  @override
+  String get homePhotoProtectedLabel => 'Photo Protected';
+
+  @override
+  String get discoverInterestSentLabel => 'Interest Sent';
+
+  @override
+  String get homeAiMatchScoreLabel => 'AI Match';
+
+  @override
+  String get homeAstroMatchScoreLabel => 'Astro Match';
+
+  @override
+  String get homePsychologyMatchScoreLabel => 'Psychology Match';
+
+  @override
+  String get discoverCompatibilityLabel => 'Compatibility';
+
+  @override
+  String get actionInterested => 'Interested';
+
+  @override
+  String get actionViewProfile => 'View Profile';
+
+  @override
+  String get actionShare => 'Share';
+
+  @override
+  String get discoverFilterLabel => 'Filter';
+
+  @override
+  String get homeProfileDetailsLabel => 'Details';
+
+  @override
+  String get navDiscover => 'Discover';
+
+  @override
+  String get navMessages => 'Inbox';
+
+  @override
+  String get navAstro => 'Astro';
+
+  @override
+  String get navPremium => 'Premium';
+
+  @override
+  String get discoverForYouTab => 'For You';
+
+  @override
+  String get discoverNearMeTab => 'Near Me';
+
+  @override
+  String get discoverNewTab => 'New';
+
+  @override
+  String get appNameShort => 'Nenjam';
+
+  @override
+  String get discoverSearchTooltip => 'Search';
+
+  @override
+  String get discoverAiRecommendedTitle => 'AI Recommended';
+
+  @override
+  String get discoverRecentlyJoinedTitle => 'Recently Joined';
+
+  @override
+  String get discoverVerifiedProfilesTitle => 'Verified Profiles';
+
+  @override
+  String get discoverNearYouTitle => 'Near You';
+
+  @override
+  String get discoverPremiumMembersTitle => 'Premium Members';
+
+  @override
+  String get discoverViewAllButton => 'View All';
+
+  @override
+  String get discoverStatMatchLabel => 'Match';
+
+  @override
+  String get discoverStatAstroLabel => 'Astro';
+
+  @override
+  String get discoverStatTrustLabel => 'Trust';
+
+  @override
+  String get discoverUpgradeButton => 'Upgrade';
+
+  @override
+  String get discoverEliteMemberLabel => 'Elite Member';
+
+  @override
+  String get discoverConnectButton => 'Connect';
+
+  @override
+  String get matchesEmptyTitle => 'No matches yet';
+
+  @override
+  String get matchesEmptySubtitle => 'Check back soon for new profiles';
+
+  @override
+  String get discoverKmAwaySuffix => 'km away';
 
   @override
   String get premiumBannerTitle => 'Upgrade to Premium';
@@ -1416,4 +1533,61 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingAstroSync => 'Astro Sync';
+
+  @override
+  String get drawerProfile => 'My Profile';
+
+  @override
+  String get drawerEditProfile => 'Edit Profile';
+
+  @override
+  String get drawerVerificationCenter => 'Verification Center';
+
+  @override
+  String get drawerTrustScore => 'Trust Score';
+
+  @override
+  String get drawerVisitors => 'Visitors';
+
+  @override
+  String get drawerInterestSent => 'Interests Sent';
+
+  @override
+  String get drawerInterestReceived => 'Interests Received';
+
+  @override
+  String get drawerShortlist => 'Shortlisted Profiles';
+
+  @override
+  String get drawerLanguage => 'Language';
+
+  @override
+  String get drawerSettings => 'Account Settings';
+
+  @override
+  String get drawerPrivacy => 'Privacy & Safety';
+
+  @override
+  String get drawerHelp => 'Help & Support';
+
+  @override
+  String get drawerLogout => 'Logout';
+
+  @override
+  String get drawerProfileStrength => 'Profile Strength';
+
+  @override
+  String get drawerCompleteProfile => 'Complete Profile';
+
+  @override
+  String get drawerPremiumTitle => 'Nenjam Premium';
+
+  @override
+  String get drawerPremiumSubtitle => 'Get 5x more visibility';
+
+  @override
+  String get drawerUpgrade => 'Upgrade Now';
+
+  @override
+  String get drawerVersionLabel => 'Nenjam Matrimony';
 }

@@ -35,43 +35,51 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit(): Promise<void> {
     try {
       await this.client.connect();
+
+      const start = Date.now();
+      const pong = await this.client.ping();
+      const latencyMs = Date.now() - start;
+      const { host, port } = this.configService.redis;
+
+      this.logger.log(
+        [
+          '=====================================',
+          'REDIS',
+          '',
+          `Host        : ${host}`,
+          `Port        : ${port}`,
+          `Connection  : ${pong === 'PONG' ? 'SUCCESS' : 'FAILED'}`,
+          `Latency     : ${latencyMs} ms`,
+          '',
+          '=====================================',
+        ].join('\n'),
+      );
     } catch (error) {
-      this.failStartup('Redis connection failed', error);
+      this.handleStartupFailure(error);
     }
-
-    const start = Date.now();
-    let pong: string;
-    try {
-      pong = await this.client.ping();
-    } catch (error) {
-      this.failStartup('Redis PING failed', error);
-    }
-
-    const latencyMs = Date.now() - start;
-    const { host, port } = this.configService.redis;
-
-    this.logger.log(
-      [
-        '=====================================',
-        'REDIS',
-        '',
-        `Host        : ${host}`,
-        `Port        : ${port}`,
-        `Connection  : ${pong === 'PONG' ? 'SUCCESS' : 'FAILED'}`,
-        `Latency     : ${latencyMs} ms`,
-        '',
-        '=====================================',
-      ].join('\n'),
-    );
   }
 
   async onModuleDestroy(): Promise<void> {
     await this.client.quit();
   }
 
-  private failStartup(prefix: string, error: unknown): never {
+  // In development, Redis is a nice-to-have (caching/rate-limiting), not a
+  // hard dependency — a developer without it running locally shouldn't be
+  // blocked from starting the API. Production keeps the original
+  // fail-fast behavior: a misconfigured/unreachable Redis there is a real
+  // incident, not something to silently continue past.
+  private handleStartupFailure(error: unknown): void {
     const cause = this.lastConnectionError ?? error;
-    this.logger.error(`${prefix}: ${this.describeConnectionError(cause)}`);
+    const description = this.describeConnectionError(cause);
+
+    if (this.configService.isDevelopment) {
+      this.logger.warn(
+        `Redis unavailable — continuing without it (development only): ${description}`,
+      );
+      return;
+    }
+
+    this.logger.error(`Redis connection failed: ${description}`);
     throw cause;
   }
 

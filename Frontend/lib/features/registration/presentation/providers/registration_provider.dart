@@ -1,6 +1,22 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_providers.dart';
+import '../../data/repositories/registration_repository.dart';
 import '../../domain/models/profile_draft.dart';
+import '../../domain/models/profile_flow_mode.dart';
+
+/// Wraps the shared [apiClientProvider] (Firebase-token-authenticated).
+final registrationRepositoryProvider = Provider<RegistrationRepository>(
+  (ref) => RegistrationRepository(ref.watch(apiClientProvider)),
+);
+
+/// Whether the wizard/review screens are being used to create a brand-new
+/// profile (fresh signup) or to edit an existing, already-finalized one
+/// (opened from the navigation drawer). Same screens, different save
+/// destinations — see [RegistrationNotifier.startCreateMode] /
+/// [RegistrationNotifier.startEditMode].
+final profileFlowModeProvider =
+    StateProvider<ProfileFlowMode>((ref) => ProfileFlowMode.create);
 
 /// Riverpod provider for the registration wizard state.
 ///
@@ -14,6 +30,89 @@ final registrationProvider =
 class RegistrationNotifier extends Notifier<ProfileDraft> {
   @override
   ProfileDraft build() => const ProfileDraft();
+
+  // ─── Backend sync ────────────────────────────────────────────────────
+  //
+  // Called from ProfileWizardPage's "Continue" button — sends whichever
+  // step's data was just filled in. Steps 10 (photos) and 11 (verification)
+  // aren't sent here: photo upload isn't wired to S3 yet, and verification
+  // status is read-only, reflecting other modules.
+  Future<void> syncCurrentStepToBackend() async {
+    final repo = ref.read(registrationRepositoryProvider);
+    switch (state.currentStep) {
+      case 0:
+        await repo.updateBasicDetails(state.basicDetails);
+        return;
+      case 1:
+        await repo.updateReligionDetails(state.religionDetails);
+        return;
+      case 2:
+        await repo.updateLanguageDetails(state.languageDetails);
+        return;
+      case 3:
+        await repo.updateLocationDetails(state.locationDetails);
+        return;
+      case 4:
+        await repo.updateEducationDetails(state.educationDetails);
+        return;
+      case 5:
+        await repo.updatePhysicalDetails(state.physicalDetails);
+        return;
+      case 6:
+        await repo.updateLifestyleDetails(state.lifestyleDetails);
+        return;
+      case 7:
+        await repo.updateFamilyDetails(state.familyDetails);
+        return;
+      case 8:
+        await repo.updateHoroscopeDetails(state.horoscopeDetails);
+        return;
+      case 9:
+        await repo.updatePartnerPreference(state.partnerPreference);
+        return;
+      default:
+        // Steps 10-11: nothing to sync.
+        return;
+    }
+  }
+
+  /// Maps the accumulated draft into the finalized backend profile. Call
+  /// from the Profile Review screen's "Enter App" button. Idempotent on the
+  /// backend, so this also doubles as the EDIT MODE "publish my changes"
+  /// step — see [startEditMode].
+  Future<void> finalizeToBackend() =>
+      ref.read(registrationRepositoryProvider).finalizeProfile();
+
+  // ─── Flow Mode ───────────────────────────────────────────────────────
+  //
+  // CREATE and EDIT reuse this exact wizard/review UI — only the mode flag
+  // and where the draft data comes from differ.
+
+  /// Switches to CREATE mode with an empty draft — the normal first-time
+  /// signup path. Also used to reset state after an EDIT session ends.
+  void startCreateMode() {
+    ref.read(profileFlowModeProvider.notifier).state = ProfileFlowMode.create;
+    state = const ProfileDraft();
+  }
+
+  /// Switches to EDIT mode and hydrates the draft from the logged-in
+  /// user's saved data (`GET /profiles/draft`) — called before opening
+  /// Edit Profile / Verification Center from the navigation drawer, so
+  /// those screens open pre-populated with the user's existing values.
+  Future<void> startEditMode() async {
+    final json = await ref.read(registrationRepositoryProvider).getDraft();
+    ref.read(profileFlowModeProvider.notifier).state = ProfileFlowMode.edit;
+    state = ProfileDraft.fromJson(json).copyWith(currentStep: 0);
+  }
+
+  /// Sets an exact draft + mode combination directly, with no network call
+  /// or reset. Used only by [SplashController] to resume a mid-registration
+  /// or mid-edit session that survived an app-process restart (see
+  /// StorageService.saveNavState / AppLifecycleObserver).
+  void restore(ProfileDraft draft, ProfileFlowMode mode) {
+    ref.read(profileFlowModeProvider.notifier).state = mode;
+    state = draft;
+  }
 
   // ─── Step Navigation ───────────────────────────────────────────────
   void goToStep(int step) {
