@@ -46,10 +46,22 @@ class NmVisitorCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(name, style: AppTypography.titleMedium),
-                      Text(timeAgo, style: AppTypography.labelSmall.copyWith(color: AppColors.textTertiaryLight)),
+                      // A real visitor name is unbounded-length user
+                      // content — Expanded+ellipsis keeps timeAgo visible
+                      // instead of letting the Row overflow horizontally.
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: AppTypography.titleMedium,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(timeAgo,
+                          style: AppTypography.labelSmall
+                              .copyWith(color: AppColors.textTertiaryLight)),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -59,10 +71,13 @@ class NmVisitorCard extends StatelessWidget {
             ),
             if (onConnect != null) ...[
               const SizedBox(width: 12),
+              // width:100 only comfortably fit "Connect" at 1.0x scale;
+              // 128 gives headroom for larger text-scale settings, with
+              // NmPrimaryButton's label falling back to ellipsis beyond that.
               NmPrimaryButton(
                 label: 'Connect',
                 onPressed: onConnect,
-                width: 100,
+                width: 128,
                 height: 40,
               ),
             ],

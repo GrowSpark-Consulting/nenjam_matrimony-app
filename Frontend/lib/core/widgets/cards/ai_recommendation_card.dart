@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../constants/app_spacing.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
 
 /// AI recommendation card for smart matches.
+///
+/// Sizes itself from its content — the photo tile is aspect-ratio driven
+/// and the text block below it is intrinsically sized (`MainAxisSize.min`
+/// on both the outer and inner [Column]), so the card never assumes or
+/// requires a fixed overall height from its parent. Callers that need a
+/// horizontal rail of these should give the *row*, not the card, room to
+/// size itself (see `RecommendationRailSection`) rather than constraining
+/// this widget to a guessed pixel height.
 class NmAiRecommendationCard extends StatelessWidget {
   final String name;
   final String? imageUrl;
   final int compatibility;
   final String reason;
   final VoidCallback? onTap;
+  final double width;
 
   const NmAiRecommendationCard({
     super.key,
@@ -20,6 +30,7 @@ class NmAiRecommendationCard extends StatelessWidget {
     required this.compatibility,
     required this.reason,
     this.onTap,
+    this.width = 180,
   });
 
   @override
@@ -30,7 +41,7 @@ class NmAiRecommendationCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 180,
+        width: width,
         decoration: AppDecorations.card(isDark: isDark),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -82,13 +93,14 @@ class NmAiRecommendationCard extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: AppSpacing.cardPaddingCompact,
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(name, style: AppTypography.titleSmall, maxLines: 1,
                       overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     '$compatibility% ${l10n.discoverAiMatchLabel} • $reason',
                     style: AppTypography.labelSmall.copyWith(

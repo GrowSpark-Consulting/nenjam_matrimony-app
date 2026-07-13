@@ -333,6 +333,9 @@ class AppLocalizationsTa extends AppLocalizations {
   String get actionShare => 'பகிர்';
 
   @override
+  String get actionSave => 'சேமி';
+
+  @override
   String get discoverFilterLabel => 'வடிகட்டி';
 
   @override
@@ -345,7 +348,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get navMessages => 'இன்பாக்ஸ்';
 
   @override
-  String get navAstro => 'ஜோதிடம்';
+  String get navNenjam => 'நெஞ்சம்';
 
   @override
   String get navPremium => 'பிரீமியம்';
@@ -1494,6 +1497,520 @@ class AppLocalizationsTa extends AppLocalizations {
   @override
   String get registrationCompleteMore =>
       'சிறந்த பொருத்தங்களை ஈர்க்க மேலும் பிரிவுகளை நிரப்புங்கள்.';
+
+  @override
+  String get registrationWelcomeHeadline => 'உங்கள் கதையைச் சொல்வோம் ❤️';
+
+  @override
+  String get registrationWelcomeSubtitle =>
+      'உங்களுக்கு மிகவும் பொருத்தமான ஒருவரை அறிமுகப்படுத்த, உங்களைப் பற்றி இன்னும் கொஞ்சம் தெரிந்துகொள்கிறோம்.';
+
+  @override
+  String get registrationWelcomeCta => 'என் பயணத்தைத் தொடங்குங்கள்';
+
+  @override
+  String get registrationMilestoneGettingStarted => 'தொடக்கம்';
+
+  @override
+  String get registrationMilestoneAboutYou => 'உங்களைப் பற்றி';
+
+  @override
+  String get registrationMilestoneYourWorld => 'உங்கள் உலகம்';
+
+  @override
+  String get registrationMilestoneLifestyle => 'வாழ்க்கை முறை';
+
+  @override
+  String get registrationMilestoneCompatibility => 'பொருத்தம்';
+
+  @override
+  String get registrationMilestoneReady => 'தயார்';
+
+  @override
+  String registrationTimeRemainingMinutes(int minutes) {
+    return 'சுமார் $minutes நிமிடங்கள் மீதம்';
+  }
+
+  @override
+  String get registrationTimeRemainingLessThanMinute =>
+      'ஒரு நிமிடத்திற்கும் குறைவாக மீதம்';
+
+  @override
+  String get registrationContinueYourStory => 'உங்கள் கதையைத் தொடருங்கள்';
+
+  @override
+  String get registrationMotivationStep1 =>
+      'நீங்கள் மிகச் சிறப்பாகச் செய்கிறீர்கள்.';
+
+  @override
+  String get registrationMotivationStep2 =>
+      'உங்களை இன்னும் அறிந்து கொள்கிறோம்.';
+
+  @override
+  String get registrationMotivationStep3 =>
+      'இது சிறந்த பொருத்தங்களை பரிந்துரைக்க உதவுகிறது.';
+
+  @override
+  String get registrationMotivationStep4 => 'அருமையான தொடக்கம்.';
+
+  @override
+  String get registrationMotivationStep5 =>
+      'ஒவ்வொரு விவரமும் சரியான பொருத்தத்தைக் கண்டறிய உதவுகிறது.';
+
+  @override
+  String get registrationMotivationStep6 =>
+      'பாதி வழி வந்துவிட்டீர்கள் — அருமையாகச் செய்கிறீர்கள்.';
+
+  @override
+  String get registrationMotivationStep7 =>
+      'உங்களுக்கு முக்கியமானவற்றைப் புரிந்துகொள்ள இது உதவுகிறது.';
+
+  @override
+  String get registrationMotivationStep8 => 'கிட்டத்தட்ட முடிந்துவிட்டது.';
+
+  @override
+  String get registrationMotivationStep9 => 'இன்னும் சில விவரங்கள் மட்டுமே.';
+
+  @override
+  String get registrationMotivationStep10 =>
+      'உங்கள் கதையின் பெரும்பகுதியை ஏற்கனவே முடித்துவிட்டீர்கள்.';
+
+  @override
+  String get registrationMotivationStep11 =>
+      'உங்கள் பொருத்தங்களைச் சந்திக்க இன்னும் கொஞ்சம் தான்.';
+
+  @override
+  String get registrationMotivationStep12 => 'உங்கள் கதையை முடிக்க கடைசி படி.';
+
+  @override
+  String get registrationTipBasicInfo =>
+      'உங்கள் வயது பொருத்தத்தை மேம்படுத்தவே பயன்படுத்தப்படுகிறது.';
+
+  @override
+  String get registrationTipReligion =>
+      'இது உங்கள் சமூக விருப்பங்களுக்குள் பொருத்தமானவர்களை கண்டறிய உதவுகிறது.';
+
+  @override
+  String get registrationTipLanguage =>
+      'பொதுவான மொழிகள் முதல் நாளிலிருந்தே உரையாடலை எளிதாக்குகின்றன.';
+
+  @override
+  String get registrationTipLocation =>
+      'அருகிலோ அல்லது நீங்கள் விரும்பும் இடத்திலோ பொருத்தங்களை பரிந்துரைக்க இதைப் பயன்படுத்துகிறோம்.';
+
+  @override
+  String get registrationTipEducation =>
+      'உங்கள் பின்னணி உங்கள் பயணத்தை நிறைவு செய்பவரை கண்டறிய உதவுகிறது.';
+
+  @override
+  String get registrationTipPhysical =>
+      'இந்த விவரங்கள் உங்கள் பொருத்த சுயவிவரத்தை மேலும் துல்லியமாக்க உதவுகின்றன.';
+
+  @override
+  String get registrationTipLifestyle =>
+      'பொதுவான வாழ்க்கை முறைகள் பெரும்பாலும் வலுவான உறவுகளுக்கு வழிவகுக்கும்.';
+
+  @override
+  String get registrationTipFamily =>
+      'குடும்ப விவரங்கள் பொருத்தமான குடும்பங்களை பரிந்துரைக்க உதவுகின்றன.';
+
+  @override
+  String get registrationTipHoroscope =>
+      'இந்த படி விருப்பத்தேர்வு ஆனால் ஜோதிட பொருத்தத்தை மேம்படுத்துகிறது.';
+
+  @override
+  String get registrationTipPartnerPref =>
+      'இவற்றை நீங்கள் எப்போது வேண்டுமானாலும் புதுப்பிக்கலாம்.';
+
+  @override
+  String get registrationTipPhotos =>
+      'இயல்பான, புன்னகையுடன் கூடிய புகைப்படங்கள் அதிக ஆர்வத்தைப் பெறுகின்றன.';
+
+  @override
+  String get registrationTipVerification =>
+      'சரிபார்க்கப்பட்ட சுயவிவரங்கள் அதிக நம்பிக்கையையும் பதில்களையும் பெறுகின்றன.';
+
+  @override
+  String get registrationWizardBasicInfoHeadline =>
+      'உங்களைப் பற்றி சொல்லுங்கள் ❤️';
+
+  @override
+  String get registrationWizardBasicInfoHook =>
+      'ஒவ்வொரு சிறந்த உறவும் ஒரு எளிய அறிமுகத்துடன் தொடங்குகிறது.';
+
+  @override
+  String get registrationWizardReligionHeadline =>
+      'உங்கள் வேர்களும் நம்பிக்கைகளும்';
+
+  @override
+  String get registrationWizardReligionHook =>
+      'நீங்கள் எங்கிருந்து வருகிறீர்கள் என்பதை புரிந்துகொள்ள உதவுங்கள்.';
+
+  @override
+  String get registrationWizardLanguageHeadline => 'உங்கள் மனதின் மொழிகள்';
+
+  @override
+  String get registrationWizardLanguageHook =>
+      'நீங்கள் எப்படி தொடர்பு கொள்ள விரும்புகிறீர்கள் என்று சொல்லுங்கள்.';
+
+  @override
+  String get registrationWizardLocationHeadline => 'உங்கள் கதை நடக்கும் இடம்';
+
+  @override
+  String get registrationWizardLocationHook =>
+      'உங்களை எங்கே கண்டறிவது என்று எங்களுக்குத் தெரியப்படுத்துங்கள்.';
+
+  @override
+  String get registrationWizardEducationHeadline => 'இதுவரையிலான உங்கள் பயணம்';
+
+  @override
+  String get registrationWizardEducationHook =>
+      'உங்கள் படிப்பு மற்றும் தொழில் பற்றி சொல்லுங்கள்.';
+
+  @override
+  String get registrationWizardPhysicalHeadline =>
+      'உங்கள் தோற்றம் பற்றி சிறிது';
+
+  @override
+  String get registrationWizardPhysicalHook =>
+      'படத்தை நிறைவு செய்ய இன்னும் சில விவரங்கள்.';
+
+  @override
+  String get registrationWizardLifestyleHeadline =>
+      'உங்கள் நாட்களை எப்படி கழிக்கிறீர்கள்?';
+
+  @override
+  String get registrationWizardLifestyleHook =>
+      'உங்கள் வாழ்க்கை முறையையும் உங்களை உங்களாக ஆக்குவதையும் புரிந்துகொள்ள உதவுங்கள்.';
+
+  @override
+  String get registrationWizardFamilyHeadline =>
+      'உங்கள் குடும்பத்தைப் பற்றி சொல்லுங்கள்';
+
+  @override
+  String get registrationWizardFamilyHook =>
+      'குடும்பம் ஒவ்வொரு பயணத்திலும் முக்கியமான பகுதி.';
+
+  @override
+  String get registrationWizardHoroscopeHeadline =>
+      'உங்கள் நட்சத்திரங்கள் கதையின் ஒரு பகுதியைச் சொல்லும்';
+
+  @override
+  String get registrationWizardHoroscopeHook =>
+      'இந்த படி விருப்பத்தேர்வு ஆனால் பொருத்தத்தை மேம்படுத்த உதவுகிறது.';
+
+  @override
+  String get registrationWizardPartnerHeadline =>
+      'நீங்கள் யாரை சந்திக்க விரும்புகிறீர்கள்?';
+
+  @override
+  String get registrationWizardPartnerHook =>
+      'நீங்கள் தேடும் நபரைப் பற்றி சொல்லுங்கள்.';
+
+  @override
+  String get registrationWizardPhotosHeadline =>
+      'உங்கள் புன்னகை உங்கள் கதையைச் சொல்லட்டும்';
+
+  @override
+  String get registrationWizardPhotosHook =>
+      'மக்கள் உண்மையான புகைப்படங்களுடன் இணைகிறார்கள்.';
+
+  @override
+  String get registrationWizardVerificationHeadline =>
+      'நம்பிக்கையை ஒன்றாகக் கட்டுவோம்';
+
+  @override
+  String get registrationWizardVerificationHook =>
+      'அனைவரின் கதையையும் பாதுகாப்பாக வைக்க சில விரைவான சரிபார்ப்புகள்.';
+
+  @override
+  String get registrationCompletingHeadline =>
+      'உங்கள் பொருத்த சுயவிவரத்தை உருவாக்குகிறோம்...';
+
+  @override
+  String get registrationCompletingSubtitle =>
+      'இது ஒரு நிமிடம் மட்டுமே எடுக்கும்.';
+
+  @override
+  String get registrationCompletingStage1 => 'உங்கள் சுயவிவரத்தை சேமிக்கிறோம்';
+
+  @override
+  String get registrationCompletingStage2 =>
+      'உங்கள் பொருத்த சுயவிவரத்தை தயார் செய்கிறோம்';
+
+  @override
+  String get registrationCompletingStage3 =>
+      'அர்த்தமுள்ள பொருத்தங்களை கண்டறிகிறோம்';
+
+  @override
+  String get registrationCompletingStage4 =>
+      'உங்கள் அனுபவத்தை தனிப்பயனாக்குகிறோம்';
+
+  @override
+  String get registrationCompletingErrorTitle => 'ஏதோ தவறு நடந்தது';
+
+  @override
+  String get registrationCompletingErrorMessage =>
+      'உங்கள் சுயவிவரத்தை சேமிக்க முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get registrationCompletingRetryCta => 'மதிப்பாய்வுக்குத் திரும்பு';
+
+  @override
+  String get registrationSuccessHeadline => 'நெஞ்சம் இற்கு வரவேற்கிறோம் ❤️';
+
+  @override
+  String get registrationSuccessSubtitle =>
+      'உங்கள் கதை தயார். உங்களுக்காக அர்த்தமுள்ள தொடர்புகளை ஏற்கனவே தேடத் தொடங்கிவிட்டோம்.';
+
+  @override
+  String registrationSuccessCompletionCard(int percent) {
+    return 'சுயவிவரம் $percent% முடிந்தது';
+  }
+
+  @override
+  String get registrationSuccessPhotosAdded => 'புகைப்படங்கள் சேர்க்கப்பட்டன';
+
+  @override
+  String get registrationSuccessPhotosSkipped =>
+      'புகைப்படங்கள் தவிர்க்கப்பட்டன';
+
+  @override
+  String get registrationSuccessHoroscopeDone => 'ஜாதகம் தயார்';
+
+  @override
+  String get registrationSuccessHoroscopeSkipped => 'ஜாதகம் தவிர்க்கப்பட்டது';
+
+  @override
+  String get registrationSuccessPartnerPrefSaved =>
+      'துணை விருப்பங்கள் சேமிக்கப்பட்டன';
+
+  @override
+  String get registrationSuccessCta => 'உங்கள் முதல் பொருத்தத்தை சந்திக்கவும்';
+
+  @override
+  String get profileCompletionScreenTitle => 'சுயவிவர வலிமை';
+
+  @override
+  String get profileCompletionScreenSubtitle =>
+      'உங்கள் கதை எவ்வளவு முழுமையானது என்று பாருங்கள் — அடுத்து என்ன செய்யலாம் என்பதையும்.';
+
+  @override
+  String get profileCompletionTierBuilding => 'தொடங்குகிறது';
+
+  @override
+  String get profileCompletionTierGood => 'நல்லது';
+
+  @override
+  String get profileCompletionTierStrong => 'வலுவானது';
+
+  @override
+  String get profileCompletionTierExceptional => 'விதிவிலக்கானது';
+
+  @override
+  String get profileCompletionHighestImpactLabel =>
+      'அதிக தாக்கம் செலுத்தும் முன்னேற்றம்';
+
+  @override
+  String get profileCompletionCompletedSectionsTitle =>
+      'இதுவரையிலான உங்கள் கதை';
+
+  @override
+  String get profileCompletionMissingSectionsTitle => 'இன்னும் வளர்கிறது';
+
+  @override
+  String get profileCompletionFutureGrowthTitle =>
+      'உங்கள் சுயவிவரத்தை தொடர்ந்து வளர்க்கவும்';
+
+  @override
+  String get profileCompletionFutureGrowthSubtitle =>
+      'முழுமையான சுயவிவரம் கூட இன்னும் மேலே செல்ல முடியும்.';
+
+  @override
+  String get profileCompletionModuleRegistration => 'உங்கள் கதை';
+
+  @override
+  String get profileCompletionTipRegistration =>
+      'ஒவ்வொரு விவரமும் உங்கள் சிறந்த பொருத்தத்தைக் கண்டறிய உதவுகிறது.';
+
+  @override
+  String get profileCompletionActionRegistration => 'உங்கள் கதையை முடிக்கவும்';
+
+  @override
+  String get profileCompletionActionPhotos =>
+      'உங்கள் பொருத்த தரத்தை மேம்படுத்துங்கள்';
+
+  @override
+  String get profileCompletionActionPartnerPref =>
+      'உங்கள் பொருத்தங்களை துல்லியமாக்குங்கள்';
+
+  @override
+  String get profileCompletionActionVerification =>
+      'நம்பிக்கையை உருவாக்குங்கள்';
+
+  @override
+  String get profileCompletionActionHoroscope =>
+      'உங்கள் பொருத்தத்தை ஆழப்படுத்துங்கள்';
+
+  @override
+  String get profileCompletionGrowthPsychology => 'உளவியல் மதிப்பீடு';
+
+  @override
+  String get profileCompletionGrowthPsychologySubtitle =>
+      'உங்கள் ஆளுமை சுயவிவரத்தைக் கண்டறியுங்கள்.';
+
+  @override
+  String get profileCompletionGrowthHoroscope => 'ஜாதக பொருத்தம்';
+
+  @override
+  String get profileCompletionGrowthHoroscopeSubtitle =>
+      'உங்கள் ஜோதிட பொருத்த நுண்ணறிவுகளைப் பாருங்கள்.';
+
+  @override
+  String get profileCompletionGrowthPrompts => 'சுயவிவர கேள்விகள்';
+
+  @override
+  String get profileCompletionGrowthPromptsSubtitle =>
+      'உங்களைப் போல் தோன்றும் சில வார்த்தைகளைச் சேர்க்கவும்.';
+
+  @override
+  String get profileCompletionGrowthPremium => 'நெஞ்சம் பிரீமியம்';
+
+  @override
+  String get profileCompletionGrowthPremiumSubtitle =>
+      '5 மடங்கு அதிக காட்சிப்புலனாகுங்கள்.';
+
+  @override
+  String nenjamHubGreeting(String name) {
+    return 'வணக்கம் $name';
+  }
+
+  @override
+  String get nenjamHubGreetingSubtitle => 'இன்றைய உங்கள் உறவு நுண்ணறிவு இதோ.';
+
+  @override
+  String get nenjamHubBestMatchTitle => 'இன்றைய சிறந்த பொருத்தம்';
+
+  @override
+  String get nenjamHubWhyThisMatch => 'ஏன் இந்த பொருத்தம்?';
+
+  @override
+  String get nenjamHubRelationshipIntelligenceTitle => 'உறவு நுண்ணறிவு';
+
+  @override
+  String get nenjamHubRelationshipIntelligenceSubtitle =>
+      'உங்களையும், நீங்கள் ஏன் பொருந்துகிறீர்கள் என்பதையும் புரிந்துகொள்ளுங்கள்.';
+
+  @override
+  String get nenjamHubCardPsychology => 'உளவியல்';
+
+  @override
+  String get nenjamHubCardAstrology => 'ஜோதிடம்';
+
+  @override
+  String get nenjamHubCardCommunication => 'தொடர்பு பாணி';
+
+  @override
+  String get nenjamHubCardCommunicationSubtitle =>
+      'நீங்கள் எப்படி தொடர்புகொள்கிறீர்கள் மற்றும் வெளிப்படுத்துகிறீர்கள்';
+
+  @override
+  String get nenjamHubCardLifestyle => 'வாழ்க்கை முறை';
+
+  @override
+  String get nenjamHubCardLifestyleSubtitle =>
+      'பழக்கவழக்கங்கள், உணவு முறை மற்றும் தினசரி வாழ்க்கை';
+
+  @override
+  String get nenjamHubCardFutureGoals => 'எதிர்கால இலக்குகள்';
+
+  @override
+  String get nenjamHubCardFutureGoalsSubtitle =>
+      'நீங்கள் இருவரும் எதை நோக்கி உருவாக்குகிறீர்கள்';
+
+  @override
+  String get nenjamHubCardLoveLanguage => 'அன்பு மொழி';
+
+  @override
+  String get nenjamHubCardAttachmentStyle => 'பிணைப்பு பாணி';
+
+  @override
+  String get nenjamHubComingSoon => 'விரைவில் வருகிறது';
+
+  @override
+  String get nenjamHubCompatibilityReportTitle => 'பொருத்தம் அறிக்கை';
+
+  @override
+  String nenjamHubCompatibilityReportSubtitle(String name) {
+    return 'நீங்களும் $name எவ்வளவு பொருந்துகிறீர்கள்';
+  }
+
+  @override
+  String get nenjamHubAxisPsychology => 'உளவியல்';
+
+  @override
+  String get nenjamHubAxisAstrology => 'ஜோதிடம்';
+
+  @override
+  String get nenjamHubAxisLifestyle => 'வாழ்க்கை முறை';
+
+  @override
+  String get nenjamHubAxisFamily => 'குடும்பம்';
+
+  @override
+  String get nenjamHubAxisEducation => 'கல்வி';
+
+  @override
+  String get nenjamHubAxisValues => 'மதிப்புகள்';
+
+  @override
+  String get nenjamHubAxisGoals => 'இலக்குகள்';
+
+  @override
+  String get nenjamHubShowMore => 'மேலும் காட்டு';
+
+  @override
+  String get nenjamHubShowLess => 'குறைவாக காட்டு';
+
+  @override
+  String get nenjamHubDailyInsightTitle => 'இன்றைய நுண்ணறிவு';
+
+  @override
+  String get nenjamHubImproveTitle => 'உங்கள் பொருத்த தரத்தை மேம்படுத்துங்கள்';
+
+  @override
+  String get nenjamHubImproveSubtitle => 'சிறிய படிகள், சிறந்த பொருத்தங்கள்.';
+
+  @override
+  String get nenjamHubSeeAll => 'அனைத்தையும் காண்க';
+
+  @override
+  String get nenjamHubConversationStarterTitle => 'உரையாடல் தொடக்கம்';
+
+  @override
+  String nenjamHubConversationStarterSubtitle(String name) {
+    return '$name உடன் பேசத் தொடங்க 3 வழிகள்';
+  }
+
+  @override
+  String get nenjamHubUseThis => 'இதைப் பயன்படுத்து';
+
+  @override
+  String get nenjamHubRecommendationsTitle => 'இன்றைய பரிந்துரைகள்';
+
+  @override
+  String get nenjamHubGrowthVoiceIntro => 'குரல் அறிமுகம்';
+
+  @override
+  String get nenjamHubGrowthVoiceIntroSubtitle =>
+      'விரைவில் வருகிறது — உங்கள் குரலே பேசட்டும்.';
+
+  @override
+  String get nenjamHubGrowthTrustScore => 'நம்பிக்கை மதிப்பெண்';
+
+  @override
+  String get nenjamHubGrowthTrustScoreSubtitle =>
+      'உங்கள் சுயவிவரம் எவ்வளவு நம்பகமானது என்பதைப் பாருங்கள்.';
 
   @override
   String get onboardingSkip => 'தவிர்';

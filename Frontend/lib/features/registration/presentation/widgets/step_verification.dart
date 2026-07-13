@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/cards/checklist_item_card.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
+import 'registration_helper_tip.dart';
 
 /// Step 12 — Verification Badges & Trust
 class StepVerification extends StatelessWidget {
@@ -28,63 +29,61 @@ class StepVerification extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            l10n.registrationVerificationTitle,
+            l10n.registrationWizardVerificationHeadline,
             style: AppTypography.headlineSmall.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            l10n.registrationVerificationSubtitle,
+            l10n.registrationWizardVerificationHook,
             style: AppTypography.bodyMedium.copyWith(
               color: isDark
                   ? AppColors.textSecondaryDark
                   : AppColors.textSecondaryLight,
             ),
           ),
+          const SizedBox(height: 16),
+          RegistrationHelperTip(text: l10n.registrationTipVerification),
           const SizedBox(height: 24),
-          _VerificationCard(
+          NmChecklistItemCard(
             title: l10n.registrationVerifyMobileTitle,
             subtitle: l10n.registrationVerifyMobileSubtitle,
-            verifyLabel: l10n.registrationVerifyButton,
+            actionLabel: l10n.registrationVerifyButton,
             icon: Icons.phone_android_rounded,
-            isVerified: true, // Automatically verified during signup/login
-            isDark: isDark,
-            onVerify: () {},
+            isDone: true, // Automatically verified during signup/login
+            onAction: () {},
           ),
           const SizedBox(height: 16),
-          _VerificationCard(
+          NmChecklistItemCard(
             title: l10n.registrationVerifyEmailTitle,
             subtitle: l10n.registrationVerifyEmailSubtitle,
-            verifyLabel: l10n.registrationVerifyButton,
+            actionLabel: l10n.registrationVerifyButton,
             icon: Icons.email_outlined,
-            isVerified: status.emailVerified,
-            isDark: isDark,
-            onVerify: () {
+            isDone: status.emailVerified,
+            onAction: () {
               onChanged(status.copyWith(emailVerified: true));
             },
           ),
           const SizedBox(height: 16),
-          _VerificationCard(
+          NmChecklistItemCard(
             title: l10n.registrationVerifyFaceTitle,
             subtitle: l10n.registrationVerifyFaceSubtitle,
-            verifyLabel: l10n.registrationVerifyButton,
+            actionLabel: l10n.registrationVerifyButton,
             icon: Icons.face_retouching_natural_rounded,
-            isVerified: status.faceVerified,
-            isDark: isDark,
-            onVerify: () {
+            isDone: status.faceVerified,
+            onAction: () {
               onChanged(status.copyWith(faceVerified: true));
             },
           ),
           const SizedBox(height: 16),
-          _VerificationCard(
+          NmChecklistItemCard(
             title: l10n.registrationVerifyIdTitle,
             subtitle: l10n.registrationVerifyIdSubtitle,
-            verifyLabel: l10n.registrationVerifyButton,
+            actionLabel: l10n.registrationVerifyButton,
             icon: Icons.verified_user_outlined,
-            isVerified: status.aadhaarVerified || status.govIdVerified,
-            isDark: isDark,
-            onVerify: () {
+            isDone: status.aadhaarVerified || status.govIdVerified,
+            onAction: () {
               onChanged(status.copyWith(aadhaarVerified: true, govIdVerified: true));
             },
           ),
@@ -129,102 +128,6 @@ class StepVerification extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
-        ],
-      ),
-    );
-  }
-}
-
-class _VerificationCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String verifyLabel;
-  final IconData icon;
-  final bool isVerified;
-  final bool isDark;
-  final VoidCallback onVerify;
-
-  const _VerificationCard({
-    required this.title,
-    required this.subtitle,
-    required this.verifyLabel,
-    required this.icon,
-    required this.isVerified,
-    required this.isDark,
-    required this.onVerify,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: AppDecorations.card(isDark: isDark).copyWith(
-        border: Border.all(
-          color: isVerified
-              ? AppColors.success
-              : (isDark ? AppColors.borderDark : AppColors.borderLight),
-          width: isVerified ? 1.5 : 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: isVerified
-                  ? AppColors.success.withValues(alpha: 0.1)
-                  : AppColors.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              icon,
-              color: isVerified ? AppColors.success : AppColors.primary,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: AppTypography.titleMedium.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    if (isVerified)
-                      const Icon(Icons.check_circle_rounded,
-                          color: AppColors.success, size: 18),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          if (!isVerified)
-            TextButton(
-              onPressed: onVerify,
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-              child: Text(verifyLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
-            ),
         ],
       ),
     );

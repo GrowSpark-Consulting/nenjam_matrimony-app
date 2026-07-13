@@ -33,6 +33,9 @@ export class FirebaseAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
+    console.log(`Incoming request: ${request.method} ${request.url}`);
+    console.log('Firebase Guard entered');
+
     const authHeader = request.headers.authorization;
 
     if (!authHeader?.startsWith('Bearer ')) {
@@ -45,8 +48,13 @@ export class FirebaseAuthGuard implements CanActivate {
       throw new UnauthorizedException('Empty bearer token.');
     }
 
+    console.log('Before verify(idToken) await');
     const decoded = await this.verify(idToken);
+    console.log(`After verify(idToken) await — Firebase verified (uid=${decoded.uid})`);
+
+    console.log('Before resolveUser(decoded) await — Prisma user.upsert');
     request.user = await this.resolveUser(decoded);
+    console.log('After resolveUser(decoded) await — Guard complete, returning true');
     return true;
   }
 
@@ -76,7 +84,38 @@ export class FirebaseAuthGuard implements CanActivate {
     // the uid — it's never shown to the user and never collides.
     const email = decoded.email ?? `${decoded.uid}@firebase.invalid`;
 
-    const user = await this.prisma.user.upsert({
+    // Firebase UIDs are not permanently stable for a given person — the
+    // Firebase account can be deleted and re-created (routine during dev/QA
+    // testing, but also possible in production account-recovery flows)
+    // while `email` remains this system's durable identity. Upserting on
+    // firebaseUid alone would then try to CREATE a second row with the same
+    // email and crash on the unique constraint (this is exactly what
+    // produced a bare 500 on PATCH /profiles/draft/basic-details). Reconcile
+    // by firebaseUid first, then fall back to re-linking an existing row
+    // found by email instead of failing.
+    let user = await this.prisma.user.findUnique({
+      where: { firebaseUid: decoded.uid },
+    });
+
+    if (!user && decoded.email) {
+      const existingByEmail = await this.prisma.user.findUnique({
+        where: { email: decoded.email },
+      });
+      if (existingByEmail) {
+        this.logger.log(
+          `Re-linking existing user ${existingByEmail.id} to new Firebase uid=${decoded.uid} (was ${existingByEmail.firebaseUid})`,
+        );
+        user = await this.prisma.user.update({
+          where: { id: existingByEmail.id },
+          data: {
+            firebaseUid: decoded.uid,
+            ...(decoded.phone_number ? { phone: decoded.phone_number } : {}),
+          },
+        });
+      }
+    }
+
+    user ??= await this.prisma.user.upsert({
       where: { firebaseUid: decoded.uid },
       update: {
         ...(decoded.email ? { email: decoded.email } : {}),

@@ -10,7 +10,7 @@ import '../../theme/app_typography.dart';
 import '../../theme/tokens/app_radius.dart';
 
 /// Floating pill-style bottom navigation shell that wraps tabbed routes —
-/// Discover / Matches / Inbox / Astro / Premium.
+/// Discover / Matches / Inbox / Nenjam / Premium.
 class AppBottomNavShell extends StatelessWidget {
   final Widget child;
 
@@ -20,7 +20,7 @@ class AppBottomNavShell extends StatelessWidget {
     _NavTab(RouteNames.discover, Icons.explore_rounded, Icons.explore_outlined),
     _NavTab(RouteNames.matches, Icons.favorite_rounded, Icons.favorite_border_rounded),
     _NavTab(RouteNames.messages, Icons.chat_bubble_rounded, Icons.chat_bubble_outline_rounded),
-    _NavTab(RouteNames.astro, Icons.auto_awesome_rounded, Icons.auto_awesome_outlined),
+    _NavTab(RouteNames.nenjam, Icons.volunteer_activism_rounded, Icons.volunteer_activism_outlined),
     _NavTab(RouteNames.premium, Icons.workspace_premium_rounded, Icons.workspace_premium_outlined),
   ];
 
@@ -29,7 +29,7 @@ class AppBottomNavShell extends StatelessWidget {
         l10n.navDiscover,
         l10n.navMatches,
         l10n.navMessages,
-        l10n.navAstro,
+        l10n.navNenjam,
         l10n.navPremium,
       ];
 

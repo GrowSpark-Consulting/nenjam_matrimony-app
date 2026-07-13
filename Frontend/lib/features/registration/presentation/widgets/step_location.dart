@@ -5,6 +5,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
+import 'registration_helper_tip.dart';
 
 /// Step 4 — Location Details
 class StepLocation extends StatefulWidget {
@@ -93,9 +94,11 @@ class _StepLocationState extends State<StepLocation> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.registrationLocationTitle, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
+          Text(l10n.registrationWizardLocationHeadline, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text(l10n.registrationLocationSubtitle, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationWizardLocationHook, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          const SizedBox(height: 16),
+          RegistrationHelperTip(text: l10n.registrationTipLocation),
           const SizedBox(height: 24),
           Text(l10n.registrationCountryLabel, style: AppTypography.labelLarge),
           const SizedBox(height: 8),

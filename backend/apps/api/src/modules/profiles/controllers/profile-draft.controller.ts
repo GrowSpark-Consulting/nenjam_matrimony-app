@@ -34,6 +34,7 @@ export class ProfileDraftController {
     @CurrentUser('id') userId: string,
     @Body() dto: BasicDetailsDto,
   ): Promise<DraftResponse> {
+    console.log('[PATCH BASIC DETAILS] Controller entered');
     return this.draftService.updateSection(userId, 'basicDetails', dto);
   }
 

@@ -25,7 +25,7 @@ const _restorableTabRoutes = {
   RouteNames.discover,
   RouteNames.matches,
   RouteNames.messages,
-  RouteNames.astro,
+  RouteNames.nenjam,
   RouteNames.premium,
 };
 

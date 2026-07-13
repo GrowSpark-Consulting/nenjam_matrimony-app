@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
+import 'registration_helper_tip.dart';
 
 /// Step 10 — Partner Preferences
 class StepPartnerPref extends StatefulWidget {
@@ -143,9 +144,11 @@ class _StepPartnerPrefState extends State<StepPartnerPref> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.registrationPartnerTitle, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
+          Text(l10n.registrationWizardPartnerHeadline, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text(l10n.registrationPartnerSubtitle, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationWizardPartnerHook, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          const SizedBox(height: 16),
+          RegistrationHelperTip(text: l10n.registrationTipPartnerPref),
           const SizedBox(height: 24),
           // Numeric age/height/income ranges kept as-is (only 'Any' localized).
           _section(l10n.registrationPrefAgeLabel, _ageRanges, _ageRange, (v) => setState(() => _ageRange = v), labelOf: (v) => _anyOrSelf(l10n, v)),

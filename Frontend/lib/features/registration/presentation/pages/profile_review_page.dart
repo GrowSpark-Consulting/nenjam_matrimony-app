@@ -12,6 +12,8 @@ import '../../../../core/widgets/relationship_intelligence/profile_prompt_sectio
 import '../../../../core/widgets/relationship_intelligence/psychology_section.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../astro/presentation/providers/compatibility_provider.dart';
+import '../../../profile_completion/domain/profile_completion_aggregator.dart';
+import '../../../profile_completion/domain/profile_completion_module.dart';
 import '../../../profile_prompts/presentation/providers/profile_prompt_provider.dart';
 import '../../../psychology/domain/models/personality_result.dart';
 import '../../../psychology/presentation/providers/personality_provider.dart';
@@ -35,6 +37,15 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
 
   Future<void> _onEnterApp() async {
     final mode = ref.read(profileFlowModeProvider);
+
+    // CREATE MODE: the real save now happens on the Completing screen (see
+    // registration_completing_page.dart) so its checklist reflects an
+    // actual in-flight finalizeToBackend() call rather than a fake loader.
+    if (mode != ProfileFlowMode.edit) {
+      context.go(RouteNames.registrationCompleting);
+      return;
+    }
+
     setState(() => _isSaving = true);
     try {
       await ref.read(registrationProvider.notifier).finalizeToBackend();
@@ -60,13 +71,11 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
 
     // EDIT MODE: publish confirmation, reset to CREATE for hygiene, and
     // return to Discover — never back into onboarding/registration.
-    if (mode == ProfileFlowMode.edit) {
-      ref.read(registrationProvider.notifier).startCreateMode();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully')),
-      );
-    }
+    ref.read(registrationProvider.notifier).startCreateMode();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Profile updated successfully')),
+    );
     context.go(RouteNames.discover);
   }
 
@@ -78,7 +87,9 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
     final mode = ref.watch(profileFlowModeProvider);
     final isEditMode = mode == ProfileFlowMode.edit;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final completion = draft.completionPercentage.toInt();
+    final completion = aggregateProfileCompletion(
+      ProfileCompletionContext(draft: draft),
+    ).percentage;
 
     void editStep(int step) {
       notifier.goToStep(step);
@@ -451,7 +462,8 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                 ],
               ),
               child: NmGradientButton(
-                label: isEditMode ? 'Save Changes' : l10n.registrationEnterApp,
+                label:
+                    isEditMode ? 'Save Changes' : l10n.registrationContinueYourStory,
                 useGoldGradient: true,
                 icon: Icons.favorite_rounded,
                 isLoading: _isSaving,

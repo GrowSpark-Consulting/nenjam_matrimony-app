@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/astro/presentation/pages/astro_page.dart';
+import '../../features/nenjam_hub/presentation/pages/nenjam_hub_page.dart';
 import '../../features/astro/presentation/pages/horoscope_matching_page.dart';
 import '../../features/authentication/presentation/pages/auth_selection_page.dart';
 import '../../features/authentication/presentation/pages/email_verify_screen.dart';
@@ -25,11 +25,15 @@ import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile_intelligence/presentation/pages/profile_intelligence_page.dart';
 import '../../features/profile_prompts/domain/models/prompt_bank_item.dart';
 import '../../features/profile_prompts/presentation/pages/choose_prompt_page.dart';
+import '../../features/profile_completion/presentation/pages/profile_completion_page.dart';
 import '../../features/psychology/presentation/pages/psychology_quiz_page.dart';
 import '../../features/registration/presentation/pages/create_profile_for_page.dart';
 import '../../features/registration/presentation/pages/profile_review_page.dart';
 import '../../features/registration/presentation/pages/profile_wizard_page.dart';
+import '../../features/registration/presentation/pages/registration_completing_page.dart';
 import '../../features/registration/presentation/pages/registration_page.dart';
+import '../../features/registration/presentation/pages/registration_success_page.dart';
+import '../../features/registration/presentation/pages/registration_welcome_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/shortlist/presentation/pages/shortlisted_page.dart';
@@ -142,9 +146,24 @@ GoRouter createRouter() {
           builder: (context, state) => const CreateProfileForPage(),
         ),
         GoRoute(
+          path: RouteNames.registrationWelcome,
+          name: RouteNames.registrationWelcomeName,
+          builder: (context, state) => const RegistrationWelcomePage(),
+        ),
+        GoRoute(
           path: RouteNames.registrationWizard,
           name: RouteNames.registrationWizardName,
           builder: (context, state) => const ProfileWizardPage(),
+        ),
+        GoRoute(
+          path: RouteNames.registrationCompleting,
+          name: RouteNames.registrationCompletingName,
+          builder: (context, state) => const RegistrationCompletingPage(),
+        ),
+        GoRoute(
+          path: RouteNames.registrationSuccess,
+          name: RouteNames.registrationSuccessName,
+          builder: (context, state) => const RegistrationSuccessPage(),
         ),
         GoRoute(
           path: RouteNames.psychologyQuiz,
@@ -176,6 +195,11 @@ GoRouter createRouter() {
           path: RouteNames.profileReview,
           name: RouteNames.profileReviewName,
           builder: (context, state) => const ProfileReviewPage(),
+        ),
+        GoRoute(
+          path: RouteNames.profileCompletion,
+          name: RouteNames.profileCompletionName,
+          builder: (context, state) => const ProfileCompletionPage(),
         ),
         GoRoute(
           path: RouteNames.settings,
@@ -287,10 +311,10 @@ GoRouter createRouter() {
               ),
             ),
             GoRoute(
-              path: RouteNames.astro,
-              name: RouteNames.astroName,
+              path: RouteNames.nenjam,
+              name: RouteNames.nenjamName,
               pageBuilder: (context, state) => const NoTransitionPage(
-                child: AstroPage(),
+                child: NenjamHubPage(),
               ),
             ),
           ],

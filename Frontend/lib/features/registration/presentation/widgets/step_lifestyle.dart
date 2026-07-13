@@ -5,6 +5,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
+import 'registration_helper_tip.dart';
 
 /// Step 7 — Lifestyle
 class StepLifestyle extends StatefulWidget {
@@ -111,9 +112,11 @@ class _StepLifestyleState extends State<StepLifestyle> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.registrationLifestyleTitle, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
+          Text(l10n.registrationWizardLifestyleHeadline, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text(l10n.registrationLifestyleSubtitle, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationWizardLifestyleHook, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          const SizedBox(height: 16),
+          RegistrationHelperTip(text: l10n.registrationTipLifestyle),
           const SizedBox(height: 24),
           _choiceSection(l10n.registrationEatingHabitLabel, _eatingHabits, _eatingHabit, (v) => setState(() => _eatingHabit = v), labelOf: (v) => _eatingLabel(l10n, v)),
           const SizedBox(height: 20),

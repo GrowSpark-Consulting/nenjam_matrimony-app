@@ -45,7 +45,18 @@ class NmOutlinedButton extends StatelessWidget {
                     Icon(icon, size: 20),
                     const SizedBox(width: 8),
                   ],
-                  Text(label, style: AppTypography.button),
+                  // Flexible + ellipsis so a squeezed button (narrow
+                  // Expanded flex share, long localized label, or large
+                  // text-scale settings) truncates gracefully instead of
+                  // throwing a RenderFlex overflow.
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: AppTypography.button,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
       ),

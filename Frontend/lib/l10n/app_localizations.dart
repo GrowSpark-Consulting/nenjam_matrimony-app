@@ -710,6 +710,12 @@ abstract class AppLocalizations {
   /// **'Share'**
   String get actionShare;
 
+  /// No description provided for @actionSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get actionSave;
+
   /// No description provided for @discoverFilterLabel.
   ///
   /// In en, this message translates to:
@@ -734,11 +740,11 @@ abstract class AppLocalizations {
   /// **'Inbox'**
   String get navMessages;
 
-  /// No description provided for @navAstro.
+  /// No description provided for @navNenjam.
   ///
   /// In en, this message translates to:
-  /// **'Astro'**
-  String get navAstro;
+  /// **'Nenjam'**
+  String get navNenjam;
 
   /// No description provided for @navPremium.
   ///
@@ -2965,6 +2971,870 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Complete more sections to attract better matches.'**
   String get registrationCompleteMore;
+
+  /// No description provided for @registrationWelcomeHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s build your story ❤️'**
+  String get registrationWelcomeHeadline;
+
+  /// No description provided for @registrationWelcomeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll get to know you a little better so we can introduce you to someone truly compatible.'**
+  String get registrationWelcomeSubtitle;
+
+  /// No description provided for @registrationWelcomeCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Begin My Journey'**
+  String get registrationWelcomeCta;
+
+  /// No description provided for @registrationMilestoneGettingStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Getting Started'**
+  String get registrationMilestoneGettingStarted;
+
+  /// No description provided for @registrationMilestoneAboutYou.
+  ///
+  /// In en, this message translates to:
+  /// **'About You'**
+  String get registrationMilestoneAboutYou;
+
+  /// No description provided for @registrationMilestoneYourWorld.
+  ///
+  /// In en, this message translates to:
+  /// **'Your World'**
+  String get registrationMilestoneYourWorld;
+
+  /// No description provided for @registrationMilestoneLifestyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifestyle'**
+  String get registrationMilestoneLifestyle;
+
+  /// No description provided for @registrationMilestoneCompatibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Compatibility'**
+  String get registrationMilestoneCompatibility;
+
+  /// No description provided for @registrationMilestoneReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get registrationMilestoneReady;
+
+  /// No description provided for @registrationTimeRemainingMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'About {minutes} min left'**
+  String registrationTimeRemainingMinutes(int minutes);
+
+  /// No description provided for @registrationTimeRemainingLessThanMinute.
+  ///
+  /// In en, this message translates to:
+  /// **'Less than a minute remaining'**
+  String get registrationTimeRemainingLessThanMinute;
+
+  /// No description provided for @registrationContinueYourStory.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Your Story'**
+  String get registrationContinueYourStory;
+
+  /// No description provided for @registrationMotivationStep1.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re doing great.'**
+  String get registrationMotivationStep1;
+
+  /// No description provided for @registrationMotivationStep2.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'re getting to know you.'**
+  String get registrationMotivationStep2;
+
+  /// No description provided for @registrationMotivationStep3.
+  ///
+  /// In en, this message translates to:
+  /// **'This helps us recommend better matches.'**
+  String get registrationMotivationStep3;
+
+  /// No description provided for @registrationMotivationStep4.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re off to a wonderful start.'**
+  String get registrationMotivationStep4;
+
+  /// No description provided for @registrationMotivationStep5.
+  ///
+  /// In en, this message translates to:
+  /// **'Every detail helps us find the right match.'**
+  String get registrationMotivationStep5;
+
+  /// No description provided for @registrationMotivationStep6.
+  ///
+  /// In en, this message translates to:
+  /// **'Halfway there — you\'re doing wonderfully.'**
+  String get registrationMotivationStep6;
+
+  /// No description provided for @registrationMotivationStep7.
+  ///
+  /// In en, this message translates to:
+  /// **'This helps us understand what matters to you.'**
+  String get registrationMotivationStep7;
+
+  /// No description provided for @registrationMotivationStep8.
+  ///
+  /// In en, this message translates to:
+  /// **'Almost there.'**
+  String get registrationMotivationStep8;
+
+  /// No description provided for @registrationMotivationStep9.
+  ///
+  /// In en, this message translates to:
+  /// **'Just a few more details.'**
+  String get registrationMotivationStep9;
+
+  /// No description provided for @registrationMotivationStep10.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve already completed most of your story.'**
+  String get registrationMotivationStep10;
+
+  /// No description provided for @registrationMotivationStep11.
+  ///
+  /// In en, this message translates to:
+  /// **'So close to meeting your matches.'**
+  String get registrationMotivationStep11;
+
+  /// No description provided for @registrationMotivationStep12.
+  ///
+  /// In en, this message translates to:
+  /// **'One last step to complete your story.'**
+  String get registrationMotivationStep12;
+
+  /// No description provided for @registrationTipBasicInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Your age is only used to improve compatibility.'**
+  String get registrationTipBasicInfo;
+
+  /// No description provided for @registrationTipReligion.
+  ///
+  /// In en, this message translates to:
+  /// **'This helps us match you within your community preferences.'**
+  String get registrationTipReligion;
+
+  /// No description provided for @registrationTipLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared languages make conversations easier from day one.'**
+  String get registrationTipLanguage;
+
+  /// No description provided for @registrationTipLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'We use this to suggest matches nearby or wherever you\'d like.'**
+  String get registrationTipLocation;
+
+  /// No description provided for @registrationTipEducation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your background helps us find someone who complements your journey.'**
+  String get registrationTipEducation;
+
+  /// No description provided for @registrationTipPhysical.
+  ///
+  /// In en, this message translates to:
+  /// **'These details help us fine-tune your compatibility profile.'**
+  String get registrationTipPhysical;
+
+  /// No description provided for @registrationTipLifestyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared lifestyles often lead to stronger relationships.'**
+  String get registrationTipLifestyle;
+
+  /// No description provided for @registrationTipFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Family details help us recommend compatible families.'**
+  String get registrationTipFamily;
+
+  /// No description provided for @registrationTipHoroscope.
+  ///
+  /// In en, this message translates to:
+  /// **'This step is optional but improves astrology compatibility.'**
+  String get registrationTipHoroscope;
+
+  /// No description provided for @registrationTipPartnerPref.
+  ///
+  /// In en, this message translates to:
+  /// **'You can always update these later.'**
+  String get registrationTipPartnerPref;
+
+  /// No description provided for @registrationTipPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Natural, smiling photos receive more interest.'**
+  String get registrationTipPhotos;
+
+  /// No description provided for @registrationTipVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified profiles earn more trust and better responses.'**
+  String get registrationTipVerification;
+
+  /// No description provided for @registrationWizardBasicInfoHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us about yourself ❤️'**
+  String get registrationWizardBasicInfoHeadline;
+
+  /// No description provided for @registrationWizardBasicInfoHook.
+  ///
+  /// In en, this message translates to:
+  /// **'Every great relationship starts with a simple introduction.'**
+  String get registrationWizardBasicInfoHook;
+
+  /// No description provided for @registrationWizardReligionHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Your roots & beliefs'**
+  String get registrationWizardReligionHeadline;
+
+  /// No description provided for @registrationWizardReligionHook.
+  ///
+  /// In en, this message translates to:
+  /// **'Help us understand where you come from.'**
+  String get registrationWizardReligionHook;
+
+  /// No description provided for @registrationWizardLanguageHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'The languages of your heart'**
+  String get registrationWizardLanguageHeadline;
+
+  /// No description provided for @registrationWizardLanguageHook.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us how you love to communicate.'**
+  String get registrationWizardLanguageHook;
+
+  /// No description provided for @registrationWizardLocationHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Where your story is unfolding'**
+  String get registrationWizardLocationHeadline;
+
+  /// No description provided for @registrationWizardLocationHook.
+  ///
+  /// In en, this message translates to:
+  /// **'Let us know where to find you.'**
+  String get registrationWizardLocationHook;
+
+  /// No description provided for @registrationWizardEducationHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Your journey so far'**
+  String get registrationWizardEducationHeadline;
+
+  /// No description provided for @registrationWizardEducationHook.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us about your studies and career.'**
+  String get registrationWizardEducationHook;
+
+  /// No description provided for @registrationWizardPhysicalHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'A little about your appearance'**
+  String get registrationWizardPhysicalHeadline;
+
+  /// No description provided for @registrationWizardPhysicalHook.
+  ///
+  /// In en, this message translates to:
+  /// **'Just a few details to complete the picture.'**
+  String get registrationWizardPhysicalHook;
+
+  /// No description provided for @registrationWizardLifestyleHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'How do you spend your days?'**
+  String get registrationWizardLifestyleHeadline;
+
+  /// No description provided for @registrationWizardLifestyleHook.
+  ///
+  /// In en, this message translates to:
+  /// **'Help us understand your lifestyle and what makes you, you.'**
+  String get registrationWizardLifestyleHook;
+
+  /// No description provided for @registrationWizardFamilyHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us about your family'**
+  String get registrationWizardFamilyHeadline;
+
+  /// No description provided for @registrationWizardFamilyHook.
+  ///
+  /// In en, this message translates to:
+  /// **'Family is an important part of every journey.'**
+  String get registrationWizardFamilyHook;
+
+  /// No description provided for @registrationWizardHoroscopeHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Your stars can tell part of the story'**
+  String get registrationWizardHoroscopeHeadline;
+
+  /// No description provided for @registrationWizardHoroscopeHook.
+  ///
+  /// In en, this message translates to:
+  /// **'This step is optional but helps us improve compatibility.'**
+  String get registrationWizardHoroscopeHook;
+
+  /// No description provided for @registrationWizardPartnerHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Who are you hoping to meet?'**
+  String get registrationWizardPartnerHeadline;
+
+  /// No description provided for @registrationWizardPartnerHook.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us about the kind of person you\'re looking for.'**
+  String get registrationWizardPartnerHook;
+
+  /// No description provided for @registrationWizardPhotosHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Let your smile tell your story'**
+  String get registrationWizardPhotosHeadline;
+
+  /// No description provided for @registrationWizardPhotosHook.
+  ///
+  /// In en, this message translates to:
+  /// **'People connect with genuine photos.'**
+  String get registrationWizardPhotosHook;
+
+  /// No description provided for @registrationWizardVerificationHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Building trust, together'**
+  String get registrationWizardVerificationHeadline;
+
+  /// No description provided for @registrationWizardVerificationHook.
+  ///
+  /// In en, this message translates to:
+  /// **'A few quick checks to keep everyone\'s story safe.'**
+  String get registrationWizardVerificationHook;
+
+  /// No description provided for @registrationCompletingHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating your compatibility profile...'**
+  String get registrationCompletingHeadline;
+
+  /// No description provided for @registrationCompletingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This will only take a moment.'**
+  String get registrationCompletingSubtitle;
+
+  /// No description provided for @registrationCompletingStage1.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving your profile'**
+  String get registrationCompletingStage1;
+
+  /// No description provided for @registrationCompletingStage2.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing your compatibility profile'**
+  String get registrationCompletingStage2;
+
+  /// No description provided for @registrationCompletingStage3.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding meaningful matches'**
+  String get registrationCompletingStage3;
+
+  /// No description provided for @registrationCompletingStage4.
+  ///
+  /// In en, this message translates to:
+  /// **'Personalizing your experience'**
+  String get registrationCompletingStage4;
+
+  /// No description provided for @registrationCompletingErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get registrationCompletingErrorTitle;
+
+  /// No description provided for @registrationCompletingErrorMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t save your profile. Please check your connection and try again.'**
+  String get registrationCompletingErrorMessage;
+
+  /// No description provided for @registrationCompletingRetryCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to Review'**
+  String get registrationCompletingRetryCta;
+
+  /// No description provided for @registrationSuccessHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Nenjam ❤️'**
+  String get registrationSuccessHeadline;
+
+  /// No description provided for @registrationSuccessSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your story is ready. We\'ve already started finding meaningful connections for you.'**
+  String get registrationSuccessSubtitle;
+
+  /// No description provided for @registrationSuccessCompletionCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile {percent}% Complete'**
+  String registrationSuccessCompletionCard(int percent);
+
+  /// No description provided for @registrationSuccessPhotosAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos Added'**
+  String get registrationSuccessPhotosAdded;
+
+  /// No description provided for @registrationSuccessPhotosSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos Skipped'**
+  String get registrationSuccessPhotosSkipped;
+
+  /// No description provided for @registrationSuccessHoroscopeDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Horoscope Ready'**
+  String get registrationSuccessHoroscopeDone;
+
+  /// No description provided for @registrationSuccessHoroscopeSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Horoscope Skipped'**
+  String get registrationSuccessHoroscopeSkipped;
+
+  /// No description provided for @registrationSuccessPartnerPrefSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Partner Preferences Saved'**
+  String get registrationSuccessPartnerPrefSaved;
+
+  /// No description provided for @registrationSuccessCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Meet Your First Match'**
+  String get registrationSuccessCta;
+
+  /// No description provided for @profileCompletionScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Strength'**
+  String get profileCompletionScreenTitle;
+
+  /// No description provided for @profileCompletionScreenSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'See how complete your story is — and what to do next.'**
+  String get profileCompletionScreenSubtitle;
+
+  /// No description provided for @profileCompletionTierBuilding.
+  ///
+  /// In en, this message translates to:
+  /// **'Building'**
+  String get profileCompletionTierBuilding;
+
+  /// No description provided for @profileCompletionTierGood.
+  ///
+  /// In en, this message translates to:
+  /// **'Good'**
+  String get profileCompletionTierGood;
+
+  /// No description provided for @profileCompletionTierStrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Strong'**
+  String get profileCompletionTierStrong;
+
+  /// No description provided for @profileCompletionTierExceptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Exceptional'**
+  String get profileCompletionTierExceptional;
+
+  /// No description provided for @profileCompletionHighestImpactLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Highest Impact Improvement'**
+  String get profileCompletionHighestImpactLabel;
+
+  /// No description provided for @profileCompletionCompletedSectionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Story So Far'**
+  String get profileCompletionCompletedSectionsTitle;
+
+  /// No description provided for @profileCompletionMissingSectionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Still Growing'**
+  String get profileCompletionMissingSectionsTitle;
+
+  /// No description provided for @profileCompletionFutureGrowthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep Growing Your Profile'**
+  String get profileCompletionFutureGrowthTitle;
+
+  /// No description provided for @profileCompletionFutureGrowthSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Even a complete profile can go further.'**
+  String get profileCompletionFutureGrowthSubtitle;
+
+  /// No description provided for @profileCompletionModuleRegistration.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Story'**
+  String get profileCompletionModuleRegistration;
+
+  /// No description provided for @profileCompletionTipRegistration.
+  ///
+  /// In en, this message translates to:
+  /// **'Every detail helps us find your best match.'**
+  String get profileCompletionTipRegistration;
+
+  /// No description provided for @profileCompletionActionRegistration.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete Your Story'**
+  String get profileCompletionActionRegistration;
+
+  /// No description provided for @profileCompletionActionPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Boost Your Match Quality'**
+  String get profileCompletionActionPhotos;
+
+  /// No description provided for @profileCompletionActionPartnerPref.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharpen Your Matches'**
+  String get profileCompletionActionPartnerPref;
+
+  /// No description provided for @profileCompletionActionVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Build Trust'**
+  String get profileCompletionActionVerification;
+
+  /// No description provided for @profileCompletionActionHoroscope.
+  ///
+  /// In en, this message translates to:
+  /// **'Deepen Your Compatibility'**
+  String get profileCompletionActionHoroscope;
+
+  /// No description provided for @profileCompletionGrowthPsychology.
+  ///
+  /// In en, this message translates to:
+  /// **'Psychology Assessment'**
+  String get profileCompletionGrowthPsychology;
+
+  /// No description provided for @profileCompletionGrowthPsychologySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover your personality profile.'**
+  String get profileCompletionGrowthPsychologySubtitle;
+
+  /// No description provided for @profileCompletionGrowthHoroscope.
+  ///
+  /// In en, this message translates to:
+  /// **'Horoscope Compatibility'**
+  String get profileCompletionGrowthHoroscope;
+
+  /// No description provided for @profileCompletionGrowthHoroscopeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'See your astrological match insights.'**
+  String get profileCompletionGrowthHoroscopeSubtitle;
+
+  /// No description provided for @profileCompletionGrowthPrompts.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Prompts'**
+  String get profileCompletionGrowthPrompts;
+
+  /// No description provided for @profileCompletionGrowthPromptsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a few words that sound like you.'**
+  String get profileCompletionGrowthPromptsSubtitle;
+
+  /// No description provided for @profileCompletionGrowthPremium.
+  ///
+  /// In en, this message translates to:
+  /// **'Nenjam Premium'**
+  String get profileCompletionGrowthPremium;
+
+  /// No description provided for @profileCompletionGrowthPremiumSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get 5x more visibility.'**
+  String get profileCompletionGrowthPremiumSubtitle;
+
+  /// No description provided for @nenjamHubGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi {name}'**
+  String nenjamHubGreeting(String name);
+
+  /// No description provided for @nenjamHubGreetingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Here\'s your relationship intelligence for today.'**
+  String get nenjamHubGreetingSubtitle;
+
+  /// No description provided for @nenjamHubBestMatchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s Best Match'**
+  String get nenjamHubBestMatchTitle;
+
+  /// No description provided for @nenjamHubWhyThisMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Why this match?'**
+  String get nenjamHubWhyThisMatch;
+
+  /// No description provided for @nenjamHubRelationshipIntelligenceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Relationship Intelligence'**
+  String get nenjamHubRelationshipIntelligenceTitle;
+
+  /// No description provided for @nenjamHubRelationshipIntelligenceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Understand yourself, and why you match.'**
+  String get nenjamHubRelationshipIntelligenceSubtitle;
+
+  /// No description provided for @nenjamHubCardPsychology.
+  ///
+  /// In en, this message translates to:
+  /// **'Psychology'**
+  String get nenjamHubCardPsychology;
+
+  /// No description provided for @nenjamHubCardAstrology.
+  ///
+  /// In en, this message translates to:
+  /// **'Astrology'**
+  String get nenjamHubCardAstrology;
+
+  /// No description provided for @nenjamHubCardCommunication.
+  ///
+  /// In en, this message translates to:
+  /// **'Communication Style'**
+  String get nenjamHubCardCommunication;
+
+  /// No description provided for @nenjamHubCardCommunicationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How you connect and express yourself'**
+  String get nenjamHubCardCommunicationSubtitle;
+
+  /// No description provided for @nenjamHubCardLifestyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifestyle'**
+  String get nenjamHubCardLifestyle;
+
+  /// No description provided for @nenjamHubCardLifestyleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Habits, diet, and daily rhythm'**
+  String get nenjamHubCardLifestyleSubtitle;
+
+  /// No description provided for @nenjamHubCardFutureGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Future Goals'**
+  String get nenjamHubCardFutureGoals;
+
+  /// No description provided for @nenjamHubCardFutureGoalsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What you\'re both building toward'**
+  String get nenjamHubCardFutureGoalsSubtitle;
+
+  /// No description provided for @nenjamHubCardLoveLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Love Language'**
+  String get nenjamHubCardLoveLanguage;
+
+  /// No description provided for @nenjamHubCardAttachmentStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachment Style'**
+  String get nenjamHubCardAttachmentStyle;
+
+  /// No description provided for @nenjamHubComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get nenjamHubComingSoon;
+
+  /// No description provided for @nenjamHubCompatibilityReportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Compatibility Report'**
+  String get nenjamHubCompatibilityReportTitle;
+
+  /// No description provided for @nenjamHubCompatibilityReportSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How you and {name} align'**
+  String nenjamHubCompatibilityReportSubtitle(String name);
+
+  /// No description provided for @nenjamHubAxisPsychology.
+  ///
+  /// In en, this message translates to:
+  /// **'Psychology'**
+  String get nenjamHubAxisPsychology;
+
+  /// No description provided for @nenjamHubAxisAstrology.
+  ///
+  /// In en, this message translates to:
+  /// **'Astrology'**
+  String get nenjamHubAxisAstrology;
+
+  /// No description provided for @nenjamHubAxisLifestyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifestyle'**
+  String get nenjamHubAxisLifestyle;
+
+  /// No description provided for @nenjamHubAxisFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Family'**
+  String get nenjamHubAxisFamily;
+
+  /// No description provided for @nenjamHubAxisEducation.
+  ///
+  /// In en, this message translates to:
+  /// **'Education'**
+  String get nenjamHubAxisEducation;
+
+  /// No description provided for @nenjamHubAxisValues.
+  ///
+  /// In en, this message translates to:
+  /// **'Values'**
+  String get nenjamHubAxisValues;
+
+  /// No description provided for @nenjamHubAxisGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Goals'**
+  String get nenjamHubAxisGoals;
+
+  /// No description provided for @nenjamHubShowMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get nenjamHubShowMore;
+
+  /// No description provided for @nenjamHubShowLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get nenjamHubShowLess;
+
+  /// No description provided for @nenjamHubDailyInsightTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Insight'**
+  String get nenjamHubDailyInsightTitle;
+
+  /// No description provided for @nenjamHubImproveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Improve Your Match Quality'**
+  String get nenjamHubImproveTitle;
+
+  /// No description provided for @nenjamHubImproveSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Small steps, better matches.'**
+  String get nenjamHubImproveSubtitle;
+
+  /// No description provided for @nenjamHubSeeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'See all'**
+  String get nenjamHubSeeAll;
+
+  /// No description provided for @nenjamHubConversationStarterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation Starter'**
+  String get nenjamHubConversationStarterTitle;
+
+  /// No description provided for @nenjamHubConversationStarterSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'3 ways to break the ice with {name}'**
+  String nenjamHubConversationStarterSubtitle(String name);
+
+  /// No description provided for @nenjamHubUseThis.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this'**
+  String get nenjamHubUseThis;
+
+  /// No description provided for @nenjamHubRecommendationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s Recommendations'**
+  String get nenjamHubRecommendationsTitle;
+
+  /// No description provided for @nenjamHubGrowthVoiceIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice Introduction'**
+  String get nenjamHubGrowthVoiceIntro;
+
+  /// No description provided for @nenjamHubGrowthVoiceIntroSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon — let your voice speak for you.'**
+  String get nenjamHubGrowthVoiceIntroSubtitle;
+
+  /// No description provided for @nenjamHubGrowthTrustScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Trust Score'**
+  String get nenjamHubGrowthTrustScore;
+
+  /// No description provided for @nenjamHubGrowthTrustScoreSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'See how trusted your profile is.'**
+  String get nenjamHubGrowthTrustScoreSubtitle;
 
   /// No description provided for @onboardingSkip.
   ///

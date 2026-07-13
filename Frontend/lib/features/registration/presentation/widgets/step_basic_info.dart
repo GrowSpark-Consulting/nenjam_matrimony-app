@@ -6,6 +6,7 @@ import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
+import 'registration_helper_tip.dart';
 
 /// Step 1 — Basic Information
 class StepBasicInfo extends StatefulWidget {
@@ -117,15 +118,17 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.registrationBasicInfoTitle,
+          Text(l10n.registrationWizardBasicInfoHeadline,
               style: AppTypography.headlineSmall
                   .copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text(l10n.registrationBasicInfoSubtitle,
+          Text(l10n.registrationWizardBasicInfoHook,
               style: AppTypography.bodyMedium.copyWith(
                   color: isDark
                       ? AppColors.textSecondaryDark
                       : AppColors.textSecondaryLight)),
+          const SizedBox(height: 16),
+          RegistrationHelperTip(text: l10n.registrationTipBasicInfo),
           const SizedBox(height: 24),
           NmTextField(
             label: l10n.registrationFirstNameLabel,

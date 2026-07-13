@@ -77,7 +77,7 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
     RouteNames.discover,
     RouteNames.matches,
     RouteNames.messages,
-    RouteNames.astro,
+    RouteNames.nenjam,
     RouteNames.premium,
   };
 

@@ -1,76 +1,109 @@
-# OS / editor noise
+# ═══════════════════════════════════════════════════════════════════
+# Nenjam Matrimony — Root .gitignore
+#
+# This file covers repo-wide/cross-cutting concerns (secrets, editors,
+# OS noise) and acts as a monorepo-safe backstop for platform build
+# output. Frontend/.gitignore and backend/.gitignore own the detailed,
+# tool-specific rules for their own trees — see those files first.
+# ═══════════════════════════════════════════════════════════════════
+
+# ─── OS / editor noise ────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
 
-# IDEs
-.vscode/*
-!.vscode/settings.json.example
+# ─── IDEs ──────────────────────────────────────────────────────────
+# Only the personal/machine-specific VS Code files are ignored —
+# extensions.json / tasks.json (team-shared recommendations) stay
+# trackable if this project adds them later.
+.vscode/settings.json
+.vscode/launch.json
 .idea/
+*.iml
 
-# Environment files
+# ─── Environment files ─────────────────────────────────────────────
+# Real secrets must never be committed, from either root or a nested
+# app. `.env.example` (committed, no real values) is the only
+# exception.
 .env
+.env.local
+.env.*.local
 .env.*
 !.env.example
 
-# Firebase secrets
+# ─── Firebase / cloud service credentials ──────────────────────────
 serviceAccountKey.json
 *serviceAccount*.json
 firebase-adminsdk*.json
 firebase/*.json
 backend/firebase/*.json
+GoogleService-Info.plist
+google-services.json
 
-# Private keys
+# ─── Private keys, certs, keystores ────────────────────────────────
 *.pem
 *.key
 *.p12
+*.pfx
 *.crt
+*.jks
+*.keystore
+key.properties
+**/android/key.properties
 
-# Node / NestJS
+# ─── Node / NestJS (repo-wide backstop) ────────────────────────────
 node_modules/
 dist/
 build/
 coverage/
-.nest/
+logs/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.nest/
+tmp/
+.cache/
 
-# Prisma
-generated/
-.prisma/
-
-# Flutter
-Frontend/build/
+# ─── Flutter (repo-wide backstop; Frontend/.gitignore is primary) ──
 .dart_tool/
+.packages
 .flutter-plugins
 .flutter-plugins-dependencies
-.pub-cache/
 .pub/
-coverage/
+.pub-cache/
 
-# Android
-*.apk
-*.aab
-android/local.properties
-android/.gradle/
-android/app/debug/
-android/app/profile/
-android/app/release/
+# ─── Android (repo-wide backstop for any android/ dir in the tree) ─
 **/android/local.properties
 **/android/.gradle/
-**/android/app/debug/
-**/android/app/profile/
-**/android/app/release/
+**/android/**/build/
+**/android/**/captures/
+**/android/**/outputs/
+**/android/**/intermediates/
+**/android/**/*.apk
+**/android/**/*.aab
+**/*.jks
+**/*.keystore
+**/**/mapping.txt
+**/**/*.mapping
 
-# iOS
-ios/Pods/
-ios/.symlinks/
-ios/Flutter/Flutter.framework
-ios/Flutter/Flutter.podspec
+# ─── iOS / macOS / Linux / Windows Flutter ephemeral dirs ──────────
 **/ios/Pods/
 **/ios/.symlinks/
 **/ios/Flutter/Flutter.framework
 **/ios/Flutter/Flutter.podspec
+**/ios/Flutter/ephemeral/
+**/macos/Flutter/ephemeral/
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
 
-# UI prototypes / design assets
+# ─── Local uploads / scratch (repo root only — not assets/l10n) ───
+/temp/
+/tmp/
+/uploads/
+/cache/
+
+# ─── UI prototypes / design assets (not part of the shipped app) ──
 nenjam ui/

@@ -87,7 +87,7 @@ class _EmailVerifyScreenState extends ConsumerState<EmailVerifyScreen> {
       // Always CREATE MODE here — guarantees no stale draft/mode leaks in
       // from a previous session (e.g. a prior user's edit on a shared device).
       ref.read(registrationProvider.notifier).startCreateMode();
-      context.go(RouteNames.registrationWizard);
+      context.go(RouteNames.registrationWelcome);
     } else if (!silent) {
       final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(

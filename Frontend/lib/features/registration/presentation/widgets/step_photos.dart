@@ -5,6 +5,7 @@ import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
+import 'registration_helper_tip.dart';
 
 /// Step 11 — Photo Upload (Local only, no backend)
 class StepPhotos extends StatefulWidget {
@@ -28,9 +29,11 @@ class _StepPhotosState extends State<StepPhotos> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.registrationPhotosTitle, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
+          Text(l10n.registrationWizardPhotosHeadline, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text(l10n.registrationPhotosSubtitle, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationWizardPhotosHook, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          const SizedBox(height: 16),
+          RegistrationHelperTip(text: l10n.registrationTipPhotos),
           const SizedBox(height: 24),
 
           // Primary photo placeholder

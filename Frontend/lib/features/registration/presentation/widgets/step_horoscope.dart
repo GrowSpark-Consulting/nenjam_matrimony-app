@@ -5,6 +5,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
+import 'registration_helper_tip.dart';
 
 /// Step 9 — Horoscope Details
 class StepHoroscope extends StatefulWidget {
@@ -115,9 +116,11 @@ class _StepHoroscopeState extends State<StepHoroscope> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.registrationHoroscopeTitle, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
+          Text(l10n.registrationWizardHoroscopeHeadline, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text(l10n.registrationHoroscopeSubtitle, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationWizardHoroscopeHook, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          const SizedBox(height: 16),
+          RegistrationHelperTip(text: l10n.registrationTipHoroscope),
           const SizedBox(height: 24),
           Row(
             children: [

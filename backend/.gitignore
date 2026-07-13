@@ -1,24 +1,64 @@
 # Node / NestJS
 node_modules/
 dist/
+build/
 coverage/
 logs/
 *.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 *.tsbuildinfo
+.nest/
+tmp/
+.cache/
 
-# Environment files
+# Package manager lockfile hygiene — this project standardizes on pnpm
+# (pnpm-lock.yaml, tracked intentionally — see repo notes). A stray
+# package-lock.json means someone ran plain `npm install` at some
+# point; ignored here so it can't be silently regenerated/recommitted.
+# The already-tracked backend/package-lock.json should be removed
+# (`git rm --cached package-lock.json`) to match.
+package-lock.json
+yarn.lock
+
+# Environment files — real secrets (DB password, JWT secret, Firebase
+# Admin key, AWS/Razorpay/SMTP credentials, etc.) live only in these
+# and must never be committed. Only .env.example (no real values) is
+# tracked.
 .env
+.env.local
+.env.*.local
 .env.*
 !.env.example
 
-# Firebase secrets
+# Firebase / cloud service credentials
 serviceAccountKey.json
 *serviceAccount*.json
 firebase-adminsdk*.json
 firebase/*.json
 
+# Private keys, certs
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+
 # Local files
 .DS_Store
+Thumbs.db
 
-# Prisma generated
+# Local uploads / scratch — no code path writes here yet (storage is
+# S3-backed per .env), but ignored proactively for whenever local
+# temp-file handling is added before upload.
+temp/
+uploads/
+cache/
+
+# Prisma — only the generated client is ignored. schema.prisma and
+# prisma/migrations/ are tracked deliberately (see report: migrations
+# are the source of truth for schema history and must ship with the
+# app).
 libs/database/generated/

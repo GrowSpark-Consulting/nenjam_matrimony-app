@@ -12,7 +12,8 @@ import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/presentation/providers/auth_providers.dart';
-import '../../../registration/presentation/providers/registration_provider.dart';
+import '../../../profile_completion/presentation/providers/profile_completeness_provider.dart';
+import '../../../registration/presentation/utils/open_edit_profile.dart';
 import '../../domain/entities/discovery_profile_entity.dart';
 import '../../domain/entities/discover_feed_entity.dart';
 import '../../domain/entities/story_entity.dart';
@@ -49,6 +50,7 @@ class DiscoverPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feedAsync = ref.watch(discoverFeedProvider);
+    final completenessAsync = ref.watch(profileCompletenessSnapshotProvider);
 
     ref.listen(_shouldShowImproveProfilePromptProvider, (previous, next) {
       next.whenData((shouldShow) {
@@ -62,12 +64,16 @@ class DiscoverPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       drawer: NenjamNavigationDrawer(
+        // Falls back to the previous static default while loading/on error
+        // so the drawer never regresses to a broken state.
+        profileCompletionPercent:
+            completenessAsync.valueOrNull?.percentage ?? 85,
         onMyProfileTap: () => context.push(RouteNames.profile),
-        onEditProfileTap: () => _openEditProfile(context, ref),
+        onEditProfileTap: () => openEditProfile(context, ref),
         onProfileIntelligenceTap: () =>
             context.push(RouteNames.profileIntelligence),
         onVerificationCenterTap: () =>
-            _openEditProfile(context, ref, wizardStep: 11),
+            openEditProfile(context, ref, wizardStep: 11),
         onTrustScoreTap: () => context.push(RouteNames.trustScore),
         onVisitorsTap: () => context.push(RouteNames.visitors),
         onInterestSentTap: () => context.push(RouteNames.interestsSent),
@@ -80,7 +86,7 @@ class DiscoverPage extends ConsumerWidget {
         onHelpTap: () => context.push(RouteNames.help),
         onLogoutTap: () => _confirmAndLogoutFromDrawer(context, ref),
         onUpgradeTap: () => context.go(RouteNames.premium),
-        onCompleteProfileTap: () => _openEditProfile(context, ref),
+        onCompleteProfileTap: () => context.push(RouteNames.profileCompletion),
       ),
       body: feedAsync.when(
         data: (feed) => _DiscoverFeedView(feed: feed),
@@ -90,46 +96,6 @@ class DiscoverPage extends ConsumerWidget {
         ),
       ),
     );
-  }
-}
-
-/// Switches the registration provider into EDIT MODE, fetches the logged-in
-/// user's saved profile (`GET /profiles/draft`), then opens either the
-/// review summary (Edit Profile) or a specific wizard step (e.g.
-/// Verification Center) pre-populated with that data. A blocking loader
-/// covers the fetch since it's a network round-trip.
-Future<void> _openEditProfile(
-  BuildContext context,
-  WidgetRef ref, {
-  int? wizardStep,
-}) async {
-  showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => const Center(child: CircularProgressIndicator()),
-  );
-
-  try {
-    await ref.read(registrationProvider.notifier).startEditMode();
-  } catch (_) {
-    if (!context.mounted) return;
-    Navigator.of(context, rootNavigator: true).pop(); // dismiss loader
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Could not load your profile. Check your connection.'),
-      ),
-    );
-    return;
-  }
-
-  if (!context.mounted) return;
-  Navigator.of(context, rootNavigator: true).pop(); // dismiss loader
-
-  if (wizardStep != null) {
-    ref.read(registrationProvider.notifier).goToStep(wizardStep);
-    context.push(RouteNames.registrationWizard);
-  } else {
-    context.push(RouteNames.profileReview);
   }
 }
 
@@ -1056,15 +1022,24 @@ class _HorizontalCompactCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 320,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
-        itemCount: profiles.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.base),
-        itemBuilder: (_, i) => _CompactProfileCard(profile: profiles[i]),
+    // A horizontal SingleChildScrollView + Row (rather than a ListView
+    // pinned to a guessed pixel height) lets each card size itself from
+    // its own content — the row's height becomes the tallest card's
+    // natural height, so larger text-scale settings or longer localized
+    // profession/location strings simply make the row taller instead of
+    // overflowing a fixed box.
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < profiles.length; i++) ...[
+            if (i > 0) const SizedBox(width: AppSpacing.base),
+            _CompactProfileCard(profile: profiles[i]),
+          ],
+        ],
       ),
     );
   }
@@ -1091,6 +1066,7 @@ class _CompactProfileCard extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Photo

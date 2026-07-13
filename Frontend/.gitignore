@@ -3,6 +3,7 @@
 *.log
 *.pyc
 *.swp
+*.swo
 .DS_Store
 .atom/
 .build/
@@ -20,18 +21,32 @@ migrate_working_dir/
 
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
+# is commented out by default. (Root .gitignore already ignores
+# .vscode/settings.json and .vscode/launch.json specifically.)
 #.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.packages
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
 /coverage/
+
+# pubspec.lock is intentionally tracked (NOT ignored) — this is an
+# application, not a published package, so the lockfile is committed
+# for reproducible builds across the team and CI. Do not add it here.
+
+# Generated code (build_runner/freezed/json_serializable). Nothing is
+# generated yet in this codebase, but the deps are already declared in
+# pubspec.yaml — ignore proactively so generated output is never
+# committed once codegen starts being used.
+*.g.dart
+*.freezed.dart
 
 # Symbolication related
 app.*.symbols
@@ -39,14 +54,31 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Android build artifacts — Flutter's own `flutter build`/`flutter run`
+# route output through the top-level /build/ above, but opening
+# android/ directly in Android Studio builds into these paths instead,
+# so both must be covered.
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/build/
+/android/app/build/
+/android/**/build/
+/android/**/captures/
+/android/**/outputs/
+/android/**/intermediates/
+/android/**/*.apk
+/android/**/*.aab
+/android/**/mapping.txt
+
+# Test/golden-test output — never real test fixtures, always
+# regenerable by re-running the tests.
+/test/**/failures/
+**/*_testImage.png
 
 # Environment Secrets & Local Config
 .env
+.env.local
+.env.*.local
 .env.*
 !.env.example
-*.g.dart
-*.freezed.dart

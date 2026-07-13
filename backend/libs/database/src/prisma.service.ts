@@ -23,7 +23,18 @@ export class PrismaService
         user: configService.database.username,
         password: configService.database.password,
         database: configService.database.name,
+        // No timeout was previously set here, so a query that can't get a
+        // pooled connection (pool exhausted by a leaked/idle-in-transaction
+        // session) or that gets stuck behind a row lock would wait
+        // indefinitely with no error — exactly the "hangs forever, no crash"
+        // symptom this fixes: both now fail fast with a clear Postgres error
+        // instead of hanging past Dio's client-side timeout.
+        connectionTimeoutMillis: 10_000,
+        statement_timeout: 10_000,
       }),
+      // TEMPORARY DEBUG LOGGING — surfaces exact SQL + timing for the
+      // PATCH /profiles/draft/* hang investigation. Remove once resolved.
+      log: ['query', 'warn', 'error'],
     });
   }
 

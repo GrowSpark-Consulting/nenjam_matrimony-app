@@ -40,12 +40,48 @@ export class FirebaseService implements OnModuleInit {
   // Verifies a client-supplied Firebase ID token (a signed JWT). Throws on
   // any invalid/expired/malformed token — callers (FirebaseAuthGuard) decide
   // how to map that to an HTTP response.
+  //
+  // On a cache miss, the Admin SDK fetches Google's public signing certs over
+  // HTTPS before it can verify the signature. Neither the SDK nor Node's
+  // underlying http client apply a timeout to that fetch, so if outbound
+  // HTTPS to Google (proxy/firewall/DNS) is blocked or black-holed, this call
+  // hangs forever with no error — every request behind FirebaseAuthGuard
+  // stalls silently. The explicit timeout below turns that into a fast,
+  // diagnosable error instead.
   async verifyIdToken(idToken: string): Promise<DecodedIdToken> {
     if (!this.app) {
       throw new InternalServerErrorException(
         'Firebase Admin SDK is not configured on this server.',
       );
     }
-    return getAuth(this.app).verifyIdToken(idToken);
+    console.time('verifyIdToken');
+    console.log('VERIFY START');
+    try {
+      const decoded = await this.withTimeout(
+        getAuth(this.app).verifyIdToken(idToken),
+        10_000,
+        'Firebase token verification timed out — check outbound network ' +
+          'connectivity to Google (securetoken.google.com / googleapis.com).',
+      );
+      console.log('VERIFY END');
+      return decoded;
+    } finally {
+      console.timeEnd('verifyIdToken');
+    }
+  }
+
+  private withTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number,
+    timeoutMessage: string,
+  ): Promise<T> {
+    let timer: NodeJS.Timeout;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(timeoutMessage)),
+        timeoutMs,
+      );
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
   }
 }

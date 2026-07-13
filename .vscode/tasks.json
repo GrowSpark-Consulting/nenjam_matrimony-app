@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ADB Reverse",
+      "type": "shell",
+      "command": "adb",
+      "args": ["reverse", "tcp:3000", "tcp:3000"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "detail": "Forward the Android device's 127.0.0.1:3000 to this machine's 127.0.0.1:3000 over USB (see docs/development/android-usb-debugging.md)."
+    },
+    {
+      "label": "ADB Reverse: Remove All",
+      "type": "shell",
+      "command": "adb",
+      "args": ["reverse", "--remove-all"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "detail": "Remove all adb reverse port mappings."
+    }
+  ]
+}

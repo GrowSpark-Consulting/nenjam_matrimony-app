@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1060875646049-8fql6ak4vliaj6m9sncf0tkt9il852kg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.nenjam_matrimony",
+            "certificate_hash": "15fe8c7189b3d8f8e11f1f5c99a363ad61cd0a94"
+          }
+        },
+        {
           "client_id": "1060875646049-lj6dfvsbb05o7jpi70jma08m5iv2nat3.apps.googleusercontent.com",
           "client_type": 3
         }

@@ -4,15 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/route_names.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/buttons/gradient_button.dart';
-import '../../../../core/widgets/buttons/outlined_button.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/repositories/registration_repository.dart';
 import '../../domain/models/profile_draft.dart';
 import '../../domain/models/profile_flow_mode.dart';
 import '../providers/registration_provider.dart';
+import '../utils/registration_milestones.dart';
+import '../utils/registration_motivation.dart';
+import '../utils/registration_time_estimate.dart';
+import '../widgets/registration_journey_header.dart';
+import '../widgets/registration_motivation_caption.dart';
+import '../widgets/registration_sticky_bottom_bar.dart';
 import '../widgets/step_basic_info.dart';
 import '../widgets/step_education.dart';
 import '../widgets/step_family.dart';
@@ -36,22 +38,6 @@ class ProfileWizardPage extends ConsumerStatefulWidget {
 
 class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   bool _isSaving = false;
-
-  /// Localized step titles, index-aligned with [_buildStepContent].
-  List<String> _stepTitles(AppLocalizations l10n) => [
-        l10n.registrationStepBasicInfo,
-        l10n.registrationStepReligion,
-        l10n.registrationStepLanguage,
-        l10n.registrationStepLocation,
-        l10n.registrationStepEducation,
-        l10n.registrationStepPhysical,
-        l10n.registrationStepLifestyle,
-        l10n.registrationStepFamily,
-        l10n.registrationStepHoroscope,
-        l10n.registrationStepPreferences,
-        l10n.registrationStepPhotos,
-        l10n.registrationStepVerification,
-      ];
 
   Future<void> _onNext() async {
     final draft = ref.read(registrationProvider);
@@ -189,105 +175,58 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     final l10n = AppLocalizations.of(context);
     final draft = ref.watch(registrationProvider);
     final notifier = ref.read(registrationProvider.notifier);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final stepIndex = draft.currentStep;
+    final isLastStep = stepIndex == ProfileDraft.totalSteps - 1;
+    final (_, milestoneLabel) =
+        milestoneEmojiAndLabel(l10n, milestoneForStep(stepIndex));
 
     return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(onPressed: _onBack),
-        title: Text(
-          l10n.registrationStepIndicator(
-              stepIndex + 1, ProfileDraft.totalSteps),
-          style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _isSaving ? null : _onSaveExit,
-            child: Text(
-              l10n.registrationSaveExit,
-              style: AppTypography.labelLarge.copyWith(color: AppColors.primary),
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(6),
-          child: LinearProgressIndicator(
-            value: (stepIndex + 1) / ProfileDraft.totalSteps,
-            backgroundColor: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-            minHeight: 6,
-          ),
-        ),
-      ),
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              color: isDark ? AppColors.surfaceVariantDark.withValues(alpha: 0.3) : AppColors.surfaceVariantLight.withValues(alpha: 0.5),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _stepTitles(l10n)[stepIndex],
-                    style: AppTypography.titleSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
-                  ),
-                  Text(
-                    l10n.registrationPercentCompleted(
-                        draft.completionPercentage.toInt()),
-                    style: AppTypography.labelSmall.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
+            RegistrationJourneyHeader(
+              stepIndex: stepIndex,
+              totalSteps: ProfileDraft.totalSteps,
+              onBack: _onBack,
+              onSaveExit: _isSaving ? null : _onSaveExit,
+            ),
+            RegistrationMotivationCaption(
+              stepIndex: stepIndex,
+              caption: motivationCaption(l10n, stepIndex),
             ),
             const SizedBox(height: 12),
             Expanded(
               child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+                duration: const Duration(milliseconds: 400),
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.04),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                ),
                 child: KeyedSubtree(
                   key: ValueKey<int>(stepIndex),
                   child: _buildStepContent(stepIndex, draft, notifier),
                 ),
               ),
             ),
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  if (stepIndex > 0) ...[
-                    Expanded(
-                      flex: 1,
-                      child: NmOutlinedButton(
-                        label: l10n.registrationBack,
-                        onPressed: _isSaving ? null : _onBack,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                  ],
-                  Expanded(
-                    flex: 2,
-                    child: NmGradientButton(
-                      label: stepIndex == ProfileDraft.totalSteps - 1 ? l10n.registrationFinishLogin : l10n.commonContinue,
-                      icon: stepIndex == ProfileDraft.totalSteps - 1 ? Icons.check_rounded : Icons.arrow_forward_rounded,
-                      isLoading: _isSaving,
-                      onPressed: _isSaving ? null : _onNext,
-                    ),
-                  ),
-                ],
-              ),
+            RegistrationStickyBottomBar(
+              milestoneLabel: milestoneLabel,
+              estimatedTimeLabel: estimatedTimeRemainingLabel(l10n, stepIndex),
+              continueLabel: isLastStep
+                  ? l10n.registrationFinishLogin
+                  : l10n.registrationContinueYourStory,
+              continueIcon:
+                  isLastStep ? Icons.check_rounded : Icons.arrow_forward_rounded,
+              backLabel: l10n.registrationBack,
+              showBack: stepIndex > 0,
+              isLoading: _isSaving,
+              onBack: _isSaving ? null : _onBack,
+              onNext: _isSaving ? null : _onNext,
             ),
           ],
         ),

@@ -34,7 +34,13 @@ class NmVerificationCard extends StatelessWidget {
           ),
           if (onVerify != null) ...[
             const SizedBox(width: 12),
-            NmPrimaryButton(label: 'Verify', onPressed: onVerify, width: 80, height: 36),
+            // width:80 previously left no room for the label after the
+            // button theme's 24dp/side padding — it overflowed even at
+            // 1.0x text scale in English. 120 gives real headroom, and
+            // NmPrimaryButton's label now falls back to ellipsis (see
+            // core/widgets/buttons/primary_button.dart) if a locale still
+            // needs more.
+            NmPrimaryButton(label: 'Verify', onPressed: onVerify, width: 120, height: 36),
           ],
         ],
       ),
