@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/router/route_names.dart';
-import '../../../../core/services/storage_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -32,18 +31,9 @@ import '../widgets/nenjam_navigation_drawer.dart';
 ///   5. Verified Profiles — full-height card with stats
 ///   6. Near You — 2-column grid
 ///   7. Premium Members — dark navy section
-/// One-time "Improve Profile" nudge — checks (and atomically marks) a
-/// device-local flag so [DiscoverPage] can offer the Profile Intelligence
-/// hub exactly once, the first time a user lands here. Deliberately
-/// decoupled from registration/profile-draft state — see
-/// StorageService.hasSeenImproveProfilePrompt.
-final _shouldShowImproveProfilePromptProvider =
-    FutureProvider.autoDispose<bool>((ref) async {
-  if (storageService.hasSeenImproveProfilePrompt) return false;
-  await storageService.setImproveProfilePromptSeen();
-  return true;
-});
-
+///
+/// Profile Intelligence is optional enrichment, never auto-opened here —
+/// users reach it deliberately via the navigation drawer or Profile page.
 class DiscoverPage extends ConsumerWidget {
   const DiscoverPage({super.key});
 
@@ -51,15 +41,6 @@ class DiscoverPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final feedAsync = ref.watch(discoverFeedProvider);
     final completenessAsync = ref.watch(profileCompletenessSnapshotProvider);
-
-    ref.listen(_shouldShowImproveProfilePromptProvider, (previous, next) {
-      next.whenData((shouldShow) {
-        if (!shouldShow) return;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (context.mounted) context.push(RouteNames.profileIntelligence);
-        });
-      });
-    });
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
@@ -77,8 +58,7 @@ class DiscoverPage extends ConsumerWidget {
         onTrustScoreTap: () => context.push(RouteNames.trustScore),
         onVisitorsTap: () => context.push(RouteNames.visitors),
         onInterestSentTap: () => context.push(RouteNames.interestsSent),
-        onInterestReceivedTap: () =>
-            context.push(RouteNames.interestsReceived),
+        onInterestReceivedTap: () => context.push(RouteNames.interestsReceived),
         onShortlistTap: () => context.push(RouteNames.shortlisted),
         onLanguageTap: () => context.push(RouteNames.language),
         onSettingsTap: () => context.push(RouteNames.settings),
@@ -92,7 +72,9 @@ class DiscoverPage extends ConsumerWidget {
         data: (feed) => _DiscoverFeedView(feed: feed),
         loading: () => const _DiscoverLoading(),
         error: (error, _) => Center(
-          child: NmErrorWidget(onRetry: () => ref.invalidate(discoverFeedProvider)),
+          child: NmErrorWidget(
+            onRetry: () => ref.invalidate(discoverFeedProvider),
+          ),
         ),
       ),
     );
@@ -205,9 +187,7 @@ class _DiscoverFeedView extends ConsumerWidget {
               child: _SectionPadding(
                 child: _FeedSection(
                   title: l10n.discoverRecentlyJoinedTitle,
-                  child: _HorizontalCompactCards(
-                    profiles: feed.recentlyJoined,
-                  ),
+                  child: _HorizontalCompactCards(profiles: feed.recentlyJoined),
                 ),
               ),
             ),
@@ -405,7 +385,8 @@ class _NewTodaySection extends StatelessWidget {
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
               itemCount: stories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.base),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(width: AppSpacing.base),
               itemBuilder: (context, index) =>
                   _StoryBubble(story: stories[index]),
             ),
@@ -481,9 +462,9 @@ class _StoryBubble extends StatelessWidget {
   }
 
   Widget _fallback() => Container(
-        color: AppColors.primarySurface,
-        child: const Icon(Icons.person_rounded, size: 28, color: AppColors.primary),
-      );
+    color: AppColors.primarySurface,
+    child: const Icon(Icons.person_rounded, size: 28, color: AppColors.primary),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -496,8 +477,10 @@ class _SectionPadding extends StatelessWidget {
   const _SectionPadding({required this.child});
 
   @override
-  Widget build(BuildContext context) =>
-      Padding(padding: const EdgeInsets.only(top: AppSpacing.xl2), child: child);
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: AppSpacing.xl2),
+    child: child,
+  );
 }
 
 class _FeedSection extends StatelessWidget {
@@ -530,7 +513,11 @@ class _FeedSection extends StatelessWidget {
                 child: Row(
                   children: [
                     if (icon != null) ...[
-                      Icon(icon, size: 20, color: iconColor ?? AppColors.accentGold),
+                      Icon(
+                        icon,
+                        size: 20,
+                        color: iconColor ?? AppColors.accentGold,
+                      ),
                       const SizedBox(width: AppSpacing.sm),
                     ],
                     Flexible(
@@ -579,10 +566,7 @@ class _LargeProfileCard extends StatelessWidget {
   final DiscoveryProfileEntity profile;
   final bool showStats;
 
-  const _LargeProfileCard({
-    required this.profile,
-    required this.showStats,
-  });
+  const _LargeProfileCard({required this.profile, required this.showStats});
 
   @override
   Widget build(BuildContext context) {
@@ -673,7 +657,8 @@ class _LargeProfileCard extends StatelessWidget {
                         Text(
                           [
                             if (profile.location.isNotEmpty) profile.location,
-                            if (profile.profession.isNotEmpty) profile.profession,
+                            if (profile.profession.isNotEmpty)
+                              profile.profession,
                           ].join(' • '),
                           style: AppTypography.bodyMedium.copyWith(
                             color: Colors.white.withValues(alpha: 0.8),
@@ -683,9 +668,13 @@ class _LargeProfileCard extends StatelessWidget {
                         ),
 
                       // Stats row (Match / Astro / Trust) for verified card
-                      if (showStats && profile.compatibility.aiMatchPercent > 0) ...[
+                      if (showStats &&
+                          profile.compatibility.aiMatchPercent > 0) ...[
                         const SizedBox(height: AppSpacing.sm),
-                        _StatsRow(l10n: l10n, compatibility: profile.compatibility),
+                        _StatsRow(
+                          l10n: l10n,
+                          compatibility: profile.compatibility,
+                        ),
                       ],
 
                       // Tag pills
@@ -694,9 +683,10 @@ class _LargeProfileCard extends StatelessWidget {
                         Wrap(
                           spacing: 6,
                           runSpacing: 5,
-                          children: _tagPills(l10n, profile)
-                              .map((t) => _TagPill(label: t))
-                              .toList(),
+                          children: _tagPills(
+                            l10n,
+                            profile,
+                          ).map((t) => _TagPill(label: t)).toList(),
                         ),
                       ],
 
@@ -717,7 +707,9 @@ class _LargeProfileCard extends StatelessWidget {
 
   List<String> _tagPills(AppLocalizations l10n, DiscoveryProfileEntity p) {
     final list = <String>[...p.tags];
-    if (p.isVerified && !list.contains('Verified')) list.insert(0, 'Verified Identity');
+    if (p.isVerified && !list.contains('Verified')) {
+      list.insert(0, 'Verified Identity');
+    }
     if (p.isPremium && !list.contains('Premium Plus')) list.add('Premium Plus');
     return list.take(4).map((tag) => _localizedTag(l10n, tag)).toList();
   }
@@ -803,7 +795,9 @@ class _Stat extends StatelessWidget {
         Text(
           value,
           style: AppTypography.labelMedium.copyWith(
-            color: isGold ? const Color(0xFFFFE08F) : AppColors.faceVerificationGreen,
+            color: isGold
+                ? const Color(0xFFFFE08F)
+                : AppColors.faceVerificationGreen,
             fontWeight: FontWeight.w700,
             fontSize: 14,
           ),
@@ -818,11 +812,11 @@ class _Stat extends StatelessWidget {
 class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
-        width: 1,
-        height: 28,
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        color: Colors.white.withValues(alpha: 0.2),
-      );
+    width: 1,
+    height: 28,
+    margin: const EdgeInsets.symmetric(horizontal: 16),
+    color: Colors.white.withValues(alpha: 0.2),
+  );
 }
 
 /// Interested (full-width gold) + Shortlist / View Profile buttons.
@@ -869,21 +863,27 @@ class _CardButtonsState extends State<_CardButtons> {
               child: Container(
                 height: 54,
                 decoration: BoxDecoration(
-                  color: _sent ? AppColors.faceVerificationGreen : const Color(0xFFFFE08F),
+                  color: _sent
+                      ? AppColors.faceVerificationGreen
+                      : const Color(0xFFFFE08F),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      _sent ? Icons.check_circle_rounded : Icons.favorite_rounded,
+                      _sent
+                          ? Icons.check_circle_rounded
+                          : Icons.favorite_rounded,
                       size: 20,
                       color: _sent ? Colors.white : const Color(0xFF241A00),
                     ),
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        _sent ? l10n.discoverInterestSentLabel : l10n.actionInterested,
+                        _sent
+                            ? l10n.discoverInterestSentLabel
+                            : l10n.actionInterested,
                         style: AppTypography.button.copyWith(
                           color: _sent ? Colors.white : const Color(0xFF241A00),
                           fontWeight: FontWeight.w700,
@@ -906,10 +906,14 @@ class _CardButtonsState extends State<_CardButtons> {
           children: [
             Expanded(
               child: _GlassBtn(
-                icon: _shortlisted ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                icon: _shortlisted
+                    ? Icons.bookmark_rounded
+                    : Icons.bookmark_border_rounded,
                 label: l10n.profileCardShortlist,
                 onTap: () => setState(() => _shortlisted = !_shortlisted),
-                iconColor: _shortlisted ? AppColors.accentGoldLight : Colors.white,
+                iconColor: _shortlisted
+                    ? AppColors.accentGoldLight
+                    : Colors.white,
               ),
             ),
             const SizedBox(width: 12),
@@ -1085,18 +1089,26 @@ class _CompactProfileCard extends StatelessWidget {
                       constraints: const BoxConstraints(maxWidth: 160),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusFull,
+                          ),
                           border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2)),
+                            color: Colors.white.withValues(alpha: 0.2),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.bolt_rounded,
-                                size: 10, color: Color(0xFFFFE08F)),
+                            const Icon(
+                              Icons.bolt_rounded,
+                              size: 10,
+                              color: Color(0xFFFFE08F),
+                            ),
                             const SizedBox(width: 3),
                             Flexible(
                               child: Text(
@@ -1159,7 +1171,9 @@ class _CompactProfileCard extends StatelessWidget {
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusSm,
+                        ),
                       ),
                     ),
                     child: Text(
@@ -1225,15 +1239,15 @@ class _NearYouCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceVariantLight,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        border: Border.all(color: AppColors.dividerLight.withValues(alpha: 0.15)),
+        border: Border.all(
+          color: AppColors.dividerLight.withValues(alpha: 0.15),
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: _CardImage(photoUrls: profile.photoUrls),
-          ),
+          Expanded(child: _CardImage(photoUrls: profile.photoUrls)),
           Padding(
             padding: const EdgeInsets.all(10),
             child: Column(
@@ -1272,7 +1286,9 @@ class _NearYouCard extends StatelessWidget {
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusSm,
+                        ),
                       ),
                     ),
                     child: Text(
@@ -1369,9 +1385,9 @@ class _PremiumMembersSection extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
                 itemCount: profiles.length,
-                separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.base),
-                itemBuilder: (_, i) =>
-                    _PremiumMemberCard(profile: profiles[i]),
+                separatorBuilder: (_, __) =>
+                    const SizedBox(width: AppSpacing.base),
+                itemBuilder: (_, i) => _PremiumMemberCard(profile: profiles[i]),
               ),
             ),
           ],
@@ -1511,7 +1527,10 @@ class _FeedFooter extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base, vertical: AppSpacing.xl3),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.base,
+        vertical: AppSpacing.xl3,
+      ),
       child: Column(
         children: [
           Icon(
@@ -1564,9 +1583,13 @@ class _CardImage extends StatelessWidget {
   }
 
   Widget _placeholder() => Container(
-        color: AppColors.surfaceVariantDark,
-        child: const Center(
-          child: Icon(Icons.person_rounded, size: 48, color: AppColors.textTertiaryDark),
-        ),
-      );
+    color: AppColors.surfaceVariantDark,
+    child: const Center(
+      child: Icon(
+        Icons.person_rounded,
+        size: 48,
+        color: AppColors.textTertiaryDark,
+      ),
+    ),
+  );
 }

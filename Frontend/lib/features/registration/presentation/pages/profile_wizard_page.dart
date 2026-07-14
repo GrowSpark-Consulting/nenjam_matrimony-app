@@ -59,15 +59,32 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     }
 
     setState(() => _isSaving = true);
+    final ok = await _syncCurrentStep(notifier);
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+    if (!ok) return;
+
+    if (draft.currentStep < ProfileDraft.totalSteps - 1) {
+      notifier.nextStep();
+    } else {
+      context.go(RouteNames.profileReview);
+    }
+  }
+
+  /// Persists the current step's data to the backend. Shared by the
+  /// "Continue" and "Save & Exit" CREATE-mode actions so the save/error
+  /// handling only lives in one place. Shows an error snackbar and returns
+  /// false on failure.
+  Future<bool> _syncCurrentStep(RegistrationNotifier notifier) async {
     try {
       await notifier.syncCurrentStepToBackend();
+      return true;
     } on RegistrationApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _isSaving = false);
+      if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not save this step: ${e.message}')),
       );
-      return;
+      return false;
     } on DioException catch (e) {
       // TEMPORARY DEBUG LOGGING — real diagnostic detail for the
       // registration-save connection issue. Remove once PATCH
@@ -80,32 +97,22 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
         '\n  responseBody: ${e.response?.data}'
         '\n  message    : ${e.message}',
       );
-      if (!mounted) return;
-      setState(() => _isSaving = false);
+      if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Could not save this step. Check your connection.'),
         ),
       );
-      return;
+      return false;
     } catch (e) {
       debugPrint('[RegistrationSave] Unexpected error: $e');
-      if (!mounted) return;
-      setState(() => _isSaving = false);
+      if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Could not save this step. Check your connection.'),
         ),
       );
-      return;
-    }
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-
-    if (draft.currentStep < ProfileDraft.totalSteps - 1) {
-      notifier.nextStep();
-    } else {
-      context.go(RouteNames.profileReview);
+      return false;
     }
   }
 
@@ -118,20 +125,29 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     }
   }
 
-  /// CREATE MODE: unchanged — leaves the wizard to sign in later.
+  /// CREATE MODE: persists progress on the current step and returns to
+  /// Profile Review, so the user can resume editing any section later
+  /// instead of losing what they've entered so far.
   /// EDIT MODE: saves the section being edited and returns to Discover.
   Future<void> _onSaveExit() async {
-    if (ref.read(profileFlowModeProvider) != ProfileFlowMode.edit) {
-      context.push(RouteNames.login);
+    final notifier = ref.read(registrationProvider.notifier);
+
+    if (ref.read(profileFlowModeProvider) == ProfileFlowMode.edit) {
+      setState(() => _isSaving = true);
+      final ok = await _saveAndFinalizeForEdit(notifier);
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      if (!ok) return;
+      _exitEditModeToDiscover(notifier);
       return;
     }
-    final notifier = ref.read(registrationProvider.notifier);
+
     setState(() => _isSaving = true);
-    final ok = await _saveAndFinalizeForEdit(notifier);
+    final ok = await _syncCurrentStep(notifier);
     if (!mounted) return;
     setState(() => _isSaving = false);
     if (!ok) return;
-    _exitEditModeToDiscover(notifier);
+    context.go(RouteNames.profileReview);
   }
 
   /// EDIT MODE only — persists the section currently open and re-finalizes
@@ -177,8 +193,10 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     final notifier = ref.read(registrationProvider.notifier);
     final stepIndex = draft.currentStep;
     final isLastStep = stepIndex == ProfileDraft.totalSteps - 1;
-    final (_, milestoneLabel) =
-        milestoneEmojiAndLabel(l10n, milestoneForStep(stepIndex));
+    final (_, milestoneLabel) = milestoneEmojiAndLabel(
+      l10n,
+      milestoneForStep(stepIndex),
+    );
 
     return Scaffold(
       body: SafeArea(
@@ -220,8 +238,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
               continueLabel: isLastStep
                   ? l10n.registrationFinishLogin
                   : l10n.registrationContinueYourStory,
-              continueIcon:
-                  isLastStep ? Icons.check_rounded : Icons.arrow_forward_rounded,
+              continueIcon: isLastStep
+                  ? Icons.check_rounded
+                  : Icons.arrow_forward_rounded,
               backLabel: l10n.registrationBack,
               showBack: stepIndex > 0,
               isLoading: _isSaving,
@@ -234,32 +253,72 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     );
   }
 
-  Widget _buildStepContent(int step, ProfileDraft draft, RegistrationNotifier notifier) {
+  Widget _buildStepContent(
+    int step,
+    ProfileDraft draft,
+    RegistrationNotifier notifier,
+  ) {
     switch (step) {
       case 0:
-        return StepBasicInfo(details: draft.basicDetails, onChanged: notifier.updateBasicDetails);
+        return StepBasicInfo(
+          details: draft.basicDetails,
+          onChanged: notifier.updateBasicDetails,
+        );
       case 1:
-        return StepReligion(details: draft.religionDetails, onChanged: notifier.updateReligionDetails);
+        return StepReligion(
+          details: draft.religionDetails,
+          onChanged: notifier.updateReligionDetails,
+        );
       case 2:
-        return StepLanguage(details: draft.languageDetails, onChanged: notifier.updateLanguageDetails);
+        return StepLanguage(
+          details: draft.languageDetails,
+          onChanged: notifier.updateLanguageDetails,
+        );
       case 3:
-        return StepLocation(details: draft.locationDetails, onChanged: notifier.updateLocationDetails);
+        return StepLocation(
+          details: draft.locationDetails,
+          onChanged: notifier.updateLocationDetails,
+        );
       case 4:
-        return StepEducation(details: draft.educationDetails, onChanged: notifier.updateEducationDetails);
+        return StepEducation(
+          details: draft.educationDetails,
+          onChanged: notifier.updateEducationDetails,
+        );
       case 5:
-        return StepPhysical(details: draft.physicalDetails, onChanged: notifier.updatePhysicalDetails);
+        return StepPhysical(
+          details: draft.physicalDetails,
+          onChanged: notifier.updatePhysicalDetails,
+        );
       case 6:
-        return StepLifestyle(details: draft.lifestyleDetails, onChanged: notifier.updateLifestyleDetails);
+        return StepLifestyle(
+          details: draft.lifestyleDetails,
+          onChanged: notifier.updateLifestyleDetails,
+        );
       case 7:
-        return StepFamily(details: draft.familyDetails, onChanged: notifier.updateFamilyDetails);
+        return StepFamily(
+          details: draft.familyDetails,
+          onChanged: notifier.updateFamilyDetails,
+        );
       case 8:
-        return StepHoroscope(details: draft.horoscopeDetails, onChanged: notifier.updateHoroscopeDetails);
+        return StepHoroscope(
+          details: draft.horoscopeDetails,
+          onChanged: notifier.updateHoroscopeDetails,
+        );
       case 9:
-        return StepPartnerPref(details: draft.partnerPreference, onChanged: notifier.updatePartnerPreference);
+        return StepPartnerPref(
+          details: draft.partnerPreference,
+          onChanged: notifier.updatePartnerPreference,
+        );
       case 10:
-        return StepPhotos(gallery: draft.photoGallery, onChanged: notifier.updatePhotoGallery);
+        return StepPhotos(
+          gallery: draft.photoGallery,
+          onChanged: notifier.updatePhotoGallery,
+        );
       case 11:
-        return StepVerification(status: draft.verificationStatus, onChanged: notifier.updateVerificationStatus);
+        return StepVerification(
+          status: draft.verificationStatus,
+          onChanged: notifier.updateVerificationStatus,
+        );
       default:
         return const SizedBox.shrink();
     }

@@ -57,15 +57,13 @@ class StorageService {
   }
 
   // ─── Authentication Tokens ───────────────────────────────────────
-  String? get accessToken =>
-      _prefs.getString(AppConstants.keyAccessToken);
+  String? get accessToken => _prefs.getString(AppConstants.keyAccessToken);
 
   Future<void> setAccessToken(String token) async {
     await _prefs.setString(AppConstants.keyAccessToken, token);
   }
 
-  String? get refreshToken =>
-      _prefs.getString(AppConstants.keyRefreshToken);
+  String? get refreshToken => _prefs.getString(AppConstants.keyRefreshToken);
 
   Future<void> setRefreshToken(String token) async {
     await _prefs.setString(AppConstants.keyRefreshToken, token);
@@ -119,14 +117,6 @@ class StorageService {
     await _prefs.setBool(AppConstants.keyOnboardingDone, true);
   }
 
-  // ─── Improve Profile prompt (Relationship Intelligence hub) ──────
-  bool get hasSeenImproveProfilePrompt =>
-      _prefs.getBool(AppConstants.keyImproveProfilePromptSeen) ?? false;
-
-  Future<void> setImproveProfilePromptSeen() async {
-    await _prefs.setBool(AppConstants.keyImproveProfilePromptSeen, true);
-  }
-
   // ─── Notifications ──────────────────────────────────────────────
   bool get notificationsEnabled =>
       _prefs.getBool(AppConstants.keyNotificationsEnabled) ?? true;
@@ -160,16 +150,24 @@ class StorageService {
     String? profileFlowMode,
     String? profileDraftJson,
   }) async {
-    final futures = <Future<bool>>[_prefs.setString(AppConstants.keyLastRoute, route)];
-    futures.add(registrationStep != null
-        ? _prefs.setInt(AppConstants.keyRegistrationStep, registrationStep)
-        : _prefs.remove(AppConstants.keyRegistrationStep));
-    futures.add(profileFlowMode != null
-        ? _prefs.setString(AppConstants.keyProfileFlowMode, profileFlowMode)
-        : _prefs.remove(AppConstants.keyProfileFlowMode));
-    futures.add(profileDraftJson != null
-        ? _prefs.setString(AppConstants.keyProfileDraftJson, profileDraftJson)
-        : _prefs.remove(AppConstants.keyProfileDraftJson));
+    final futures = <Future<bool>>[
+      _prefs.setString(AppConstants.keyLastRoute, route),
+    ];
+    futures.add(
+      registrationStep != null
+          ? _prefs.setInt(AppConstants.keyRegistrationStep, registrationStep)
+          : _prefs.remove(AppConstants.keyRegistrationStep),
+    );
+    futures.add(
+      profileFlowMode != null
+          ? _prefs.setString(AppConstants.keyProfileFlowMode, profileFlowMode)
+          : _prefs.remove(AppConstants.keyProfileFlowMode),
+    );
+    futures.add(
+      profileDraftJson != null
+          ? _prefs.setString(AppConstants.keyProfileDraftJson, profileDraftJson)
+          : _prefs.remove(AppConstants.keyProfileDraftJson),
+    );
     await Future.wait(futures);
   }
 
@@ -189,10 +187,7 @@ class StorageService {
 
   /// Clears user-specific data while preserving app settings.
   Future<void> clearUserData() async {
-    await Future.wait([
-      clearTokens(),
-      _prefs.remove(AppConstants.keyUserId),
-    ]);
+    await Future.wait([clearTokens(), _prefs.remove(AppConstants.keyUserId)]);
   }
 }
 

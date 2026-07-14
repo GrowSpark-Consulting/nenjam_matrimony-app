@@ -50,12 +50,6 @@ abstract final class AppConstants {
   static const String keyOnboardingDone = 'onboarding_done';
   static const String keyNotificationsEnabled = 'notifications_enabled';
 
-  /// One-time "Improve Profile" nudge (Relationship Intelligence hub) shown
-  /// after a user first lands on Discover — device-local only, deliberately
-  /// decoupled from registration/profile-draft state.
-  static const String keyImproveProfilePromptSeen =
-      'improve_profile_prompt_seen';
-
   /// Phone number captured during signup, held locally only until the number
   /// is verified and linked to the Firebase account. Not a profile store.
   static const String keyPendingPhone = 'pending_signup_phone';
@@ -79,6 +73,15 @@ abstract final class AppConstants {
 
   /// Supported Languages roadmap (translations rolled out incrementally).
   static const List<String> supportedLanguages = [
-    'en', 'ta', 'hi', 'gu', 'te', 'kn', 'ml', 'mr', 'bn', 'ar',
+    'en',
+    'ta',
+    'hi',
+    'gu',
+    'te',
+    'kn',
+    'ml',
+    'mr',
+    'bn',
+    'ar',
   ];
 }

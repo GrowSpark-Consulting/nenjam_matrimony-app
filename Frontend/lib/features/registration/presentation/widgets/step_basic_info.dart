@@ -48,14 +48,16 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
   }
 
   void _emit() {
-    widget.onChanged(BasicDetails(
-      firstName: _firstNameCtrl.text.trim(),
-      lastName: _lastNameCtrl.text.trim(),
-      gender: _gender,
-      dob: _dob,
-      maritalStatus: _maritalStatus,
-      profileCreatedFor: widget.details.profileCreatedFor,
-    ));
+    widget.onChanged(
+      BasicDetails(
+        firstName: _firstNameCtrl.text.trim(),
+        lastName: _lastNameCtrl.text.trim(),
+        gender: _gender,
+        dob: _dob,
+        maritalStatus: _maritalStatus,
+        profileCreatedFor: widget.details.profileCreatedFor,
+      ),
+    );
   }
 
   Future<void> _pickDob() async {
@@ -68,9 +70,9 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: Theme.of(context).colorScheme.copyWith(
-                primary: AppColors.primary,
-                onPrimary: Colors.white,
-              ),
+            primary: AppColors.primary,
+            onPrimary: Colors.white,
+          ),
         ),
         child: child!,
       ),
@@ -79,6 +81,14 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
       setState(() => _dob = picked);
       _emit();
     }
+  }
+
+  /// Every registration field is optional — this only enforces name format
+  /// (letters/length) when the user actually types something, rather than
+  /// requiring a value the way [Validators.name] does.
+  String? _optionalName(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    return Validators.name(value);
   }
 
   int? get _age {
@@ -94,19 +104,19 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
 
   /// Localized display label for a stored gender value (value stays English).
   String _genderLabel(AppLocalizations l10n, String value) => switch (value) {
-        'Male' => l10n.genderMale,
-        'Female' => l10n.genderFemale,
-        _ => value,
-      };
+    'Male' => l10n.genderMale,
+    'Female' => l10n.genderFemale,
+    _ => value,
+  };
 
   /// Localized display label for a stored marital-status value.
   String _maritalLabel(AppLocalizations l10n, String value) => switch (value) {
-        'Never Married' => l10n.maritalNeverMarried,
-        'Divorced' => l10n.maritalDivorced,
-        'Widowed' => l10n.maritalWidowed,
-        'Awaiting Divorce' => l10n.maritalAwaitingDivorce,
-        _ => value,
-      };
+    'Never Married' => l10n.maritalNeverMarried,
+    'Divorced' => l10n.maritalDivorced,
+    'Widowed' => l10n.maritalWidowed,
+    'Awaiting Divorce' => l10n.maritalAwaitingDivorce,
+    _ => value,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -118,15 +128,21 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.registrationWizardBasicInfoHeadline,
-              style: AppTypography.headlineSmall
-                  .copyWith(fontWeight: FontWeight.w700)),
+          Text(
+            l10n.registrationWizardBasicInfoHeadline,
+            style: AppTypography.headlineSmall.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(l10n.registrationWizardBasicInfoHook,
-              style: AppTypography.bodyMedium.copyWith(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight)),
+          Text(
+            l10n.registrationWizardBasicInfoHook,
+            style: AppTypography.bodyMedium.copyWith(
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
+            ),
+          ),
           const SizedBox(height: 16),
           RegistrationHelperTip(text: l10n.registrationTipBasicInfo),
           const SizedBox(height: 24),
@@ -134,7 +150,7 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
             label: l10n.registrationFirstNameLabel,
             hint: l10n.registrationFirstNameHint,
             controller: _firstNameCtrl,
-            validator: Validators.name,
+            validator: _optionalName,
             onChanged: (_) => _emit(),
           ),
           const SizedBox(height: 16),
@@ -142,7 +158,7 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
             label: l10n.registrationLastNameLabel,
             hint: l10n.registrationLastNameHint,
             controller: _lastNameCtrl,
-            validator: Validators.name,
+            validator: _optionalName,
             onChanged: (_) => _emit(),
           ),
           const SizedBox(height: 20),
@@ -182,42 +198,47 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
                       : '',
                 ),
                 suffix: const Icon(Icons.calendar_today_rounded, size: 20),
-                validator: (v) =>
-                    _dob == null ? l10n.registrationDobError : null,
               ),
             ),
           ),
           if (_age != null) ...[
             const SizedBox(height: 8),
-            Text(l10n.registrationAgeYears(_age!),
-                style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.primary, fontWeight: FontWeight.w600)),
+            Text(
+              l10n.registrationAgeYears(_age!),
+              style: AppTypography.labelMedium.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
           const SizedBox(height: 20),
-          Text(l10n.registrationMaritalStatusLabel,
-              style: AppTypography.labelLarge),
+          Text(
+            l10n.registrationMaritalStatusLabel,
+            style: AppTypography.labelLarge,
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             // Values stay English (stored/emitted); only the label is localized.
-            children: [
-              'Never Married',
-              'Divorced',
-              'Widowed',
-              'Awaiting Divorce'
-            ].map((s) {
-              final sel = _maritalStatus == s;
-              return ChoiceChip(
-                label: Text(_maritalLabel(l10n, s)),
-                selected: sel,
-                selectedColor: AppColors.primarySurface,
-                onSelected: (_) {
-                  setState(() => _maritalStatus = s);
-                  _emit();
-                },
-              );
-            }).toList(),
+            children:
+                [
+                  'Never Married',
+                  'Divorced',
+                  'Widowed',
+                  'Awaiting Divorce',
+                ].map((s) {
+                  final sel = _maritalStatus == s;
+                  return ChoiceChip(
+                    label: Text(_maritalLabel(l10n, s)),
+                    selected: sel,
+                    selectedColor: AppColors.primarySurface,
+                    onSelected: (_) {
+                      setState(() => _maritalStatus = s);
+                      _emit();
+                    },
+                  );
+                }).toList(),
           ),
           const SizedBox(height: 32),
         ],
