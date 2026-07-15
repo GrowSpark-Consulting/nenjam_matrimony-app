@@ -31,7 +31,6 @@ export '../widgets/buttons/primary_button.dart';
 export '../widgets/buttons/secondary_button.dart';
 export '../widgets/buttons/text_button.dart';
 
-export '../widgets/cards/ai_recommendation_card.dart';
 export '../widgets/cards/chat_card.dart';
 export '../widgets/cards/compatibility_card.dart';
 export '../widgets/cards/feedback_cards.dart';

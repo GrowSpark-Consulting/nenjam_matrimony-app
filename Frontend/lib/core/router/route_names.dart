@@ -22,7 +22,6 @@ abstract final class RouteNames {
   static const String registrationCompleting = '/registration/completing';
   static const String registrationSuccess = '/registration/success';
   static const String discover = '/discover';
-  static const String nenjam = '/nenjam';
   static const String search = '/search';
   static const String matches = '/matches';
   static const String messages = '/messages';
@@ -67,7 +66,6 @@ abstract final class RouteNames {
   static const String registrationCompletingName = 'registrationCompleting';
   static const String registrationSuccessName = 'registrationSuccess';
   static const String discoverName = 'discover';
-  static const String nenjamName = 'nenjam';
   static const String searchName = 'search';
   static const String matchesName = 'matches';
   static const String messagesName = 'messages';

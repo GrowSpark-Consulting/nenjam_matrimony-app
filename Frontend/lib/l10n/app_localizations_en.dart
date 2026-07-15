@@ -346,9 +346,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navMessages => 'Inbox';
 
   @override
-  String get navNenjam => 'Nenjam';
-
-  @override
   String get navPremium => 'Premium';
 
   @override
@@ -1561,6 +1558,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registrationMotivationStep9 => 'Just a few more details.';
 
   @override
+  String get registrationMotivationQuiz =>
+      'This helps us understand what makes you, you.';
+
+  @override
   String get registrationMotivationStep10 =>
       'You\'ve already completed most of your story.';
 
@@ -1607,6 +1608,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get registrationTipHoroscope =>
       'This step is optional but improves astrology compatibility.';
+
+  @override
+  String get registrationTipQuiz =>
+      'This step is optional but improves match quality.';
 
   @override
   String get registrationTipPartnerPref => 'You can always update these later.';
@@ -1685,6 +1690,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get registrationWizardHoroscopeHook =>
       'This step is optional but helps us improve compatibility.';
+
+  @override
+  String get registrationWizardQuizHeadline => 'What makes you, you?';
+
+  @override
+  String get registrationWizardQuizHook =>
+      'A short personality assessment to help us find someone truly compatible.';
 
   @override
   String get registrationWizardPartnerHeadline => 'Who are you hoping to meet?';
@@ -1854,139 +1866,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profileCompletionGrowthPremiumSubtitle =>
       'Get 5x more visibility.';
-
-  @override
-  String nenjamHubGreeting(String name) {
-    return 'Hi $name';
-  }
-
-  @override
-  String get nenjamHubGreetingSubtitle =>
-      'Here\'s your relationship intelligence for today.';
-
-  @override
-  String get nenjamHubBestMatchTitle => 'Today\'s Best Match';
-
-  @override
-  String get nenjamHubWhyThisMatch => 'Why this match?';
-
-  @override
-  String get nenjamHubRelationshipIntelligenceTitle =>
-      'Relationship Intelligence';
-
-  @override
-  String get nenjamHubRelationshipIntelligenceSubtitle =>
-      'Understand yourself, and why you match.';
-
-  @override
-  String get nenjamHubCardPsychology => 'Psychology';
-
-  @override
-  String get nenjamHubCardAstrology => 'Astrology';
-
-  @override
-  String get nenjamHubCardCommunication => 'Communication Style';
-
-  @override
-  String get nenjamHubCardCommunicationSubtitle =>
-      'How you connect and express yourself';
-
-  @override
-  String get nenjamHubCardLifestyle => 'Lifestyle';
-
-  @override
-  String get nenjamHubCardLifestyleSubtitle => 'Habits, diet, and daily rhythm';
-
-  @override
-  String get nenjamHubCardFutureGoals => 'Future Goals';
-
-  @override
-  String get nenjamHubCardFutureGoalsSubtitle =>
-      'What you\'re both building toward';
-
-  @override
-  String get nenjamHubCardLoveLanguage => 'Love Language';
-
-  @override
-  String get nenjamHubCardAttachmentStyle => 'Attachment Style';
-
-  @override
-  String get nenjamHubComingSoon => 'Coming soon';
-
-  @override
-  String get nenjamHubCompatibilityReportTitle => 'Compatibility Report';
-
-  @override
-  String nenjamHubCompatibilityReportSubtitle(String name) {
-    return 'How you and $name align';
-  }
-
-  @override
-  String get nenjamHubAxisPsychology => 'Psychology';
-
-  @override
-  String get nenjamHubAxisAstrology => 'Astrology';
-
-  @override
-  String get nenjamHubAxisLifestyle => 'Lifestyle';
-
-  @override
-  String get nenjamHubAxisFamily => 'Family';
-
-  @override
-  String get nenjamHubAxisEducation => 'Education';
-
-  @override
-  String get nenjamHubAxisValues => 'Values';
-
-  @override
-  String get nenjamHubAxisGoals => 'Goals';
-
-  @override
-  String get nenjamHubShowMore => 'Show more';
-
-  @override
-  String get nenjamHubShowLess => 'Show less';
-
-  @override
-  String get nenjamHubDailyInsightTitle => 'Daily Insight';
-
-  @override
-  String get nenjamHubImproveTitle => 'Improve Your Match Quality';
-
-  @override
-  String get nenjamHubImproveSubtitle => 'Small steps, better matches.';
-
-  @override
-  String get nenjamHubSeeAll => 'See all';
-
-  @override
-  String get nenjamHubConversationStarterTitle => 'Conversation Starter';
-
-  @override
-  String nenjamHubConversationStarterSubtitle(String name) {
-    return '3 ways to break the ice with $name';
-  }
-
-  @override
-  String get nenjamHubUseThis => 'Use this';
-
-  @override
-  String get nenjamHubRecommendationsTitle => 'Today\'s Recommendations';
-
-  @override
-  String get nenjamHubGrowthVoiceIntro => 'Voice Introduction';
-
-  @override
-  String get nenjamHubGrowthVoiceIntroSubtitle =>
-      'Coming soon — let your voice speak for you.';
-
-  @override
-  String get nenjamHubGrowthTrustScore => 'Trust Score';
-
-  @override
-  String get nenjamHubGrowthTrustScoreSubtitle =>
-      'See how trusted your profile is.';
 
   @override
   String get onboardingSkip => 'Skip';

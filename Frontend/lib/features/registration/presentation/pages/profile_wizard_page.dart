@@ -25,10 +25,11 @@ import '../widgets/step_location.dart';
 import '../widgets/step_partner_pref.dart';
 import '../widgets/step_photos.dart';
 import '../widgets/step_physical.dart';
+import '../widgets/step_psychological_quiz.dart';
 import '../widgets/step_religion.dart';
 import '../widgets/step_verification.dart';
 
-/// Container wizard screen hosting all 12 registration steps.
+/// Container wizard screen hosting all 13 registration steps.
 class ProfileWizardPage extends ConsumerStatefulWidget {
   const ProfileWizardPage({super.key});
 
@@ -305,16 +306,18 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
           onChanged: notifier.updateHoroscopeDetails,
         );
       case 9:
+        return const StepPsychologicalQuiz();
+      case 10:
         return StepPartnerPref(
           details: draft.partnerPreference,
           onChanged: notifier.updatePartnerPreference,
         );
-      case 10:
+      case 11:
         return StepPhotos(
           gallery: draft.photoGallery,
           onChanged: notifier.updatePhotoGallery,
         );
-      case 11:
+      case 12:
         return StepVerification(
           status: draft.verificationStatus,
           onChanged: notifier.updateVerificationStatus,

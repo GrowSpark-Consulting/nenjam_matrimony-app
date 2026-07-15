@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/nenjam_hub/presentation/pages/nenjam_hub_page.dart';
 import '../../features/astro/presentation/pages/horoscope_matching_page.dart';
 import '../../features/authentication/presentation/pages/auth_selection_page.dart';
 import '../../features/authentication/presentation/pages/email_verify_screen.dart';
@@ -308,13 +307,6 @@ GoRouter createRouter() {
               name: RouteNames.premiumName,
               pageBuilder: (context, state) => const NoTransitionPage(
                 child: PremiumPage(),
-              ),
-            ),
-            GoRoute(
-              path: RouteNames.nenjam,
-              name: RouteNames.nenjamName,
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: NenjamHubPage(),
               ),
             ),
           ],

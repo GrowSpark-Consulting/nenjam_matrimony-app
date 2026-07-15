@@ -254,7 +254,7 @@ Full detail in [§8](#8-registration-wizard). Summary: a single `ProfileWizardPa
 ### 4.8 Core network layer
 
 `ApiClient` (`core/network/api_client.dart`) wraps a Dio singleton:
-- `baseUrl`: from `.env.dev` → `http://192.168.168.109:3000` (a LAN IP — **a real device/emulator must be on the same network as the dev machine running the backend**; see [§22](#22-troubleshooting)).
+- `baseUrl`: from `.env.dev` → `http://127.0.0.1:3000` (no LAN IP — a physical device reaches this over USB via `adb reverse tcp:3000 tcp:3000`; see [§22](#22-troubleshooting) and `docs/development/android-usb-debugging.md`).
 - Timeouts: 15s connect, 30s send/receive.
 - `validateStatus: status < 500` — 4xx responses resolve normally rather than throwing, so callers must check status codes themselves.
 - Interceptor chain: `AuthInterceptor` (injects `Authorization: Bearer <Firebase ID token>`) → `LoggingInterceptor` → a **verbose debug `LogInterceptor`** (flagged in-code as temporary, logs full request/response bodies) → `ErrorInterceptor` (maps Dio/HTTP errors to user-facing messages).
@@ -850,7 +850,7 @@ See [§7.2](#72-splash--session-resolution). Firebase's SDK handles ID token ref
 
 ## 11. API Documentation
 
-Base URL (dev): `http://192.168.168.109:3000` (from `Frontend/.env.dev` — a LAN IP, see [§22](#22-troubleshooting)). All endpoints below are prefixed with this base URL. **Auth column**: 🔒 = requires `Authorization: Bearer <Firebase ID token>` via `FirebaseAuthGuard`.
+Base URL (dev): `http://127.0.0.1:3000` (from `Frontend/.env.dev` — reached over USB via `adb reverse`, see [§22](#22-troubleshooting)). All endpoints below are prefixed with this base URL. **Auth column**: 🔒 = requires `Authorization: Bearer <Firebase ID token>` via `FirebaseAuthGuard`.
 
 ### 11.1 Live, implemented endpoints (`ProfilesModule`)
 
@@ -1193,7 +1193,7 @@ flutter pub get          # also triggers `flutter gen-l10n` (flutter: generate: 
 flutter run               # standard debug run; no build flavors are wired up
 ```
 
-⚠️ `main.dart` hardcodes `AppEnvironment.dev`, which loads `.env.dev` → `API_BASE_URL=http://192.168.168.109:3000` (a LAN IP). **Update this IP to match whatever machine is actually running the backend**, or the app will fail to reach it (see [§22](#22-troubleshooting)).
+`main.dart` hardcodes `AppEnvironment.dev`, which loads `.env.dev` → `API_BASE_URL=http://127.0.0.1:3000`. This is intentionally **not** a LAN IP — for a physical device over USB, run `scripts/dev/start_dev.ps1` (or the "Start Development" VS Code task) to start the backend and wire up `adb reverse tcp:3000 tcp:3000`, so `127.0.0.1:3000` on the phone tunnels straight to the backend on your machine regardless of Wi-Fi network (see [§22](#22-troubleshooting) and `docs/development/android-usb-debugging.md`).
 
 ### 21.2 Running the backend
 
@@ -1264,7 +1264,7 @@ pnpm start:websocket   # apps/websocket — port 3001
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Flutter app can't reach the backend (`DioException`, connection refused/timeout) | `API_BASE_URL` in `.env.dev` points to a stale LAN IP (`192.168.168.109`) that isn't the machine actually running `pnpm start:dev`, or the device/emulator isn't on the same network | Update `Frontend/.env.dev`'s `API_BASE_URL` to the current host's LAN IP (or `10.0.2.2` for the Android emulator talking to `localhost`); restart the app after editing `.env.dev` since dotenv is loaded once at startup |
+| Flutter app on a physical device can't reach the backend (`DioException`, connection refused/timeout) | `API_BASE_URL` in `.env.dev` is `http://127.0.0.1:3000` by design (no LAN IP) — this fails whenever the backend isn't running, `adb reverse tcp:3000 tcp:3000` hasn't been (re-)run since the last USB reconnect, or the phone is unplugged. These three look identical from the app. In debug builds the app itself shows a "Backend unreachable" banner with this checklist (see `core/network/backend_connectivity_checker.dart`) | Run `scripts/dev/start_dev.ps1` (or the "Start Development" VS Code task), which starts the backend, waits for it to be ready, and sets up `adb reverse` in one step. See `docs/development/android-usb-debugging.md`. For the Android **emulator** (not a physical device), use `10.0.2.2` instead — `adb reverse` doesn't apply there. Do **not** hardcode a LAN IP; it breaks on network changes |
 | Backend won't start — Joi validation error on boot | A required env var is missing (`DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME`, `REDIS_HOST`, `REDIS_PORT`, `ELASTICSEARCH_NODE`, or `JWT_SECRET` < 16 chars) | Copy `backend/.env.example` → `.env`, fill in every required key; check `libs/config/src/validation.ts` for the exact Joi schema if the error message is unclear |
 | Every `FirebaseAuthGuard`-protected endpoint returns 500 | `FIREBASE_PROJECT_ID`/`FIREBASE_CLIENT_EMAIL`/`FIREBASE_PRIVATE_KEY` not set — Firebase Admin never initialized | Set all three; note `FIREBASE_PRIVATE_KEY`'s `\n` sequences must be literal backslash-n in the env file (the code unescapes them at load time) |
 | Prisma errors on `pnpm prisma:migrate:dev`/`deploy` | `DATABASE_URL` (separate from the discrete `DATABASE_HOST/PORT/...` vars) not set, or out of sync with them | Prisma CLI/adapter path reads `DATABASE_URL` specifically — make sure it's set and matches the discrete vars |

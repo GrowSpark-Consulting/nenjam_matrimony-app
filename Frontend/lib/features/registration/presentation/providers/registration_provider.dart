@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_providers.dart';
+import '../../../psychology/domain/models/personality_result.dart';
+import '../../../psychology/presentation/providers/personality_provider.dart';
 import '../../data/repositories/registration_repository.dart';
 import '../../domain/models/profile_draft.dart';
 import '../../domain/models/profile_flow_mode.dart';
@@ -34,9 +36,11 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   // ─── Backend sync ────────────────────────────────────────────────────
   //
   // Called from ProfileWizardPage's "Continue" button — sends whichever
-  // step's data was just filled in. Steps 10 (photos) and 11 (verification)
-  // aren't sent here: photo upload isn't wired to S3 yet, and verification
-  // status is read-only, reflecting other modules.
+  // step's data was just filled in. Step 9 (psychological quiz) is synced
+  // independently by the psychology feature's own repository the moment
+  // the quiz is submitted, not through this draft. Steps 11 (photos) and
+  // 12 (verification) aren't sent here either: photo upload isn't wired to
+  // S3 yet, and verification status is read-only, reflecting other modules.
   Future<void> syncCurrentStepToBackend() async {
     final repo = ref.read(registrationRepositoryProvider);
     switch (state.currentStep) {
@@ -67,11 +71,12 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
       case 8:
         await repo.updateHoroscopeDetails(state.horoscopeDetails);
         return;
-      case 9:
+      case 10:
         await repo.updatePartnerPreference(state.partnerPreference);
         return;
       default:
-        // Steps 10-11: nothing to sync.
+        // Steps 9 (psychological quiz), 11 (photos), 12 (verification):
+        // nothing to sync here.
         return;
     }
   }
@@ -185,17 +190,30 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     state = state.copyWith(horoscopeDetails: details);
   }
 
-  // ─── Step 10: Partner Preference ───────────────────────────────────
+  // ─── Step 10: Psychological Quiz (read-only, on demand) ──────────────
+  //
+  // No answers/scores/completion flag are ever mirrored into ProfileDraft
+  // — the psychology feature (PersonalityRepository) is the single source
+  // of truth. When registration flow logic needs to know step-10 status
+  // (e.g. finalize-time checks), it pulls straight from there instead of
+  // maintaining a synchronized copy. StepPsychologicalQuiz itself never
+  // calls this — it displays status by watching
+  // myPersonalityResultProvider directly, the same as everywhere else.
+  Future<PersonalityResult?> psychologyQuizResult() {
+    return ref.read(personalityRepositoryProvider).getMyResult();
+  }
+
+  // ─── Step 11: Partner Preference ───────────────────────────────────
   void updatePartnerPreference(PartnerPreference details) {
     state = state.copyWith(partnerPreference: details);
   }
 
-  // ─── Step 11: Photos ───────────────────────────────────────────────
+  // ─── Step 12: Photos ───────────────────────────────────────────────
   void updatePhotoGallery(PhotoGallery gallery) {
     state = state.copyWith(photoGallery: gallery);
   }
 
-  // ─── Step 12: Verification ─────────────────────────────────────────
+  // ─── Step 13: Verification ─────────────────────────────────────────
   void updateVerificationStatus(VerificationStatus status) {
     state = state.copyWith(verificationStatus: status);
   }

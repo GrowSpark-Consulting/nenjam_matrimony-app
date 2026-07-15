@@ -16,14 +16,17 @@ enum RegistrationMilestone {
 }
 
 /// Inclusive step-index ranges for each milestone, aligned with
-/// [ProfileDraft.totalSteps] (12 steps, index 0-11).
+/// [ProfileDraft.totalSteps] (13 steps, index 0-12).
+///
+/// `compatibility` spans Horoscope (8) and the Psychological Quiz (9) —
+/// both optional, both about deeper-than-demographic matching.
 const Map<RegistrationMilestone, (int, int)> registrationMilestoneStepRanges = {
   RegistrationMilestone.gettingStarted: (0, 0),
   RegistrationMilestone.aboutYou: (1, 2),
   RegistrationMilestone.yourWorld: (3, 5),
   RegistrationMilestone.lifestyle: (6, 7),
   RegistrationMilestone.compatibility: (8, 9),
-  RegistrationMilestone.ready: (10, 11),
+  RegistrationMilestone.ready: (10, 12),
 };
 
 /// Returns which milestone a given wizard [step] index belongs to.

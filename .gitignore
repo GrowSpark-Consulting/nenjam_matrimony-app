@@ -15,10 +15,9 @@ Thumbs.db
 
 # ─── IDEs ──────────────────────────────────────────────────────────
 # Only the personal/machine-specific VS Code files are ignored —
-# extensions.json / tasks.json (team-shared recommendations) stay
-# trackable if this project adds them later.
+# extensions.json / tasks.json / launch.json (team-shared recommendations
+# and the "Start Development" USB-debug launch config) stay trackable.
 .vscode/settings.json
-.vscode/launch.json
 .idea/
 *.iml
 

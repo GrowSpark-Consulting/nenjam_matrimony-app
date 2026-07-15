@@ -348,9 +348,6 @@ class AppLocalizationsTa extends AppLocalizations {
   String get navMessages => 'இன்பாக்ஸ்';
 
   @override
-  String get navNenjam => 'நெஞ்சம்';
-
-  @override
   String get navPremium => 'பிரீமியம்';
 
   @override
@@ -1572,6 +1569,10 @@ class AppLocalizationsTa extends AppLocalizations {
   String get registrationMotivationStep9 => 'இன்னும் சில விவரங்கள் மட்டுமே.';
 
   @override
+  String get registrationMotivationQuiz =>
+      'இது உங்களை உங்களாக்குவது என்ன என்பதைப் புரிந்துகொள்ள உதவுகிறது.';
+
+  @override
   String get registrationMotivationStep10 =>
       'உங்கள் கதையின் பெரும்பகுதியை ஏற்கனவே முடித்துவிட்டீர்கள்.';
 
@@ -1617,6 +1618,10 @@ class AppLocalizationsTa extends AppLocalizations {
   @override
   String get registrationTipHoroscope =>
       'இந்த படி விருப்பத்தேர்வு ஆனால் ஜோதிட பொருத்தத்தை மேம்படுத்துகிறது.';
+
+  @override
+  String get registrationTipQuiz =>
+      'இந்த படி விருப்பத்தேர்வு ஆனால் பொருத்தத்தின் தரத்தை மேம்படுத்துகிறது.';
 
   @override
   String get registrationTipPartnerPref =>
@@ -1698,6 +1703,13 @@ class AppLocalizationsTa extends AppLocalizations {
   @override
   String get registrationWizardHoroscopeHook =>
       'இந்த படி விருப்பத்தேர்வு ஆனால் பொருத்தத்தை மேம்படுத்த உதவுகிறது.';
+
+  @override
+  String get registrationWizardQuizHeadline => 'உங்களை உங்களாக்குவது என்ன?';
+
+  @override
+  String get registrationWizardQuizHook =>
+      'உண்மையிலேயே பொருந்தக்கூடிய ஒருவரைக் கண்டறிய உதவும் ஒரு குறுகிய ஆளுமை மதிப்பீடு.';
 
   @override
   String get registrationWizardPartnerHeadline =>
@@ -1879,138 +1891,6 @@ class AppLocalizationsTa extends AppLocalizations {
   @override
   String get profileCompletionGrowthPremiumSubtitle =>
       '5 மடங்கு அதிக காட்சிப்புலனாகுங்கள்.';
-
-  @override
-  String nenjamHubGreeting(String name) {
-    return 'வணக்கம் $name';
-  }
-
-  @override
-  String get nenjamHubGreetingSubtitle => 'இன்றைய உங்கள் உறவு நுண்ணறிவு இதோ.';
-
-  @override
-  String get nenjamHubBestMatchTitle => 'இன்றைய சிறந்த பொருத்தம்';
-
-  @override
-  String get nenjamHubWhyThisMatch => 'ஏன் இந்த பொருத்தம்?';
-
-  @override
-  String get nenjamHubRelationshipIntelligenceTitle => 'உறவு நுண்ணறிவு';
-
-  @override
-  String get nenjamHubRelationshipIntelligenceSubtitle =>
-      'உங்களையும், நீங்கள் ஏன் பொருந்துகிறீர்கள் என்பதையும் புரிந்துகொள்ளுங்கள்.';
-
-  @override
-  String get nenjamHubCardPsychology => 'உளவியல்';
-
-  @override
-  String get nenjamHubCardAstrology => 'ஜோதிடம்';
-
-  @override
-  String get nenjamHubCardCommunication => 'தொடர்பு பாணி';
-
-  @override
-  String get nenjamHubCardCommunicationSubtitle =>
-      'நீங்கள் எப்படி தொடர்புகொள்கிறீர்கள் மற்றும் வெளிப்படுத்துகிறீர்கள்';
-
-  @override
-  String get nenjamHubCardLifestyle => 'வாழ்க்கை முறை';
-
-  @override
-  String get nenjamHubCardLifestyleSubtitle =>
-      'பழக்கவழக்கங்கள், உணவு முறை மற்றும் தினசரி வாழ்க்கை';
-
-  @override
-  String get nenjamHubCardFutureGoals => 'எதிர்கால இலக்குகள்';
-
-  @override
-  String get nenjamHubCardFutureGoalsSubtitle =>
-      'நீங்கள் இருவரும் எதை நோக்கி உருவாக்குகிறீர்கள்';
-
-  @override
-  String get nenjamHubCardLoveLanguage => 'அன்பு மொழி';
-
-  @override
-  String get nenjamHubCardAttachmentStyle => 'பிணைப்பு பாணி';
-
-  @override
-  String get nenjamHubComingSoon => 'விரைவில் வருகிறது';
-
-  @override
-  String get nenjamHubCompatibilityReportTitle => 'பொருத்தம் அறிக்கை';
-
-  @override
-  String nenjamHubCompatibilityReportSubtitle(String name) {
-    return 'நீங்களும் $name எவ்வளவு பொருந்துகிறீர்கள்';
-  }
-
-  @override
-  String get nenjamHubAxisPsychology => 'உளவியல்';
-
-  @override
-  String get nenjamHubAxisAstrology => 'ஜோதிடம்';
-
-  @override
-  String get nenjamHubAxisLifestyle => 'வாழ்க்கை முறை';
-
-  @override
-  String get nenjamHubAxisFamily => 'குடும்பம்';
-
-  @override
-  String get nenjamHubAxisEducation => 'கல்வி';
-
-  @override
-  String get nenjamHubAxisValues => 'மதிப்புகள்';
-
-  @override
-  String get nenjamHubAxisGoals => 'இலக்குகள்';
-
-  @override
-  String get nenjamHubShowMore => 'மேலும் காட்டு';
-
-  @override
-  String get nenjamHubShowLess => 'குறைவாக காட்டு';
-
-  @override
-  String get nenjamHubDailyInsightTitle => 'இன்றைய நுண்ணறிவு';
-
-  @override
-  String get nenjamHubImproveTitle => 'உங்கள் பொருத்த தரத்தை மேம்படுத்துங்கள்';
-
-  @override
-  String get nenjamHubImproveSubtitle => 'சிறிய படிகள், சிறந்த பொருத்தங்கள்.';
-
-  @override
-  String get nenjamHubSeeAll => 'அனைத்தையும் காண்க';
-
-  @override
-  String get nenjamHubConversationStarterTitle => 'உரையாடல் தொடக்கம்';
-
-  @override
-  String nenjamHubConversationStarterSubtitle(String name) {
-    return '$name உடன் பேசத் தொடங்க 3 வழிகள்';
-  }
-
-  @override
-  String get nenjamHubUseThis => 'இதைப் பயன்படுத்து';
-
-  @override
-  String get nenjamHubRecommendationsTitle => 'இன்றைய பரிந்துரைகள்';
-
-  @override
-  String get nenjamHubGrowthVoiceIntro => 'குரல் அறிமுகம்';
-
-  @override
-  String get nenjamHubGrowthVoiceIntroSubtitle =>
-      'விரைவில் வருகிறது — உங்கள் குரலே பேசட்டும்.';
-
-  @override
-  String get nenjamHubGrowthTrustScore => 'நம்பிக்கை மதிப்பெண்';
-
-  @override
-  String get nenjamHubGrowthTrustScoreSubtitle =>
-      'உங்கள் சுயவிவரம் எவ்வளவு நம்பகமானது என்பதைப் பாருங்கள்.';
 
   @override
   String get onboardingSkip => 'தவிர்';

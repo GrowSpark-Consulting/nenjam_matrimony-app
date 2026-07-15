@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Nenjam (USB / dev)",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "Frontend",
+      "program": "lib/main.dart",
+      "preLaunchTask": "Start Development"
+    }
+  ]
+}

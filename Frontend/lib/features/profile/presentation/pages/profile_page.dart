@@ -368,7 +368,7 @@ class ProfilePage extends ConsumerWidget {
                       draft?.partnerPreference ?? const PartnerPreference(),
                     ),
                     onEditTap: () =>
-                        openEditProfile(context, ref, wizardStep: 9),
+                        openEditProfile(context, ref, wizardStep: 10),
                   ),
                 ),
                 gap,
@@ -385,7 +385,7 @@ class ProfilePage extends ConsumerWidget {
                     // URLs once photo upload/CDN storage exists.
                     photoUrls: const [],
                     onAddTap: () =>
-                        openEditProfile(context, ref, wizardStep: 10),
+                        openEditProfile(context, ref, wizardStep: 11),
                   ),
                 ),
                 gap,

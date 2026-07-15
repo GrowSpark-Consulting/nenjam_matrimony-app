@@ -21,7 +21,7 @@ import '../../data/repositories/registration_repository.dart';
 import '../../domain/models/profile_flow_mode.dart';
 import '../providers/registration_provider.dart';
 
-/// Summary review screen displaying all 12 wizard sections before entering Home.
+/// Summary review screen displaying all 13 wizard sections before entering Home.
 ///
 /// Displays the profile completion percentage and allows editing any section
 /// by jumping back to the correct wizard step.
@@ -307,13 +307,39 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // ─── Step 10: Partner Preferences ─────────────
+                    // ─── Step 10: Psychological Quiz ──────────────
+                    //
+                    // Reuses the same PsychologySection widget and
+                    // myPersonalityResultProvider as the psychology feature
+                    // and the (former edit-mode-only) Profile Intelligence
+                    // block below — no separate review-row implementation.
+                    Text(
+                      l10n.registrationWizardQuizHeadline,
+                      style: AppTypography.titleMedium
+                          .copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    Consumer(builder: (context, ref, _) {
+                      final personalityAsync =
+                          ref.watch(myPersonalityResultProvider);
+                      return PsychologySection(
+                        result: personalityAsync.value ??
+                            const PersonalityResult(),
+                        onTakeQuizTap: () async {
+                          await context.push(RouteNames.psychologyQuiz);
+                          ref.invalidate(myPersonalityResultProvider);
+                        },
+                      );
+                    }),
+                    const SizedBox(height: 16),
+
+                    // ─── Step 11: Partner Preferences ─────────────
                     _ReviewSection(
                       title: l10n.registrationPartnerTitle,
                       icon: Icons.handshake_rounded,
-                      stepIndex: 9,
+                      stepIndex: 10,
                       isDark: isDark,
-                      onEdit: () => editStep(9),
+                      onEdit: () => editStep(10),
                       items: [
                         _ri('Age Range',
                             draft.partnerPreference.preferredAgeRange),
@@ -330,13 +356,13 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // ─── Step 11: Photos ──────────────────────────
+                    // ─── Step 12: Photos ──────────────────────────
                     _ReviewSection(
                       title: l10n.registrationPhotosTitle,
                       icon: Icons.photo_library_rounded,
-                      stepIndex: 10,
+                      stepIndex: 11,
                       isDark: isDark,
-                      onEdit: () => editStep(10),
+                      onEdit: () => editStep(11),
                       items: [
                         _ri('Primary Photo',
                             draft.photoGallery.primaryPhotoPath != null
@@ -348,13 +374,13 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // ─── Step 12: Verification ────────────────────
+                    // ─── Step 13: Verification ────────────────────
                     _ReviewSection(
                       title: l10n.registrationStepVerification,
                       icon: Icons.verified_rounded,
-                      stepIndex: 11,
+                      stepIndex: 12,
                       isDark: isDark,
-                      onEdit: () => editStep(11),
+                      onEdit: () => editStep(12),
                       items: [
                         _ri('Mobile', draft.verificationStatus.mobileVerified
                             ? 'Verified ✓'
@@ -372,14 +398,14 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                     ),
                     // ─── Profile Intelligence (EDIT MODE ONLY) ─────
                     //
-                    // Registration mode never shows this — new users are
-                    // never blocked by missing prompts/personality/
-                    // horoscope-compatibility, since Relationship
-                    // Intelligence is optional profile enrichment, not
-                    // registration data. Sourced entirely from independent
-                    // providers (profile_prompts / psychology / astro
-                    // features) — never from ProfileDraft, registrationProvider
-                    // or RegistrationRepository.
+                    // Registration mode already showed the personality quiz
+                    // as Step 10 above. This block only covers prompts and
+                    // horoscope-compatibility matching — those stay optional
+                    // enrichment, added anytime from Edit Profile, never
+                    // blocking a new user. Sourced entirely from independent
+                    // providers (profile_prompts / astro features) — never
+                    // from ProfileDraft, registrationProvider or
+                    // RegistrationRepository.
                     if (isEditMode) ...[
                       const SizedBox(height: 24),
                       Text(
@@ -407,19 +433,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                             await context.push(RouteNames.choosePrompt,
                                 extra: prompts);
                             ref.invalidate(myPromptsProvider);
-                          },
-                        );
-                      }),
-                      const SizedBox(height: 16),
-                      Consumer(builder: (context, ref, _) {
-                        final personalityAsync =
-                            ref.watch(myPersonalityResultProvider);
-                        return PsychologySection(
-                          result: personalityAsync.value ??
-                              const PersonalityResult(),
-                          onTakeQuizTap: () async {
-                            await context.push(RouteNames.psychologyQuiz);
-                            ref.invalidate(myPersonalityResultProvider);
                           },
                         );
                       }),

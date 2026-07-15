@@ -740,12 +740,6 @@ abstract class AppLocalizations {
   /// **'Inbox'**
   String get navMessages;
 
-  /// No description provided for @navNenjam.
-  ///
-  /// In en, this message translates to:
-  /// **'Nenjam'**
-  String get navNenjam;
-
   /// No description provided for @navPremium.
   ///
   /// In en, this message translates to:
@@ -3098,6 +3092,12 @@ abstract class AppLocalizations {
   /// **'Just a few more details.'**
   String get registrationMotivationStep9;
 
+  /// No description provided for @registrationMotivationQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'This helps us understand what makes you, you.'**
+  String get registrationMotivationQuiz;
+
   /// No description provided for @registrationMotivationStep10.
   ///
   /// In en, this message translates to:
@@ -3169,6 +3169,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This step is optional but improves astrology compatibility.'**
   String get registrationTipHoroscope;
+
+  /// No description provided for @registrationTipQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'This step is optional but improves match quality.'**
+  String get registrationTipQuiz;
 
   /// No description provided for @registrationTipPartnerPref.
   ///
@@ -3295,6 +3301,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This step is optional but helps us improve compatibility.'**
   String get registrationWizardHoroscopeHook;
+
+  /// No description provided for @registrationWizardQuizHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'What makes you, you?'**
+  String get registrationWizardQuizHeadline;
+
+  /// No description provided for @registrationWizardQuizHook.
+  ///
+  /// In en, this message translates to:
+  /// **'A short personality assessment to help us find someone truly compatible.'**
+  String get registrationWizardQuizHook;
 
   /// No description provided for @registrationWizardPartnerHeadline.
   ///
@@ -3595,246 +3613,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Get 5x more visibility.'**
   String get profileCompletionGrowthPremiumSubtitle;
-
-  /// No description provided for @nenjamHubGreeting.
-  ///
-  /// In en, this message translates to:
-  /// **'Hi {name}'**
-  String nenjamHubGreeting(String name);
-
-  /// No description provided for @nenjamHubGreetingSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Here\'s your relationship intelligence for today.'**
-  String get nenjamHubGreetingSubtitle;
-
-  /// No description provided for @nenjamHubBestMatchTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Today\'s Best Match'**
-  String get nenjamHubBestMatchTitle;
-
-  /// No description provided for @nenjamHubWhyThisMatch.
-  ///
-  /// In en, this message translates to:
-  /// **'Why this match?'**
-  String get nenjamHubWhyThisMatch;
-
-  /// No description provided for @nenjamHubRelationshipIntelligenceTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Relationship Intelligence'**
-  String get nenjamHubRelationshipIntelligenceTitle;
-
-  /// No description provided for @nenjamHubRelationshipIntelligenceSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Understand yourself, and why you match.'**
-  String get nenjamHubRelationshipIntelligenceSubtitle;
-
-  /// No description provided for @nenjamHubCardPsychology.
-  ///
-  /// In en, this message translates to:
-  /// **'Psychology'**
-  String get nenjamHubCardPsychology;
-
-  /// No description provided for @nenjamHubCardAstrology.
-  ///
-  /// In en, this message translates to:
-  /// **'Astrology'**
-  String get nenjamHubCardAstrology;
-
-  /// No description provided for @nenjamHubCardCommunication.
-  ///
-  /// In en, this message translates to:
-  /// **'Communication Style'**
-  String get nenjamHubCardCommunication;
-
-  /// No description provided for @nenjamHubCardCommunicationSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'How you connect and express yourself'**
-  String get nenjamHubCardCommunicationSubtitle;
-
-  /// No description provided for @nenjamHubCardLifestyle.
-  ///
-  /// In en, this message translates to:
-  /// **'Lifestyle'**
-  String get nenjamHubCardLifestyle;
-
-  /// No description provided for @nenjamHubCardLifestyleSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Habits, diet, and daily rhythm'**
-  String get nenjamHubCardLifestyleSubtitle;
-
-  /// No description provided for @nenjamHubCardFutureGoals.
-  ///
-  /// In en, this message translates to:
-  /// **'Future Goals'**
-  String get nenjamHubCardFutureGoals;
-
-  /// No description provided for @nenjamHubCardFutureGoalsSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'What you\'re both building toward'**
-  String get nenjamHubCardFutureGoalsSubtitle;
-
-  /// No description provided for @nenjamHubCardLoveLanguage.
-  ///
-  /// In en, this message translates to:
-  /// **'Love Language'**
-  String get nenjamHubCardLoveLanguage;
-
-  /// No description provided for @nenjamHubCardAttachmentStyle.
-  ///
-  /// In en, this message translates to:
-  /// **'Attachment Style'**
-  String get nenjamHubCardAttachmentStyle;
-
-  /// No description provided for @nenjamHubComingSoon.
-  ///
-  /// In en, this message translates to:
-  /// **'Coming soon'**
-  String get nenjamHubComingSoon;
-
-  /// No description provided for @nenjamHubCompatibilityReportTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Compatibility Report'**
-  String get nenjamHubCompatibilityReportTitle;
-
-  /// No description provided for @nenjamHubCompatibilityReportSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'How you and {name} align'**
-  String nenjamHubCompatibilityReportSubtitle(String name);
-
-  /// No description provided for @nenjamHubAxisPsychology.
-  ///
-  /// In en, this message translates to:
-  /// **'Psychology'**
-  String get nenjamHubAxisPsychology;
-
-  /// No description provided for @nenjamHubAxisAstrology.
-  ///
-  /// In en, this message translates to:
-  /// **'Astrology'**
-  String get nenjamHubAxisAstrology;
-
-  /// No description provided for @nenjamHubAxisLifestyle.
-  ///
-  /// In en, this message translates to:
-  /// **'Lifestyle'**
-  String get nenjamHubAxisLifestyle;
-
-  /// No description provided for @nenjamHubAxisFamily.
-  ///
-  /// In en, this message translates to:
-  /// **'Family'**
-  String get nenjamHubAxisFamily;
-
-  /// No description provided for @nenjamHubAxisEducation.
-  ///
-  /// In en, this message translates to:
-  /// **'Education'**
-  String get nenjamHubAxisEducation;
-
-  /// No description provided for @nenjamHubAxisValues.
-  ///
-  /// In en, this message translates to:
-  /// **'Values'**
-  String get nenjamHubAxisValues;
-
-  /// No description provided for @nenjamHubAxisGoals.
-  ///
-  /// In en, this message translates to:
-  /// **'Goals'**
-  String get nenjamHubAxisGoals;
-
-  /// No description provided for @nenjamHubShowMore.
-  ///
-  /// In en, this message translates to:
-  /// **'Show more'**
-  String get nenjamHubShowMore;
-
-  /// No description provided for @nenjamHubShowLess.
-  ///
-  /// In en, this message translates to:
-  /// **'Show less'**
-  String get nenjamHubShowLess;
-
-  /// No description provided for @nenjamHubDailyInsightTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Daily Insight'**
-  String get nenjamHubDailyInsightTitle;
-
-  /// No description provided for @nenjamHubImproveTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Improve Your Match Quality'**
-  String get nenjamHubImproveTitle;
-
-  /// No description provided for @nenjamHubImproveSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Small steps, better matches.'**
-  String get nenjamHubImproveSubtitle;
-
-  /// No description provided for @nenjamHubSeeAll.
-  ///
-  /// In en, this message translates to:
-  /// **'See all'**
-  String get nenjamHubSeeAll;
-
-  /// No description provided for @nenjamHubConversationStarterTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Conversation Starter'**
-  String get nenjamHubConversationStarterTitle;
-
-  /// No description provided for @nenjamHubConversationStarterSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'3 ways to break the ice with {name}'**
-  String nenjamHubConversationStarterSubtitle(String name);
-
-  /// No description provided for @nenjamHubUseThis.
-  ///
-  /// In en, this message translates to:
-  /// **'Use this'**
-  String get nenjamHubUseThis;
-
-  /// No description provided for @nenjamHubRecommendationsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Today\'s Recommendations'**
-  String get nenjamHubRecommendationsTitle;
-
-  /// No description provided for @nenjamHubGrowthVoiceIntro.
-  ///
-  /// In en, this message translates to:
-  /// **'Voice Introduction'**
-  String get nenjamHubGrowthVoiceIntro;
-
-  /// No description provided for @nenjamHubGrowthVoiceIntroSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Coming soon — let your voice speak for you.'**
-  String get nenjamHubGrowthVoiceIntroSubtitle;
-
-  /// No description provided for @nenjamHubGrowthTrustScore.
-  ///
-  /// In en, this message translates to:
-  /// **'Trust Score'**
-  String get nenjamHubGrowthTrustScore;
-
-  /// No description provided for @nenjamHubGrowthTrustScoreSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'See how trusted your profile is.'**
-  String get nenjamHubGrowthTrustScoreSubtitle;
 
   /// No description provided for @onboardingSkip.
   ///

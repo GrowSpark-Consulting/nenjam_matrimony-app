@@ -44,6 +44,16 @@ $ pnpm run start:dev
 $ pnpm run start:prod
 ```
 
+## Development: Android USB debugging
+
+The Flutter app (`Frontend/.env.dev`) reaches this backend at
+`http://127.0.0.1:3000` — including from a physical phone over USB, via
+`adb reverse tcp:3000 tcp:3000` (no LAN IP involved). Run
+`scripts/dev/start_dev.ps1` from the repo root (or the **Start
+Development** VS Code task) to start the backend and set up `adb reverse`
+together. See
+[`docs/development/android-usb-debugging.md`](../docs/development/android-usb-debugging.md).
+
 ## Run tests
 
 ```bash

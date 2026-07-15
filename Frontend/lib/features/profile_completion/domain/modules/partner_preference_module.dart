@@ -22,7 +22,7 @@ class PartnerPreferenceModule extends ProfileCompletionModule {
     return ModuleStatus(
       isComplete: hasAny,
       progress: hasAny ? 1.0 : 0.0,
-      wizardStep: 9,
+      wizardStep: 10,
     );
   }
 }

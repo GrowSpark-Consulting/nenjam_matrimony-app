@@ -24,7 +24,7 @@ class PsychologyQuizPage extends ConsumerWidget {
     final state = ref.watch(personalityQuizProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Personality Quiz')),
+      appBar: AppBar(title: const Text('Psychological Quiz')),
       body: SafeArea(
         child: switch (state.phase) {
           QuizPhase.intro => const _IntroView(),

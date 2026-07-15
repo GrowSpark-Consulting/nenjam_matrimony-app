@@ -1,6 +1,6 @@
 import '../../../../l10n/app_localizations.dart';
 
-/// Rough seconds-to-complete for each of the 12 wizard steps, used only to
+/// Rough seconds-to-complete for each of the 13 wizard steps, used only to
 /// render an encouraging "About N min left" estimate. Purely presentational
 /// — never persisted, never affects [ProfileDraft] or backend sync.
 const List<int> _secondsPerStep = [
@@ -13,6 +13,7 @@ const List<int> _secondsPerStep = [
   60, // Lifestyle
   60, // Family
   50, // Horoscope
+  180, // Psychological Quiz
   50, // Partner Preference
   40, // Photos
   25, // Verification

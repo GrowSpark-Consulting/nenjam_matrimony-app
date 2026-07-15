@@ -14,8 +14,9 @@ String motivationCaption(AppLocalizations l10n, int stepIndex) {
     6 => l10n.registrationMotivationStep7,
     7 => l10n.registrationMotivationStep8,
     8 => l10n.registrationMotivationStep9,
-    9 => l10n.registrationMotivationStep10,
-    10 => l10n.registrationMotivationStep11,
+    9 => l10n.registrationMotivationQuiz,
+    10 => l10n.registrationMotivationStep10,
+    11 => l10n.registrationMotivationStep11,
     _ => l10n.registrationMotivationStep12,
   };
 }

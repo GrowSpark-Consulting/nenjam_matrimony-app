@@ -35,6 +35,22 @@ This is why `Frontend/.env.dev`'s `API_BASE_URL` is set to
 `http://127.0.0.1:3000` — as long as the reverse mapping is active, that
 address is always correct, on any network, for any developer's machine.
 
+## One command (recommended)
+
+`scripts/dev/start_dev.ps1` does everything below in one step: starts the
+backend, waits for it to actually be listening on port 3000, checks the
+device, runs `adb reverse`, and confirms the whole path works end-to-end
+via `GET /health`. Run it directly, or via the **Start Development** VS
+Code task (`.vscode/tasks.json`) — which is also wired up as the
+`preLaunchTask` for the `Nenjam (USB / dev)` launch config, so `F5` alone
+is enough.
+
+To tear down: `scripts/dev/stop_dev.ps1` (removes the `tcp:3000` reverse
+mapping and stops the backend process), or the **Stop Development** task.
+
+The manual steps below are the fallback these scripts automate — useful to
+understand what's happening, or to debug when the script itself fails.
+
 ## Prerequisites
 
 - A physical Android phone with **Developer Options** and **USB debugging**
@@ -93,9 +109,19 @@ address is always correct, on any network, for any developer's machine.
 - Check the backend terminal — you should see the incoming request logged
   (route mapped, guard/controller logs, etc.) at the same moment you trigger
   the action in the app.
+- From your PC: `curl http://127.0.0.1:3000/health` should return
+  `{"status":"ok",...}` — this is what `start_dev.ps1` checks automatically.
 - If you want to sanity check outside the app: `adb shell` into the device
-  and run `curl http://127.0.0.1:3000` — you should get a response (not a
-  timeout), since the phone's shell is also subject to the reverse mapping.
+  and run `curl http://127.0.0.1:3000/health` — you should get the same
+  response (not a timeout), since the phone's shell is also subject to the
+  reverse mapping.
+- In debug builds, the app itself checks `/health` shortly after startup
+  and shows a red "Backend unreachable" / "Backend unhealthy" banner if
+  something's wrong, with a checklist and a Retry button (see
+  `Frontend/lib/core/network/backend_connectivity_checker.dart`). Note it
+  can't tell apart "backend not running" vs. "adb reverse missing" vs. "USB
+  unplugged" — those look identical from the phone's side — so it lists all
+  three.
 
 ## Removing the mapping
 

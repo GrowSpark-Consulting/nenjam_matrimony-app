@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'core/config/app_config.dart';
 import 'core/config/app_environment.dart';
 import 'core/constants/app_constants.dart';
+import 'core/network/api_providers.dart';
+import 'core/network/backend_connectivity_checker.dart';
+import 'core/widgets/backend_diagnostic_banner.dart';
 import 'firebase_options.dart';
 import 'core/providers/locale_provider.dart';
 import 'core/router/app_router.dart';
@@ -77,7 +81,6 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
     RouteNames.discover,
     RouteNames.matches,
     RouteNames.messages,
-    RouteNames.nenjam,
     RouteNames.premium,
   };
 
@@ -104,6 +107,14 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
   /// see [_saveNavStateSnapshot].
   Timer? _saveDebounce;
 
+  /// Debug-only backend reachability check — see [_checkBackendConnectivity].
+  /// Never set (and [BackendDiagnosticBanner] never built) in production.
+  BackendConnectivityResult? _connectivityResult;
+  bool _connectivityBannerDismissed = false;
+
+  bool get _connectivityCheckEnabled =>
+      kDebugMode && !AppConfig().environment.isProduction;
+
   @override
   void initState() {
     super.initState();
@@ -123,6 +134,25 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
     // continuously, well before the user ever backgrounds the app, removes
     // that race entirely.
     router.routerDelegate.addListener(_scheduleSave);
+    if (_connectivityCheckEnabled) {
+      unawaited(_checkBackendConnectivity());
+    }
+  }
+
+  /// Hits the backend's /health endpoint so a dev on a physical device gets
+  /// an honest "backend unreachable" banner instead of Dio's generic "No
+  /// internet connection" message, which is misleading over adb reverse
+  /// (see docs/development/android-usb-debugging.md). Best-effort — never
+  /// blocks splash/navigation.
+  Future<void> _checkBackendConnectivity() async {
+    final checker = BackendConnectivityChecker(ref.read(apiClientProvider).dio);
+    final result = await checker.check();
+    if (mounted) {
+      setState(() {
+        _connectivityResult = result;
+        _connectivityBannerDismissed = false;
+      });
+    }
   }
 
   @override
@@ -256,8 +286,38 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
 
           // Routing
           routerConfig: router,
+
+          builder: _connectivityCheckEnabled
+              ? (context, child) => _wrapWithConnectivityBanner(child)
+              : null,
         );
       },
+    );
+  }
+
+  Widget _wrapWithConnectivityBanner(Widget? child) {
+    final result = _connectivityResult;
+    final content = child ?? const SizedBox.shrink();
+    if (result == null || result is BackendHealthy || _connectivityBannerDismissed) {
+      return content;
+    }
+    return Stack(
+      children: [
+        content,
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: SafeArea(
+            bottom: false,
+            child: BackendDiagnosticBanner(
+              result: result,
+              onRetry: _checkBackendConnectivity,
+              onDismiss: () => setState(() => _connectivityBannerDismissed = true),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

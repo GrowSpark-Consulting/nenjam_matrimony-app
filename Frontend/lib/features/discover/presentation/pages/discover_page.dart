@@ -54,7 +54,7 @@ class DiscoverPage extends ConsumerWidget {
         onProfileIntelligenceTap: () =>
             context.push(RouteNames.profileIntelligence),
         onVerificationCenterTap: () =>
-            openEditProfile(context, ref, wizardStep: 11),
+            openEditProfile(context, ref, wizardStep: 12),
         onTrustScoreTap: () => context.push(RouteNames.trustScore),
         onVisitorsTap: () => context.push(RouteNames.visitors),
         onInterestSentTap: () => context.push(RouteNames.interestsSent),

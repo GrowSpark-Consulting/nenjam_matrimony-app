@@ -18,7 +18,7 @@ class PhotosModule extends ProfileCompletionModule {
     return ModuleStatus(
       isComplete: hasPhoto,
       progress: hasPhoto ? 1.0 : 0.0,
-      wizardStep: 10,
+      wizardStep: 11,
     );
   }
 }

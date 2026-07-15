@@ -24,7 +24,7 @@ class VerificationModule extends ProfileCompletionModule {
     return ModuleStatus(
       isComplete: progress >= 1.0,
       progress: progress,
-      wizardStep: 11,
+      wizardStep: 12,
     );
   }
 }

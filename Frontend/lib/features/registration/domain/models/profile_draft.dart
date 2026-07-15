@@ -1,7 +1,13 @@
 /// Nenjam Matrimony — Profile Draft Domain Models
 ///
-/// Immutable data classes for the 12-step registration wizard.
+/// Immutable data classes for the 13-step registration wizard.
 /// Plain Dart — no Flutter dependency, no code generation required.
+///
+/// Step 10 (Psychological Quiz) intentionally has no domain class here —
+/// its answers/result are owned by the psychology feature
+/// (features/psychology/domain/models, PersonalityRepository) and fetched
+/// live via myPersonalityResultProvider, so the wizard step reads that
+/// shared state instead of duplicating it into the draft.
 library;
 
 /// Reads a nested JSON object safely — the draft endpoint omits keys for
@@ -566,7 +572,7 @@ class HoroscopeDetails {
       };
 }
 
-// ─── Partner Preference (Step 10) ────────────────────────────────────
+// ─── Partner Preference (Step 11) ────────────────────────────────────
 class PartnerPreference {
   final String preferredAgeRange;
   final String preferredHeightRange;
@@ -649,7 +655,7 @@ class PartnerPreference {
       };
 }
 
-// ─── Photo Gallery (Step 11) ─────────────────────────────────────────
+// ─── Photo Gallery (Step 12) ─────────────────────────────────────────
 class PhotoGallery {
   final String? primaryPhotoPath;
   final List<String> galleryPaths;
@@ -682,7 +688,7 @@ class PhotoGallery {
       };
 }
 
-// ─── Verification Status (Step 12) ───────────────────────────────────
+// ─── Verification Status (Step 13) ───────────────────────────────────
 class VerificationStatus {
   final bool mobileVerified;
   final bool emailVerified;
@@ -768,7 +774,7 @@ class ProfileDraft {
     this.currentStep = 0,
   });
 
-  static const int totalSteps = 12;
+  static const int totalSteps = 13;
 
   /// Hydrates a draft from `GET /profiles/draft`'s response shape:
   /// `{ currentStep, totalSteps, completedSteps, isComplete,
