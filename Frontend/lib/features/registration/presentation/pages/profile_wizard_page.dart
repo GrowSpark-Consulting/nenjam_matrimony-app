@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -87,17 +88,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       );
       return false;
     } on DioException catch (e) {
-      // TEMPORARY DEBUG LOGGING — real diagnostic detail for the
-      // registration-save connection issue. Remove once PATCH
-      // /profiles/draft/* is confirmed reaching the backend.
-      debugPrint(
-        '[RegistrationSave] DioException'
-        '\n  type       : ${e.type}'
-        '\n  requestUrl : ${e.requestOptions.uri}'
-        '\n  statusCode : ${e.response?.statusCode}'
-        '\n  responseBody: ${e.response?.data}'
-        '\n  message    : ${e.message}',
-      );
+      if (kDebugMode) {
+        debugPrint('[RegistrationSave] DioException: ${e.type}, status ${e.response?.statusCode}');
+      }
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -106,7 +99,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       );
       return false;
     } catch (e) {
-      debugPrint('[RegistrationSave] Unexpected error: $e');
+      if (kDebugMode) {
+        debugPrint('[RegistrationSave] Unexpected error: ${e.runtimeType}');
+      }
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

@@ -88,4 +88,24 @@ abstract final class RouteNames {
   static const String profileIntelligenceName = 'profileIntelligence';
   static const String choosePromptName = 'choosePrompt';
   static const String horoscopeMatchingName = 'horoscopeMatching';
+
+  // ─── Auth Guard ─────────────────────────────────────────────────────
+  //
+  // Screens reachable without an active Firebase session — everything else
+  // is treated as protected by GoRouter's redirect (see app_router.dart)
+  // and by NenjamMatrimonyApp's resume check (see main.dart). Single
+  // source of truth so the two never drift apart.
+  static const Set<String> publicRoutes = {
+    splash,
+    language,
+    authSelection,
+    onboarding,
+    login,
+    otp,
+    loginOtp,
+    verifyEmail,
+    verifyPhone,
+    forgotPassword,
+    registration,
+  };
 }

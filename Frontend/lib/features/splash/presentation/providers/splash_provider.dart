@@ -46,8 +46,13 @@ class SplashController extends Notifier<void> {
       return RouteNames.language;
     }
 
+    // Waits for Firebase's own session-restoration signal (the stream's
+    // first emission) instead of reading `currentUser` synchronously —
+    // Firebase may still be restoring a persisted session at this point,
+    // and reading synchronously here is the race that used to send a
+    // signed-in user briefly through auth-selection on cold start.
+    final user = await ref.read(authStateChangesProvider.future);
     final repo = ref.read(authRepositoryProvider);
-    final user = repo.currentUser;
     if (user == null) {
       await storageService.clearNavState();
       return RouteNames.authSelection;

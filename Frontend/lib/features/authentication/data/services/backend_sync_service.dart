@@ -22,8 +22,12 @@ Future<void> syncUserWithBackend(ApiClient apiClient) async {
     await apiClient.get<dynamic>(ApiEndpoints.profileMe);
   } on DioException catch (e) {
     if (e.response?.statusCode == 404) return;
-    debugPrint('[Auth] Backend profile sync failed: ${e.message}');
+    if (kDebugMode) {
+      debugPrint('[Auth] Backend profile sync failed: ${e.type}, status ${e.response?.statusCode}');
+    }
   } catch (e) {
-    debugPrint('[Auth] Backend profile sync failed: $e');
+    if (kDebugMode) {
+      debugPrint('[Auth] Backend profile sync failed: ${e.runtimeType}');
+    }
   }
 }

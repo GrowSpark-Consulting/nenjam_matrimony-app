@@ -60,7 +60,7 @@ class NenjamMatrimonyApp extends ConsumerStatefulWidget {
 class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp> {
   // Built once and kept for the app's lifetime so locale changes don't
   // recreate the router (which would reset navigation state).
-  late final router = createRouter();
+  late final router = createRouter(ref);
 
   @override
   Widget build(BuildContext context) {

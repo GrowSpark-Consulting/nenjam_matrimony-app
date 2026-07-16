@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/astro/presentation/pages/horoscope_matching_page.dart';
@@ -41,6 +44,7 @@ import '../../features/subscription/presentation/pages/subscription_page.dart';
 import '../../features/trust_score/presentation/pages/trust_score_page.dart';
 import '../../features/verification/presentation/pages/verification_page.dart';
 import '../../features/visitors/presentation/pages/visitors_page.dart';
+import '../../features/authentication/presentation/providers/auth_providers.dart';
 import '../widgets/navigation/app_bottom_nav.dart';
 import 'route_names.dart';
 
@@ -53,7 +57,7 @@ import 'route_names.dart';
 ///
 /// [createRouter] must be called exactly once and the resulting [GoRouter]
 /// instance kept alive for the app's lifetime (see `main.dart`'s
-/// `late final router = createRouter();`). Calling it again would build a
+/// `late final router = createRouter(ref);`). Calling it again would build a
 /// second [GoRouter] that reuses [rootNavigatorKey] — two Navigators can't
 /// share one GlobalKey — and would silently drop the entire in-memory
 /// navigation stack (back to `initialLocation`), which looks exactly like
@@ -63,14 +67,58 @@ final GlobalKey<NavigatorState> rootNavigatorKey =
 final GlobalKey<NavigatorState> _shellNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'shell');
 
-GoRouter createRouter() {
-  // TEMPORARY DIAGNOSTIC — remove after the resume/reload investigation.
-  // ignore: avoid_print
-  print('ROUTER CREATED');
+/// Adapts a [Stream] into a [Listenable] so GoRouter's [GoRouter.refresh]
+/// fires — and `redirect` re-runs — on every event, not just on explicit
+/// navigation. go_router shipped this itself pre-6.0; since then it's the
+/// documented pattern to copy into the app (see go_router's "Multiple
+/// Navigators" guide).
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
+/// Builds the app's [GoRouter], gating every route not listed in
+/// [RouteNames.publicRoutes] behind an active Firebase session.
+///
+/// [redirect] is the single source of truth for route protection — it runs
+/// for every navigation, including deep links and links restored from a
+/// previous process, so a protected path can never be reached by typing a
+/// URL, tapping a deep link, or hot-restoring navigation state. It awaits
+/// [authStateChangesProvider]'s first emission (Firebase's own session
+/// restoration signal) rather than reading `currentUser` synchronously, so
+/// it never races a session that's still being restored.
+///
+/// [refreshListenable] re-runs that redirect whenever the Firebase auth
+/// stream emits — e.g. a background 401 recovery (see api_providers.dart)
+/// or a logout triggered from anywhere in the app — so the user is bounced
+/// to Login automatically without every call site needing its own
+/// navigation logic.
+GoRouter createRouter(WidgetRef ref) {
   return GoRouter(
       navigatorKey: rootNavigatorKey,
       initialLocation: RouteNames.splash,
       debugLogDiagnostics: true,
+      refreshListenable: GoRouterRefreshStream(
+        ref.read(authRepositoryProvider).authStateChanges(),
+      ),
+      redirect: (context, state) async {
+        final location = state.matchedLocation;
+        if (RouteNames.publicRoutes.contains(location)) return null;
+
+        final user = await ref.read(authStateChangesProvider.future);
+        if (user == null) return RouteNames.login;
+        return null;
+      },
       routes: [
         // ─── Standalone Routes (no bottom nav) ────────────────────
         GoRoute(

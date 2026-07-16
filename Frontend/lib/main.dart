@@ -67,8 +67,10 @@ class NenjamMatrimonyApp extends ConsumerStatefulWidget {
 class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
     with WidgetsBindingObserver {
   // Built once and kept for the app's lifetime so locale changes don't
-  // recreate the router (which would reset navigation state).
-  late final router = createRouter();
+  // recreate the router (which would reset navigation state). Route
+  // protection itself lives in createRouter's `redirect` — see
+  // core/router/app_router.dart.
+  late final router = createRouter(ref);
 
   /// Routes whose progress is worth persisting across a process kill —
   /// see StorageService.saveNavState. Anything else (splash, auth/OTP
@@ -82,23 +84,6 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
     RouteNames.matches,
     RouteNames.messages,
     RouteNames.premium,
-  };
-
-  /// Screens that don't require an active session — resuming into one of
-  /// these should never be redirected to login even if, say, the very
-  /// first auth check hasn't resolved yet.
-  static const _publicRoutes = {
-    RouteNames.splash,
-    RouteNames.language,
-    RouteNames.authSelection,
-    RouteNames.onboarding,
-    RouteNames.login,
-    RouteNames.otp,
-    RouteNames.loginOtp,
-    RouteNames.verifyEmail,
-    RouteNames.verifyPhone,
-    RouteNames.forgotPassword,
-    RouteNames.registration,
   };
 
   /// Coalesces bursts of saves (e.g. every keystroke in a wizard step) into
@@ -118,9 +103,6 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
   @override
   void initState() {
     super.initState();
-    // TEMPORARY DIAGNOSTIC — remove after the resume/reload investigation.
-    // ignore: avoid_print
-    print('APP STATE INIT (hashCode=$hashCode)');
     WidgetsBinding.instance.addObserver(this);
     // Route changes (tab switches, entering/leaving the wizard) don't go
     // through build() — GoRouterDelegate notifies its own listeners
@@ -165,9 +147,6 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // TEMPORARY DIAGNOSTIC — remove after the resume/reload investigation.
-    // ignore: avoid_print
-    print('AppLifecycle: $state');
     switch (state) {
       case AppLifecycleState.paused:
         // Flush immediately — do not wait out the debounce — this is the
@@ -223,10 +202,7 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
   void _checkSessionOnResume() {
     final signedIn = ref.read(authRepositoryProvider).currentUser != null;
     final location = _currentLocation;
-    final willRedirect = !signedIn && !_publicRoutes.contains(location);
-    // TEMPORARY DIAGNOSTIC — remove after the resume/reload investigation.
-    // ignore: avoid_print
-    print('checkSessionOnResume: signedIn=$signedIn location=$location willRedirect=$willRedirect');
+    final willRedirect = !signedIn && !RouteNames.publicRoutes.contains(location);
     if (willRedirect) {
       router.go(RouteNames.login);
     }
@@ -240,14 +216,16 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
     // never leak from one signed-in user into the next session on this
     // device.
     ref.listen(authStateChangesProvider, (previous, next) {
-      // TEMPORARY DIAGNOSTIC — remove after the resume/reload investigation.
-      // ignore: avoid_print
-      print('authStateChanges: previous=${previous?.value?.uid} next=${next.value?.uid} isLoading=${next.isLoading}');
       final wasSignedIn = previous?.value != null;
       final isNowSignedOut = !next.isLoading && next.value == null;
       if (wasSignedIn && isNowSignedOut) {
+        // Full local session teardown — the one place this runs, regardless
+        // of which entry point (Settings, nav drawer, background 401
+        // recovery) triggered the Firebase sign-out that landed here.
         ref.read(registrationProvider.notifier).startCreateMode();
         unawaited(storageService.clearNavState());
+        unawaited(storageService.clearUserData());
+        unawaited(storageService.clearPendingPhone());
       }
     });
 

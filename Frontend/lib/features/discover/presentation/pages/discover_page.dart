@@ -10,7 +10,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../authentication/presentation/providers/auth_providers.dart';
+import '../../../authentication/presentation/utils/logout_flow.dart';
 import '../../../profile_completion/presentation/providers/profile_completeness_provider.dart';
 import '../../../registration/presentation/utils/open_edit_profile.dart';
 import '../../domain/entities/discovery_profile_entity.dart';
@@ -64,7 +64,7 @@ class DiscoverPage extends ConsumerWidget {
         onSettingsTap: () => context.push(RouteNames.settings),
         onPrivacyTap: () => context.push(RouteNames.privacy),
         onHelpTap: () => context.push(RouteNames.help),
-        onLogoutTap: () => _confirmAndLogoutFromDrawer(context, ref),
+        onLogoutTap: () => confirmAndLogout(context, ref),
         onUpgradeTap: () => context.go(RouteNames.premium),
         onCompleteProfileTap: () => context.push(RouteNames.profileCompletion),
       ),
@@ -79,39 +79,6 @@ class DiscoverPage extends ConsumerWidget {
       ),
     );
   }
-}
-
-/// Confirms, signs out of Firebase, and returns to login with a cleared
-/// navigation stack. Mirrors SettingsPage's logout flow so both entry
-/// points share the same auth/session-clear behavior.
-Future<void> _confirmAndLogoutFromDrawer(
-  BuildContext context,
-  WidgetRef ref,
-) async {
-  final l10n = AppLocalizations.of(context);
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(l10n.settingsLogout),
-      content: Text(l10n.authLogoutConfirm),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(false),
-          child: Text(l10n.commonCancel),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(true),
-          style: TextButton.styleFrom(foregroundColor: AppColors.error),
-          child: Text(l10n.settingsLogout),
-        ),
-      ],
-    ),
-  );
-  if (confirmed != true) return;
-
-  await ref.read(authRepositoryProvider).logout();
-  if (!context.mounted) return;
-  context.go(RouteNames.login);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

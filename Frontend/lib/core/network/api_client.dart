@@ -29,23 +29,13 @@ class ApiClient {
       ),
     );
 
-    // Add interceptors in order
+    // Add interceptors in order. AuthInterceptor is inserted separately
+    // (see addAuthInterceptor) once the token provider is ready, ahead of
+    // these so it can attach the Authorization header before anything else
+    // runs.
     _dio.interceptors.addAll([
       LoggingInterceptor(),
-      // TEMPORARY DEBUG LOGGING — prints full request/response/error detail
-      // (URL, headers, body, status code) to diagnose the registration-save
-      // connection issue. Remove once PATCH /profiles/draft/* is confirmed
-      // reaching the backend.
-      LogInterceptor(
-        request: true,
-        requestHeader: true,
-        requestBody: true,
-        responseHeader: false,
-        responseBody: true,
-        error: true,
-      ),
       ErrorInterceptor(),
-      // AuthInterceptor will be added when storage service is ready
     ]);
   }
 
