@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../avatars/app_avatars.dart';
 
 /// App navigation drawer.
 class NmDrawer extends StatelessWidget {
   final String? userName;
   final String? userEmail;
   final String? profileImageUrl;
+  /// 'Male' / 'Female' / '' — picks the gender-aware placeholder icon
+  /// when [profileImageUrl] is null.
+  final String gender;
   final VoidCallback? onProfileTap;
   final VoidCallback? onSettingsTap;
   final VoidCallback? onPremiumTap;
@@ -19,6 +23,7 @@ class NmDrawer extends StatelessWidget {
     this.userName,
     this.userEmail,
     this.profileImageUrl,
+    this.gender = '',
     this.onProfileTap,
     this.onSettingsTap,
     this.onPremiumTap,
@@ -40,13 +45,7 @@ class NmDrawer extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: isDark
-                        ? AppColors.surfaceVariantDark
-                        : AppColors.surfaceVariantLight,
-                    child: const Icon(Icons.person_rounded, size: 28),
-                  ),
+                  NmCircleAvatar(imageUrl: profileImageUrl, size: 56, gender: gender),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(

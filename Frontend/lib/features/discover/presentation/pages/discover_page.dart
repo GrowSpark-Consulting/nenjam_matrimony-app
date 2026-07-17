@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/router/profile_navigation.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/avatars/gender_placeholder.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -278,7 +280,10 @@ class _DiscoverAppBar extends StatelessWidget {
       ),
       actions: [
         IconButton(
-          onPressed: () {},
+          // Pushed (not `go`) so Discover stays on the navigator stack —
+          // back returns to this exact instance with scroll position,
+          // loaded feed data, and provider state all intact.
+          onPressed: () => context.push(RouteNames.search),
           icon: const Icon(Icons.search_rounded, color: AppColors.primary),
           tooltip: l10n.discoverSearchTooltip,
         ),
@@ -371,66 +376,83 @@ class _StoryBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 76,
-          height: 76,
-          padding: const EdgeInsets.all(2.5),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: story.hasNewStory
-                ? const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF755B00), Color(0xFFFED977)],
-                  )
-                : null,
-            color: story.hasNewStory
-                ? null
-                : AppColors.dividerLight.withValues(alpha: 0.5),
-          ),
-          child: Container(
+    final profile = story.profile;
+
+    return GestureDetector(
+      // "New Today" bubbles represent newly-joined members, not
+      // ephemeral stories — tapping one opens Profile Detail exactly
+      // like any other profile card.
+      onTap: profile == null ? null : () => openProfileDetail(context, profile),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 76,
+            height: 76,
+            padding: const EdgeInsets.all(2.5),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.backgroundLight, width: 2),
+              gradient: story.hasNewStory
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF755B00), Color(0xFFFED977)],
+                    )
+                  : null,
+              color: story.hasNewStory
+                  ? null
+                  : AppColors.dividerLight.withValues(alpha: 0.5),
             ),
-            clipBehavior: Clip.antiAlias,
-            child: story.imageUrl.startsWith('http')
-                ? Image.network(
-                    story.imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _fallback(),
-                  )
-                : Image.asset(
-                    story.imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _fallback(),
-                  ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        SizedBox(
-          width: 76,
-          child: Text(
-            story.name,
-            textAlign: TextAlign.center,
-            style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textPrimaryLight,
-              fontSize: 11,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.backgroundLight, width: 2),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Hero(
+                tag: profile == null
+                    ? 'story-photo-${story.id}'
+                    : 'profile-photo-${profile.id}',
+                child: story.imageUrl.isEmpty
+                    ? _fallback()
+                    : (story.imageUrl.startsWith('http')
+                          ? Image.network(
+                              story.imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _fallback(),
+                            )
+                          : Image.asset(
+                              story.imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _fallback(),
+                            )),
+              ),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
+          const SizedBox(height: AppSpacing.xs),
+          SizedBox(
+            width: 76,
+            child: Text(
+              story.name,
+              textAlign: TextAlign.center,
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textPrimaryLight,
+                fontSize: 11,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _fallback() => Container(
-    color: AppColors.primarySurface,
-    child: const Icon(Icons.person_rounded, size: 28, color: AppColors.primary),
+  Widget _fallback() => NmGenderPlaceholder(
+    gender: story.gender,
+    iconSize: 28,
+    backgroundColor: AppColors.primarySurface,
+    iconColor: AppColors.primary,
   );
 }
 
@@ -546,126 +568,139 @@ class _LargeProfileCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(32),
         child: SizedBox(
           height: cardHeight,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // ── Profile photo ──────────────────────────────────────
-              _CardImage(photoUrls: profile.photoUrls),
-
-              // ── Bottom gradient scrim ──────────────────────────────
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Color(0x4D041635), // primary/30
-                      Color(0xF2041635), // primary/95
-                    ],
-                    stops: [0.0, 0.45, 1.0],
+          // Tapping anywhere on the card opens Profile Detail; the
+          // buttons in `_CardButtons` below win the gesture arena for
+          // their own taps since they're the deeper, more-specific
+          // recognizers, so they keep working independently.
+          child: GestureDetector(
+            onTap: () => openProfileDetail(context, profile),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // ── Profile photo ────────────────────────────────────
+                Hero(
+                  tag: 'profile-photo-${profile.id}',
+                  child: _CardImage(
+                    photoUrls: profile.photoUrls,
+                    gender: profile.gender,
                   ),
                 ),
-              ),
 
-              // ── Top badge row ──────────────────────────────────────
-              Positioned(
-                top: 16,
-                left: 16,
-                right: 16,
-                child: CompatibilityBadgeRow(
-                  compatibility: profile.compatibility,
-                  isVerified: profile.isVerified,
-                  isPremium: profile.isPremium,
+                // ── Bottom gradient scrim ──────────────────────────────
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Color(0x4D041635), // primary/30
+                        Color(0xF2041635), // primary/95
+                      ],
+                      stops: [0.0, 0.45, 1.0],
+                    ),
+                  ),
                 ),
-              ),
 
-              // ── Bottom info + buttons ──────────────────────────────
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Name + verified
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              '${profile.name}, ${profile.age}',
-                              style: AppTypography.headlineMedium.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
+                // ── Top badge row ──────────────────────────────────────
+                Positioned(
+                  top: 16,
+                  left: 16,
+                  right: 16,
+                  child: CompatibilityBadgeRow(
+                    compatibility: profile.compatibility,
+                    isVerified: profile.isVerified,
+                    isPremium: profile.isPremium,
+                  ),
+                ),
+
+                // ── Bottom info + buttons ──────────────────────────────
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Name + verified
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                '${profile.name}, ${profile.age}',
+                                style: AppTypography.headlineMedium.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          if (profile.isVerified) ...[
-                            const SizedBox(width: 6),
-                            const Icon(
-                              Icons.verified_rounded,
-                              size: 20,
-                              color: Color(0xFFFFE08F), // secondary-fixed
-                            ),
+                            if (profile.isVerified) ...[
+                              const SizedBox(width: 6),
+                              const Icon(
+                                Icons.verified_rounded,
+                                size: 20,
+                                color: Color(0xFFFFE08F), // secondary-fixed
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                      const SizedBox(height: 4),
+                        ),
+                        const SizedBox(height: 4),
 
-                      // Location • Profession
-                      if (profile.location.isNotEmpty ||
-                          profile.profession.isNotEmpty)
-                        Text(
-                          [
-                            if (profile.location.isNotEmpty) profile.location,
-                            if (profile.profession.isNotEmpty)
-                              profile.profession,
-                          ].join(' • '),
-                          style: AppTypography.bodyMedium.copyWith(
-                            color: Colors.white.withValues(alpha: 0.8),
+                        // Location • Profession
+                        if (profile.location.isNotEmpty ||
+                            profile.profession.isNotEmpty)
+                          Text(
+                            [
+                              if (profile.location.isNotEmpty) profile.location,
+                              if (profile.profession.isNotEmpty)
+                                profile.profession,
+                            ].join(' • '),
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: Colors.white.withValues(alpha: 0.8),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
 
-                      // Stats row (Match / Astro / Trust) for verified card
-                      if (showStats &&
-                          profile.compatibility.aiMatchPercent > 0) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        _StatsRow(
-                          l10n: l10n,
-                          compatibility: profile.compatibility,
-                        ),
+                        // Stats row (Match / Astro / Trust) for verified card
+                        if (showStats &&
+                            profile.compatibility.aiMatchPercent > 0) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          _StatsRow(
+                            l10n: l10n,
+                            compatibility: profile.compatibility,
+                          ),
+                        ],
+
+                        // Tag pills
+                        if (_tagPills(l10n, profile).isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 5,
+                            children: _tagPills(
+                              l10n,
+                              profile,
+                            ).map((t) => _TagPill(label: t)).toList(),
+                          ),
+                        ],
+
+                        const SizedBox(height: AppSpacing.base),
+
+                        // Buttons
+                        _CardButtons(profile: profile),
                       ],
-
-                      // Tag pills
-                      if (_tagPills(l10n, profile).isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 5,
-                          children: _tagPills(
-                            l10n,
-                            profile,
-                          ).map((t) => _TagPill(label: t)).toList(),
-                        ),
-                      ],
-
-                      const SizedBox(height: AppSpacing.base),
-
-                      // Buttons
-                      _CardButtons(profile: profile),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -888,7 +923,7 @@ class _CardButtonsState extends State<_CardButtons> {
               child: _GlassBtn(
                 icon: Icons.person_rounded,
                 label: l10n.actionViewProfile,
-                onTap: () {},
+                onTap: () => openProfileDetail(context, widget.profile),
               ),
             ),
           ],
@@ -1025,139 +1060,151 @@ class _CompactProfileCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return Container(
-      width: 176,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        boxShadow: AppShadows.cardLight,
-        border: Border.all(
-          color: AppColors.dividerLight.withValues(alpha: 0.15),
+    // Tapping anywhere on the card opens Profile Detail; the "Interested"
+    // button below wins the gesture arena for its own tap since it's the
+    // deeper, more-specific recognizer.
+    return GestureDetector(
+      onTap: () => openProfileDetail(context, profile),
+      child: Container(
+        width: 176,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceLight,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+          boxShadow: AppShadows.cardLight,
+          border: Border.all(
+            color: AppColors.dividerLight.withValues(alpha: 0.15),
+          ),
         ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Photo
-          SizedBox(
-            height: 192,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                _CardImage(photoUrls: profile.photoUrls),
-                // Match badge overlay
-                if (profile.compatibility.aiMatchPercent > 0)
-                  Positioned(
-                    bottom: 8,
-                    left: 8,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 160),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(
-                            AppSpacing.radiusFull,
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Photo
+            SizedBox(
+              height: 192,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Hero(
+                    tag: 'profile-photo-${profile.id}',
+                    child: _CardImage(
+                      photoUrls: profile.photoUrls,
+                      gender: profile.gender,
+                    ),
+                  ),
+                  // Match badge overlay
+                  if (profile.compatibility.aiMatchPercent > 0)
+                    Positioned(
+                      bottom: 8,
+                      left: 8,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 160),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
                           ),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.bolt_rounded,
-                              size: 10,
-                              color: Color(0xFFFFE08F),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(
+                              AppSpacing.radiusFull,
                             ),
-                            const SizedBox(width: 3),
-                            Flexible(
-                              child: Text(
-                                '${profile.compatibility.aiMatchPercent}% ${l10n.discoverStatMatchLabel}',
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.bolt_rounded,
+                                size: 10,
+                                color: Color(0xFFFFE08F),
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 3),
+                              Flexible(
+                                child: Text(
+                                  '${profile.compatibility.aiMatchPercent}% ${l10n.discoverStatMatchLabel}',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-          // Info
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${profile.name}, ${profile.age}',
-                  style: AppTypography.labelLarge.copyWith(
-                    color: AppColors.textPrimaryLight,
-                    fontWeight: FontWeight.w700,
+            // Info
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${profile.name}, ${profile.age}',
+                    style: AppTypography.labelLarge.copyWith(
+                      color: AppColors.textPrimaryLight,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  [
-                    if (profile.profession.isNotEmpty) profile.profession,
-                    if (profile.location.isNotEmpty) profile.location,
-                  ].join(' • '),
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.textSecondaryLight,
-                    fontSize: 11,
+                  const SizedBox(height: 2),
+                  Text(
+                    [
+                      if (profile.profession.isNotEmpty) profile.profession,
+                      if (profile.location.isNotEmpty) profile.location,
+                    ].join(' • '),
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textSecondaryLight,
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                // Interested button
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.accentGold,
-                      side: const BorderSide(color: AppColors.accentGold),
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppSpacing.radiusSm,
+                  const SizedBox(height: 8),
+                  // Interested button
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () {},
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.accentGold,
+                        side: const BorderSide(color: AppColors.accentGold),
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusSm,
+                          ),
                         ),
                       ),
-                    ),
-                    child: Text(
-                      l10n.actionInterested,
-                      style: AppTypography.labelSmall.copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 11,
+                      child: Text(
+                        l10n.actionInterested,
+                        style: AppTypography.labelSmall.copyWith(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1202,77 +1249,88 @@ class _NearYouCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceVariantLight,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        border: Border.all(
-          color: AppColors.dividerLight.withValues(alpha: 0.15),
+    return GestureDetector(
+      onTap: () => openProfileDetail(context, profile),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceVariantLight,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+          border: Border.all(
+            color: AppColors.dividerLight.withValues(alpha: 0.15),
+          ),
         ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(child: _CardImage(photoUrls: profile.photoUrls)),
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${profile.name}, ${profile.age}',
-                  style: AppTypography.labelLarge.copyWith(
-                    color: AppColors.textPrimaryLight,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Hero(
+                tag: 'profile-photo-${profile.id}',
+                child: _CardImage(
+                  photoUrls: profile.photoUrls,
+                  gender: profile.gender,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  profile.distanceKm != null
-                      ? '${profile.distanceKm!.toStringAsFixed(1)} ${l10n.discoverKmAwaySuffix} • ${profile.education}'
-                      : profile.profession,
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.textSecondaryLight,
-                    fontSize: 10,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${profile.name}, ${profile.age}',
+                    style: AppTypography.labelLarge.copyWith(
+                      color: AppColors.textPrimaryLight,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.accentGold,
-                      side: const BorderSide(color: AppColors.accentGold),
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppSpacing.radiusSm,
+                  const SizedBox(height: 2),
+                  Text(
+                    profile.distanceKm != null
+                        ? '${profile.distanceKm!.toStringAsFixed(1)} ${l10n.discoverKmAwaySuffix} • ${profile.education}'
+                        : profile.profession,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textSecondaryLight,
+                      fontSize: 10,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () {},
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.accentGold,
+                        side: const BorderSide(color: AppColors.accentGold),
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusSm,
+                          ),
                         ),
                       ),
-                    ),
-                    child: Text(
-                      l10n.actionInterested,
-                      style: AppTypography.labelSmall.copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 10,
+                      child: Text(
+                        l10n.actionInterested,
+                        style: AppTypography.labelSmall.copyWith(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 10,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1373,109 +1431,121 @@ class _PremiumMemberCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return SizedBox(
-      width: 260,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: const Color(0xFFFFE08F).withValues(alpha: 0.3),
+    // Tapping anywhere on the card opens Profile Detail; the Connect
+    // button below wins the gesture arena for its own tap since it's the
+    // deeper, more-specific recognizer.
+    return GestureDetector(
+      onTap: () => openProfileDetail(context, profile),
+      child: SizedBox(
+        width: 260,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: const Color(0xFFFFE08F).withValues(alpha: 0.3),
+            ),
           ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            _CardImage(photoUrls: profile.photoUrls),
-            // Gradient
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Color(0xCC041635)],
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Hero(
+                tag: 'profile-photo-${profile.id}',
+                child: _CardImage(
+                  photoUrls: profile.photoUrls,
+                  gender: profile.gender,
                 ),
               ),
-            ),
-            // Bottom info
-            Positioned(
-              bottom: 16,
-              left: 16,
-              right: 16,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.discoverEliteMemberLabel.toUpperCase(),
-                    style: AppTypography.labelSmall.copyWith(
-                      color: const Color(0xFFFFE08F),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+              // Gradient
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Color(0xCC041635)],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${profile.name}, ${profile.age}',
-                    style: AppTypography.titleMedium.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 40,
-                          child: ElevatedButton(
-                            onPressed: () {},
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFFE08F),
-                              foregroundColor: const Color(0xFF241A00),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: EdgeInsets.zero,
-                            ),
-                            child: Text(
-                              l10n.discoverConnectButton,
-                              style: AppTypography.labelSmall.copyWith(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.4),
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.chat_bubble_outline_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+              // Bottom info
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.discoverEliteMemberLabel.toUpperCase(),
+                      style: AppTypography.labelSmall.copyWith(
+                        color: const Color(0xFFFFE08F),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${profile.name}, ${profile.age}',
+                      style: AppTypography.titleMedium.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 40,
+                            child: ElevatedButton(
+                              onPressed: () {},
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFFE08F),
+                                foregroundColor: const Color(0xFF241A00),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: EdgeInsets.zero,
+                              ),
+                              child: Text(
+                                l10n.discoverConnectButton,
+                                style: AppTypography.labelSmall.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.4),
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1526,8 +1596,9 @@ class _FeedFooter extends StatelessWidget {
 
 class _CardImage extends StatelessWidget {
   final List<String> photoUrls;
+  final String gender;
 
-  const _CardImage({required this.photoUrls});
+  const _CardImage({required this.photoUrls, this.gender = ''});
 
   @override
   Widget build(BuildContext context) {
@@ -1549,14 +1620,5 @@ class _CardImage extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() => Container(
-    color: AppColors.surfaceVariantDark,
-    child: const Center(
-      child: Icon(
-        Icons.person_rounded,
-        size: 48,
-        color: AppColors.textTertiaryDark,
-      ),
-    ),
-  );
+  Widget _placeholder() => NmGenderPlaceholder(gender: gender);
 }

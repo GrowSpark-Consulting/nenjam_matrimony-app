@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
+import '../avatars/app_avatars.dart';
 import '../buttons/primary_button.dart';
 
 /// Visitor card displaying profile visit log and action button.
@@ -11,6 +12,9 @@ class NmVisitorCard extends StatelessWidget {
   final String subtitle;
   final String timeAgo;
   final String? imageUrl;
+  /// 'Male' / 'Female' / '' — picks the gender-aware placeholder icon
+  /// when [imageUrl] is null.
+  final String gender;
   final VoidCallback? onConnect;
   final VoidCallback? onTap;
 
@@ -20,6 +24,7 @@ class NmVisitorCard extends StatelessWidget {
     required this.subtitle,
     required this.timeAgo,
     this.imageUrl,
+    this.gender = '',
     this.onConnect,
     this.onTap,
   });
@@ -34,12 +39,7 @@ class NmVisitorCard extends StatelessWidget {
         decoration: AppDecorations.card(isDark: isDark),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
-              backgroundImage: imageUrl != null ? NetworkImage(imageUrl!) : null,
-              child: imageUrl == null ? const Icon(Icons.person, size: 28, color: AppColors.textSecondaryLight) : null,
-            ),
+            NmCircleAvatar(imageUrl: imageUrl, size: 56, gender: gender),
             const SizedBox(width: 16),
             Expanded(
               child: Column(

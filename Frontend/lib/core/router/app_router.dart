@@ -13,6 +13,7 @@ import '../../features/authentication/presentation/pages/login_page.dart';
 import '../../features/authentication/presentation/pages/otp_page.dart';
 import '../../features/authentication/presentation/pages/phone_verify_screen.dart';
 import '../../features/chat/presentation/pages/chat_page.dart';
+import '../../features/discover/domain/entities/discovery_profile_entity.dart';
 import '../../features/discover/presentation/pages/discover_page.dart';
 import '../../features/help/presentation/pages/help_page.dart';
 import '../../features/interests/presentation/pages/interests_received_page.dart';
@@ -24,6 +25,7 @@ import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/premium/presentation/pages/premium_page.dart';
 import '../../features/privacy/presentation/pages/privacy_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
+import '../../features/profile_detail/presentation/pages/profile_detail_page.dart';
 import '../../features/profile_intelligence/presentation/pages/profile_intelligence_page.dart';
 import '../../features/profile_prompts/domain/models/prompt_bank_item.dart';
 import '../../features/profile_prompts/presentation/pages/choose_prompt_page.dart';
@@ -45,6 +47,7 @@ import '../../features/trust_score/presentation/pages/trust_score_page.dart';
 import '../../features/verification/presentation/pages/verification_page.dart';
 import '../../features/visitors/presentation/pages/visitors_page.dart';
 import '../../features/authentication/presentation/providers/auth_providers.dart';
+import '../../l10n/app_localizations.dart';
 import '../widgets/navigation/app_bottom_nav.dart';
 import 'route_names.dart';
 
@@ -64,8 +67,38 @@ import 'route_names.dart';
 /// "the app forgot where I was" even though the process never died.
 final GlobalKey<NavigatorState> rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'root');
-final GlobalKey<NavigatorState> _shellNavigatorKey =
-    GlobalKey<NavigatorState>(debugLabel: 'shell');
+
+// TEMP DEBUG — remove before shipping.
+//
+// Logs every didPush/didPop/didRemove/didReplace on whichever Navigator
+// it's attached to, tagged with [label] so root-vs-branch is unambiguous
+// in the console.
+class _DebugNavObserver extends NavigatorObserver {
+  _DebugNavObserver(this.label);
+  final String label;
+
+  String _name(Route<dynamic>? r) => r?.settings.name ?? r?.settings.toString() ?? 'null';
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    debugPrint('[NAV:$label] didPush  ${_name(previousRoute)} -> ${_name(route)}');
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    debugPrint('[NAV:$label] didPop   ${_name(route)} -> ${_name(previousRoute)}');
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    debugPrint('[NAV:$label] didRemove ${_name(route)} -> ${_name(previousRoute)}');
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    debugPrint('[NAV:$label] didReplace ${_name(oldRoute)} -> ${_name(newRoute)}');
+  }
+}
 
 /// Adapts a [Stream] into a [Listenable] so GoRouter's [GoRouter.refresh]
 /// fires — and `redirect` re-runs — on every event, not just on explicit
@@ -108,6 +141,8 @@ GoRouter createRouter(WidgetRef ref) {
       navigatorKey: rootNavigatorKey,
       initialLocation: RouteNames.splash,
       debugLogDiagnostics: true,
+      // TEMP DEBUG — remove before shipping.
+      observers: [_DebugNavObserver('root')],
       refreshListenable: GoRouterRefreshStream(
         ref.read(authRepositoryProvider).authStateChanges(),
       ),
@@ -302,60 +337,116 @@ GoRouter createRouter(WidgetRef ref) {
           name: RouteNames.shortlistedName,
           builder: (context, state) => const ShortlistedPage(),
         ),
+        GoRoute(
+          path: RouteNames.profileDetail,
+          name: RouteNames.profileDetailName,
+          builder: (context, state) {
+            final extra = state.extra;
+            if (extra is! DiscoveryProfileEntity) {
+              // Defensive fallback — nothing in-app pushes this route
+              // without `extra`, but a raw/deep link could theoretically
+              // hit it directly.
+              return Scaffold(
+                body: Center(
+                  child: Text(
+                    AppLocalizations.of(context).profileDetailProfileNotAvailable,
+                  ),
+                ),
+              );
+            }
+            return ProfileDetailPage(profile: extra);
+          },
+        ),
+        // Search, Notifications and Profile are *reached from* the bottom-nav
+        // branches (and, for Search, from more than one branch — Discover's
+        // AppBar and Matches' category bar both push it) but aren't branch
+        // roots themselves. Standalone routes push onto the root navigator,
+        // covering the whole shell — the same "temporary page" pattern as
+        // Settings/Verification/etc. below — rather than belonging to any
+        // one branch's own stack, which is what a route pushed from
+        // multiple different branches needs.
+        GoRoute(
+          path: RouteNames.search,
+          name: RouteNames.searchName,
+          builder: (context, state) => const SearchPage(),
+        ),
+        GoRoute(
+          path: RouteNames.notifications,
+          name: RouteNames.notificationsName,
+          builder: (context, state) => const NotificationsPage(),
+        ),
+        GoRoute(
+          path: RouteNames.profile,
+          name: RouteNames.profileName,
+          builder: (context, state) => const ProfilePage(),
+        ),
 
-        // ─── Shell Route with Bottom Navigation ───────────────────
-        ShellRoute(
-          navigatorKey: _shellNavigatorKey,
-          builder: (context, state, child) => AppBottomNavShell(child: child),
-          routes: [
-            GoRoute(
-              path: RouteNames.discover,
-              name: RouteNames.discoverName,
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: DiscoverPage(),
-              ),
+        // ─── Bottom Navigation — StatefulShellRoute ────────────────
+        //
+        // Each branch owns its own Navigator and route stack, preserved by
+        // an IndexedStack under the hood: switching Discover → Matches →
+        // Discover restores Discover's scroll position and any state
+        // exactly as left, which a plain ShellRoute (a single Navigator
+        // shared across all tabs, rebuilt on every switch) cannot do.
+        // AppBottomNavShell's PopScope still owns "Back on any non-Discover
+        // branch returns to Discover" — StatefulShellRoute doesn't impose
+        // that policy itself, it just gives each branch a real stack to
+        // reason about.
+        StatefulShellRoute.indexedStack(
+          builder: (context, state, navigationShell) =>
+              AppBottomNavShell(navigationShell: navigationShell),
+          branches: [
+            StatefulShellBranch(
+              // TEMP DEBUG — remove before shipping.
+              observers: [_DebugNavObserver('branch:discover')],
+              routes: [
+                GoRoute(
+                  path: RouteNames.discover,
+                  name: RouteNames.discoverName,
+                  pageBuilder: (context, state) => const NoTransitionPage(
+                    child: DiscoverPage(),
+                  ),
+                ),
+              ],
             ),
-            GoRoute(
-              path: RouteNames.search,
-              name: RouteNames.searchName,
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: SearchPage(),
-              ),
+            StatefulShellBranch(
+              // TEMP DEBUG — remove before shipping.
+              observers: [_DebugNavObserver('branch:matches')],
+              routes: [
+                GoRoute(
+                  path: RouteNames.matches,
+                  name: RouteNames.matchesName,
+                  pageBuilder: (context, state) => const NoTransitionPage(
+                    child: MatchesPage(),
+                  ),
+                ),
+              ],
             ),
-            GoRoute(
-              path: RouteNames.matches,
-              name: RouteNames.matchesName,
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: MatchesPage(),
-              ),
+            StatefulShellBranch(
+              // TEMP DEBUG — remove before shipping.
+              observers: [_DebugNavObserver('branch:messages')],
+              routes: [
+                GoRoute(
+                  path: RouteNames.messages,
+                  name: RouteNames.messagesName,
+                  pageBuilder: (context, state) => const NoTransitionPage(
+                    child: ChatPage(),
+                  ),
+                ),
+              ],
             ),
-            GoRoute(
-              path: RouteNames.messages,
-              name: RouteNames.messagesName,
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: ChatPage(),
-              ),
-            ),
-            GoRoute(
-              path: RouteNames.notifications,
-              name: RouteNames.notificationsName,
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: NotificationsPage(),
-              ),
-            ),
-            GoRoute(
-              path: RouteNames.profile,
-              name: RouteNames.profileName,
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: ProfilePage(),
-              ),
-            ),
-            GoRoute(
-              path: RouteNames.premium,
-              name: RouteNames.premiumName,
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: PremiumPage(),
-              ),
+            StatefulShellBranch(
+              // TEMP DEBUG — remove before shipping.
+              observers: [_DebugNavObserver('branch:premium')],
+              routes: [
+                GoRoute(
+                  path: RouteNames.premium,
+                  name: RouteNames.premiumName,
+                  pageBuilder: (context, state) => const NoTransitionPage(
+                    child: PremiumPage(),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

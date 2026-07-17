@@ -89,7 +89,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       return false;
     } on DioException catch (e) {
       if (kDebugMode) {
-        debugPrint('[RegistrationSave] DioException: ${e.type}, status ${e.response?.statusCode}');
+        debugPrint(
+          '[RegistrationSave] DioException: ${e.type}, status ${e.response?.statusCode}',
+        );
       }
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -194,56 +196,71 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       milestoneForStep(stepIndex),
     );
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            RegistrationJourneyHeader(
-              stepIndex: stepIndex,
-              totalSteps: ProfileDraft.totalSteps,
-              onBack: _onBack,
-              onSaveExit: _isSaving ? null : _onSaveExit,
-            ),
-            RegistrationMotivationCaption(
-              stepIndex: stepIndex,
-              caption: motivationCaption(l10n, stepIndex),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 400),
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.04),
-                      end: Offset.zero,
-                    ).animate(animation),
-                    child: child,
+    return PopScope(
+      // System back (Android hardware back / iOS swipe) must behave
+      // exactly like the on-screen back button — step backward through the
+      // wizard one step at a time, not jump straight out of the whole
+      // 13-step flow. Only the real route pop is allowed once already on
+      // step 0, mirroring _onBack()'s own logic.
+      canPop: stepIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _onBack();
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: [
+              RegistrationJourneyHeader(
+                stepIndex: stepIndex,
+                totalSteps: ProfileDraft.totalSteps,
+                onBack: _onBack,
+                onSaveExit: _isSaving ? null : _onSaveExit,
+              ),
+              RegistrationMotivationCaption(
+                stepIndex: stepIndex,
+                caption: motivationCaption(l10n, stepIndex),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.04),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  ),
+                  child: KeyedSubtree(
+                    key: ValueKey<int>(stepIndex),
+                    child: _buildStepContent(stepIndex, draft, notifier),
                   ),
                 ),
-                child: KeyedSubtree(
-                  key: ValueKey<int>(stepIndex),
-                  child: _buildStepContent(stepIndex, draft, notifier),
-                ),
               ),
-            ),
-            RegistrationStickyBottomBar(
-              milestoneLabel: milestoneLabel,
-              estimatedTimeLabel: estimatedTimeRemainingLabel(l10n, stepIndex),
-              continueLabel: isLastStep
-                  ? l10n.registrationFinishLogin
-                  : l10n.registrationContinueYourStory,
-              continueIcon: isLastStep
-                  ? Icons.check_rounded
-                  : Icons.arrow_forward_rounded,
-              backLabel: l10n.registrationBack,
-              showBack: stepIndex > 0,
-              isLoading: _isSaving,
-              onBack: _isSaving ? null : _onBack,
-              onNext: _isSaving ? null : _onNext,
-            ),
-          ],
+              RegistrationStickyBottomBar(
+                milestoneLabel: milestoneLabel,
+                estimatedTimeLabel: estimatedTimeRemainingLabel(
+                  l10n,
+                  stepIndex,
+                ),
+                continueLabel: isLastStep
+                    ? l10n.registrationFinishLogin
+                    : l10n.registrationContinueYourStory,
+                continueIcon: isLastStep
+                    ? Icons.check_rounded
+                    : Icons.arrow_forward_rounded,
+                backLabel: l10n.registrationBack,
+                showBack: stepIndex > 0,
+                isLoading: _isSaving,
+                onBack: _isSaving ? null : _onBack,
+                onNext: _isSaving ? null : _onNext,
+              ),
+            ],
+          ),
         ),
       ),
     );

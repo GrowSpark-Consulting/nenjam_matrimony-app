@@ -3,12 +3,16 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
+import '../avatars/gender_placeholder.dart';
 
 /// Match card with compatibility percentage.
 class NmMatchCard extends StatelessWidget {
   final String name;
   final String age;
   final String? imageUrl;
+  /// 'Male' / 'Female' / '' — picks the gender-aware placeholder icon
+  /// when [imageUrl] is null/fails to load.
+  final String gender;
   final int matchPercentage;
   final String matchReason;
   final VoidCallback? onTap;
@@ -18,6 +22,7 @@ class NmMatchCard extends StatelessWidget {
     required this.name,
     required this.age,
     this.imageUrl,
+    this.gender = '',
     required this.matchPercentage,
     this.matchReason = 'AI Match',
     this.onTap,
@@ -97,18 +102,7 @@ class NmMatchCard extends StatelessWidget {
     );
   }
 
-  Widget _placeholder(bool isDark) => Container(
-        color: isDark
-            ? AppColors.surfaceVariantDark
-            : AppColors.surfaceVariantLight,
-        child: Icon(
-          Icons.person_rounded,
-          size: 32,
-          color: isDark
-              ? AppColors.textTertiaryDark
-              : AppColors.textTertiaryLight,
-        ),
-      );
+  Widget _placeholder(bool isDark) => NmGenderPlaceholder(gender: gender, iconSize: 32);
 }
 
 class _CompatibilityBadge extends StatelessWidget {

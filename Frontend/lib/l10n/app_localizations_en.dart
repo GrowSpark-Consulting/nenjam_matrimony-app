@@ -406,6 +406,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get matchesEmptySubtitle => 'Check back soon for new profiles';
 
   @override
+  String get matchesCategorySearch => 'Search';
+
+  @override
+  String get matchesCategoryNew => 'New';
+
+  @override
+  String get matchesCategoryDaily => 'Daily';
+
+  @override
+  String get matchesCategoryMyMatches => 'My Matches';
+
+  @override
+  String get matchesCategoryNearMe => 'Near Me';
+
+  @override
+  String get matchesCategoryMoreMatches => 'More Matches';
+
+  @override
   String get discoverKmAwaySuffix => 'km away';
 
   @override
@@ -440,6 +458,135 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchSortButton => 'Sort';
+
+  @override
+  String get searchHint => 'Name, Matrimony ID, City, Profession...';
+
+  @override
+  String get searchRecentTitle => 'Recent Searches';
+
+  @override
+  String get searchPopularTitle => 'Popular Searches';
+
+  @override
+  String get searchClearAll => 'Clear All';
+
+  @override
+  String get searchEmptyResultsTitle => 'No matching profiles found.';
+
+  @override
+  String get searchEmptyResultsSubtitle => 'Try changing your filters.';
+
+  @override
+  String get searchResetFiltersButton => 'Reset Filters';
+
+  @override
+  String get searchFilterSheetTitle => 'Filters';
+
+  @override
+  String get searchFilterReset => 'Reset';
+
+  @override
+  String get searchFilterApply => 'Apply Filters';
+
+  @override
+  String get searchFilterSectionBasic => 'Basic';
+
+  @override
+  String get searchFilterSectionReligion => 'Religion';
+
+  @override
+  String get searchFilterSectionLocation => 'Location';
+
+  @override
+  String get searchFilterSectionEducation => 'Education';
+
+  @override
+  String get searchFilterSectionCareer => 'Career';
+
+  @override
+  String get searchFilterSectionLifestyle => 'Lifestyle';
+
+  @override
+  String get searchFilterSectionHoroscope => 'Horoscope';
+
+  @override
+  String get searchFilterSectionVerification => 'Verification';
+
+  @override
+  String get searchFilterSectionPremium => 'Premium';
+
+  @override
+  String get searchFilterSectionProfile => 'Profile';
+
+  @override
+  String get searchFilterAgeRange => 'Age Range';
+
+  @override
+  String get searchFilterGender => 'Gender';
+
+  @override
+  String get searchFilterGenderMale => 'Male';
+
+  @override
+  String get searchFilterGenderFemale => 'Female';
+
+  @override
+  String get searchFilterHeightMin => 'Min Height';
+
+  @override
+  String get searchFilterHeightMax => 'Max Height';
+
+  @override
+  String get searchFilterCommunity => 'Community';
+
+  @override
+  String get searchFilterState => 'State';
+
+  @override
+  String get searchFilterDiet => 'Diet';
+
+  @override
+  String get searchFilterSmoking => 'Smoking';
+
+  @override
+  String get searchFilterDrinking => 'Drinking';
+
+  @override
+  String get searchFilterRashi => 'Rashi';
+
+  @override
+  String get searchFilterStar => 'Star';
+
+  @override
+  String get searchFilterHoroscopeAvailable => 'Horoscope Available';
+
+  @override
+  String get searchFilterAadhaarVerified => 'Aadhaar Verified';
+
+  @override
+  String get searchFilterIncomeVerified => 'Income Verified';
+
+  @override
+  String get searchFilterNriVerified => 'NRI Verified';
+
+  @override
+  String get searchFilterPremiumOnly => 'Premium Members Only';
+
+  @override
+  String get searchFilterWithPhoto => 'With Photo';
+
+  @override
+  String get searchFilterCompletedProfile => 'Completed Profile';
+
+  @override
+  String get searchFilterOptionYes => 'Yes';
+
+  @override
+  String get searchFilterOptionNo => 'No';
+
+  @override
+  String get searchFilterOptionOccasionally => 'Occasionally';
 
   @override
   String get matchesTitle => 'My Matches';
@@ -1971,4 +2118,49 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get drawerVersionLabel => 'Nenjam Matrimony';
+
+  @override
+  String get profileDetailSendInterest => 'Send Interest';
+
+  @override
+  String get profileDetailInterestSent => 'Interest Sent';
+
+  @override
+  String get profileDetailStartConversation => 'Start Conversation';
+
+  @override
+  String get profileDetailVideoCall => 'Video Call';
+
+  @override
+  String get profileDetailVideoComingSoon => 'Video calling is coming soon';
+
+  @override
+  String get profileDetailShareComingSoon => 'Share coming soon';
+
+  @override
+  String get profileDetailTabAbout => 'About';
+
+  @override
+  String get profileDetailTabPhotos => 'Photos';
+
+  @override
+  String get profileDetailTabFamily => 'Family';
+
+  @override
+  String get profileDetailTabLifestyle => 'Lifestyle';
+
+  @override
+  String get profileDetailTabHoroscope => 'Horoscope';
+
+  @override
+  String get profileDetailTabPreferences => 'Preferences';
+
+  @override
+  String get profileDetailTabVerification => 'Verification';
+
+  @override
+  String get profileDetailTabTimeline => 'Timeline';
+
+  @override
+  String get profileDetailProfileNotAvailable => 'Profile not available';
 }

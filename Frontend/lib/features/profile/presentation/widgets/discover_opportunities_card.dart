@@ -4,6 +4,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/avatars/gender_placeholder.dart';
 
 /// Discover Opportunities section — horizontally scrollable list of match
 /// recommendation cards with name, profession, and compatibility %.
@@ -129,9 +130,9 @@ class _MatchCard extends StatelessWidget {
                             match.imageUrl!,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) =>
-                                _PhotoPlaceholder(isDark: isDark),
+                                NmGenderPlaceholder(gender: match.gender, iconSize: 40),
                           )
-                        : _PhotoPlaceholder(isDark: isDark),
+                        : NmGenderPlaceholder(gender: match.gender, iconSize: 40),
                   ),
 
                   // Gradient overlay + name
@@ -212,20 +213,6 @@ class _MatchCard extends StatelessWidget {
   }
 }
 
-class _PhotoPlaceholder extends StatelessWidget {
-  final bool isDark;
-  const _PhotoPlaceholder({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Icon(
-      Icons.person_rounded,
-      size: 40,
-      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-    ),
-  );
-}
-
 class _EmptyState extends StatelessWidget {
   final bool isDark;
   const _EmptyState({required this.isDark});
@@ -251,6 +238,9 @@ class NmDiscoverMatch {
   final String profession;
   final int compatibilityPct;
   final String? imageUrl;
+  /// 'Male' / 'Female' / '' — picks the gender-aware placeholder icon
+  /// when [imageUrl] is null/fails to load.
+  final String gender;
   final VoidCallback? onTap;
 
   const NmDiscoverMatch({
@@ -259,6 +249,7 @@ class NmDiscoverMatch {
     required this.profession,
     required this.compatibilityPct,
     this.imageUrl,
+    this.gender = '',
     this.onTap,
   });
 }

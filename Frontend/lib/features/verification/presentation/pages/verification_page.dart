@@ -15,7 +15,6 @@ class VerificationPage extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        leading: BackButton(onPressed: () => context.pop()),
         title: Text(l10n.registrationVerificationTitle),
       ),
       body: SafeArea(

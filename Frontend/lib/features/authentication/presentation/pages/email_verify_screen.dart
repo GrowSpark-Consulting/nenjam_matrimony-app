@@ -123,6 +123,18 @@ class _EmailVerifyScreenState extends ConsumerState<EmailVerifyScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            // Always reached via `context.go` (never pushed), so there is
+            // no pop stack to fall back on — return to Login explicitly.
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(RouteNames.login);
+            }
+          },
+        ),
         title: Text(
           l10n.authVerifyEmailTitle,
           style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w600),

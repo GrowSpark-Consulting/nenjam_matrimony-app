@@ -8,6 +8,7 @@ import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
+import '../../../../core/widgets/buttons/icon_button.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// Language selection screen.
@@ -30,8 +31,16 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
     final selected = ref.watch(localeProvider).languageCode;
 
     final options = <_LanguageOption>[
-      _LanguageOption(code: 'en', nativeName: 'English', label: l10n.languageEnglish),
-      _LanguageOption(code: 'ta', nativeName: 'தமிழ்', label: l10n.languageTamil),
+      _LanguageOption(
+        code: 'en',
+        nativeName: 'English',
+        label: l10n.languageEnglish,
+      ),
+      _LanguageOption(
+        code: 'ta',
+        nativeName: 'தமிழ்',
+        label: l10n.languageTamil,
+      ),
     ];
 
     return Scaffold(
@@ -47,6 +56,21 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 16),
+                  // This page is reached both as an onboarding root (via
+                  // `go`, nothing to pop to) and pushed from Settings (via
+                  // `push`, where the user needs a way back) — only show a
+                  // back affordance when there's actually something to pop.
+                  if (context.canPop())
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: NmIconButton(
+                        icon: Icons.arrow_back_rounded,
+                        onPressed: () => context.pop(),
+                        tooltip: MaterialLocalizations.of(
+                          context,
+                        ).backButtonTooltip,
+                      ),
+                    ),
                   Text(
                     l10n.languageChooseTitle,
                     style: AppTypography.headlineLarge.copyWith(
@@ -107,9 +131,9 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
   void _onContinue() {
     // Ensure the currently-active locale is persisted before leaving —
     // covers the case where the user accepts the default without tapping.
-    ref.read(localeProvider.notifier).changeLocale(
-          ref.read(localeProvider).languageCode,
-        );
+    ref
+        .read(localeProvider.notifier)
+        .changeLocale(ref.read(localeProvider).languageCode);
     context.go(RouteNames.onboarding);
   }
 }
@@ -144,8 +168,9 @@ class _LanguageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseSurface =
-        isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight;
+    final baseSurface = isDark
+        ? AppColors.surfaceVariantDark
+        : AppColors.surfaceVariantLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
     return Semantics(
@@ -158,8 +183,8 @@ class _LanguageCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? (isDark
-                  ? AppColors.primary.withValues(alpha: 0.18)
-                  : AppColors.primarySurface)
+                    ? AppColors.primary.withValues(alpha: 0.18)
+                    : AppColors.primarySurface)
               : baseSurface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
@@ -193,17 +218,13 @@ class _LanguageCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppColors.primary
-                          : (isDark
-                              ? AppColors.surfaceDark
-                              : Colors.white),
+                          : (isDark ? AppColors.surfaceDark : Colors.white),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Text(
                       option.nativeName.characters.first,
                       style: AppTypography.titleLarge.copyWith(
-                        color: isSelected
-                            ? Colors.white
-                            : AppColors.primary,
+                        color: isSelected ? Colors.white : AppColors.primary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),

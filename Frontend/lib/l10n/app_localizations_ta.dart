@@ -409,6 +409,24 @@ class AppLocalizationsTa extends AppLocalizations {
       'புதிய சுயவிவரங்களுக்கு விரைவில் மீண்டும் பார்க்கவும்';
 
   @override
+  String get matchesCategorySearch => 'தேடல்';
+
+  @override
+  String get matchesCategoryNew => 'புதியவை';
+
+  @override
+  String get matchesCategoryDaily => 'தினசரி';
+
+  @override
+  String get matchesCategoryMyMatches => 'எனது பொருத்தங்கள்';
+
+  @override
+  String get matchesCategoryNearMe => 'என் அருகில்';
+
+  @override
+  String get matchesCategoryMoreMatches => 'மேலும் பொருத்தங்கள்';
+
+  @override
   String get discoverKmAwaySuffix => 'கி.மீ தொலைவில்';
 
   @override
@@ -443,6 +461,136 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get searchSortButton => 'வரிசைப்படுத்து';
+
+  @override
+  String get searchHint => 'பெயர், திருமண அடையாள எண், நகரம், தொழில்...';
+
+  @override
+  String get searchRecentTitle => 'சமீபத்திய தேடல்கள்';
+
+  @override
+  String get searchPopularTitle => 'பிரபலமான தேடல்கள்';
+
+  @override
+  String get searchClearAll => 'அனைத்தையும் அழி';
+
+  @override
+  String get searchEmptyResultsTitle => 'பொருந்தும் சுயவிவரங்கள் இல்லை.';
+
+  @override
+  String get searchEmptyResultsSubtitle =>
+      'உங்கள் வடிகட்டிகளை மாற்றி முயற்சிக்கவும்.';
+
+  @override
+  String get searchResetFiltersButton => 'வடிகட்டிகளை மீட்டமை';
+
+  @override
+  String get searchFilterSheetTitle => 'வடிகட்டிகள்';
+
+  @override
+  String get searchFilterReset => 'மீட்டமை';
+
+  @override
+  String get searchFilterApply => 'வடிகட்டிகளைப் பயன்படுத்து';
+
+  @override
+  String get searchFilterSectionBasic => 'அடிப்படை';
+
+  @override
+  String get searchFilterSectionReligion => 'மதம்';
+
+  @override
+  String get searchFilterSectionLocation => 'இடம்';
+
+  @override
+  String get searchFilterSectionEducation => 'கல்வி';
+
+  @override
+  String get searchFilterSectionCareer => 'தொழில்';
+
+  @override
+  String get searchFilterSectionLifestyle => 'வாழ்க்கை முறை';
+
+  @override
+  String get searchFilterSectionHoroscope => 'ஜாதகம்';
+
+  @override
+  String get searchFilterSectionVerification => 'சரிபார்ப்பு';
+
+  @override
+  String get searchFilterSectionPremium => 'பிரீமியம்';
+
+  @override
+  String get searchFilterSectionProfile => 'சுயவிவரம்';
+
+  @override
+  String get searchFilterAgeRange => 'வயது வரம்பு';
+
+  @override
+  String get searchFilterGender => 'பாலினம்';
+
+  @override
+  String get searchFilterGenderMale => 'ஆண்';
+
+  @override
+  String get searchFilterGenderFemale => 'பெண்';
+
+  @override
+  String get searchFilterHeightMin => 'குறைந்தபட்ச உயரம்';
+
+  @override
+  String get searchFilterHeightMax => 'அதிகபட்ச உயரம்';
+
+  @override
+  String get searchFilterCommunity => 'சமூகம்';
+
+  @override
+  String get searchFilterState => 'மாநிலம்';
+
+  @override
+  String get searchFilterDiet => 'உணவுப் பழக்கம்';
+
+  @override
+  String get searchFilterSmoking => 'புகைபிடித்தல்';
+
+  @override
+  String get searchFilterDrinking => 'மது அருந்துதல்';
+
+  @override
+  String get searchFilterRashi => 'ராசி';
+
+  @override
+  String get searchFilterStar => 'நட்சத்திரம்';
+
+  @override
+  String get searchFilterHoroscopeAvailable => 'ஜாதகம் உள்ளது';
+
+  @override
+  String get searchFilterAadhaarVerified => 'ஆதார் சரிபார்க்கப்பட்டது';
+
+  @override
+  String get searchFilterIncomeVerified => 'வருமானம் சரிபார்க்கப்பட்டது';
+
+  @override
+  String get searchFilterNriVerified => 'NRI சரிபார்க்கப்பட்டது';
+
+  @override
+  String get searchFilterPremiumOnly => 'பிரீமியம் உறுப்பினர்கள் மட்டும்';
+
+  @override
+  String get searchFilterWithPhoto => 'புகைப்படத்துடன்';
+
+  @override
+  String get searchFilterCompletedProfile => 'முடிக்கப்பட்ட சுயவிவரம்';
+
+  @override
+  String get searchFilterOptionYes => 'ஆம்';
+
+  @override
+  String get searchFilterOptionNo => 'இல்லை';
+
+  @override
+  String get searchFilterOptionOccasionally => 'எப்போதாவது';
 
   @override
   String get matchesTitle => 'என் பொருத்தங்கள்';
@@ -1996,4 +2144,49 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get drawerVersionLabel => 'நெஞ்சம் மேட்ரிமோனி';
+
+  @override
+  String get profileDetailSendInterest => 'விருப்பம் அனுப்பு';
+
+  @override
+  String get profileDetailInterestSent => 'விருப்பம் அனுப்பப்பட்டது';
+
+  @override
+  String get profileDetailStartConversation => 'உரையாடலைத் தொடங்கு';
+
+  @override
+  String get profileDetailVideoCall => 'வீடியோ அழைப்பு';
+
+  @override
+  String get profileDetailVideoComingSoon => 'வீடியோ அழைப்பு விரைவில் வருகிறது';
+
+  @override
+  String get profileDetailShareComingSoon => 'பகிர்வு விரைவில் வருகிறது';
+
+  @override
+  String get profileDetailTabAbout => 'பற்றி';
+
+  @override
+  String get profileDetailTabPhotos => 'புகைப்படங்கள்';
+
+  @override
+  String get profileDetailTabFamily => 'குடும்பம்';
+
+  @override
+  String get profileDetailTabLifestyle => 'வாழ்க்கை முறை';
+
+  @override
+  String get profileDetailTabHoroscope => 'ஜாதகம்';
+
+  @override
+  String get profileDetailTabPreferences => 'விருப்பத்தேர்வுகள்';
+
+  @override
+  String get profileDetailTabVerification => 'சரிபார்ப்பு';
+
+  @override
+  String get profileDetailTabTimeline => 'காலவரிசை';
+
+  @override
+  String get profileDetailProfileNotAvailable => 'சுயவிவரம் கிடைக்கவில்லை';
 }

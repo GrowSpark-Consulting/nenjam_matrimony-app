@@ -54,6 +54,10 @@ abstract final class AppConstants {
   /// is verified and linked to the Firebase account. Not a profile store.
   static const String keyPendingPhone = 'pending_signup_phone';
 
+  /// Local-only search history — capped at [maxRecentSearches] entries.
+  static const String keySearchHistory = 'search_history';
+  static const int maxRecentSearches = 10;
+
   // ─── Navigation / App State Restoration ───────────────────────────
   //
   // Snapshotted on AppLifecycleState.paused, consumed once by

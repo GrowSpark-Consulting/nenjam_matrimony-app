@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -39,11 +41,13 @@ class DiscoverTopBar extends ConsumerWidget {
       child: Row(
         children: [
           // ── Search ──────────────────────────────────────────────
+          // Pushed (not `go`) so Discover stays on the navigator stack —
+          // back returns to this exact instance with its state intact.
           Semantics(
             button: true,
             label: l10n.searchTitle,
             child: IconButton(
-              onPressed: () {},
+              onPressed: () => context.push(RouteNames.search),
               icon: const Icon(Icons.search_rounded, color: Colors.white),
               tooltip: l10n.searchTitle,
             ),

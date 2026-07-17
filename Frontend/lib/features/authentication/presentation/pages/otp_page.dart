@@ -105,7 +105,6 @@ class _OtpPageState extends State<OtpPage> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: BackButton(onPressed: () => context.pop()),
         title: Text(
           isEmail ? l10n.authVerifyEmail : l10n.authVerifyMobile,
           style: AppTypography.titleMedium

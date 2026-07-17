@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../constants/app_spacing.dart';
-import '../../router/route_names.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_shadows.dart';
 import '../../theme/app_typography.dart';
@@ -11,19 +10,25 @@ import '../../theme/tokens/app_radius.dart';
 
 /// Floating pill-style bottom navigation shell that wraps tabbed routes —
 /// Discover / Matches / Inbox / Premium.
+///
+/// Backed by a [StatefulShellRoute.indexedStack] (see `app_router.dart`):
+/// [navigationShell] itself renders whichever branch is active inside an
+/// `IndexedStack`, so switching tabs preserves each branch's own Navigator
+/// stack and scroll position instead of rebuilding it from scratch.
 class AppBottomNavShell extends StatelessWidget {
-  final Widget child;
+  final StatefulNavigationShell navigationShell;
 
-  const AppBottomNavShell({super.key, required this.child});
+  const AppBottomNavShell({super.key, required this.navigationShell});
 
   static const _tabs = [
-    _NavTab(RouteNames.discover, Icons.explore_rounded, Icons.explore_outlined),
-    _NavTab(RouteNames.matches, Icons.favorite_rounded, Icons.favorite_border_rounded),
-    _NavTab(RouteNames.messages, Icons.chat_bubble_rounded, Icons.chat_bubble_outline_rounded),
-    _NavTab(RouteNames.premium, Icons.workspace_premium_rounded, Icons.workspace_premium_outlined),
+    _NavTab(Icons.explore_rounded, Icons.explore_outlined),
+    _NavTab(Icons.favorite_rounded, Icons.favorite_border_rounded),
+    _NavTab(Icons.chat_bubble_rounded, Icons.chat_bubble_outline_rounded),
+    _NavTab(Icons.workspace_premium_rounded, Icons.workspace_premium_outlined),
   ];
 
-  /// Localized labels, index-aligned with [_tabs].
+  /// Localized labels, index-aligned with [_tabs] and with the branch order
+  /// declared in `app_router.dart`.
   List<String> _labels(AppLocalizations l10n) => [
         l10n.navDiscover,
         l10n.navMatches,
@@ -31,36 +36,40 @@ class AppBottomNavShell extends StatelessWidget {
         l10n.navPremium,
       ];
 
-  int _currentIndex(BuildContext context) {
-    final location = GoRouterState.of(context).uri.path;
-    for (int i = 0; i < _tabs.length; i++) {
-      if (location == _tabs[i].path) return i;
-    }
-    return 0;
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final currentIndex = _currentIndex(context);
+    final currentIndex = navigationShell.currentIndex;
     final labels = _labels(AppLocalizations.of(context));
 
-    // Android/iOS back button: only the Discover tab is a true "root" —
-    // every other tab was reached via context.go() (a stack replace, not a
-    // push), so there's nothing underneath it to pop back to. Intercept
-    // the back gesture there and return to Discover instead of letting the
-    // OS close the app; only allow the real pop (app exit) from Discover
-    // itself. Routes pushed on top of any tab (Edit Profile, wizard steps,
-    // ...) are unaffected — they live above this in the Navigator stack,
-    // so the OS back button already pops them first as normal.
+    // Android/iOS back button: only the Discover branch is a true "root" —
+    // every other branch was reached by switching tabs, not by pushing on
+    // top of Discover, so there's nothing underneath it in ITS OWN branch
+    // stack to pop back to. Intercept the back gesture there and switch to
+    // the Discover branch instead of letting the OS close the app; only
+    // allow the real pop (app exit) from Discover itself. Routes pushed on
+    // top of any branch (Search, Edit Profile, wizard steps, ...) are
+    // unaffected — they live above this as root-navigator pages, so the OS
+    // back button already pops them first as normal.
+    // TEMP DEBUG — remove before shipping.
+    debugPrint(
+      '[BACK] AppBottomNavShell.build: currentIndex=$currentIndex '
+      'canPop(computed)=${currentIndex == 0}',
+    );
     return PopScope(
       canPop: currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
+        // TEMP DEBUG — remove before shipping.
+        debugPrint(
+          '[BACK] PopScope.onPopInvokedWithResult FIRED: '
+          'didPop=$didPop currentIndex=$currentIndex',
+        );
         if (didPop) return;
-        context.go(RouteNames.discover);
+        debugPrint('[BACK] -> navigationShell.goBranch(0)');
+        navigationShell.goBranch(0);
       },
       child: Scaffold(
-        body: child,
+        body: navigationShell,
         bottomNavigationBar: SafeArea(
           top: false,
           minimum: const EdgeInsets.fromLTRB(
@@ -85,7 +94,14 @@ class AppBottomNavShell extends StatelessWidget {
                     activeIcon: tab.activeIcon,
                     label: labels[index],
                     isActive: index == currentIndex,
-                    onTap: () => context.go(tab.path),
+                    // initialLocation resets the branch to its starting
+                    // route when re-tapping the tab you're already on —
+                    // the standard go_router pattern — while switching
+                    // between different tabs preserves each one's state.
+                    onTap: () => navigationShell.goBranch(
+                      index,
+                      initialLocation: index == currentIndex,
+                    ),
                   ),
                 );
               }),
@@ -195,9 +211,8 @@ class _NavItem extends StatelessWidget {
 }
 
 class _NavTab {
-  final String path;
   final IconData activeIcon;
   final IconData icon;
 
-  const _NavTab(this.path, this.activeIcon, this.icon);
+  const _NavTab(this.activeIcon, this.icon);
 }

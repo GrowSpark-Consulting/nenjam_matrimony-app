@@ -4,6 +4,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
+import '../avatars/gender_placeholder.dart';
 import '../badges/premium_badge.dart';
 import '../badges/verification_badge.dart';
 
@@ -14,12 +15,19 @@ class NmProfileCard extends StatelessWidget {
   final String location;
   final String? imageUrl;
   final String? profession;
+  /// 'Male' / 'Female' / '' — picks the icon [NmGenderPlaceholder] shows
+  /// when [imageUrl] is null/empty.
+  final String gender;
   final bool isVerified;
   final bool isPremium;
   final bool isOnline;
   final VoidCallback? onTap;
   final VoidCallback? onLikeTap;
   final VoidCallback? onShortlistTap;
+  /// When set, wraps the card photo in a [Hero] with this tag so tapping
+  /// through to Profile Detail animates the same photo into its hero.
+  /// Defaults to null (no [Hero]) so existing call sites are unaffected.
+  final String? heroTag;
 
   const NmProfileCard({
     super.key,
@@ -28,12 +36,14 @@ class NmProfileCard extends StatelessWidget {
     required this.location,
     this.imageUrl,
     this.profession,
+    this.gender = '',
     this.isVerified = false,
     this.isPremium = false,
     this.isOnline = false,
     this.onTap,
     this.onLikeTap,
     this.onShortlistTap,
+    this.heroTag,
   });
 
   @override
@@ -49,32 +59,39 @@ class NmProfileCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Profile Image
-            AspectRatio(
-              aspectRatio: 3 / 4,
+            // Profile image fills whatever height the parent leaves after
+            // the footer below takes its natural size — an AspectRatio
+            // here would instead force its own height regardless of what
+            // the parent (grid cell, fixed-size shelf card, etc.) actually
+            // gives the card, which is what caused the bottom overflow.
+            // BoxFit.cover on the photo itself keeps the crop looking
+            // intentional at whatever height results.
+            Expanded(
               child: Stack(
                 fit: StackFit.expand,
                 children: [
                   // Image placeholder
-                  Container(
-                    color: isDark
-                        ? AppColors.surfaceVariantDark
-                        : AppColors.surfaceVariantLight,
-                    child: imageUrl != null
-                        ? (imageUrl!.startsWith('assets/')
-                            ? Image.asset(
-                                imageUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
-                                    _buildPlaceholder(isDark),
-                              )
-                            : Image.network(
-                                imageUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
-                                    _buildPlaceholder(isDark),
-                              ))
-                        : _buildPlaceholder(isDark),
+                  _wrapHero(
+                    Container(
+                      color: isDark
+                          ? AppColors.surfaceVariantDark
+                          : AppColors.surfaceVariantLight,
+                      child: imageUrl != null
+                          ? (imageUrl!.startsWith('assets/')
+                              ? Image.asset(
+                                  imageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      _buildPlaceholder(isDark),
+                                )
+                              : Image.network(
+                                  imageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      _buildPlaceholder(isDark),
+                                ))
+                          : _buildPlaceholder(isDark),
+                    ),
                   ),
 
                   // Gradient overlay
@@ -100,16 +117,19 @@ class NmProfileCard extends StatelessWidget {
                       ),
                     ),
 
-                  // Badges
+                  // Badges — Wrap rather than Row so a future third badge
+                  // wraps onto a second line instead of overflowing the
+                  // card width.
                   Positioned(
                     top: 12,
                     left: 12,
-                    child: Row(
+                    right: 12,
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
                       children: [
-                        if (isPremium) ...[
+                        if (isPremium)
                           const NmPremiumBadge(size: NmBadgeSize.small),
-                          const SizedBox(width: 6),
-                        ],
                         if (isVerified)
                           const NmVerificationBadge(
                             size: NmBadgeSize.small,
@@ -192,15 +212,10 @@ class NmProfileCard extends StatelessWidget {
     );
   }
 
-  Widget _buildPlaceholder(bool isDark) => Center(
-        child: Icon(
-          Icons.person_rounded,
-          size: 48,
-          color: isDark
-              ? AppColors.textTertiaryDark
-              : AppColors.textTertiaryLight,
-        ),
-      );
+  Widget _wrapHero(Widget child) =>
+      heroTag == null ? child : Hero(tag: heroTag!, child: child);
+
+  Widget _buildPlaceholder(bool isDark) => NmGenderPlaceholder(gender: gender);
 }
 
 class _ActionIcon extends StatelessWidget {

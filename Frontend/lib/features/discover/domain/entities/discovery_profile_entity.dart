@@ -30,6 +30,10 @@ class DiscoveryProfileEntity {
   final String height;
   final String diet;
   final double? distanceKm;
+  /// 'Male' | 'Female' | '' (unknown) — matches the value shape used by
+  /// registration's own gender field. Drives which gender-specific icon a
+  /// "no photo yet" placeholder shows for this profile.
+  final String gender;
 
   const DiscoveryProfileEntity({
     required this.id,
@@ -55,5 +59,6 @@ class DiscoveryProfileEntity {
     this.height = '',
     this.diet = '',
     this.distanceKm,
+    this.gender = '',
   });
 }
