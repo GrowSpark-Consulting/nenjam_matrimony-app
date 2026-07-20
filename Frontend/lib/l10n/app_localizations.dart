@@ -1118,6 +1118,12 @@ abstract class AppLocalizations {
   /// **'Finish & Login'**
   String get registrationFinishLogin;
 
+  /// No description provided for @registrationRequiredFieldsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Please fill in all required fields to continue.'**
+  String get registrationRequiredFieldsHint;
+
   /// No description provided for @registrationStepBasicInfo.
   ///
   /// In en, this message translates to:

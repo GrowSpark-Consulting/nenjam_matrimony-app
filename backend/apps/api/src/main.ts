@@ -8,6 +8,17 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
 
+  const configForCors = app.get(AppConfigService);
+  // Browsers block cross-origin XHR/fetch by default (native/mobile builds
+  // never hit this — only the Flutter web build does). No production origin
+  // allowlist exists yet since there's no deployed environment — reflect
+  // the request origin in dev, tighten this once one exists.
+  app.enableCors({
+    origin: configForCors.isDevelopment ? true : false,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-App-Version', 'Accept'],
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

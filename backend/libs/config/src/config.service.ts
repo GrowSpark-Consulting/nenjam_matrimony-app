@@ -57,6 +57,10 @@ export class AppConfigService implements OnModuleInit {
     return this.configService.get('firebase', { infer: true });
   }
 
+  get storage(): AppConfig['storage'] {
+    return this.configService.get('storage', { infer: true });
+  }
+
   get logLevel(): string {
     return this.configService.get('logLevel', { infer: true });
   }

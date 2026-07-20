@@ -549,6 +549,10 @@ class AppLocalizationsTa extends AppLocalizations {
   String get registrationFinishLogin => 'முடித்து உள்நுழை';
 
   @override
+  String get registrationRequiredFieldsHint =>
+      'தொடர தேவையான அனைத்து விவரங்களையும் நிரப்பவும்.';
+
+  @override
   String get registrationStepBasicInfo => 'அடிப்படை தகவல்';
 
   @override

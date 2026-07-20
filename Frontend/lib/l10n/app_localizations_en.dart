@@ -545,6 +545,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registrationFinishLogin => 'Finish & Login';
 
   @override
+  String get registrationRequiredFieldsHint =>
+      'Please fill in all required fields to continue.';
+
+  @override
   String get registrationStepBasicInfo => 'Basic Info';
 
   @override

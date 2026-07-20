@@ -220,6 +220,7 @@
   },
   "registrationBack": "பின்",
   "registrationFinishLogin": "முடித்து உள்நுழை",
+  "registrationRequiredFieldsHint": "தொடர தேவையான அனைத்து விவரங்களையும் நிரப்பவும்.",
   "registrationStepBasicInfo": "அடிப்படை தகவல்",
   "registrationStepReligion": "மதம்",
   "registrationStepLanguage": "மொழி",

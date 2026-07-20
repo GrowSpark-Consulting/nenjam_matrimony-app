@@ -31,6 +31,12 @@ export interface AppConfig {
     clientEmail?: string;
     privateKey?: string;
   };
+  storage: {
+    region?: string;
+    accessKeyId?: string;
+    secretAccessKey?: string;
+    bucket?: string;
+  };
   logLevel: string;
 }
 
@@ -69,6 +75,15 @@ export default (): AppConfig => ({
     // instead of real newlines — Firebase Admin's cert() requires real ones.
     privateKey:
       process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n') || undefined,
+  },
+  // AWS S3 (profile photos + verification documents). Left unset, the app
+  // still boots — only the photo-upload endpoints require these, and
+  // S3Service throws a clear error if a request reaches it unconfigured.
+  storage: {
+    region: process.env.AWS_REGION || undefined,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || undefined,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || undefined,
+    bucket: process.env.AWS_S3_BUCKET_NAME || undefined,
   },
   logLevel: process.env.LOG_LEVEL ?? 'info',
 });

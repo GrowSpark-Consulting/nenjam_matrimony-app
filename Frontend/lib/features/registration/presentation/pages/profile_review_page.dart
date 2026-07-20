@@ -14,6 +14,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../astro/presentation/providers/compatibility_provider.dart';
 import '../../../profile_completion/domain/profile_completion_aggregator.dart';
 import '../../../profile_completion/domain/profile_completion_module.dart';
+import '../../../profile_prompts/domain/models/prompt_bank_item.dart';
 import '../../../profile_prompts/presentation/providers/profile_prompt_provider.dart';
 import '../../../psychology/domain/models/personality_result.dart';
 import '../../../psychology/presentation/providers/personality_provider.dart';
@@ -430,8 +431,14 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                           prompts: prompts,
                           editable: true,
                           onEditTap: () async {
-                            await context.push(RouteNames.choosePrompt,
+                            final result = await context.push<List<PromptAnswer>>(
+                                RouteNames.choosePrompt,
                                 extra: prompts);
+                            if (result != null) {
+                              await ref
+                                  .read(profilePromptRepositoryProvider)
+                                  .saveUserPrompts(result);
+                            }
                             ref.invalidate(myPromptsProvider);
                           },
                         );

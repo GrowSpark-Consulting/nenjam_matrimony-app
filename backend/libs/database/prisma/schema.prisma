@@ -52,6 +52,7 @@ model User {
   reportsAgainst    UserReport[]         @relation("ReportsAgainst")
   reportsMade       UserReport[]         @relation("ReportsMade")
   subscriptions     UserSubscription[]
+  profilePrompts    UserProfilePrompt[]
 
   @@index([firebaseUid])
   @@index([email])
@@ -104,7 +105,10 @@ model UserProfile {
   religion           String
   caste              String
   subCaste           String?       @map("sub_caste")
+  community          String?
+  denomination       String?
   motherTongue       String        @map("mother_tongue")
+  languagesKnown     Json          @default("[]") @map("languages_known")
   heightCm           Int           @map("height_cm")
   weightKg           Int?          @map("weight_kg")
   annualIncomeLakhs  Decimal?      @map("annual_income_lakhs") @db.Decimal(10, 2)
@@ -115,13 +119,19 @@ model UserProfile {
   currentCity        String        @map("current_city")
   currentState       String        @map("current_state")
   nativeCity         String?       @map("native_city")
+  country            String?
+  area               String?
+  pinCode            String?       @map("pin_code")
   bio                String?
   dietaryHabits      String?       @map("dietary_habits")
   smokingHabits      String?       @map("smoking_habits")
   drinkingHabits     String?       @map("drinking_habits")
+  fitness            String?
+  hobbies            Json          @default("[]")
   physicalStatus     String?       @map("physical_status")
   familyType         String?       @map("family_type")
   familyStatus       String?       @map("family_status")
+  familyValues       String?       @map("family_values")
   fatherOccupation   String?       @map("father_occupation")
   motherOccupation   String?       @map("mother_occupation")
   siblings           Int?
@@ -174,6 +184,8 @@ model PartnerPreference {
   preferredCities    Json     @default("[]") @map("preferred_cities")
   preferredStates    Json     @default("[]") @map("preferred_states")
   preferredEducation Json     @default("[]") @map("preferred_education")
+  preferredOccupations   Json @default("[]") @map("preferred_occupations")
+  preferredMotherTongues Json @default("[]") @map("preferred_mother_tongues")
   maritalStatusPref  Json     @default("[]") @map("marital_status_pref")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
@@ -213,6 +225,7 @@ model AstrologyProfile {
   lagnam     String?
   gotram     String?
   dosham     DoshamType @default(NONE)
+  horoscopeAvailable Boolean @default(false) @map("horoscope_available")
   rawChart   Json?      @map("raw_chart")
   createdAt  DateTime   @default(now()) @map("created_at")
   updatedAt  DateTime   @updatedAt @map("updated_at")
@@ -335,6 +348,40 @@ model UserQuizResponse {
   @@unique([userId, quizId])
   @@index([userId])
   @@map("user_quiz_responses")
+}
+
+/// Catalogue of pickable profile prompts (Hinge/Jeevansathi-style) — see
+/// Frontend/lib/features/profile_prompts. Category names mirror the Flutter
+/// PromptCategory enum (SCREAMING_SNAKE here, camelCase there).
+model PromptBankItem {
+  id         String              @id @default(uuid())
+  category   PromptCategory
+  promptText String              @map("prompt_text")
+  isActive   Boolean             @default(true) @map("is_active")
+  order      Int                 @default(0)
+  createdAt  DateTime            @default(now()) @map("created_at")
+  answers    UserProfilePrompt[]
+
+  @@index([category])
+  @@map("prompt_bank_items")
+}
+
+/// A user's chosen prompt + written answer. Capped at 3 per user, enforced
+/// in PromptsService — see ChoosePromptPage's max-3 UI limit.
+model UserProfilePrompt {
+  id         String         @id @default(uuid())
+  userId     String         @map("user_id")
+  promptId   String         @map("prompt_id")
+  answerText String         @map("answer_text")
+  order      Int            @default(0)
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt     PromptBankItem @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, promptId])
+  @@index([userId])
+  @@map("user_profile_prompts")
 }
 
 /// Subscription plan catalogue (Silver, Gold). Prices in paise (₹1 = 100 paise).
@@ -665,6 +712,16 @@ enum InterestStatus {
   DECLINED
 
   @@map("interest_status")
+}
+
+/// Mirrors Frontend/lib/features/profile_prompts/domain/models/prompt_bank_item.dart -> PromptCategory
+enum PromptCategory {
+  PERSONALITY
+  MARRIAGE_COMPATIBILITY
+  FAMILY
+  CAREER
+
+  @@map("prompt_category")
 }
 
 enum OceanDomain {

@@ -1,6 +1,13 @@
+import { PhotoEntity } from './photo.entity';
+import { PartnerPreferenceEntity } from './partner-preference.entity';
+import { AstrologyProfileEntity } from './astrology-profile.entity';
+import { ProfileCompletionEntity } from './profile-completion.entity';
+
 // Domain object the service layer works with, mapped from Prisma's
 // UserProfile row by ProfileRepository — Prisma's generated type never
-// leaks past the repository.
+// leaks past the repository. The nested fields (photos/partnerPreference/
+// astrology/completion) are assembled by ProfileService.getOwn() from the
+// other repositories in this module — they aren't UserProfile columns.
 export class ProfileEntity {
   id!: string;
   userId!: string;
@@ -12,7 +19,10 @@ export class ProfileEntity {
   religion!: string;
   caste!: string;
   subCaste!: string | null;
+  community!: string | null;
+  denomination!: string | null;
   motherTongue!: string;
+  languagesKnown!: string[];
   heightCm!: number;
   weightKg!: number | null;
   annualIncomeLakhs!: string | null;
@@ -23,16 +33,27 @@ export class ProfileEntity {
   currentCity!: string;
   currentState!: string;
   nativeCity!: string | null;
+  country!: string | null;
+  area!: string | null;
+  pinCode!: string | null;
   bio!: string | null;
   dietaryHabits!: string | null;
   smokingHabits!: string | null;
   drinkingHabits!: string | null;
+  fitness!: string | null;
+  hobbies!: string[];
   physicalStatus!: string | null;
   familyType!: string | null;
   familyStatus!: string | null;
+  familyValues!: string | null;
   fatherOccupation!: string | null;
   motherOccupation!: string | null;
   siblings!: number | null;
   isProfileComplete!: boolean;
   profileCompletePct!: number;
+
+  photos!: PhotoEntity[];
+  partnerPreference!: PartnerPreferenceEntity | null;
+  astrology!: AstrologyProfileEntity | null;
+  completion!: ProfileCompletionEntity;
 }
