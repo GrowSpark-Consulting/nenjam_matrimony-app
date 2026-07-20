@@ -4,8 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ProfileRepository } from '../repositories/profile.repository';
+import { PhotoRepository } from '../repositories/photo.repository';
 import { ProfileDraftService } from './profile-draft.service';
 import { ProfileEntity } from '../entities/profile.entity';
+import { PhotoEntity } from '../entities/photo.entity';
+import { PartnerPreferenceEntity } from '../entities/partner-preference.entity';
+import { AstrologyProfileEntity } from '../entities/astrology-profile.entity';
+import { ProfileCompletionEntity } from '../entities/profile-completion.entity';
 
 // Best-effort parsers for the free-text range/string fields the Flutter
 // wizard collects. These assume the wizard's dropdown/picker values look
@@ -33,6 +38,16 @@ function toStringArray(value: string | undefined): string[] {
     .split(',')
     .map((part) => part.trim())
     .filter(Boolean);
+}
+
+// The wizard sends some fields as genuine JSON arrays already
+// (languagesKnown, hobbies — see profile_draft.dart's toJson()), unlike the
+// comma-separated free-text partner-preference fields toStringArray()
+// handles. Accepts either shape defensively.
+function toArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map((v) => String(v));
+  if (typeof value === 'string') return toStringArray(value);
+  return [];
 }
 
 function joinNonEmpty(...parts: (string | undefined)[]): string | undefined {
@@ -63,15 +78,81 @@ function mapDosham(
 export class ProfileService {
   constructor(
     private readonly profileRepository: ProfileRepository,
+    private readonly photoRepository: PhotoRepository,
     private readonly draftService: ProfileDraftService,
   ) {}
 
+  // Assembles the full response: the finalized UserProfile plus everything
+  // else the profile screen needs in one round trip — photos,
+  // partner-preference, astrology (each null/[] if the user never filled
+  // that optional section), and a freshly-computed completion breakdown.
   async getOwn(userId: string): Promise<ProfileEntity> {
     const profile = await this.profileRepository.findProfileByUserId(userId);
     if (!profile) {
       throw new NotFoundException('Profile has not been finalized yet.');
     }
+
+    const [photos, partnerPreference, astrology] = await Promise.all([
+      this.photoRepository.findAllForUser(userId),
+      this.profileRepository.findPartnerPreference(userId),
+      this.profileRepository.findAstrologyProfile(userId),
+    ]);
+
+    profile.photos = photos;
+    profile.partnerPreference = partnerPreference;
+    profile.astrology = astrology;
+    profile.completion = this.calculateCompletion(
+      profile,
+      photos,
+      partnerPreference,
+      astrology,
+    );
     return profile;
+  }
+
+  // Distinct from ProfileDraftService's completionPercentage (which tracks
+  // in-progress wizard draftData before finalize() has ever run). This one
+  // reads the finalized row + related tables — the source of truth once a
+  // profile exists. basicInfo/religionCommunity/location/careerEducation are
+  // enforced by assertRequiredFieldsPresent() at finalize() and so are
+  // always complete for any profile that exists at all; the remaining
+  // sections are genuinely optional and carry the real signal.
+  private calculateCompletion(
+    profile: ProfileEntity,
+    photos: PhotoEntity[],
+    partnerPreference: PartnerPreferenceEntity | null,
+    astrology: AstrologyProfileEntity | null,
+  ): ProfileCompletionEntity {
+    const sections: Record<string, boolean> = {
+      basicInfo: Boolean(
+        profile.firstName && profile.lastName && profile.dob && profile.gender,
+      ),
+      religionCommunity: Boolean(profile.religion && profile.caste),
+      location: Boolean(profile.currentCity && profile.currentState),
+      careerEducation: Boolean(profile.profession && profile.highestEducation),
+      about: Boolean(profile.bio && profile.bio.trim().length > 0),
+      photos: photos.length > 0,
+      partnerPreference: partnerPreference !== null,
+      astrology: astrology !== null,
+    };
+
+    const completedSections = Object.keys(sections).filter(
+      (key) => sections[key],
+    );
+    const missingSections = Object.keys(sections).filter(
+      (key) => !sections[key],
+    );
+    const total = Object.keys(sections).length;
+    const percentage =
+      total === 0
+        ? 0
+        : Math.round((completedSections.length / total) * 100);
+
+    const completion = new ProfileCompletionEntity();
+    completion.percentage = percentage;
+    completion.completedSections = completedSections;
+    completion.missingSections = missingSections;
+    return completion;
   }
 
   // Reads the accumulated wizard draft (see ProfileDraftService) and writes
@@ -124,7 +205,10 @@ export class ProfileService {
       religion: religion.religion as string,
       caste: religion.caste as string,
       subCaste: (religion.subCaste as string) || null,
+      community: (religion.community as string) || null,
+      denomination: (religion.denomination as string) || null,
       motherTongue: language.motherTongue as string,
+      languagesKnown: toArray(language.languagesKnown),
       heightCm: heightCm ?? 0,
       weightKg,
       annualIncomeLakhs: annualIncomeLakhs?.toString() ?? null,
@@ -140,10 +224,15 @@ export class ProfileService {
       currentCity: location.city as string,
       currentState: location.state as string,
       nativeCity: (location.nativePlace as string) || null,
+      country: (location.country as string) || null,
+      area: (location.area as string) || null,
+      pinCode: (location.pinCode as string) || null,
       bio: (lifestyle.aboutMe as string) || null,
       dietaryHabits: (lifestyle.eatingHabit as string) || null,
       smokingHabits: (lifestyle.smoking as string) || null,
       drinkingHabits: (lifestyle.drinking as string) || null,
+      fitness: (lifestyle.fitness as string) || null,
+      hobbies: toArray(lifestyle.hobbies),
       physicalStatus:
         joinNonEmpty(
           physical.bodyType as string,
@@ -153,25 +242,40 @@ export class ProfileService {
         ) ?? null,
       familyType: (family.familyType as string) || null,
       familyStatus: (family.familyStatus as string) || null,
+      familyValues: (family.familyValues as string) || null,
       fatherOccupation: (family.fatherOccupation as string) || null,
       motherOccupation: (family.motherOccupation as string) || null,
       siblings: brothers + sisters,
       isProfileComplete: true,
-      profileCompletePct: 100,
+      // Placeholder — replaced below with the real, freshly-computed value
+      // once photos/partnerPreference/astrology have all been written for
+      // this finalize() call.
+      profileCompletePct: 0,
     });
 
-    if (horoscope.birthTime || horoscope.birthPlace || horoscope.rashi) {
+    if (
+      horoscope.birthTime ||
+      horoscope.birthPlace ||
+      horoscope.rashi ||
+      horoscope.nakshatra ||
+      horoscope.star ||
+      horoscope.horoscopeAvailable
+    ) {
       await this.profileRepository.upsertAstrologyProfile(userId, {
         birthDate: new Date(basic.dob as string),
         birthTime: (horoscope.birthTime as string) || null,
         birthPlace: (horoscope.birthPlace as string) || null,
         rasi: (horoscope.rashi as string) || null,
-        nakshatra: (horoscope.nakshatra as string) || null,
+        // `star` is a UI duplicate of `nakshatra` in the wizard (both
+        // collected, same concept) — nakshatra wins when both are filled.
+        nakshatra:
+          (horoscope.nakshatra as string) || (horoscope.star as string) || null,
         gotram: (religion.gothra as string) || null,
         dosham: mapDosham(
           horoscope.manglik as string | undefined,
           horoscope.dosham as string | undefined,
         ),
+        horoscopeAvailable: Boolean(horoscope.horoscopeAvailable),
       });
     }
 
@@ -206,6 +310,12 @@ export class ProfileService {
         preferredEducation: toStringArray(
           partnerPref.educationPref as string | undefined,
         ),
+        preferredOccupations: toStringArray(
+          partnerPref.occupationPref as string | undefined,
+        ),
+        preferredMotherTongues: toStringArray(
+          partnerPref.motherTonguePref as string | undefined,
+        ),
         maritalStatusPref: toStringArray(
           partnerPref.maritalStatusPref as string | undefined,
         ),
@@ -213,7 +323,22 @@ export class ProfileService {
     }
 
     await this.profileRepository.markComplete(userId);
-    return profile;
+    return this.recalculateAndPersistCompletion(userId);
+  }
+
+  // Recomputes completion from the real, just-written rows and persists it
+  // to UserProfile.profileCompletePct (so other modules querying that column
+  // directly — search/matching, once built — see a correct value without
+  // going through ProfileService). Returns the same full shape as getOwn()
+  // so finalize()'s response is consistent with GET /profiles/me.
+  async recalculateAndPersistCompletion(userId: string): Promise<ProfileEntity> {
+    const full = await this.getOwn(userId);
+    await this.profileRepository.updateProfileCompletePct(
+      userId,
+      full.completion.percentage,
+    );
+    full.profileCompletePct = full.completion.percentage;
+    return full;
   }
 
   private assertRequiredFieldsPresent(

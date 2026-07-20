@@ -12,8 +12,11 @@ import '../../../../core/widgets/relationship_intelligence/profile_prompt_sectio
 import '../../../../core/widgets/relationship_intelligence/psychology_section.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../astro/presentation/providers/compatibility_provider.dart';
-import '../../../profile_completion/domain/profile_completion_aggregator.dart';
-import '../../../profile_completion/domain/profile_completion_module.dart';
+import '../../../profile/presentation/providers/profile_dashboard_providers.dart';
+import '../../../profile_completion/presentation/providers/profile_completeness_provider.dart';
+import '../../../profile_photos/domain/models/user_photo.dart';
+import '../../../profile_photos/presentation/providers/photo_providers.dart';
+import '../../../profile_prompts/domain/models/prompt_bank_item.dart';
 import '../../../profile_prompts/presentation/providers/profile_prompt_provider.dart';
 import '../../../psychology/domain/models/personality_result.dart';
 import '../../../psychology/presentation/providers/personality_provider.dart';
@@ -69,6 +72,13 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
     }
     if (!mounted) return;
 
+    // The edit is now persisted — refresh the dashboard's source-of-truth
+    // providers so the Profile page and the Discover completeness banner
+    // (both kept alive by the always-mounted Discover screen) reflect the
+    // change immediately instead of a stale pre-edit snapshot.
+    ref.invalidate(profileDraftResponseProvider);
+    ref.invalidate(profileCompletenessSnapshotProvider);
+
     // EDIT MODE: publish confirmation, reset to CREATE for hygiene, and
     // return to Discover — never back into onboarding/registration.
     ref.read(registrationProvider.notifier).startCreateMode();
@@ -86,10 +96,17 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
     final notifier = ref.read(registrationProvider.notifier);
     final mode = ref.watch(profileFlowModeProvider);
     final isEditMode = mode == ProfileFlowMode.edit;
+    // Photos are a backend resource (PhotoController), not part of the draft —
+    // read them from the single source of truth so the count/primary here
+    // matches the wizard photo step and the profile dashboard exactly.
+    final photos = ref.watch(myPhotosProvider).valueOrNull ?? const <UserPhoto>[];
+    final hasPrimaryPhoto = photos.any((p) => p.isPrimary);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final completion = aggregateProfileCompletion(
-      ProfileCompletionContext(draft: draft),
-    ).percentage;
+    // Single source of truth: the backend-computed completion (same value the
+    // Profile page, Discover drawer, and completion screen show). Never a
+    // locally recomputed number — that's what caused Edit Profile (57%) to
+    // disagree with the Profile page (83%).
+    final completion = ref.watch(backendProfileCompletionProvider).valueOrNull ?? 0;
 
     void editStep(int step) {
       notifier.goToStep(step);
@@ -365,11 +382,8 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       onEdit: () => editStep(11),
                       items: [
                         _ri('Primary Photo',
-                            draft.photoGallery.primaryPhotoPath != null
-                                ? 'Uploaded'
-                                : 'Not Uploaded'),
-                        _ri('Gallery Photos',
-                            '${draft.photoGallery.galleryPaths.length} photo(s)'),
+                            hasPrimaryPhoto ? 'Uploaded' : 'Not Uploaded'),
+                        _ri('Gallery Photos', '${photos.length} photo(s)'),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -430,8 +444,14 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                           prompts: prompts,
                           editable: true,
                           onEditTap: () async {
-                            await context.push(RouteNames.choosePrompt,
+                            final result = await context.push<List<PromptAnswer>>(
+                                RouteNames.choosePrompt,
                                 extra: prompts);
+                            if (result != null) {
+                              await ref
+                                  .read(profilePromptRepositoryProvider)
+                                  .saveUserPrompts(result);
+                            }
                             ref.invalidate(myPromptsProvider);
                           },
                         );

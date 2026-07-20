@@ -40,6 +40,8 @@
     "db:seed": "ts-node libs/database/src/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1090.0",
+    "@aws-sdk/s3-request-presigner": "^3.1090.0",
     "@elastic/elasticsearch": "^7.17.14",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
@@ -97,7 +99,9 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
-    "transformIgnorePatterns": ["node_modules/\\.pnpm/(?!(jose|jwks-rsa)@)"],
+    "transformIgnorePatterns": [
+      "node_modules/\\.pnpm/(?!(jose|jwks-rsa)@)"
+    ],
     "moduleNameMapper": {
       "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
       "^@app/config(|/.*)$": "<rootDir>/libs/config/src/$1",

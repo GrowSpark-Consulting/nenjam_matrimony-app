@@ -1,14 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_providers.dart';
 import '../../domain/models/prompt_bank_item.dart';
 import '../../domain/repositories/profile_prompt_repository.dart';
-import '../../data/repositories/mock_profile_prompt_repository.dart';
+import '../../data/repositories/api_profile_prompt_repository.dart';
 
-/// Default implementation is the in-memory mock. Override this provider
-/// with an `ApiProfilePromptRepository` once the backend team's endpoints
-/// are ready — no other code needs to change.
 final profilePromptRepositoryProvider = Provider<ProfilePromptRepository>(
-  (ref) => MockProfilePromptRepository(),
+  (ref) => ApiProfilePromptRepository(ref.watch(apiClientProvider)),
 );
 
 /// The pickable prompt bank, optionally filtered by category.

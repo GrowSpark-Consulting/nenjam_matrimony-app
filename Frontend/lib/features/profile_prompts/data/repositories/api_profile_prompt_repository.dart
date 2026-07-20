@@ -4,15 +4,26 @@ import '../../../../core/network/api_exception.dart';
 import '../../domain/models/prompt_bank_item.dart';
 import '../../domain/repositories/profile_prompt_repository.dart';
 
-/// Real backend implementation — not wired by default (see
-/// `profilePromptRepositoryProvider`). Ready for the backend team to
-/// connect by flipping that provider's override once their endpoints are
-/// live; no UI changes required.
-///
-/// TODO(backend): GET /profiles/prompts/bank, GET/PUT /profiles/prompts/me
-/// — no `profile_prompts`/`prompts` backend code exists yet (confirmed:
-/// zero files anywhere in the backend repo mention "prompt"), so every call
-/// here 404s until that module is built.
+/// Maps backend/apps/api/.../entities/PromptCategory enum values
+/// ("PERSONALITY", "MARRIAGE_COMPATIBILITY", …) to this app's
+/// [PromptCategory]. Falls back to [PromptCategory.personality] for an
+/// unrecognized value rather than throwing — a new backend category should
+/// degrade gracefully, not crash the prompt bank.
+PromptCategory _categoryFromBackend(String? raw) {
+  switch (raw) {
+    case 'MARRIAGE_COMPATIBILITY':
+      return PromptCategory.marriageCompatibility;
+    case 'FAMILY':
+      return PromptCategory.family;
+    case 'CAREER':
+      return PromptCategory.career;
+    case 'PERSONALITY':
+    default:
+      return PromptCategory.personality;
+  }
+}
+
+/// Talks to backend/apps/api/src/modules/profiles' PromptsController.
 class ApiProfilePromptRepository implements ProfilePromptRepository {
   ApiProfilePromptRepository(this._apiClient);
 
@@ -24,14 +35,16 @@ class ApiProfilePromptRepository implements ProfilePromptRepository {
       ApiEndpoints.profilePromptsBank,
     );
     final data = unwrapOrThrow(response.statusCode, response.data);
-    return ((data as List<dynamic>?) ?? [])
+    final items = ((data as List<dynamic>?) ?? [])
         .cast<Map<String, dynamic>>()
         .map((e) => PromptBankItem(
               id: e['id'] as String,
-              category: PromptCategory.personality,
+              category: _categoryFromBackend(e['category'] as String?),
               promptText: e['promptText'] as String,
             ))
         .toList();
+    if (category == null) return items;
+    return items.where((p) => p.category == category).toList();
   }
 
   @override

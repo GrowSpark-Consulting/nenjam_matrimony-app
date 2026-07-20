@@ -34,6 +34,14 @@ export const validationSchema = Joi.object({
   FIREBASE_CLIENT_EMAIL: Joi.string().allow('').optional(),
   FIREBASE_PRIVATE_KEY: Joi.string().allow('').optional(),
 
+  // Optional: AWS S3 credentials for profile-photo storage. Left unset, the
+  // app still boots; only the photo-upload endpoints need them, and
+  // S3Service returns a clear error if a request reaches it unconfigured.
+  AWS_REGION: Joi.string().allow('').optional(),
+  AWS_ACCESS_KEY_ID: Joi.string().allow('').optional(),
+  AWS_SECRET_ACCESS_KEY: Joi.string().allow('').optional(),
+  AWS_S3_BUCKET_NAME: Joi.string().allow('').optional(),
+
   LOG_LEVEL: Joi.string()
     .valid('error', 'warn', 'info', 'debug', 'verbose')
     .default('info'),

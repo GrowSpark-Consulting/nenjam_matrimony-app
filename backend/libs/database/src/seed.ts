@@ -10,6 +10,7 @@ import { PrismaClient } from '../generated/client';
 import { seedPlans } from './seeders/plans.seeder';
 import { seedQuiz } from './seeders/quiz.seeder';
 import { seedAdmin } from './seeders/admin.seeder';
+import { seedPrompts } from './seeders/prompts.seeder';
 
 // ─────────────────────────────────────────────────────────────
 // Bootstrap Prisma with the driver adapter (mirrors PrismaService)
@@ -47,7 +48,10 @@ async function main(): Promise<void> {
   // 2. OCEAN psychology quiz
   await seedQuiz(prisma);
 
-  // 3. Default admin account
+  // 3. Profile prompt bank
+  await seedPrompts(prisma);
+
+  // 4. Default admin account
   await seedAdmin(prisma);
 
   console.log('');

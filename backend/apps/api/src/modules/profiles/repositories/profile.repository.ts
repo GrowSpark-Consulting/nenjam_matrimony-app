@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/database';
 import type {
+  AstrologyProfile,
+  PartnerPreference,
   Prisma,
   RegistrationStep,
   UserProfile,
 } from '../../../../../../libs/database/generated/client';
 import { ProfileEntity } from '../entities/profile.entity';
+import { PartnerPreferenceEntity } from '../entities/partner-preference.entity';
+import { AstrologyProfileEntity } from '../entities/astrology-profile.entity';
 
 @Injectable()
 export class ProfileRepository {
@@ -108,12 +112,67 @@ export class ProfileRepository {
     });
   }
 
+  async findPartnerPreference(
+    userId: string,
+  ): Promise<PartnerPreferenceEntity | null> {
+    const row = await this.prisma.partnerPreference.findUnique({
+      where: { userId },
+    });
+    return row ? this.toPartnerPreferenceEntity(row) : null;
+  }
+
+  async findAstrologyProfile(
+    userId: string,
+  ): Promise<AstrologyProfileEntity | null> {
+    const row = await this.prisma.astrologyProfile.findUnique({
+      where: { userId },
+    });
+    return row ? this.toAstrologyProfileEntity(row) : null;
+  }
+
+  // Live recompute, not just a getter — callers use this to persist a fresh
+  // profileCompletePct after any write that could change it (finalize, photo
+  // add/delete, preference/astrology upsert).
+  async updateProfileCompletePct(userId: string, pct: number): Promise<void> {
+    await this.prisma.userProfile.update({
+      where: { userId },
+      data: { profileCompletePct: pct },
+    });
+  }
+
   private toEntity(row: UserProfile): ProfileEntity {
     const entity = new ProfileEntity();
     Object.assign(entity, {
       ...row,
       annualIncomeLakhs: row.annualIncomeLakhs?.toString() ?? null,
     });
+    return entity;
+  }
+
+  private toPartnerPreferenceEntity(
+    row: PartnerPreference,
+  ): PartnerPreferenceEntity {
+    const entity = new PartnerPreferenceEntity();
+    Object.assign(entity, {
+      ...row,
+      preferredReligions: row.preferredReligions as string[],
+      preferredCastes: row.preferredCastes as string[],
+      minIncomeLakhs: row.minIncomeLakhs?.toString() ?? null,
+      preferredCities: row.preferredCities as string[],
+      preferredStates: row.preferredStates as string[],
+      preferredEducation: row.preferredEducation as string[],
+      preferredOccupations: row.preferredOccupations as string[],
+      preferredMotherTongues: row.preferredMotherTongues as string[],
+      maritalStatusPref: row.maritalStatusPref as string[],
+    });
+    return entity;
+  }
+
+  private toAstrologyProfileEntity(
+    row: AstrologyProfile,
+  ): AstrologyProfileEntity {
+    const entity = new AstrologyProfileEntity();
+    Object.assign(entity, row);
     return entity;
   }
 }

@@ -33,6 +33,10 @@ dependencies:
   cached_network_image: ^3.4.1
   flutter_svg: ^2.0.17
   shimmer: ^3.0.0
+  # Profile photo picking. imageQuality/maxWidth downscale on-device to keep
+  # uploads well under the backend's 5 MB cap — no separate compression
+  # package needed.
+  image_picker: ^1.1.2
   flutter_animate: ^4.5.2
 
   # Utilities

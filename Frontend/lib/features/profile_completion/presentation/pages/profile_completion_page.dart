@@ -10,6 +10,7 @@ import '../../../../core/widgets/cards/checklist_item_card.dart';
 import '../../../../core/widgets/cards/growth_card.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../profile/presentation/providers/profile_dashboard_providers.dart';
 import '../../../registration/presentation/utils/open_edit_profile.dart';
 import '../../domain/profile_completion_aggregator.dart';
 import '../providers/profile_completeness_provider.dart';
@@ -52,6 +53,11 @@ class _ProfileCompletionBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Headline percentage comes from the backend — the single source of truth
+    // shared with the Profile page, Edit Profile, and Discover. The module
+    // breakdown below still uses the aggregator to show which sections remain.
+    final pct = ref.watch(backendProfileCompletionProvider).valueOrNull ??
+        completeness.percentage;
     final highestImpact = completeness.highestImpactModule;
     // "Still Growing" excludes the module already featured above, so it
     // isn't shown twice on the same screen.
@@ -73,7 +79,7 @@ class _ProfileCompletionBody extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          _StrengthHero(completeness: completeness),
+          _StrengthHero(completeness: completeness, percentage: pct),
           if (highestImpact != null) ...[
             const SizedBox(height: 24),
             Text(l10n.profileCompletionHighestImpactLabel,
@@ -182,8 +188,11 @@ String _tierLabel(AppLocalizations l10n, ProfileStrengthTier tier) => switch (ti
 
 class _StrengthHero extends StatelessWidget {
   final ProfileCompleteness completeness;
+  // Backend-computed percentage (single source of truth). The tier/module
+  // breakdown still comes from [completeness].
+  final int percentage;
 
-  const _StrengthHero({required this.completeness});
+  const _StrengthHero({required this.completeness, required this.percentage});
 
   @override
   Widget build(BuildContext context) {
@@ -200,7 +209,7 @@ class _StrengthHero extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${completeness.percentage}%',
+                '$percentage%',
                 style: AppTypography.displaySmall
                     .copyWith(color: Colors.white, fontWeight: FontWeight.w700),
               ),
@@ -229,7 +238,7 @@ class _StrengthHero extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
-              value: completeness.percentage / 100,
+              value: percentage / 100,
               minHeight: 8,
               backgroundColor: Colors.white.withValues(alpha: 0.15),
               color: AppColors.accentGold,

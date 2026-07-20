@@ -277,6 +277,7 @@
   },
   "registrationBack": "Back",
   "registrationFinishLogin": "Finish & Login",
+  "registrationRequiredFieldsHint": "Please fill in all required fields to continue.",
   "registrationStepBasicInfo": "Basic Info",
   "registrationStepReligion": "Religion",
   "registrationStepLanguage": "Language",

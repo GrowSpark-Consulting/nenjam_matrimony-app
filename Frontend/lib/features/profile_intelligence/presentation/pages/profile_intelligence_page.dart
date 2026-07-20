@@ -7,6 +7,7 @@ import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/cards/intelligence_card.dart';
 import '../../../astro/presentation/providers/compatibility_provider.dart';
+import '../../../profile_prompts/domain/models/prompt_bank_item.dart';
 import '../../../profile_prompts/presentation/providers/profile_prompt_provider.dart';
 import '../../../psychology/presentation/providers/personality_provider.dart';
 
@@ -55,7 +56,15 @@ class ProfileIntelligencePage extends ConsumerWidget {
                 ),
                 onTap: () async {
                   final prompts = promptsAsync.value ?? [];
-                  await context.push(RouteNames.choosePrompt, extra: prompts);
+                  final result = await context.push<List<PromptAnswer>>(
+                    RouteNames.choosePrompt,
+                    extra: prompts,
+                  );
+                  if (result != null) {
+                    await ref
+                        .read(profilePromptRepositoryProvider)
+                        .saveUserPrompts(result);
+                  }
                   ref.invalidate(myPromptsProvider);
                 },
               ),

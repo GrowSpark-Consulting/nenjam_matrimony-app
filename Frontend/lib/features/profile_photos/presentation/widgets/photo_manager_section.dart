@@ -1,0 +1,442 @@
+import 'dart:io';
+
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
+import '../../data/repositories/photo_repository.dart';
+import '../../domain/models/user_photo.dart';
+import '../providers/photo_providers.dart';
+
+const int kMaxPhotos = 6;
+
+/// Self-contained profile-photo manager: fetches the user's photos, lets them
+/// add (camera/gallery), set primary, replace, delete, and drag-to-reorder —
+/// all wired to the backend PhotoController via [myPhotosProvider]. Reused by
+/// the registration wizard's photo step and the edit-profile flow, so the two
+/// stay in lockstep automatically (same provider).
+class PhotoManagerSection extends ConsumerStatefulWidget {
+  const PhotoManagerSection({super.key});
+
+  @override
+  ConsumerState<PhotoManagerSection> createState() =>
+      _PhotoManagerSectionState();
+}
+
+class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
+  final _picker = ImagePicker();
+
+  @override
+  Widget build(BuildContext context) {
+    final photosAsync = ref.watch(myPhotosProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final photos = photosAsync.valueOrNull ?? const <UserPhoto>[];
+    final busy = photosAsync.isLoading;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text('Your Photos', style: AppTypography.labelLarge),
+            ),
+            Text(
+              '${photos.length}/$kMaxPhotos',
+              style: AppTypography.labelSmall.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        photosAsync.when(
+          // Only a full-screen spinner when there's no prior data to show;
+          // during mutations the previous list stays visible with an overlay.
+          loading: () => photos.isEmpty
+              ? const _LoadingState()
+              : _buildGallery(context, photos, isDark, busy: true),
+          error: (error, _) => _ErrorState(
+            message: error is PhotoApiException
+                ? error.message
+                : 'Could not load your photos. Check your connection.',
+            onRetry: () => ref.read(myPhotosProvider.notifier).refresh(),
+          ),
+          data: (list) => list.isEmpty
+              ? _EmptyState(onAdd: _onAddTap)
+              : _buildGallery(context, list, isDark, busy: busy),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGallery(
+    BuildContext context,
+    List<UserPhoto> photos,
+    bool isDark, {
+    required bool busy,
+  }) {
+    final canAddMore = photos.length < kMaxPhotos;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 160,
+          child: Stack(
+            children: [
+              ReorderableListView.builder(
+                scrollDirection: Axis.horizontal,
+                buildDefaultDragHandles: false,
+                itemCount: photos.length,
+                onReorderItem: (oldIndex, newIndex) =>
+                    _onReorder(photos, oldIndex, newIndex),
+                itemBuilder: (context, index) {
+                  final photo = photos[index];
+                  return ReorderableDelayedDragStartListener(
+                    key: ValueKey(photo.id),
+                    index: index,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: _PhotoTile(
+                        photo: photo,
+                        isDark: isDark,
+                        onTap: () => _showPhotoOptions(photo),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              if (busy)
+                const Positioned.fill(
+                  child: ColoredBox(
+                    color: Color(0x22000000),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (canAddMore)
+          OutlinedButton.icon(
+            onPressed: busy ? null : _onAddTap,
+            icon: const Icon(Icons.add_a_photo_outlined, size: 18),
+            label: const Text('Add photo'),
+          ),
+        const SizedBox(height: 6),
+        Text(
+          'Long-press and drag to reorder. Tap a photo to set as display, '
+          'replace, or delete.',
+          style: AppTypography.bodySmall.copyWith(
+            color: isDark
+                ? AppColors.textTertiaryDark
+                : AppColors.textTertiaryLight,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _onReorder(
+    List<UserPhoto> photos,
+    int oldIndex,
+    int newIndex,
+  ) async {
+    // onReorderItem already adjusts newIndex for the removed item.
+    if (oldIndex == newIndex) return;
+    final reordered = [...photos];
+    final moved = reordered.removeAt(oldIndex);
+    reordered.insert(newIndex, moved);
+    await _run(() => ref
+        .read(myPhotosProvider.notifier)
+        .reorder(reordered.map((p) => p.id).toList()));
+  }
+
+  void _onAddTap() => _pickAndUpload(makePrimaryIfFirst: true);
+
+  Future<void> _pickAndUpload({
+    bool makePrimaryIfFirst = false,
+    String? replaceId,
+  }) async {
+    final source = await _chooseSource();
+    if (source == null) return;
+
+    final XFile? picked;
+    try {
+      picked = await _picker.pickImage(
+        source: source,
+        maxWidth: 1080,
+        imageQuality: 85,
+      );
+    } catch (_) {
+      _snack('Could not open the image picker.');
+      return;
+    }
+    if (picked == null) return; // user cancelled
+
+    final file = File(picked.path);
+    final notifier = ref.read(myPhotosProvider.notifier);
+    final currentCount = ref.read(myPhotosProvider).valueOrNull?.length ?? 0;
+
+    await _run(() async {
+      if (replaceId != null) {
+        await notifier.replace(replaceId, file);
+      } else {
+        await notifier.upload(
+          file,
+          isPrimary: makePrimaryIfFirst && currentCount == 0 ? true : null,
+        );
+      }
+    });
+  }
+
+  Future<ImageSource?> _chooseSource() {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded,
+                  color: AppColors.primary),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded,
+                  color: AppColors.accentGold),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPhotoOptions(UserPhoto photo) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            if (!photo.isPrimary)
+              ListTile(
+                leading: const Icon(Icons.star_rounded, color: AppColors.accentGold),
+                title: const Text('Set as display photo'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _run(() =>
+                      ref.read(myPhotosProvider.notifier).setPrimary(photo.id));
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.sync_rounded, color: AppColors.primary),
+              title: const Text('Replace photo'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickAndUpload(replaceId: photo.id);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded,
+                  color: AppColors.error),
+              title: const Text('Delete photo'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _run(() =>
+                    ref.read(myPhotosProvider.notifier).delete(photo.id));
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Runs a mutation and surfaces its backend error (if any) as a snackbar —
+  /// the provider already flips to an error state, this just makes it visible
+  /// for one-shot actions.
+  Future<void> _run(Future<void> Function() action) async {
+    await action();
+    if (!mounted) return;
+    final state = ref.read(myPhotosProvider);
+    state.whenOrNull(
+      error: (error, _) => _snack(
+        error is PhotoApiException
+            ? error.message
+            : 'Something went wrong. Please try again.',
+      ),
+    );
+  }
+
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _PhotoTile extends StatelessWidget {
+  const _PhotoTile({
+    required this.photo,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final UserPhoto photo;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: CachedNetworkImage(
+              imageUrl: photo.cdnUrl,
+              width: 116,
+              height: 160,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(
+                width: 116,
+                height: 160,
+                color: isDark
+                    ? AppColors.surfaceVariantDark
+                    : AppColors.surfaceVariantLight,
+              ),
+              errorWidget: (_, __, ___) => Container(
+                width: 116,
+                height: 160,
+                color: isDark
+                    ? AppColors.surfaceVariantDark
+                    : AppColors.surfaceVariantLight,
+                child: const Icon(Icons.broken_image_outlined, size: 28),
+              ),
+            ),
+          ),
+          if (photo.isPrimary)
+            Positioned(
+              top: 8,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.accentGold,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star_rounded, size: 12, color: Colors.white),
+                    const SizedBox(width: 3),
+                    Text('DISPLAY',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                        )),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LoadingState extends StatelessWidget {
+  const _LoadingState();
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+        height: 160,
+        child: Center(child: CircularProgressIndicator()),
+      );
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.onAdd});
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: onAdd,
+      child: Container(
+        width: double.infinity,
+        height: 180,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.3),
+            width: 2,
+          ),
+          color: isDark
+              ? AppColors.surfaceVariantDark.withValues(alpha: 0.4)
+              : AppColors.surfaceVariantLight,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_a_photo_rounded,
+                size: 44, color: AppColors.primary.withValues(alpha: 0.6)),
+            const SizedBox(height: 12),
+            Text('Add your first photo',
+                style: AppTypography.labelMedium
+                    .copyWith(color: AppColors.primary)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message, required this.onRetry});
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: AppColors.error.withValues(alpha: 0.06),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.cloud_off_rounded, color: AppColors.error, size: 32),
+          const SizedBox(height: 8),
+          Text(message,
+              textAlign: TextAlign.center, style: AppTypography.bodySmall),
+          const SizedBox(height: 12),
+          OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
+      ),
+    );
+  }
+}

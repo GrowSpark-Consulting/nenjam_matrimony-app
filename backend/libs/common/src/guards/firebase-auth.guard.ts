@@ -33,8 +33,6 @@ export class FirebaseAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
-    console.log(`Incoming request: ${request.method} ${request.url}`);
-    console.log('Firebase Guard entered');
 
     const authHeader = request.headers.authorization;
 
@@ -48,13 +46,8 @@ export class FirebaseAuthGuard implements CanActivate {
       throw new UnauthorizedException('Empty bearer token.');
     }
 
-    console.log('Before verify(idToken) await');
     const decoded = await this.verify(idToken);
-    console.log(`After verify(idToken) await — Firebase verified (uid=${decoded.uid})`);
-
-    console.log('Before resolveUser(decoded) await — Prisma user.upsert');
     request.user = await this.resolveUser(decoded);
-    console.log('After resolveUser(decoded) await — Guard complete, returning true');
     return true;
   }
 
@@ -111,6 +104,24 @@ export class FirebaseAuthGuard implements CanActivate {
             firebaseUid: decoded.uid,
             ...(decoded.phone_number ? { phone: decoded.phone_number } : {}),
           },
+        });
+      }
+    }
+
+    // Same rotation problem for phone-only accounts (no email at all) —
+    // without this, a phone-only user's UID rotation silently creates a
+    // second User row via the upsert below instead of re-linking.
+    if (!user && !decoded.email && decoded.phone_number) {
+      const existingByPhone = await this.prisma.user.findUnique({
+        where: { phone: decoded.phone_number },
+      });
+      if (existingByPhone) {
+        this.logger.log(
+          `Re-linking existing user ${existingByPhone.id} to new Firebase uid=${decoded.uid} (was ${existingByPhone.firebaseUid})`,
+        );
+        user = await this.prisma.user.update({
+          where: { id: existingByPhone.id },
+          data: { firebaseUid: decoded.uid },
         });
       }
     }

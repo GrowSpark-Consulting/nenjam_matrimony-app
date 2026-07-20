@@ -114,6 +114,38 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     }
   }
 
+  /// Mirrors ProfileService.assertRequiredFieldsPresent on the backend —
+  /// without this, "Continue" let a user click through the whole wizard
+  /// with required fields empty, only to have POST /profiles/finalize
+  /// reject it at the very last step with a field name they'd have no way
+  /// to trace back to which step it came from. Steps without a case here
+  /// (lifestyle, family, horoscope, partner preference, photos,
+  /// verification) have no required backend fields.
+  bool _isCurrentStepValid(ProfileDraft draft) {
+    switch (draft.currentStep) {
+      case 0:
+        return draft.basicDetails.firstName.isNotEmpty &&
+            draft.basicDetails.lastName.isNotEmpty &&
+            draft.basicDetails.gender.isNotEmpty &&
+            draft.basicDetails.dob != null;
+      case 1:
+        return draft.religionDetails.religion.isNotEmpty &&
+            draft.religionDetails.caste.isNotEmpty;
+      case 2:
+        return draft.languageDetails.motherTongue.isNotEmpty;
+      case 3:
+        return draft.locationDetails.city.isNotEmpty &&
+            draft.locationDetails.state.isNotEmpty;
+      case 4:
+        return draft.educationDetails.qualification.isNotEmpty &&
+            draft.educationDetails.occupation.isNotEmpty;
+      case 5:
+        return draft.physicalDetails.height.isNotEmpty;
+      default:
+        return true;
+    }
+  }
+
   void _onBack() {
     final draft = ref.read(registrationProvider);
     if (draft.currentStep > 0) {
@@ -257,7 +289,12 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 showBack: stepIndex > 0,
                 isLoading: _isSaving,
                 onBack: _isSaving ? null : _onBack,
-                onNext: _isSaving ? null : _onNext,
+                // Gate "Continue" on the current step's required fields being
+                // present (see [_isCurrentStepValid]) so a user can't click
+                // through with empty required fields and hit an untraceable
+                // 400 at finalize.
+                onNext:
+                    (_isSaving || !_isCurrentStepValid(draft)) ? null : _onNext,
               ),
             ],
           ),
@@ -325,10 +362,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
           onChanged: notifier.updatePartnerPreference,
         );
       case 11:
-        return StepPhotos(
-          gallery: draft.photoGallery,
-          onChanged: notifier.updatePhotoGallery,
-        );
+        // Photos are an independent backend resource (PhotoController), not
+        // part of the wizard draft — StepPhotos manages them directly.
+        return const StepPhotos();
       case 12:
         return StepVerification(
           status: draft.verificationStatus,

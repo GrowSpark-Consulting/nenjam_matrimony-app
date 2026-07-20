@@ -54,20 +54,12 @@ export class FirebaseService implements OnModuleInit {
         'Firebase Admin SDK is not configured on this server.',
       );
     }
-    console.time('verifyIdToken');
-    console.log('VERIFY START');
-    try {
-      const decoded = await this.withTimeout(
-        getAuth(this.app).verifyIdToken(idToken),
-        10_000,
-        'Firebase token verification timed out — check outbound network ' +
-          'connectivity to Google (securetoken.google.com / googleapis.com).',
-      );
-      console.log('VERIFY END');
-      return decoded;
-    } finally {
-      console.timeEnd('verifyIdToken');
-    }
+    return this.withTimeout(
+      getAuth(this.app).verifyIdToken(idToken),
+      10_000,
+      'Firebase token verification timed out — check outbound network ' +
+        'connectivity to Google (securetoken.google.com / googleapis.com).',
+    );
   }
 
   private withTimeout<T>(

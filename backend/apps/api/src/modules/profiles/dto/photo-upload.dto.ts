@@ -1,16 +1,14 @@
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsOptional } from 'class-validator';
 
-// Registers a photo already uploaded to S3 (see libs/storage — presigned-URL
-// upload isn't wired yet, so this assumes the client has the resulting key).
-// Mirrors ...profile_draft.dart -> PhotoGallery (step 11) at the per-photo level.
+// Non-file fields that accompany a multipart photo upload. The binary is
+// handled by @UploadedFile()/PhotoFilePipe, not here. `isPrimary` arrives as
+// a form-field string ("true"/"false"), so it's coerced to a real boolean.
 export class PhotoUploadDto {
-  @IsString()
-  s3Key!: string;
-
-  @IsString()
-  cdnUrl!: string;
-
   @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.toLowerCase() === 'true' : value,
+  )
   @IsBoolean()
   isPrimary?: boolean;
 }
