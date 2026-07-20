@@ -33,6 +33,11 @@ class NmDropdown<T> extends StatelessWidget {
         DropdownButtonFormField<T>(
           initialValue: value,
           items: items,
+          // Without this, the button sizes itself to its widest item/value
+          // instead of the space it's actually given — the horizontal
+          // overflow when a dropdown sits in a Row (e.g. next to another
+          // field) or an option's text is long.
+          isExpanded: true,
           onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,
@@ -40,6 +45,22 @@ class NmDropdown<T> extends StatelessWidget {
           ),
           icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondaryLight),
           style: AppTypography.bodyMedium,
+          // Truncates the closed-state selected value with an ellipsis
+          // instead of wrapping/overflowing — wraps whatever widget each
+          // caller's DropdownMenuItem uses (typically a plain Text) without
+          // requiring every call site to opt in itself.
+          selectedItemBuilder: (context) => items
+              .map(
+                (item) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: DefaultTextStyle.merge(
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    child: item.child,
+                  ),
+                ),
+              )
+              .toList(),
         ),
       ],
     );

@@ -490,6 +490,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchFilterApply => 'Apply Filters';
 
   @override
+  String get searchFilterShowResults => 'Show Results';
+
+  @override
   String get searchFilterSectionBasic => 'Basic';
 
   @override

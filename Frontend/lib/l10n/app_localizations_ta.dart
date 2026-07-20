@@ -494,6 +494,9 @@ class AppLocalizationsTa extends AppLocalizations {
   String get searchFilterApply => 'வடிகட்டிகளைப் பயன்படுத்து';
 
   @override
+  String get searchFilterShowResults => 'முடிவுகளைக் காட்டு';
+
+  @override
   String get searchFilterSectionBasic => 'அடிப்படை';
 
   @override

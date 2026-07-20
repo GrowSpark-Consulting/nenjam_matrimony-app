@@ -41,14 +41,21 @@ class NmSearchAppBar extends StatelessWidget implements PreferredSizeWidget {
   final TextEditingController? controller;
   final String hint;
   final void Function(String)? onChanged;
+  final void Function(String)? onSubmitted;
   final VoidCallback? onFilterTap;
+  /// Count shown as a small pill on the filter icon when > 0 (e.g. active
+  /// filter count). No pill is drawn at 0 — existing callers that don't
+  /// pass this see no visual change.
+  final int filterBadgeCount;
 
   const NmSearchAppBar({
     super.key,
     this.controller,
     this.hint = 'Search by ID, name, community...',
     this.onChanged,
+    this.onSubmitted,
     this.onFilterTap,
+    this.filterBadgeCount = 0,
   });
 
   @override
@@ -75,6 +82,7 @@ class NmSearchAppBar extends StatelessWidget implements PreferredSizeWidget {
                       child: TextField(
                         controller: controller,
                         onChanged: onChanged,
+                        onSubmitted: onSubmitted,
                         decoration: InputDecoration(hintText: hint, border: InputBorder.none),
                         style: AppTypography.bodyMedium,
                       ),
@@ -85,7 +93,34 @@ class NmSearchAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
             if (onFilterTap != null) ...[
               const SizedBox(width: 8),
-              IconButton(icon: const Icon(Icons.tune_rounded), onPressed: onFilterTap),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(icon: const Icon(Icons.tune_rounded), onPressed: onFilterTap),
+                  if (filterBadgeCount > 0)
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        constraints: const BoxConstraints(minWidth: 16),
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.all(Radius.circular(999)),
+                        ),
+                        child: Text(
+                          '$filterBadgeCount',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ],
           ],
         ),

@@ -8,10 +8,11 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/router/profile_navigation.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/secondary_button.dart';
+import '../../../../core/widgets/chips/app_chips.dart';
 import '../../../../core/widgets/feedback/empty_state.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
-import '../../../../core/widgets/inputs/search_bar.dart';
+import '../../../../core/widgets/navigation/app_bars.dart';
 import '../../../../core/widgets/sheets/app_sheets.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
@@ -71,12 +72,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     _submit(term);
   }
 
-  Future<void> _openFilters() async {
-    final l10n = AppLocalizations.of(context);
+  Future<void> _openFilters({String? expandSection}) async {
     await AppSheets.show<void>(
       context,
-      title: l10n.searchFilterSheetTitle,
-      child: const SearchFilterSheet(),
+      child: SearchFilterSheet(initialExpandedSection: expandSection),
     );
   }
 
@@ -89,20 +88,19 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final showSuggestions = query.isEmpty && filters.isEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.searchTitle)),
+      appBar: NmSearchAppBar(
+        controller: _controller,
+        hint: l10n.searchHint,
+        onChanged: _onChanged,
+        onSubmitted: _submit,
+        onFilterTap: _openFilters,
+        filterBadgeCount: filters.activeCount,
+      ),
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.base),
-              child: NmSearchBar(
-                controller: _controller,
-                hint: l10n.searchHint,
-                onChanged: _onChanged,
-                onSubmitted: _submit,
-                onFilterTap: _openFilters,
-              ),
-            ),
+            const SizedBox(height: AppSpacing.sm),
+            _QuickFilterChips(onSelectSection: (section) => _openFilters(expandSection: section)),
             if (!showSuggestions)
               Padding(
                 padding: const EdgeInsets.symmetric(
@@ -169,6 +167,47 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Horizontal shortcut row — one chip per filter section. Tapping one
+/// opens the filter sheet with that section pre-expanded, so a user who
+/// only cares about e.g. Education doesn't have to open the sheet and then
+/// tap to expand it themselves.
+class _QuickFilterChips extends ConsumerWidget {
+  final ValueChanged<String> onSelectSection;
+
+  const _QuickFilterChips({required this.onSelectSection});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final sections = [
+      l10n.searchFilterSectionBasic,
+      l10n.searchFilterSectionReligion,
+      l10n.searchFilterSectionLocation,
+      l10n.searchFilterSectionEducation,
+      l10n.searchFilterSectionCareer,
+      l10n.searchFilterSectionLifestyle,
+      l10n.searchFilterSectionHoroscope,
+      l10n.searchFilterSectionVerification,
+      l10n.searchFilterSectionPremium,
+      l10n.searchFilterSectionProfile,
+    ];
+
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+        itemCount: sections.length,
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+        itemBuilder: (context, index) {
+          final title = sections[index];
+          return NmFilterChip(label: title, onSelected: (_) => onSelectSection(title));
+        },
       ),
     );
   }

@@ -1,5 +1,6 @@
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../domain/models/compatibility_result.dart';
 import '../../domain/repositories/compatibility_repository.dart';
 
@@ -7,6 +8,10 @@ import '../../domain/repositories/compatibility_repository.dart';
 /// `compatibilityRepositoryProvider`). Ready for the backend team to
 /// connect by flipping that provider's override once their endpoints are
 /// live.
+///
+/// TODO(backend): GET /astro/profile/me, GET /astro/compatibility/:id — the
+/// `astro` controller is currently an empty stub (zero routes), so every
+/// call here 404s until that module is built.
 class ApiCompatibilityRepository implements CompatibilityRepository {
   ApiCompatibilityRepository(this._apiClient);
 
@@ -16,7 +21,7 @@ class ApiCompatibilityRepository implements CompatibilityRepository {
   Future<HoroscopeSummary> getMyHoroscopeSummary() async {
     final response =
         await _apiClient.get<Map<String, dynamic>>(ApiEndpoints.astroProfileMe);
-    final data = response.data ?? {};
+    final data = unwrapOrThrow(response.statusCode, response.data) ?? {};
     return HoroscopeSummary(
       rasi: data['rasi'] as String?,
       nakshatra: data['nakshatra'] as String?,
@@ -39,7 +44,7 @@ class ApiCompatibilityRepository implements CompatibilityRepository {
           ? ApiEndpoints.astroCompatibility(targetUserId)
           : ApiEndpoints.astroProfileMe,
     );
-    final data = response.data ?? {};
+    final data = unwrapOrThrow(response.statusCode, response.data) ?? {};
     final details = data['poruthamDetails'] as Map<String, dynamic>? ?? {};
     final components = details['components'] as Map<String, dynamic>? ?? {};
     return CompatibilityResult(

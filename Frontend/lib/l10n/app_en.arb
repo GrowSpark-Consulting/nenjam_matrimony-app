@@ -192,6 +192,7 @@
   "searchFilterSheetTitle": "Filters",
   "searchFilterReset": "Reset",
   "searchFilterApply": "Apply Filters",
+  "searchFilterShowResults": "Show Results",
   "searchFilterSectionBasic": "Basic",
   "searchFilterSectionReligion": "Religion",
   "searchFilterSectionLocation": "Location",

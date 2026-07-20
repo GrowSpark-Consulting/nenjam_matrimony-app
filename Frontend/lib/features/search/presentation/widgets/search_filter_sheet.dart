@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
 import '../../../../core/widgets/buttons/secondary_button.dart';
+import '../../../../core/widgets/cards/expandable_section.dart';
 import '../../../../core/widgets/chips/app_chips.dart';
-import '../../../../core/widgets/inputs/app_dropdown.dart';
-import '../../../../core/widgets/inputs/matrimony_selectors.dart';
+import '../../../../core/widgets/inputs/range_slider.dart';
+import '../../../../core/widgets/inputs/searchable_dropdown.dart';
+import '../../../../core/widgets/inputs/segmented_control.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/search_filters_entity.dart';
 import '../providers/search_providers.dart';
@@ -34,6 +37,98 @@ const _kStates = [
   'Maharashtra',
   'Delhi',
   'Other',
+];
+
+// Same list NmLocationSelector (matrimony_selectors.dart) uses — duplicated
+// locally since that widget doesn't expose its option list, and this sheet
+// needs it in NmSearchableDropdown form instead of a plain dropdown.
+const _kCities = [
+  'Chennai',
+  'Coimbatore',
+  'Madurai',
+  'Trichy',
+  'Bangalore',
+  'Hyderabad',
+  'Mumbai',
+  'Singapore',
+  'USA / UK / Abroad',
+];
+
+// The following lists all mirror matrimony_selectors.dart's internal
+// option lists exactly (values must stay identical to what those widgets
+// would have produced, since search_filters_entity.dart's fields carry the
+// same strings) — duplicated locally for the same reason as _kCities:
+// every dropdown-style field in this sheet now uses NmSearchableDropdown
+// instead of the shared NmXSelector widgets (which wrap a native
+// DropdownButtonFormField). That native dropdown's overlay menu is
+// positioned/clipped relative to the wrong ancestor when opened from
+// inside a modal bottom sheet — it can render partly off-screen or get
+// clipped by the sheet's own Material boundary. NmSearchableDropdown
+// sidesteps this entirely by opening its own bottom sheet (via
+// AppSheets.showSearchableSelection) instead of a native overlay.
+const _kReligions = ['Hindu', 'Christian', 'Muslim', 'Jain', 'Sikh', 'Buddhist', 'Inter-Religion'];
+
+const _kCastes = [
+  'Iyer',
+  'Iyengar',
+  'Mudaliar',
+  'Pillai',
+  'Chettiar',
+  'Gounder',
+  'Nadar',
+  'Vanniyar',
+  'Don\'t Wish to Specify',
+];
+
+const _kProfessions = [
+  'Software Engineer',
+  'Doctor',
+  'IAS / IPS / Govt',
+  'Business / Entrepreneur',
+  'Finance / Banking',
+  'Architect / Design',
+  'Civil / Mechanical Engg',
+];
+
+const _kIncomes = [
+  '5 - 10 Lakhs PA',
+  '10 - 20 Lakhs PA',
+  '20 - 50 Lakhs PA',
+  '50 Lakhs - 1 Crore PA',
+  '1 Crore+ PA',
+  'Prefer not to say',
+];
+
+const _kHeights = [
+  '5 ft 0 in (152 cm)',
+  '5 ft 2 in (157 cm)',
+  '5 ft 4 in (162 cm)',
+  '5 ft 6 in (167 cm)',
+  '5 ft 8 in (172 cm)',
+  '5 ft 10 in (177 cm)',
+  '6 ft 0 in (183 cm)',
+  '6 ft 2 in+',
+];
+
+const _kEducations = [
+  'B.E / B.Tech / M.Tech',
+  'MBBS / MD / MS',
+  'MBA / PGDM',
+  'CA / CFA',
+  'B.Sc / M.Sc',
+  'Ph.D',
+  'Other Bachelors / Masters',
+];
+
+const _kCountries = [
+  'India (+91)',
+  'United States (+1)',
+  'United Kingdom (+44)',
+  'Singapore (+65)',
+  'UAE (+971)',
+  'Malaysia (+60)',
+  'Australia (+61)',
+  'Canada (+1)',
 ];
 
 const _kRashis = [
@@ -86,7 +181,12 @@ const _kStars = [
 /// applied to [searchFiltersProvider] until "Apply Filters" is tapped, and
 /// "Reset" clears the draft without leaving the sheet.
 class SearchFilterSheet extends ConsumerStatefulWidget {
-  const SearchFilterSheet({super.key});
+  /// When set, only the section whose title equals this string starts
+  /// expanded (overriding the usual Basic/Religion default) — lets a quick
+  /// filter chip open the sheet with the relevant section already open.
+  final String? initialExpandedSection;
+
+  const SearchFilterSheet({super.key, this.initialExpandedSection});
 
   @override
   ConsumerState<SearchFilterSheet> createState() => _SearchFilterSheetState();
@@ -105,30 +205,74 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
     setState(() => _draft = transform(_draft));
   }
 
+  int _count(List<bool> flags) => flags.where((f) => f).length;
+
+  /// [defaultExpanded] is whether this section is one of the two that
+  /// start open when the sheet is opened generically (no requested
+  /// section); a specific [widget.initialExpandedSection] always wins.
+  bool _isExpanded(String title, {required bool defaultExpanded}) =>
+      widget.initialExpandedSection == null
+          ? defaultExpanded
+          : widget.initialExpandedSection == title;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
+    // AppSheets.show wraps this sheet in a Flexible, which already caps
+    // whatever height we ask for here to what's actually left after the
+    // handle bar/keyboard/safe-area — so a plain 85%-of-screen preference
+    // is enough; no need to duplicate that clamping here too.
     return SizedBox(
       height: MediaQuery.sizeOf(context).height * 0.85,
       child: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.base,
+              AppSpacing.sm,
+              AppSpacing.base,
+              AppSpacing.sm,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(l10n.searchFilterSheetTitle, style: AppTypography.titleLarge),
+                TextButton(
+                  onPressed: () => setState(() => _draft = const SearchFilters.empty()),
+                  child: Text(l10n.searchFilterReset),
+                ),
+              ],
+            ),
+          ),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.base,
-                AppSpacing.base,
+                0,
                 AppSpacing.base,
                 AppSpacing.xl,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _Section(
+                  NmExpandableSection(
                     title: l10n.searchFilterSectionBasic,
+                    initiallyExpanded:
+                        _isExpanded(l10n.searchFilterSectionBasic, defaultExpanded: true),
+                    activeCount: _count([
+                      _draft.ageRange != const RangeValues(18, 60),
+                      _draft.heightMin != null,
+                      _draft.heightMax != null,
+                      _draft.gender != null,
+                    ]),
                     children: [
-                      _AgeRangeField(
+                      NmRangeSlider(
+                        label: l10n.searchFilterAgeRange,
                         range: _draft.ageRange,
+                        min: 18,
+                        max: 70,
+                        divisions: 52,
                         onChanged: (range) => _update((f) => f.copyWith(ageRange: range)),
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -138,8 +282,10 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                           Expanded(
                             child: _CaptionedField(
                               caption: l10n.searchFilterHeightMin,
-                              child: NmHeightSelector(
+                              child: NmSearchableDropdown(
+                                hint: l10n.searchFilterHeightMin,
                                 value: _draft.heightMin,
+                                options: _kHeights,
                                 onChanged: (v) => _update(
                                   (f) => f.copyWith(heightMin: v, clearHeightMin: v == null),
                                 ),
@@ -150,8 +296,10 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                           Expanded(
                             child: _CaptionedField(
                               caption: l10n.searchFilterHeightMax,
-                              child: NmHeightSelector(
+                              child: NmSearchableDropdown(
+                                hint: l10n.searchFilterHeightMax,
                                 value: _draft.heightMax,
+                                options: _kHeights,
                                 onChanged: (v) => _update(
                                   (f) => f.copyWith(heightMax: v, clearHeightMax: v == null),
                                 ),
@@ -161,86 +309,137 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                         ],
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      _ChoiceChips(
-                        label: l10n.searchFilterGender,
-                        value: _draft.gender,
+                      Text(l10n.searchFilterGender, style: AppTypography.labelMedium),
+                      const SizedBox(height: AppSpacing.sm),
+                      NmSegmentedControl<String>(
                         options: [l10n.searchFilterGenderMale, l10n.searchFilterGenderFemale],
+                        labelBuilder: (v) => v,
+                        value: _draft.gender,
                         onChanged: (v) => _update((f) => f.copyWith(gender: v, clearGender: v == null)),
                       ),
                     ],
                   ),
-                  _Section(
+                  NmExpandableSection(
                     title: l10n.searchFilterSectionReligion,
+                    initiallyExpanded:
+                        _isExpanded(l10n.searchFilterSectionReligion, defaultExpanded: true),
+                    activeCount: _count([
+                      _draft.religion != null,
+                      _draft.caste != null,
+                      _draft.community != null,
+                    ]),
                     children: [
-                      NmReligionSelector(
+                      NmSearchableDropdown(
+                        label: 'Religion',
+                        hint: 'Select Religion',
                         value: _draft.religion,
+                        options: _kReligions,
                         onChanged: (v) => _update((f) => f.copyWith(religion: v, clearReligion: v == null)),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      NmCasteSelector(
+                      NmSearchableDropdown(
+                        label: 'Caste / Division',
+                        hint: 'Select Caste',
                         value: _draft.caste,
+                        options: _kCastes,
                         onChanged: (v) => _update((f) => f.copyWith(caste: v, clearCaste: v == null)),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      NmDropdown<String>(
+                      NmSearchableDropdown(
                         label: l10n.searchFilterCommunity,
                         hint: l10n.searchFilterCommunity,
                         value: _draft.community,
-                        items: _kCommunities
-                            .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                            .toList(),
+                        options: _kCommunities,
                         onChanged: (v) => _update((f) => f.copyWith(community: v, clearCommunity: v == null)),
                       ),
                     ],
                   ),
-                  _Section(
+                  NmExpandableSection(
                     title: l10n.searchFilterSectionLocation,
+                    initiallyExpanded:
+                        _isExpanded(l10n.searchFilterSectionLocation, defaultExpanded: false),
+                    activeCount: _count([
+                      _draft.country != null,
+                      _draft.state != null,
+                      _draft.city != null,
+                    ]),
                     children: [
-                      NmCountryPicker(
+                      NmSearchableDropdown(
+                        label: 'Country',
+                        hint: 'Select Country',
                         value: _draft.country,
+                        options: _kCountries,
                         onChanged: (v) => _update((f) => f.copyWith(country: v, clearCountry: v == null)),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      NmDropdown<String>(
+                      NmSearchableDropdown(
                         label: l10n.searchFilterState,
                         hint: l10n.searchFilterState,
                         value: _draft.state,
-                        items: _kStates.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                        options: _kStates,
                         onChanged: (v) => _update((f) => f.copyWith(state: v, clearState: v == null)),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      NmLocationSelector(
+                      NmSearchableDropdown(
+                        label: 'Current Location',
+                        hint: 'Select City / Country',
                         value: _draft.city,
+                        options: _kCities,
                         onChanged: (v) => _update((f) => f.copyWith(city: v, clearCity: v == null)),
                       ),
                     ],
                   ),
-                  _Section(
+                  NmExpandableSection(
                     title: l10n.searchFilterSectionEducation,
+                    initiallyExpanded:
+                        _isExpanded(l10n.searchFilterSectionEducation, defaultExpanded: false),
+                    activeCount: _count([_draft.education != null]),
                     children: [
-                      NmEducationSelector(
+                      NmSearchableDropdown(
+                        label: 'Highest Qualification',
+                        hint: 'Select Degree',
                         value: _draft.education,
+                        options: _kEducations,
                         onChanged: (v) => _update((f) => f.copyWith(education: v, clearEducation: v == null)),
                       ),
                     ],
                   ),
-                  _Section(
+                  NmExpandableSection(
                     title: l10n.searchFilterSectionCareer,
+                    initiallyExpanded:
+                        _isExpanded(l10n.searchFilterSectionCareer, defaultExpanded: false),
+                    activeCount: _count([
+                      _draft.occupation != null,
+                      _draft.annualIncome != null,
+                    ]),
                     children: [
-                      NmProfessionSelector(
+                      NmSearchableDropdown(
+                        label: 'Profession',
+                        hint: 'Select Profession',
                         value: _draft.occupation,
+                        options: _kProfessions,
                         onChanged: (v) => _update((f) => f.copyWith(occupation: v, clearOccupation: v == null)),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      NmIncomeSelector(
+                      NmSearchableDropdown(
+                        label: 'Annual Income',
+                        hint: 'Select Range',
                         value: _draft.annualIncome,
+                        options: _kIncomes,
                         onChanged: (v) =>
                             _update((f) => f.copyWith(annualIncome: v, clearAnnualIncome: v == null)),
                       ),
                     ],
                   ),
-                  _Section(
+                  NmExpandableSection(
                     title: l10n.searchFilterSectionLifestyle,
+                    initiallyExpanded:
+                        _isExpanded(l10n.searchFilterSectionLifestyle, defaultExpanded: false),
+                    activeCount: _count([
+                      _draft.diet != null,
+                      _draft.smoking != null,
+                      _draft.drinking != null,
+                    ]),
                     children: [
                       _ChoiceChips(
                         label: l10n.searchFilterDiet,
@@ -272,22 +471,29 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                       ),
                     ],
                   ),
-                  _Section(
+                  NmExpandableSection(
                     title: l10n.searchFilterSectionHoroscope,
+                    initiallyExpanded:
+                        _isExpanded(l10n.searchFilterSectionHoroscope, defaultExpanded: false),
+                    activeCount: _count([
+                      _draft.rashi != null,
+                      _draft.star != null,
+                      _draft.horoscopeAvailable,
+                    ]),
                     children: [
-                      NmDropdown<String>(
+                      NmSearchableDropdown(
                         label: l10n.searchFilterRashi,
                         hint: l10n.searchFilterRashi,
                         value: _draft.rashi,
-                        items: _kRashis.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                        options: _kRashis,
                         onChanged: (v) => _update((f) => f.copyWith(rashi: v, clearRashi: v == null)),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      NmDropdown<String>(
+                      NmSearchableDropdown(
                         label: l10n.searchFilterStar,
                         hint: l10n.searchFilterStar,
                         value: _draft.star,
-                        items: _kStars.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                        options: _kStars,
                         onChanged: (v) => _update((f) => f.copyWith(star: v, clearStar: v == null)),
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -298,9 +504,28 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                       ),
                     ],
                   ),
-                  _Section(
+                  NmExpandableSection(
                     title: l10n.searchFilterSectionVerification,
+                    initiallyExpanded:
+                        _isExpanded(l10n.searchFilterSectionVerification, defaultExpanded: false),
+                    activeCount: _count([
+                      _draft.aadhaarVerified,
+                      _draft.incomeVerified,
+                      _draft.nriVerified,
+                    ]),
                     children: [
+                      _ToggleChip(
+                        label: l10n.searchFilterVerifiedOnly,
+                        value: _draft.aadhaarVerified && _draft.incomeVerified && _draft.nriVerified,
+                        onChanged: (v) => _update(
+                          (f) => f.copyWith(
+                            aadhaarVerified: v,
+                            incomeVerified: v,
+                            nriVerified: v,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
                       Wrap(
                         spacing: AppSpacing.sm,
                         runSpacing: AppSpacing.sm,
@@ -324,8 +549,11 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                       ),
                     ],
                   ),
-                  _Section(
+                  NmExpandableSection(
                     title: l10n.searchFilterSectionPremium,
+                    initiallyExpanded:
+                        _isExpanded(l10n.searchFilterSectionPremium, defaultExpanded: false),
+                    activeCount: _count([_draft.premiumOnly]),
                     children: [
                       _ToggleChip(
                         label: l10n.searchFilterPremiumOnly,
@@ -334,8 +562,11 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                       ),
                     ],
                   ),
-                  _Section(
+                  NmExpandableSection(
                     title: l10n.searchFilterSectionProfile,
+                    initiallyExpanded:
+                        _isExpanded(l10n.searchFilterSectionProfile, defaultExpanded: false),
+                    activeCount: _count([_draft.withPhoto, _draft.completedProfile]),
                     children: [
                       Wrap(
                         spacing: AppSpacing.sm,
@@ -373,34 +604,6 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
   }
 }
 
-class _Section extends StatelessWidget {
-  final String title;
-  final List<Widget> children;
-
-  const _Section({required this.title, required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: AppTypography.titleSmall.copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          ...children,
-        ],
-      ),
-    );
-  }
-}
-
 class _CaptionedField extends StatelessWidget {
   final String caption;
   final Widget child;
@@ -415,53 +618,6 @@ class _CaptionedField extends StatelessWidget {
         Text(caption, style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondaryLight)),
         const SizedBox(height: AppSpacing.xs),
         child,
-      ],
-    );
-  }
-}
-
-class _AgeRangeField extends StatelessWidget {
-  final RangeValues range;
-  final ValueChanged<RangeValues> onChanged;
-
-  const _AgeRangeField({required this.range, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(l10n.searchFilterAgeRange, style: AppTypography.labelMedium),
-            Text(
-              '${range.start.round()} – ${range.end.round()}',
-              style: AppTypography.labelMedium.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            activeTrackColor: AppColors.primary,
-            inactiveTrackColor: AppColors.primarySurface,
-            thumbColor: AppColors.primary,
-            overlayColor: AppColors.primary.withValues(alpha: 0.12),
-            rangeThumbShape: const RoundRangeSliderThumbShape(enabledThumbRadius: 10),
-          ),
-          child: RangeSlider(
-            values: range,
-            min: 18,
-            max: 70,
-            divisions: 52,
-            labels: RangeLabels('${range.start.round()}', '${range.end.round()}'),
-            onChanged: onChanged,
-          ),
-        ),
       ],
     );
   }
@@ -530,33 +686,63 @@ class _FilterSheetFooter extends StatelessWidget {
     required this.onApply,
   });
 
+  /// Picks the fullest label that fits [maxWidth] without truncating —
+  /// "Apply Filters (N)" when there's room, falling back to the shorter
+  /// "Show Results (N)" on narrow buttons (small phones, or a wide Reset
+  /// label in another locale eating into this button's share). Never
+  /// returns something that can overflow: [NmPrimaryButton] still
+  /// ellipsis-clips as a last-resort safety net if even the fallback form
+  /// doesn't fit.
+  String _applyLabel(BuildContext context, AppLocalizations l10n, double maxWidth) {
+    final full = activeCount > 0
+        ? '${l10n.searchFilterApply} ($activeCount)'
+        : l10n.searchFilterApply;
+    final fallback = activeCount > 0
+        ? '${l10n.searchFilterShowResults} ($activeCount)'
+        : l10n.searchFilterShowResults;
+
+    // Same horizontal padding ElevatedButtonThemeData reserves (see
+    // app_theme.dart) — the actual room available to the label text.
+    const buttonPadding = 24 * 2;
+    final painter = TextPainter(
+      text: TextSpan(text: full, style: AppTypography.button),
+      textDirection: Directionality.of(context),
+      maxLines: 1,
+    )..layout();
+    return painter.width <= maxWidth - buttonPadding ? full : fallback;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Container(
       padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
         AppSpacing.base,
-        AppSpacing.md,
-        AppSpacing.base,
-        AppSpacing.md + MediaQuery.paddingOf(context).bottom,
+        AppSpacing.lg,
+        AppSpacing.base + MediaQuery.paddingOf(context).bottom,
       ),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.dividerLight)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.surfaceDark
+            : AppColors.surfaceLight,
+        boxShadow: AppShadows.bottomNav,
       ),
       child: Row(
         children: [
           Expanded(
-            child: NmSecondaryButton(label: l10n.searchFilterReset, onPressed: onReset, height: 48),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
             flex: 2,
-            child: NmPrimaryButton(
-              label: activeCount > 0
-                  ? '${l10n.searchFilterApply} ($activeCount)'
-                  : l10n.searchFilterApply,
-              onPressed: onApply,
-              height: 48,
+            child: NmSecondaryButton(label: l10n.searchFilterReset, onPressed: onReset, height: 52),
+          ),
+          const SizedBox(width: AppSpacing.base),
+          Expanded(
+            flex: 3,
+            child: LayoutBuilder(
+              builder: (context, constraints) => NmPrimaryButton(
+                label: _applyLabel(context, l10n, constraints.maxWidth),
+                onPressed: onApply,
+                height: 52,
+              ),
             ),
           ),
         ],

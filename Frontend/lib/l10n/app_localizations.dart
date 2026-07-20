@@ -1022,6 +1022,12 @@ abstract class AppLocalizations {
   /// **'Apply Filters'**
   String get searchFilterApply;
 
+  /// No description provided for @searchFilterShowResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Results'**
+  String get searchFilterShowResults;
+
   /// No description provided for @searchFilterSectionBasic.
   ///
   /// In en, this message translates to:

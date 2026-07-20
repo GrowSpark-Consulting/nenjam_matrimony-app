@@ -12,7 +12,9 @@ import '../providers/search_providers.dart';
 /// Shown in place of results while the search field is empty and no
 /// filters are active: locally-saved recent searches (tap to search again,
 /// swipe/tap-x to remove one, or clear all) plus a static set of popular
-/// search terms.
+/// search terms and two trending filter shortcuts (Verified/Premium —
+/// applied directly to [searchFiltersProvider], distinct from the plain
+/// text-query chips above them).
 class SearchSuggestions extends ConsumerWidget {
   final ValueChanged<String> onSelect;
 
@@ -64,6 +66,21 @@ class SearchSuggestions extends ConsumerWidget {
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.sm,
           children: [
+            NmInfoChip(
+              label: l10n.searchFilterVerifiedOnly,
+              icon: Icons.verified_rounded,
+              onTap: () => ref.read(searchFiltersProvider.notifier).state =
+                  ref.read(searchFiltersProvider).copyWith(
+                        aadhaarVerified: true,
+                        incomeVerified: true,
+                      ),
+            ),
+            NmInfoChip(
+              label: l10n.searchFilterPremiumOnly,
+              icon: Icons.workspace_premium_rounded,
+              onTap: () => ref.read(searchFiltersProvider.notifier).state =
+                  ref.read(searchFiltersProvider).copyWith(premiumOnly: true),
+            ),
             for (final term in _popularSearches)
               NmInfoChip(label: term, onTap: () => onSelect(term)),
           ],

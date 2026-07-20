@@ -1,25 +1,20 @@
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../domain/models/profile_draft.dart';
 
-/// Thrown when the backend rejects a registration-wizard request (validation
-/// error, unauthenticated, etc.) — carries the backend's own message when
-/// available so the UI can show something more useful than "something went
-/// wrong".
-class RegistrationApiException implements Exception {
-  RegistrationApiException(this.statusCode, this.message);
-  final int? statusCode;
-  final String message;
-
-  @override
-  String toString() => 'RegistrationApiException($statusCode): $message';
-}
+/// Kept as the name the wizard UI already catches (`on
+/// RegistrationApiException catch (e)` in profile_wizard_page.dart,
+/// profile_review_page.dart, registration_completing_page.dart) — same
+/// shape as the shared [ApiException], just aliased so those call sites
+/// didn't need to change when this repository moved onto the shared helper.
+typedef RegistrationApiException = ApiException;
 
 /// Talks to backend/apps/api/src/modules/profiles — one PATCH per wizard
 /// step (1-10), matching [ApiEndpoints]'s profileDraft* constants, plus
 /// finalize(). ApiClient is configured with `validateStatus: status < 500`,
 /// so 4xx responses land here as normal Response objects rather than
-/// exceptions — [_unwrap] is what turns those into a thrown exception.
+/// exceptions — [unwrapOrThrow] is what turns those into a thrown exception.
 class RegistrationRepository {
   RegistrationRepository(this._apiClient);
 
@@ -29,7 +24,7 @@ class RegistrationRepository {
     final response = await _apiClient.get<Map<String, dynamic>>(
       ApiEndpoints.profileDraft,
     );
-    return _unwrap(response.statusCode, response.data) ?? {};
+    return unwrapOrThrow(response.statusCode, response.data) ?? {};
   }
 
   Future<void> updateBasicDetails(BasicDetails details) =>
@@ -72,7 +67,7 @@ class RegistrationRepository {
   Future<Map<String, dynamic>> finalizeProfile() async {
     final response =
         await _apiClient.post<Map<String, dynamic>>(ApiEndpoints.profileFinalize);
-    return _unwrap(response.statusCode, response.data) ?? {};
+    return unwrapOrThrow(response.statusCode, response.data) ?? {};
   }
 
   Future<void> _patchSection(String path, Map<String, dynamic> data) async {
@@ -81,21 +76,6 @@ class RegistrationRepository {
       path,
       data: data,
     );
-    _unwrap(response.statusCode, response.data);
-  }
-
-  Map<String, dynamic>? _unwrap(int? statusCode, Map<String, dynamic>? data) {
-    if (statusCode != null && statusCode >= 400) {
-      final message = data?['message'];
-      throw RegistrationApiException(
-        statusCode,
-        message is String
-            ? message
-            : message is List && message.isNotEmpty
-                ? message.join(', ')
-                : 'Request failed ($statusCode).',
-      );
-    }
-    return data;
+    unwrapOrThrow(response.statusCode, response.data);
   }
 }
