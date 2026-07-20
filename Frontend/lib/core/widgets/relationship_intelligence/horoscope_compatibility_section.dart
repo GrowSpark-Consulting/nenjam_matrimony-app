@@ -56,7 +56,8 @@ class HoroscopeCompatibilitySection extends StatelessWidget {
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hasData = (rasi?.isNotEmpty ?? false) || (nakshatra?.isNotEmpty ?? false);
+    final hasData =
+        (rasi?.isNotEmpty ?? false) || (nakshatra?.isNotEmpty ?? false);
 
     return Container(
       width: double.infinity,
@@ -67,10 +68,20 @@ class HoroscopeCompatibilitySection extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.auto_awesome_rounded,
-                  color: AppColors.accentGold, size: 22),
+              const Icon(
+                Icons.auto_awesome_rounded,
+                color: AppColors.accentGold,
+                size: 22,
+              ),
               const SizedBox(width: AppSpacing.sm),
-              Text('Your Horoscope', style: AppTypography.titleSmall),
+              Flexible(
+                child: Text(
+                  'Your Horoscope',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.titleSmall,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -103,14 +114,20 @@ class HoroscopeCompatibilitySection extends StatelessWidget {
                     ? Icons.check_circle_rounded
                     : Icons.cancel_rounded,
                 size: 16,
-                color: matchingEnabled ? AppColors.success : AppColors.textTertiaryLight,
+                color: matchingEnabled
+                    ? AppColors.success
+                    : AppColors.textTertiaryLight,
               ),
               const SizedBox(width: 6),
-              Text(
-                matchingEnabled
-                    ? 'Horoscope matching enabled'
-                    : 'Horoscope matching disabled',
-                style: AppTypography.labelSmall,
+              Flexible(
+                child: Text(
+                  matchingEnabled
+                      ? 'Horoscope matching enabled'
+                      : 'Horoscope matching disabled',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.labelSmall,
+                ),
               ),
             ],
           ),

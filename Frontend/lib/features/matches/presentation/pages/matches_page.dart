@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/router/profile_navigation.dart';
+import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/tokens/app_animation_tokens.dart';
+import '../../../../core/theme/tokens/app_touch_target.dart';
+import '../../../../core/widgets/avatars/gender_placeholder.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../../discover/presentation/providers/discover_providers.dart';
+import '../providers/matches_providers.dart';
 
 /// Nenjam Matches — Instagram Reels-style vertical swipeable feed.
 ///
 /// Pixel-faithful translation of the Stitch "matches_reels" design:
 ///   • Full-screen profile photo per page (scroll-snap = PageView)
 ///   • Black gradient overlay top + bottom
-///   • Fixed header: title + "For You / Near Me / New" tabs + avatar
+///   • Fixed header: title + Search/New/Daily/My Matches/Near Me/More
+///     Matches category selector + avatar
 ///   • Right-side action column: ❤ Interested / ☆ Shortlist / ↗ Share / ⚑ Report
 ///   • Bottom info: gold AI Match pill, name + profession, glass chips
 ///   • Double-tap anywhere → heart burst animation
@@ -42,32 +51,31 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final feedAsync = ref.watch(discoverFeedProvider);
+    // Reel position only resets when the category actually changes, never
+    // on unrelated rebuilds (e.g. the header's own scroll-into-view).
+    ref.listen<MatchCategory>(matchCategoryProvider, (previous, next) {
+      if (previous != null && previous != next && _pageController.hasClients) {
+        _pageController.jumpToPage(0);
+      }
+    });
+
+    final feedAsync = ref.watch(matchCategoryFeedProvider);
 
     return Scaffold(
       backgroundColor: AppColors.primary,
       extendBodyBehindAppBar: true,
       body: feedAsync.when(
-        data: (feed) {
-          // Aggregate all profiles for the reel feed
-          final profiles = [
-            ...feed.aiRecommended,
-            ...feed.verifiedProfiles,
-            ...feed.recentlyJoined,
-            ...feed.premiumMembers,
-            ...feed.nearYou,
-          ];
+        data: (profiles) {
           if (profiles.isEmpty) {
             return const _EmptyReel();
           }
-          return _ReelFeed(
-            profiles: profiles,
-            controller: _pageController,
-          );
+          return _ReelFeed(profiles: profiles, controller: _pageController);
         },
         loading: () => const _ReelLoading(),
         error: (_, __) => Center(
-          child: NmErrorWidget(onRetry: () => ref.invalidate(discoverFeedProvider)),
+          child: NmErrorWidget(
+            onRetry: () => ref.invalidate(discoverFeedProvider),
+          ),
         ),
       ),
     );
@@ -78,18 +86,11 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
 // Feed container
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ReelFeed extends StatefulWidget {
+class _ReelFeed extends StatelessWidget {
   final List<DiscoveryProfileEntity> profiles;
   final PageController controller;
 
   const _ReelFeed({required this.profiles, required this.controller});
-
-  @override
-  State<_ReelFeed> createState() => _ReelFeedState();
-}
-
-class _ReelFeedState extends State<_ReelFeed> {
-  int _selectedTab = 1; // 0=For You, 1=Near Me, 2=New (matches "Near Me" active)
 
   @override
   Widget build(BuildContext context) {
@@ -98,28 +99,20 @@ class _ReelFeedState extends State<_ReelFeed> {
       children: [
         // ── Reel PageView ────────────────────────────────────────────
         PageView.builder(
-          controller: widget.controller,
+          controller: controller,
           scrollDirection: Axis.vertical,
           physics: const PageScrollPhysics(parent: BouncingScrollPhysics()),
-          itemCount: widget.profiles.length,
+          itemCount: profiles.length,
           itemBuilder: (context, index) {
             return _KeepAlivePage(
-              key: ValueKey(widget.profiles[index].id),
-              child: _ReelCard(profile: widget.profiles[index]),
+              key: ValueKey(profiles[index].id),
+              child: _ReelCard(profile: profiles[index]),
             );
           },
         ),
 
         // ── Fixed header overlay ─────────────────────────────────────
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: _ReelHeader(
-            selectedTab: _selectedTab,
-            onTabChanged: (i) => setState(() => _selectedTab = i),
-          ),
-        ),
+        const Positioned(top: 0, left: 0, right: 0, child: _ReelHeader()),
       ],
     );
   }
@@ -130,21 +123,10 @@ class _ReelFeedState extends State<_ReelFeed> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ReelHeader extends StatelessWidget {
-  final int selectedTab;
-  final ValueChanged<int> onTabChanged;
-
-  const _ReelHeader({
-    required this.selectedTab,
-    required this.onTabChanged,
-  });
-
-  List<String> _tabs(AppLocalizations l10n) =>
-      [l10n.discoverForYouTab, l10n.discoverNearMeTab, l10n.discoverNewTab];
+  const _ReelHeader();
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final tabs = _tabs(l10n);
     final top = MediaQuery.paddingOf(context).top;
 
     return Container(
@@ -161,100 +143,181 @@ class _ReelHeader extends StatelessWidget {
           colors: [Color(0x99000000), Colors.transparent],
         ),
       ),
+      // Category selector: Search / New / Daily / My Matches / Near Me /
+      // More Matches — the only content in the header, given the full
+      // width to work with.
+      child: const _MatchesCategoryBar(),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Category selector bar
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Horizontal scrollable category selector: Search, New, Daily, My Matches,
+/// Near Me, More Matches. Self-contained — reads/writes [matchCategoryProvider]
+/// directly so it rebuilds independently of the reel [PageView] below it.
+class _MatchesCategoryBar extends ConsumerStatefulWidget {
+  const _MatchesCategoryBar();
+
+  @override
+  ConsumerState<_MatchesCategoryBar> createState() =>
+      _MatchesCategoryBarState();
+}
+
+class _MatchesCategoryBarState extends ConsumerState<_MatchesCategoryBar> {
+  final _scrollController = ScrollController();
+  final Map<MatchCategory, GlobalKey> _chipKeys = {
+    for (final category in MatchCategory.values) category: GlobalKey(),
+  };
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onCategorySelected(MatchCategory category) {
+    ref.read(matchCategoryProvider.notifier).state = category;
+    final chipContext = _chipKeys[category]?.currentContext;
+    if (chipContext != null) {
+      Scrollable.ensureVisible(
+        chipContext,
+        duration: AppAnimationTokens.normal,
+        curve: AppAnimationTokens.luxuryCurve,
+        alignment: 0.5,
+      );
+    }
+  }
+
+  String _labelFor(MatchCategory category, AppLocalizations l10n) {
+    switch (category) {
+      case MatchCategory.newProfiles:
+        return l10n.matchesCategoryNew;
+      case MatchCategory.daily:
+        return l10n.matchesCategoryDaily;
+      case MatchCategory.myMatches:
+        return l10n.matchesCategoryMyMatches;
+      case MatchCategory.nearMe:
+        return l10n.matchesCategoryNearMe;
+      case MatchCategory.moreMatches:
+        return l10n.matchesCategoryMoreMatches;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final selected = ref.watch(matchCategoryProvider);
+
+    return SingleChildScrollView(
+      controller: _scrollController,
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Search + title (Flexible to prevent overflow) ──────────
-          Expanded(
-            flex: 3,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.search_rounded, color: Colors.white, size: 24),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    MediaQuery.sizeOf(context).width < 375 ? l10n.appNameShort : l10n.appName,
-                    style: AppTypography.titleMedium.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
+          // Search is a pure navigation shortcut — not a MatchCategory, so
+          // it never carries selected state. Pushed (not `go`) so Matches
+          // stays on the navigator stack — back returns to this exact
+          // instance with its state intact, per the app-wide rule that
+          // temporary/secondary pages use push, not replace.
+          _MatchesCategoryChip(
+            label: l10n.matchesCategorySearch,
+            icon: Icons.search_rounded,
+            isSelected: false,
+            onTap: () => context.push(RouteNames.search),
           ),
+          const SizedBox(width: AppSpacing.sm),
+          for (final category in MatchCategory.values) ...[
+            _MatchesCategoryChip(
+              key: _chipKeys[category],
+              label: _labelFor(category, l10n),
+              isSelected: category == selected,
+              onTap: () => _onCategorySelected(category),
+            ),
+            if (category != MatchCategory.values.last)
+              const SizedBox(width: AppSpacing.sm),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
-          const SizedBox(width: 8),
+/// Small on-photo category pill with selected (gold gradient) / unselected
+/// (frosted-glass) states — mirrors the Discover reel's tab styling so both
+/// reel-style feeds share the same "Nenjam" on-photo selector language.
+class _MatchesCategoryChip extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final bool isSelected;
+  final VoidCallback onTap;
 
-          // ── Tab pills: For You / Near Me / New (scrollable so long
-          // translations — e.g. Tamil — never overflow) ───────────────
-          Flexible(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
+  const _MatchesCategoryChip({
+    super.key,
+    required this.label,
+    this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: AppTouchTarget.minSize),
+          child: Center(
+            child: AnimatedContainer(
+              duration: AppAnimationTokens.normal,
+              curve: AppAnimationTokens.luxuryCurve,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                gradient: isSelected
+                    ? AppGradients.gold
+                    : AppGradients.cardGlass,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                border: isSelected
+                    ? null
+                    : Border.all(color: Colors.white.withValues(alpha: 0.35)),
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: List.generate(tabs.length, (i) {
-                  final active = selectedTab == i;
-                  return GestureDetector(
-                    onTap: () => onTabChanged(i),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: AnimatedDefaultTextStyle(
-                        duration: const Duration(milliseconds: 200),
-                        style: AppTypography.labelMedium.copyWith(
-                          color: active
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.55),
-                          fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                          fontSize: 12,
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              tabs[i],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              height: 2,
-                              width: active ? 20 : 0,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFED977), // secondary-container
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                children: [
+                  if (icon != null) ...[
+                    Icon(
+                      icon,
+                      size: 15,
+                      color: isSelected ? AppColors.textOnGold : Colors.white,
                     ),
-                  );
-                }),
+                    const SizedBox(width: 4),
+                  ],
+                  AnimatedDefaultTextStyle(
+                    duration: AppAnimationTokens.normal,
+                    curve: AppAnimationTokens.luxuryCurve,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: isSelected ? AppColors.textOnGold : Colors.white,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                    ),
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-
-          const SizedBox(width: 8),
-
-          // ── Avatar ─────────────────────────────────────────────────
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-              color: AppColors.primarySurface,
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: const Icon(Icons.person_rounded, size: 18, color: AppColors.primary),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -334,6 +397,14 @@ class _ReelCardState extends State<_ReelCard>
     super.build(context);
 
     return GestureDetector(
+      // Tapping anywhere on the card (outside the action column and the
+      // action buttons, which win the gesture arena for their own taps
+      // as the deeper/more-specific recognizers) opens Profile Detail.
+      // Coexists with the double-tap-to-like below exactly the way it
+      // already coexists with the action buttons — GestureDetector
+      // natively defers a single tap until the double-tap window elapses
+      // whenever both are registered on the same detector.
+      onTap: () => openProfileDetail(context, widget.profile),
       onDoubleTapDown: _onDoubleTap,
       onDoubleTap: () {}, // needed to activate onDoubleTapDown
       child: RepaintBoundary(
@@ -341,7 +412,13 @@ class _ReelCardState extends State<_ReelCard>
           fit: StackFit.expand,
           children: [
             // ── Full-bleed photo ─────────────────────────────────────
-            _ProfilePhoto(photoUrls: widget.profile.photoUrls),
+            Hero(
+              tag: 'profile-photo-${widget.profile.id}',
+              child: _ProfilePhoto(
+                photoUrls: widget.profile.photoUrls,
+                gender: widget.profile.gender,
+              ),
+            ),
 
             // ── Gradient: top dark + bottom dark, clear middle ───────
             const DecoratedBox(
@@ -379,7 +456,9 @@ class _ReelCardState extends State<_ReelCard>
               left: 0,
               right: 80, // leave space for action column
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.base,
+                ),
                 child: _ProfileInfo(profile: widget.profile),
               ),
             ),
@@ -612,9 +691,7 @@ class _ProfileInfo extends StatelessWidget {
             fontWeight: FontWeight.w700,
             fontSize: 36,
             height: 1.0,
-            shadows: const [
-              Shadow(blurRadius: 12, color: Colors.black54),
-            ],
+            shadows: const [Shadow(blurRadius: 12, color: Colors.black54)],
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -641,9 +718,9 @@ class _ProfileInfo extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 6,
-          children: _chips(profile)
-              .map((chip) => _GlassChip(label: chip.$1, icon: chip.$2))
-              .toList(),
+          children: _chips(
+            profile,
+          ).map((chip) => _GlassChip(label: chip.$1, icon: chip.$2)).toList(),
         ),
       ],
     );
@@ -703,8 +780,9 @@ class _GlassChip extends StatelessWidget {
 
 class _ProfilePhoto extends StatelessWidget {
   final List<String> photoUrls;
+  final String gender;
 
-  const _ProfilePhoto({required this.photoUrls});
+  const _ProfilePhoto({required this.photoUrls, this.gender = ''});
 
   @override
   Widget build(BuildContext context) {
@@ -727,12 +805,12 @@ class _ProfilePhoto extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() => Container(
-        color: AppColors.primaryDark,
-        child: const Center(
-          child: Icon(Icons.person_rounded, size: 72, color: Color(0xFF374668)),
-        ),
-      );
+  Widget _placeholder() => NmGenderPlaceholder(
+    gender: gender,
+    iconSize: 72,
+    backgroundColor: AppColors.primaryDark,
+    iconColor: const Color(0xFF374668),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -788,8 +866,11 @@ class _EmptyReel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.favorite_border_rounded,
-                size: 64, color: Color(0xFFFED977)),
+            const Icon(
+              Icons.favorite_border_rounded,
+              size: 64,
+              color: Color(0xFFFED977),
+            ),
             const SizedBox(height: 16),
             Text(
               l10n.matchesEmptyTitle,

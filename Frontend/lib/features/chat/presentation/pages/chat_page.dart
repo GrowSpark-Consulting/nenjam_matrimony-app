@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/avatars/app_avatars.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// Chat conversations list page.
@@ -25,13 +26,9 @@ class ChatPage extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               leading: Stack(
                 children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: isDark
-                        ? AppColors.surfaceVariantDark
-                        : AppColors.surfaceVariantLight,
-                    child: const Icon(Icons.person_rounded),
-                  ),
+                  // Both current mock names are male — this list is a
+                  // placeholder until a real conversations provider lands.
+                  const NmCircleAvatar(size: 56, gender: 'Male'),
                   if (index < 2)
                     Positioned(
                       right: 0,

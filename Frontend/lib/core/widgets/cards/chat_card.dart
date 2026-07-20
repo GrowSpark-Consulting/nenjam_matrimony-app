@@ -12,6 +12,9 @@ class NmChatCard extends StatelessWidget {
   final int unreadCount;
   final bool isOnline;
   final String? avatarUrl;
+  /// 'Male' / 'Female' / '' — picks the gender-aware placeholder icon
+  /// when [avatarUrl] is null.
+  final String gender;
   final VoidCallback? onTap;
 
   const NmChatCard({
@@ -22,6 +25,7 @@ class NmChatCard extends StatelessWidget {
     this.unreadCount = 0,
     this.isOnline = false,
     this.avatarUrl,
+    this.gender = '',
     this.onTap,
   });
 
@@ -33,7 +37,7 @@ class NmChatCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(
           children: [
-            NmOnlineAvatar(imageUrl: avatarUrl, isOnline: isOnline, size: 54),
+            NmOnlineAvatar(imageUrl: avatarUrl, isOnline: isOnline, size: 54, gender: gender),
             const SizedBox(width: 16),
             Expanded(
               child: Column(

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -13,8 +12,9 @@ class VisitorsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
+      // Default AppBar back button: automatically shown only when there's
+      // something to pop back to, so it never crashes on a dead-end route.
       appBar: AppBar(
-        leading: BackButton(onPressed: () => context.pop()),
         title: Text(l10n.drawerVisitors),
       ),
       body: Center(

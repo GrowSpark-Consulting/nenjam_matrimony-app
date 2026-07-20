@@ -860,6 +860,42 @@ abstract class AppLocalizations {
   /// **'Check back soon for new profiles'**
   String get matchesEmptySubtitle;
 
+  /// No description provided for @matchesCategorySearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get matchesCategorySearch;
+
+  /// No description provided for @matchesCategoryNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get matchesCategoryNew;
+
+  /// No description provided for @matchesCategoryDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get matchesCategoryDaily;
+
+  /// No description provided for @matchesCategoryMyMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'My Matches'**
+  String get matchesCategoryMyMatches;
+
+  /// No description provided for @matchesCategoryNearMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Near Me'**
+  String get matchesCategoryNearMe;
+
+  /// No description provided for @matchesCategoryMoreMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'More Matches'**
+  String get matchesCategoryMoreMatches;
+
   /// No description provided for @discoverKmAwaySuffix.
   ///
   /// In en, this message translates to:
@@ -925,6 +961,270 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sort'**
   String get searchSortButton;
+
+  /// No description provided for @searchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Name, Matrimony ID, City, Profession...'**
+  String get searchHint;
+
+  /// No description provided for @searchRecentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Searches'**
+  String get searchRecentTitle;
+
+  /// No description provided for @searchPopularTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Popular Searches'**
+  String get searchPopularTitle;
+
+  /// No description provided for @searchClearAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear All'**
+  String get searchClearAll;
+
+  /// No description provided for @searchEmptyResultsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching profiles found.'**
+  String get searchEmptyResultsTitle;
+
+  /// No description provided for @searchEmptyResultsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Try changing your filters.'**
+  String get searchEmptyResultsSubtitle;
+
+  /// No description provided for @searchResetFiltersButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Filters'**
+  String get searchResetFiltersButton;
+
+  /// No description provided for @searchFilterSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get searchFilterSheetTitle;
+
+  /// No description provided for @searchFilterReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get searchFilterReset;
+
+  /// No description provided for @searchFilterApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Filters'**
+  String get searchFilterApply;
+
+  /// No description provided for @searchFilterShowResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Results'**
+  String get searchFilterShowResults;
+
+  /// No description provided for @searchFilterSectionBasic.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic'**
+  String get searchFilterSectionBasic;
+
+  /// No description provided for @searchFilterSectionReligion.
+  ///
+  /// In en, this message translates to:
+  /// **'Religion'**
+  String get searchFilterSectionReligion;
+
+  /// No description provided for @searchFilterSectionLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get searchFilterSectionLocation;
+
+  /// No description provided for @searchFilterSectionEducation.
+  ///
+  /// In en, this message translates to:
+  /// **'Education'**
+  String get searchFilterSectionEducation;
+
+  /// No description provided for @searchFilterSectionCareer.
+  ///
+  /// In en, this message translates to:
+  /// **'Career'**
+  String get searchFilterSectionCareer;
+
+  /// No description provided for @searchFilterSectionLifestyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifestyle'**
+  String get searchFilterSectionLifestyle;
+
+  /// No description provided for @searchFilterSectionHoroscope.
+  ///
+  /// In en, this message translates to:
+  /// **'Horoscope'**
+  String get searchFilterSectionHoroscope;
+
+  /// No description provided for @searchFilterSectionVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification'**
+  String get searchFilterSectionVerification;
+
+  /// No description provided for @searchFilterSectionPremium.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium'**
+  String get searchFilterSectionPremium;
+
+  /// No description provided for @searchFilterSectionProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get searchFilterSectionProfile;
+
+  /// No description provided for @searchFilterAgeRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Age Range'**
+  String get searchFilterAgeRange;
+
+  /// No description provided for @searchFilterGender.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get searchFilterGender;
+
+  /// No description provided for @searchFilterGenderMale.
+  ///
+  /// In en, this message translates to:
+  /// **'Male'**
+  String get searchFilterGenderMale;
+
+  /// No description provided for @searchFilterGenderFemale.
+  ///
+  /// In en, this message translates to:
+  /// **'Female'**
+  String get searchFilterGenderFemale;
+
+  /// No description provided for @searchFilterHeightMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Min Height'**
+  String get searchFilterHeightMin;
+
+  /// No description provided for @searchFilterHeightMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Height'**
+  String get searchFilterHeightMax;
+
+  /// No description provided for @searchFilterCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get searchFilterCommunity;
+
+  /// No description provided for @searchFilterState.
+  ///
+  /// In en, this message translates to:
+  /// **'State'**
+  String get searchFilterState;
+
+  /// No description provided for @searchFilterDiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet'**
+  String get searchFilterDiet;
+
+  /// No description provided for @searchFilterSmoking.
+  ///
+  /// In en, this message translates to:
+  /// **'Smoking'**
+  String get searchFilterSmoking;
+
+  /// No description provided for @searchFilterDrinking.
+  ///
+  /// In en, this message translates to:
+  /// **'Drinking'**
+  String get searchFilterDrinking;
+
+  /// No description provided for @searchFilterRashi.
+  ///
+  /// In en, this message translates to:
+  /// **'Rashi'**
+  String get searchFilterRashi;
+
+  /// No description provided for @searchFilterStar.
+  ///
+  /// In en, this message translates to:
+  /// **'Star'**
+  String get searchFilterStar;
+
+  /// No description provided for @searchFilterHoroscopeAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Horoscope Available'**
+  String get searchFilterHoroscopeAvailable;
+
+  /// No description provided for @searchFilterAadhaarVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Aadhaar Verified'**
+  String get searchFilterAadhaarVerified;
+
+  /// No description provided for @searchFilterIncomeVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Income Verified'**
+  String get searchFilterIncomeVerified;
+
+  /// No description provided for @searchFilterNriVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'NRI Verified'**
+  String get searchFilterNriVerified;
+
+  /// No description provided for @searchFilterPremiumOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium Members Only'**
+  String get searchFilterPremiumOnly;
+
+  /// No description provided for @searchFilterWithPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'With Photo'**
+  String get searchFilterWithPhoto;
+
+  /// No description provided for @searchFilterCompletedProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed Profile'**
+  String get searchFilterCompletedProfile;
+
+  /// No description provided for @searchFilterOptionYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get searchFilterOptionYes;
+
+  /// No description provided for @searchFilterOptionNo.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get searchFilterOptionNo;
+
+  /// No description provided for @searchFilterOptionOccasionally.
+  ///
+  /// In en, this message translates to:
+  /// **'Occasionally'**
+  String get searchFilterOptionOccasionally;
 
   /// No description provided for @matchesTitle.
   ///
@@ -3823,6 +4123,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nenjam Matrimony'**
   String get drawerVersionLabel;
+
+  /// No description provided for @profileDetailSendInterest.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Interest'**
+  String get profileDetailSendInterest;
+
+  /// No description provided for @profileDetailInterestSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Interest Sent'**
+  String get profileDetailInterestSent;
+
+  /// No description provided for @profileDetailStartConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Conversation'**
+  String get profileDetailStartConversation;
+
+  /// No description provided for @profileDetailVideoCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Video Call'**
+  String get profileDetailVideoCall;
+
+  /// No description provided for @profileDetailVideoComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Video calling is coming soon'**
+  String get profileDetailVideoComingSoon;
+
+  /// No description provided for @profileDetailShareComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Share coming soon'**
+  String get profileDetailShareComingSoon;
+
+  /// No description provided for @profileDetailTabAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get profileDetailTabAbout;
+
+  /// No description provided for @profileDetailTabPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos'**
+  String get profileDetailTabPhotos;
+
+  /// No description provided for @profileDetailTabFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Family'**
+  String get profileDetailTabFamily;
+
+  /// No description provided for @profileDetailTabLifestyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifestyle'**
+  String get profileDetailTabLifestyle;
+
+  /// No description provided for @profileDetailTabHoroscope.
+  ///
+  /// In en, this message translates to:
+  /// **'Horoscope'**
+  String get profileDetailTabHoroscope;
+
+  /// No description provided for @profileDetailTabPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get profileDetailTabPreferences;
+
+  /// No description provided for @profileDetailTabVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification'**
+  String get profileDetailTabVerification;
+
+  /// No description provided for @profileDetailTabTimeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeline'**
+  String get profileDetailTabTimeline;
+
+  /// No description provided for @profileDetailProfileNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile not available'**
+  String get profileDetailProfileNotAvailable;
 }
 
 class _AppLocalizationsDelegate

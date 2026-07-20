@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/router/profile_navigation.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
+import '../../../../core/widgets/avatars/gender_placeholder.dart';
 import '../../domain/entities/discovery_profile_entity.dart';
 import 'compatibility_badge.dart';
 import 'discover_action_rail.dart';
@@ -34,31 +36,43 @@ class MatchReelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // ── 1. Background photo ──────────────────────────────────
-          _ProfileImage(photoUrls: profile.photoUrls),
-
-          // ── 2. Gradient overlay (transparent → dark bottom) ──────
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: AppGradients.imageOverlayStrong,
-            ),
-          ),
-
-          // ── 3. Content ───────────────────────────────────────────
-          Positioned.fill(
-            child: SafeArea(
-              child: _CardContent(
-                profile: profile,
-                onInterested: onInterested,
-                onShortlist: onShortlist,
-                onShare: onShare,
+      // Tapping anywhere on the card opens Profile Detail; the action
+      // rail buttons below win the gesture arena for their own taps
+      // since they're the deeper, more-specific recognizers.
+      child: GestureDetector(
+        onTap: () => openProfileDetail(context, profile),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // ── 1. Background photo ──────────────────────────────────
+            Hero(
+              tag: 'profile-photo-${profile.id}',
+              child: _ProfileImage(
+                photoUrls: profile.photoUrls,
+                gender: profile.gender,
               ),
             ),
-          ),
-        ],
+
+            // ── 2. Gradient overlay (transparent → dark bottom) ──────
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: AppGradients.imageOverlayStrong,
+              ),
+            ),
+
+            // ── 3. Content ───────────────────────────────────────────
+            Positioned.fill(
+              child: SafeArea(
+                child: _CardContent(
+                  profile: profile,
+                  onInterested: onInterested,
+                  onShortlist: onShortlist,
+                  onShare: onShare,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -138,12 +152,13 @@ class _CardContent extends StatelessWidget {
 
 class _ProfileImage extends StatelessWidget {
   final List<String> photoUrls;
+  final String gender;
 
-  const _ProfileImage({required this.photoUrls});
+  const _ProfileImage({required this.photoUrls, this.gender = ''});
 
   @override
   Widget build(BuildContext context) {
-    if (photoUrls.isEmpty) return _Placeholder();
+    if (photoUrls.isEmpty) return _Placeholder(gender: gender);
     final url = photoUrls.first;
 
     // Local asset path
@@ -151,7 +166,7 @@ class _ProfileImage extends StatelessWidget {
       return Image.asset(
         url,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _Placeholder(),
+        errorBuilder: (_, __, ___) => _Placeholder(gender: gender),
       );
     }
 
@@ -159,27 +174,27 @@ class _ProfileImage extends StatelessWidget {
     return Image.network(
       url,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => _Placeholder(),
+      errorBuilder: (_, __, ___) => _Placeholder(gender: gender),
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
-        return _Placeholder();
+        return _Placeholder(gender: gender);
       },
     );
   }
 }
 
 class _Placeholder extends StatelessWidget {
+  final String gender;
+
+  const _Placeholder({this.gender = ''});
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.primaryDark,
-      child: const Center(
-        child: Icon(
-          Icons.person_rounded,
-          size: 72,
-          color: AppColors.textTertiaryDark,
-        ),
-      ),
+    return NmGenderPlaceholder(
+      gender: gender,
+      iconSize: 72,
+      backgroundColor: AppColors.primaryDark,
+      iconColor: AppColors.textTertiaryDark,
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/avatars/gender_placeholder.dart';
 import '../../../../l10n/app_localizations.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -26,6 +27,10 @@ import '../../../../l10n/app_localizations.dart';
 class NenjamNavigationDrawer extends StatelessWidget {
   /// URL of the user's profile photo.
   final String? profileImageUrl;
+
+  /// 'Male' / 'Female' / '' — picks the gender-aware placeholder icon
+  /// when [profileImageUrl] is null/fails to load.
+  final String gender;
 
   /// Display name (e.g. "Dhatri Patel").
   final String userName;
@@ -73,6 +78,7 @@ class NenjamNavigationDrawer extends StatelessWidget {
   const NenjamNavigationDrawer({
     super.key,
     this.profileImageUrl,
+    this.gender = '',
     this.userName = 'Dhatri Patel',
     this.age = 23,
     this.location = 'Chennai',
@@ -124,6 +130,7 @@ class NenjamNavigationDrawer extends StatelessWidget {
             // ── 1. Compact profile header ──────────────────────────────────
             _ProfileHeader(
               imageUrl: profileImageUrl,
+              gender: gender,
               name: userName,
               age: age,
               location: location,
@@ -322,6 +329,7 @@ class NenjamNavigationDrawer extends StatelessWidget {
 
 class _ProfileHeader extends StatelessWidget {
   final String? imageUrl;
+  final String gender;
   final String name;
   final int age;
   final String location;
@@ -332,6 +340,7 @@ class _ProfileHeader extends StatelessWidget {
 
   const _ProfileHeader({
     required this.imageUrl,
+    this.gender = '',
     required this.name,
     required this.age,
     required this.location,
@@ -374,7 +383,7 @@ class _ProfileHeader extends StatelessWidget {
                     color: AppColors.primarySurface,
                   ),
                   clipBehavior: Clip.antiAlias,
-                  child: _AvatarImage(imageUrl: imageUrl),
+                  child: _AvatarImage(imageUrl: imageUrl, gender: gender),
                 ),
               ),
               // Verification badge overlay
@@ -520,8 +529,9 @@ class _ProfileHeader extends StatelessWidget {
 
 class _AvatarImage extends StatelessWidget {
   final String? imageUrl;
+  final String gender;
 
-  const _AvatarImage({this.imageUrl});
+  const _AvatarImage({this.imageUrl, this.gender = ''});
 
   @override
   Widget build(BuildContext context) {
@@ -531,16 +541,17 @@ class _AvatarImage extends StatelessWidget {
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
-        errorBuilder: (_, __, ___) => _icon(),
+        errorBuilder: (_, __, ___) => _placeholder(),
       );
     }
-    return _icon();
+    return _placeholder();
   }
 
-  Widget _icon() => const Icon(
-        Icons.person_rounded,
-        size: 36,
-        color: AppColors.primary,
+  Widget _placeholder() => NmGenderPlaceholder(
+        gender: gender,
+        iconSize: 36,
+        backgroundColor: AppColors.primarySurface,
+        iconColor: AppColors.primary,
       );
 }
 

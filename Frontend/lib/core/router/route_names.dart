@@ -40,6 +40,7 @@ abstract final class RouteNames {
   static const String interestsSent = '/interests-sent';
   static const String interestsReceived = '/interests-received';
   static const String shortlisted = '/shortlisted';
+  static const String profileDetail = '/profile-detail';
 
   // ─── Relationship Intelligence (independent of registration) ──────
   static const String profileIntelligence = '/profile-intelligence';
@@ -84,6 +85,7 @@ abstract final class RouteNames {
   static const String interestsSentName = 'interestsSent';
   static const String interestsReceivedName = 'interestsReceived';
   static const String shortlistedName = 'shortlisted';
+  static const String profileDetailName = 'profileDetail';
 
   static const String profileIntelligenceName = 'profileIntelligence';
   static const String choosePromptName = 'choosePrompt';

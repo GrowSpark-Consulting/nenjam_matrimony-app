@@ -109,6 +109,14 @@ class StorageService {
     await _prefs.remove(AppConstants.keyPendingPhone);
   }
 
+  // ─── Search History ──────────────────────────────────────────────
+  List<String> get recentSearches =>
+      _prefs.getStringList(AppConstants.keySearchHistory) ?? const [];
+
+  Future<void> setRecentSearches(List<String> searches) async {
+    await _prefs.setStringList(AppConstants.keySearchHistory, searches);
+  }
+
   // ─── Onboarding ──────────────────────────────────────────────────
   bool get isOnboardingDone =>
       _prefs.getBool(AppConstants.keyOnboardingDone) ?? false;

@@ -3,18 +3,23 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_gradients.dart';
+import 'gender_placeholder.dart';
 
 /// Reusable base Circle Avatar with CachedNetworkImage fallback.
 class NmCircleAvatar extends StatelessWidget {
   final String? imageUrl;
   final double size;
   final VoidCallback? onTap;
+  /// 'Male' / 'Female' / '' — picks the fallback icon when [imageUrl] is
+  /// null/empty.
+  final String gender;
 
   const NmCircleAvatar({
     super.key,
     this.imageUrl,
     this.size = 48.0,
     this.onTap,
+    this.gender = '',
   });
 
   @override
@@ -43,17 +48,27 @@ class NmCircleAvatar extends StatelessWidget {
     );
   }
 
-  Widget _fallback() => Center(child: Icon(Icons.person_rounded, size: size * 0.6, color: AppColors.primary));
+  // Delegates to the single canonical gender-icon mapping in
+  // [NmGenderPlaceholder] rather than duplicating the switch here — the
+  // circular clip/background above is this widget's only real job.
+  Widget _fallback() => NmGenderPlaceholder(
+        gender: gender,
+        iconSize: size * 0.6,
+        backgroundColor: AppColors.primarySurface,
+        iconColor: AppColors.primary,
+      );
 }
 
 /// Profile Avatar.
 class NmProfileAvatar extends StatelessWidget {
   final String? imageUrl;
   final double size;
-  const NmProfileAvatar({super.key, this.imageUrl, this.size = 100.0});
+  final String gender;
+  const NmProfileAvatar({super.key, this.imageUrl, this.size = 100.0, this.gender = ''});
 
   @override
-  Widget build(BuildContext context) => NmCircleAvatar(imageUrl: imageUrl, size: size);
+  Widget build(BuildContext context) =>
+      NmCircleAvatar(imageUrl: imageUrl, size: size, gender: gender);
 }
 
 /// Online Avatar with green indicator badge.
@@ -61,14 +76,21 @@ class NmOnlineAvatar extends StatelessWidget {
   final String? imageUrl;
   final bool isOnline;
   final double size;
+  final String gender;
 
-  const NmOnlineAvatar({super.key, this.imageUrl, this.isOnline = true, this.size = 54.0});
+  const NmOnlineAvatar({
+    super.key,
+    this.imageUrl,
+    this.isOnline = true,
+    this.size = 54.0,
+    this.gender = '',
+  });
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        NmCircleAvatar(imageUrl: imageUrl, size: size),
+        NmCircleAvatar(imageUrl: imageUrl, size: size, gender: gender),
         if (isOnline)
           Positioned(
             right: 2,
@@ -92,14 +114,15 @@ class NmOnlineAvatar extends StatelessWidget {
 class NmVerifiedAvatar extends StatelessWidget {
   final String? imageUrl;
   final double size;
+  final String gender;
 
-  const NmVerifiedAvatar({super.key, this.imageUrl, this.size = 54.0});
+  const NmVerifiedAvatar({super.key, this.imageUrl, this.size = 54.0, this.gender = ''});
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        NmCircleAvatar(imageUrl: imageUrl, size: size),
+        NmCircleAvatar(imageUrl: imageUrl, size: size, gender: gender),
         Positioned(
           right: 0,
           bottom: 0,
@@ -118,8 +141,9 @@ class NmVerifiedAvatar extends StatelessWidget {
 class NmPremiumAvatar extends StatelessWidget {
   final String? imageUrl;
   final double size;
+  final String gender;
 
-  const NmPremiumAvatar({super.key, this.imageUrl, this.size = 54.0});
+  const NmPremiumAvatar({super.key, this.imageUrl, this.size = 54.0, this.gender = ''});
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +153,7 @@ class NmPremiumAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: AppGradients.goldButton,
       ),
-      child: NmCircleAvatar(imageUrl: imageUrl, size: size - 5),
+      child: NmCircleAvatar(imageUrl: imageUrl, size: size - 5, gender: gender),
     );
   }
 }
@@ -140,6 +164,7 @@ class NmStoryAvatar extends StatelessWidget {
   final bool hasStory;
   final double size;
   final VoidCallback? onTap;
+  final String gender;
 
   const NmStoryAvatar({
     super.key,
@@ -147,6 +172,7 @@ class NmStoryAvatar extends StatelessWidget {
     this.hasStory = true,
     this.size = 64.0,
     this.onTap,
+    this.gender = '',
   });
 
   @override
@@ -163,7 +189,7 @@ class NmStoryAvatar extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(2),
           decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
-          child: NmCircleAvatar(imageUrl: imageUrl, size: size - 10),
+          child: NmCircleAvatar(imageUrl: imageUrl, size: size - 10, gender: gender),
         ),
       ),
     );

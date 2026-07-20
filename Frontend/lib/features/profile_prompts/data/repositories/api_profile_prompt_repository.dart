@@ -1,5 +1,6 @@
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../domain/models/prompt_bank_item.dart';
 import '../../domain/repositories/profile_prompt_repository.dart';
 
@@ -30,10 +31,11 @@ class ApiProfilePromptRepository implements ProfilePromptRepository {
 
   @override
   Future<List<PromptBankItem>> getPrompts({PromptCategory? category}) async {
-    final response = await _apiClient.get<List<dynamic>>(
+    final response = await _apiClient.get<dynamic>(
       ApiEndpoints.profilePromptsBank,
     );
-    final items = (response.data ?? [])
+    final data = unwrapOrThrow(response.statusCode, response.data);
+    final items = ((data as List<dynamic>?) ?? [])
         .cast<Map<String, dynamic>>()
         .map((e) => PromptBankItem(
               id: e['id'] as String,
@@ -48,8 +50,9 @@ class ApiProfilePromptRepository implements ProfilePromptRepository {
   @override
   Future<List<PromptAnswer>> getUserPrompts() async {
     final response =
-        await _apiClient.get<List<dynamic>>(ApiEndpoints.profilePromptsMe);
-    return (response.data ?? [])
+        await _apiClient.get<dynamic>(ApiEndpoints.profilePromptsMe);
+    final data = unwrapOrThrow(response.statusCode, response.data);
+    return ((data as List<dynamic>?) ?? [])
         .cast<Map<String, dynamic>>()
         .map((e) => PromptAnswer(
               promptId: e['promptId'] as String,
@@ -62,7 +65,7 @@ class ApiProfilePromptRepository implements ProfilePromptRepository {
 
   @override
   Future<void> saveUserPrompts(List<PromptAnswer> prompts) async {
-    await _apiClient.put<Map<String, dynamic>>(
+    final response = await _apiClient.put<Map<String, dynamic>>(
       ApiEndpoints.profilePromptsMe,
       data: {
         'prompts': prompts
@@ -70,5 +73,6 @@ class ApiProfilePromptRepository implements ProfilePromptRepository {
             .toList(),
       },
     );
+    unwrapOrThrow(response.statusCode, response.data);
   }
 }

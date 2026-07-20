@@ -273,7 +273,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         onInterestsTap: () =>
                             context.push(RouteNames.interestsReceived),
                         onVisitorsTap: () => context.push(RouteNames.visitors),
-                        onMatchesTap: () => context.push(RouteNames.matches),
+                        // Matches is a bottom-nav tab — switch via the
+                        // shell's go navigation, not a stacked push.
+                        onMatchesTap: () => context.go(RouteNames.matches),
                       ),
                       smallGap,
                       NmProfilePerformanceCard(
@@ -300,10 +302,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       for (final profile in discoverMatches.take(3))
                         profileDisplayDiscoverMatch(
                           profile,
-                          onTap: () => context.push(RouteNames.discover),
+                          // Discover is a bottom-nav tab — switch via the
+                          // shell's go navigation, not a stacked push.
+                          onTap: () => context.go(RouteNames.discover),
                         ),
                     ],
-                    onViewAllTap: () => context.push(RouteNames.discover),
+                    onViewAllTap: () => context.go(RouteNames.discover),
                   ),
                 ),
                 gap,
@@ -437,7 +441,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     // subscriptionStatus is unused) — placeholder until
                     // that's implemented.
                     isPremiumMember: false,
-                    onCtaTap: () => context.push(RouteNames.premium),
+                    // Premium is a bottom-nav tab — switch via the shell's
+                    // go navigation, not a stacked push.
+                    onCtaTap: () => context.go(RouteNames.premium),
                   ),
                 ),
                 gap,

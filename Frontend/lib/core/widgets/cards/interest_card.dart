@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
+import '../avatars/app_avatars.dart';
 import '../buttons/outlined_button.dart';
 import '../buttons/primary_button.dart';
 
@@ -12,6 +13,9 @@ class NmInterestCard extends StatelessWidget {
   final String details;
   final String message;
   final String? imageUrl;
+  /// 'Male' / 'Female' / '' — picks the gender-aware placeholder icon
+  /// when [imageUrl] is null.
+  final String gender;
   final bool isReceived;
   final VoidCallback? onAccept;
   final VoidCallback? onDecline;
@@ -22,6 +26,7 @@ class NmInterestCard extends StatelessWidget {
     required this.details,
     required this.message,
     this.imageUrl,
+    this.gender = '',
     this.isReceived = true,
     this.onAccept,
     this.onDecline,
@@ -38,12 +43,7 @@ class NmInterestCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
-                backgroundImage: imageUrl != null ? NetworkImage(imageUrl!) : null,
-                child: imageUrl == null ? const Icon(Icons.favorite, color: AppColors.liked) : null,
-              ),
+              NmCircleAvatar(imageUrl: imageUrl, size: 52, gender: gender),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(

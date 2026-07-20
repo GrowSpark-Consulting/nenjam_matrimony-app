@@ -42,29 +42,38 @@ class PsychologySection extends StatelessWidget {
                   color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: AppSpacing.borderRadiusMd,
                 ),
-                child: const Icon(Icons.psychology_alt_rounded,
-                    color: AppColors.primary),
+                child: const Icon(
+                  Icons.psychology_alt_rounded,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Discover your personality',
-                        style: AppTypography.bodyMedium
-                            .copyWith(fontWeight: FontWeight.w600)),
+                    Text(
+                      'Discover your personality',
+                      style: AppTypography.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text('3-minute quiz · improves match quality',
-                        style: AppTypography.labelSmall.copyWith(
-                          color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
-                        )),
+                    Text(
+                      '3-minute quiz · improves match quality',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded,
-                  color: AppColors.accentGold),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.accentGold,
+              ),
             ],
           ),
         ),
@@ -88,11 +97,20 @@ class PsychologySection extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.psychology_alt_rounded,
-                  color: AppColors.primary, size: 22),
+              const Icon(
+                Icons.psychology_alt_rounded,
+                color: AppColors.primary,
+                size: 22,
+              ),
               const SizedBox(width: AppSpacing.sm),
-              Text('Personality Profile', style: AppTypography.titleSmall),
-              const Spacer(),
+              Expanded(
+                child: Text(
+                  'Personality Profile',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.titleSmall,
+                ),
+              ),
               if (onTakeQuizTap != null)
                 TextButton(
                   onPressed: onTakeQuizTap,
@@ -111,7 +129,15 @@ class PsychologySection extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(entry.key, style: AppTypography.labelMedium),
+                      Flexible(
+                        child: Text(
+                          entry.key,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.labelMedium,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
                       Text('$value%', style: AppTypography.labelMedium),
                     ],
                   ),
@@ -124,8 +150,9 @@ class PsychologySection extends StatelessWidget {
                       backgroundColor: isDark
                           ? AppColors.surfaceVariantDark
                           : AppColors.surfaceVariantLight,
-                      valueColor:
-                          const AlwaysStoppedAnimation(AppColors.accentGold),
+                      valueColor: const AlwaysStoppedAnimation(
+                        AppColors.accentGold,
+                      ),
                     ),
                   ),
                 ],

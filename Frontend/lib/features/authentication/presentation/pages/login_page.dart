@@ -10,6 +10,7 @@ import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/utils/validators.dart';
+import '../../../../core/widgets/buttons/icon_button.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
 import '../../../../core/widgets/buttons/social_button.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
@@ -60,8 +61,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
   void initState() {
     super.initState();
     _currentTab = widget.initialTab;
-    _tabController =
-        TabController(length: 2, vsync: this, initialIndex: _currentTab);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: _currentTab,
+    );
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() => _currentTab = _tabController.index);
@@ -83,21 +87,25 @@ class _LoginPageState extends ConsumerState<LoginPage>
   }
 
   void _snack(String message, {Color? color}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
   }
 
   // ─── Login: Email + Password ───────────────────────────────────────
   Future<void> _onLoginEmail() async {
     if (!(_loginFormKey.currentState?.validate() ?? false)) return;
-    final result = await ref.read(loginControllerProvider.notifier).loginWithEmail(
+    final result = await ref
+        .read(loginControllerProvider.notifier)
+        .loginWithEmail(
           email: _loginEmailCtrl.text.trim(),
           password: _loginPasswordCtrl.text,
         );
     if (!mounted) return;
     if (!result.success) {
-      _snack(result.errorMessage ?? AppLocalizations.of(context).authGenericError);
+      _snack(
+        result.errorMessage ?? AppLocalizations.of(context).authGenericError,
+      );
       return;
     }
     _routeAfterLogin(result.needsVerification);
@@ -124,7 +132,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
     // Send the user to whichever verification step is still outstanding.
     final emailVerified =
         ref.read(firebaseAuthServiceProvider).currentUser?.emailVerified ??
-            false;
+        false;
     context.go(emailVerified ? RouteNames.verifyPhone : RouteNames.verifyEmail);
   }
 
@@ -150,8 +158,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
     final ok = await notifier.submit();
     if (!mounted) return;
     if (!ok) {
-      _snack(ref.read(signupControllerProvider).errorMessage ??
-          AppLocalizations.of(context).authGenericError);
+      _snack(
+        ref.read(signupControllerProvider).errorMessage ??
+            AppLocalizations.of(context).authGenericError,
+      );
       return;
     }
     // Best-effort: mirrors this new Firebase account into the NestJS +
@@ -172,69 +182,90 @@ class _LoginPageState extends ConsumerState<LoginPage>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor:
-            isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-        body: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            return [
-              SliverToBoxAdapter(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 320),
-                  transitionBuilder: (child, anim) => FadeTransition(
-                    opacity: anim,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.08),
-                        end: Offset.zero,
-                      ).animate(anim),
-                      child: child,
+        backgroundColor: isDark
+            ? AppColors.backgroundDark
+            : AppColors.backgroundLight,
+        body: Stack(
+          children: [
+            NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) {
+                return [
+                  SliverToBoxAdapter(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 320),
+                      transitionBuilder: (child, anim) => FadeTransition(
+                        opacity: anim,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0, 0.08),
+                            end: Offset.zero,
+                          ).animate(anim),
+                          child: child,
+                        ),
+                      ),
+                      child: isSignUp
+                          ? const _SignUpHeader(key: ValueKey('signup'))
+                          : const _LoginHeader(key: ValueKey('login')),
                     ),
                   ),
-                  child: isSignUp
-                      ? const _SignUpHeader(key: ValueKey('signup'))
-                      : const _LoginHeader(key: ValueKey('login')),
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _StickyTabBarDelegate(
+                      tabController: _tabController,
+                      isDark: isDark,
+                    ),
+                  ),
+                ];
+              },
+              body: TabBarView(
+                controller: _tabController,
+                children: [
+                  _TabFormCard(
+                    isDark: isDark,
+                    child: _LoginForm(
+                      formKey: _loginFormKey,
+                      phoneCtrl: _loginPhoneCtrl,
+                      emailCtrl: _loginEmailCtrl,
+                      passwordCtrl: _loginPasswordCtrl,
+                      isLoading: loginLoading,
+                      onLoginEmail: _onLoginEmail,
+                      onLoginMobile: _onLoginMobile,
+                      onSignUpTap: () => _tabController.animateTo(1),
+                    ),
+                  ),
+                  _TabFormCard(
+                    isDark: isDark,
+                    child: _SignUpForm(
+                      formKey: _signUpFormKey,
+                      usernameCtrl: _usernameCtrl,
+                      phoneCtrl: _phoneCtrl,
+                      emailCtrl: _emailCtrl,
+                      passwordCtrl: _passwordCtrl,
+                      isLoading: signupLoading,
+                      onCreateAccount: _onCreateAccount,
+                      onLoginTap: () => _tabController.animateTo(0),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Login is reached both as a flow root (via `go` after Splash/
+            // OTP — nothing to pop to) and pushed from Auth Selection (via
+            // `push`, where the user needs a way back) — only show a back
+            // affordance when there's actually something to pop. White
+            // icon: this overlays NmCurvedHeader's navy background.
+            if (context.canPop())
+              Positioned(
+                top: MediaQuery.paddingOf(context).top,
+                left: 4,
+                child: NmIconButton(
+                  icon: Icons.arrow_back_rounded,
+                  onPressed: () => context.pop(),
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  color: Colors.white,
                 ),
               ),
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _StickyTabBarDelegate(
-                  tabController: _tabController,
-                  isDark: isDark,
-                ),
-              ),
-            ];
-          },
-          body: TabBarView(
-            controller: _tabController,
-            children: [
-              _TabFormCard(
-                isDark: isDark,
-                child: _LoginForm(
-                  formKey: _loginFormKey,
-                  phoneCtrl: _loginPhoneCtrl,
-                  emailCtrl: _loginEmailCtrl,
-                  passwordCtrl: _loginPasswordCtrl,
-                  isLoading: loginLoading,
-                  onLoginEmail: _onLoginEmail,
-                  onLoginMobile: _onLoginMobile,
-                  onSignUpTap: () => _tabController.animateTo(1),
-                ),
-              ),
-              _TabFormCard(
-                isDark: isDark,
-                child: _SignUpForm(
-                  formKey: _signUpFormKey,
-                  usernameCtrl: _usernameCtrl,
-                  phoneCtrl: _phoneCtrl,
-                  emailCtrl: _emailCtrl,
-                  passwordCtrl: _passwordCtrl,
-                  isLoading: signupLoading,
-                  onCreateAccount: _onCreateAccount,
-                  onLoginTap: () => _tabController.animateTo(0),
-                ),
-              ),
-            ],
-          ),
+          ],
         ),
       ),
     );
@@ -295,7 +326,11 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => 62.0;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     final isPinned = shrinkOffset > 0;
     final cardBg = isDark ? AppColors.surfaceDark : Colors.white;
 
@@ -331,13 +366,18 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
               controller: tabController,
               labelColor: AppColors.primary,
               unselectedLabelColor: AppColors.textTertiaryLight,
-              labelStyle: AppTypography.titleSmall
-                  .copyWith(fontWeight: FontWeight.w700, fontSize: 15),
-              unselectedLabelStyle:
-                  AppTypography.titleSmall.copyWith(fontWeight: FontWeight.w400),
+              labelStyle: AppTypography.titleSmall.copyWith(
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+              ),
+              unselectedLabelStyle: AppTypography.titleSmall.copyWith(
+                fontWeight: FontWeight.w400,
+              ),
               indicator: UnderlineTabIndicator(
-                borderSide:
-                    const BorderSide(color: AppColors.accentGold, width: 2.5),
+                borderSide: const BorderSide(
+                  color: AppColors.accentGold,
+                  width: 2.5,
+                ),
                 borderRadius: BorderRadius.circular(2),
               ),
               indicatorSize: TabBarIndicatorSize.label,
@@ -382,8 +422,9 @@ class _TabFormCard extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : Colors.white,
-              borderRadius:
-                  const BorderRadius.vertical(bottom: Radius.circular(28)),
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(28),
+              ),
               boxShadow: [
                 BoxShadow(
                   color: const Color(0xFF1B2B4B).withValues(alpha: 0.12),
@@ -530,9 +571,9 @@ class _LoginFormState extends State<_LoginForm> {
 
             NmSocialButton(
               label: l10n.authSignInWithGoogle,
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.authComingSoon)),
-              ),
+              onPressed: () => ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(l10n.authComingSoon))),
             ),
             const SizedBox(height: 24),
 
@@ -542,8 +583,9 @@ class _LoginFormState extends State<_LoginForm> {
                 children: [
                   Text(
                     l10n.authNewHere,
-                    style: AppTypography.bodyMedium
-                        .copyWith(color: AppColors.textSecondaryLight),
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondaryLight,
+                    ),
                   ),
                   GestureDetector(
                     onTap: widget.onSignUpTap,
@@ -626,7 +668,12 @@ class _SignUpForm extends ConsumerWidget {
   });
 
   static const List<String> _registeringForOptions = [
-    'Myself', 'Son', 'Daughter', 'Brother', 'Sister', 'Friend',
+    'Myself',
+    'Son',
+    'Daughter',
+    'Brother',
+    'Sister',
+    'Friend',
   ];
 
   String _registeringForLabel(AppLocalizations l10n, String value) {
@@ -651,8 +698,9 @@ class _SignUpForm extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final registeringFor =
-        ref.watch(signupControllerProvider.select((s) => s.registeringFor));
+    final registeringFor = ref.watch(
+      signupControllerProvider.select((s) => s.registeringFor),
+    );
     final notifier = ref.read(signupControllerProvider.notifier);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final labelColor = isDark ? Colors.white70 : AppColors.textSecondaryLight;
@@ -774,8 +822,10 @@ class _FieldLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: AppTypography.labelSmall
-          .copyWith(color: color, fontWeight: FontWeight.w600),
+      style: AppTypography.labelSmall.copyWith(
+        color: color,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 }
@@ -794,8 +844,9 @@ class _Fixed91PhoneField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor =
-        isDark ? AppColors.surfaceVariantDark : const Color(0xFFF5F3EE);
+    final bgColor = isDark
+        ? AppColors.surfaceVariantDark
+        : const Color(0xFFF5F3EE);
     final borderColor = isDark
         ? AppColors.borderDark.withValues(alpha: 0.5)
         : const Color(0xFFC5C6CF).withValues(alpha: 0.4);
@@ -966,8 +1017,14 @@ class _TrustBadges extends StatelessWidget {
         runSpacing: 8,
         children: [
           _TrustItem(icon: Icons.shield_outlined, label: l10n.authTrustSecure),
-          _TrustItem(icon: Icons.lock_outline_rounded, label: l10n.authTrustPrivate),
-          _TrustItem(icon: Icons.verified_outlined, label: l10n.authTrustVerified),
+          _TrustItem(
+            icon: Icons.lock_outline_rounded,
+            label: l10n.authTrustPrivate,
+          ),
+          _TrustItem(
+            icon: Icons.verified_outlined,
+            label: l10n.authTrustVerified,
+          ),
         ],
       ),
     );
@@ -982,8 +1039,9 @@ class _TrustItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final color = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
 
     return Row(
       mainAxisSize: MainAxisSize.min,

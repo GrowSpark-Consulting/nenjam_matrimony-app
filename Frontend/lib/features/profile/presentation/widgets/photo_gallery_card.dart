@@ -10,12 +10,14 @@ class NmPhotoGalleryCard extends StatelessWidget {
   final List<String> photoUrls;
   final int maxPhotos;
   final VoidCallback? onAddTap;
+  final void Function(int index)? onPhotoTap;
 
   const NmPhotoGalleryCard({
     super.key,
     this.photoUrls = const [],
     this.maxPhotos = 6,
     this.onAddTap,
+    this.onPhotoTap,
   });
 
   @override
@@ -92,10 +94,13 @@ class NmPhotoGalleryCard extends StatelessWidget {
               physics: const BouncingScrollPhysics(),
               children: [
                 // Existing photos
-                ...photoUrls.map(
-                  (url) => Padding(
+                ...photoUrls.asMap().entries.map(
+                  (entry) => Padding(
                     padding: const EdgeInsets.only(right: AppSpacing.sm),
-                    child: _PhotoThumbnail(url: url, isDark: isDark),
+                    child: GestureDetector(
+                      onTap: onPhotoTap == null ? null : () => onPhotoTap!(entry.key),
+                      child: _PhotoThumbnail(url: entry.value, isDark: isDark),
+                    ),
                   ),
                 ),
 

@@ -25,6 +25,19 @@ import 'features/registration/presentation/providers/registration_provider.dart'
 import 'l10n/app_localizations.dart';
 export 'core/services/storage_service.dart' show storageService;
 
+// TEMP DEBUG — remove before shipping.
+//
+// Logs the moment Android's back event reaches Flutter's Router layer,
+// before GoRouter/PopScope get any say — confirms whether the event is
+// arriving here at all.
+class _LoggingBackButtonDispatcher extends RootBackButtonDispatcher {
+  @override
+  Future<bool> didPopRoute() {
+    debugPrint('[BACK] OS back event reached BackButtonDispatcher.didPopRoute()');
+    return super.didPopRoute();
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -263,7 +276,13 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
           supportedLocales: AppLocalizations.supportedLocales,
 
           // Routing
-          routerConfig: router,
+          // TEMP DEBUG — normally just `routerConfig: router`; expanded to
+          // individual params so a logging BackButtonDispatcher can be
+          // swapped in. Revert to `routerConfig: router` when done.
+          routeInformationProvider: router.routeInformationProvider,
+          routeInformationParser: router.routeInformationParser,
+          routerDelegate: router.routerDelegate,
+          backButtonDispatcher: _LoggingBackButtonDispatcher(),
 
           builder: _connectivityCheckEnabled
               ? (context, child) => _wrapWithConnectivityBanner(child)
