@@ -41,7 +41,14 @@ abstract final class ApiEndpoints {
   // ─── Profile (not yet implemented on the backend) ─────────────────
   static const String profile = '/profile';
   static const String profileUpdate = '/profile/update';
-  static const String profilePhotos = '/profile/photos';
+  // Photo management — backend/apps/api/src/modules/profiles' PhotoController
+  // (all user-scoped via FirebaseAuthGuard). List + upload live at the base;
+  // per-photo routes append the id.
+  static const String profilePhotos = '/profiles/me/photos';
+  static const String profilePhotosReorder = '/profiles/me/photos/reorder';
+  static String profilePhoto(String id) => '/profiles/me/photos/$id';
+  static String profilePhotoPrimary(String id) =>
+      '/profiles/me/photos/$id/primary';
   static const String profilePreferences = '/profile/preferences';
   static const String profileCompletion = '/profile/completion';
   static const String profileVerification = '/profile/verification';

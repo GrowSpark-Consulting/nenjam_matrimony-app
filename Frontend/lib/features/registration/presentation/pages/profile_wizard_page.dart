@@ -345,10 +345,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
           onChanged: notifier.updatePartnerPreference,
         );
       case 11:
-        return StepPhotos(
-          gallery: draft.photoGallery,
-          onChanged: notifier.updatePhotoGallery,
-        );
+        // Photos are an independent backend resource (PhotoController), not
+        // part of the wizard draft — StepPhotos manages them directly.
+        return const StepPhotos();
       case 12:
         return StepVerification(
           status: draft.verificationStatus,

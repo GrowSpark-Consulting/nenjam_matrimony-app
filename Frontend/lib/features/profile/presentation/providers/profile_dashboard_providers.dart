@@ -3,18 +3,37 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../registration/domain/models/profile_draft.dart';
 import '../../../registration/presentation/providers/registration_provider.dart';
 
-/// Ambient (not-mid-session) snapshot of the signed-in user's saved profile
-/// data, for read-only display on the Profile dashboard.
+/// Single fetch of the signed-in user's saved profile (`GET /profiles/draft`),
+/// shared by every dashboard derivation below so the draft is never fetched
+/// more than once per load. Invalidate THIS to refresh the whole dashboard
+/// (draft fields + backend completion) in one shot — see ProfilePage.initState.
 ///
 /// Deliberately calls [RegistrationRepository.getDraft] directly rather than
 /// `RegistrationNotifier.startEditMode()`, so simply viewing the dashboard
 /// never flips `profileFlowModeProvider` or overwrites an in-progress edit
-/// session sitting in `registrationProvider` — same rationale documented on
-/// `profileCompletenessSnapshotProvider`, which depends on this provider
-/// instead of fetching the draft a second time.
+/// session sitting in `registrationProvider`.
+final profileDraftResponseProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  return ref.watch(registrationRepositoryProvider).getDraft();
+});
+
+/// Ambient (not-mid-session) snapshot of the user's saved profile data, for
+/// read-only display on the Profile dashboard. Derived from the shared
+/// [profileDraftResponseProvider] fetch.
 final myProfileDraftProvider = FutureProvider.autoDispose<ProfileDraft>((
   ref,
 ) async {
-  final json = await ref.watch(registrationRepositoryProvider).getDraft();
+  final json = await ref.watch(profileDraftResponseProvider.future);
   return ProfileDraft.fromJson(json);
+});
+
+/// The **backend-computed** profile completion percentage (the single source
+/// of truth for "how complete am I"), read straight off the same
+/// `GET /profiles/draft` response's `completionPercentage`. Displayed on the
+/// Profile dashboard so the figure there always matches what the backend
+/// computed — never a separately recomputed number.
+final backendProfileCompletionProvider =
+    FutureProvider.autoDispose<int>((ref) async {
+  final json = await ref.watch(profileDraftResponseProvider.future);
+  return (json['completionPercentage'] as num?)?.round() ?? 0;
 });

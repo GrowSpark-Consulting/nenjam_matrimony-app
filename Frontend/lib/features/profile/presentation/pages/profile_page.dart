@@ -16,6 +16,7 @@ import '../../../authentication/presentation/providers/auth_providers.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../../discover/presentation/providers/discover_providers.dart';
 import '../../../profile_completion/presentation/providers/profile_completeness_provider.dart';
+import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../../profile_completion/presentation/utils/module_copy.dart';
 import '../../../profile_prompts/domain/models/prompt_bank_item.dart';
 import '../../../profile_prompts/presentation/providers/profile_prompt_provider.dart';
@@ -61,11 +62,35 @@ import '../widgets/verification_card.dart';
 ///  11.  Premium Membership
 ///  12.  Quick Actions
 ///  13.  Account
-class ProfilePage extends ConsumerWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends ConsumerState<ProfilePage> {
+  @override
+  void initState() {
+    super.initState();
+    // The dashboard's data providers (draft, completeness, photos) are kept
+    // alive across the app by the always-mounted Discover screen, so without
+    // this they'd render a once-loaded, possibly stale snapshot. Forcing a
+    // refetch on every open makes the Profile page always reflect the current
+    // backend state — the single source of truth — including any edits or
+    // photo changes made since the app started.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // One invalidation refreshes the whole dashboard: the shared draft fetch
+      // feeds both myProfileDraftProvider (fields) and
+      // backendProfileCompletionProvider (%).
+      ref.invalidate(profileDraftResponseProvider);
+      ref.invalidate(myPhotosProvider);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -88,6 +113,20 @@ class ProfilePage extends ConsumerWidget {
     final authUser = ref.watch(currentAuthUserProvider);
     final ProfileDraft? draft = ref.watch(myProfileDraftProvider).valueOrNull;
     final completeness = ref.watch(profileCompletenessSnapshotProvider).valueOrNull;
+    // Backend-computed completion % — the single source of truth for the
+    // figure shown on this screen (hero card + AI coach), so it always matches
+    // what the backend calculated rather than a separately recomputed number.
+    final completionPct =
+        ref.watch(backendProfileCompletionProvider).valueOrNull ??
+            completeness?.percentage ??
+            0;
+    // Single source of truth for photos (PhotoController) — the header hero
+    // image and the gallery card below both read this, so the primary photo is
+    // identical here and on the Edit Profile screen.
+    final photos = ref.watch(myPhotosProvider).valueOrNull ?? const [];
+    final primaryPhotoUrl = photos.isEmpty
+        ? null
+        : photos.firstWhere((p) => p.isPrimary, orElse: () => photos.first).cdnUrl;
     final List<DiscoveryProfileEntity> discoverMatches =
         ref.watch(discoverProfilesProvider).valueOrNull ??
         const <DiscoveryProfileEntity>[];
@@ -123,12 +162,13 @@ class ProfilePage extends ConsumerWidget {
                     name: profileDisplayName(draft, authUser),
                     age: profileDisplayAge(draft),
                     nmId: profileDisplayId(authUser),
+                    imageUrl: primaryPhotoUrl,
                     location: profileDisplayLocation(draft),
                     // TODO(backend): no trust-score concept exists yet
                     // anywhere in the app (no entity, no endpoint) —
                     // placeholder until the backend defines one.
                     trustScore: 0,
-                    profileCompletion: completeness?.percentage ?? 0,
+                    profileCompletion: completionPct,
                     // TODO(backend): no subscription/premium-status
                     // endpoint is wired yet (ApiEndpoints.
                     // subscriptionStatus is unused) — placeholder until
@@ -182,8 +222,8 @@ class ProfilePage extends ConsumerWidget {
                 _FadeInSection(
                   delay: 120,
                   child: NmAiMatchCoachCard(
-                    headline: completeness != null
-                        ? 'Your profile is ${completeness.percentage}% complete'
+                    headline: completionPct > 0
+                        ? 'Your profile is $completionPct% complete'
                         : "Let's build your profile",
                     suggestions: missingModules.isNotEmpty
                         ? [
@@ -240,7 +280,7 @@ class ProfilePage extends ConsumerWidget {
                         // Reuses the same completeness score shown in the
                         // hero card and Profile Completion screen — this
                         // is genuinely what "profile strength" means.
-                        strengthPct: completeness?.percentage ?? 0,
+                        strengthPct: completionPct,
                         // TODO(backend): no profile-visibility or
                         // response-time analytics exist yet — placeholders
                         // until the backend defines them.
@@ -376,14 +416,12 @@ class ProfilePage extends ConsumerWidget {
                 // ── 10. Photo Gallery ─────────────────────────────
                 _FadeInSection(
                   delay: 500,
+                  // Live photos from the backend (PhotoController) — presigned
+                  // URLs, refreshed whenever an upload/delete/reorder/primary
+                  // op updates myPhotosProvider. "Add" opens the wizard photo
+                  // step (edit mode), which manages the same provider.
                   child: NmPhotoGalleryCard(
-                    // TODO(backend): photo upload isn't wired yet —
-                    // ProfileDraft.photoGallery only holds local device
-                    // file paths captured during registration (see
-                    // PhotoGallery.fromJson's doc comment), which this
-                    // card can't render as network images. Wire real
-                    // URLs once photo upload/CDN storage exists.
-                    photoUrls: const [],
+                    photoUrls: photos.map((p) => p.cdnUrl).toList(),
                     onAddTap: () =>
                         openEditProfile(context, ref, wizardStep: 11),
                   ),

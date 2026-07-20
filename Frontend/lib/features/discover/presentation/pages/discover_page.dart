@@ -11,7 +11,7 @@ import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/presentation/utils/logout_flow.dart';
-import '../../../profile_completion/presentation/providers/profile_completeness_provider.dart';
+import '../../../profile/presentation/providers/profile_dashboard_providers.dart';
 import '../../../registration/presentation/utils/open_edit_profile.dart';
 import '../../domain/entities/discovery_profile_entity.dart';
 import '../../domain/entities/discover_feed_entity.dart';
@@ -40,15 +40,16 @@ class DiscoverPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feedAsync = ref.watch(discoverFeedProvider);
-    final completenessAsync = ref.watch(profileCompletenessSnapshotProvider);
+    // Backend-computed completion — the single source of truth shared with the
+    // Profile page, Edit Profile, and the completion screen.
+    final completionAsync = ref.watch(backendProfileCompletionProvider);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       drawer: NenjamNavigationDrawer(
         // Falls back to the previous static default while loading/on error
         // so the drawer never regresses to a broken state.
-        profileCompletionPercent:
-            completenessAsync.valueOrNull?.percentage ?? 85,
+        profileCompletionPercent: completionAsync.valueOrNull ?? 85,
         onMyProfileTap: () => context.push(RouteNames.profile),
         onEditProfileTap: () => openEditProfile(context, ref),
         onProfileIntelligenceTap: () =>
