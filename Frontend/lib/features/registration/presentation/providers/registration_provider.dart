@@ -208,6 +208,16 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     state = state.copyWith(partnerPreference: details);
   }
 
+  /// Updates local state AND persists immediately — used by the standalone
+  /// Partner Preferences page (features/partner_preferences), which isn't
+  /// part of the step-by-step wizard flow and so can't rely on
+  /// [syncCurrentStepToBackend]'s step-index switch. Same repository call
+  /// that switch makes for step 10.
+  Future<void> savePartnerPreference(PartnerPreference details) async {
+    state = state.copyWith(partnerPreference: details);
+    await ref.read(registrationRepositoryProvider).updatePartnerPreference(details);
+  }
+
   // ─── Step 12: Photos ───────────────────────────────────────────────
   void updatePhotoGallery(PhotoGallery gallery) {
     state = state.copyWith(photoGallery: gallery);

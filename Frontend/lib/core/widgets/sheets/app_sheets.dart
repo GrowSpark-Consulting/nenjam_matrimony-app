@@ -99,6 +99,38 @@ abstract final class AppSheets {
     );
   }
 
+  /// Multi-Select Sheet — like [showSelection], but lets the user toggle any
+  /// number of options on/off (checkboxes) before confirming with a bottom
+  /// "Done" button. Returns null if dismissed without confirming.
+  static Future<List<String>?> showMultiSelection(
+    BuildContext context, {
+    required String title,
+    required List<String> options,
+    List<String> selectedValues = const [],
+  }) {
+    return show<List<String>>(
+      context,
+      title: title,
+      child: _MultiSelectionBody(options: options, selectedValues: selectedValues),
+    );
+  }
+
+  /// Free-text Input Sheet — a single-line text field with a "Done" button,
+  /// for optional free-text preference fields (sub-caste, colleges, field of
+  /// study) that don't fit a fixed option list.
+  static Future<String?> showTextInput(
+    BuildContext context, {
+    required String title,
+    String? initialValue,
+    String? hint,
+  }) {
+    return show<String>(
+      context,
+      title: title,
+      child: _TextInputBody(initialValue: initialValue, hint: hint),
+    );
+  }
+
   /// Date Sheet picker modal.
   static Future<DateTime?> showDate(BuildContext context, {DateTime? initialDate}) async {
     final now = DateTime.now();
@@ -195,6 +227,120 @@ class _SearchableSelectionBodyState extends State<_SearchableSelectionBody> {
                 ),
         ),
       ],
+    );
+  }
+}
+
+/// Checkbox option list + "Done" button, used by [AppSheets.showMultiSelection].
+class _MultiSelectionBody extends StatefulWidget {
+  final List<String> options;
+  final List<String> selectedValues;
+
+  const _MultiSelectionBody({required this.options, required this.selectedValues});
+
+  @override
+  State<_MultiSelectionBody> createState() => _MultiSelectionBodyState();
+}
+
+class _MultiSelectionBodyState extends State<_MultiSelectionBody> {
+  late final Set<String> _selected = widget.selectedValues.toSet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: widget.options.length,
+            itemBuilder: (context, index) {
+              final opt = widget.options[index];
+              final isSelected = _selected.contains(opt);
+              return CheckboxListTile(
+                title: Text(
+                  opt,
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                    color: isSelected ? AppColors.primary : null,
+                  ),
+                ),
+                value: isSelected,
+                activeColor: AppColors.primary,
+                onChanged: (checked) => setState(() {
+                  if (checked ?? false) {
+                    _selected.add(opt);
+                  } else {
+                    _selected.remove(opt);
+                  }
+                }),
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => Navigator.pop(context, _selected.toList()),
+              child: const Text('Done'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Single-line text field + "Done" button, used by [AppSheets.showTextInput].
+class _TextInputBody extends StatefulWidget {
+  final String? initialValue;
+  final String? hint;
+
+  const _TextInputBody({this.initialValue, this.hint});
+
+  @override
+  State<_TextInputBody> createState() => _TextInputBodyState();
+}
+
+class _TextInputBodyState extends State<_TextInputBody> {
+  late final _controller = TextEditingController(text: widget.initialValue);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: widget.hint,
+              isDense: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            style: AppTypography.bodyMedium,
+            onSubmitted: (value) => Navigator.pop(context, value.trim()),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => Navigator.pop(context, _controller.text.trim()),
+              child: const Text('Done'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

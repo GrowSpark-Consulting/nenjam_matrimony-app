@@ -2996,6 +2996,480 @@ abstract class AppLocalizations {
   /// **'Doesn\'t Matter'**
   String get prefMaritalDoesntMatter;
 
+  /// No description provided for @partnerPrefPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Partner Preferences'**
+  String get partnerPrefPageTitle;
+
+  /// No description provided for @partnerPrefSaveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Preferences'**
+  String get partnerPrefSaveButton;
+
+  /// No description provided for @partnerPrefSavedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Partner preferences saved'**
+  String get partnerPrefSavedSnackbar;
+
+  /// No description provided for @partnerPrefSaveErrorSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save preferences. Check your connection.'**
+  String get partnerPrefSaveErrorSnackbar;
+
+  /// No description provided for @partnerPrefNotSetPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get partnerPrefNotSetPlaceholder;
+
+  /// No description provided for @partnerPrefDoesntMatter.
+  ///
+  /// In en, this message translates to:
+  /// **'Doesn\'t Matter'**
+  String get partnerPrefDoesntMatter;
+
+  /// No description provided for @partnerPrefSectionBasic.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic Preferences'**
+  String get partnerPrefSectionBasic;
+
+  /// No description provided for @partnerPrefSectionReligionCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Religion & Community'**
+  String get partnerPrefSectionReligionCommunity;
+
+  /// No description provided for @partnerPrefSectionEducationCareer.
+  ///
+  /// In en, this message translates to:
+  /// **'Education & Career'**
+  String get partnerPrefSectionEducationCareer;
+
+  /// No description provided for @partnerPrefSectionFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Family'**
+  String get partnerPrefSectionFamily;
+
+  /// No description provided for @partnerPrefSectionProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Preferences'**
+  String get partnerPrefSectionProfile;
+
+  /// No description provided for @partnerPrefSectionLifestyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifestyle'**
+  String get partnerPrefSectionLifestyle;
+
+  /// No description provided for @partnerPrefSectionLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location Preferences'**
+  String get partnerPrefSectionLocation;
+
+  /// No description provided for @partnerPrefSectionSpecialCases.
+  ///
+  /// In en, this message translates to:
+  /// **'Special Cases'**
+  String get partnerPrefSectionSpecialCases;
+
+  /// No description provided for @partnerPrefSectionVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification & Other'**
+  String get partnerPrefSectionVerification;
+
+  /// No description provided for @partnerPrefEthnicityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ethnicity / Community'**
+  String get partnerPrefEthnicityLabel;
+
+  /// No description provided for @partnerPrefSubCasteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-Caste'**
+  String get partnerPrefSubCasteLabel;
+
+  /// No description provided for @partnerPrefMangalikLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mangalik Status'**
+  String get partnerPrefMangalikLabel;
+
+  /// No description provided for @partnerPrefMinEducationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum Education'**
+  String get partnerPrefMinEducationLabel;
+
+  /// No description provided for @partnerPrefEducationLevelsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred Education Levels'**
+  String get partnerPrefEducationLevelsLabel;
+
+  /// No description provided for @partnerPrefCollegesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred Colleges / Universities'**
+  String get partnerPrefCollegesLabel;
+
+  /// No description provided for @partnerPrefFieldOfStudyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Field of Study'**
+  String get partnerPrefFieldOfStudyLabel;
+
+  /// No description provided for @partnerPrefIndustryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Industry'**
+  String get partnerPrefIndustryLabel;
+
+  /// No description provided for @partnerPrefEmploymentTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Employment Type'**
+  String get partnerPrefEmploymentTypeLabel;
+
+  /// No description provided for @partnerPrefFamilyStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Family Status'**
+  String get partnerPrefFamilyStatusLabel;
+
+  /// No description provided for @partnerPrefFamilyTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Family Type'**
+  String get partnerPrefFamilyTypeLabel;
+
+  /// No description provided for @partnerPrefFamilyValuesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Family Values'**
+  String get partnerPrefFamilyValuesLabel;
+
+  /// No description provided for @partnerPrefProfileManagedByLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Managed By'**
+  String get partnerPrefProfileManagedByLabel;
+
+  /// No description provided for @partnerPrefDietLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet'**
+  String get partnerPrefDietLabel;
+
+  /// No description provided for @partnerPrefDrinkingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Drinking'**
+  String get partnerPrefDrinkingLabel;
+
+  /// No description provided for @partnerPrefSmokingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Smoking'**
+  String get partnerPrefSmokingLabel;
+
+  /// No description provided for @partnerPrefCountryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Country'**
+  String get partnerPrefCountryLabel;
+
+  /// No description provided for @partnerPrefStateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'State'**
+  String get partnerPrefStateLabel;
+
+  /// No description provided for @partnerPrefCityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'City'**
+  String get partnerPrefCityLabel;
+
+  /// No description provided for @partnerPrefWillingToRelocateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Willing to Relocate'**
+  String get partnerPrefWillingToRelocateLabel;
+
+  /// No description provided for @partnerPrefNriAcceptedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'NRI Accepted'**
+  String get partnerPrefNriAcceptedLabel;
+
+  /// No description provided for @partnerPrefDivorcedAcceptedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Divorced Accepted'**
+  String get partnerPrefDivorcedAcceptedLabel;
+
+  /// No description provided for @partnerPrefWidowedAcceptedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Widowed Accepted'**
+  String get partnerPrefWidowedAcceptedLabel;
+
+  /// No description provided for @partnerPrefAwaitingDivorceAcceptedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting Divorce Accepted'**
+  String get partnerPrefAwaitingDivorceAcceptedLabel;
+
+  /// No description provided for @partnerPrefPhysicallyChallengedAcceptedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Physically Challenged Accepted'**
+  String get partnerPrefPhysicallyChallengedAcceptedLabel;
+
+  /// No description provided for @partnerPrefAnySpecialCaseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Any Special Case'**
+  String get partnerPrefAnySpecialCaseLabel;
+
+  /// No description provided for @partnerPrefHoroscopeMatchRequiredLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Horoscope Match Required'**
+  String get partnerPrefHoroscopeMatchRequiredLabel;
+
+  /// No description provided for @partnerPrefVerifiedProfilesOnlyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified Profiles Only'**
+  String get partnerPrefVerifiedProfilesOnlyLabel;
+
+  /// No description provided for @partnerPrefHasProfilePhotoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Has Profile Photo'**
+  String get partnerPrefHasProfilePhotoLabel;
+
+  /// No description provided for @partnerPrefHasHoroscopeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Has Horoscope'**
+  String get partnerPrefHasHoroscopeLabel;
+
+  /// No description provided for @partnerPrefAadhaarVerifiedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Aadhaar Verified'**
+  String get partnerPrefAadhaarVerifiedLabel;
+
+  /// No description provided for @partnerPrefPhoneVerifiedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone Verified'**
+  String get partnerPrefPhoneVerifiedLabel;
+
+  /// No description provided for @partnerPrefMangalikMustBe.
+  ///
+  /// In en, this message translates to:
+  /// **'Must be Mangalik'**
+  String get partnerPrefMangalikMustBe;
+
+  /// No description provided for @partnerPrefMangalikNon.
+  ///
+  /// In en, this message translates to:
+  /// **'Non-Mangalik'**
+  String get partnerPrefMangalikNon;
+
+  /// No description provided for @partnerPrefDietVegetarian.
+  ///
+  /// In en, this message translates to:
+  /// **'Vegetarian'**
+  String get partnerPrefDietVegetarian;
+
+  /// No description provided for @partnerPrefDietEggetarian.
+  ///
+  /// In en, this message translates to:
+  /// **'Eggetarian'**
+  String get partnerPrefDietEggetarian;
+
+  /// No description provided for @partnerPrefDietVegan.
+  ///
+  /// In en, this message translates to:
+  /// **'Vegan'**
+  String get partnerPrefDietVegan;
+
+  /// No description provided for @partnerPrefDietNonVegetarian.
+  ///
+  /// In en, this message translates to:
+  /// **'Non-Vegetarian'**
+  String get partnerPrefDietNonVegetarian;
+
+  /// No description provided for @partnerPrefDrinkingNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get partnerPrefDrinkingNever;
+
+  /// No description provided for @partnerPrefDrinkingOccasionally.
+  ///
+  /// In en, this message translates to:
+  /// **'Occasionally'**
+  String get partnerPrefDrinkingOccasionally;
+
+  /// No description provided for @partnerPrefDrinkingSocially.
+  ///
+  /// In en, this message translates to:
+  /// **'Socially'**
+  String get partnerPrefDrinkingSocially;
+
+  /// No description provided for @partnerPrefDrinkingRegularly.
+  ///
+  /// In en, this message translates to:
+  /// **'Regularly'**
+  String get partnerPrefDrinkingRegularly;
+
+  /// No description provided for @partnerPrefSmokingNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get partnerPrefSmokingNever;
+
+  /// No description provided for @partnerPrefSmokingOccasionally.
+  ///
+  /// In en, this message translates to:
+  /// **'Occasionally'**
+  String get partnerPrefSmokingOccasionally;
+
+  /// No description provided for @partnerPrefSmokingRegularly.
+  ///
+  /// In en, this message translates to:
+  /// **'Regularly'**
+  String get partnerPrefSmokingRegularly;
+
+  /// No description provided for @partnerPrefFamilyStatusMiddleClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Middle Class'**
+  String get partnerPrefFamilyStatusMiddleClass;
+
+  /// No description provided for @partnerPrefFamilyStatusUpperMiddleClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Upper Middle Class'**
+  String get partnerPrefFamilyStatusUpperMiddleClass;
+
+  /// No description provided for @partnerPrefFamilyStatusRich.
+  ///
+  /// In en, this message translates to:
+  /// **'Rich'**
+  String get partnerPrefFamilyStatusRich;
+
+  /// No description provided for @partnerPrefFamilyStatusAffluent.
+  ///
+  /// In en, this message translates to:
+  /// **'Affluent'**
+  String get partnerPrefFamilyStatusAffluent;
+
+  /// No description provided for @partnerPrefFamilyTypeJoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Joint Family'**
+  String get partnerPrefFamilyTypeJoint;
+
+  /// No description provided for @partnerPrefFamilyTypeNuclear.
+  ///
+  /// In en, this message translates to:
+  /// **'Nuclear Family'**
+  String get partnerPrefFamilyTypeNuclear;
+
+  /// No description provided for @partnerPrefFamilyValuesTraditional.
+  ///
+  /// In en, this message translates to:
+  /// **'Traditional'**
+  String get partnerPrefFamilyValuesTraditional;
+
+  /// No description provided for @partnerPrefFamilyValuesModerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderate'**
+  String get partnerPrefFamilyValuesModerate;
+
+  /// No description provided for @partnerPrefFamilyValuesLiberal.
+  ///
+  /// In en, this message translates to:
+  /// **'Liberal'**
+  String get partnerPrefFamilyValuesLiberal;
+
+  /// No description provided for @partnerPrefManagedBySelf.
+  ///
+  /// In en, this message translates to:
+  /// **'Self'**
+  String get partnerPrefManagedBySelf;
+
+  /// No description provided for @partnerPrefManagedByParent.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent'**
+  String get partnerPrefManagedByParent;
+
+  /// No description provided for @partnerPrefManagedBySibling.
+  ///
+  /// In en, this message translates to:
+  /// **'Sibling'**
+  String get partnerPrefManagedBySibling;
+
+  /// No description provided for @partnerPrefManagedByRelative.
+  ///
+  /// In en, this message translates to:
+  /// **'Relative'**
+  String get partnerPrefManagedByRelative;
+
+  /// No description provided for @partnerPrefManagedByGuardian.
+  ///
+  /// In en, this message translates to:
+  /// **'Guardian'**
+  String get partnerPrefManagedByGuardian;
+
+  /// No description provided for @partnerPrefAcceptanceAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get partnerPrefAcceptanceAccepted;
+
+  /// No description provided for @partnerPrefAcceptanceNotAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Accepted'**
+  String get partnerPrefAcceptanceNotAccepted;
+
+  /// No description provided for @partnerPrefRequirementRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get partnerPrefRequirementRequired;
+
+  /// No description provided for @partnerPrefRequirementOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get partnerPrefRequirementOptional;
+
+  /// No description provided for @drawerPartnerPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Partner Preferences'**
+  String get drawerPartnerPreferences;
+
   /// No description provided for @registrationPhotosTitle.
   ///
   /// In en, this message translates to:

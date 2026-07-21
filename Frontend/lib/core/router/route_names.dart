@@ -36,6 +36,7 @@ abstract final class RouteNames {
   static const String privacy = '/privacy';
   static const String about = '/about';
   static const String trustScore = '/trust-score';
+  static const String partnerPreferences = '/partner-preferences';
   static const String visitors = '/visitors';
   static const String interestsSent = '/interests-sent';
   static const String interestsReceived = '/interests-received';
@@ -81,6 +82,7 @@ abstract final class RouteNames {
   static const String privacyName = 'privacy';
   static const String aboutName = 'about';
   static const String trustScoreName = 'trustScore';
+  static const String partnerPreferencesName = 'partnerPreferences';
   static const String visitorsName = 'visitors';
   static const String interestsSentName = 'interestsSent';
   static const String interestsReceivedName = 'interestsReceived';

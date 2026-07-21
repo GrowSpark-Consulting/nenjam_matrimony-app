@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
+import '../utils/partner_preference_labels.dart';
 import 'registration_helper_tip.dart';
 
 /// Step 10 — Partner Preferences
@@ -29,16 +30,16 @@ class _StepPartnerPrefState extends State<StepPartnerPref> {
   late String _motherTonguePref;
   late String _maritalStatusPref;
 
-  static const _ageRanges = ['18-22', '22-26', '26-30', '30-35', '35-40', '40-50', 'Any'];
-  static const _heightRanges = ['4\'6"-5\'0"', '5\'0"-5\'4"', '5\'4"-5\'8"', '5\'8"-6\'0"', '6\'0"+', 'Any'];
-  static const _religions = ['Hindu', 'Christian', 'Muslim', 'Jain', 'Sikh', 'Any'];
-  static const _castes = ['Same Caste', 'Any Caste', 'Inter-Caste OK'];
-  static const _educations = ['B.E / B.Tech+', 'MBBS / MD+', 'MBA+', 'Any Degree', 'Any'];
-  static const _occupations = ['Software / IT', 'Doctor', 'Government', 'Business', 'Any'];
-  static const _incomes = ['5-10 Lakhs', '10-20 Lakhs', '20-50 Lakhs', '50 Lakhs+', 'Any'];
-  static const _locations = ['Same City', 'Same State', 'Anywhere in India', 'NRI OK', 'Any'];
-  static const _tongues = ['Same Mother Tongue', 'Tamil', 'Telugu', 'Hindi', 'Any'];
-  static const _maritalStatuses = ['Never Married', 'Doesn\'t Matter', 'Any'];
+  static const _ageRanges = partnerPrefAgeRanges;
+  static const _heightRanges = partnerPrefHeightRanges;
+  static const _religions = partnerPrefReligions;
+  static const _castes = partnerPrefCastes;
+  static const _educations = partnerPrefEducations;
+  static const _occupations = partnerPrefOccupations;
+  static const _incomes = partnerPrefIncomes;
+  static const _locations = partnerPrefLocations;
+  static const _tongues = partnerPrefMotherTongues;
+  static const _maritalStatuses = partnerPrefMaritalStatuses;
 
   @override
   void initState() {
@@ -56,7 +57,10 @@ class _StepPartnerPrefState extends State<StepPartnerPref> {
   }
 
   void _emit() {
-    widget.onChanged(PartnerPreference(preferredAgeRange: _ageRange, preferredHeightRange: _heightRange, religionPref: _religionPref, castePref: _castePref, educationPref: _educationPref, occupationPref: _occupationPref, incomePref: _incomePref, locationPref: _locationPref, motherTonguePref: _motherTonguePref, maritalStatusPref: _maritalStatusPref));
+    // `extended` (advanced preferences edited from the standalone Partner
+    // Preferences page) is passed through unchanged — this step only ever
+    // edits the 10 base fields, and must not reset it back to its default.
+    widget.onChanged(PartnerPreference(preferredAgeRange: _ageRange, preferredHeightRange: _heightRange, religionPref: _religionPref, castePref: _castePref, educationPref: _educationPref, occupationPref: _occupationPref, incomePref: _incomePref, locationPref: _locationPref, motherTonguePref: _motherTonguePref, maritalStatusPref: _maritalStatusPref, extended: widget.details.extended));
   }
 
   /// Chip section with an optional value->label mapper (values stay English).
@@ -72,67 +76,6 @@ class _StepPartnerPrefState extends State<StepPartnerPref> {
       ],
     );
   }
-
-  String _religionLabel(AppLocalizations l10n, String v) => switch (v) {
-        'Hindu' => l10n.religionHindu,
-        'Christian' => l10n.religionChristian,
-        'Muslim' => l10n.religionMuslim,
-        'Jain' => l10n.religionJain,
-        'Sikh' => l10n.religionSikh,
-        'Any' => l10n.commonAny,
-        _ => v,
-      };
-
-  String _casteLabel(AppLocalizations l10n, String v) => switch (v) {
-        'Same Caste' => l10n.prefCasteSame,
-        'Any Caste' => l10n.prefCasteAny,
-        'Inter-Caste OK' => l10n.prefCasteInter,
-        _ => v,
-      };
-
-  String _educationLabel(AppLocalizations l10n, String v) => switch (v) {
-        'Any Degree' => l10n.prefEduAnyDegree,
-        'Any' => l10n.commonAny,
-        _ => v, // degree acronyms stay English
-      };
-
-  String _occupationLabel(AppLocalizations l10n, String v) => switch (v) {
-        'Software / IT' => l10n.prefOccSoftwareIt,
-        'Doctor' => l10n.occDoctor,
-        'Government' => l10n.empGovernment,
-        'Business' => l10n.empBusiness,
-        'Any' => l10n.commonAny,
-        _ => v,
-      };
-
-  String _locationLabel(AppLocalizations l10n, String v) => switch (v) {
-        'Same City' => l10n.prefLocSameCity,
-        'Same State' => l10n.prefLocSameState,
-        'Anywhere in India' => l10n.prefLocAnywhereIndia,
-        'NRI OK' => l10n.prefLocNri,
-        'Any' => l10n.commonAny,
-        _ => v,
-      };
-
-  String _tongueLabel(AppLocalizations l10n, String v) => switch (v) {
-        'Same Mother Tongue' => l10n.prefTongueSame,
-        'Tamil' => l10n.langTamil,
-        'Telugu' => l10n.langTelugu,
-        'Hindi' => l10n.langHindi,
-        'Any' => l10n.commonAny,
-        _ => v,
-      };
-
-  String _maritalLabel(AppLocalizations l10n, String v) => switch (v) {
-        'Never Married' => l10n.maritalNeverMarried,
-        'Doesn\'t Matter' => l10n.prefMaritalDoesntMatter,
-        'Any' => l10n.commonAny,
-        _ => v,
-      };
-
-  /// 'Any' -> localized, numeric ranges kept as-is.
-  String _anyOrSelf(AppLocalizations l10n, String v) =>
-      v == 'Any' ? l10n.commonAny : v;
 
   @override
   Widget build(BuildContext context) {
@@ -151,25 +94,25 @@ class _StepPartnerPrefState extends State<StepPartnerPref> {
           RegistrationHelperTip(text: l10n.registrationTipPartnerPref),
           const SizedBox(height: 24),
           // Numeric age/height/income ranges kept as-is (only 'Any' localized).
-          _section(l10n.registrationPrefAgeLabel, _ageRanges, _ageRange, (v) => setState(() => _ageRange = v), labelOf: (v) => _anyOrSelf(l10n, v)),
+          _section(l10n.registrationPrefAgeLabel, _ageRanges, _ageRange, (v) => setState(() => _ageRange = v), labelOf: (v) => anyOrSelfLabel(l10n, v)),
           const SizedBox(height: 20),
-          _section(l10n.registrationPrefHeightLabel, _heightRanges, _heightRange, (v) => setState(() => _heightRange = v), labelOf: (v) => _anyOrSelf(l10n, v)),
+          _section(l10n.registrationPrefHeightLabel, _heightRanges, _heightRange, (v) => setState(() => _heightRange = v), labelOf: (v) => anyOrSelfLabel(l10n, v)),
           const SizedBox(height: 20),
-          _section(l10n.registrationPrefReligionLabel, _religions, _religionPref, (v) => setState(() => _religionPref = v), labelOf: (v) => _religionLabel(l10n, v)),
+          _section(l10n.registrationPrefReligionLabel, _religions, _religionPref, (v) => setState(() => _religionPref = v), labelOf: (v) => religionPrefLabel(l10n, v)),
           const SizedBox(height: 20),
-          _section(l10n.registrationPrefCasteLabel, _castes, _castePref, (v) => setState(() => _castePref = v), labelOf: (v) => _casteLabel(l10n, v)),
+          _section(l10n.registrationPrefCasteLabel, _castes, _castePref, (v) => setState(() => _castePref = v), labelOf: (v) => castePrefLabel(l10n, v)),
           const SizedBox(height: 20),
-          _section(l10n.registrationPrefEducationLabel, _educations, _educationPref, (v) => setState(() => _educationPref = v), labelOf: (v) => _educationLabel(l10n, v)),
+          _section(l10n.registrationPrefEducationLabel, _educations, _educationPref, (v) => setState(() => _educationPref = v), labelOf: (v) => educationPrefLabel(l10n, v)),
           const SizedBox(height: 20),
-          _section(l10n.registrationPrefOccupationLabel, _occupations, _occupationPref, (v) => setState(() => _occupationPref = v), labelOf: (v) => _occupationLabel(l10n, v)),
+          _section(l10n.registrationPrefOccupationLabel, _occupations, _occupationPref, (v) => setState(() => _occupationPref = v), labelOf: (v) => occupationPrefLabel(l10n, v)),
           const SizedBox(height: 20),
-          _section(l10n.registrationPrefIncomeLabel, _incomes, _incomePref, (v) => setState(() => _incomePref = v), labelOf: (v) => _anyOrSelf(l10n, v)),
+          _section(l10n.registrationPrefIncomeLabel, _incomes, _incomePref, (v) => setState(() => _incomePref = v), labelOf: (v) => anyOrSelfLabel(l10n, v)),
           const SizedBox(height: 20),
-          _section(l10n.registrationPrefLocationLabel, _locations, _locationPref, (v) => setState(() => _locationPref = v), labelOf: (v) => _locationLabel(l10n, v)),
+          _section(l10n.registrationPrefLocationLabel, _locations, _locationPref, (v) => setState(() => _locationPref = v), labelOf: (v) => locationPrefLabel(l10n, v)),
           const SizedBox(height: 20),
-          _section(l10n.registrationPrefMotherTongueLabel, _tongues, _motherTonguePref, (v) => setState(() => _motherTonguePref = v), labelOf: (v) => _tongueLabel(l10n, v)),
+          _section(l10n.registrationPrefMotherTongueLabel, _tongues, _motherTonguePref, (v) => setState(() => _motherTonguePref = v), labelOf: (v) => motherTonguePrefLabel(l10n, v)),
           const SizedBox(height: 20),
-          _section(l10n.registrationPrefMaritalLabel, _maritalStatuses, _maritalStatusPref, (v) => setState(() => _maritalStatusPref = v), labelOf: (v) => _maritalLabel(l10n, v)),
+          _section(l10n.registrationPrefMaritalLabel, _maritalStatuses, _maritalStatusPref, (v) => setState(() => _maritalStatusPref = v), labelOf: (v) => maritalStatusPrefLabel(l10n, v)),
           const SizedBox(height: 32),
         ],
       ),

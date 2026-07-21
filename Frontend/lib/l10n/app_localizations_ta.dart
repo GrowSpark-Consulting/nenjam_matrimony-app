@@ -1497,6 +1497,249 @@ class AppLocalizationsTa extends AppLocalizations {
   String get prefMaritalDoesntMatter => 'பொருட்டல்ல';
 
   @override
+  String get partnerPrefPageTitle => 'துணை விருப்பத்தேர்வுகள்';
+
+  @override
+  String get partnerPrefSaveButton => 'விருப்பத்தேர்வுகளை சேமி';
+
+  @override
+  String get partnerPrefSavedSnackbar =>
+      'துணை விருப்பத்தேர்வுகள் சேமிக்கப்பட்டன';
+
+  @override
+  String get partnerPrefSaveErrorSnackbar =>
+      'விருப்பத்தேர்வுகளை சேமிக்க முடியவில்லை. இணைப்பை சரிபார்க்கவும்.';
+
+  @override
+  String get partnerPrefNotSetPlaceholder => 'அமைக்கப்படவில்லை';
+
+  @override
+  String get partnerPrefDoesntMatter => 'பொருட்டல்ல';
+
+  @override
+  String get partnerPrefSectionBasic => 'அடிப்படை விருப்பத்தேர்வுகள்';
+
+  @override
+  String get partnerPrefSectionReligionCommunity => 'மதம் & சமூகம்';
+
+  @override
+  String get partnerPrefSectionEducationCareer => 'கல்வி & தொழில்';
+
+  @override
+  String get partnerPrefSectionFamily => 'குடும்பம்';
+
+  @override
+  String get partnerPrefSectionProfile => 'சுயவிவர விருப்பத்தேர்வுகள்';
+
+  @override
+  String get partnerPrefSectionLifestyle => 'வாழ்க்கை முறை';
+
+  @override
+  String get partnerPrefSectionLocation => 'இருப்பிட விருப்பத்தேர்வுகள்';
+
+  @override
+  String get partnerPrefSectionSpecialCases => 'சிறப்பு சூழ்நிலைகள்';
+
+  @override
+  String get partnerPrefSectionVerification => 'சரிபார்ப்பு & பிற';
+
+  @override
+  String get partnerPrefEthnicityLabel => 'இனம் / சமூகம்';
+
+  @override
+  String get partnerPrefSubCasteLabel => 'உட்பிரிவு';
+
+  @override
+  String get partnerPrefMangalikLabel => 'மங்களீக நிலை';
+
+  @override
+  String get partnerPrefMinEducationLabel => 'குறைந்தபட்ச கல்வி';
+
+  @override
+  String get partnerPrefEducationLevelsLabel => 'விருப்பமான கல்வி நிலைகள்';
+
+  @override
+  String get partnerPrefCollegesLabel =>
+      'விருப்பமான கல்லூரிகள் / பல்கலைக்கழகங்கள்';
+
+  @override
+  String get partnerPrefFieldOfStudyLabel => 'படிப்புத் துறை';
+
+  @override
+  String get partnerPrefIndustryLabel => 'தொழில் துறை';
+
+  @override
+  String get partnerPrefEmploymentTypeLabel => 'வேலை வகை';
+
+  @override
+  String get partnerPrefFamilyStatusLabel => 'குடும்ப நிலை';
+
+  @override
+  String get partnerPrefFamilyTypeLabel => 'குடும்ப வகை';
+
+  @override
+  String get partnerPrefFamilyValuesLabel => 'குடும்ப விழுமியங்கள்';
+
+  @override
+  String get partnerPrefProfileManagedByLabel => 'சுயவிவரத்தை நிர்வகிப்பவர்';
+
+  @override
+  String get partnerPrefDietLabel => 'உணவுப் பழக்கம்';
+
+  @override
+  String get partnerPrefDrinkingLabel => 'மது அருந்துதல்';
+
+  @override
+  String get partnerPrefSmokingLabel => 'புகைபிடித்தல்';
+
+  @override
+  String get partnerPrefCountryLabel => 'நாடு';
+
+  @override
+  String get partnerPrefStateLabel => 'மாநிலம்';
+
+  @override
+  String get partnerPrefCityLabel => 'நகரம்';
+
+  @override
+  String get partnerPrefWillingToRelocateLabel => 'இடம் மாற தயார்';
+
+  @override
+  String get partnerPrefNriAcceptedLabel => 'வெளிநாட்டு இந்தியர் ஏற்கத்தக்கது';
+
+  @override
+  String get partnerPrefDivorcedAcceptedLabel => 'விவாகரத்தானவர் ஏற்கத்தக்கது';
+
+  @override
+  String get partnerPrefWidowedAcceptedLabel => 'விதவை/விதுரர் ஏற்கத்தக்கது';
+
+  @override
+  String get partnerPrefAwaitingDivorceAcceptedLabel =>
+      'விவாகரத்து நிலுவையில் ஏற்கத்தக்கது';
+
+  @override
+  String get partnerPrefPhysicallyChallengedAcceptedLabel =>
+      'உடல் ஊனமுற்றோர் ஏற்கத்தக்கது';
+
+  @override
+  String get partnerPrefAnySpecialCaseLabel => 'ஏதேனும் சிறப்பு சூழ்நிலை';
+
+  @override
+  String get partnerPrefHoroscopeMatchRequiredLabel => 'ஜாதக பொருத்தம் தேவை';
+
+  @override
+  String get partnerPrefVerifiedProfilesOnlyLabel =>
+      'சரிபார்க்கப்பட்ட சுயவிவரங்கள் மட்டும்';
+
+  @override
+  String get partnerPrefHasProfilePhotoLabel => 'சுயவிவர புகைப்படம் உள்ளது';
+
+  @override
+  String get partnerPrefHasHoroscopeLabel => 'ஜாதகம் உள்ளது';
+
+  @override
+  String get partnerPrefAadhaarVerifiedLabel => 'ஆதார் சரிபார்க்கப்பட்டது';
+
+  @override
+  String get partnerPrefPhoneVerifiedLabel => 'தொலைபேசி சரிபார்க்கப்பட்டது';
+
+  @override
+  String get partnerPrefMangalikMustBe => 'மங்களீகமாக இருக்க வேண்டும்';
+
+  @override
+  String get partnerPrefMangalikNon => 'மங்களீகம் இல்லாதவர்';
+
+  @override
+  String get partnerPrefDietVegetarian => 'சைவம்';
+
+  @override
+  String get partnerPrefDietEggetarian => 'முட்டை உண்பவர்';
+
+  @override
+  String get partnerPrefDietVegan => 'வீகன்';
+
+  @override
+  String get partnerPrefDietNonVegetarian => 'அசைவம்';
+
+  @override
+  String get partnerPrefDrinkingNever => 'ஒருபோதும் இல்லை';
+
+  @override
+  String get partnerPrefDrinkingOccasionally => 'எப்போதாவது';
+
+  @override
+  String get partnerPrefDrinkingSocially => 'சமூக நிகழ்வுகளில்';
+
+  @override
+  String get partnerPrefDrinkingRegularly => 'தவறாமல்';
+
+  @override
+  String get partnerPrefSmokingNever => 'ஒருபோதும் இல்லை';
+
+  @override
+  String get partnerPrefSmokingOccasionally => 'எப்போதாவது';
+
+  @override
+  String get partnerPrefSmokingRegularly => 'தவறாமல்';
+
+  @override
+  String get partnerPrefFamilyStatusMiddleClass => 'நடுத்தர வர்க்கம்';
+
+  @override
+  String get partnerPrefFamilyStatusUpperMiddleClass => 'மேல் நடுத்தர வர்க்கம்';
+
+  @override
+  String get partnerPrefFamilyStatusRich => 'பணக்காரர்';
+
+  @override
+  String get partnerPrefFamilyStatusAffluent => 'செல்வந்தர்';
+
+  @override
+  String get partnerPrefFamilyTypeJoint => 'கூட்டுக் குடும்பம்';
+
+  @override
+  String get partnerPrefFamilyTypeNuclear => 'தனிக் குடும்பம்';
+
+  @override
+  String get partnerPrefFamilyValuesTraditional => 'பாரம்பரியமான';
+
+  @override
+  String get partnerPrefFamilyValuesModerate => 'மிதமான';
+
+  @override
+  String get partnerPrefFamilyValuesLiberal => 'தாராளவாத';
+
+  @override
+  String get partnerPrefManagedBySelf => 'சுயமாக';
+
+  @override
+  String get partnerPrefManagedByParent => 'பெற்றோர்';
+
+  @override
+  String get partnerPrefManagedBySibling => 'உடன்பிறப்பு';
+
+  @override
+  String get partnerPrefManagedByRelative => 'உறவினர்';
+
+  @override
+  String get partnerPrefManagedByGuardian => 'பாதுகாவலர்';
+
+  @override
+  String get partnerPrefAcceptanceAccepted => 'ஏற்கத்தக்கது';
+
+  @override
+  String get partnerPrefAcceptanceNotAccepted => 'ஏற்க முடியாது';
+
+  @override
+  String get partnerPrefRequirementRequired => 'அவசியம்';
+
+  @override
+  String get partnerPrefRequirementOptional => 'விருப்பமானது';
+
+  @override
+  String get drawerPartnerPreferences => 'துணை விருப்பத்தேர்வுகள்';
+
+  @override
   String get registrationPhotosTitle => 'புகைப்படங்கள்';
 
   @override

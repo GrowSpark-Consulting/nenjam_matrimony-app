@@ -16,6 +16,7 @@ import '../../../authentication/presentation/providers/auth_providers.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../../discover/presentation/providers/discover_providers.dart';
 import '../../../profile_completion/presentation/providers/profile_completeness_provider.dart';
+import '../../../partner_preferences/presentation/utils/open_partner_preferences.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../../profile_completion/presentation/utils/module_copy.dart';
 import '../../../profile_prompts/domain/models/prompt_bank_item.dart';
@@ -411,8 +412,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     preferences: profileDisplayPartnerPreferences(
                       draft?.partnerPreference ?? const PartnerPreference(),
                     ),
-                    onEditTap: () =>
-                        openEditProfile(context, ref, wizardStep: 10),
+                    onEditTap: () => openPartnerPreferences(context, ref),
                   ),
                 ),
                 gap,

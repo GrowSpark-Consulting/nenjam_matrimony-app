@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsObject, IsOptional, IsString } from 'class-validator';
 
 // Mirrors ...profile_draft.dart -> PartnerPreference (step 10).
 // Kept as free-text range strings to match the Flutter form; parsed into
@@ -43,4 +43,13 @@ export class PartnerPreferenceDto {
   @IsOptional()
   @IsString()
   maritalStatusPref?: string;
+
+  // Advanced fields from the standalone Partner Preferences page — kept
+  // permissive (no nested DTO/whitelist) since this blob's internal shape
+  // is owned by the Flutter client (PartnerPreferenceExtended.toJson()) and
+  // can evolve without a backend redeploy, same as draftData itself. Stored
+  // as-is in partner_preferences.extended_preferences at finalize().
+  @IsOptional()
+  @IsObject()
+  extended?: Record<string, unknown>;
 }

@@ -65,6 +65,7 @@ class NenjamNavigationDrawer extends StatelessWidget {
   // ── Tap callbacks ──────────────────────────────────────────────────────────
   final VoidCallback? onMyProfileTap;
   final VoidCallback? onEditProfileTap;
+  final VoidCallback? onPartnerPreferencesTap;
   final VoidCallback? onProfileIntelligenceTap;
   final VoidCallback? onVerificationCenterTap;
   final VoidCallback? onTrustScoreTap;
@@ -96,6 +97,7 @@ class NenjamNavigationDrawer extends StatelessWidget {
     this.onAvatarTap,
     this.onMyProfileTap,
     this.onEditProfileTap,
+    this.onPartnerPreferencesTap,
     this.onProfileIntelligenceTap,
     this.onVerificationCenterTap,
     this.onTrustScoreTap,
@@ -192,6 +194,14 @@ class NenjamNavigationDrawer extends StatelessWidget {
                       onTap: () {
                         Navigator.pop(context);
                         onEditProfileTap?.call();
+                      },
+                    ),
+                    _DrawerItem(
+                      icon: Icons.favorite_border_rounded,
+                      label: l10n.drawerPartnerPreferences,
+                      onTap: () {
+                        Navigator.pop(context);
+                        onPartnerPreferencesTap?.call();
                       },
                     ),
                     _DrawerItem(

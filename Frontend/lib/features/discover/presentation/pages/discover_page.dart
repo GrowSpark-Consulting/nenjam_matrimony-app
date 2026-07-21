@@ -18,6 +18,7 @@ import '../../../authentication/presentation/utils/logout_flow.dart';
 import '../../../profile/presentation/providers/profile_dashboard_providers.dart';
 import '../../../profile/presentation/utils/profile_dashboard_mapper.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
+import '../../../partner_preferences/presentation/utils/open_partner_preferences.dart';
 import '../../../profile_photos/presentation/widgets/photo_manager_bottom_sheet.dart';
 import '../../../registration/presentation/utils/open_edit_profile.dart';
 import '../../domain/entities/discovery_profile_entity.dart';
@@ -77,6 +78,7 @@ class DiscoverPage extends ConsumerWidget {
         onAvatarTap: () => showPhotoManagerBottomSheet(context),
         onMyProfileTap: () => context.push(RouteNames.profile),
         onEditProfileTap: () => openEditProfile(context, ref),
+        onPartnerPreferencesTap: () => openPartnerPreferences(context, ref),
         onProfileIntelligenceTap: () =>
             context.push(RouteNames.profileIntelligence),
         onVerificationCenterTap: () =>

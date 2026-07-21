@@ -22,6 +22,7 @@ import '../../features/language/presentation/pages/language_page.dart';
 import '../../features/matches/presentation/pages/matches_page.dart';
 import '../../features/notifications/presentation/pages/notifications_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
+import '../../features/partner_preferences/presentation/pages/partner_preferences_page.dart';
 import '../../features/premium/presentation/pages/premium_page.dart';
 import '../../features/privacy/presentation/pages/privacy_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
@@ -316,6 +317,11 @@ GoRouter createRouter(WidgetRef ref) {
           path: RouteNames.trustScore,
           name: RouteNames.trustScoreName,
           builder: (context, state) => const TrustScorePage(),
+        ),
+        GoRoute(
+          path: RouteNames.partnerPreferences,
+          name: RouteNames.partnerPreferencesName,
+          builder: (context, state) => const PartnerPreferencesPage(),
         ),
         GoRoute(
           path: RouteNames.visitors,

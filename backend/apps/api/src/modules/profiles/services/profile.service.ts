@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import type { Prisma } from '../../../../../../libs/database/generated/client';
 import { ProfileRepository } from '../repositories/profile.repository';
 import { PhotoRepository } from '../repositories/photo.repository';
 import { ProfileDraftService } from './profile-draft.service';
@@ -319,6 +320,8 @@ export class ProfileService {
         maritalStatusPref: toStringArray(
           partnerPref.maritalStatusPref as string | undefined,
         ),
+        extendedPreferences:
+          (partnerPref.extended as Prisma.InputJsonValue | undefined) ?? {},
       });
     }
 

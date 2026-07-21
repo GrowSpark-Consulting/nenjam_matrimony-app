@@ -15,4 +15,9 @@ export class PartnerPreferenceEntity {
   preferredOccupations!: string[];
   preferredMotherTongues!: string[];
   maritalStatusPref!: string[];
+  // Advanced fields (religion/community, education/career, family,
+  // lifestyle, location, special cases, verification filters, per-criterion
+  // requirement tags) from the standalone Partner Preferences page. Free-form
+  // — mirrors Frontend's PartnerPreferenceExtended.toJson().
+  extendedPreferences!: Record<string, unknown>;
 }

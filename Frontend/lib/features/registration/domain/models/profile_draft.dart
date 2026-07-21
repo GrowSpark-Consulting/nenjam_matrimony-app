@@ -10,6 +10,8 @@
 /// shared state instead of duplicating it into the draft.
 library;
 
+import '../../../partner_preferences/domain/models/partner_preference_extended.dart';
+
 /// Reads a nested JSON object safely — the draft endpoint omits keys for
 /// sections the user hasn't reached yet.
 Map<String, dynamic> _section(Map<String, dynamic> data, String key) {
@@ -585,6 +587,14 @@ class PartnerPreference {
   final String motherTonguePref;
   final String maritalStatusPref;
 
+  /// Advanced fields (religion/community, education/career, family,
+  /// lifestyle, location, special cases, verification filters) edited from
+  /// the standalone Partner Preferences page — see
+  /// features/partner_preferences. Kept nested so the 10 base fields above,
+  /// and every existing call site that constructs a [PartnerPreference],
+  /// stay untouched.
+  final PartnerPreferenceExtended extended;
+
   const PartnerPreference({
     this.preferredAgeRange = '',
     this.preferredHeightRange = '',
@@ -596,6 +606,7 @@ class PartnerPreference {
     this.locationPref = '',
     this.motherTonguePref = '',
     this.maritalStatusPref = '',
+    this.extended = const PartnerPreferenceExtended(),
   });
 
   PartnerPreference copyWith({
@@ -609,6 +620,7 @@ class PartnerPreference {
     String? locationPref,
     String? motherTonguePref,
     String? maritalStatusPref,
+    PartnerPreferenceExtended? extended,
   }) {
     return PartnerPreference(
       preferredAgeRange: preferredAgeRange ?? this.preferredAgeRange,
@@ -621,6 +633,7 @@ class PartnerPreference {
       locationPref: locationPref ?? this.locationPref,
       motherTonguePref: motherTonguePref ?? this.motherTonguePref,
       maritalStatusPref: maritalStatusPref ?? this.maritalStatusPref,
+      extended: extended ?? this.extended,
     );
   }
 
@@ -636,6 +649,9 @@ class PartnerPreference {
         locationPref: json['locationPref'] as String? ?? '',
         motherTonguePref: json['motherTonguePref'] as String? ?? '',
         maritalStatusPref: json['maritalStatusPref'] as String? ?? '',
+        extended: PartnerPreferenceExtended.fromJson(
+          (json['extended'] as Map?)?.cast<String, dynamic>() ?? const {},
+        ),
       );
 
   Map<String, dynamic> toJson() => {
@@ -652,6 +668,7 @@ class PartnerPreference {
         if (motherTonguePref.isNotEmpty) 'motherTonguePref': motherTonguePref,
         if (maritalStatusPref.isNotEmpty)
           'maritalStatusPref': maritalStatusPref,
+        if (!extended.isEmpty) 'extended': extended.toJson(),
       };
 }
 

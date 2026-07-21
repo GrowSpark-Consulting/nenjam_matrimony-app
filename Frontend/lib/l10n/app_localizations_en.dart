@@ -1490,6 +1490,247 @@ class AppLocalizationsEn extends AppLocalizations {
   String get prefMaritalDoesntMatter => 'Doesn\'t Matter';
 
   @override
+  String get partnerPrefPageTitle => 'Partner Preferences';
+
+  @override
+  String get partnerPrefSaveButton => 'Save Preferences';
+
+  @override
+  String get partnerPrefSavedSnackbar => 'Partner preferences saved';
+
+  @override
+  String get partnerPrefSaveErrorSnackbar =>
+      'Could not save preferences. Check your connection.';
+
+  @override
+  String get partnerPrefNotSetPlaceholder => 'Not set';
+
+  @override
+  String get partnerPrefDoesntMatter => 'Doesn\'t Matter';
+
+  @override
+  String get partnerPrefSectionBasic => 'Basic Preferences';
+
+  @override
+  String get partnerPrefSectionReligionCommunity => 'Religion & Community';
+
+  @override
+  String get partnerPrefSectionEducationCareer => 'Education & Career';
+
+  @override
+  String get partnerPrefSectionFamily => 'Family';
+
+  @override
+  String get partnerPrefSectionProfile => 'Profile Preferences';
+
+  @override
+  String get partnerPrefSectionLifestyle => 'Lifestyle';
+
+  @override
+  String get partnerPrefSectionLocation => 'Location Preferences';
+
+  @override
+  String get partnerPrefSectionSpecialCases => 'Special Cases';
+
+  @override
+  String get partnerPrefSectionVerification => 'Verification & Other';
+
+  @override
+  String get partnerPrefEthnicityLabel => 'Ethnicity / Community';
+
+  @override
+  String get partnerPrefSubCasteLabel => 'Sub-Caste';
+
+  @override
+  String get partnerPrefMangalikLabel => 'Mangalik Status';
+
+  @override
+  String get partnerPrefMinEducationLabel => 'Minimum Education';
+
+  @override
+  String get partnerPrefEducationLevelsLabel => 'Preferred Education Levels';
+
+  @override
+  String get partnerPrefCollegesLabel => 'Preferred Colleges / Universities';
+
+  @override
+  String get partnerPrefFieldOfStudyLabel => 'Field of Study';
+
+  @override
+  String get partnerPrefIndustryLabel => 'Industry';
+
+  @override
+  String get partnerPrefEmploymentTypeLabel => 'Employment Type';
+
+  @override
+  String get partnerPrefFamilyStatusLabel => 'Family Status';
+
+  @override
+  String get partnerPrefFamilyTypeLabel => 'Family Type';
+
+  @override
+  String get partnerPrefFamilyValuesLabel => 'Family Values';
+
+  @override
+  String get partnerPrefProfileManagedByLabel => 'Profile Managed By';
+
+  @override
+  String get partnerPrefDietLabel => 'Diet';
+
+  @override
+  String get partnerPrefDrinkingLabel => 'Drinking';
+
+  @override
+  String get partnerPrefSmokingLabel => 'Smoking';
+
+  @override
+  String get partnerPrefCountryLabel => 'Country';
+
+  @override
+  String get partnerPrefStateLabel => 'State';
+
+  @override
+  String get partnerPrefCityLabel => 'City';
+
+  @override
+  String get partnerPrefWillingToRelocateLabel => 'Willing to Relocate';
+
+  @override
+  String get partnerPrefNriAcceptedLabel => 'NRI Accepted';
+
+  @override
+  String get partnerPrefDivorcedAcceptedLabel => 'Divorced Accepted';
+
+  @override
+  String get partnerPrefWidowedAcceptedLabel => 'Widowed Accepted';
+
+  @override
+  String get partnerPrefAwaitingDivorceAcceptedLabel =>
+      'Awaiting Divorce Accepted';
+
+  @override
+  String get partnerPrefPhysicallyChallengedAcceptedLabel =>
+      'Physically Challenged Accepted';
+
+  @override
+  String get partnerPrefAnySpecialCaseLabel => 'Any Special Case';
+
+  @override
+  String get partnerPrefHoroscopeMatchRequiredLabel =>
+      'Horoscope Match Required';
+
+  @override
+  String get partnerPrefVerifiedProfilesOnlyLabel => 'Verified Profiles Only';
+
+  @override
+  String get partnerPrefHasProfilePhotoLabel => 'Has Profile Photo';
+
+  @override
+  String get partnerPrefHasHoroscopeLabel => 'Has Horoscope';
+
+  @override
+  String get partnerPrefAadhaarVerifiedLabel => 'Aadhaar Verified';
+
+  @override
+  String get partnerPrefPhoneVerifiedLabel => 'Phone Verified';
+
+  @override
+  String get partnerPrefMangalikMustBe => 'Must be Mangalik';
+
+  @override
+  String get partnerPrefMangalikNon => 'Non-Mangalik';
+
+  @override
+  String get partnerPrefDietVegetarian => 'Vegetarian';
+
+  @override
+  String get partnerPrefDietEggetarian => 'Eggetarian';
+
+  @override
+  String get partnerPrefDietVegan => 'Vegan';
+
+  @override
+  String get partnerPrefDietNonVegetarian => 'Non-Vegetarian';
+
+  @override
+  String get partnerPrefDrinkingNever => 'Never';
+
+  @override
+  String get partnerPrefDrinkingOccasionally => 'Occasionally';
+
+  @override
+  String get partnerPrefDrinkingSocially => 'Socially';
+
+  @override
+  String get partnerPrefDrinkingRegularly => 'Regularly';
+
+  @override
+  String get partnerPrefSmokingNever => 'Never';
+
+  @override
+  String get partnerPrefSmokingOccasionally => 'Occasionally';
+
+  @override
+  String get partnerPrefSmokingRegularly => 'Regularly';
+
+  @override
+  String get partnerPrefFamilyStatusMiddleClass => 'Middle Class';
+
+  @override
+  String get partnerPrefFamilyStatusUpperMiddleClass => 'Upper Middle Class';
+
+  @override
+  String get partnerPrefFamilyStatusRich => 'Rich';
+
+  @override
+  String get partnerPrefFamilyStatusAffluent => 'Affluent';
+
+  @override
+  String get partnerPrefFamilyTypeJoint => 'Joint Family';
+
+  @override
+  String get partnerPrefFamilyTypeNuclear => 'Nuclear Family';
+
+  @override
+  String get partnerPrefFamilyValuesTraditional => 'Traditional';
+
+  @override
+  String get partnerPrefFamilyValuesModerate => 'Moderate';
+
+  @override
+  String get partnerPrefFamilyValuesLiberal => 'Liberal';
+
+  @override
+  String get partnerPrefManagedBySelf => 'Self';
+
+  @override
+  String get partnerPrefManagedByParent => 'Parent';
+
+  @override
+  String get partnerPrefManagedBySibling => 'Sibling';
+
+  @override
+  String get partnerPrefManagedByRelative => 'Relative';
+
+  @override
+  String get partnerPrefManagedByGuardian => 'Guardian';
+
+  @override
+  String get partnerPrefAcceptanceAccepted => 'Accepted';
+
+  @override
+  String get partnerPrefAcceptanceNotAccepted => 'Not Accepted';
+
+  @override
+  String get partnerPrefRequirementRequired => 'Required';
+
+  @override
+  String get partnerPrefRequirementOptional => 'Optional';
+
+  @override
+  String get drawerPartnerPreferences => 'Partner Preferences';
+
+  @override
   String get registrationPhotosTitle => 'Photos';
 
   @override
