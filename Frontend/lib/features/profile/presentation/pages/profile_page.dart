@@ -124,9 +124,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     // image and the gallery card below both read this, so the primary photo is
     // identical here and on the Edit Profile screen.
     final photos = ref.watch(myPhotosProvider).valueOrNull ?? const [];
-    final primaryPhotoUrl = photos.isEmpty
-        ? null
-        : photos.firstWhere((p) => p.isPrimary, orElse: () => photos.first).cdnUrl;
+    // Shared derivation (also used by the navigation drawer and Discover app
+    // bar avatars) so "what is my current avatar" is computed in one place.
+    final primaryPhotoUrl = ref.watch(myPrimaryPhotoUrlProvider);
     final List<DiscoveryProfileEntity> discoverMatches =
         ref.watch(discoverProfilesProvider).valueOrNull ??
         const <DiscoveryProfileEntity>[];

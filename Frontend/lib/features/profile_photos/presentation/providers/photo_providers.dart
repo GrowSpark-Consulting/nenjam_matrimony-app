@@ -20,6 +20,22 @@ final myPhotosProvider = AsyncNotifierProvider<PhotosController, List<UserPhoto>
   PhotosController.new,
 );
 
+/// The signed-in user's current avatar URL — the primary photo's `cdnUrl`,
+/// falling back to the first photo if none is flagged primary, or `null`
+/// with no photos yet. The single derivation every current-user avatar in
+/// the app (drawer, Discover app bar, profile hero) should read instead of
+/// each re-implementing the same "pick primary, else first" lookup —
+/// Riverpod only notifies watchers when this resolved value actually
+/// changes, so unrelated [myPhotosProvider] state churn (e.g. a reorder's
+/// loading tick) doesn't cause extra rebuilds downstream.
+final myPrimaryPhotoUrlProvider = Provider<String?>((ref) {
+  final photos = ref.watch(myPhotosProvider).valueOrNull ?? const <UserPhoto>[];
+  if (photos.isEmpty) return null;
+  return photos
+      .firstWhere((p) => p.isPrimary, orElse: () => photos.first)
+      .cdnUrl;
+});
+
 /// Owns photo state and every mutation. Each mutation optimistically flips the
 /// provider into a loading state, calls the backend, and republishes the
 /// authoritative list the backend returns — so the UI (wizard step, profile

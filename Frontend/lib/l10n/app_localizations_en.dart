@@ -2127,6 +2127,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drawerVersionLabel => 'Nenjam Matrimony';
 
   @override
+  String get drawerManagePhotosTitle => 'Manage Photos';
+
+  @override
+  String get drawerChangePhotoSemanticLabel => 'Change profile photo';
+
+  @override
   String get profileDetailSendInterest => 'Send Interest';
 
   @override

@@ -2153,6 +2153,12 @@ class AppLocalizationsTa extends AppLocalizations {
   String get drawerVersionLabel => 'நெஞ்சம் மேட்ரிமோனி';
 
   @override
+  String get drawerManagePhotosTitle => 'புகைப்படங்களை நிர்வகி';
+
+  @override
+  String get drawerChangePhotoSemanticLabel => 'சுயவிவரப் புகைப்படத்தை மாற்று';
+
+  @override
   String get profileDetailSendInterest => 'விருப்பம் அனுப்பு';
 
   @override

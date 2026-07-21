@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/avatars/gender_placeholder.dart';
+import '../../../../core/widgets/avatars/app_avatars.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../profile_photos/presentation/providers/photo_providers.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // NenjamNavigationDrawer
@@ -56,6 +58,10 @@ class NenjamNavigationDrawer extends StatelessWidget {
   /// Whether the user is a premium subscriber.
   final bool isPremium;
 
+  /// Tapping the avatar or the "+" badge — both open the same photo
+  /// management bottom sheet ([showPhotoManagerBottomSheet]).
+  final VoidCallback? onAvatarTap;
+
   // ── Tap callbacks ──────────────────────────────────────────────────────────
   final VoidCallback? onMyProfileTap;
   final VoidCallback? onEditProfileTap;
@@ -87,6 +93,7 @@ class NenjamNavigationDrawer extends StatelessWidget {
     this.profileCompletionPercent = 85,
     this.isVerified = true,
     this.isPremium = false,
+    this.onAvatarTap,
     this.onMyProfileTap,
     this.onEditProfileTap,
     this.onProfileIntelligenceTap,
@@ -138,6 +145,7 @@ class NenjamNavigationDrawer extends StatelessWidget {
               profileId: profileId,
               isVerified: isVerified,
               isPremium: isPremium,
+              onAvatarTap: onAvatarTap,
             ),
 
             // ── 2. Profile Strength bar ────────────────────────────────────
@@ -337,6 +345,7 @@ class _ProfileHeader extends StatelessWidget {
   final String profileId;
   final bool isVerified;
   final bool isPremium;
+  final VoidCallback? onAvatarTap;
 
   const _ProfileHeader({
     required this.imageUrl,
@@ -348,6 +357,7 @@ class _ProfileHeader extends StatelessWidget {
     required this.profileId,
     required this.isVerified,
     required this.isPremium,
+    this.onAvatarTap,
   });
 
   @override
@@ -366,26 +376,60 @@ class _ProfileHeader extends StatelessWidget {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              Container(
-                width: 72,
-                height: 72,
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.accentGold,
-                    width: 1.5,
+              Semantics(
+                button: onAvatarTap != null,
+                label: AppLocalizations.of(context).drawerChangePhotoSemanticLabel,
+                child: GestureDetector(
+                  onTap: onAvatarTap,
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.accentGold,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.primarySurface,
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: _LiveAvatarImage(imageUrl: imageUrl, gender: gender),
+                    ),
                   ),
-                ),
-                child: Container(
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.primarySurface,
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: _AvatarImage(imageUrl: imageUrl, gender: gender),
                 ),
               ),
+              // "+" badge — same tap target as the avatar itself, opens the
+              // identical photo management bottom sheet.
+              if (onAvatarTap != null)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: onAvatarTap,
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.verifiedBlue,
+                        border: Border.all(
+                          color: AppColors.backgroundLight,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.add_rounded,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
               // Verification badge overlay
               if (isVerified)
                 Positioned(
@@ -468,7 +512,7 @@ class _ProfileHeader extends StatelessWidget {
           // ── Subtitle: age • location ─────────────────────────────────────
           const SizedBox(height: AppSpacing.xs2),
           Text(
-            '$age • $location',
+            [if (age > 0) '$age', location].join(' • '),
             style: AppTypography.bodySmall.copyWith(
               color: AppColors.textSecondaryLight,
             ),
@@ -527,32 +571,27 @@ class _ProfileHeader extends StatelessWidget {
   }
 }
 
-class _AvatarImage extends StatelessWidget {
+/// Reads the live current-user photo directly from [myPrimaryPhotoUrlProvider]
+/// — scoped to just this leaf widget (not the whole drawer) so uploading,
+/// replacing, or deleting a photo only rebuilds this small avatar, not the
+/// entire [NenjamNavigationDrawer] menu tree. Falls back to the [imageUrl]
+/// prop (the caller's best-known value) until the provider has loaded, then
+/// to the gender placeholder if the user has no photos at all.
+class _LiveAvatarImage extends ConsumerWidget {
   final String? imageUrl;
   final String gender;
 
-  const _AvatarImage({this.imageUrl, this.gender = ''});
+  const _LiveAvatarImage({this.imageUrl, this.gender = ''});
 
   @override
-  Widget build(BuildContext context) {
-    if (imageUrl != null && imageUrl!.isNotEmpty) {
-      return Image.network(
-        imageUrl!,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        errorBuilder: (_, __, ___) => _placeholder(),
-      );
-    }
-    return _placeholder();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final liveUrl = ref.watch(myPrimaryPhotoUrlProvider);
+    return NmCircleAvatar(
+      imageUrl: liveUrl ?? imageUrl,
+      size: 68,
+      gender: gender,
+    );
   }
-
-  Widget _placeholder() => NmGenderPlaceholder(
-        gender: gender,
-        iconSize: 36,
-        backgroundColor: AppColors.primarySurface,
-        iconColor: AppColors.primary,
-      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

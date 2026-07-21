@@ -4124,6 +4124,18 @@ abstract class AppLocalizations {
   /// **'Nenjam Matrimony'**
   String get drawerVersionLabel;
 
+  /// No description provided for @drawerManagePhotosTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Photos'**
+  String get drawerManagePhotosTitle;
+
+  /// No description provided for @drawerChangePhotoSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Change profile photo'**
+  String get drawerChangePhotoSemanticLabel;
+
   /// No description provided for @profileDetailSendInterest.
   ///
   /// In en, this message translates to:

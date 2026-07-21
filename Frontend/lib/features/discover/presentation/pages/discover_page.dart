@@ -8,12 +8,17 @@ import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/avatars/app_avatars.dart';
 import '../../../../core/widgets/avatars/gender_placeholder.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../authentication/presentation/providers/auth_providers.dart';
 import '../../../authentication/presentation/utils/logout_flow.dart';
 import '../../../profile/presentation/providers/profile_dashboard_providers.dart';
+import '../../../profile/presentation/utils/profile_dashboard_mapper.dart';
+import '../../../profile_photos/presentation/providers/photo_providers.dart';
+import '../../../profile_photos/presentation/widgets/photo_manager_bottom_sheet.dart';
 import '../../../registration/presentation/utils/open_edit_profile.dart';
 import '../../domain/entities/discovery_profile_entity.dart';
 import '../../domain/entities/discover_feed_entity.dart';
@@ -45,6 +50,13 @@ class DiscoverPage extends ConsumerWidget {
     // Backend-computed completion — the single source of truth shared with the
     // Profile page, Edit Profile, and the completion screen.
     final completionAsync = ref.watch(backendProfileCompletionProvider);
+    // Same real profile data the Profile dashboard reads (`profile_page.dart`)
+    // — reused here via the same mapper functions rather than re-deriving
+    // display strings a second way. The drawer's own avatar image is NOT
+    // read here (see `_LiveAvatarImage` inside the drawer) so a photo change
+    // doesn't rebuild this whole page.
+    final draft = ref.watch(myProfileDraftProvider).valueOrNull;
+    final authUser = ref.watch(currentAuthUserProvider);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
@@ -52,6 +64,17 @@ class DiscoverPage extends ConsumerWidget {
         // Falls back to the previous static default while loading/on error
         // so the drawer never regresses to a broken state.
         profileCompletionPercent: completionAsync.valueOrNull ?? 85,
+        userName: profileDisplayName(draft, authUser),
+        age: profileDisplayAge(draft) ?? 0,
+        location: profileDisplayLocation(draft),
+        gender: draft?.basicDetails.gender ?? '',
+        community: draft?.religionDetails.community ?? '',
+        profileId: profileDisplayId(authUser),
+        isVerified: authUser?.isFullyVerified ?? false,
+        // TODO(backend): no subscription/premium-status endpoint is wired
+        // yet — same placeholder used on the Profile page.
+        isPremium: false,
+        onAvatarTap: () => showPhotoManagerBottomSheet(context),
         onMyProfileTap: () => context.push(RouteNames.profile),
         onEditProfileTap: () => openEditProfile(context, ref),
         onProfileIntelligenceTap: () =>
@@ -243,24 +266,23 @@ class _DiscoverAppBar extends StatelessWidget {
       ),
       title: Row(
         children: [
-          // User avatar
-          GestureDetector(
-            onTap: () => Scaffold.of(context).openDrawer(),
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.borderLight.withValues(alpha: 0.3),
-                ),
-                color: AppColors.primarySurface,
+          // User avatar — a scoped Consumer so a photo change only rebuilds
+          // this small avatar, not the whole sticky app bar / feed below it.
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.borderLight.withValues(alpha: 0.3),
               ),
-              clipBehavior: Clip.antiAlias,
-              child: const Icon(
-                Icons.person_rounded,
-                size: 20,
-                color: AppColors.primary,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Consumer(
+              builder: (context, ref, _) => NmCircleAvatar(
+                imageUrl: ref.watch(myPrimaryPhotoUrlProvider),
+                size: 32,
+                onTap: () => Scaffold.of(context).openDrawer(),
               ),
             ),
           ),
