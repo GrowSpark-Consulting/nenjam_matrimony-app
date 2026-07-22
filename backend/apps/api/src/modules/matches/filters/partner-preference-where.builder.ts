@@ -83,7 +83,9 @@ export interface PreferenceFilters {
  *    "B.E / B.Tech+") are non-literal — they are dropped, never filtered on, so
  *    the feed never over-filters to an empty result on a non-literal choice.
  *  - "Same X" resolves to the caller's own attribute (caste/city/state/tongue).
- *  - Always excludes the caller themselves and soft-deleted (inactive) users.
+ *  - Always excludes: the caller themselves, soft-deleted users, non-ACTIVE
+ *    users (unverified/suspended/deactivated/banned), incomplete profiles, and
+ *    anyone with a mutual block against the caller.
  *  - Only fields that exist on the schema are used; nothing is invented.
  */
 export function buildFeedWhere(
@@ -93,9 +95,25 @@ export function buildFeedWhere(
 
   const and: Prisma.UserProfileWhereInput[] = [
     { userId: { not: currentUserId } },
-    // "Inactive" = soft-deleted account. (A UserProfile row only exists once
-    // registration is finalized, so incomplete profiles are already excluded.)
-    { user: { is: { deletedAt: null } } },
+    // Defensive: a UserProfile row only exists once registration is finalized
+    // (finalize() sets this true), but this guards against ever surfacing a
+    // partially-written row.
+    { isProfileComplete: true },
+    {
+      user: {
+        is: {
+          deletedAt: null,
+          // Only ACTIVE accounts are matchable — excludes unverified
+          // (PENDING_VERIFICATION), SUSPENDED, DEACTIVATED, and BANNED users.
+          status: 'ACTIVE',
+          // Mutual block: neither side of a block should see the other.
+          NOT: [
+            { blocksMade: { some: { blockedUserId: currentUserId } } },
+            { blocksReceived: { some: { blockerId: currentUserId } } },
+          ],
+        },
+      },
+    },
   ];
 
   if (myGender === 'MALE') and.push({ gender: 'FEMALE' });
@@ -178,6 +196,11 @@ export function buildFeedWhere(
     addEquals(and, 'smokingHabits', ext.smoking);
     addEquals(and, 'drinkingHabits', ext.drinking);
     addEquals(and, 'country', ext.country);
+    // "Ethnicity" in the standalone Partner Preferences page's Religion &
+    // Community section is a community name (Vellalar/Nadar/Iyer/…) — maps to
+    // UserProfile.community, distinct from the base castePref -> caste filter.
+    addEquals(and, 'community', ext.ethnicity);
+    addEquals(and, 'subCaste', ext.subCaste);
   }
 
   return { AND: and };
