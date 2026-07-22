@@ -33,6 +33,23 @@ function parseLeadingNumber(value: string | undefined): number | null {
   return match ? Number(match[1]) : null;
 }
 
+// The wizard's height picker emits feet'inches" strings ("5'9\"", "6'0\"" —
+// see step_physical.dart's _heights). parseLeadingNumber would read only the
+// leading number (the FEET), storing e.g. 5 into height_cm instead of 175 —
+// which then wrongly excludes the profile from any height-range partner
+// filter. Convert feet+inches to centimetres; fall back to a plain-cm value
+// (e.g. "175" / "175 cm") if that's ever what's stored.
+function parseHeightToCm(value: string | undefined): number | null {
+  if (!value) return null;
+  const feetInches = value.match(/(\d+)\s*'\s*(\d+)/);
+  if (feetInches) {
+    const feet = Number(feetInches[1]);
+    const inches = Number(feetInches[2]);
+    return Math.round((feet * 12 + inches) * 2.54);
+  }
+  return parseLeadingNumber(value);
+}
+
 function toStringArray(value: string | undefined): string[] {
   if (!value) return [];
   return value
@@ -186,7 +203,7 @@ export class ProfileService {
       physical,
     );
 
-    const heightCm = parseLeadingNumber(physical.height as string | undefined);
+    const heightCm = parseHeightToCm(physical.height as string | undefined);
     const weightKg = parseLeadingNumber(physical.weight as string | undefined);
     const annualIncomeLakhs = parseLeadingNumber(
       education.annualIncome as string | undefined,

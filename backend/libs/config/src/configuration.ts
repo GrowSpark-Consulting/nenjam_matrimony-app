@@ -8,6 +8,11 @@ export interface AppConfig {
     username: string;
     password: string;
     name: string;
+    /** Full connection string. When set (e.g. a shared Neon URL) it takes
+     *  precedence over the individual host/port/... fields and carries its own
+     *  SSL mode. Lets every teammate point at one shared DB by setting a single
+     *  DATABASE_URL, with the discrete fields kept as a local-Postgres fallback. */
+    url?: string;
   };
   redis: {
     host: string;
@@ -50,6 +55,7 @@ export default (): AppConfig => ({
     username: process.env.DATABASE_USER ?? 'postgres',
     password: process.env.DATABASE_PASSWORD ?? '',
     name: process.env.DATABASE_NAME ?? 'app',
+    url: process.env.DATABASE_URL?.trim() || undefined,
   },
   redis: {
     host: process.env.REDIS_HOST ?? 'localhost',

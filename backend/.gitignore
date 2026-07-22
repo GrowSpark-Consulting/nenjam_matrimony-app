@@ -62,3 +62,6 @@ cache/
 # are the source of truth for schema history and must ship with the
 # app).
 libs/database/generated/
+
+# Neon CLI local artifact
+.neon

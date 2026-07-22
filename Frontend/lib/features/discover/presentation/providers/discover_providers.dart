@@ -1,22 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/datasources/discover_mock_datasource.dart';
+import '../../../../core/network/api_providers.dart';
 import '../../data/repositories/discover_repository_impl.dart';
 import '../../domain/entities/discovery_profile_entity.dart';
 import '../../domain/entities/discover_feed_entity.dart';
 import '../../domain/repositories/discover_repository.dart';
 
-final discoverMockDataSourceProvider = Provider<DiscoverMockDataSource>(
-  (ref) => DiscoverMockDataSource(),
-);
-
+/// Real backend-backed repository — fetches `GET /discover` (the
+/// preference-filtered feed) via the shared authenticated [ApiClient].
 final discoverRepositoryProvider = Provider<DiscoverRepository>(
-  (ref) => DiscoverRepositoryImpl(ref.watch(discoverMockDataSourceProvider)),
+  (ref) => DiscoverRepositoryImpl(ref.watch(apiClientProvider)),
 );
 
-/// Drives the Discover feed screen. Swapping [DiscoverRepositoryImpl] for a
-/// Dio backed implementation is the only change a real backend integration
-/// requires.
+/// Drives the Discover feed screen — and, by reprojection, the Matches reels,
+/// Search pool, and "similar profiles" shelf. All real backend data.
 final discoverFeedProvider = FutureProvider<DiscoverFeedEntity>(
   (ref) => ref.watch(discoverRepositoryProvider).getDiscoverFeed(),
 );

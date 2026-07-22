@@ -15,14 +15,23 @@ import { seedPrompts } from './seeders/prompts.seeder';
 // ─────────────────────────────────────────────────────────────
 // Bootstrap Prisma with the driver adapter (mirrors PrismaService)
 // ─────────────────────────────────────────────────────────────
+// Prefer a full DATABASE_URL (shared Neon/managed Postgres — carries its own
+// sslmode) exactly like PrismaService; fall back to the discrete fields for a
+// local Postgres. Without this the seeder would silently target localhost even
+// when the app is pointed at the shared DB.
+const databaseUrl = process.env.DATABASE_URL?.trim();
 const prisma = new PrismaClient({
-  adapter: new PrismaPg({
-    host: process.env.DATABASE_HOST ?? 'localhost',
-    port: Number(process.env.DATABASE_PORT ?? 5432),
-    user: process.env.DATABASE_USER ?? 'postgres',
-    password: process.env.DATABASE_PASSWORD ?? '',
-    database: process.env.DATABASE_NAME ?? 'nenjam_matrimony',
-  }),
+  adapter: new PrismaPg(
+    databaseUrl
+      ? { connectionString: databaseUrl }
+      : {
+          host: process.env.DATABASE_HOST ?? 'localhost',
+          port: Number(process.env.DATABASE_PORT ?? 5432),
+          user: process.env.DATABASE_USER ?? 'postgres',
+          password: process.env.DATABASE_PASSWORD ?? '',
+          database: process.env.DATABASE_NAME ?? 'nenjam_matrimony',
+        },
+  ),
 });
 
 // ─────────────────────────────────────────────────────────────

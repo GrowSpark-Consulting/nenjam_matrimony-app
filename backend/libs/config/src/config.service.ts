@@ -89,7 +89,7 @@ export class AppConfigService implements OnModuleInit {
       '',
       `Environment : ${this.nodeEnv}`,
       `Port        : ${this.port}`,
-      `Database    : ${this.database.host}:${this.database.port}`,
+      `Database    : ${this.describeDatabaseTarget()}`,
       `Redis       : ${this.redis.host}:${this.redis.port}`,
       `Elastic     : ${this.elasticsearch.node}`,
       `SMTP        : ${this.smtp.host}:${this.smtp.port}`,
@@ -99,5 +99,20 @@ export class AppConfigService implements OnModuleInit {
     ].join('\n');
 
     this.logger.log(banner);
+  }
+
+  /** Shows the real DB endpoint in the boot banner: the DATABASE_URL host when
+   *  set (shared Neon/managed Postgres), otherwise the discrete host:port. */
+  private describeDatabaseTarget(): string {
+    const { host, port, url } = this.database;
+    if (url) {
+      try {
+        const u = new URL(url);
+        return `${u.hostname}:${u.port || 5432} (via DATABASE_URL)`;
+      } catch {
+        /* fall through */
+      }
+    }
+    return `${host}:${port}`;
   }
 }

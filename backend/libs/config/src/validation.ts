@@ -7,11 +7,17 @@ export const validationSchema = Joi.object({
   PORT: Joi.number().port().default(3000),
   WEBSOCKET_PORT: Joi.number().port().default(3001),
 
-  DATABASE_HOST: Joi.string().required(),
-  DATABASE_PORT: Joi.number().port().required(),
-  DATABASE_USER: Joi.string().required(),
-  DATABASE_PASSWORD: Joi.string().required(),
-  DATABASE_NAME: Joi.string().required(),
+  // Either a full DATABASE_URL (shared Neon/managed Postgres, preferred — the
+  // app uses it verbatim, SSL included) OR the discrete fields below (local
+  // Postgres). The individual fields are optional so a teammate can point at
+  // the shared DB by setting only DATABASE_URL. `PrismaService` validates real
+  // connectivity at boot, so a config with neither fails fast with a clear error.
+  DATABASE_URL: Joi.string().optional(),
+  DATABASE_HOST: Joi.string().optional(),
+  DATABASE_PORT: Joi.number().port().optional(),
+  DATABASE_USER: Joi.string().optional(),
+  DATABASE_PASSWORD: Joi.string().allow('').optional(),
+  DATABASE_NAME: Joi.string().optional(),
 
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().port().required(),
