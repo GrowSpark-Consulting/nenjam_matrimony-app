@@ -45,7 +45,24 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
       this.feedRepository.findSelf(userId),
       this.preferenceRepository.findByUserId(userId),
     ]);
-    const myGender = self?.gender ?? null;
+
+    // No finalized profile → the caller's own gender is unknown, so the
+    // mandatory opposite-gender rule can't be satisfied (buildFeedWhere fails
+    // closed and every tier is guaranteed empty). Short-circuit with a stable,
+    // machine-readable reason the client uses to prompt the user to finish
+    // their profile — and skip the 10 pointless count probes.
+    if (!self) {
+      return {
+        rows: [],
+        total: 0,
+        tier: 1,
+        fallbackUsed: false,
+        reason: 'INCOMPLETE_SELF_PROFILE',
+        relaxedFilters: [],
+      };
+    }
+
+    const myGender = self.gender;
     const config = this.configService.fallback;
 
     const plan = buildTierPlan(pref, {
