@@ -44,7 +44,9 @@ function buildStrategy(opts: {
   const findRows = jest.fn().mockResolvedValue(opts.rows ?? []);
 
   const feedRepository = {
-    findSelf: jest.fn().mockResolvedValue(opts.self ?? SELF),
+    // Respect an explicit `self: null` (no finalized profile); only default to
+    // SELF when the caller didn't specify one at all.
+    findSelf: jest.fn().mockResolvedValue('self' in opts ? opts.self : SELF),
     countMatching,
     findRows,
     findMatching: jest.fn(),
@@ -75,6 +77,23 @@ function buildStrategy(opts: {
 }
 
 describe('ProgressiveFallbackStrategy', () => {
+  it('caller has no finalized profile: short-circuits to an empty feed with INCOMPLETE_SELF_PROFILE, running zero tier probes', async () => {
+    const { strategy, countMatching, findRows } = buildStrategy({
+      self: null,
+      countSequence: [],
+    });
+
+    const result = await strategy.getFeedForUser('me', { skip: 0, take: 20 });
+
+    expect(result.total).toBe(0);
+    expect(result.rows).toEqual([]);
+    expect(result.reason).toBe('INCOMPLETE_SELF_PROFILE');
+    expect(result.fallbackUsed).toBe(false);
+    // No pointless count/row queries — the opposite-gender rule can't be met.
+    expect(countMatching).not.toHaveBeenCalled();
+    expect(findRows).not.toHaveBeenCalled();
+  });
+
   it('exact match exists: Tier 1 returns immediately, fallbackUsed=false, no further tiers tried', async () => {
     const { strategy, countMatching, findRows } = buildStrategy({
       countSequence: [4], // Tier 1 alone has candidates

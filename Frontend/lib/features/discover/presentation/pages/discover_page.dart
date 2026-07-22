@@ -147,6 +147,18 @@ class _DiscoverFeedView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
 
+    // A feed with no profiles in any section is a legitimate state — the
+    // caller hasn't finalized their own profile (backend fails the mandatory
+    // opposite-gender rule closed), or nobody matches even after the backend's
+    // progressive fallback. Show a real empty state instead of the perpetual
+    // "Searching for more souls…" footer, which reads like a stuck spinner.
+    final bool isEmpty = feed.stories.isEmpty &&
+        feed.aiRecommended.isEmpty &&
+        feed.recentlyJoined.isEmpty &&
+        feed.verifiedProfiles.isEmpty &&
+        feed.nearYou.isEmpty &&
+        feed.premiumMembers.isEmpty;
+
     return RefreshIndicator(
       color: AppColors.accentGold,
       onRefresh: () => ref.refresh(discoverFeedProvider.future),
@@ -156,6 +168,12 @@ class _DiscoverFeedView extends ConsumerWidget {
           // ── 1. Sticky App Bar ──────────────────────────────────────
           const _DiscoverAppBar(),
 
+          if (isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: _DiscoverEmptyState(reason: feed.fallbackReason),
+            )
+          else ...[
           // ── Fallback banner (backend widened the search) ───────────
           if (feed.fallbackUsed)
             const SliverToBoxAdapter(child: _FallbackBanner()),
@@ -231,6 +249,7 @@ class _DiscoverFeedView extends ConsumerWidget {
 
           // Bottom padding for nav bar
           const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl3)),
+          ],
         ],
       ),
     );
@@ -1640,6 +1659,89 @@ class _PremiumMemberCard extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // Footer
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// Shown when the feed has no profiles in any section. Distinguishes the two
+/// legitimate empty causes via the backend's machine-readable [reason]:
+///   • `INCOMPLETE_SELF_PROFILE` — the caller hasn't finalized their own
+///     profile, so no matching is possible yet → prompt to complete it.
+///   • anything else — a finalized caller whose preferences matched nobody
+///     even after the backend widened them → prompt to adjust preferences.
+/// All strings/CTAs reuse existing localized keys, so no new translations.
+class _DiscoverEmptyState extends ConsumerWidget {
+  final String reason;
+
+  const _DiscoverEmptyState({required this.reason});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final incompleteProfile = reason == 'INCOMPLETE_SELF_PROFILE';
+
+    final title = incompleteProfile
+        ? l10n.homeCompleteProfileTitle
+        : l10n.searchEmptyResultsTitle;
+    final subtitle = incompleteProfile
+        ? l10n.profileCompletionTipRegistration
+        : l10n.searchEmptyResultsSubtitle;
+    final ctaLabel = incompleteProfile
+        ? l10n.profileCompletionActionRegistration
+        : l10n.profileCompletionActionPartnerPref;
+
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            incompleteProfile
+                ? Icons.person_add_alt_1_rounded
+                : Icons.travel_explore_rounded,
+            size: 64,
+            color: AppColors.accentGold.withValues(alpha: 0.6),
+          ),
+          const SizedBox(height: AppSpacing.base),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: AppTypography.titleMedium.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondaryLight,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          ElevatedButton(
+            onPressed: () => incompleteProfile
+                ? openEditProfile(context, ref)
+                : openPartnerPreferences(context, ref),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentGold,
+              foregroundColor: const Color(0xFF241A00),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
+                vertical: AppSpacing.base,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+            ),
+            child: Text(
+              ctaLabel,
+              style: AppTypography.button.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _FeedFooter extends StatelessWidget {
   const _FeedFooter();
