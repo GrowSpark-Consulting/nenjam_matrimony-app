@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import type { Prisma } from '../../../../../../libs/database/generated/client';
@@ -128,6 +129,8 @@ function mapDosham(
 
 @Injectable()
 export class ProfileService {
+  private readonly logger = new Logger(ProfileService.name);
+
   constructor(
     private readonly profileRepository: ProfileRepository,
     private readonly photoRepository: PhotoRepository,
@@ -217,6 +220,53 @@ export class ProfileService {
     const draft = await this.draftService.getDraft(userId);
     const data = draft.data as Record<string, Record<string, unknown>>;
 
+    const missing = this.missingRequiredFields(data);
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `Cannot finalize profile — missing required fields: ${missing.join(', ')}`,
+      );
+    }
+
+    await this.writeProfileFromDraft(userId, data);
+    await this.profileRepository.markComplete(userId);
+    return this.recalculateAndPersistCompletion(userId);
+  }
+
+  /**
+   * Makes the user eligible for Discover/matchmaking the moment every MANDATORY
+   * profile field exists — without waiting for the optional steps (photos,
+   * quiz, verification) or the final Review/finalize tap. Called after every
+   * wizard draft-section save (see ProfileDraftController). No-op until the
+   * mandatory set is complete. Never throws: the draft is already persisted, so
+   * a failure here must not fail the user's step save — they'll still become
+   * matchable on the next save or at finalize().
+   */
+  async syncMatchableFromDraft(userId: string): Promise<void> {
+    try {
+      const draft = await this.draftService.getDraft(userId);
+      const data = draft.data as Record<string, Record<string, unknown>>;
+      if (this.missingRequiredFields(data).length > 0) return;
+
+      await this.writeProfileFromDraft(userId, data);
+      await this.recalculateAndPersistCompletion(userId);
+    } catch (error) {
+      this.logger.warn(
+        `Auto-materialise from draft skipped for ${userId}: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * Materialises the wizard draft into the real UserProfile / AstrologyProfile /
+   * PartnerPreference rows (idempotent upsert) and flags the profile matchable
+   * (`isProfileComplete = true`). Does NOT mark the wizard registration complete
+   * (that stays in finalize()'s markComplete). Callers must have verified the
+   * mandatory fields are present first (missingRequiredFields === []).
+   */
+  private async writeProfileFromDraft(
+    userId: string,
+    data: Record<string, Record<string, unknown>>,
+  ): Promise<void> {
     const basic = data.basicDetails ?? {};
     const religion = data.religionDetails ?? {};
     const language = data.languageDetails ?? {};
@@ -227,15 +277,6 @@ export class ProfileService {
     const family = data.familyDetails ?? {};
     const horoscope = data.horoscopeDetails ?? {};
     const partnerPref = data.partnerPreference ?? {};
-
-    this.assertRequiredFieldsPresent(
-      basic,
-      religion,
-      language,
-      location,
-      education,
-      physical,
-    );
 
     const heightCm = parseHeightToCm(physical.height as string | undefined);
     const weightKg = parseLeadingNumber(physical.weight as string | undefined);
@@ -375,9 +416,6 @@ export class ProfileService {
           (partnerPref.extended as Prisma.InputJsonValue | undefined) ?? {},
       });
     }
-
-    await this.profileRepository.markComplete(userId);
-    return this.recalculateAndPersistCompletion(userId);
   }
 
   // Recomputes completion from the real, just-written rows and persists it
@@ -395,14 +433,23 @@ export class ProfileService {
     return full;
   }
 
-  private assertRequiredFieldsPresent(
-    basic: Record<string, unknown>,
-    religion: Record<string, unknown>,
-    language: Record<string, unknown>,
-    location: Record<string, unknown>,
-    education: Record<string, unknown>,
-    physical: Record<string, unknown>,
-  ): void {
+  /**
+   * The mandatory profile fields required for matchmaking — exactly the set
+   * that maps to UserProfile's NOT NULL columns. Returns the list of missing
+   * ones (empty === the user is eligible to be materialised/finalised). Single
+   * source of truth for both finalize() (throws on missing) and
+   * syncMatchableFromDraft() (no-op on missing).
+   */
+  private missingRequiredFields(
+    data: Record<string, Record<string, unknown>>,
+  ): string[] {
+    const basic = data.basicDetails ?? {};
+    const religion = data.religionDetails ?? {};
+    const language = data.languageDetails ?? {};
+    const location = data.locationDetails ?? {};
+    const education = data.educationDetails ?? {};
+    const physical = data.physicalDetails ?? {};
+
     const missing: string[] = [];
     if (!basic.firstName) missing.push('basicDetails.firstName');
     if (!basic.lastName) missing.push('basicDetails.lastName');
@@ -418,10 +465,6 @@ export class ProfileService {
     if (!education.occupation) missing.push('educationDetails.occupation');
     if (!physical.height) missing.push('physicalDetails.height');
 
-    if (missing.length > 0) {
-      throw new BadRequestException(
-        `Cannot finalize profile — missing required fields: ${missing.join(', ')}`,
-      );
-    }
+    return missing;
   }
 }
