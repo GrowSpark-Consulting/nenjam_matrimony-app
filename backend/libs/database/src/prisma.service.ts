@@ -16,25 +16,31 @@ export class PrismaService
   private readonly logger = new Logger(PrismaService.name);
 
   constructor(private readonly configService: AppConfigService) {
+    const db = configService.database;
+    // Prefer a full connection string when provided (shared Neon/managed
+    // Postgres — carries its own `sslmode`, so SSL is handled by the driver).
+    // Fall back to the discrete host/port/... fields for a local Postgres.
+    const poolConfig = db.url
+      ? { connectionString: db.url }
+      : {
+          host: db.host,
+          port: db.port,
+          user: db.username,
+          password: db.password,
+          database: db.name,
+        };
     super({
       adapter: new PrismaPg({
-        host: configService.database.host,
-        port: configService.database.port,
-        user: configService.database.username,
-        password: configService.database.password,
-        database: configService.database.name,
-        // No timeout was previously set here, so a query that can't get a
-        // pooled connection (pool exhausted by a leaked/idle-in-transaction
-        // session) or that gets stuck behind a row lock would wait
-        // indefinitely with no error — exactly the "hangs forever, no crash"
-        // symptom this fixes: both now fail fast with a clear Postgres error
-        // instead of hanging past Dio's client-side timeout.
+        ...poolConfig,
+        // Without a timeout, a query that can't get a pooled connection (pool
+        // exhausted by a leaked/idle-in-transaction session) or that's stuck
+        // behind a row lock would wait indefinitely with no error — the "hangs
+        // forever, no crash" symptom. Both now fail fast with a clear Postgres
+        // error instead of hanging past Dio's client-side timeout.
         connectionTimeoutMillis: 10_000,
         statement_timeout: 10_000,
       }),
-      // TEMPORARY DEBUG LOGGING — surfaces exact SQL + timing for the
-      // PATCH /profiles/draft/* hang investigation. Remove once resolved.
-      log: ['query', 'warn', 'error'],
+      log: ['warn', 'error'],
     });
   }
 
@@ -55,22 +61,41 @@ export class PrismaService
     }
 
     const latencyMs = Date.now() - start;
-    const { host, port, name } = this.configService.database;
+    const target = this.describeTarget();
 
     this.logger.log(
       [
         '=====================================',
         'DATABASE',
         '',
-        `Host        : ${host}`,
-        `Port        : ${port}`,
-        `Database    : ${name}`,
+        `Host        : ${target.host}`,
+        `Port        : ${target.port}`,
+        `Database    : ${target.name}`,
         'Connection  : SUCCESS',
         `Latency     : ${latencyMs} ms`,
         '',
         '=====================================',
       ].join('\n'),
     );
+  }
+
+  /** Where we're actually connected — parsed from DATABASE_URL when set, so the
+   *  boot banner never misreports the discrete (fallback) host/port/name. */
+  private describeTarget(): { host: string; port: number | string; name: string } {
+    const { host, port, name, url } = this.configService.database;
+    if (url) {
+      try {
+        const u = new URL(url);
+        return {
+          host: u.hostname,
+          port: u.port || 5432,
+          name: u.pathname.replace(/^\//, '') || name,
+        };
+      } catch {
+        // Fall through to discrete fields if the URL is unparseable.
+      }
+    }
+    return { host, port, name };
   }
 
   async onModuleDestroy(): Promise<void> {
