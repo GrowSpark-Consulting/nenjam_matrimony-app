@@ -10,9 +10,11 @@ describe('withSafetyExclusions', () => {
     expect(and.length).toBeGreaterThan(1);
   });
 
-  it('excludes non-ACTIVE users', () => {
+  it('excludes suspended/deactivated/banned users but not PENDING_VERIFICATION', () => {
     const and = withSafetyExclusions({ AND: [] }, 'me').AND as Record<string, unknown>[];
-    expect(and).toContainEqual({ user: { is: { status: 'ACTIVE' } } });
+    expect(and).toContainEqual({
+      user: { is: { status: { notIn: ['SUSPENDED', 'DEACTIVATED', 'BANNED'] } } },
+    });
   });
 
   it('excludes both directions of a block', () => {

@@ -131,9 +131,11 @@ describe('ProgressiveFallbackStrategy', () => {
     expect(result.fallbackUsed).toBe(true);
     expect(countMatching).toHaveBeenCalledTimes(10);
     expect(findRows).toHaveBeenCalledTimes(1);
-    // Tier 10's WHERE must still be a safety-exclusion-wrapped, gender-only query.
+    // Tier 10's WHERE must still be a safety-exclusion-wrapped, gender-only
+    // query — status is a denylist (not an ACTIVE allowlist): PENDING_VERIFICATION
+    // must remain visible even at the loosest tier (see safety-exclusions.builder.ts).
     const tier10Where = countMatching.mock.calls[9][0];
-    expect(JSON.stringify(tier10Where)).toContain('ACTIVE');
+    expect(JSON.stringify(tier10Where)).toContain('"notIn":["SUSPENDED","DEACTIVATED","BANNED"]');
   });
 
   it('no users in database (every tier empty, including Tier 10): returns an honest empty feed, not an error', async () => {
