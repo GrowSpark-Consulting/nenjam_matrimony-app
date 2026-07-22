@@ -288,6 +288,10 @@ class AppLocalizationsTa extends AppLocalizations {
   String get discoverSearchingMoreLabel => 'மேலும் இதயங்களைத் தேடுகிறோம்…';
 
   @override
+  String get discoverFallbackBannerLabel =>
+      'மேலும் பொருத்தங்களைக் காட்ட உங்கள் விருப்பங்களை சற்று விரிவுபடுத்தினோம்.';
+
+  @override
   String get discoverVerifiedLabel => 'சரிபார்க்கப்பட்டது';
 
   @override
@@ -616,7 +620,162 @@ class AppLocalizationsTa extends AppLocalizations {
   String get matchesMutualEmpty => 'பரஸ்பர விருப்பங்கள்';
 
   @override
-  String get chatTitle => 'உரையாடல்கள்';
+  String get inboxTitle => 'இன்பாக்ஸ்';
+
+  @override
+  String get inboxNotificationsTooltip => 'அறிவிப்புகள்';
+
+  @override
+  String get inboxFilterTooltip => 'வடிகட்டிகள்';
+
+  @override
+  String get inboxSearchHint => 'உரையாடல்களைத் தேடுங்கள்...';
+
+  @override
+  String get inboxTabInterestsReceived => 'பெறப்பட்ட ஆர்வங்கள்';
+
+  @override
+  String get inboxTabInterestsSent => 'அனுப்பப்பட்ட ஆர்வங்கள்';
+
+  @override
+  String get inboxTabMessages => 'செய்திகள்';
+
+  @override
+  String get inboxEmptyTitle => 'இதுவரை உரையாடல்கள் இல்லை';
+
+  @override
+  String get inboxEmptySubtitle =>
+      'உரையாடலைத் தொடங்க பொருத்தங்களைக் கண்டறியவும்.';
+
+  @override
+  String get inboxEmptyCta => 'பொருத்தங்களைக் கண்டறியவும்';
+
+  @override
+  String get inboxLoadError =>
+      'ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்க கீழே இழுக்கவும்.';
+
+  @override
+  String get inboxFilterSheetTitle => 'வடிகட்டிகள்';
+
+  @override
+  String get inboxFilterUnread => 'படிக்காதவை';
+
+  @override
+  String get inboxFilterOnline => 'ஆன்லைன்';
+
+  @override
+  String get inboxFilterVerified => 'சரிபார்க்கப்பட்டது';
+
+  @override
+  String get inboxFilterPremium => 'பிரீமியம்';
+
+  @override
+  String get inboxFilterRecent => 'சமீபத்தியவை';
+
+  @override
+  String get inboxFilterArchived => 'காப்பகப்படுத்தப்பட்டது';
+
+  @override
+  String get inboxFilterBlocked => 'தடுக்கப்பட்டது';
+
+  @override
+  String get inboxSmartNewMatch => 'புதிய பொருத்தம்';
+
+  @override
+  String get inboxSmartInterestAccepted => 'ஆர்வம் ஏற்கப்பட்டது';
+
+  @override
+  String get inboxSmartInterestDeclined => 'ஆர்வம் நிராகரிக்கப்பட்டது';
+
+  @override
+  String get inboxSmartMessageRequest => 'செய்தி கோரிக்கை';
+
+  @override
+  String get inboxSmartAiSuggested => 'AI பரிந்துரை';
+
+  @override
+  String inboxCompatibilityLabel(int percent) {
+    return '$percent% பொருத்தம்';
+  }
+
+  @override
+  String get inboxActionViewProfile => 'சுயவிவரத்தைக் காண்க';
+
+  @override
+  String get inboxActionMute => 'ஒலி நிறுத்து';
+
+  @override
+  String get inboxActionUnmute => 'ஒலி இயக்கு';
+
+  @override
+  String get inboxActionArchive => 'காப்பகப்படுத்து';
+
+  @override
+  String get inboxActionUnarchive => 'காப்பகத்திலிருந்து மீட்டெடு';
+
+  @override
+  String get inboxActionBlock => 'தடு';
+
+  @override
+  String get inboxActionUnblock => 'தடையை நீக்கு';
+
+  @override
+  String get inboxActionDelete => 'நீக்கு';
+
+  @override
+  String get inboxActionPin => 'பின் செய்';
+
+  @override
+  String get inboxActionMarkUnread => 'படிக்காததாகக் குறி';
+
+  @override
+  String get inboxPremiumLockedName => 'பிரீமியம் உறுப்பினர்';
+
+  @override
+  String get inboxPremiumLockedMessage =>
+      'தொடர்ந்து அரட்டையடிக்க பிரீமியத்தைத் திறக்கவும்.';
+
+  @override
+  String get inboxUpgradeCta => 'மேம்படுத்து';
+
+  @override
+  String get inboxAccept => 'ஏற்றுக்கொள்';
+
+  @override
+  String get inboxDecline => 'நிராகரி';
+
+  @override
+  String get inboxYesterday => 'நேற்று';
+
+  @override
+  String get inboxToday => 'இன்று';
+
+  @override
+  String get inboxOnline => 'ஆன்லைன்';
+
+  @override
+  String get inboxMoreOptions => 'மேலும் விருப்பங்கள்';
+
+  @override
+  String get inboxMessageFailed => 'அனுப்ப முடியவில்லை';
+
+  @override
+  String get inboxBlockedBanner => 'இந்த உரையாடலை நீங்கள் தடுத்துள்ளீர்கள்.';
+
+  @override
+  String get inboxComposerHint => 'செய்தியை உள்ளிடவும்...';
+
+  @override
+  String get inboxComposerAttach => 'இணை';
+
+  @override
+  String get inboxComposerEmoji => 'எமோஜி';
+
+  @override
+  String get inboxComposerSend => 'அனுப்பு';
+
+  @override
+  String get inboxComposerVoice => 'குரல் செய்தி';
 
   @override
   String get notificationsTitle => 'அறிவிப்புகள்';

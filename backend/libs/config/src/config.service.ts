@@ -65,6 +65,10 @@ export class AppConfigService implements OnModuleInit {
     return this.configService.get('logLevel', { infer: true });
   }
 
+  get fallback(): AppConfig['fallback'] {
+    return this.configService.get('fallback', { infer: true });
+  }
+
   checkHealth(): ConfigHealth {
     const details: Record<string, boolean> = {
       envFileLoaded: Boolean(this.nodeEnv),

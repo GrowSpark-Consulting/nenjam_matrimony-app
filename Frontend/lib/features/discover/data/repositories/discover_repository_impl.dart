@@ -71,6 +71,8 @@ class DiscoverRepositoryImpl implements DiscoverRepository {
       // Not surfaced by the feed screen — the drawer/Profile read the real
       // backend completion via its own provider. Kept 0 rather than invented.
       profileCompletionPercent: 0,
+      fallbackUsed: data['fallbackUsed'] == true,
+      fallbackReason: (data['reason'] as String?) ?? '',
     );
   }
 

@@ -75,4 +75,31 @@ export class FeedRepository {
     ]);
     return { rows: rows as FeedProfileRow[], total };
   }
+
+  /**
+   * Cheap existence/count probe — no `include`, no row fetch. Used by
+   * ProgressiveFallbackStrategy to test each fallback tier's WHERE before
+   * paying for the full row fetch, so only the winning tier ever runs
+   * [findRows].
+   */
+  countMatching(where: Prisma.UserProfileWhereInput): Promise<number> {
+    return this.prisma.userProfile.count({ where });
+  }
+
+  /** The paginated rows for an already-confirmed-non-empty WHERE — same shape
+   *  and ordering as [findMatching], split out so the caller can reuse a count
+   *  it already has instead of paying for it twice. */
+  async findRows(
+    where: Prisma.UserProfileWhereInput,
+    { skip, take }: { skip: number; take: number },
+  ): Promise<FeedProfileRow[]> {
+    const rows = await this.prisma.userProfile.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take,
+      include: FEED_PROFILE_INCLUDE,
+    });
+    return rows as FeedProfileRow[];
+  }
 }

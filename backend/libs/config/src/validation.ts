@@ -51,4 +51,11 @@ export const validationSchema = Joi.object({
   LOG_LEVEL: Joi.string()
     .valid('error', 'warn', 'info', 'debug', 'verbose')
     .default('info'),
+
+  // Progressive Discover-feed fallback (ProgressiveFallbackStrategy). All
+  // optional with sane defaults — ops can tune/disable without a code change.
+  FALLBACK_ENABLED: Joi.boolean().default(true),
+  AGE_RELAX_STEP_1: Joi.number().integer().min(0).default(2),
+  AGE_RELAX_STEP_2: Joi.number().integer().min(0).default(5),
+  MAX_FALLBACK_TIER: Joi.number().integer().min(1).max(10).default(10),
 }).unknown(true);

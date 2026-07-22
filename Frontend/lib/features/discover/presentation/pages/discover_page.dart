@@ -156,6 +156,10 @@ class _DiscoverFeedView extends ConsumerWidget {
           // ── 1. Sticky App Bar ──────────────────────────────────────
           const _DiscoverAppBar(),
 
+          // ── Fallback banner (backend widened the search) ───────────
+          if (feed.fallbackUsed)
+            const SliverToBoxAdapter(child: _FallbackBanner()),
+
           // ── 2. New Today stories ───────────────────────────────────
           if (feed.stories.isNotEmpty)
             SliverToBoxAdapter(child: _NewTodaySection(stories: feed.stories)),
@@ -339,6 +343,62 @@ class _DiscoverAppBar extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.xs),
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fallback banner — shown when the backend's ProgressiveFallbackStrategy had
+// to widen the caller's saved preferences to avoid an empty feed. Deliberately
+// a quiet inline banner (not a dialog/snackbar) per the fallback spec: it
+// should never interrupt the user, just quietly explain what happened.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _FallbackBanner extends StatelessWidget {
+  const _FallbackBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.base,
+        AppSpacing.sm,
+        AppSpacing.base,
+        0,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.base,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.accentGold.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          border: Border.all(color: AppColors.accentGold.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.tune_rounded,
+              size: 16,
+              color: AppColors.accentGold,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                l10n.discoverFallbackBannerLabel,
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textSecondaryLight,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

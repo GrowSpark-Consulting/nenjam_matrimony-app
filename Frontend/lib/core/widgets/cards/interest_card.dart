@@ -19,6 +19,13 @@ class NmInterestCard extends StatelessWidget {
   final bool isReceived;
   final VoidCallback? onAccept;
   final VoidCallback? onDecline;
+  /// Already-localized copy for the status badge and action buttons —
+  /// defaults keep every existing call site's (currently English-only)
+  /// behavior unchanged.
+  final String receivedLabel;
+  final String sentLabel;
+  final String acceptLabel;
+  final String declineLabel;
 
   const NmInterestCard({
     super.key,
@@ -30,6 +37,10 @@ class NmInterestCard extends StatelessWidget {
     this.isReceived = true,
     this.onAccept,
     this.onDecline,
+    this.receivedLabel = 'Received',
+    this.sentLabel = 'Sent',
+    this.acceptLabel = 'Accept',
+    this.declineLabel = 'Decline',
   });
 
   @override
@@ -61,7 +72,7 @@ class NmInterestCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  isReceived ? 'Received' : 'Sent',
+                  isReceived ? receivedLabel : sentLabel,
                   style: AppTypography.labelSmall.copyWith(
                     color: isReceived ? AppColors.success : AppColors.info,
                     fontWeight: FontWeight.w600,
@@ -90,7 +101,7 @@ class NmInterestCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: NmOutlinedButton(
-                    label: 'Decline',
+                    label: declineLabel,
                     onPressed: onDecline,
                     height: 44,
                   ),
@@ -98,7 +109,7 @@ class NmInterestCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: NmPrimaryButton(
-                    label: 'Accept',
+                    label: acceptLabel,
                     onPressed: onAccept,
                     height: 44,
                   ),

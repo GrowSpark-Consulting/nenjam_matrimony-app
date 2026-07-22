@@ -8,6 +8,10 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { AppConfigService } from '@app/config';
 import { PrismaClient } from '../generated/client';
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 @Injectable()
 export class PrismaService
   extends PrismaClient
@@ -44,6 +48,16 @@ export class PrismaService
     });
   }
 
+  // Managed Postgres (Neon) auto-suspends an idle compute; waking it can
+  // intermittently exceed a single connection attempt's window (observed:
+  // "Connection terminated due to connection timeout" on a cold start that
+  // succeeds a moment later). Without a retry, that one transient blip took
+  // the whole app down at boot. 4 attempts with linear backoff (2s/4s/6s)
+  // rides out the wake-up; a genuinely misconfigured DB still fails fast
+  // after ~12s instead of hanging indefinitely.
+  private static readonly CONNECT_MAX_ATTEMPTS = 4;
+  private static readonly CONNECT_RETRY_DELAY_MS = 2_000;
+
   async onModuleInit(): Promise<void> {
     // $connect() alone does not verify real connectivity with the driver-adapter
     // + query-compiler engine used here: it resolves successfully even with no
@@ -51,14 +65,7 @@ export class PrismaService
     await this.$connect();
 
     const start = Date.now();
-    try {
-      await this.$queryRaw`SELECT 1`;
-    } catch (error) {
-      this.logger.error(
-        `Database connection failed: ${this.describeConnectionError(error)}`,
-      );
-      throw error;
-    }
+    await this.queryWithRetry();
 
     const latencyMs = Date.now() - start;
     const target = this.describeTarget();
@@ -77,6 +84,26 @@ export class PrismaService
         '=====================================',
       ].join('\n'),
     );
+  }
+
+  private async queryWithRetry(): Promise<void> {
+    for (let attempt = 1; attempt <= PrismaService.CONNECT_MAX_ATTEMPTS; attempt++) {
+      try {
+        await this.$queryRaw`SELECT 1`;
+        return;
+      } catch (error) {
+        if (attempt === PrismaService.CONNECT_MAX_ATTEMPTS) {
+          this.logger.error(
+            `Database connection failed: ${this.describeConnectionError(error)}`,
+          );
+          throw error;
+        }
+        this.logger.warn(
+          `Database connection attempt ${attempt}/${PrismaService.CONNECT_MAX_ATTEMPTS} failed, retrying: ${this.describeConnectionError(error)}`,
+        );
+        await sleep(PrismaService.CONNECT_RETRY_DELAY_MS * attempt);
+      }
+    }
   }
 
   /** Where we're actually connected — parsed from DATABASE_URL when set, so the

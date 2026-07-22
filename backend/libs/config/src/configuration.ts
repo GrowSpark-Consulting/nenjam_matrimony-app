@@ -43,6 +43,15 @@ export interface AppConfig {
     bucket?: string;
   };
   logLevel: string;
+  /** Progressive Discover-feed fallback (see ProgressiveFallbackStrategy) —
+   *  how far and by how much the recommendation engine widens a search that
+   *  returns zero strict matches. */
+  fallback: {
+    enabled: boolean;
+    ageRelaxStep1: number;
+    ageRelaxStep2: number;
+    maxTier: number;
+  };
 }
 
 export default (): AppConfig => ({
@@ -92,4 +101,10 @@ export default (): AppConfig => ({
     bucket: process.env.AWS_S3_BUCKET_NAME || undefined,
   },
   logLevel: process.env.LOG_LEVEL ?? 'info',
+  fallback: {
+    enabled: (process.env.FALLBACK_ENABLED ?? 'true') !== 'false',
+    ageRelaxStep1: parseInt(process.env.AGE_RELAX_STEP_1 ?? '2', 10),
+    ageRelaxStep2: parseInt(process.env.AGE_RELAX_STEP_2 ?? '5', 10),
+    maxTier: parseInt(process.env.MAX_FALLBACK_TIER ?? '10', 10),
+  },
 });

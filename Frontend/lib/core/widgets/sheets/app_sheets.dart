@@ -3,6 +3,21 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 
+/// A single row in [AppSheets.showActionSheet].
+class AppSheetAction {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool isDestructive;
+
+  const AppSheetAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.isDestructive = false,
+  });
+}
+
 /// Nenjam Matrimony — Reusable Bottom Sheets Kit
 abstract final class AppSheets {
   /// Base styled Bottom Sheet wrapper.
@@ -128,6 +143,39 @@ abstract final class AppSheets {
       context,
       title: title,
       child: _TextInputBody(initialValue: initialValue, hint: hint),
+    );
+  }
+
+  /// Generic icon+label options sheet — e.g. a long-press "View Profile /
+  /// Mute / Archive / Block / Delete" menu. Each row pops the sheet, then
+  /// runs its own [AppSheetAction.onTap].
+  static Future<void> showActionSheet(
+    BuildContext context, {
+    String? title,
+    required List<AppSheetAction> actions,
+  }) {
+    return show<void>(
+      context,
+      title: title,
+      child: ListView.builder(
+        shrinkWrap: true,
+        itemCount: actions.length,
+        itemBuilder: (context, index) {
+          final action = actions[index];
+          final color = action.isDestructive ? AppColors.error : AppColors.primary;
+          return ListTile(
+            leading: Icon(action.icon, color: color),
+            title: Text(
+              action.label,
+              style: AppTypography.bodyMedium.copyWith(color: color, fontWeight: FontWeight.w600),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              action.onTap();
+            },
+          );
+        },
+      ),
     );
   }
 

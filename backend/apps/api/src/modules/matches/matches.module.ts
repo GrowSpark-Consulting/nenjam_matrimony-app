@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AppConfigModule } from '@app/config';
 import { StorageModule } from '@app/storage';
 import { DiscoverController } from './controllers/discover.controller';
 import { FeedService } from './services/feed.service';
@@ -9,6 +10,7 @@ import { FeedRepository } from './repositories/feed.repository';
 import { PreferenceRepository } from './repositories/preference.repository';
 import { RECOMMENDATION_SERVICE } from './recommendation/recommendation.service';
 import { FilteredFeedStrategy } from './recommendation/filtered-feed.strategy';
+import { ProgressiveFallbackStrategy } from './recommendation/progressive-fallback.strategy';
 import { SEARCH_STRATEGY } from './search/search.strategy';
 import { PostgresSearchStrategy } from './search/postgres-search.strategy';
 
@@ -22,7 +24,7 @@ import { PostgresSearchStrategy } from './search/postgres-search.strategy';
  * imported for presigning photo URLs.
  */
 @Module({
-  imports: [StorageModule],
+  imports: [StorageModule, AppConfigModule],
   controllers: [DiscoverController],
   providers: [
     FeedService,
@@ -31,12 +33,18 @@ import { PostgresSearchStrategy } from './search/postgres-search.strategy';
     ProfileFeedMapper,
     FeedRepository,
     PreferenceRepository,
-    // Phase 2 strategy bindings — the only lines that change when the
-    // algorithm behind the feed/search evolves.
-    { provide: RECOMMENDATION_SERVICE, useClass: FilteredFeedStrategy },
+    // Strategy bindings — the only lines that change when the algorithm
+    // behind the feed/search evolves. ProgressiveFallbackStrategy is Tier 1
+    // (FilteredFeedStrategy's exact `buildFeedWhere` query) plus progressive
+    // relaxation tiers 2-10 when Tier 1 returns zero — see tier-plan.ts.
+    // FilteredFeedStrategy itself stays registered/available: it's the
+    // reference "strict only" implementation this strategy is built on top
+    // of, not removed or replaced.
+    { provide: RECOMMENDATION_SERVICE, useClass: ProgressiveFallbackStrategy },
     { provide: SEARCH_STRATEGY, useClass: PostgresSearchStrategy },
     // Concrete strategies also registered so Nest can construct them.
     FilteredFeedStrategy,
+    ProgressiveFallbackStrategy,
     PostgresSearchStrategy,
   ],
 })

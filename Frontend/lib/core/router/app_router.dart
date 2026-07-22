@@ -12,10 +12,12 @@ import '../../features/authentication/presentation/pages/login_otp_screen.dart';
 import '../../features/authentication/presentation/pages/login_page.dart';
 import '../../features/authentication/presentation/pages/otp_page.dart';
 import '../../features/authentication/presentation/pages/phone_verify_screen.dart';
-import '../../features/chat/presentation/pages/chat_page.dart';
 import '../../features/discover/domain/entities/discovery_profile_entity.dart';
 import '../../features/discover/presentation/pages/discover_page.dart';
 import '../../features/help/presentation/pages/help_page.dart';
+import '../../features/inbox/domain/entities/conversation_entity.dart';
+import '../../features/inbox/presentation/pages/chat_detail_page.dart';
+import '../../features/inbox/presentation/pages/inbox_page.dart';
 import '../../features/interests/presentation/pages/interests_received_page.dart';
 import '../../features/interests/presentation/pages/interests_sent_page.dart';
 import '../../features/language/presentation/pages/language_page.dart';
@@ -363,6 +365,26 @@ GoRouter createRouter(WidgetRef ref) {
             return ProfileDetailPage(profile: extra);
           },
         ),
+        GoRoute(
+          path: RouteNames.chatDetail,
+          name: RouteNames.chatDetailName,
+          builder: (context, state) {
+            final extra = state.extra;
+            if (extra is! ConversationEntity) {
+              // Defensive fallback — nothing in-app pushes this route
+              // without `extra`, but a raw/deep link could theoretically
+              // hit it directly.
+              return Scaffold(
+                body: Center(
+                  child: Text(
+                    AppLocalizations.of(context).profileDetailProfileNotAvailable,
+                  ),
+                ),
+              );
+            }
+            return ChatDetailPage(conversation: extra);
+          },
+        ),
         // Search, Notifications and Profile are *reached from* the bottom-nav
         // branches (and, for Search, from more than one branch — Discover's
         // AppBar and Matches' category bar both push it) but aren't branch
@@ -436,7 +458,7 @@ GoRouter createRouter(WidgetRef ref) {
                   path: RouteNames.messages,
                   name: RouteNames.messagesName,
                   pageBuilder: (context, state) => const NoTransitionPage(
-                    child: ChatPage(),
+                    child: InboxPage(),
                   ),
                 ),
               ],

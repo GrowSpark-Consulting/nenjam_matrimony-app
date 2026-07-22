@@ -286,6 +286,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverSearchingMoreLabel => 'Searching for more souls…';
 
   @override
+  String get discoverFallbackBannerLabel =>
+      'We widened your preferences slightly to show more matches.';
+
+  @override
   String get discoverVerifiedLabel => 'Verified';
 
   @override
@@ -612,7 +616,161 @@ class AppLocalizationsEn extends AppLocalizations {
   String get matchesMutualEmpty => 'Mutual Likes';
 
   @override
-  String get chatTitle => 'Conversations';
+  String get inboxTitle => 'Inbox';
+
+  @override
+  String get inboxNotificationsTooltip => 'Notifications';
+
+  @override
+  String get inboxFilterTooltip => 'Filters';
+
+  @override
+  String get inboxSearchHint => 'Search conversations...';
+
+  @override
+  String get inboxTabInterestsReceived => 'Interests Received';
+
+  @override
+  String get inboxTabInterestsSent => 'Interests Sent';
+
+  @override
+  String get inboxTabMessages => 'Messages';
+
+  @override
+  String get inboxEmptyTitle => 'No conversations yet';
+
+  @override
+  String get inboxEmptySubtitle =>
+      'Start discovering matches to begin a conversation.';
+
+  @override
+  String get inboxEmptyCta => 'Discover Matches';
+
+  @override
+  String get inboxLoadError => 'Something went wrong. Pull down to try again.';
+
+  @override
+  String get inboxFilterSheetTitle => 'Filters';
+
+  @override
+  String get inboxFilterUnread => 'Unread';
+
+  @override
+  String get inboxFilterOnline => 'Online';
+
+  @override
+  String get inboxFilterVerified => 'Verified';
+
+  @override
+  String get inboxFilterPremium => 'Premium';
+
+  @override
+  String get inboxFilterRecent => 'Recent';
+
+  @override
+  String get inboxFilterArchived => 'Archived';
+
+  @override
+  String get inboxFilterBlocked => 'Blocked';
+
+  @override
+  String get inboxSmartNewMatch => 'New Match';
+
+  @override
+  String get inboxSmartInterestAccepted => 'Interest Accepted';
+
+  @override
+  String get inboxSmartInterestDeclined => 'Interest Declined';
+
+  @override
+  String get inboxSmartMessageRequest => 'Message Request';
+
+  @override
+  String get inboxSmartAiSuggested => 'AI Suggested';
+
+  @override
+  String inboxCompatibilityLabel(int percent) {
+    return '$percent% Match';
+  }
+
+  @override
+  String get inboxActionViewProfile => 'View Profile';
+
+  @override
+  String get inboxActionMute => 'Mute';
+
+  @override
+  String get inboxActionUnmute => 'Unmute';
+
+  @override
+  String get inboxActionArchive => 'Archive';
+
+  @override
+  String get inboxActionUnarchive => 'Unarchive';
+
+  @override
+  String get inboxActionBlock => 'Block';
+
+  @override
+  String get inboxActionUnblock => 'Unblock';
+
+  @override
+  String get inboxActionDelete => 'Delete';
+
+  @override
+  String get inboxActionPin => 'Pin';
+
+  @override
+  String get inboxActionMarkUnread => 'Mark Unread';
+
+  @override
+  String get inboxPremiumLockedName => 'Premium Member';
+
+  @override
+  String get inboxPremiumLockedMessage =>
+      'Unlock Premium to continue chatting.';
+
+  @override
+  String get inboxUpgradeCta => 'Upgrade';
+
+  @override
+  String get inboxAccept => 'Accept';
+
+  @override
+  String get inboxDecline => 'Decline';
+
+  @override
+  String get inboxYesterday => 'Yesterday';
+
+  @override
+  String get inboxToday => 'Today';
+
+  @override
+  String get inboxOnline => 'Online';
+
+  @override
+  String get inboxMoreOptions => 'More options';
+
+  @override
+  String get inboxMessageFailed => 'Failed to send';
+
+  @override
+  String get inboxBlockedBanner => 'You have blocked this conversation.';
+
+  @override
+  String get inboxComposerHint => 'Type a message...';
+
+  @override
+  String get inboxComposerAttach => 'Attach';
+
+  @override
+  String get inboxComposerEmoji => 'Emoji';
+
+  @override
+  String get inboxComposerSend => 'Send';
+
+  @override
+  String get inboxComposerVoice => 'Voice message';
 
   @override
   String get notificationsTitle => 'Notifications';

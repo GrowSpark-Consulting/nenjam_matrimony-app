@@ -620,6 +620,12 @@ abstract class AppLocalizations {
   /// **'Searching for more souls…'**
   String get discoverSearchingMoreLabel;
 
+  /// No description provided for @discoverFallbackBannerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'We widened your preferences slightly to show more matches.'**
+  String get discoverFallbackBannerLabel;
+
   /// No description provided for @discoverVerifiedLabel.
   ///
   /// In en, this message translates to:
@@ -1262,11 +1268,311 @@ abstract class AppLocalizations {
   /// **'Mutual Likes'**
   String get matchesMutualEmpty;
 
-  /// No description provided for @chatTitle.
+  /// No description provided for @inboxTitle.
   ///
   /// In en, this message translates to:
-  /// **'Conversations'**
-  String get chatTitle;
+  /// **'Inbox'**
+  String get inboxTitle;
+
+  /// No description provided for @inboxNotificationsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get inboxNotificationsTooltip;
+
+  /// No description provided for @inboxFilterTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get inboxFilterTooltip;
+
+  /// No description provided for @inboxSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search conversations...'**
+  String get inboxSearchHint;
+
+  /// No description provided for @inboxTabInterestsReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Interests Received'**
+  String get inboxTabInterestsReceived;
+
+  /// No description provided for @inboxTabInterestsSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Interests Sent'**
+  String get inboxTabInterestsSent;
+
+  /// No description provided for @inboxTabMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get inboxTabMessages;
+
+  /// No description provided for @inboxEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No conversations yet'**
+  String get inboxEmptyTitle;
+
+  /// No description provided for @inboxEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start discovering matches to begin a conversation.'**
+  String get inboxEmptySubtitle;
+
+  /// No description provided for @inboxEmptyCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover Matches'**
+  String get inboxEmptyCta;
+
+  /// No description provided for @inboxLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Pull down to try again.'**
+  String get inboxLoadError;
+
+  /// No description provided for @inboxFilterSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get inboxFilterSheetTitle;
+
+  /// No description provided for @inboxFilterUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread'**
+  String get inboxFilterUnread;
+
+  /// No description provided for @inboxFilterOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get inboxFilterOnline;
+
+  /// No description provided for @inboxFilterVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get inboxFilterVerified;
+
+  /// No description provided for @inboxFilterPremium.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium'**
+  String get inboxFilterPremium;
+
+  /// No description provided for @inboxFilterRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent'**
+  String get inboxFilterRecent;
+
+  /// No description provided for @inboxFilterArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get inboxFilterArchived;
+
+  /// No description provided for @inboxFilterBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked'**
+  String get inboxFilterBlocked;
+
+  /// No description provided for @inboxSmartNewMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'New Match'**
+  String get inboxSmartNewMatch;
+
+  /// No description provided for @inboxSmartInterestAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Interest Accepted'**
+  String get inboxSmartInterestAccepted;
+
+  /// No description provided for @inboxSmartInterestDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'Interest Declined'**
+  String get inboxSmartInterestDeclined;
+
+  /// No description provided for @inboxSmartMessageRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Message Request'**
+  String get inboxSmartMessageRequest;
+
+  /// No description provided for @inboxSmartAiSuggested.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Suggested'**
+  String get inboxSmartAiSuggested;
+
+  /// No description provided for @inboxCompatibilityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% Match'**
+  String inboxCompatibilityLabel(int percent);
+
+  /// No description provided for @inboxActionViewProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'View Profile'**
+  String get inboxActionViewProfile;
+
+  /// No description provided for @inboxActionMute.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get inboxActionMute;
+
+  /// No description provided for @inboxActionUnmute.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute'**
+  String get inboxActionUnmute;
+
+  /// No description provided for @inboxActionArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get inboxActionArchive;
+
+  /// No description provided for @inboxActionUnarchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Unarchive'**
+  String get inboxActionUnarchive;
+
+  /// No description provided for @inboxActionBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Block'**
+  String get inboxActionBlock;
+
+  /// No description provided for @inboxActionUnblock.
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock'**
+  String get inboxActionUnblock;
+
+  /// No description provided for @inboxActionDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get inboxActionDelete;
+
+  /// No description provided for @inboxActionPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin'**
+  String get inboxActionPin;
+
+  /// No description provided for @inboxActionMarkUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark Unread'**
+  String get inboxActionMarkUnread;
+
+  /// No description provided for @inboxPremiumLockedName.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium Member'**
+  String get inboxPremiumLockedName;
+
+  /// No description provided for @inboxPremiumLockedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock Premium to continue chatting.'**
+  String get inboxPremiumLockedMessage;
+
+  /// No description provided for @inboxUpgradeCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade'**
+  String get inboxUpgradeCta;
+
+  /// No description provided for @inboxAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get inboxAccept;
+
+  /// No description provided for @inboxDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get inboxDecline;
+
+  /// No description provided for @inboxYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get inboxYesterday;
+
+  /// No description provided for @inboxToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get inboxToday;
+
+  /// No description provided for @inboxOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get inboxOnline;
+
+  /// No description provided for @inboxMoreOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get inboxMoreOptions;
+
+  /// No description provided for @inboxMessageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send'**
+  String get inboxMessageFailed;
+
+  /// No description provided for @inboxBlockedBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'You have blocked this conversation.'**
+  String get inboxBlockedBanner;
+
+  /// No description provided for @inboxComposerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a message...'**
+  String get inboxComposerHint;
+
+  /// No description provided for @inboxComposerAttach.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach'**
+  String get inboxComposerAttach;
+
+  /// No description provided for @inboxComposerEmoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Emoji'**
+  String get inboxComposerEmoji;
+
+  /// No description provided for @inboxComposerSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get inboxComposerSend;
+
+  /// No description provided for @inboxComposerVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice message'**
+  String get inboxComposerVoice;
 
   /// No description provided for @notificationsTitle.
   ///

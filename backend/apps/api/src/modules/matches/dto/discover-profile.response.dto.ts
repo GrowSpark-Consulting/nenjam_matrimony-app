@@ -46,4 +46,13 @@ export interface DiscoverFeedResponseDto {
   limit: number;
   total: number;
   hasMore: boolean;
+  // ProgressiveFallbackStrategy metadata. `tier` 1 = exact match on the
+  // caller's saved preferences; higher tiers mean the search was
+  // progressively widened (see tier-plan.ts). `fallbackUsed` is the single
+  // flag Flutter needs to decide whether to show the "widened your
+  // preferences" banner.
+  tier: number;
+  fallbackUsed: boolean;
+  reason: string;
+  relaxedFilters: string[];
 }

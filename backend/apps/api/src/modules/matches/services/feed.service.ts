@@ -33,17 +33,24 @@ export class FeedService {
     );
     const skip = (page - 1) * limit;
 
-    const { rows, total } = await this.recommendation.getFeedForUser(
-      currentUserId,
-      { skip, take: limit },
-    );
+    const result = await this.recommendation.getFeedForUser(currentUserId, {
+      skip,
+      take: limit,
+    });
 
     return {
-      items: await this.mapper.toDtoList(rows),
+      items: await this.mapper.toDtoList(result.rows),
       page,
       limit,
-      total,
-      hasMore: skip + rows.length < total,
+      total: result.total,
+      hasMore: skip + result.rows.length < result.total,
+      // A strategy that doesn't implement tiered fallback (e.g. the plain
+      // FilteredFeedStrategy, or search reusing the same shape) simply omits
+      // these — default to "no fallback happened".
+      tier: result.tier ?? 1,
+      fallbackUsed: result.fallbackUsed ?? false,
+      reason: result.reason ?? '',
+      relaxedFilters: result.relaxedFilters ?? [],
     };
   }
 }

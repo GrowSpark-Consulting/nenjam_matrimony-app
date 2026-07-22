@@ -50,6 +50,40 @@ function parseHeightToCm(value: string | undefined): number | null {
   return parseLeadingNumber(value);
 }
 
+// The wizard's partner-preference height picker emits bucketed feet'inches
+// ranges ("4'6\"-5'0\"", "6'0\"+", "Any" — see partner_preference_labels.dart's
+// partnerPrefHeightRanges). parseIntRange's generic `(\d+)\D+(\d+)` regex reads
+// the first two digit runs verbatim — for "4'6\"-5'0\"" that's the 4 and the 6
+// (feet and inches of the LOWER bound alone), producing an impossible
+// min=4cm/max=6cm that excludes every real profile from the feed. Parse each
+// side of the range through parseHeightToCm instead so bounds land in
+// realistic centimetres.
+function parseHeightRangeToCm(
+  value: string | undefined,
+  fallback: [number, number],
+): [number, number] {
+  if (!value) return fallback;
+  const trimmed = value.trim();
+  if (/^any$/i.test(trimmed)) return fallback;
+
+  // Open-ended lower bound, e.g. "6'0\"+".
+  const plusMatch = trimmed.match(/^(.+?)\+$/);
+  if (plusMatch) {
+    const min = parseHeightToCm(plusMatch[1]);
+    return min !== null ? [min, fallback[1]] : fallback;
+  }
+
+  // Closed range, e.g. "4'6\"-5'0\"".
+  const dashIndex = trimmed.indexOf('-');
+  if (dashIndex > 0) {
+    const min = parseHeightToCm(trimmed.slice(0, dashIndex));
+    const max = parseHeightToCm(trimmed.slice(dashIndex + 1));
+    if (min !== null && max !== null) return [min, max];
+  }
+
+  return fallback;
+}
+
 function toStringArray(value: string | undefined): string[] {
   if (!value) return [];
   return value
@@ -302,7 +336,7 @@ export class ProfileService {
         partnerPref.preferredAgeRange as string | undefined,
         [18, 45],
       );
-      const [minHeightCm, maxHeightCm] = parseIntRange(
+      const [minHeightCm, maxHeightCm] = parseHeightRangeToCm(
         partnerPref.preferredHeightRange as string | undefined,
         [140, 210],
       );

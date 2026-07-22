@@ -43,6 +43,12 @@ export class SearchService {
       limit,
       total,
       hasMore: skip + rows.length < total,
+      // Text search has no partner-preference tiers to fall back through —
+      // always "exact", matching FeedService's default for non-tiered results.
+      tier: 1,
+      fallbackUsed: false,
+      reason: '',
+      relaxedFilters: [],
     };
   }
 }

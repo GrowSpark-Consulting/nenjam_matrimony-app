@@ -172,21 +172,21 @@ model ProfilePhoto {
 
 /// Partner preference criteria used for AI matching and search filters.
 model PartnerPreference {
-  id                 String   @id @default(uuid())
-  userId             String   @unique @map("user_id")
-  minAge             Int      @default(18) @map("min_age")
-  maxAge             Int      @default(45) @map("max_age")
-  minHeightCm        Int      @default(140) @map("min_height_cm")
-  maxHeightCm        Int      @default(210) @map("max_height_cm")
-  preferredReligions Json     @default("[]") @map("preferred_religions")
-  preferredCastes    Json     @default("[]") @map("preferred_castes")
-  minIncomeLakhs     Decimal? @map("min_income_lakhs") @db.Decimal(10, 2)
-  preferredCities    Json     @default("[]") @map("preferred_cities")
-  preferredStates    Json     @default("[]") @map("preferred_states")
-  preferredEducation Json     @default("[]") @map("preferred_education")
-  preferredOccupations   Json @default("[]") @map("preferred_occupations")
-  preferredMotherTongues Json @default("[]") @map("preferred_mother_tongues")
-  maritalStatusPref  Json     @default("[]") @map("marital_status_pref")
+  id                     String   @id @default(uuid())
+  userId                 String   @unique @map("user_id")
+  minAge                 Int      @default(18) @map("min_age")
+  maxAge                 Int      @default(45) @map("max_age")
+  minHeightCm            Int      @default(140) @map("min_height_cm")
+  maxHeightCm            Int      @default(210) @map("max_height_cm")
+  preferredReligions     Json     @default("[]") @map("preferred_religions")
+  preferredCastes        Json     @default("[]") @map("preferred_castes")
+  minIncomeLakhs         Decimal? @map("min_income_lakhs") @db.Decimal(10, 2)
+  preferredCities        Json     @default("[]") @map("preferred_cities")
+  preferredStates        Json     @default("[]") @map("preferred_states")
+  preferredEducation     Json     @default("[]") @map("preferred_education")
+  preferredOccupations   Json     @default("[]") @map("preferred_occupations")
+  preferredMotherTongues Json     @default("[]") @map("preferred_mother_tongues")
+  maritalStatusPref      Json     @default("[]") @map("marital_status_pref")
   // Advanced preference fields (religion/community, education/career,
   // family, lifestyle, location, special cases, verification filters, and
   // per-criterion matching-engine requirement tags) collected by the
@@ -194,10 +194,10 @@ model PartnerPreference {
   // mirrors Frontend's PartnerPreferenceExtended.toJson() — rather than one
   // column per field, so the client's field set can evolve without a
   // migration for every addition.
-  extendedPreferences Json    @default("{}") @map("extended_preferences")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  extendedPreferences    Json     @default("{}") @map("extended_preferences")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("partner_preferences")
 }
@@ -221,23 +221,23 @@ model RegistrationStep {
 
 /// Horoscope details for traditional Porutham / Koota matching.
 model AstrologyProfile {
-  id         String     @id @default(uuid())
-  userId     String     @unique @map("user_id")
-  birthDate  DateTime   @map("birth_date")
-  birthTime  String?    @map("birth_time")
-  birthPlace String?    @map("birth_place")
-  birthLat   Decimal?   @map("birth_lat") @db.Decimal(10, 7)
-  birthLng   Decimal?   @map("birth_lng") @db.Decimal(10, 7)
-  rasi       String?
-  nakshatra  String?
-  lagnam     String?
-  gotram     String?
-  dosham     DoshamType @default(NONE)
-  horoscopeAvailable Boolean @default(false) @map("horoscope_available")
-  rawChart   Json?      @map("raw_chart")
-  createdAt  DateTime   @default(now()) @map("created_at")
-  updatedAt  DateTime   @updatedAt @map("updated_at")
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String     @id @default(uuid())
+  userId             String     @unique @map("user_id")
+  birthDate          DateTime   @map("birth_date")
+  birthTime          String?    @map("birth_time")
+  birthPlace         String?    @map("birth_place")
+  birthLat           Decimal?   @map("birth_lat") @db.Decimal(10, 7)
+  birthLng           Decimal?   @map("birth_lng") @db.Decimal(10, 7)
+  rasi               String?
+  nakshatra          String?
+  lagnam             String?
+  gotram             String?
+  dosham             DoshamType @default(NONE)
+  horoscopeAvailable Boolean    @default(false) @map("horoscope_available")
+  rawChart           Json?      @map("raw_chart")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("astrology_profiles")
 }

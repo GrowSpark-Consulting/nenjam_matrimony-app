@@ -44,6 +44,16 @@ describe('PrismaService', () => {
   // setup (verified empirically), so onModuleInit uses a real `SELECT 1` via
   // $queryRaw as the actual liveness check — these tests mock that instead.
 
+  // onModuleInit retries a failing SELECT 1 up to CONNECT_MAX_ATTEMPTS times
+  // with real (2s/4s/6s) backoff between attempts, to ride out a Neon
+  // cold-start blip instead of crashing the app on one transient failure.
+  // Every "always fails" test below exhausts all attempts, which would
+  // otherwise make these tests actually wait ~12s each (and blow past Jest's
+  // 5s default timeout) — fake timers let the backoff elapse instantly.
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('connects successfully and logs a banner without leaking the password', async () => {
     const service = await buildService();
     spyOnQueryRaw(service).mockResolvedValue([{ '?column?': 1 }]);
@@ -59,12 +69,41 @@ describe('PrismaService', () => {
     logSpy.mockRestore();
   });
 
+  it('retries a transient failure and succeeds without throwing once a later attempt connects', async () => {
+    const service = await buildService();
+    spyOnQueryRaw(service)
+      .mockRejectedValueOnce(errorWithCode('ETIMEDOUT'))
+      .mockRejectedValueOnce(errorWithCode('ETIMEDOUT'))
+      .mockResolvedValueOnce([{ '?column?': 1 }]);
+    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+
+    jest.useFakeTimers();
+    const init = service.onModuleInit();
+    await jest.runAllTimersAsync();
+    await expect(init).resolves.toBeUndefined();
+
+    // Warned twice (the two failed attempts), then logged the SUCCESS banner
+    // on the third — never rejected the whole app for a transient blip.
+    expect(warnSpy).toHaveBeenCalledTimes(2);
+    expect(
+      logSpy.mock.calls.map((call) => String(call[0])).join('\n'),
+    ).toContain('Connection  : SUCCESS');
+
+    warnSpy.mockRestore();
+    logSpy.mockRestore();
+  });
+
   it('logs a meaningful error and rethrows when the connection is refused', async () => {
     const service = await buildService();
     spyOnQueryRaw(service).mockRejectedValue(errorWithCode('ECONNREFUSED'));
     const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
 
-    await expect(service.onModuleInit()).rejects.toThrow();
+    jest.useFakeTimers();
+    const init = service.onModuleInit();
+    const assertion = expect(init).rejects.toThrow();
+    await jest.runAllTimersAsync();
+    await assertion;
     expect(
       errorSpy.mock.calls.map((call) => String(call[0])).join('\n'),
     ).toContain('unreachable');
@@ -77,7 +116,11 @@ describe('PrismaService', () => {
     spyOnQueryRaw(service).mockRejectedValue(errorWithCode('28P01'));
     const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
 
-    await expect(service.onModuleInit()).rejects.toThrow();
+    jest.useFakeTimers();
+    const init = service.onModuleInit();
+    const assertion = expect(init).rejects.toThrow();
+    await jest.runAllTimersAsync();
+    await assertion;
     expect(
       errorSpy.mock.calls.map((call) => String(call[0])).join('\n'),
     ).toContain('Authentication failed');
@@ -90,7 +133,11 @@ describe('PrismaService', () => {
     spyOnQueryRaw(service).mockRejectedValue(errorWithCode('3D000'));
     const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
 
-    await expect(service.onModuleInit()).rejects.toThrow();
+    jest.useFakeTimers();
+    const init = service.onModuleInit();
+    const assertion = expect(init).rejects.toThrow();
+    await jest.runAllTimersAsync();
+    await assertion;
     expect(
       errorSpy.mock.calls.map((call) => String(call[0])).join('\n'),
     ).toContain('does not exist');
@@ -103,7 +150,11 @@ describe('PrismaService', () => {
     spyOnQueryRaw(service).mockRejectedValue(errorWithCode('ETIMEDOUT'));
     const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
 
-    await expect(service.onModuleInit()).rejects.toThrow();
+    jest.useFakeTimers();
+    const init = service.onModuleInit();
+    const assertion = expect(init).rejects.toThrow();
+    await jest.runAllTimersAsync();
+    await assertion;
     expect(
       errorSpy.mock.calls.map((call) => String(call[0])).join('\n'),
     ).toContain('timed out');

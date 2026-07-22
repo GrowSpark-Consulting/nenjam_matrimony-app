@@ -14,6 +14,13 @@ export interface FeedPageQuery {
 export interface RecommendationResult {
   rows: FeedProfileRow[];
   total: number;
+  /** Which tier produced these rows (1 = exact match on saved preferences).
+   *  Strategies that don't implement tiered fallback can omit this — callers
+   *  default it to 1/false/[] . */
+  tier?: number;
+  fallbackUsed?: boolean;
+  reason?: string;
+  relaxedFilters?: string[];
 }
 
 export interface RecommendationService {

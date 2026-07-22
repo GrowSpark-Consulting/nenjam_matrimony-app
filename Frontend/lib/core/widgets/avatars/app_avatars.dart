@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_gradients.dart';
+import '../feedback/pulse_dot.dart';
 import 'gender_placeholder.dart';
 
 /// Reusable base Circle Avatar with CachedNetworkImage fallback.
@@ -95,14 +96,10 @@ class NmOnlineAvatar extends StatelessWidget {
           Positioned(
             right: 2,
             bottom: 2,
-            child: Container(
-              width: size * 0.25,
-              height: size * 0.25,
-              decoration: BoxDecoration(
-                color: AppColors.online,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
+            child: NmPulseDot(
+              size: size * 0.25,
+              color: AppColors.online,
+              border: Border.all(color: Colors.white, width: 2),
             ),
           ),
       ],
