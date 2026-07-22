@@ -34,18 +34,40 @@ const base: FeedWhereParams = {
   pref: null,
 };
 
+const BASE_CLAUSE_COUNT = 3; // self-exclusion, isProfileComplete, user.is{...}
+
 describe('buildFeedWhere', () => {
-  it('always excludes the caller and soft-deleted users', () => {
+  it('always excludes the caller, incomplete profiles, and invalid users', () => {
     const c = clauses(base);
     expect(c).toContainEqual({ userId: { not: 'me' } });
-    expect(c).toContainEqual({ user: { is: { deletedAt: null } } });
+    expect(c).toContainEqual({ isProfileComplete: true });
+    expect(
+      c.some(
+        (x) =>
+          'user' in x &&
+          JSON.stringify(x) ===
+            JSON.stringify({
+              user: {
+                is: {
+                  deletedAt: null,
+                  status: 'ACTIVE',
+                  NOT: [
+                    { blocksMade: { some: { blockedUserId: 'me' } } },
+                    { blocksReceived: { some: { blockerId: 'me' } } },
+                  ],
+                },
+              },
+            }),
+      ),
+    ).toBe(true);
+    expect(c).toHaveLength(BASE_CLAUSE_COUNT);
   });
 
   it('applies opposite-gender matching when gender is known', () => {
     expect(has({ ...base, myGender: 'MALE' }, (c) => 'gender' in c && c.gender === 'FEMALE')).toBe(true);
     expect(has({ ...base, myGender: 'FEMALE' }, (c) => 'gender' in c && c.gender === 'MALE')).toBe(true);
-    // Unknown gender → no gender constraint (only the two base clauses).
-    expect(clauses(base)).toHaveLength(2);
+    // Unknown gender → no gender constraint (only the base clauses).
+    expect(clauses(base)).toHaveLength(BASE_CLAUSE_COUNT);
   });
 
   it('ignores empty / "Any" / meta preference tokens (never over-filters)', () => {
@@ -58,8 +80,8 @@ describe('buildFeedWhere', () => {
         preferredMotherTongues: [],
       },
     });
-    // Only the two base clauses survive.
-    expect(c).toHaveLength(2);
+    // Only the base clauses survive.
+    expect(c).toHaveLength(BASE_CLAUSE_COUNT);
   });
 
   it('applies literal values as case-insensitive filters', () => {
@@ -70,8 +92,8 @@ describe('buildFeedWhere', () => {
     expect(
       hasCiIn({ ...base, self: { caste: 'Iyer' }, pref: { preferredCastes: ['Same Caste'] } }, 'caste', ['Iyer']),
     ).toBe(true);
-    // No own caste → "Same Caste" becomes a no-op (2 base clauses only).
-    expect(clauses({ ...base, pref: { preferredCastes: ['Same Caste'] } })).toHaveLength(2);
+    // No own caste → "Same Caste" becomes a no-op (base clauses only).
+    expect(clauses({ ...base, pref: { preferredCastes: ['Same Caste'] } })).toHaveLength(BASE_CLAUSE_COUNT);
   });
 
   it('routes "Same City" / "Same State" to the correct columns', () => {
@@ -89,7 +111,7 @@ describe('buildFeedWhere', () => {
           preferredEducation: ['B.E / B.Tech+'],
         },
       }),
-    ).toHaveLength(2);
+    ).toHaveLength(BASE_CLAUSE_COUNT);
   });
 
   it('normalizes marital-status labels to enum values', () => {
@@ -99,7 +121,7 @@ describe('buildFeedWhere', () => {
       ),
     ).toBe(true);
     // "Doesn't Matter" / "Any" are not valid enum values → dropped.
-    expect(clauses({ ...base, pref: { maritalStatusPref: ["Doesn't Matter", 'Any'] } })).toHaveLength(2);
+    expect(clauses({ ...base, pref: { maritalStatusPref: ["Doesn't Matter", 'Any'] } })).toHaveLength(BASE_CLAUSE_COUNT);
   });
 
   it('applies extended lifestyle preferences (diet/smoking/drinking/country)', () => {
@@ -118,6 +140,25 @@ describe('buildFeedWhere', () => {
     expect(c).toContainEqual({ smokingHabits: { equals: 'No', mode: 'insensitive' } });
     expect(c).toContainEqual({ country: { equals: 'India', mode: 'insensitive' } });
     expect(c.some((x) => 'drinkingHabits' in x)).toBe(false);
+  });
+
+  it('applies extended community (ethnicity) and sub-caste preferences', () => {
+    const c = clauses({
+      ...base,
+      pref: { extendedPreferences: { ethnicity: 'Iyer', subCaste: 'Vadama' } },
+    });
+    expect(c).toContainEqual({ community: { equals: 'Iyer', mode: 'insensitive' } });
+    expect(c).toContainEqual({ subCaste: { equals: 'Vadama', mode: 'insensitive' } });
+  });
+
+  it('always requires ACTIVE status and excludes both directions of a block', () => {
+    const c = clauses({ ...base, currentUserId: 'user-42' });
+    const userClause = c.find((x) => 'user' in x) as { user: { is: Record<string, unknown> } };
+    expect(userClause.user.is.status).toBe('ACTIVE');
+    expect(userClause.user.is.NOT).toEqual([
+      { blocksMade: { some: { blockedUserId: 'user-42' } } },
+      { blocksReceived: { some: { blockerId: 'user-42' } } },
+    ]);
   });
 
   it('applies age and height bounds', () => {
