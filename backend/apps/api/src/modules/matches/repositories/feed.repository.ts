@@ -22,18 +22,36 @@ export const FEED_PROFILE_INCLUDE: Prisma.UserProfileInclude = {
 // A finalized profile row plus the joined user/photos the card needs.
 export type FeedProfileRow = Record<string, unknown>;
 
+// The caller's own attributes the feed needs: gender for opposite-gender
+// matching, and caste/city/state/tongue to resolve relative "Same X" prefs.
+export interface SelfProfile {
+  gender: Gender;
+  caste: string;
+  currentCity: string;
+  currentState: string;
+  motherTongue: string;
+}
+
 @Injectable()
 export class FeedRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** The caller's own gender (for opposite-gender matching); null if they
-   *  haven't finalized a profile yet. */
-  async findGender(userId: string): Promise<Gender | null> {
+  /** The caller's own matchable attributes: gender (for opposite-gender
+   *  matching) plus the fields a relative "Same X" preference resolves against
+   *  (caste / city / state / mother tongue). Null if they haven't finalized a
+   *  profile yet. */
+  async findSelf(userId: string): Promise<SelfProfile | null> {
     const row = await this.prisma.userProfile.findUnique({
       where: { userId },
-      select: { gender: true },
+      select: {
+        gender: true,
+        caste: true,
+        currentCity: true,
+        currentState: true,
+        motherTongue: true,
+      },
     });
-    return row?.gender ?? null;
+    return row ?? null;
   }
 
   /**

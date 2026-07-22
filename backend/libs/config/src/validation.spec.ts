@@ -35,12 +35,10 @@ describe('validationSchema', () => {
     expect(error).toBeUndefined();
   });
 
+  // DATABASE_* are intentionally optional: a deployment may point at a shared
+  // managed DB with a single DATABASE_URL instead of the discrete fields
+  // (see validation.ts / PrismaService). They are covered separately below.
   it.each([
-    'DATABASE_HOST',
-    'DATABASE_PORT',
-    'DATABASE_USER',
-    'DATABASE_PASSWORD',
-    'DATABASE_NAME',
     'REDIS_HOST',
     'REDIS_PORT',
     'ELASTICSEARCH_NODE',
@@ -54,6 +52,23 @@ describe('validationSchema', () => {
     const { error } = validationSchema.validate(env, { abortEarly: false });
     expect(error).toBeDefined();
     expect(error?.message).toContain(key);
+  });
+
+  it('passes with a single DATABASE_URL and no discrete DATABASE_* fields', () => {
+    const env = { ...validEnv } as Record<string, string>;
+    for (const k of [
+      'DATABASE_HOST',
+      'DATABASE_PORT',
+      'DATABASE_USER',
+      'DATABASE_PASSWORD',
+      'DATABASE_NAME',
+    ]) {
+      delete env[k];
+    }
+    env.DATABASE_URL = 'postgresql://u:p@host/db?sslmode=require';
+
+    const { error } = validationSchema.validate(env, { abortEarly: false });
+    expect(error).toBeUndefined();
   });
 
   it('fails when JWT_SECRET is shorter than 16 characters', () => {

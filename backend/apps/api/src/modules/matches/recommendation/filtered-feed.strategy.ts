@@ -28,12 +28,17 @@ export class FilteredFeedStrategy implements RecommendationService {
     userId: string,
     { skip, take }: FeedPageQuery,
   ): Promise<RecommendationResult> {
-    const [myGender, pref] = await Promise.all([
-      this.feedRepository.findGender(userId),
+    const [self, pref] = await Promise.all([
+      this.feedRepository.findSelf(userId),
       this.preferenceRepository.findByUserId(userId),
     ]);
 
-    const where = buildFeedWhere({ currentUserId: userId, myGender, pref });
+    const where = buildFeedWhere({
+      currentUserId: userId,
+      myGender: self?.gender ?? null,
+      self,
+      pref,
+    });
     return this.feedRepository.findMatching(where, { skip, take });
   }
 }
