@@ -27,14 +27,17 @@ function hasCiIn(
   return clauses(params).some((c) => JSON.stringify(c) === want);
 }
 
+// A known gender by default, so every other test's clause count is isolated
+// from the "unknown own gender" edge case (covered by its own dedicated test
+// below) rather than tripping over it incidentally.
 const base: FeedWhereParams = {
   currentUserId: 'me',
-  myGender: null,
+  myGender: 'MALE',
   self: null,
   pref: null,
 };
 
-const BASE_CLAUSE_COUNT = 3; // self-exclusion, isProfileComplete, user.is{...}
+const BASE_CLAUSE_COUNT = 4; // self-exclusion, isProfileComplete, user.is{...}, gender
 
 describe('buildFeedWhere', () => {
   it('always excludes the caller, incomplete profiles, and invalid users', () => {
@@ -60,14 +63,21 @@ describe('buildFeedWhere', () => {
             }),
       ),
     ).toBe(true);
-    expect(c).toHaveLength(BASE_CLAUSE_COUNT);
   });
 
   it('applies opposite-gender matching when gender is known', () => {
     expect(has({ ...base, myGender: 'MALE' }, (c) => 'gender' in c && c.gender === 'FEMALE')).toBe(true);
     expect(has({ ...base, myGender: 'FEMALE' }, (c) => 'gender' in c && c.gender === 'MALE')).toBe(true);
-    // Unknown gender → no gender constraint (only the base clauses).
     expect(clauses(base)).toHaveLength(BASE_CLAUSE_COUNT);
+  });
+
+  it('fails closed (zero possible results) when the caller\'s own gender is unknown', () => {
+    // No finalized profile → myGender is null. The exclusivity rule is
+    // mandatory, so with no self-gender to anchor "opposite", it must never
+    // fall back to "no constraint" (which would leak a mixed-gender feed).
+    const c = clauses({ ...base, myGender: null });
+    expect(c).toContainEqual({ gender: { in: [] } });
+    expect(c).toHaveLength(BASE_CLAUSE_COUNT);
   });
 
   it('ignores empty / "Any" / meta preference tokens (never over-filters)', () => {

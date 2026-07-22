@@ -122,6 +122,13 @@ export function buildFeedWhere(
 
   if (myGender === 'MALE') and.push({ gender: 'FEMALE' });
   else if (myGender === 'FEMALE') and.push({ gender: 'MALE' });
+  else {
+    // The opposite-gender rule is mandatory and must always apply — but with
+    // no finalized profile, the caller's own gender (and therefore who counts
+    // as "opposite") is unknown. Fail closed (zero results) rather than
+    // silently returning an unfiltered, mixed-gender feed.
+    and.push({ gender: { in: [] } });
+  }
 
   if (pref) {
     // Date-only "today" so the bounds are birthday-accurate and immune to the
