@@ -50,7 +50,7 @@ describe('buildFeedWhere', () => {
               user: {
                 is: {
                   deletedAt: null,
-                  status: 'ACTIVE',
+                  status: { notIn: ['SUSPENDED', 'DEACTIVATED', 'BANNED'] },
                   NOT: [
                     { blocksMade: { some: { blockedUserId: 'me' } } },
                     { blocksReceived: { some: { blockerId: 'me' } } },
@@ -151,10 +151,12 @@ describe('buildFeedWhere', () => {
     expect(c).toContainEqual({ subCaste: { equals: 'Vadama', mode: 'insensitive' } });
   });
 
-  it('always requires ACTIVE status and excludes both directions of a block', () => {
+  it('excludes suspended/deactivated/banned users but not PENDING_VERIFICATION, and excludes both directions of a block', () => {
     const c = clauses({ ...base, currentUserId: 'user-42' });
     const userClause = c.find((x) => 'user' in x) as { user: { is: Record<string, unknown> } };
-    expect(userClause.user.is.status).toBe('ACTIVE');
+    expect(userClause.user.is.status).toEqual({
+      notIn: ['SUSPENDED', 'DEACTIVATED', 'BANNED'],
+    });
     expect(userClause.user.is.NOT).toEqual([
       { blocksMade: { some: { blockedUserId: 'user-42' } } },
       { blocksReceived: { some: { blockerId: 'user-42' } } },

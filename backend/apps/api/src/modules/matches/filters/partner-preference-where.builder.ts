@@ -83,9 +83,10 @@ export interface PreferenceFilters {
  *    "B.E / B.Tech+") are non-literal — they are dropped, never filtered on, so
  *    the feed never over-filters to an empty result on a non-literal choice.
  *  - "Same X" resolves to the caller's own attribute (caste/city/state/tongue).
- *  - Always excludes: the caller themselves, soft-deleted users, non-ACTIVE
- *    users (unverified/suspended/deactivated/banned), incomplete profiles, and
- *    anyone with a mutual block against the caller.
+ *  - Always excludes: the caller themselves, soft-deleted users, suspended/
+ *    deactivated/banned users, incomplete profiles, and anyone with a mutual
+ *    block against the caller. PENDING_VERIFICATION users ARE included — no
+ *    verification flow exists yet to ever clear that state.
  *  - Only fields that exist on the schema are used; nothing is invented.
  */
 export function buildFeedWhere(
@@ -103,9 +104,12 @@ export function buildFeedWhere(
       user: {
         is: {
           deletedAt: null,
-          // Only ACTIVE accounts are matchable — excludes unverified
-          // (PENDING_VERIFICATION), SUSPENDED, DEACTIVATED, and BANNED users.
-          status: 'ACTIVE',
+          // Excludes only genuinely-bad account states (suspended, deactivated,
+          // banned). PENDING_VERIFICATION is deliberately NOT excluded: there is
+          // no verification flow in this app yet that ever promotes a user to
+          // ACTIVE, so requiring ACTIVE would permanently hide every real
+          // signup from Discover. Revisit this once verification exists.
+          status: { notIn: ['SUSPENDED', 'DEACTIVATED', 'BANNED'] },
           // Mutual block: neither side of a block should see the other.
           NOT: [
             { blocksMade: { some: { blockedUserId: currentUserId } } },
