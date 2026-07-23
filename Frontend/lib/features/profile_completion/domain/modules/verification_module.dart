@@ -1,7 +1,13 @@
 import '../profile_completion_module.dart';
 
-/// Proportional over 3 *actionable* verification flags — mobile is excluded
-/// since it's auto-verified at signup/login and never user-actionable here.
+/// Step 13 (Verification) — worth 25 of the overall 100 points, 5 per
+/// verified flag: mobile, income, asset, aadhaar/government ID, NRI. Email
+/// is deliberately excluded — it stays part of account verification/security
+/// (see AuthUser.emailVerified) but must never add to this module's score,
+/// per the product requirement that Step 13 tops out at exactly 25%.
+/// [weight] was raised from 10 to 25 to match; [RegistrationModule.weight]
+/// was reduced 50 -> 35 to keep all modules' weights summing to 100 (see its
+/// own doc comment).
 class VerificationModule extends ProfileCompletionModule {
   const VerificationModule();
 
@@ -9,15 +15,17 @@ class VerificationModule extends ProfileCompletionModule {
   String get id => 'verification';
 
   @override
-  double get weight => 10;
+  double get weight => 25;
 
   @override
   ModuleStatus evaluate(ProfileCompletionContext context) {
     final v = context.draft.verificationStatus;
     final flags = [
-      v.emailVerified,
-      v.faceVerified,
+      v.mobileVerified,
+      v.incomeVerified,
+      v.assetVerified,
       v.aadhaarVerified || v.govIdVerified,
+      v.nriVerified,
     ];
     final done = flags.where((f) => f).length;
     final progress = done / flags.length;

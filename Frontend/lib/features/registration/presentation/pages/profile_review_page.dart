@@ -425,10 +425,16 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                         _ri('Email', draft.verificationStatus.emailVerified
                             ? 'Verified ✓'
                             : 'Pending'),
-                        _ri('Face', draft.verificationStatus.faceVerified
+                        _ri('Income', draft.verificationStatus.incomeVerified
+                            ? 'Verified ✓'
+                            : 'Pending'),
+                        _ri('Asset', draft.verificationStatus.assetVerified
                             ? 'Verified ✓'
                             : 'Pending'),
                         _ri('Aadhaar', draft.verificationStatus.aadhaarVerified
+                            ? 'Verified ✓'
+                            : 'Pending'),
+                        _ri('NRI', draft.verificationStatus.nriVerified
                             ? 'Verified ✓'
                             : 'Pending'),
                       ],

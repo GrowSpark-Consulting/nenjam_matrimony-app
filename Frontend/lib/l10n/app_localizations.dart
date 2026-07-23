@@ -4034,6 +4034,42 @@ abstract class AppLocalizations {
   /// **'Verify your age and identity securely'**
   String get registrationVerifyIdSubtitle;
 
+  /// No description provided for @registrationVerifyIncomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Income Verification'**
+  String get registrationVerifyIncomeTitle;
+
+  /// No description provided for @registrationVerifyIncomeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload a document to verify your income'**
+  String get registrationVerifyIncomeSubtitle;
+
+  /// No description provided for @registrationVerifyAssetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Asset Verification'**
+  String get registrationVerifyAssetTitle;
+
+  /// No description provided for @registrationVerifyAssetSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload proof of assets for verification'**
+  String get registrationVerifyAssetSubtitle;
+
+  /// No description provided for @registrationVerifyNriTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'NRI Verification'**
+  String get registrationVerifyNriTitle;
+
+  /// No description provided for @registrationVerifyNriSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload proof of your overseas residency status'**
+  String get registrationVerifyNriSubtitle;
+
   /// No description provided for @registrationPrivacyTitle.
   ///
   /// In en, this message translates to:
@@ -4051,6 +4087,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Verify'**
   String get registrationVerifyButton;
+
+  /// No description provided for @registrationVerificationRetryButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get registrationVerificationRetryButton;
+
+  /// No description provided for @registrationVerificationPendingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Review'**
+  String get registrationVerificationPendingLabel;
+
+  /// No description provided for @registrationVerificationRejectedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification Rejected'**
+  String get registrationVerificationRejectedLabel;
+
+  /// No description provided for @registrationVerificationFailedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Failed'**
+  String get registrationVerificationFailedLabel;
+
+  /// No description provided for @registrationVerifyMobileRequiredHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your mobile number to finish registration.'**
+  String get registrationVerifyMobileRequiredHint;
 
   /// No description provided for @registrationProfileForTitle.
   ///

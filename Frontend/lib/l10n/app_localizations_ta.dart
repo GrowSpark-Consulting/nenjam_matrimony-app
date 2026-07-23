@@ -2044,6 +2044,27 @@ class AppLocalizationsTa extends AppLocalizations {
       'உங்கள் வயது மற்றும் அடையாளத்தை பாதுகாப்பாக சரிபார்க்கவும்';
 
   @override
+  String get registrationVerifyIncomeTitle => 'வருமான சரிபார்ப்பு';
+
+  @override
+  String get registrationVerifyIncomeSubtitle =>
+      'உங்கள் வருமானத்தை சரிபார்க்க ஆவணத்தை பதிவேற்றவும்';
+
+  @override
+  String get registrationVerifyAssetTitle => 'சொத்து சரிபார்ப்பு';
+
+  @override
+  String get registrationVerifyAssetSubtitle =>
+      'சரிபார்ப்புக்காக சொத்து ஆதாரத்தை பதிவேற்றவும்';
+
+  @override
+  String get registrationVerifyNriTitle => 'என்.ஆர்.ஐ சரிபார்ப்பு';
+
+  @override
+  String get registrationVerifyNriSubtitle =>
+      'உங்கள் வெளிநாட்டு வதிவிட நிலைக்கான ஆதாரத்தை பதிவேற்றவும்';
+
+  @override
   String get registrationPrivacyTitle => '100% தனியுரிமை உறுதி';
 
   @override
@@ -2052,6 +2073,23 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get registrationVerifyButton => 'சரிபார்';
+
+  @override
+  String get registrationVerificationRetryButton => 'மீண்டும் முயற்சி';
+
+  @override
+  String get registrationVerificationPendingLabel => 'மதிப்பாய்வு நிலுவையில்';
+
+  @override
+  String get registrationVerificationRejectedLabel =>
+      'சரிபார்ப்பு நிராகரிக்கப்பட்டது';
+
+  @override
+  String get registrationVerificationFailedLabel => 'பதிவேற்றம் தோல்வியடைந்தது';
+
+  @override
+  String get registrationVerifyMobileRequiredHint =>
+      'பதிவை முடிக்க உங்கள் மொபைல் எண்ணை சரிபார்க்கவும்.';
 
   @override
   String get registrationProfileForTitle =>

@@ -95,9 +95,17 @@ abstract final class ApiEndpoints {
   static const String subscribe = '/subscription/subscribe';
   static const String subscriptionStatus = '/subscription/status';
 
-  // ─── Verification ────────────────────────────────────────────────
-  static const String verifyId = '/verification/id';
-  static const String verifyPhoto = '/verification/photo';
+  // ─── Verification (document-backed: income/asset/aadhaar/nri) ──────
+  // backend/apps/api/src/modules/verification is scaffolded but its
+  // controller/service/DTO bodies are still empty — no routes registered
+  // yet (see VerificationRepositoryImpl's header comment). Mobile/email
+  // verification are NOT here — they reflect the existing Firebase auth
+  // session directly, not a submitted document.
+  // Retry re-uses the same submit endpoint with a freshly picked file —
+  // there's nothing meaningful to "retry" without new evidence, and we
+  // deliberately don't cache the previous file client-side (see security
+  // notes on VerificationStatusesController).
+  static const String verificationDocuments = '/verification/documents';
   static const String verificationStatus = '/verification/status';
 
   // ─── Settings ────────────────────────────────────────────────────

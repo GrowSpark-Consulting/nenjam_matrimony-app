@@ -122,9 +122,11 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   /// field name they'd have no way to trace back to which step it came
   /// from. Steps 0-3 and 5 are hard-required (no skip). Steps 4, 6, and 8
   /// are skippable, but once touched every field is required — see each
-  /// model's `isValid` getter. Steps 7 (family), 9 (quiz), 10 (partner
-  /// preference), and 12 (verification) have no required fields at all.
-  /// Step 11 (photos) requires at least one uploaded photo.
+  /// model's `isValid` getter. Steps 7 (family), 9 (quiz), and 10 (partner
+  /// preference) have no required fields at all. Step 11 (photos) requires
+  /// at least one uploaded photo. Step 12 (verification) requires mobile
+  /// verification only — the minimum for registration completion; income,
+  /// asset, Aadhaar/gov ID, and NRI verification may remain pending.
   bool _isCurrentStepValid(ProfileDraft draft) {
     switch (draft.currentStep) {
       case 0:
@@ -145,6 +147,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
         return draft.horoscopeDetails.isValid;
       case 11:
         return (ref.watch(myPhotosProvider).valueOrNull?.isNotEmpty) ?? false;
+      case 12:
+        return draft.verificationStatus.mobileVerified;
       default:
         return true;
     }
@@ -313,7 +317,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                     ? null
                     : _onSkip,
                 validationHint: (!_isSaving && !_isCurrentStepValid(draft))
-                    ? l10n.registrationRequiredFieldsHint
+                    ? (stepIndex == 12
+                        ? l10n.registrationVerifyMobileRequiredHint
+                        : l10n.registrationRequiredFieldsHint)
                     : null,
               ),
             ],

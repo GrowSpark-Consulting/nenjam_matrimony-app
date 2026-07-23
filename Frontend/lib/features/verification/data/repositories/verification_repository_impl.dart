@@ -1,45 +1,75 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_exception.dart';
-import '../../../registration/domain/models/profile_draft.dart';
+import '../../domain/models/verification_document.dart';
 import '../../domain/repositories/verification_repository.dart';
 
-/// Real backend implementation — dormant, not wired to any provider.
+/// Real backend implementation.
 ///
-/// TODO(backend): the `verification` controller is currently an empty
-/// stub — zero routes, despite `ApiEndpoints.verifyId`/`.verifyPhoto`/
-/// `.verificationStatus` all being defined. Like [PhotoRepositoryImpl],
-/// `submitIdVerification`/`submitPhotoVerification` assume the client
-/// already has a `documentUrl`/`photoUrl` from somewhere else — no
-/// upload-transport endpoint exists for verification documents either.
+/// TODO(backend): `backend/apps/api/src/modules/verification` is scaffolded
+/// (controller/service/DTO/entity files exist) but every class body is
+/// still empty — no routes are registered yet. This repository is written
+/// against the contract those files imply (`SubmitDocumentDto` for the
+/// multipart submit, a status list keyed by document type) so the UI is
+/// ready to connect the moment those routes ship, with no widget changes
+/// required. Until then, calls here return real `ApiException`s (404s),
+/// which the UI surfaces as a normal "upload failed" / retry state — never
+/// a faked success.
 class VerificationRepositoryImpl implements VerificationRepository {
   VerificationRepositoryImpl(this._apiClient);
 
   final ApiClient _apiClient;
 
   @override
-  Future<VerificationStatus> getStatus() async {
-    final response = await _apiClient
-        .get<Map<String, dynamic>>(ApiEndpoints.verificationStatus);
+  Future<Map<VerificationDocumentType, VerificationDocumentRecord>>
+      getStatuses() async {
+    final response =
+        await _apiClient.get<List<dynamic>>(ApiEndpoints.verificationStatus);
+    final data = unwrapOrThrow(response.statusCode, response.data) ?? const [];
+    final records = data
+        .cast<Map<String, dynamic>>()
+        .map(VerificationDocumentRecord.fromJson);
+    return {for (final r in records) r.type: r};
+  }
+
+  @override
+  Future<VerificationDocumentRecord> submitDocument({
+    required VerificationDocumentType type,
+    required File file,
+    void Function(int sent, int total)? onProgress,
+  }) async {
+    final form = FormData.fromMap({
+      'type': type.wireValue,
+      'file': await _multipart(file),
+    });
+    final response = await _apiClient.upload<Map<String, dynamic>>(
+      ApiEndpoints.verificationDocuments,
+      data: form,
+      onSendProgress: onProgress,
+    );
     final data = unwrapOrThrow(response.statusCode, response.data);
-    return VerificationStatus.fromJson(data ?? {});
+    return VerificationDocumentRecord.fromJson(data ?? {'type': type.wireValue});
   }
 
-  @override
-  Future<void> submitIdVerification({required String documentUrl}) async {
-    final response = await _apiClient.post<Map<String, dynamic>>(
-      ApiEndpoints.verifyId,
-      data: {'documentUrl': documentUrl},
+  Future<MultipartFile> _multipart(File file) async {
+    final filename = file.path.split(RegExp(r'[/\\]')).last;
+    final dot = filename.lastIndexOf('.');
+    final ext = dot >= 0 ? filename.substring(dot).toLowerCase() : '';
+    final subtype = switch (ext) {
+      '.png' => 'png',
+      '.webp' => 'webp',
+      '.pdf' => 'pdf',
+      _ => 'jpeg',
+    };
+    final type = subtype == 'pdf' ? 'application' : 'image';
+    return MultipartFile.fromFile(
+      file.path,
+      filename: filename,
+      contentType: DioMediaType(type, subtype),
     );
-    unwrapOrThrow(response.statusCode, response.data);
-  }
-
-  @override
-  Future<void> submitPhotoVerification({required String photoUrl}) async {
-    final response = await _apiClient.post<Map<String, dynamic>>(
-      ApiEndpoints.verifyPhoto,
-      data: {'photoUrl': photoUrl},
-    );
-    unwrapOrThrow(response.statusCode, response.data);
   }
 }

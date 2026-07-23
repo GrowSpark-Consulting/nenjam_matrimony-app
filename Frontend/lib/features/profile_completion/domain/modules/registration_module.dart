@@ -5,6 +5,15 @@ import '../profile_completion_module.dart';
 /// the single source of truth for "is the core registration data filled
 /// in." If that getter's internal weighting ever changes, this module's
 /// score changes with it automatically.
+///
+/// Weight reduced 50 -> 35 to make room for [VerificationModule] moving
+/// 10 -> 25 (Step 13 must contribute exactly 25 of the overall 100 points)
+/// while keeping every active module's weight summing to 100. This module
+/// absorbs the full rebalance rather than spreading it across
+/// PhotosModule/PartnerPreferenceModule/HoroscopeModule because its score is
+/// already a smooth 0-100% proportion (many fields), so a weight change is
+/// the least perceptible here — the other three are binary all-or-nothing
+/// modules where users would otherwise notice their card's "worth" shrink.
 class RegistrationModule extends ProfileCompletionModule {
   const RegistrationModule();
 
@@ -12,7 +21,7 @@ class RegistrationModule extends ProfileCompletionModule {
   String get id => 'registration';
 
   @override
-  double get weight => 50;
+  double get weight => 35;
 
   @override
   ModuleStatus evaluate(ProfileCompletionContext context) {

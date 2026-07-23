@@ -2030,6 +2030,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Verify your age and identity securely';
 
   @override
+  String get registrationVerifyIncomeTitle => 'Income Verification';
+
+  @override
+  String get registrationVerifyIncomeSubtitle =>
+      'Upload a document to verify your income';
+
+  @override
+  String get registrationVerifyAssetTitle => 'Asset Verification';
+
+  @override
+  String get registrationVerifyAssetSubtitle =>
+      'Upload proof of assets for verification';
+
+  @override
+  String get registrationVerifyNriTitle => 'NRI Verification';
+
+  @override
+  String get registrationVerifyNriSubtitle =>
+      'Upload proof of your overseas residency status';
+
+  @override
   String get registrationPrivacyTitle => '100% Privacy Guaranteed';
 
   @override
@@ -2038,6 +2059,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get registrationVerifyButton => 'Verify';
+
+  @override
+  String get registrationVerificationRetryButton => 'Retry';
+
+  @override
+  String get registrationVerificationPendingLabel => 'Pending Review';
+
+  @override
+  String get registrationVerificationRejectedLabel => 'Verification Rejected';
+
+  @override
+  String get registrationVerificationFailedLabel => 'Upload Failed';
+
+  @override
+  String get registrationVerifyMobileRequiredHint =>
+      'Verify your mobile number to finish registration.';
 
   @override
   String get registrationProfileForTitle =>

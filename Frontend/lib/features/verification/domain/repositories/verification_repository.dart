@@ -1,19 +1,24 @@
-import '../../../registration/domain/models/profile_draft.dart';
+import 'dart:io';
 
-/// Pure abstract Dart interface. Concrete implementation lives in `data/`.
-/// Not wired to any provider today — `verification_page.dart` (standalone
-/// feature) and the registration wizard's `step_verification.dart` both
-/// toggle [VerificationStatus] locally with no backend call. Reuses
-/// [VerificationStatus] (defined in the registration feature, step 13's
-/// model) rather than a parallel type, so both screens can eventually
-/// share one provider/state once wired.
+import '../models/verification_document.dart';
+
+/// Pure abstract Dart interface for document-backed verification (income,
+/// asset, government ID/Aadhaar, NRI). Concrete implementation lives in
+/// `data/`. Mobile and email verification are NOT part of this contract —
+/// they're reflections of the existing Firebase auth session
+/// ([AuthUser.phoneVerified]/[AuthUser.emailVerified]), not documents a user
+/// submits for review.
 abstract interface class VerificationRepository {
-  /// `GET /verification/status`.
-  Future<VerificationStatus> getStatus();
+  /// `GET /verification/status` — every document type's current status.
+  Future<Map<VerificationDocumentType, VerificationDocumentRecord>> getStatuses();
 
-  /// `POST /verification/id` — government ID document verification.
-  Future<void> submitIdVerification({required String documentUrl});
-
-  /// `POST /verification/photo` — face/selfie verification.
-  Future<void> submitPhotoVerification({required String photoUrl});
+  /// `POST /verification/documents` (multipart) — submits [file] as evidence
+  /// for [type]. Returns the backend's freshly created record, which is
+  /// always `PENDING` (or whatever the backend decides) — never
+  /// client-declared `VERIFIED`.
+  Future<VerificationDocumentRecord> submitDocument({
+    required VerificationDocumentType type,
+    required File file,
+    void Function(int sent, int total)? onProgress,
+  });
 }

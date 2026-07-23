@@ -894,12 +894,29 @@ class PhotoGallery {
 }
 
 // ─── Verification Status (Step 13) ───────────────────────────────────
+//
+// Mirrors, rather than owns, the real signals from elsewhere: mobileVerified/
+// emailVerified reflect the Firebase auth session (AuthUser.phoneVerified/
+// .emailVerified), and incomeVerified/assetVerified/aadhaarVerified/
+// nriVerified reflect the independent document-verification resource (see
+// features/verification — VerificationRepository/verificationStatusesProvider)
+// once the backend reports a document as VERIFIED. Nothing here is ever
+// set to true just because a document was *submitted* — only an actual
+// VERIFIED status from the backend flips these. faceVerified/govIdVerified
+// are kept for the shared Verification Center badges elsewhere in the app
+// (features/profile's NmVerificationCard, features/verification's
+// VerificationPage) that still read them — see step_verification.dart's
+// header comment for why the registration step itself no longer sets
+// faceVerified.
 class VerificationStatus {
   final bool mobileVerified;
   final bool emailVerified;
   final bool faceVerified;
   final bool aadhaarVerified;
   final bool govIdVerified;
+  final bool incomeVerified;
+  final bool assetVerified;
+  final bool nriVerified;
 
   const VerificationStatus({
     this.mobileVerified = false,
@@ -907,6 +924,9 @@ class VerificationStatus {
     this.faceVerified = false,
     this.aadhaarVerified = false,
     this.govIdVerified = false,
+    this.incomeVerified = false,
+    this.assetVerified = false,
+    this.nriVerified = false,
   });
 
   VerificationStatus copyWith({
@@ -915,6 +935,9 @@ class VerificationStatus {
     bool? faceVerified,
     bool? aadhaarVerified,
     bool? govIdVerified,
+    bool? incomeVerified,
+    bool? assetVerified,
+    bool? nriVerified,
   }) {
     return VerificationStatus(
       mobileVerified: mobileVerified ?? this.mobileVerified,
@@ -922,6 +945,9 @@ class VerificationStatus {
       faceVerified: faceVerified ?? this.faceVerified,
       aadhaarVerified: aadhaarVerified ?? this.aadhaarVerified,
       govIdVerified: govIdVerified ?? this.govIdVerified,
+      incomeVerified: incomeVerified ?? this.incomeVerified,
+      assetVerified: assetVerified ?? this.assetVerified,
+      nriVerified: nriVerified ?? this.nriVerified,
     );
   }
 
@@ -936,6 +962,9 @@ class VerificationStatus {
         faceVerified: json['faceVerified'] as bool? ?? false,
         aadhaarVerified: json['aadhaarVerified'] as bool? ?? false,
         govIdVerified: json['govIdVerified'] as bool? ?? false,
+        incomeVerified: json['incomeVerified'] as bool? ?? false,
+        assetVerified: json['assetVerified'] as bool? ?? false,
+        nriVerified: json['nriVerified'] as bool? ?? false,
       );
 
   Map<String, dynamic> toJson() => {
@@ -944,6 +973,9 @@ class VerificationStatus {
         'faceVerified': faceVerified,
         'aadhaarVerified': aadhaarVerified,
         'govIdVerified': govIdVerified,
+        'incomeVerified': incomeVerified,
+        'assetVerified': assetVerified,
+        'nriVerified': nriVerified,
       };
 }
 
