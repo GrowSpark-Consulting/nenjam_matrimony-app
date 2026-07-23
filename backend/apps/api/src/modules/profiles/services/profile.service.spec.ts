@@ -11,12 +11,25 @@ const COMPLETE_DRAFT = {
     gender: 'MALE',
     dob: '2000-01-01',
     maritalStatus: 'NEVER_MARRIED',
+    profileCreatedFor: 'Self',
   },
-  religionDetails: { religion: 'Muslim', caste: 'Sheikh' },
-  languageDetails: { motherTongue: 'Urdu' },
-  locationDetails: { city: 'Bangalore', state: 'Karnataka' },
+  religionDetails: {
+    religion: 'Muslim',
+    caste: 'Sheikh',
+    subCaste: 'Siddiqui',
+    community: 'Sunni',
+  },
+  languageDetails: { motherTongue: 'Urdu', languagesKnown: ['Urdu', 'English'] },
+  locationDetails: {
+    country: 'India',
+    state: 'Karnataka',
+    city: 'Bangalore',
+    area: 'Indiranagar',
+    pinCode: '560038',
+    nativePlace: 'Bangalore',
+  },
   educationDetails: { qualification: 'B.Tech', occupation: 'Software Engineer' },
-  physicalDetails: { height: `5'9"` },
+  physicalDetails: { height: `5'9"`, weight: '68 kg', disability: 'None' },
   partnerPreference: {},
 };
 
@@ -65,10 +78,12 @@ describe('ProfileService.syncMatchableFromDraft', () => {
   });
 
   it('is a no-op while any mandatory field is still missing (no premature row)', async () => {
-    // Same draft, but the height (a NOT NULL column) hasn't been entered yet.
+    // Same draft, but the city (a NOT NULL column, Step 4) hasn't been
+    // entered yet. Physical (Step 6) is deliberately NOT used for this case
+    // — it's skippable and no longer part of the mandatory-fields gate.
     const incomplete = {
       ...COMPLETE_DRAFT,
-      physicalDetails: {},
+      locationDetails: {},
     };
     const { service, upsertProfile } = buildService(incomplete);
 

@@ -132,9 +132,17 @@ model UserProfile {
   familyType         String?       @map("family_type")
   familyStatus       String?       @map("family_status")
   familyValues       String?       @map("family_values")
+  fatherName         String?       @map("father_name")
+  fatherAge          Int?          @map("father_age")
   fatherOccupation   String?       @map("father_occupation")
+  motherName         String?       @map("mother_name")
+  motherAge          Int?          @map("mother_age")
   motherOccupation   String?       @map("mother_occupation")
   siblings           Int?
+  /// Structured per-sibling records: [{ relation: "BROTHER"|"SISTER", name, age, occupation }].
+  /// `siblings` (the aggregate count) is kept in sync from this array's length
+  /// going forward so any existing code still querying the plain count keeps working.
+  siblingDetails     Json          @default("[]") @map("sibling_details")
   isProfileComplete  Boolean       @default(false) @map("is_profile_complete")
   profileCompletePct Int           @default(0) @map("profile_complete_pct")
   createdAt          DateTime      @default(now()) @map("created_at")

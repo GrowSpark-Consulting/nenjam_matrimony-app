@@ -46,12 +46,17 @@ class StepVerification extends StatelessWidget {
           const SizedBox(height: 16),
           RegistrationHelperTip(text: l10n.registrationTipVerification),
           const SizedBox(height: 24),
+          // Mobile verification is intentionally non-blocking for now — no
+          // OTP flow, no backend gate on finalize(). When that's built,
+          // wire `isDone` to a real verified-phone signal (the Firebase ID
+          // token's `phone_number` claim is already available server-side
+          // in FirebaseAuthGuard) instead of this hardcoded `true`.
           NmChecklistItemCard(
             title: l10n.registrationVerifyMobileTitle,
             subtitle: l10n.registrationVerifyMobileSubtitle,
             actionLabel: l10n.registrationVerifyButton,
             icon: Icons.phone_android_rounded,
-            isDone: true, // Automatically verified during signup/login
+            isDone: true,
             onAction: () {},
           ),
           const SizedBox(height: 16),

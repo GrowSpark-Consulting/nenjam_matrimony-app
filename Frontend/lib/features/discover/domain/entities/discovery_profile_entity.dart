@@ -34,6 +34,11 @@ class DiscoveryProfileEntity {
   /// registration's own gender field. Drives which gender-specific icon a
   /// "no photo yet" placeholder shows for this profile.
   final String gender;
+  /// Full-profile completeness — distinct from Discover eligibility (which
+  /// only requires the mandatory registration steps). `false` means this
+  /// profile skipped some of the optional sections; the card shows a
+  /// "Building profile" badge in that case.
+  final bool profileComplete;
 
   const DiscoveryProfileEntity({
     required this.id,
@@ -60,5 +65,6 @@ class DiscoveryProfileEntity {
     this.diet = '',
     this.distanceKm,
     this.gender = '',
+    this.profileComplete = false,
   });
 }

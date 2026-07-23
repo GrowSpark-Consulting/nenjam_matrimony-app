@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
+import 'other_option_field.dart';
 import 'registration_helper_tip.dart';
 
 /// Step 5 — Education & Career
@@ -30,7 +32,7 @@ class _StepEducationState extends State<StepEducation> {
   static const _qualifications = ['B.E / B.Tech', 'M.Tech / M.E', 'MBBS / MD', 'MBA / PGDM', 'B.Sc / M.Sc', 'CA / CFA', 'B.Com / M.Com', 'Ph.D', 'Diploma', 'Other'];
   static const _occupations = ['Software Engineer', 'Doctor', 'IAS / IPS / Govt', 'Business Owner', 'Finance / Banking', 'Civil / Mechanical Engg', 'Teacher / Professor', 'Lawyer', 'Architect', 'Other'];
   static const _employmentTypes = ['Private', 'Government', 'Business', 'Self-Employed', 'Not Working', 'Student'];
-  static const _incomeRanges = ['Below 5 Lakhs', '5 - 10 Lakhs', '10 - 20 Lakhs', '20 - 50 Lakhs', '50 Lakhs - 1 Crore', '1 Crore+', 'Prefer not to say'];
+  static const _incomeRanges = ['Below 5 Lakhs', '5 - 10 Lakhs', '10 - 20 Lakhs', '20 - 50 Lakhs', '50 Lakhs - 1 Crore', '1 Crore+', 'Other'];
 
   @override
   void initState() {
@@ -92,7 +94,7 @@ class _StepEducationState extends State<StepEducation> {
         '20 - 50 Lakhs' => l10n.income20to50,
         '50 Lakhs - 1 Crore' => l10n.income50to100,
         '1 Crore+' => l10n.income100Plus,
-        'Prefer not to say' => l10n.incomePreferNotSay,
+        'Other' => l10n.incomeOther,
         _ => value,
       };
 
@@ -112,16 +114,27 @@ class _StepEducationState extends State<StepEducation> {
           const SizedBox(height: 16),
           RegistrationHelperTip(text: l10n.registrationTipEducation),
           const SizedBox(height: 24),
-          Text(l10n.registrationQualificationLabel, style: AppTypography.labelLarge),
-          const SizedBox(height: 8),
           // Degree acronyms (B.E, MBBS, MBA…) stay English by convention.
-          Wrap(spacing: 8, runSpacing: 8, children: _qualifications.map((q) { final sel = _qualification == q; return ChoiceChip(label: Text(q), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _qualification = q); _emit(); }); }).toList()),
+          OtherOptionField(
+            title: l10n.registrationQualificationLabel,
+            options: _qualifications,
+            value: _qualification,
+            customFieldLabel: l10n.registrationSpecifyQualificationLabel,
+            customFieldHint: l10n.registrationSpecifyQualificationHint,
+            onChanged: (v) { setState(() => _qualification = v); _emit(); },
+          ),
           const SizedBox(height: 16),
           NmTextField(label: l10n.registrationCollegeLabel, hint: l10n.registrationCollegeHint, controller: _collegeCtrl, onChanged: (_) => _emit()),
           const SizedBox(height: 20),
-          Text(l10n.registrationOccupationLabel, style: AppTypography.labelLarge),
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: _occupations.map((o) { final sel = _occupation == o; return ChoiceChip(label: Text(_occupationLabel(l10n, o)), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _occupation = o); _emit(); }); }).toList()),
+          OtherOptionField(
+            title: l10n.registrationOccupationLabel,
+            options: _occupations,
+            value: _occupation,
+            labelOf: (v) => _occupationLabel(l10n, v),
+            customFieldLabel: l10n.registrationSpecifyOccupationLabel,
+            customFieldHint: l10n.registrationSpecifyOccupationHint,
+            onChanged: (v) { setState(() => _occupation = v); _emit(); },
+          ),
           const SizedBox(height: 16),
           NmTextField(label: l10n.registrationCompanyLabel, hint: l10n.registrationCompanyHint, controller: _companyCtrl, onChanged: (_) => _emit()),
           const SizedBox(height: 20),
@@ -129,9 +142,17 @@ class _StepEducationState extends State<StepEducation> {
           const SizedBox(height: 8),
           Wrap(spacing: 8, runSpacing: 8, children: _employmentTypes.map((e) { final sel = _employmentType == e; return ChoiceChip(label: Text(_employmentLabel(l10n, e)), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _employmentType = e); _emit(); }); }).toList()),
           const SizedBox(height: 20),
-          Text(l10n.registrationAnnualIncomeLabel, style: AppTypography.labelLarge),
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: _incomeRanges.map((i) { final sel = _annualIncome == i; return ChoiceChip(label: Text(_incomeLabel(l10n, i)), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _annualIncome = i); _emit(); }); }).toList()),
+          OtherOptionField(
+            title: l10n.registrationAnnualIncomeLabel,
+            options: _incomeRanges,
+            value: _annualIncome,
+            labelOf: (v) => _incomeLabel(l10n, v),
+            customFieldLabel: l10n.registrationAnnualIncomeOtherLabel,
+            customFieldHint: l10n.registrationAnnualIncomeOtherHint,
+            customFieldKeyboardType: TextInputType.number,
+            customFieldInputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onChanged: (v) { setState(() => _annualIncome = v); _emit(); },
+          ),
           const SizedBox(height: 16),
           NmTextField(label: l10n.registrationWorkLocationLabel, hint: l10n.registrationWorkLocationHint, controller: _workLocationCtrl, onChanged: (_) => _emit()),
           const SizedBox(height: 32),

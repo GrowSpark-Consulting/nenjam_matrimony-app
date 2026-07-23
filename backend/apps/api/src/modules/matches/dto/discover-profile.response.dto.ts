@@ -36,6 +36,12 @@ export interface DiscoverProfileDto {
   diet: string;
   distanceKm: number | null;
   gender: string;
+  // Full-profile completeness (UserProfile.profileCompletePct >= 100) —
+  // distinct from Discover eligibility, which only requires the mandatory
+  // Steps 1-4 (see UserProfile.isProfileComplete / buildFeedWhere). A caller
+  // can be feed-eligible with profileComplete: false; the client shows a
+  // "Building profile" badge in that case.
+  profileComplete: boolean;
 }
 
 // Paginated envelope. `hasMore` lets the client drive infinite scroll without

@@ -32,6 +32,17 @@ class RegistrationStickyBottomBar extends StatelessWidget {
   final VoidCallback? onBack;
   final VoidCallback? onNext;
 
+  /// Rendered as a centered text button below Continue only when non-null —
+  /// shown for skippable steps (Education, Lifestyle, Family, Horoscope,
+  /// Partner Preference). See ProfileWizardPage._isStepSkippable.
+  final String? skipLabel;
+  final VoidCallback? onSkip;
+
+  /// Shown above the button row when non-null — surfaces *why* Continue is
+  /// disabled (missing/incomplete required fields) instead of silently
+  /// greying it out with no explanation.
+  final String? validationHint;
+
   const RegistrationStickyBottomBar({
     super.key,
     required this.milestoneLabel,
@@ -43,6 +54,9 @@ class RegistrationStickyBottomBar extends StatelessWidget {
     required this.isLoading,
     this.onBack,
     this.onNext,
+    this.skipLabel,
+    this.onSkip,
+    this.validationHint,
   });
 
   @override
@@ -96,6 +110,21 @@ class RegistrationStickyBottomBar extends StatelessWidget {
               ),
             ],
           ),
+          if (validationHint != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.error),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    validationHint!,
+                    style: AppTypography.labelSmall.copyWith(color: AppColors.error),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           Row(
             children: [
@@ -131,6 +160,22 @@ class RegistrationStickyBottomBar extends StatelessWidget {
               ),
             ],
           ),
+          if (onSkip != null) ...[
+            const SizedBox(height: 4),
+            Center(
+              child: TextButton(
+                onPressed: isLoading ? null : onSkip,
+                child: Text(
+                  skipLabel ?? '',
+                  style: AppTypography.labelLarge.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

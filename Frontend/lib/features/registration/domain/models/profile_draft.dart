@@ -22,6 +22,15 @@ Map<String, dynamic> _section(Map<String, dynamic> data, String key) {
 List<String> _stringList(dynamic value) =>
     value is List ? value.map((e) => e.toString()).toList() : const [];
 
+/// The literal string "Other" is never a valid, complete answer — it's
+/// [OtherOptionField]'s chip-selection placeholder for fields with a custom
+/// "Other" option (religion, country, state, qualification, occupation,
+/// disability, annual income). The widget itself never emits this literal
+/// value once wired correctly (selecting "Other" with no custom text yet
+/// emits `''`), but every `isComplete`/`isValid` getter below checks through
+/// this helper as the authoritative, single-point guard.
+bool _hasValue(String value) => value.isNotEmpty && value != 'Other';
+
 /// Reverses [BasicDetails._toEnumValue] — maps a backend enum value
 /// ("MALE", "NEVER_MARRIED") back to this app's display value ("Male",
 /// "Never Married"). Falls back to the raw value for anything unmapped.
@@ -113,6 +122,17 @@ class BasicDetails {
         if (profileCreatedFor.isNotEmpty)
           'profileCreatedFor': profileCreatedFor,
       };
+
+  /// Step 1 is not skippable — every field is required. Mirrors
+  /// backend/apps/api/src/modules/profiles/validation/registration-rules.ts
+  /// -> isBasicDetailsComplete().
+  bool get isComplete =>
+      firstName.isNotEmpty &&
+      lastName.isNotEmpty &&
+      gender.isNotEmpty &&
+      maritalStatus.isNotEmpty &&
+      profileCreatedFor.isNotEmpty &&
+      dob != null;
 }
 
 // ─── Religion Details (Step 2) ───────────────────────────────────────
@@ -169,6 +189,14 @@ class ReligionDetails {
         if (denomination.isNotEmpty) 'denomination': denomination,
         if (community.isNotEmpty) 'community': community,
       };
+
+  /// Step 2 is not skippable — religion, caste, sub caste, and community are
+  /// required; the rest (gothra, denomination) stay optional.
+  bool get isComplete =>
+      _hasValue(religion) &&
+      caste.isNotEmpty &&
+      subCaste.isNotEmpty &&
+      community.isNotEmpty;
 }
 
 // ─── Language Details (Step 3) ───────────────────────────────────────
@@ -201,6 +229,9 @@ class LanguageDetails {
         if (motherTongue.isNotEmpty) 'motherTongue': motherTongue,
         if (languagesKnown.isNotEmpty) 'languagesKnown': languagesKnown,
       };
+
+  /// Step 3 is not skippable — every field is required.
+  bool get isComplete => motherTongue.isNotEmpty && languagesKnown.isNotEmpty;
 }
 
 // ─── Location Details (Step 4) ───────────────────────────────────────
@@ -257,6 +288,15 @@ class LocationDetails {
         if (pinCode.isNotEmpty) 'pinCode': pinCode,
         if (nativePlace.isNotEmpty) 'nativePlace': nativePlace,
       };
+
+  /// Step 4 is not skippable — every field is required.
+  bool get isComplete =>
+      _hasValue(country) &&
+      _hasValue(state) &&
+      city.isNotEmpty &&
+      area.isNotEmpty &&
+      pinCode.isNotEmpty &&
+      nativePlace.isNotEmpty;
 }
 
 // ─── Education Details (Step 5) ──────────────────────────────────────
@@ -319,22 +359,41 @@ class EducationDetails {
         if (annualIncome.isNotEmpty) 'annualIncome': annualIncome,
         if (workLocation.isNotEmpty) 'workLocation': workLocation,
       };
+
+  /// Step 5 is skippable, but once the user engages with any field, every
+  /// field is required — see registration-rules.ts's isEducationDetailsValid.
+  bool get isTouched =>
+      qualification.isNotEmpty ||
+      college.isNotEmpty ||
+      occupation.isNotEmpty ||
+      company.isNotEmpty ||
+      employmentType.isNotEmpty ||
+      annualIncome.isNotEmpty ||
+      workLocation.isNotEmpty;
+
+  bool get isValid =>
+      !isTouched ||
+      (_hasValue(qualification) &&
+          college.isNotEmpty &&
+          _hasValue(occupation) &&
+          company.isNotEmpty &&
+          employmentType.isNotEmpty &&
+          _hasValue(annualIncome) &&
+          workLocation.isNotEmpty);
 }
 
 // ─── Physical Details (Step 6) ───────────────────────────────────────
+// Body Type and Complexion were removed from the product — do not
+// reintroduce them here or in any DTO/UI.
 class PhysicalDetails {
   final String height;
   final String weight;
-  final String bodyType;
-  final String complexion;
   final String bloodGroup;
   final String disability;
 
   const PhysicalDetails({
     this.height = '',
     this.weight = '',
-    this.bodyType = '',
-    this.complexion = '',
     this.bloodGroup = '',
     this.disability = 'None',
   });
@@ -342,16 +401,12 @@ class PhysicalDetails {
   PhysicalDetails copyWith({
     String? height,
     String? weight,
-    String? bodyType,
-    String? complexion,
     String? bloodGroup,
     String? disability,
   }) {
     return PhysicalDetails(
       height: height ?? this.height,
       weight: weight ?? this.weight,
-      bodyType: bodyType ?? this.bodyType,
-      complexion: complexion ?? this.complexion,
       bloodGroup: bloodGroup ?? this.bloodGroup,
       disability: disability ?? this.disability,
     );
@@ -361,8 +416,6 @@ class PhysicalDetails {
       PhysicalDetails(
         height: json['height'] as String? ?? '',
         weight: json['weight'] as String? ?? '',
-        bodyType: json['bodyType'] as String? ?? '',
-        complexion: json['complexion'] as String? ?? '',
         bloodGroup: json['bloodGroup'] as String? ?? '',
         disability: json['disability'] as String? ?? 'None',
       );
@@ -370,11 +423,21 @@ class PhysicalDetails {
   Map<String, dynamic> toJson() => {
         if (height.isNotEmpty) 'height': height,
         if (weight.isNotEmpty) 'weight': weight,
-        if (bodyType.isNotEmpty) 'bodyType': bodyType,
-        if (complexion.isNotEmpty) 'complexion': complexion,
         if (bloodGroup.isNotEmpty) 'bloodGroup': bloodGroup,
         if (disability.isNotEmpty) 'disability': disability,
       };
+
+  /// Step 6 is skippable, but once the user engages with any field, height,
+  /// weight, and disability are all required (blood group stays optional).
+  /// `disability` defaults to `'None'` (always non-empty), so touched-ness is
+  /// judged only by height/weight — see registration-rules.ts's
+  /// isPhysicalSectionTouched.
+  bool get isComplete =>
+      height.isNotEmpty && weight.isNotEmpty && _hasValue(disability);
+
+  bool get isTouched => height.isNotEmpty || weight.isNotEmpty;
+
+  bool get isValid => !isTouched || isComplete;
 }
 
 // ─── Lifestyle Details (Step 7) ──────────────────────────────────────
@@ -431,78 +494,173 @@ class LifestyleDetails {
         if (hobbies.isNotEmpty) 'hobbies': hobbies,
         if (aboutMe.isNotEmpty) 'aboutMe': aboutMe,
       };
+
+  /// Step 7 is skippable, but once the user engages with any field, every
+  /// field is required — see registration-rules.ts's isLifestyleDetailsValid.
+  bool get isTouched =>
+      eatingHabit.isNotEmpty ||
+      smoking.isNotEmpty ||
+      drinking.isNotEmpty ||
+      fitness.isNotEmpty ||
+      hobbies.isNotEmpty ||
+      aboutMe.isNotEmpty;
+
+  bool get isValid =>
+      !isTouched ||
+      (eatingHabit.isNotEmpty &&
+          smoking.isNotEmpty &&
+          drinking.isNotEmpty &&
+          fitness.isNotEmpty &&
+          hobbies.isNotEmpty &&
+          aboutMe.isNotEmpty);
 }
 
 // ─── Family Details (Step 8) ─────────────────────────────────────────
+
+/// A single family member's name/age/occupation — used for Father and
+/// Mother in [FamilyDetails]. Step 8 has no required-if-filled rule (unlike
+/// Education/Lifestyle), so partially-filled members are fine.
+class FamilyMember {
+  final String name;
+  final int? age;
+  final String occupation;
+
+  const FamilyMember({this.name = '', this.age, this.occupation = ''});
+
+  bool get isEmpty => name.isEmpty && age == null && occupation.isEmpty;
+
+  FamilyMember copyWith({String? name, int? age, String? occupation}) {
+    return FamilyMember(
+      name: name ?? this.name,
+      age: age ?? this.age,
+      occupation: occupation ?? this.occupation,
+    );
+  }
+
+  factory FamilyMember.fromJson(Map<String, dynamic> json) => FamilyMember(
+        name: json['name'] as String? ?? '',
+        age: (json['age'] as num?)?.toInt(),
+        occupation: json['occupation'] as String? ?? '',
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (name.isNotEmpty) 'name': name,
+        if (age != null) 'age': age,
+        if (occupation.isNotEmpty) 'occupation': occupation,
+      };
+}
+
+enum SiblingRelation { brother, sister }
+
+/// A single dynamically-added sibling row (Step 8's Brothers/Sisters list).
+class SiblingMember {
+  final SiblingRelation relation;
+  final String name;
+  final int? age;
+  final String occupation;
+
+  const SiblingMember({
+    this.relation = SiblingRelation.brother,
+    this.name = '',
+    this.age,
+    this.occupation = '',
+  });
+
+  SiblingMember copyWith({
+    SiblingRelation? relation,
+    String? name,
+    int? age,
+    String? occupation,
+  }) {
+    return SiblingMember(
+      relation: relation ?? this.relation,
+      name: name ?? this.name,
+      age: age ?? this.age,
+      occupation: occupation ?? this.occupation,
+    );
+  }
+
+  factory SiblingMember.fromJson(Map<String, dynamic> json) => SiblingMember(
+        relation: (json['relation'] as String?) == 'SISTER'
+            ? SiblingRelation.sister
+            : SiblingRelation.brother,
+        name: json['name'] as String? ?? '',
+        age: (json['age'] as num?)?.toInt(),
+        occupation: json['occupation'] as String? ?? '',
+      );
+
+  Map<String, dynamic> toJson() => {
+        'relation':
+            relation == SiblingRelation.sister ? 'SISTER' : 'BROTHER',
+        if (name.isNotEmpty) 'name': name,
+        if (age != null) 'age': age,
+        if (occupation.isNotEmpty) 'occupation': occupation,
+      };
+}
+
 class FamilyDetails {
-  final String fatherName;
-  final String fatherOccupation;
-  final String motherName;
-  final String motherOccupation;
+  final FamilyMember father;
+  final FamilyMember mother;
+  final List<SiblingMember> siblings;
   final String familyType;
   final String familyValues;
   final String familyStatus;
-  final int brothers;
-  final int sisters;
 
   const FamilyDetails({
-    this.fatherName = '',
-    this.fatherOccupation = '',
-    this.motherName = '',
-    this.motherOccupation = '',
+    this.father = const FamilyMember(),
+    this.mother = const FamilyMember(),
+    this.siblings = const [],
     this.familyType = '',
     this.familyValues = '',
     this.familyStatus = '',
-    this.brothers = 0,
-    this.sisters = 0,
   });
 
   FamilyDetails copyWith({
-    String? fatherName,
-    String? fatherOccupation,
-    String? motherName,
-    String? motherOccupation,
+    FamilyMember? father,
+    FamilyMember? mother,
+    List<SiblingMember>? siblings,
     String? familyType,
     String? familyValues,
     String? familyStatus,
-    int? brothers,
-    int? sisters,
   }) {
     return FamilyDetails(
-      fatherName: fatherName ?? this.fatherName,
-      fatherOccupation: fatherOccupation ?? this.fatherOccupation,
-      motherName: motherName ?? this.motherName,
-      motherOccupation: motherOccupation ?? this.motherOccupation,
+      father: father ?? this.father,
+      mother: mother ?? this.mother,
+      siblings: siblings ?? this.siblings,
       familyType: familyType ?? this.familyType,
       familyValues: familyValues ?? this.familyValues,
       familyStatus: familyStatus ?? this.familyStatus,
-      brothers: brothers ?? this.brothers,
-      sisters: sisters ?? this.sisters,
     );
   }
 
   factory FamilyDetails.fromJson(Map<String, dynamic> json) => FamilyDetails(
-        fatherName: json['fatherName'] as String? ?? '',
-        fatherOccupation: json['fatherOccupation'] as String? ?? '',
-        motherName: json['motherName'] as String? ?? '',
-        motherOccupation: json['motherOccupation'] as String? ?? '',
+        father: json['father'] is Map
+            ? FamilyMember.fromJson(
+                (json['father'] as Map<dynamic, dynamic>).cast<String, dynamic>())
+            : const FamilyMember(),
+        mother: json['mother'] is Map
+            ? FamilyMember.fromJson(
+                (json['mother'] as Map<dynamic, dynamic>).cast<String, dynamic>())
+            : const FamilyMember(),
+        siblings: json['siblings'] is List
+            ? (json['siblings'] as List)
+                .whereType<Map<dynamic, dynamic>>()
+                .map((e) => SiblingMember.fromJson(e.cast<String, dynamic>()))
+                .toList()
+            : const [],
         familyType: json['familyType'] as String? ?? '',
         familyValues: json['familyValues'] as String? ?? '',
         familyStatus: json['familyStatus'] as String? ?? '',
-        brothers: (json['brothers'] as num?)?.toInt() ?? 0,
-        sisters: (json['sisters'] as num?)?.toInt() ?? 0,
       );
 
   Map<String, dynamic> toJson() => {
-        if (fatherName.isNotEmpty) 'fatherName': fatherName,
-        if (fatherOccupation.isNotEmpty) 'fatherOccupation': fatherOccupation,
-        if (motherName.isNotEmpty) 'motherName': motherName,
-        if (motherOccupation.isNotEmpty) 'motherOccupation': motherOccupation,
+        if (!father.isEmpty) 'father': father.toJson(),
+        if (!mother.isEmpty) 'mother': mother.toJson(),
+        if (siblings.isNotEmpty)
+          'siblings': siblings.map((s) => s.toJson()).toList(),
         if (familyType.isNotEmpty) 'familyType': familyType,
         if (familyValues.isNotEmpty) 'familyValues': familyValues,
         if (familyStatus.isNotEmpty) 'familyStatus': familyStatus,
-        'brothers': brothers,
-        'sisters': sisters,
       };
 }
 
@@ -572,6 +730,20 @@ class HoroscopeDetails {
         if (dosham.isNotEmpty) 'dosham': dosham,
         'horoscopeAvailable': horoscopeAvailable,
       };
+
+  /// Step 9 is skippable, but once any horoscope field is filled, Rashi
+  /// becomes required — see registration-rules.ts's isHoroscopeDetailsValid.
+  bool get isTouched =>
+      birthTime.isNotEmpty ||
+      birthPlace.isNotEmpty ||
+      rashi.isNotEmpty ||
+      nakshatra.isNotEmpty ||
+      star.isNotEmpty ||
+      manglik.isNotEmpty ||
+      dosham.isNotEmpty ||
+      horoscopeAvailable;
+
+  bool get isValid => !isTouched || rashi.isNotEmpty;
 }
 
 // ─── Partner Preference (Step 11) ────────────────────────────────────
@@ -670,6 +842,22 @@ class PartnerPreference {
           'maritalStatusPref': maritalStatusPref,
         if (!extended.isEmpty) 'extended': extended.toJson(),
       };
+
+  /// Step 11 is skippable — used only to switch the entry-point card's
+  /// copy/button label between "Set" and "Edit" (see
+  /// PartnerPreferenceStepCard). Never gates Continue.
+  bool get hasAnyPreference =>
+      preferredAgeRange.isNotEmpty ||
+      preferredHeightRange.isNotEmpty ||
+      religionPref.isNotEmpty ||
+      castePref.isNotEmpty ||
+      educationPref.isNotEmpty ||
+      occupationPref.isNotEmpty ||
+      incomePref.isNotEmpty ||
+      locationPref.isNotEmpty ||
+      motherTonguePref.isNotEmpty ||
+      maritalStatusPref.isNotEmpty ||
+      !extended.isEmpty;
 }
 
 // ─── Photo Gallery (Step 12) ─────────────────────────────────────────

@@ -38,9 +38,13 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   // Called from ProfileWizardPage's "Continue" button — sends whichever
   // step's data was just filled in. Step 9 (psychological quiz) is synced
   // independently by the psychology feature's own repository the moment
-  // the quiz is submitted, not through this draft. Steps 11 (photos) and
-  // 12 (verification) aren't sent here either: photo upload isn't wired to
-  // S3 yet, and verification status is read-only, reflecting other modules.
+  // the quiz is submitted, not through this draft. Step 10 (partner
+  // preference) is a CTA card that pushes the standalone Partner
+  // Preferences page, which already persists immediately via
+  // [savePartnerPreference] when the user saves there — nothing left to
+  // sync here. Steps 11 (photos) and 12 (verification) aren't sent here
+  // either: photos persist immediately via PhotoController on upload, and
+  // verification status is read-only, reflecting other modules.
   Future<void> syncCurrentStepToBackend() async {
     final repo = ref.read(registrationRepositoryProvider);
     switch (state.currentStep) {
@@ -71,12 +75,9 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
       case 8:
         await repo.updateHoroscopeDetails(state.horoscopeDetails);
         return;
-      case 10:
-        await repo.updatePartnerPreference(state.partnerPreference);
-        return;
       default:
-        // Steps 9 (psychological quiz), 11 (photos), 12 (verification):
-        // nothing to sync here.
+        // Steps 9 (psychological quiz), 10 (partner preference), 11
+        // (photos), 12 (verification): nothing to sync here.
         return;
     }
   }
@@ -204,9 +205,11 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   }
 
   // ─── Step 11: Partner Preference ───────────────────────────────────
-  void updatePartnerPreference(PartnerPreference details) {
-    state = state.copyWith(partnerPreference: details);
-  }
+  //
+  // No wizard-local update-only method — the in-wizard step is now just a
+  // CTA card (see PartnerPreferenceStepCard) that pushes the standalone
+  // Partner Preferences page, which edits and persists in one step via
+  // [savePartnerPreference] below.
 
   /// Updates local state AND persists immediately — used by the standalone
   /// Partner Preferences page (features/partner_preferences), which isn't

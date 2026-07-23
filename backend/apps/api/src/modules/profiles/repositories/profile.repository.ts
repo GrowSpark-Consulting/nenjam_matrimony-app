@@ -29,11 +29,7 @@ export class ProfileRepository {
     sectionData: Record<string, unknown>,
     stepNumber: number,
   ): Promise<RegistrationStep> {
-    console.log(`[TRACE] ProfileRepository.mergeDraftSection(${section}) before upsert`);
-    console.time(`[TRACE] registrationStep.upsert(${section})`);
     const existing = await this.getOrCreateRegistrationStep(userId);
-    console.timeEnd(`[TRACE] registrationStep.upsert(${section})`);
-    console.log(`[TRACE] ProfileRepository.mergeDraftSection(${section}) after upsert, before update`);
 
     const draftData = {
       ...(existing.draftData as Record<string, unknown>),
@@ -46,8 +42,7 @@ export class ProfileRepository {
     const completedSteps = new Set((existing.completedSteps as number[]) ?? []);
     completedSteps.add(stepNumber);
 
-    console.time(`[TRACE] registrationStep.update(${section})`);
-    const result = await this.prisma.registrationStep.update({
+    return this.prisma.registrationStep.update({
       where: { userId },
       data: {
         draftData: draftData as Prisma.InputJsonValue,
@@ -56,9 +51,6 @@ export class ProfileRepository {
         lastSavedAt: new Date(),
       },
     });
-    console.timeEnd(`[TRACE] registrationStep.update(${section})`);
-    console.log(`[TRACE] ProfileRepository.mergeDraftSection(${section}) after update`);
-    return result;
   }
 
   async markComplete(userId: string): Promise<RegistrationStep> {

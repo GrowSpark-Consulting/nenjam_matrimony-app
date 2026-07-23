@@ -308,6 +308,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverChipNri => 'NRI';
 
   @override
+  String get discoverChipBuildingProfile => 'Building Profile';
+
+  @override
   String get homePhotoProtectedLabel => 'Photo Protected';
 
   @override
@@ -839,15 +842,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get registrationSaveExit => 'Save & Exit';
-
-  @override
   String registrationPercentCompleted(int percent) {
     return '$percent% Completed';
   }
 
   @override
   String get registrationBack => 'Back';
+
+  @override
+  String get registrationSkipStep => 'Skip this step';
 
   @override
   String get registrationFinishLogin => 'Finish & Login';
@@ -958,13 +961,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registrationReligionLabel => 'Religion';
 
   @override
+  String get registrationSpecifyReligionLabel => 'Specify Religion';
+
+  @override
+  String get registrationSpecifyReligionHint => 'Enter your religion';
+
+  @override
   String get registrationCasteLabel => 'Caste';
 
   @override
   String get registrationCasteHint => 'e.g., Iyer, Iyengar, Mudaliar';
 
   @override
-  String get registrationSubCasteLabel => 'Sub Caste (Optional)';
+  String get registrationSubCasteLabel => 'Sub Caste';
 
   @override
   String get registrationSubCasteHint => 'Enter sub caste';
@@ -1081,19 +1090,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registrationCityHint => 'e.g., Chennai';
 
   @override
-  String get registrationAreaLabel => 'Area (Optional)';
+  String get registrationAreaLabel => 'Area';
 
   @override
   String get registrationAreaHint => 'e.g., T. Nagar';
 
   @override
-  String get registrationPinLabel => 'PIN Code (Optional)';
+  String get registrationPinLabel => 'PIN Code';
 
   @override
   String get registrationPinHint => '600017';
 
   @override
-  String get registrationNativePlaceLabel => 'Native Place (Optional)';
+  String get registrationNativePlaceLabel => 'Native Place';
 
   @override
   String get registrationNativePlaceHint => 'e.g., Thanjavur';
@@ -1171,7 +1180,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registrationQualificationLabel => 'Highest Qualification';
 
   @override
-  String get registrationCollegeLabel => 'College / University (Optional)';
+  String get registrationSpecifyQualificationLabel => 'Specify Qualification';
+
+  @override
+  String get registrationSpecifyQualificationHint => 'e.g., B.A. History';
+
+  @override
+  String get registrationCollegeLabel => 'College / University';
 
   @override
   String get registrationCollegeHint => 'e.g., IIT Madras';
@@ -1180,7 +1195,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registrationOccupationLabel => 'Occupation';
 
   @override
-  String get registrationCompanyLabel => 'Company (Optional)';
+  String get registrationSpecifyOccupationLabel => 'Specify Occupation';
+
+  @override
+  String get registrationSpecifyOccupationHint => 'e.g., Freelance Designer';
+
+  @override
+  String get registrationCompanyLabel => 'Company';
 
   @override
   String get registrationCompanyHint => 'e.g., Google';
@@ -1192,7 +1213,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registrationAnnualIncomeLabel => 'Annual Income';
 
   @override
-  String get registrationWorkLocationLabel => 'Work Location (Optional)';
+  String get registrationAnnualIncomeOtherLabel =>
+      'Specify Annual Income (in Lakhs)';
+
+  @override
+  String get registrationAnnualIncomeOtherHint => 'e.g., 12';
+
+  @override
+  String get registrationWorkLocationLabel => 'Work Location';
 
   @override
   String get registrationWorkLocationHint => 'e.g., Bangalore';
@@ -1264,7 +1292,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get income100Plus => '1 Crore+';
 
   @override
-  String get incomePreferNotSay => 'Prefer not to say';
+  String get incomeOther => 'Other';
 
   @override
   String get registrationPhysicalTitle => 'Physical Details';
@@ -1276,43 +1304,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registrationHeightLabel => 'Height';
 
   @override
+  String get registrationTapToSetHeightLabel =>
+      'Drag the slider to set your height';
+
+  @override
   String get registrationWeightLabel => 'Weight';
 
   @override
-  String get registrationBodyTypeLabel => 'Body Type';
-
-  @override
-  String get registrationComplexionLabel => 'Complexion';
+  String get registrationTapToSetWeightLabel =>
+      'Drag the slider to set your weight';
 
   @override
   String get registrationBloodGroupLabel => 'Blood Group';
 
   @override
   String get registrationDisabilityLabel => 'Disability';
-
-  @override
-  String get bodySlim => 'Slim';
-
-  @override
-  String get bodyAverage => 'Average';
-
-  @override
-  String get bodyAthletic => 'Athletic';
-
-  @override
-  String get bodyHeavy => 'Heavy';
-
-  @override
-  String get complexionVeryFair => 'Very Fair';
-
-  @override
-  String get complexionFair => 'Fair';
-
-  @override
-  String get complexionWheatish => 'Wheatish';
-
-  @override
-  String get complexionDark => 'Dark';
 
   @override
   String get disabilityNone => 'None';
@@ -1430,10 +1436,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonDontKnow => 'Don\'t Know';
 
   @override
+  String get commonPleaseSpecifyLabel => 'Please specify';
+
+  @override
+  String get commonPleaseSpecifyHint => 'Type your answer';
+
+  @override
+  String get commonRequiredFieldLabel => 'Required field';
+
+  @override
   String get registrationFamilyTitle => 'Family Details';
 
   @override
   String get registrationFamilySubtitle => 'Tell us about your family';
+
+  @override
+  String get registrationFatherSectionLabel => 'Father';
 
   @override
   String get registrationFatherNameLabel => 'Father\'s Name (Optional)';
@@ -1442,16 +1460,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registrationFatherNameHint => 'Enter father\'s name';
 
   @override
+  String get registrationFatherAgeLabel => 'Father\'s Age (Optional)';
+
+  @override
+  String get registrationFatherAgeHint => 'Enter father\'s age';
+
+  @override
   String get registrationFatherOccLabel => 'Father\'s Occupation (Optional)';
 
   @override
   String get registrationFatherOccHint => 'e.g., Retired Government Officer';
 
   @override
+  String get registrationMotherSectionLabel => 'Mother';
+
+  @override
   String get registrationMotherNameLabel => 'Mother\'s Name (Optional)';
 
   @override
   String get registrationMotherNameHint => 'Enter mother\'s name';
+
+  @override
+  String get registrationMotherAgeLabel => 'Mother\'s Age (Optional)';
+
+  @override
+  String get registrationMotherAgeHint => 'Enter mother\'s age';
 
   @override
   String get registrationMotherOccLabel => 'Mother\'s Occupation (Optional)';
@@ -1469,10 +1502,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registrationFamilyStatusLabel => 'Family Status';
 
   @override
-  String get registrationBrothersLabel => 'No. of Brothers';
+  String get registrationSiblingsSectionLabel => 'Siblings';
 
   @override
-  String get registrationSistersLabel => 'No. of Sisters';
+  String get registrationSiblingBrotherLabel => 'Brother';
+
+  @override
+  String get registrationSiblingSisterLabel => 'Sister';
+
+  @override
+  String get registrationRemoveSiblingLabel => 'Remove';
+
+  @override
+  String get registrationSiblingNameLabel => 'Name (Optional)';
+
+  @override
+  String get registrationSiblingNameHint => 'Enter sibling\'s name';
+
+  @override
+  String get registrationSiblingAgeLabel => 'Age (Optional)';
+
+  @override
+  String get registrationSiblingAgeHint => 'Enter sibling\'s age';
+
+  @override
+  String get registrationSiblingOccupationLabel => 'Occupation (Optional)';
+
+  @override
+  String get registrationSiblingOccupationHint => 'Enter sibling\'s occupation';
+
+  @override
+  String get registrationAddSiblingLabel => 'Add Sibling';
 
   @override
   String get famJoint => 'Joint Family';
@@ -1613,6 +1673,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get registrationPrefMaritalLabel => 'Marital Status';
+
+  @override
+  String get registrationPartnerPrefSetLabel =>
+      'Your partner preferences are set';
+
+  @override
+  String get registrationPartnerPrefNotSetLabel =>
+      'You haven\'t set your partner preferences yet';
+
+  @override
+  String get registrationSetPartnerPrefButton => 'Set Partner Preferences';
+
+  @override
+  String get registrationEditPartnerPrefButton => 'Edit Partner Preferences';
 
   @override
   String get prefCasteSame => 'Same Caste';

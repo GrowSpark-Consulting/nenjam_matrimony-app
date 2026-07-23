@@ -310,6 +310,9 @@ class AppLocalizationsTa extends AppLocalizations {
   String get discoverChipNri => 'என்.ஆர்.ஐ';
 
   @override
+  String get discoverChipBuildingProfile => 'சுயவிவரம் உருவாகிறது';
+
+  @override
   String get homePhotoProtectedLabel => 'புகைப்படம் பாதுகாக்கப்பட்டது';
 
   @override
@@ -845,15 +848,15 @@ class AppLocalizationsTa extends AppLocalizations {
   }
 
   @override
-  String get registrationSaveExit => 'சேமித்து வெளியேறு';
-
-  @override
   String registrationPercentCompleted(int percent) {
     return '$percent% முடிந்தது';
   }
 
   @override
   String get registrationBack => 'பின்';
+
+  @override
+  String get registrationSkipStep => 'இந்த படியைத் தவிர்';
 
   @override
   String get registrationFinishLogin => 'முடித்து உள்நுழை';
@@ -965,13 +968,19 @@ class AppLocalizationsTa extends AppLocalizations {
   String get registrationReligionLabel => 'மதம்';
 
   @override
+  String get registrationSpecifyReligionLabel => 'மதத்தைக் குறிப்பிடவும்';
+
+  @override
+  String get registrationSpecifyReligionHint => 'உங்கள் மதத்தை உள்ளிடவும்';
+
+  @override
   String get registrationCasteLabel => 'சாதி';
 
   @override
   String get registrationCasteHint => 'எ.கா., ஐயர், ஐயங்கார், முதலியார்';
 
   @override
-  String get registrationSubCasteLabel => 'துணை சாதி (விருப்பம்)';
+  String get registrationSubCasteLabel => 'துணை சாதி';
 
   @override
   String get registrationSubCasteHint => 'துணை சாதியை உள்ளிடவும்';
@@ -1088,19 +1097,19 @@ class AppLocalizationsTa extends AppLocalizations {
   String get registrationCityHint => 'எ.கா., சென்னை';
 
   @override
-  String get registrationAreaLabel => 'பகுதி (விருப்பம்)';
+  String get registrationAreaLabel => 'பகுதி';
 
   @override
   String get registrationAreaHint => 'எ.கா., டி. நகர்';
 
   @override
-  String get registrationPinLabel => 'அஞ்சல் குறியீடு (விருப்பம்)';
+  String get registrationPinLabel => 'அஞ்சல் குறியீடு';
 
   @override
   String get registrationPinHint => '600017';
 
   @override
-  String get registrationNativePlaceLabel => 'சொந்த ஊர் (விருப்பம்)';
+  String get registrationNativePlaceLabel => 'சொந்த ஊர்';
 
   @override
   String get registrationNativePlaceHint => 'எ.கா., தஞ்சாவூர்';
@@ -1178,7 +1187,13 @@ class AppLocalizationsTa extends AppLocalizations {
   String get registrationQualificationLabel => 'உயர்ந்த தகுதி';
 
   @override
-  String get registrationCollegeLabel => 'கல்லூரி / பல்கலைக்கழகம் (விருப்பம்)';
+  String get registrationSpecifyQualificationLabel => 'தகுதியைக் குறிப்பிடவும்';
+
+  @override
+  String get registrationSpecifyQualificationHint => 'எ.கா., பி.ஏ. வரலாறு';
+
+  @override
+  String get registrationCollegeLabel => 'கல்லூரி / பல்கலைக்கழகம்';
 
   @override
   String get registrationCollegeHint => 'எ.கா., ஐஐடி சென்னை';
@@ -1187,7 +1202,14 @@ class AppLocalizationsTa extends AppLocalizations {
   String get registrationOccupationLabel => 'தொழில்';
 
   @override
-  String get registrationCompanyLabel => 'நிறுவனம் (விருப்பம்)';
+  String get registrationSpecifyOccupationLabel => 'தொழிலைக் குறிப்பிடவும்';
+
+  @override
+  String get registrationSpecifyOccupationHint =>
+      'எ.கா., சுயாதீன வடிவமைப்பாளர்';
+
+  @override
+  String get registrationCompanyLabel => 'நிறுவனம்';
 
   @override
   String get registrationCompanyHint => 'எ.கா., Google';
@@ -1199,7 +1221,14 @@ class AppLocalizationsTa extends AppLocalizations {
   String get registrationAnnualIncomeLabel => 'ஆண்டு வருமானம்';
 
   @override
-  String get registrationWorkLocationLabel => 'பணியிட இடம் (விருப்பம்)';
+  String get registrationAnnualIncomeOtherLabel =>
+      'ஆண்டு வருமானத்தைக் குறிப்பிடவும் (லட்சத்தில்)';
+
+  @override
+  String get registrationAnnualIncomeOtherHint => 'எ.கா., 12';
+
+  @override
+  String get registrationWorkLocationLabel => 'பணியிட இடம்';
 
   @override
   String get registrationWorkLocationHint => 'எ.கா., பெங்களூரு';
@@ -1271,7 +1300,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get income100Plus => '1 கோடிக்கு மேல்';
 
   @override
-  String get incomePreferNotSay => 'கூற விரும்பவில்லை';
+  String get incomeOther => 'மற்றவை';
 
   @override
   String get registrationPhysicalTitle => 'உடல் விவரங்கள்';
@@ -1283,43 +1312,21 @@ class AppLocalizationsTa extends AppLocalizations {
   String get registrationHeightLabel => 'உயரம்';
 
   @override
+  String get registrationTapToSetHeightLabel =>
+      'உங்கள் உயரத்தை அமைக்க ஸ்லைடரை இழுக்கவும்';
+
+  @override
   String get registrationWeightLabel => 'எடை';
 
   @override
-  String get registrationBodyTypeLabel => 'உடல் அமைப்பு';
-
-  @override
-  String get registrationComplexionLabel => 'நிறம்';
+  String get registrationTapToSetWeightLabel =>
+      'உங்கள் எடையை அமைக்க ஸ்லைடரை இழுக்கவும்';
 
   @override
   String get registrationBloodGroupLabel => 'இரத்த வகை';
 
   @override
   String get registrationDisabilityLabel => 'மாற்றுத்திறன்';
-
-  @override
-  String get bodySlim => 'மெலிந்த';
-
-  @override
-  String get bodyAverage => 'சராசரி';
-
-  @override
-  String get bodyAthletic => 'தடகள';
-
-  @override
-  String get bodyHeavy => 'பருமனான';
-
-  @override
-  String get complexionVeryFair => 'மிக வெளிர்';
-
-  @override
-  String get complexionFair => 'வெளிர்';
-
-  @override
-  String get complexionWheatish => 'கோதுமை நிறம்';
-
-  @override
-  String get complexionDark => 'கருமை';
 
   @override
   String get disabilityNone => 'இல்லை';
@@ -1438,11 +1445,23 @@ class AppLocalizationsTa extends AppLocalizations {
   String get commonDontKnow => 'தெரியாது';
 
   @override
+  String get commonPleaseSpecifyLabel => 'தயவுசெய்து குறிப்பிடவும்';
+
+  @override
+  String get commonPleaseSpecifyHint => 'உங்கள் பதிலை உள்ளிடவும்';
+
+  @override
+  String get commonRequiredFieldLabel => 'தேவையான புலம்';
+
+  @override
   String get registrationFamilyTitle => 'குடும்ப விவரங்கள்';
 
   @override
   String get registrationFamilySubtitle =>
       'உங்கள் குடும்பத்தைப் பற்றி கூறுங்கள்';
+
+  @override
+  String get registrationFatherSectionLabel => 'தந்தை';
 
   @override
   String get registrationFatherNameLabel => 'தந்தையின் பெயர் (விருப்பம்)';
@@ -1451,16 +1470,31 @@ class AppLocalizationsTa extends AppLocalizations {
   String get registrationFatherNameHint => 'தந்தையின் பெயரை உள்ளிடவும்';
 
   @override
+  String get registrationFatherAgeLabel => 'தந்தையின் வயது (விருப்பம்)';
+
+  @override
+  String get registrationFatherAgeHint => 'தந்தையின் வயதை உள்ளிடவும்';
+
+  @override
   String get registrationFatherOccLabel => 'தந்தையின் தொழில் (விருப்பம்)';
 
   @override
   String get registrationFatherOccHint => 'எ.கா., ஓய்வுபெற்ற அரசு அதிகாரி';
 
   @override
+  String get registrationMotherSectionLabel => 'தாய்';
+
+  @override
   String get registrationMotherNameLabel => 'தாயின் பெயர் (விருப்பம்)';
 
   @override
   String get registrationMotherNameHint => 'தாயின் பெயரை உள்ளிடவும்';
+
+  @override
+  String get registrationMotherAgeLabel => 'தாயின் வயது (விருப்பம்)';
+
+  @override
+  String get registrationMotherAgeHint => 'தாயின் வயதை உள்ளிடவும்';
 
   @override
   String get registrationMotherOccLabel => 'தாயின் தொழில் (விருப்பம்)';
@@ -1478,10 +1512,38 @@ class AppLocalizationsTa extends AppLocalizations {
   String get registrationFamilyStatusLabel => 'குடும்ப நிலை';
 
   @override
-  String get registrationBrothersLabel => 'சகோதரர்களின் எண்ணிக்கை';
+  String get registrationSiblingsSectionLabel => 'உடன்பிறப்புகள்';
 
   @override
-  String get registrationSistersLabel => 'சகோதரிகளின் எண்ணிக்கை';
+  String get registrationSiblingBrotherLabel => 'சகோதரன்';
+
+  @override
+  String get registrationSiblingSisterLabel => 'சகோதரி';
+
+  @override
+  String get registrationRemoveSiblingLabel => 'அகற்று';
+
+  @override
+  String get registrationSiblingNameLabel => 'பெயர் (விருப்பம்)';
+
+  @override
+  String get registrationSiblingNameHint => 'உடன்பிறப்பின் பெயரை உள்ளிடவும்';
+
+  @override
+  String get registrationSiblingAgeLabel => 'வயது (விருப்பம்)';
+
+  @override
+  String get registrationSiblingAgeHint => 'உடன்பிறப்பின் வயதை உள்ளிடவும்';
+
+  @override
+  String get registrationSiblingOccupationLabel => 'தொழில் (விருப்பம்)';
+
+  @override
+  String get registrationSiblingOccupationHint =>
+      'உடன்பிறப்பின் தொழிலை உள்ளிடவும்';
+
+  @override
+  String get registrationAddSiblingLabel => 'உடன்பிறப்பைச் சேர்';
 
   @override
   String get famJoint => 'கூட்டுக் குடும்பம்';
@@ -1621,6 +1683,21 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get registrationPrefMaritalLabel => 'திருமண நிலை';
+
+  @override
+  String get registrationPartnerPrefSetLabel =>
+      'உங்கள் துணை விருப்பங்கள் அமைக்கப்பட்டுள்ளன';
+
+  @override
+  String get registrationPartnerPrefNotSetLabel =>
+      'நீங்கள் இன்னும் துணை விருப்பங்களை அமைக்கவில்லை';
+
+  @override
+  String get registrationSetPartnerPrefButton => 'துணை விருப்பங்களை அமை';
+
+  @override
+  String get registrationEditPartnerPrefButton =>
+      'துணை விருப்பங்களைத் திருத்து';
 
   @override
   String get prefCasteSame => 'அதே சாதி';

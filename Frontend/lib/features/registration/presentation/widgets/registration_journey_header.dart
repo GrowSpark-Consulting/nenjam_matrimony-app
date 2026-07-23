@@ -7,21 +7,18 @@ import '../utils/registration_milestones.dart';
 
 /// Replaces the old "Step X of Y" + raw percentage bar with a warm,
 /// milestone-based journey timeline. Purely presentational — takes plain
-/// ints/callbacks, never reads [registrationProvider] itself. Rendered at
-/// the top of the wizard's body (no system [AppBar] is used) so the back
-/// button and Save & Exit action live inside this widget.
+/// ints, never reads [registrationProvider] itself. Rendered at the top of
+/// the wizard's body (no system [AppBar], no back arrow, no Save & Exit —
+/// backward navigation is handled entirely by the system back gesture via
+/// ProfileWizardPage's PopScope).
 class RegistrationJourneyHeader extends StatelessWidget {
   final int stepIndex;
   final int totalSteps;
-  final VoidCallback onBack;
-  final VoidCallback? onSaveExit;
 
   const RegistrationJourneyHeader({
     super.key,
     required this.stepIndex,
     required this.totalSteps,
-    required this.onBack,
-    this.onSaveExit,
   });
 
   @override
@@ -34,28 +31,6 @@ class RegistrationJourneyHeader extends StatelessWidget {
       bottom: false,
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: onBack,
-                  icon: const Icon(Icons.arrow_back_rounded),
-                ),
-                const Spacer(),
-                if (onSaveExit != null)
-                  TextButton(
-                    onPressed: onSaveExit,
-                    child: Text(
-                      l10n.registrationSaveExit,
-                      style: AppTypography.labelLarge
-                          .copyWith(color: AppColors.primary),
-                    ),
-                  ),
-                const SizedBox(width: 8),
-              ],
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Row(

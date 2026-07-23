@@ -4,9 +4,13 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
+import 'other_option_field.dart';
 import 'registration_helper_tip.dart';
 
-/// Step 6 — Physical Details
+/// Step 6 — Physical Details. Skippable: if the user drags either slider,
+/// Height/Weight/Disability all become required (Blood Group stays
+/// optional) — see PhysicalDetails.isValid. Body Type and Complexion were
+/// removed from the product entirely — do not reintroduce them here.
 class StepPhysical extends StatefulWidget {
   final PhysicalDetails details;
   final void Function(PhysicalDetails) onChanged;
@@ -18,33 +22,69 @@ class StepPhysical extends StatefulWidget {
 }
 
 class _StepPhysicalState extends State<StepPhysical> {
-  late String _height;
-  late String _weight;
-  late String _bodyType;
-  late String _complexion;
+  late int _heightCm;
+  late int _weightKg;
+  late bool _heightTouched;
+  late bool _weightTouched;
   late String _bloodGroup;
   late String _disability;
 
-  static const _heights = ['4\'6"', '4\'8"', '4\'10"', '5\'0"', '5\'2"', '5\'4"', '5\'5"', '5\'6"', '5\'7"', '5\'8"', '5\'9"', '5\'10"', '5\'11"', '6\'0"', '6\'1"', '6\'2"', '6\'4"'];
-  static const _weights = ['40-50 kg', '50-60 kg', '60-70 kg', '70-80 kg', '80-90 kg', '90-100 kg', '100+ kg'];
-  static const _bodyTypes = ['Slim', 'Average', 'Athletic', 'Heavy'];
-  static const _complexions = ['Very Fair', 'Fair', 'Wheatish', 'Dark'];
   static const _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Not Known'];
   static const _disabilities = ['None', 'Physical', 'Hearing', 'Visual', 'Speech', 'Other'];
+
+  static const _minHeightCm = 122;
+  static const _maxHeightCm = 213;
+  static const _defaultHeightCm = 170;
+  static const _minWeightKg = 35;
+  static const _maxWeightKg = 150;
+  static const _defaultWeightKg = 65;
 
   @override
   void initState() {
     super.initState();
-    _height = widget.details.height;
-    _weight = widget.details.weight;
-    _bodyType = widget.details.bodyType;
-    _complexion = widget.details.complexion;
+    _heightTouched = widget.details.height.isNotEmpty;
+    _heightCm = (_heightTouched
+            ? _parseHeightCm(widget.details.height, _defaultHeightCm)
+            : _defaultHeightCm)
+        .clamp(_minHeightCm, _maxHeightCm);
+    _weightTouched = widget.details.weight.isNotEmpty;
+    _weightKg = (_weightTouched
+            ? _parseLeadingInt(widget.details.weight, _defaultWeightKg)
+            : _defaultWeightKg)
+        .clamp(_minWeightKg, _maxWeightKg);
     _bloodGroup = widget.details.bloodGroup;
     _disability = widget.details.disability.isEmpty ? 'None' : widget.details.disability;
   }
 
+  static int _parseHeightCm(String value, int fallback) {
+    final feetInches = RegExp(r"(\d+)\s*'\s*(\d+)").firstMatch(value);
+    if (feetInches != null) {
+      final feet = int.parse(feetInches.group(1)!);
+      final inches = int.parse(feetInches.group(2)!);
+      return ((feet * 12 + inches) * 2.54).round();
+    }
+    return _parseLeadingInt(value, fallback);
+  }
+
+  static int _parseLeadingInt(String value, int fallback) {
+    final leading = RegExp(r'(\d+)').firstMatch(value);
+    return leading != null ? int.parse(leading.group(1)!) : fallback;
+  }
+
+  static String _heightLabel(int cm) {
+    final totalInches = (cm / 2.54).round();
+    final feet = totalInches ~/ 12;
+    final inches = totalInches % 12;
+    return '$feet\'$inches" ($cm cm)';
+  }
+
   void _emit() {
-    widget.onChanged(PhysicalDetails(height: _height, weight: _weight, bodyType: _bodyType, complexion: _complexion, bloodGroup: _bloodGroup, disability: _disability));
+    widget.onChanged(PhysicalDetails(
+      height: _heightTouched ? '$_heightCm cm' : '',
+      weight: _weightTouched ? '$_weightKg kg' : '',
+      bloodGroup: _bloodGroup,
+      disability: _disability,
+    ));
   }
 
   /// Chip section with an optional value->label mapper (values stay English).
@@ -61,22 +101,6 @@ class _StepPhysicalState extends State<StepPhysical> {
     );
   }
 
-  String _bodyTypeLabel(AppLocalizations l10n, String v) => switch (v) {
-        'Slim' => l10n.bodySlim,
-        'Average' => l10n.bodyAverage,
-        'Athletic' => l10n.bodyAthletic,
-        'Heavy' => l10n.bodyHeavy,
-        _ => v,
-      };
-
-  String _complexionLabel(AppLocalizations l10n, String v) => switch (v) {
-        'Very Fair' => l10n.complexionVeryFair,
-        'Fair' => l10n.complexionFair,
-        'Wheatish' => l10n.complexionWheatish,
-        'Dark' => l10n.complexionDark,
-        _ => v,
-      };
-
   String _disabilityLabel(AppLocalizations l10n, String v) => switch (v) {
         'None' => l10n.disabilityNone,
         'Physical' => l10n.disabilityPhysical,
@@ -91,6 +115,7 @@ class _StepPhysicalState extends State<StepPhysical> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final secondaryColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -99,22 +124,57 @@ class _StepPhysicalState extends State<StepPhysical> {
         children: [
           Text(l10n.registrationWizardPhysicalHeadline, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text(l10n.registrationWizardPhysicalHook, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationWizardPhysicalHook, style: AppTypography.bodyMedium.copyWith(color: secondaryColor)),
           const SizedBox(height: 16),
           RegistrationHelperTip(text: l10n.registrationTipPhysical),
           const SizedBox(height: 24),
-          // Height/weight/blood group use universal notation (kept as-is).
-          _buildChipSection(l10n.registrationHeightLabel, _heights, _height, (v) => setState(() => _height = v)),
-          const SizedBox(height: 20),
-          _buildChipSection(l10n.registrationWeightLabel, _weights, _weight, (v) => setState(() => _weight = v)),
-          const SizedBox(height: 20),
-          _buildChipSection(l10n.registrationBodyTypeLabel, _bodyTypes, _bodyType, (v) => setState(() => _bodyType = v), labelOf: (v) => _bodyTypeLabel(l10n, v)),
-          const SizedBox(height: 20),
-          _buildChipSection(l10n.registrationComplexionLabel, _complexions, _complexion, (v) => setState(() => _complexion = v), labelOf: (v) => _complexionLabel(l10n, v)),
-          const SizedBox(height: 20),
+          Text(l10n.registrationHeightLabel, style: AppTypography.labelLarge),
+          const SizedBox(height: 4),
+          Text(
+            _heightTouched ? _heightLabel(_heightCm) : l10n.registrationTapToSetHeightLabel,
+            style: AppTypography.bodyMedium.copyWith(color: secondaryColor),
+          ),
+          Slider(
+            value: _heightCm.toDouble(),
+            min: _minHeightCm.toDouble(),
+            max: _maxHeightCm.toDouble(),
+            divisions: _maxHeightCm - _minHeightCm,
+            activeColor: AppColors.primary,
+            label: _heightLabel(_heightCm),
+            onChanged: (v) {
+              setState(() { _heightCm = v.round(); _heightTouched = true; });
+              _emit();
+            },
+          ),
+          const SizedBox(height: 16),
+          Text(l10n.registrationWeightLabel, style: AppTypography.labelLarge),
+          const SizedBox(height: 4),
+          Text(
+            _weightTouched ? '$_weightKg kg' : l10n.registrationTapToSetWeightLabel,
+            style: AppTypography.bodyMedium.copyWith(color: secondaryColor),
+          ),
+          Slider(
+            value: _weightKg.toDouble(),
+            min: _minWeightKg.toDouble(),
+            max: _maxWeightKg.toDouble(),
+            divisions: _maxWeightKg - _minWeightKg,
+            activeColor: AppColors.primary,
+            label: '$_weightKg kg',
+            onChanged: (v) {
+              setState(() { _weightKg = v.round(); _weightTouched = true; });
+              _emit();
+            },
+          ),
+          const SizedBox(height: 16),
           _buildChipSection(l10n.registrationBloodGroupLabel, _bloodGroups, _bloodGroup, (v) => setState(() => _bloodGroup = v)),
           const SizedBox(height: 20),
-          _buildChipSection(l10n.registrationDisabilityLabel, _disabilities, _disability, (v) => setState(() => _disability = v), labelOf: (v) => _disabilityLabel(l10n, v)),
+          OtherOptionField(
+            title: l10n.registrationDisabilityLabel,
+            options: _disabilities,
+            value: _disability,
+            labelOf: (v) => _disabilityLabel(l10n, v),
+            onChanged: (v) { setState(() => _disability = v); _emit(); },
+          ),
           const SizedBox(height: 32),
         ],
       ),

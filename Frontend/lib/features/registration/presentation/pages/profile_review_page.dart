@@ -21,6 +21,7 @@ import '../../../profile_prompts/presentation/providers/profile_prompt_provider.
 import '../../../psychology/domain/models/personality_result.dart';
 import '../../../psychology/presentation/providers/personality_provider.dart';
 import '../../data/repositories/registration_repository.dart';
+import '../../domain/models/profile_draft.dart';
 import '../../domain/models/profile_flow_mode.dart';
 import '../providers/registration_provider.dart';
 
@@ -256,8 +257,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       items: [
                         _ri('Height', draft.physicalDetails.height),
                         _ri('Weight', draft.physicalDetails.weight),
-                        _ri('Body Type', draft.physicalDetails.bodyType),
-                        _ri('Complexion', draft.physicalDetails.complexion),
                         _ri('Blood Group', draft.physicalDetails.bloodGroup),
                         _ri('Disability', draft.physicalDetails.disability),
                       ],
@@ -291,16 +290,40 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       isDark: isDark,
                       onEdit: () => editStep(7),
                       items: [
-                        _ri('Father', draft.familyDetails.fatherName),
-                        _ri('Father\'s Occupation',
-                            draft.familyDetails.fatherOccupation),
-                        _ri('Mother', draft.familyDetails.motherName),
+                        _ri(
+                          'Father',
+                          _combineMember(
+                            name: draft.familyDetails.father.name,
+                            age: draft.familyDetails.father.age,
+                            occupation: draft.familyDetails.father.occupation,
+                          ),
+                        ),
+                        _ri(
+                          'Mother',
+                          _combineMember(
+                            name: draft.familyDetails.mother.name,
+                            age: draft.familyDetails.mother.age,
+                            occupation: draft.familyDetails.mother.occupation,
+                          ),
+                        ),
                         _ri('Family Type', draft.familyDetails.familyType),
                         _ri('Family Values', draft.familyDetails.familyValues),
                         _ri('Family Status', draft.familyDetails.familyStatus),
-                        _ri('Brothers',
-                            '${draft.familyDetails.brothers}'),
-                        _ri('Sisters', '${draft.familyDetails.sisters}'),
+                        for (var i = 0;
+                            i < draft.familyDetails.siblings.length;
+                            i++)
+                          _ri(
+                            draft.familyDetails.siblings[i].relation ==
+                                    SiblingRelation.brother
+                                ? 'Brother ${i + 1}'
+                                : 'Sister ${i + 1}',
+                            _combineMember(
+                              name: draft.familyDetails.siblings[i].name,
+                              age: draft.familyDetails.siblings[i].age,
+                              occupation:
+                                  draft.familyDetails.siblings[i].occupation,
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -511,6 +534,21 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
 
   /// Shorthand for creating a [_ReviewItem].
   _ReviewItem _ri(String label, String value) => _ReviewItem(label, value);
+
+  /// Joins a Father/Mother/Sibling record's name, age, and occupation into a
+  /// single display string, e.g. "Suresh, 58, Engineer".
+  String _combineMember({
+    required String name,
+    required int? age,
+    required String occupation,
+  }) {
+    final parts = [
+      if (name.isNotEmpty) name,
+      if (age != null) '$age',
+      if (occupation.isNotEmpty) occupation,
+    ];
+    return parts.join(', ');
+  }
 }
 
 // ─── Review Section Component ────────────────────────────────────────────

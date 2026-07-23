@@ -101,6 +101,9 @@ class ProfileInfoOverlay extends StatelessWidget {
 
   List<String> get _tagPills {
     final pills = <String>[...profile.tags];
+    if (!profile.profileComplete && !pills.contains('Building Profile')) {
+      pills.insert(0, 'Building Profile');
+    }
     if (profile.isVerified && !pills.contains('Verified')) {
       pills.insert(0, 'Verified');
     }
@@ -123,6 +126,8 @@ String _localizedTag(AppLocalizations l10n, String tag) {
       return l10n.discoverChipPremiumPlus;
     case 'Verified':
       return l10n.discoverVerifiedLabel;
+    case 'Building Profile':
+      return l10n.discoverChipBuildingProfile;
     default:
       return tag;
   }

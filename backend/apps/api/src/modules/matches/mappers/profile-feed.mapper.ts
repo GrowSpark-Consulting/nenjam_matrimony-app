@@ -58,6 +58,7 @@ export class ProfileFeedMapper {
       diet: (row.dietaryHabits as string) ?? '',
       distanceKm: null,
       gender: String(row.gender ?? '').toLowerCase(),
+      profileComplete: Number(row.profileCompletePct ?? 0) >= 100,
     };
   }
 

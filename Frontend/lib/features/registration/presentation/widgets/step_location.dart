@@ -5,6 +5,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
+import 'other_option_field.dart';
 import 'registration_helper_tip.dart';
 
 /// Step 4 — Location Details
@@ -100,13 +101,21 @@ class _StepLocationState extends State<StepLocation> {
           const SizedBox(height: 16),
           RegistrationHelperTip(text: l10n.registrationTipLocation),
           const SizedBox(height: 24),
-          Text(l10n.registrationCountryLabel, style: AppTypography.labelLarge),
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: _countries.map((c) { final sel = _country == c; return ChoiceChip(label: Text(_countryLabel(l10n, c)), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _country = c); _emit(); }); }).toList()),
+          OtherOptionField(
+            title: l10n.registrationCountryLabel,
+            options: _countries,
+            value: _country,
+            labelOf: (v) => _countryLabel(l10n, v),
+            onChanged: (v) { setState(() => _country = v); _emit(); },
+          ),
           const SizedBox(height: 20),
-          Text(l10n.registrationStateLabel, style: AppTypography.labelLarge),
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: _states.map((s) { final sel = _state == s; return ChoiceChip(label: Text(_stateLabel(l10n, s)), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _state = s); _emit(); }); }).toList()),
+          OtherOptionField(
+            title: l10n.registrationStateLabel,
+            options: _states,
+            value: _state,
+            labelOf: (v) => _stateLabel(l10n, v),
+            onChanged: (v) { setState(() => _state = v); _emit(); },
+          ),
           const SizedBox(height: 20),
           NmTextField(label: l10n.registrationCityLabel, hint: l10n.registrationCityHint, controller: _cityCtrl, onChanged: (_) => _emit()),
           const SizedBox(height: 16),

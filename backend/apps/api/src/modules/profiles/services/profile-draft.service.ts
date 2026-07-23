@@ -52,23 +52,18 @@ export class ProfileDraftService {
     section: DraftSection,
     sectionData: object,
   ): Promise<DraftResponse> {
-    console.log('Service entered');
     const stepNumber = DRAFT_SECTIONS.indexOf(section) + 1;
     if (stepNumber === 0) {
       throw new BadRequestException(`Unknown draft section: ${section}`);
     }
 
-    console.log('Before Prisma (mergeDraftSection)');
     await this.profileRepository.mergeDraftSection(
       userId,
       section,
       sectionData as Record<string, unknown>,
       stepNumber,
     );
-    console.log('After Prisma (mergeDraftSection)');
-    const result = await this.getDraft(userId);
-    console.log('Response returned');
-    return result;
+    return this.getDraft(userId);
   }
 
   // Mirrors ProfileDraft.completionPercentage in

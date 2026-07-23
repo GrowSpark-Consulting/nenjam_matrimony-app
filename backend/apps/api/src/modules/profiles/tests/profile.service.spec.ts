@@ -117,6 +117,7 @@ describe('ProfileService', () => {
     markComplete?: jest.Mock;
     updateProfileCompletePct?: jest.Mock;
     findAllForUser?: jest.Mock;
+    countForUser?: jest.Mock;
     getDraft?: jest.Mock;
   }) {
     const profileRepository = {
@@ -137,6 +138,7 @@ describe('ProfileService', () => {
     const photoRepository = {
       findAllForUser:
         overrides?.findAllForUser ?? jest.fn().mockResolvedValue([]),
+      countForUser: overrides?.countForUser ?? jest.fn().mockResolvedValue(1),
     } as unknown as PhotoRepository;
 
     const draftService = {
@@ -217,16 +219,42 @@ describe('ProfileService', () => {
             firstName: 'Arjun',
             lastName: 'Sundar',
             gender: 'MALE',
+            maritalStatus: 'NEVER_MARRIED',
+            profileCreatedFor: 'Self',
             dob: '1997-01-01',
           },
-          religionDetails: { religion: 'Hindu', caste: 'Iyer' },
-          languageDetails: { motherTongue: 'Tamil' },
-          locationDetails: { city: 'Chennai', state: 'Tamil Nadu' },
+          religionDetails: {
+            religion: 'Hindu',
+            caste: 'Iyer',
+            subCaste: 'Vadama',
+            community: 'Brahmin',
+          },
+          languageDetails: {
+            motherTongue: 'Tamil',
+            languagesKnown: ['Tamil', 'English'],
+          },
+          locationDetails: {
+            country: 'India',
+            state: 'Tamil Nadu',
+            city: 'Chennai',
+            area: 'Anna Nagar',
+            pinCode: '600040',
+            nativePlace: 'Madurai',
+          },
           educationDetails: {
             qualification: "Bachelor's",
+            college: 'Anna University',
             occupation: 'Product Designer',
+            company: 'Acme Corp',
+            employmentType: 'Private',
+            annualIncome: '10-15 Lakhs',
+            workLocation: 'Chennai',
           },
-          physicalDetails: { height: '178 cm' },
+          physicalDetails: {
+            height: '178 cm',
+            weight: '70 kg',
+            disability: 'None',
+          },
           ...overrides,
         },
       };
@@ -236,6 +264,39 @@ describe('ProfileService', () => {
       const service = buildService({
         getDraft: jest.fn().mockResolvedValue(
           buildValidDraft({ basicDetails: {} }),
+        ),
+      });
+
+      await expect(service.finalize('user-1')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('throws BadRequestException when Sub Caste is missing from Religion', async () => {
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(
+          buildValidDraft({
+            religionDetails: { religion: 'Hindu', caste: 'Iyer', community: 'Brahmin' },
+          }),
+        ),
+      });
+
+      await expect(service.finalize('user-1')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('throws BadRequestException when Religion is the literal "Other" placeholder', async () => {
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(
+          buildValidDraft({
+            religionDetails: {
+              religion: 'Other',
+              caste: 'Iyer',
+              subCaste: 'Vadama',
+              community: 'Brahmin',
+            },
+          }),
         ),
       });
 
@@ -316,6 +377,7 @@ describe('ProfileService', () => {
             religionDetails: {
               religion: 'Hindu',
               caste: 'Iyer',
+              subCaste: 'Vadama',
               community: 'Brahmin',
               denomination: 'Smartha',
             },
@@ -329,10 +391,15 @@ describe('ProfileService', () => {
               country: 'India',
               area: 'Anna Nagar',
               pinCode: '600040',
+              nativePlace: 'Madurai',
             },
             lifestyleDetails: {
+              eatingHabit: 'Vegetarian',
+              smoking: 'No',
+              drinking: 'No',
               fitness: 'Regular',
               hobbies: ['Reading', 'Cricket'],
+              aboutMe: 'Loves long walks.',
             },
             familyDetails: { familyValues: 'Traditional' },
           }),
@@ -392,6 +459,7 @@ describe('ProfileService', () => {
         getDraft: jest.fn().mockResolvedValue(
           buildValidDraft({
             horoscopeDetails: {
+              rashi: 'Mesham',
               star: 'Ashwini',
               horoscopeAvailable: true,
             },
@@ -418,7 +486,11 @@ describe('ProfileService', () => {
       const service = buildService({
         getDraft: jest.fn().mockResolvedValue(
           buildValidDraft({
-            horoscopeDetails: { nakshatra: 'Bharani', star: 'Ashwini' },
+            horoscopeDetails: {
+              rashi: 'Mesham',
+              nakshatra: 'Bharani',
+              star: 'Ashwini',
+            },
           }),
         ),
         upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
@@ -431,6 +503,139 @@ describe('ProfileService', () => {
       expect(upsertAstrologyProfile).toHaveBeenCalledWith(
         'user-1',
         expect.objectContaining({ nakshatra: 'Bharani' }),
+      );
+    });
+
+    it('throws when no profile photo has been uploaded', async () => {
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(buildValidDraft()),
+        upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+        countForUser: jest.fn().mockResolvedValue(0),
+      });
+
+      await expect(service.finalize('user-1')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('throws when Physical is partially filled instead of skipped or completed', async () => {
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(
+          buildValidDraft({
+            physicalDetails: { height: '178 cm' }, // weight, disability missing
+          }),
+        ),
+      });
+
+      await expect(service.finalize('user-1')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('does not throw when Physical is left entirely empty (skipped)', async () => {
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(
+          buildValidDraft({ physicalDetails: {} }),
+        ),
+        upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+      });
+
+      await expect(service.finalize('user-1')).resolves.toBeDefined();
+    });
+
+    it('throws when Education is partially filled instead of skipped or completed', async () => {
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(
+          buildValidDraft({
+            educationDetails: { qualification: "Bachelor's" }, // occupation, college, etc. missing
+          }),
+        ),
+      });
+
+      await expect(service.finalize('user-1')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('does not throw when Education is left entirely empty (skipped)', async () => {
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(
+          buildValidDraft({ educationDetails: {} }),
+        ),
+        upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+      });
+
+      await expect(service.finalize('user-1')).resolves.toBeDefined();
+    });
+
+    it('throws when Lifestyle is partially filled instead of skipped or completed', async () => {
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(
+          buildValidDraft({
+            lifestyleDetails: { eatingHabit: 'Vegetarian' }, // rest missing
+          }),
+        ),
+      });
+
+      await expect(service.finalize('user-1')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('throws when Horoscope is touched but Rashi is missing', async () => {
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(
+          buildValidDraft({
+            horoscopeDetails: { birthPlace: 'Chennai' }, // no rashi
+          }),
+        ),
+      });
+
+      await expect(service.finalize('user-1')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('maps structured Father/Mother/Sibling records onto the profile columns', async () => {
+      const upsertProfile = jest.fn().mockResolvedValue(buildProfile());
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(
+          buildValidDraft({
+            familyDetails: {
+              father: { name: 'Suresh', age: 58, occupation: 'Engineer' },
+              mother: { name: 'Lakshmi', age: 54, occupation: 'Teacher' },
+              siblings: [
+                { relation: 'BROTHER', name: 'Karthik', age: 30, occupation: 'Doctor' },
+                { relation: 'SISTER', name: 'Divya', age: 26, occupation: 'Designer' },
+              ],
+              familyStatus: 'Middle Class',
+            },
+          }),
+        ),
+        upsertProfile,
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+      });
+
+      await service.finalize('user-1');
+
+      expect(upsertProfile).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({
+          fatherName: 'Suresh',
+          fatherAge: 58,
+          fatherOccupation: 'Engineer',
+          motherName: 'Lakshmi',
+          motherAge: 54,
+          motherOccupation: 'Teacher',
+          siblings: 2,
+          siblingDetails: [
+            { relation: 'BROTHER', name: 'Karthik', age: 30, occupation: 'Doctor' },
+            { relation: 'SISTER', name: 'Divya', age: 26, occupation: 'Designer' },
+          ],
+        }),
       );
     });
   });

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/route_names.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../data/repositories/registration_repository.dart';
 import '../../domain/models/profile_draft.dart';
 import '../../domain/models/profile_flow_mode.dart';
@@ -13,6 +14,7 @@ import '../providers/registration_provider.dart';
 import '../utils/registration_milestones.dart';
 import '../utils/registration_motivation.dart';
 import '../utils/registration_time_estimate.dart';
+import '../widgets/partner_preference_step_card.dart';
 import '../widgets/registration_journey_header.dart';
 import '../widgets/registration_motivation_caption.dart';
 import '../widgets/registration_sticky_bottom_bar.dart';
@@ -23,7 +25,6 @@ import '../widgets/step_horoscope.dart';
 import '../widgets/step_language.dart';
 import '../widgets/step_lifestyle.dart';
 import '../widgets/step_location.dart';
-import '../widgets/step_partner_pref.dart';
 import '../widgets/step_photos.dart';
 import '../widgets/step_physical.dart';
 import '../widgets/step_psychological_quiz.dart';
@@ -114,36 +115,73 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     }
   }
 
-  /// Mirrors ProfileService.assertRequiredFieldsPresent on the backend —
-  /// without this, "Continue" let a user click through the whole wizard
-  /// with required fields empty, only to have POST /profiles/finalize
-  /// reject it at the very last step with a field name they'd have no way
-  /// to trace back to which step it came from. Steps without a case here
-  /// (lifestyle, family, horoscope, partner preference, photos,
-  /// verification) have no required backend fields.
+  /// Mirrors backend/apps/api/src/modules/profiles/validation/
+  /// registration-rules.ts — without this, "Continue" would let a user
+  /// click through the whole wizard with required fields empty, only to
+  /// have POST /profiles/finalize reject it at the very last step with a
+  /// field name they'd have no way to trace back to which step it came
+  /// from. Steps 0-3 and 5 are hard-required (no skip). Steps 4, 6, and 8
+  /// are skippable, but once touched every field is required — see each
+  /// model's `isValid` getter. Steps 7 (family), 9 (quiz), 10 (partner
+  /// preference), and 12 (verification) have no required fields at all.
+  /// Step 11 (photos) requires at least one uploaded photo.
   bool _isCurrentStepValid(ProfileDraft draft) {
     switch (draft.currentStep) {
       case 0:
-        return draft.basicDetails.firstName.isNotEmpty &&
-            draft.basicDetails.lastName.isNotEmpty &&
-            draft.basicDetails.gender.isNotEmpty &&
-            draft.basicDetails.dob != null;
+        return draft.basicDetails.isComplete;
       case 1:
-        return draft.religionDetails.religion.isNotEmpty &&
-            draft.religionDetails.caste.isNotEmpty;
+        return draft.religionDetails.isComplete;
       case 2:
-        return draft.languageDetails.motherTongue.isNotEmpty;
+        return draft.languageDetails.isComplete;
       case 3:
-        return draft.locationDetails.city.isNotEmpty &&
-            draft.locationDetails.state.isNotEmpty;
+        return draft.locationDetails.isComplete;
       case 4:
-        return draft.educationDetails.qualification.isNotEmpty &&
-            draft.educationDetails.occupation.isNotEmpty;
+        return draft.educationDetails.isValid;
       case 5:
-        return draft.physicalDetails.height.isNotEmpty;
+        return draft.physicalDetails.isValid;
+      case 6:
+        return draft.lifestyleDetails.isValid;
+      case 8:
+        return draft.horoscopeDetails.isValid;
+      case 11:
+        return (ref.watch(myPhotosProvider).valueOrNull?.isNotEmpty) ?? false;
       default:
         return true;
     }
+  }
+
+  /// Steps that show a "Skip" action alongside Continue. Every step here
+  /// already lets Continue through when left untouched (see
+  /// [_isCurrentStepValid]) — Skip exists as an explicit, discoverable
+  /// affordance rather than a functional requirement, and clears any
+  /// partial input for that section so a half-filled step can't get stuck
+  /// (see [_onSkip]). Steps 0-3 (Basic/Religion/Language/Location) are
+  /// deliberately NOT here — those four stay hard-required, no Skip. Step 9
+  /// (Discover Personality) also has no entry — it already lets Continue
+  /// through unconditionally and its own quiz UI is unchanged.
+  bool _isStepSkippable(int step) => const {4, 5, 6, 7, 8, 10}.contains(step);
+
+  /// Clears the current (skippable) step's section back to its empty
+  /// default — both locally and, via [_onNext]'s sync, on the backend —
+  /// then advances. Clearing on the backend matters: finalize() validates
+  /// against RegistrationStep.draftData as persisted server-side, not
+  /// against in-memory Flutter state, so a partial fill that's merely
+  /// hidden locally would still fail finalize() later.
+  Future<void> _onSkip() async {
+    final notifier = ref.read(registrationProvider.notifier);
+    switch (ref.read(registrationProvider).currentStep) {
+      case 4:
+        notifier.updateEducationDetails(const EducationDetails());
+      case 5:
+        notifier.updatePhysicalDetails(const PhysicalDetails());
+      case 6:
+        notifier.updateLifestyleDetails(const LifestyleDetails());
+      case 7:
+        notifier.updateFamilyDetails(const FamilyDetails());
+      case 8:
+        notifier.updateHoroscopeDetails(const HoroscopeDetails());
+    }
+    await _onNext();
   }
 
   void _onBack() {
@@ -153,31 +191,6 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     } else {
       context.pop();
     }
-  }
-
-  /// CREATE MODE: persists progress on the current step and returns to
-  /// Profile Review, so the user can resume editing any section later
-  /// instead of losing what they've entered so far.
-  /// EDIT MODE: saves the section being edited and returns to Discover.
-  Future<void> _onSaveExit() async {
-    final notifier = ref.read(registrationProvider.notifier);
-
-    if (ref.read(profileFlowModeProvider) == ProfileFlowMode.edit) {
-      setState(() => _isSaving = true);
-      final ok = await _saveAndFinalizeForEdit(notifier);
-      if (!mounted) return;
-      setState(() => _isSaving = false);
-      if (!ok) return;
-      _exitEditModeToDiscover(notifier);
-      return;
-    }
-
-    setState(() => _isSaving = true);
-    final ok = await _syncCurrentStep(notifier);
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-    if (!ok) return;
-    context.go(RouteNames.profileReview);
   }
 
   /// EDIT MODE only — persists the section currently open and re-finalizes
@@ -246,8 +259,6 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
               RegistrationJourneyHeader(
                 stepIndex: stepIndex,
                 totalSteps: ProfileDraft.totalSteps,
-                onBack: _onBack,
-                onSaveExit: _isSaving ? null : _onSaveExit,
               ),
               RegistrationMotivationCaption(
                 stepIndex: stepIndex,
@@ -295,6 +306,15 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 // 400 at finalize.
                 onNext:
                     (_isSaving || !_isCurrentStepValid(draft)) ? null : _onNext,
+                skipLabel: _isStepSkippable(stepIndex)
+                    ? l10n.registrationSkipStep
+                    : null,
+                onSkip: (_isSaving || !_isStepSkippable(stepIndex))
+                    ? null
+                    : _onSkip,
+                validationHint: (!_isSaving && !_isCurrentStepValid(draft))
+                    ? l10n.registrationRequiredFieldsHint
+                    : null,
               ),
             ],
           ),
@@ -357,10 +377,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       case 9:
         return const StepPsychologicalQuiz();
       case 10:
-        return StepPartnerPref(
-          details: draft.partnerPreference,
-          onChanged: notifier.updatePartnerPreference,
-        );
+        return PartnerPreferenceStepCard(details: draft.partnerPreference);
       case 11:
         // Photos are an independent backend resource (PhotoController), not
         // part of the wizard draft — StepPhotos manages them directly.

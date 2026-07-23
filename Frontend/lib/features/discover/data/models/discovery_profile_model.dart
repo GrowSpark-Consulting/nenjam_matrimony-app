@@ -30,6 +30,7 @@ class DiscoveryProfileModel extends DiscoveryProfileEntity {
     super.diet,
     super.distanceKm,
     super.gender,
+    super.profileComplete,
   });
 
   factory DiscoveryProfileModel.fromJson(Map<String, dynamic> json) {
@@ -69,6 +70,7 @@ class DiscoveryProfileModel extends DiscoveryProfileEntity {
       diet: json['diet'] as String? ?? '',
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       gender: json['gender'] as String? ?? '',
+      profileComplete: json['profileComplete'] as bool? ?? false,
     );
   }
 
@@ -102,5 +104,6 @@ class DiscoveryProfileModel extends DiscoveryProfileEntity {
         'diet': diet,
         'distanceKm': distanceKm,
         'gender': gender,
+        'profileComplete': profileComplete,
       };
 }

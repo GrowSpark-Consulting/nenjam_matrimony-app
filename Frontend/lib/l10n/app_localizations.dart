@@ -662,6 +662,12 @@ abstract class AppLocalizations {
   /// **'NRI'**
   String get discoverChipNri;
 
+  /// No description provided for @discoverChipBuildingProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Building Profile'**
+  String get discoverChipBuildingProfile;
+
   /// No description provided for @homePhotoProtectedLabel.
   ///
   /// In en, this message translates to:
@@ -1700,12 +1706,6 @@ abstract class AppLocalizations {
   /// **'Step {current} of {total}'**
   String registrationStepIndicator(int current, int total);
 
-  /// No description provided for @registrationSaveExit.
-  ///
-  /// In en, this message translates to:
-  /// **'Save & Exit'**
-  String get registrationSaveExit;
-
   /// No description provided for @registrationPercentCompleted.
   ///
   /// In en, this message translates to:
@@ -1717,6 +1717,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Back'**
   String get registrationBack;
+
+  /// No description provided for @registrationSkipStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip this step'**
+  String get registrationSkipStep;
 
   /// No description provided for @registrationFinishLogin.
   ///
@@ -1928,6 +1934,18 @@ abstract class AppLocalizations {
   /// **'Religion'**
   String get registrationReligionLabel;
 
+  /// No description provided for @registrationSpecifyReligionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Specify Religion'**
+  String get registrationSpecifyReligionLabel;
+
+  /// No description provided for @registrationSpecifyReligionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your religion'**
+  String get registrationSpecifyReligionHint;
+
   /// No description provided for @registrationCasteLabel.
   ///
   /// In en, this message translates to:
@@ -1943,7 +1961,7 @@ abstract class AppLocalizations {
   /// No description provided for @registrationSubCasteLabel.
   ///
   /// In en, this message translates to:
-  /// **'Sub Caste (Optional)'**
+  /// **'Sub Caste'**
   String get registrationSubCasteLabel;
 
   /// No description provided for @registrationSubCasteHint.
@@ -2177,7 +2195,7 @@ abstract class AppLocalizations {
   /// No description provided for @registrationAreaLabel.
   ///
   /// In en, this message translates to:
-  /// **'Area (Optional)'**
+  /// **'Area'**
   String get registrationAreaLabel;
 
   /// No description provided for @registrationAreaHint.
@@ -2189,7 +2207,7 @@ abstract class AppLocalizations {
   /// No description provided for @registrationPinLabel.
   ///
   /// In en, this message translates to:
-  /// **'PIN Code (Optional)'**
+  /// **'PIN Code'**
   String get registrationPinLabel;
 
   /// No description provided for @registrationPinHint.
@@ -2201,7 +2219,7 @@ abstract class AppLocalizations {
   /// No description provided for @registrationNativePlaceLabel.
   ///
   /// In en, this message translates to:
-  /// **'Native Place (Optional)'**
+  /// **'Native Place'**
   String get registrationNativePlaceLabel;
 
   /// No description provided for @registrationNativePlaceHint.
@@ -2354,10 +2372,22 @@ abstract class AppLocalizations {
   /// **'Highest Qualification'**
   String get registrationQualificationLabel;
 
+  /// No description provided for @registrationSpecifyQualificationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Specify Qualification'**
+  String get registrationSpecifyQualificationLabel;
+
+  /// No description provided for @registrationSpecifyQualificationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., B.A. History'**
+  String get registrationSpecifyQualificationHint;
+
   /// No description provided for @registrationCollegeLabel.
   ///
   /// In en, this message translates to:
-  /// **'College / University (Optional)'**
+  /// **'College / University'**
   String get registrationCollegeLabel;
 
   /// No description provided for @registrationCollegeHint.
@@ -2372,10 +2402,22 @@ abstract class AppLocalizations {
   /// **'Occupation'**
   String get registrationOccupationLabel;
 
+  /// No description provided for @registrationSpecifyOccupationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Specify Occupation'**
+  String get registrationSpecifyOccupationLabel;
+
+  /// No description provided for @registrationSpecifyOccupationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., Freelance Designer'**
+  String get registrationSpecifyOccupationHint;
+
   /// No description provided for @registrationCompanyLabel.
   ///
   /// In en, this message translates to:
-  /// **'Company (Optional)'**
+  /// **'Company'**
   String get registrationCompanyLabel;
 
   /// No description provided for @registrationCompanyHint.
@@ -2396,10 +2438,22 @@ abstract class AppLocalizations {
   /// **'Annual Income'**
   String get registrationAnnualIncomeLabel;
 
+  /// No description provided for @registrationAnnualIncomeOtherLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Specify Annual Income (in Lakhs)'**
+  String get registrationAnnualIncomeOtherLabel;
+
+  /// No description provided for @registrationAnnualIncomeOtherHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., 12'**
+  String get registrationAnnualIncomeOtherHint;
+
   /// No description provided for @registrationWorkLocationLabel.
   ///
   /// In en, this message translates to:
-  /// **'Work Location (Optional)'**
+  /// **'Work Location'**
   String get registrationWorkLocationLabel;
 
   /// No description provided for @registrationWorkLocationHint.
@@ -2540,11 +2594,11 @@ abstract class AppLocalizations {
   /// **'1 Crore+'**
   String get income100Plus;
 
-  /// No description provided for @incomePreferNotSay.
+  /// No description provided for @incomeOther.
   ///
   /// In en, this message translates to:
-  /// **'Prefer not to say'**
-  String get incomePreferNotSay;
+  /// **'Other'**
+  String get incomeOther;
 
   /// No description provided for @registrationPhysicalTitle.
   ///
@@ -2564,23 +2618,23 @@ abstract class AppLocalizations {
   /// **'Height'**
   String get registrationHeightLabel;
 
+  /// No description provided for @registrationTapToSetHeightLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag the slider to set your height'**
+  String get registrationTapToSetHeightLabel;
+
   /// No description provided for @registrationWeightLabel.
   ///
   /// In en, this message translates to:
   /// **'Weight'**
   String get registrationWeightLabel;
 
-  /// No description provided for @registrationBodyTypeLabel.
+  /// No description provided for @registrationTapToSetWeightLabel.
   ///
   /// In en, this message translates to:
-  /// **'Body Type'**
-  String get registrationBodyTypeLabel;
-
-  /// No description provided for @registrationComplexionLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Complexion'**
-  String get registrationComplexionLabel;
+  /// **'Drag the slider to set your weight'**
+  String get registrationTapToSetWeightLabel;
 
   /// No description provided for @registrationBloodGroupLabel.
   ///
@@ -2593,54 +2647,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Disability'**
   String get registrationDisabilityLabel;
-
-  /// No description provided for @bodySlim.
-  ///
-  /// In en, this message translates to:
-  /// **'Slim'**
-  String get bodySlim;
-
-  /// No description provided for @bodyAverage.
-  ///
-  /// In en, this message translates to:
-  /// **'Average'**
-  String get bodyAverage;
-
-  /// No description provided for @bodyAthletic.
-  ///
-  /// In en, this message translates to:
-  /// **'Athletic'**
-  String get bodyAthletic;
-
-  /// No description provided for @bodyHeavy.
-  ///
-  /// In en, this message translates to:
-  /// **'Heavy'**
-  String get bodyHeavy;
-
-  /// No description provided for @complexionVeryFair.
-  ///
-  /// In en, this message translates to:
-  /// **'Very Fair'**
-  String get complexionVeryFair;
-
-  /// No description provided for @complexionFair.
-  ///
-  /// In en, this message translates to:
-  /// **'Fair'**
-  String get complexionFair;
-
-  /// No description provided for @complexionWheatish.
-  ///
-  /// In en, this message translates to:
-  /// **'Wheatish'**
-  String get complexionWheatish;
-
-  /// No description provided for @complexionDark.
-  ///
-  /// In en, this message translates to:
-  /// **'Dark'**
-  String get complexionDark;
 
   /// No description provided for @disabilityNone.
   ///
@@ -2870,6 +2876,24 @@ abstract class AppLocalizations {
   /// **'Don\'t Know'**
   String get commonDontKnow;
 
+  /// No description provided for @commonPleaseSpecifyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Please specify'**
+  String get commonPleaseSpecifyLabel;
+
+  /// No description provided for @commonPleaseSpecifyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type your answer'**
+  String get commonPleaseSpecifyHint;
+
+  /// No description provided for @commonRequiredFieldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Required field'**
+  String get commonRequiredFieldLabel;
+
   /// No description provided for @registrationFamilyTitle.
   ///
   /// In en, this message translates to:
@@ -2881,6 +2905,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tell us about your family'**
   String get registrationFamilySubtitle;
+
+  /// No description provided for @registrationFatherSectionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Father'**
+  String get registrationFatherSectionLabel;
 
   /// No description provided for @registrationFatherNameLabel.
   ///
@@ -2894,6 +2924,18 @@ abstract class AppLocalizations {
   /// **'Enter father\'s name'**
   String get registrationFatherNameHint;
 
+  /// No description provided for @registrationFatherAgeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Father\'s Age (Optional)'**
+  String get registrationFatherAgeLabel;
+
+  /// No description provided for @registrationFatherAgeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter father\'s age'**
+  String get registrationFatherAgeHint;
+
   /// No description provided for @registrationFatherOccLabel.
   ///
   /// In en, this message translates to:
@@ -2906,6 +2948,12 @@ abstract class AppLocalizations {
   /// **'e.g., Retired Government Officer'**
   String get registrationFatherOccHint;
 
+  /// No description provided for @registrationMotherSectionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mother'**
+  String get registrationMotherSectionLabel;
+
   /// No description provided for @registrationMotherNameLabel.
   ///
   /// In en, this message translates to:
@@ -2917,6 +2965,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter mother\'s name'**
   String get registrationMotherNameHint;
+
+  /// No description provided for @registrationMotherAgeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mother\'s Age (Optional)'**
+  String get registrationMotherAgeLabel;
+
+  /// No description provided for @registrationMotherAgeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter mother\'s age'**
+  String get registrationMotherAgeHint;
 
   /// No description provided for @registrationMotherOccLabel.
   ///
@@ -2948,17 +3008,71 @@ abstract class AppLocalizations {
   /// **'Family Status'**
   String get registrationFamilyStatusLabel;
 
-  /// No description provided for @registrationBrothersLabel.
+  /// No description provided for @registrationSiblingsSectionLabel.
   ///
   /// In en, this message translates to:
-  /// **'No. of Brothers'**
-  String get registrationBrothersLabel;
+  /// **'Siblings'**
+  String get registrationSiblingsSectionLabel;
 
-  /// No description provided for @registrationSistersLabel.
+  /// No description provided for @registrationSiblingBrotherLabel.
   ///
   /// In en, this message translates to:
-  /// **'No. of Sisters'**
-  String get registrationSistersLabel;
+  /// **'Brother'**
+  String get registrationSiblingBrotherLabel;
+
+  /// No description provided for @registrationSiblingSisterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sister'**
+  String get registrationSiblingSisterLabel;
+
+  /// No description provided for @registrationRemoveSiblingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get registrationRemoveSiblingLabel;
+
+  /// No description provided for @registrationSiblingNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (Optional)'**
+  String get registrationSiblingNameLabel;
+
+  /// No description provided for @registrationSiblingNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter sibling\'s name'**
+  String get registrationSiblingNameHint;
+
+  /// No description provided for @registrationSiblingAgeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Age (Optional)'**
+  String get registrationSiblingAgeLabel;
+
+  /// No description provided for @registrationSiblingAgeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter sibling\'s age'**
+  String get registrationSiblingAgeHint;
+
+  /// No description provided for @registrationSiblingOccupationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Occupation (Optional)'**
+  String get registrationSiblingOccupationLabel;
+
+  /// No description provided for @registrationSiblingOccupationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter sibling\'s occupation'**
+  String get registrationSiblingOccupationHint;
+
+  /// No description provided for @registrationAddSiblingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Sibling'**
+  String get registrationAddSiblingLabel;
 
   /// No description provided for @famJoint.
   ///
@@ -3235,6 +3349,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Marital Status'**
   String get registrationPrefMaritalLabel;
+
+  /// No description provided for @registrationPartnerPrefSetLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your partner preferences are set'**
+  String get registrationPartnerPrefSetLabel;
+
+  /// No description provided for @registrationPartnerPrefNotSetLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t set your partner preferences yet'**
+  String get registrationPartnerPrefNotSetLabel;
+
+  /// No description provided for @registrationSetPartnerPrefButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Partner Preferences'**
+  String get registrationSetPartnerPrefButton;
+
+  /// No description provided for @registrationEditPartnerPrefButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Partner Preferences'**
+  String get registrationEditPartnerPrefButton;
 
   /// No description provided for @prefCasteSame.
   ///

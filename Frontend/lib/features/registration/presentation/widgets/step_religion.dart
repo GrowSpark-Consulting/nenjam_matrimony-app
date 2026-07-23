@@ -5,6 +5,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
+import 'other_option_field.dart';
 import 'registration_helper_tip.dart';
 
 /// Step 2 — Religion Details
@@ -89,16 +90,14 @@ class _StepReligionState extends State<StepReligion> {
           const SizedBox(height: 16),
           RegistrationHelperTip(text: l10n.registrationTipReligion),
           const SizedBox(height: 24),
-          Text(l10n.registrationReligionLabel, style: AppTypography.labelLarge),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            // Values stay English (stored/emitted); only the label is localized.
-            children: _religions.map((r) {
-              final sel = _religion == r;
-              return ChoiceChip(label: Text(_religionLabel(l10n, r)), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _religion = r); _emit(); });
-            }).toList(),
+          OtherOptionField(
+            title: l10n.registrationReligionLabel,
+            options: _religions,
+            value: _religion,
+            labelOf: (v) => _religionLabel(l10n, v),
+            customFieldLabel: l10n.registrationSpecifyReligionLabel,
+            customFieldHint: l10n.registrationSpecifyReligionHint,
+            onChanged: (v) { setState(() => _religion = v); _emit(); },
           ),
           const SizedBox(height: 20),
           NmTextField(label: l10n.registrationCasteLabel, hint: l10n.registrationCasteHint, controller: _casteCtrl, onChanged: (_) => _emit()),

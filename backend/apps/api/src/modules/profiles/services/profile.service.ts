@@ -13,6 +13,16 @@ import { PhotoEntity } from '../entities/photo.entity';
 import { PartnerPreferenceEntity } from '../entities/partner-preference.entity';
 import { AstrologyProfileEntity } from '../entities/astrology-profile.entity';
 import { ProfileCompletionEntity } from '../entities/profile-completion.entity';
+import {
+  isBasicDetailsComplete,
+  isEducationDetailsValid,
+  isHoroscopeDetailsValid,
+  isLanguageDetailsComplete,
+  isLifestyleDetailsValid,
+  isLocationDetailsComplete,
+  isPhysicalDetailsValid,
+  isReligionDetailsComplete,
+} from '../validation/registration-rules';
 
 // Best-effort parsers for the free-text range/string fields the Flutter
 // wizard collects. These assume the wizard's dropdown/picker values look
@@ -211,11 +221,7 @@ export class ProfileService {
   }
 
   // Reads the accumulated wizard draft (see ProfileDraftService) and writes
-  // it into UserProfile / AstrologyProfile / PartnerPreference. Fields the
-  // Flutter wizard collects but that have no dedicated column in the current
-  // schema (e.g. religionDetails.denomination, familyDetails.familyValues)
-  // are intentionally left out of the finalized row — they still exist in
-  // RegistrationStep.draftData for reference/audit.
+  // it into UserProfile / AstrologyProfile / PartnerPreference.
   async finalize(userId: string): Promise<ProfileEntity> {
     const draft = await this.draftService.getDraft(userId);
     const data = draft.data as Record<string, Record<string, unknown>>;
@@ -224,6 +230,48 @@ export class ProfileService {
     if (missing.length > 0) {
       throw new BadRequestException(
         `Cannot finalize profile — missing required fields: ${missing.join(', ')}`,
+      );
+    }
+
+    // These checks are finalize-only — deliberately NOT part of
+    // missingRequiredFields()/syncMatchableFromDraft(), so a user can still
+    // become matchable before touching the skippable Education/Lifestyle/
+    // Horoscope steps or uploading a photo. They only gate the final
+    // "complete registration" action.
+    //
+    // Mobile verification is intentionally NOT enforced here yet (no OTP
+    // module exists — see modules/verification, currently a stub). When
+    // it's built, add a check here against a real verified-phone signal
+    // (FirebaseAuthGuard already reads the ID token's `phone_number` claim
+    // into `User.phone`) rather than gating on anything client-supplied.
+    const incomplete: string[] = [];
+    if (!isPhysicalDetailsValid(data.physicalDetails ?? {})) {
+      incomplete.push(
+        'physicalDetails (once started, height/weight/disability are all required — finish it or clear it)',
+      );
+    }
+    if (!isEducationDetailsValid(data.educationDetails ?? {})) {
+      incomplete.push(
+        'educationDetails (once started, every field is required — finish it or clear it)',
+      );
+    }
+    if (!isLifestyleDetailsValid(data.lifestyleDetails ?? {})) {
+      incomplete.push(
+        'lifestyleDetails (once started, every field is required — finish it or clear it)',
+      );
+    }
+    if (!isHoroscopeDetailsValid(data.horoscopeDetails ?? {})) {
+      incomplete.push(
+        'horoscopeDetails.rashi (required once any horoscope field is filled)',
+      );
+    }
+    const photoCount = await this.photoRepository.countForUser(userId);
+    if (photoCount === 0) {
+      incomplete.push('photos (at least one profile photo is required)');
+    }
+    if (incomplete.length > 0) {
+      throw new BadRequestException(
+        `Cannot finalize profile — ${incomplete.join('; ')}`,
       );
     }
 
@@ -283,8 +331,11 @@ export class ProfileService {
     const annualIncomeLakhs = parseLeadingNumber(
       education.annualIncome as string | undefined,
     );
-    const brothers = Number(family.brothers ?? 0);
-    const sisters = Number(family.sisters ?? 0);
+    const father = (family.father ?? {}) as Record<string, unknown>;
+    const mother = (family.mother ?? {}) as Record<string, unknown>;
+    const siblingDetails = Array.isArray(family.siblings)
+      ? (family.siblings as Record<string, unknown>[])
+      : [];
 
     const profile = await this.profileRepository.upsertProfile(userId, {
       firstName: basic.firstName as string,
@@ -328,17 +379,20 @@ export class ProfileService {
       hobbies: toArray(lifestyle.hobbies),
       physicalStatus:
         joinNonEmpty(
-          physical.bodyType as string,
-          physical.complexion as string,
           physical.bloodGroup as string,
           physical.disability as string,
         ) ?? null,
       familyType: (family.familyType as string) || null,
       familyStatus: (family.familyStatus as string) || null,
       familyValues: (family.familyValues as string) || null,
-      fatherOccupation: (family.fatherOccupation as string) || null,
-      motherOccupation: (family.motherOccupation as string) || null,
-      siblings: brothers + sisters,
+      fatherName: (father.name as string) || null,
+      fatherAge: father.age != null ? Number(father.age) : null,
+      fatherOccupation: (father.occupation as string) || null,
+      motherName: (mother.name as string) || null,
+      motherAge: mother.age != null ? Number(mother.age) : null,
+      motherOccupation: (mother.occupation as string) || null,
+      siblings: siblingDetails.length,
+      siblingDetails: siblingDetails as Prisma.InputJsonValue,
       isProfileComplete: true,
       // Placeholder — replaced below with the real, freshly-computed value
       // once photos/partnerPreference/astrology have all been written for
@@ -434,11 +488,13 @@ export class ProfileService {
   }
 
   /**
-   * The mandatory profile fields required for matchmaking — exactly the set
-   * that maps to UserProfile's NOT NULL columns. Returns the list of missing
-   * ones (empty === the user is eligible to be materialised/finalised). Single
-   * source of truth for both finalize() (throws on missing) and
-   * syncMatchableFromDraft() (no-op on missing).
+   * The mandatory profile fields required for matchmaking — Steps 1-4
+   * (Basic/Religion/Language/Location). Physical (Step 6) is skippable and
+   * validated separately, finalize-only (see isPhysicalDetailsValid in
+   * finalize() above) — it does NOT gate matchability. Returns the list of
+   * missing ones (empty === the user is eligible to be
+   * materialised/finalised). Single source of truth for both finalize()
+   * (throws on missing) and syncMatchableFromDraft() (no-op on missing).
    */
   private missingRequiredFields(
     data: Record<string, Record<string, unknown>>,
@@ -447,23 +503,24 @@ export class ProfileService {
     const religion = data.religionDetails ?? {};
     const language = data.languageDetails ?? {};
     const location = data.locationDetails ?? {};
-    const education = data.educationDetails ?? {};
-    const physical = data.physicalDetails ?? {};
 
     const missing: string[] = [];
-    if (!basic.firstName) missing.push('basicDetails.firstName');
-    if (!basic.lastName) missing.push('basicDetails.lastName');
-    if (!basic.gender) missing.push('basicDetails.gender');
-    if (!basic.dob) missing.push('basicDetails.dob');
-    if (!religion.religion) missing.push('religionDetails.religion');
-    if (!religion.caste) missing.push('religionDetails.caste');
-    if (!language.motherTongue) missing.push('languageDetails.motherTongue');
-    if (!location.city) missing.push('locationDetails.city');
-    if (!location.state) missing.push('locationDetails.state');
-    if (!education.qualification)
-      missing.push('educationDetails.qualification');
-    if (!education.occupation) missing.push('educationDetails.occupation');
-    if (!physical.height) missing.push('physicalDetails.height');
+    if (!isBasicDetailsComplete(basic)) {
+      missing.push(
+        'basicDetails (firstName, lastName, gender, maritalStatus, profileCreatedFor, dob)',
+      );
+    }
+    if (!isReligionDetailsComplete(religion)) {
+      missing.push('religionDetails (religion, caste, subCaste, community)');
+    }
+    if (!isLanguageDetailsComplete(language)) {
+      missing.push('languageDetails (motherTongue, languagesKnown)');
+    }
+    if (!isLocationDetailsComplete(location)) {
+      missing.push(
+        'locationDetails (country, state, city, area, pinCode, nativePlace)',
+      );
+    }
 
     return missing;
   }

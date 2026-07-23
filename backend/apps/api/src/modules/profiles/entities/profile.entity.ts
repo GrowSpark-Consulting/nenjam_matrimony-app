@@ -46,9 +46,19 @@ export class ProfileEntity {
   familyType!: string | null;
   familyStatus!: string | null;
   familyValues!: string | null;
+  fatherName!: string | null;
+  fatherAge!: number | null;
   fatherOccupation!: string | null;
+  motherName!: string | null;
+  motherAge!: number | null;
   motherOccupation!: string | null;
   siblings!: number | null;
+  siblingDetails!: Array<{
+    relation: 'BROTHER' | 'SISTER';
+    name?: string;
+    age?: number;
+    occupation?: string;
+  }>;
   isProfileComplete!: boolean;
   profileCompletePct!: number;
 
