@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import type { RegistrationStep } from '../../../../../../libs/database/generated/client';
 import { ProfileRepository } from '../repositories/profile.repository';
 
 // Order matches the Flutter wizard's 12 steps (profile_draft.dart). Steps 11
@@ -35,16 +36,7 @@ export class ProfileDraftService {
   async getDraft(userId: string): Promise<DraftResponse> {
     const step =
       await this.profileRepository.getOrCreateRegistrationStep(userId);
-    const draftData = step.draftData as Record<string, unknown>;
-
-    return {
-      currentStep: step.currentStep,
-      totalSteps: step.totalSteps,
-      completedSteps: (step.completedSteps as number[]) ?? [],
-      isComplete: step.isComplete,
-      completionPercentage: this.computeCompletionPercentage(draftData),
-      data: draftData,
-    };
+    return this.toDraftResponse(step);
   }
 
   async updateSection(
@@ -57,13 +49,29 @@ export class ProfileDraftService {
       throw new BadRequestException(`Unknown draft section: ${section}`);
     }
 
-    await this.profileRepository.mergeDraftSection(
+    // mergeDraftSection's UPDATE already RETURNs the fully merged row — a
+    // trailing getDraft() call here would just re-run the expensive
+    // getOrCreateRegistrationStep round trip (see its comment) to re-fetch
+    // data we already have.
+    const step = await this.profileRepository.mergeDraftSection(
       userId,
       section,
       sectionData as Record<string, unknown>,
       stepNumber,
     );
-    return this.getDraft(userId);
+    return this.toDraftResponse(step);
+  }
+
+  private toDraftResponse(step: RegistrationStep): DraftResponse {
+    const draftData = step.draftData as Record<string, unknown>;
+    return {
+      currentStep: step.currentStep,
+      totalSteps: step.totalSteps,
+      completedSteps: (step.completedSteps as number[]) ?? [],
+      isComplete: step.isComplete,
+      completionPercentage: this.computeCompletionPercentage(draftData),
+      data: draftData,
+    };
   }
 
   // Mirrors ProfileDraft.completionPercentage in

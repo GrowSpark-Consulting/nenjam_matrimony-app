@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser, FirebaseAuthGuard } from '@app/common';
 import {
   DraftResponse,
@@ -38,80 +38,130 @@ export class ProfileDraftController {
   updateBasicDetails(
     @CurrentUser('id') userId: string,
     @Body() dto: BasicDetailsDto,
+    @Query('skipMaterialize') skipMaterialize?: string,
   ): Promise<DraftResponse> {
-    return this.save(userId, 'basicDetails', dto);
+    return this.save(userId, 'basicDetails', dto, skipMaterialize === 'true');
   }
 
   @Patch('religion-details')
   updateReligionDetails(
     @CurrentUser('id') userId: string,
     @Body() dto: ReligionDetailsDto,
+    @Query('skipMaterialize') skipMaterialize?: string,
   ): Promise<DraftResponse> {
-    return this.save(userId, 'religionDetails', dto);
+    return this.save(
+      userId,
+      'religionDetails',
+      dto,
+      skipMaterialize === 'true',
+    );
   }
 
   @Patch('language-details')
   updateLanguageDetails(
     @CurrentUser('id') userId: string,
     @Body() dto: LanguageDetailsDto,
+    @Query('skipMaterialize') skipMaterialize?: string,
   ): Promise<DraftResponse> {
-    return this.save(userId, 'languageDetails', dto);
+    return this.save(
+      userId,
+      'languageDetails',
+      dto,
+      skipMaterialize === 'true',
+    );
   }
 
   @Patch('location-details')
   updateLocationDetails(
     @CurrentUser('id') userId: string,
     @Body() dto: LocationDetailsDto,
+    @Query('skipMaterialize') skipMaterialize?: string,
   ): Promise<DraftResponse> {
-    return this.save(userId, 'locationDetails', dto);
+    return this.save(
+      userId,
+      'locationDetails',
+      dto,
+      skipMaterialize === 'true',
+    );
   }
 
   @Patch('education-details')
   updateEducationDetails(
     @CurrentUser('id') userId: string,
     @Body() dto: EducationDetailsDto,
+    @Query('skipMaterialize') skipMaterialize?: string,
   ): Promise<DraftResponse> {
-    return this.save(userId, 'educationDetails', dto);
+    return this.save(
+      userId,
+      'educationDetails',
+      dto,
+      skipMaterialize === 'true',
+    );
   }
 
   @Patch('physical-details')
   updatePhysicalDetails(
     @CurrentUser('id') userId: string,
     @Body() dto: PhysicalDetailsDto,
+    @Query('skipMaterialize') skipMaterialize?: string,
   ): Promise<DraftResponse> {
-    return this.save(userId, 'physicalDetails', dto);
+    return this.save(
+      userId,
+      'physicalDetails',
+      dto,
+      skipMaterialize === 'true',
+    );
   }
 
   @Patch('lifestyle-details')
   updateLifestyleDetails(
     @CurrentUser('id') userId: string,
     @Body() dto: LifestyleDetailsDto,
+    @Query('skipMaterialize') skipMaterialize?: string,
   ): Promise<DraftResponse> {
-    return this.save(userId, 'lifestyleDetails', dto);
+    return this.save(
+      userId,
+      'lifestyleDetails',
+      dto,
+      skipMaterialize === 'true',
+    );
   }
 
   @Patch('family-details')
   updateFamilyDetails(
     @CurrentUser('id') userId: string,
     @Body() dto: FamilyDetailsDto,
+    @Query('skipMaterialize') skipMaterialize?: string,
   ): Promise<DraftResponse> {
-    return this.save(userId, 'familyDetails', dto);
+    return this.save(userId, 'familyDetails', dto, skipMaterialize === 'true');
   }
 
   @Patch('horoscope-details')
   updateHoroscopeDetails(
     @CurrentUser('id') userId: string,
     @Body() dto: HoroscopeDetailsDto,
+    @Query('skipMaterialize') skipMaterialize?: string,
   ): Promise<DraftResponse> {
-    return this.save(userId, 'horoscopeDetails', dto);
+    return this.save(
+      userId,
+      'horoscopeDetails',
+      dto,
+      skipMaterialize === 'true',
+    );
   }
 
   @Patch('partner-preference')
   updatePartnerPreference(
     @CurrentUser('id') userId: string,
     @Body() dto: PartnerPreferenceDto,
+    @Query('skipMaterialize') skipMaterialize?: string,
   ): Promise<DraftResponse> {
-    return this.save(userId, 'partnerPreference', dto);
+    return this.save(
+      userId,
+      'partnerPreference',
+      dto,
+      skipMaterialize === 'true',
+    );
   }
 
   /**
@@ -120,14 +170,44 @@ export class ProfileDraftController {
    * UserProfile the moment all mandatory fields exist (see
    * ProfileService.syncMatchableFromDraft). That call is non-throwing, so the
    * step save's response is unaffected whether the user is eligible yet or not.
+   *
+   * [skipMaterialize] — set by the Flutter edit-mode flow (see
+   * RegistrationRepository._patchSection), which always calls POST
+   * /profiles/finalize immediately after this save. finalize() does its own
+   * full writeProfileFromDraft + recalculateAndPersistCompletion pass
+   * unconditionally (it has to — it's also called standalone, with no
+   * preceding PATCH, from the Profile Review / Registration Completing
+   * screens), so materialising here too was pure duplicate work: measured
+   * on a physical device, ~1.8s spent doing exactly the same 3 upserts +
+   * 4-query completion recompute that finalize() was about to redo
+   * unconditionally a moment later. Skipping it here changes nothing about
+   * the final DB state — finalize() remains authoritative — it just avoids
+   * computing it twice. CREATE mode never sends this flag (it doesn't call
+   * finalize per step), so its auto-materialize-on-mandatory-complete
+   * behavior is unchanged.
    */
   private async save(
     userId: string,
     section: DraftSection,
     dto: object,
+    skipMaterialize: boolean,
   ): Promise<DraftResponse> {
+    console.log(
+      `[STORY-PERF-SRV] ${Date.now()} save() started :: ${section} skipMaterialize=${skipMaterialize}`,
+    );
     const draft = await this.draftService.updateSection(userId, section, dto);
-    await this.profileService.syncMatchableFromDraft(userId);
+    console.log(
+      `[STORY-PERF-SRV] ${Date.now()} updateSection complete :: ${section}`,
+    );
+    if (!skipMaterialize) {
+      await this.profileService.syncMatchableFromDraft(
+        userId,
+        draft.data as Record<string, Record<string, unknown>>,
+      );
+    }
+    console.log(
+      `[STORY-PERF-SRV] ${Date.now()} save() DB work complete :: ${section}`,
+    );
     return draft;
   }
 }

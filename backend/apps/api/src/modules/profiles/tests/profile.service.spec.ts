@@ -117,7 +117,6 @@ describe('ProfileService', () => {
     markComplete?: jest.Mock;
     updateProfileCompletePct?: jest.Mock;
     findAllForUser?: jest.Mock;
-    countForUser?: jest.Mock;
     getDraft?: jest.Mock;
   }) {
     const profileRepository = {
@@ -136,9 +135,12 @@ describe('ProfileService', () => {
     } as unknown as ProfileRepository;
 
     const photoRepository = {
+      // Default: one photo present, so finalize()'s photo gate (now driven
+      // by findAllForUser().length rather than a separate countForUser())
+      // passes unless a test explicitly overrides this to [].
       findAllForUser:
-        overrides?.findAllForUser ?? jest.fn().mockResolvedValue([]),
-      countForUser: overrides?.countForUser ?? jest.fn().mockResolvedValue(1),
+        overrides?.findAllForUser ??
+        jest.fn().mockResolvedValue([buildPhoto()]),
     } as unknown as PhotoRepository;
 
     const draftService = {
@@ -511,7 +513,7 @@ describe('ProfileService', () => {
         getDraft: jest.fn().mockResolvedValue(buildValidDraft()),
         upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
         findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
-        countForUser: jest.fn().mockResolvedValue(0),
+        findAllForUser: jest.fn().mockResolvedValue([]),
       });
 
       await expect(service.finalize('user-1')).rejects.toThrow(

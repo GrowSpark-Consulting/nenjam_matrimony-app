@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/route_names.dart';
+import '../../../../core/utils/story_perf.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../data/repositories/registration_repository.dart';
@@ -43,8 +44,10 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   bool _isSaving = false;
 
   Future<void> _onNext() async {
+    StoryPerf.start('Continue tapped');
     final draft = ref.read(registrationProvider);
     final notifier = ref.read(registrationProvider.notifier);
+    StoryPerf.mark('Local validation complete');
 
     // EDIT MODE: this is a single-section quick edit (opened from the
     // drawer via Edit Profile / Verification Center) — save just this
@@ -52,24 +55,34 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     // Discover. Never advance through the remaining wizard steps or
     // restart registration/onboarding.
     if (ref.read(profileFlowModeProvider) == ProfileFlowMode.edit) {
+      StoryPerf.mark('Mode: EDIT');
       setState(() => _isSaving = true);
       final ok = await _saveAndFinalizeForEdit(notifier);
       if (!mounted) return;
       setState(() => _isSaving = false);
+      StoryPerf.mark('Cubit/state updated (isSaving=false)');
       if (!ok) return;
       _exitEditModeToDiscover(notifier);
       return;
     }
 
+    StoryPerf.mark('Mode: CREATE');
     setState(() => _isSaving = true);
     final ok = await _syncCurrentStep(notifier);
+    StoryPerf.mark('Flutter response received');
     if (!mounted) return;
     setState(() => _isSaving = false);
+    StoryPerf.mark('Cubit/state updated (isSaving=false)');
     if (!ok) return;
 
     if (draft.currentStep < ProfileDraft.totalSteps - 1) {
+      StoryPerf.mark('Navigation started (step index change)');
       notifier.nextStep();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        StoryPerf.mark('Next registration page rendered');
+      });
     } else {
+      StoryPerf.mark('Navigation started (to profileReview)');
       context.go(RouteNames.profileReview);
     }
   }
@@ -202,8 +215,15 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   /// Returns false and shows an error snackbar on failure.
   Future<bool> _saveAndFinalizeForEdit(RegistrationNotifier notifier) async {
     try {
-      await notifier.syncCurrentStepToBackend();
+      // skipMaterialize: true — finalizeToBackend() runs unconditionally
+      // right below and redoes the same materialize+recompute work this
+      // step-save would otherwise trigger server-side, so doing it here too
+      // would just be duplicate work discarded a moment later.
+      await notifier.syncCurrentStepToBackend(skipMaterialize: true);
+      StoryPerf.mark('PATCH response received');
+      StoryPerf.mark('finalize started');
       await notifier.finalizeToBackend();
+      StoryPerf.mark('finalize response received');
       return true;
     } on RegistrationApiException catch (e) {
       if (!mounted) return false;
@@ -230,7 +250,11 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Profile updated successfully')),
     );
+    StoryPerf.mark('Navigation started (to discover)');
     context.go(RouteNames.discover);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      StoryPerf.mark('Next registration page rendered');
+    });
   }
 
   @override

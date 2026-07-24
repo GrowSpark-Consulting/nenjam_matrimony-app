@@ -15,12 +15,34 @@ import { AstrologyProfileEntity } from '../entities/astrology-profile.entity';
 export class ProfileRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Deliberately raw SQL, not `prisma.registrationStep.upsert()`: because the
+  // conflict target (`userId`) isn't this model's `@id`, Prisma's query
+  // engine doesn't compile that upsert into a single `INSERT ... ON
+  // CONFLICT` — it falls back to an explicit read-then-write transaction (3
+  // SELECTs + COMMIT). Measured on this dataset: ~1.0-1.3s per call against
+  // Neon vs. ~250-300ms for the single-statement version below. This method
+  // is called multiple times per wizard "Continue" tap (see
+  // ProfileDraftService/ProfileService), so that difference was the
+  // dominant cause of the reported 5+s save delay. Column list mirrors the
+  // Prisma-generated one exactly — update both if the schema changes.
   async getOrCreateRegistrationStep(userId: string): Promise<RegistrationStep> {
-    return this.prisma.registrationStep.upsert({
-      where: { userId },
-      update: {},
-      create: { userId },
-    });
+    const rows = await this.prisma.$queryRaw<RegistrationStep[]>`
+      INSERT INTO registration_steps (id, user_id, updated_at)
+      VALUES (gen_random_uuid(), ${userId}, now())
+      ON CONFLICT (user_id) DO UPDATE SET updated_at = now()
+      RETURNING
+        id,
+        user_id AS "userId",
+        current_step AS "currentStep",
+        total_steps AS "totalSteps",
+        completed_steps AS "completedSteps",
+        draft_data AS "draftData",
+        last_saved_at AS "lastSavedAt",
+        is_complete AS "isComplete",
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"
+    `;
+    return rows[0];
   }
 
   async mergeDraftSection(
@@ -67,18 +89,42 @@ export class ProfileRepository {
     return row ? this.toEntity(row) : null;
   }
 
-  // Upsert, not create — finalize() can be called again (e.g. the user edits
-  // and resubmits the wizard), and must update the existing row rather than
-  // throw on UserProfile.userId's unique constraint or create a duplicate.
+  // Deliberately update-then-create, not `.upsert()`: same issue as
+  // getOrCreateRegistrationStep above — because `userId` isn't this model's
+  // `@id`, `.upsert()` compiles into a 3-SELECT+COMMIT transaction instead of
+  // one statement. `.update()`/`.create()` alone don't have that problem —
+  // each compiles to a single round trip. This runs on every wizard
+  // "Continue" tap once the mandatory sections are complete (see
+  // ProfileService.syncMatchableFromDraft), so it was the dominant
+  // contributor to a still-5+s save even after the RegistrationStep fix —
+  // measured: ~5-6s here vs. ~1s for the equivalent update-then-create.
+  // update() throws P2025 ("record to update not found") on a genuinely new
+  // user's first materialize — the only case that falls through to create().
+  private async updateThenCreate<T>(
+    update: () => Promise<T>,
+    create: () => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await update();
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2025') {
+        return create();
+      }
+      throw error;
+    }
+  }
+
   async upsertProfile(
     userId: string,
     data: Omit<Prisma.UserProfileCreateInput, 'user'>,
   ): Promise<ProfileEntity> {
-    const row = await this.prisma.userProfile.upsert({
-      where: { userId },
-      create: { ...data, user: { connect: { id: userId } } },
-      update: data,
-    });
+    const row = await this.updateThenCreate(
+      () => this.prisma.userProfile.update({ where: { userId }, data }),
+      () =>
+        this.prisma.userProfile.create({
+          data: { ...data, user: { connect: { id: userId } } },
+        }),
+    );
     return this.toEntity(row);
   }
 
@@ -86,22 +132,26 @@ export class ProfileRepository {
     userId: string,
     data: Omit<Prisma.AstrologyProfileCreateInput, 'user'>,
   ): Promise<void> {
-    await this.prisma.astrologyProfile.upsert({
-      where: { userId },
-      create: { ...data, user: { connect: { id: userId } } },
-      update: data,
-    });
+    await this.updateThenCreate(
+      () => this.prisma.astrologyProfile.update({ where: { userId }, data }),
+      () =>
+        this.prisma.astrologyProfile.create({
+          data: { ...data, user: { connect: { id: userId } } },
+        }),
+    );
   }
 
   async upsertPartnerPreference(
     userId: string,
     data: Omit<Prisma.PartnerPreferenceCreateInput, 'user'>,
   ): Promise<void> {
-    await this.prisma.partnerPreference.upsert({
-      where: { userId },
-      create: { ...data, user: { connect: { id: userId } } },
-      update: data,
-    });
+    await this.updateThenCreate(
+      () => this.prisma.partnerPreference.update({ where: { userId }, data }),
+      () =>
+        this.prisma.partnerPreference.create({
+          data: { ...data, user: { connect: { id: userId } } },
+        }),
+    );
   }
 
   async findPartnerPreference(

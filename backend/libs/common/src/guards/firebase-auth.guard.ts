@@ -33,6 +33,7 @@ export class FirebaseAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
+    console.log(`[STORY-PERF-SRV] ${Date.now()} NestJS request received :: ${request.method} ${request.url}`);
 
     const authHeader = request.headers.authorization;
 
@@ -47,7 +48,9 @@ export class FirebaseAuthGuard implements CanActivate {
     }
 
     const decoded = await this.verify(idToken);
+    console.log(`[STORY-PERF-SRV] ${Date.now()} verifyIdToken complete :: ${request.method} ${request.url}`);
     request.user = await this.resolveUser(decoded);
+    console.log(`[STORY-PERF-SRV] ${Date.now()} Auth guard complete :: ${request.method} ${request.url}`);
     return true;
   }
 

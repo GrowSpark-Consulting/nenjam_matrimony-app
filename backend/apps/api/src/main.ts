@@ -27,6 +27,15 @@ async function bootstrap() {
     }),
   );
 
+  // TEMP — diagnosing the registration wizard "Continue" delay. Remove with
+  // the other [STORY-PERF-SRV] instrumentation once done.
+  app.use((req: { method: string; url: string }, res: { on: (e: string, cb: () => void) => void }, next: () => void) => {
+    res.on('finish', () => {
+      console.log(`[STORY-PERF-SRV] ${Date.now()} HTTP response sent :: ${req.method} ${req.url}`);
+    });
+    next();
+  });
+
   const config = app.get(AppConfigService);
 
   await app.listen(config.port, '0.0.0.0');

@@ -3,6 +3,8 @@ import 'dart:developer';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import '../utils/story_perf.dart';
+
 /// Marks a request as already having gone through one 401-recovery retry,
 /// so [AuthInterceptor] never retries the same request twice.
 const _authRetriedKey = 'nm_auth_retried';
@@ -35,6 +37,7 @@ class AuthInterceptor extends Interceptor {
     RequestInterceptorHandler handler,
   ) async {
     final token = await getAccessToken();
+    StoryPerf.mark('Firebase token obtained (${options.path})');
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }

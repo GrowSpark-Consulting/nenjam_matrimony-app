@@ -151,17 +151,32 @@ export class ProfileService {
   // else the profile screen needs in one round trip — photos,
   // partner-preference, astrology (each null/[] if the user never filled
   // that optional section), and a freshly-computed completion breakdown.
-  async getOwn(userId: string): Promise<ProfileEntity> {
-    const profile = await this.profileRepository.findProfileByUserId(userId);
-    if (!profile) {
-      throw new NotFoundException('Profile has not been finalized yet.');
-    }
-
-    const [photos, partnerPreference, astrology] = await Promise.all([
-      this.photoRepository.findAllForUser(userId),
+  async getOwn(
+    userId: string,
+    prefetchedProfile?: ProfileEntity,
+    prefetchedPhotos?: PhotoEntity[],
+  ): Promise<ProfileEntity> {
+    // All 4 reads are independent (keyed only by userId, no cross-dependency
+    // between them) — the only thing that used to make findProfileByUserId
+    // run first was the null-check below, which doesn't need the other
+    // three results, so it can happen after they've all resolved together.
+    // Callers that just wrote/read the profile row or photos array
+    // themselves (finalize(), syncMatchableFromDraft()) can pass them in
+    // here to skip the redundant re-SELECT — see writeProfileFromDraft's
+    // return value and finalize()'s photo fetch below.
+    const [profile, photos, partnerPreference, astrology] = await Promise.all([
+      prefetchedProfile
+        ? Promise.resolve(prefetchedProfile)
+        : this.profileRepository.findProfileByUserId(userId),
+      prefetchedPhotos
+        ? Promise.resolve(prefetchedPhotos)
+        : this.photoRepository.findAllForUser(userId),
       this.profileRepository.findPartnerPreference(userId),
       this.profileRepository.findAstrologyProfile(userId),
     ]);
+    if (!profile) {
+      throw new NotFoundException('Profile has not been finalized yet.');
+    }
 
     profile.photos = photos;
     profile.partnerPreference = partnerPreference;
@@ -209,9 +224,7 @@ export class ProfileService {
     );
     const total = Object.keys(sections).length;
     const percentage =
-      total === 0
-        ? 0
-        : Math.round((completedSections.length / total) * 100);
+      total === 0 ? 0 : Math.round((completedSections.length / total) * 100);
 
     const completion = new ProfileCompletionEntity();
     completion.percentage = percentage;
@@ -223,7 +236,9 @@ export class ProfileService {
   // Reads the accumulated wizard draft (see ProfileDraftService) and writes
   // it into UserProfile / AstrologyProfile / PartnerPreference.
   async finalize(userId: string): Promise<ProfileEntity> {
+    console.log(`[STORY-PERF-SRV] ${Date.now()} finalize: getDraft started`);
     const draft = await this.draftService.getDraft(userId);
+    console.log(`[STORY-PERF-SRV] ${Date.now()} finalize: getDraft complete`);
     const data = draft.data as Record<string, Record<string, unknown>>;
 
     const missing = this.missingRequiredFields(data);
@@ -265,8 +280,14 @@ export class ProfileService {
         'horoscopeDetails.rashi (required once any horoscope field is filled)',
       );
     }
-    const photoCount = await this.photoRepository.countForUser(userId);
-    if (photoCount === 0) {
+    // Fetched once here (full rows, not just COUNT) and reused below in
+    // recalculateAndPersistCompletion's getOwn() call — avoids querying
+    // profile_photos twice for the same data within a single finalize().
+    const photos = await this.photoRepository.findAllForUser(userId);
+    console.log(
+      `[STORY-PERF-SRV] ${Date.now()} finalize: findAllForUser complete`,
+    );
+    if (photos.length === 0) {
       incomplete.push('photos (at least one profile photo is required)');
     }
     if (incomplete.length > 0) {
@@ -275,9 +296,23 @@ export class ProfileService {
       );
     }
 
-    await this.writeProfileFromDraft(userId, data);
+    const writtenProfile = await this.writeProfileFromDraft(userId, data);
+    console.log(
+      `[STORY-PERF-SRV] ${Date.now()} finalize: writeProfileFromDraft complete`,
+    );
     await this.profileRepository.markComplete(userId);
-    return this.recalculateAndPersistCompletion(userId);
+    console.log(
+      `[STORY-PERF-SRV] ${Date.now()} finalize: markComplete complete`,
+    );
+    const result = await this.recalculateAndPersistCompletion(
+      userId,
+      writtenProfile,
+      photos,
+    );
+    console.log(
+      `[STORY-PERF-SRV] ${Date.now()} finalize: recalculateAndPersistCompletion complete`,
+    );
+    return result;
   }
 
   /**
@@ -288,15 +323,38 @@ export class ProfileService {
    * mandatory set is complete. Never throws: the draft is already persisted, so
    * a failure here must not fail the user's step save — they'll still become
    * matchable on the next save or at finalize().
+   *
+   * [draftData] lets a caller that just fetched/merged the draft (e.g.
+   * ProfileDraftController.save, right after updateSection) pass it straight
+   * through instead of this method re-fetching it — that re-fetch used to be
+   * the single biggest contributor to the "Continue" button's save latency
+   * (see ProfileRepository.getOrCreateRegistrationStep). Falls back to a
+   * fresh fetch for callers that don't already have it.
    */
-  async syncMatchableFromDraft(userId: string): Promise<void> {
+  async syncMatchableFromDraft(
+    userId: string,
+    draftData?: Record<string, Record<string, unknown>>,
+  ): Promise<void> {
     try {
-      const draft = await this.draftService.getDraft(userId);
-      const data = draft.data as Record<string, Record<string, unknown>>;
+      const data =
+        draftData ??
+        ((await this.draftService.getDraft(userId)).data as Record<
+          string,
+          Record<string, unknown>
+        >);
       if (this.missingRequiredFields(data).length > 0) return;
 
-      await this.writeProfileFromDraft(userId, data);
-      await this.recalculateAndPersistCompletion(userId);
+      console.log(
+        `[STORY-PERF-SRV] ${Date.now()} syncMatchableFromDraft: writeProfileFromDraft started`,
+      );
+      const writtenProfile = await this.writeProfileFromDraft(userId, data);
+      console.log(
+        `[STORY-PERF-SRV] ${Date.now()} syncMatchableFromDraft: writeProfileFromDraft complete`,
+      );
+      await this.recalculateAndPersistCompletion(userId, writtenProfile);
+      console.log(
+        `[STORY-PERF-SRV] ${Date.now()} syncMatchableFromDraft: recalculateAndPersistCompletion complete`,
+      );
     } catch (error) {
       this.logger.warn(
         `Auto-materialise from draft skipped for ${userId}: ${(error as Error).message}`,
@@ -314,7 +372,7 @@ export class ProfileService {
   private async writeProfileFromDraft(
     userId: string,
     data: Record<string, Record<string, unknown>>,
-  ): Promise<void> {
+  ): Promise<ProfileEntity> {
     const basic = data.basicDetails ?? {};
     const religion = data.religionDetails ?? {};
     const language = data.languageDetails ?? {};
@@ -337,7 +395,7 @@ export class ProfileService {
       ? (family.siblings as Record<string, unknown>[])
       : [];
 
-    const profile = await this.profileRepository.upsertProfile(userId, {
+    const profileWrite = this.profileRepository.upsertProfile(userId, {
       firstName: basic.firstName as string,
       lastName: basic.lastName as string,
       dob: new Date(basic.dob as string),
@@ -400,33 +458,38 @@ export class ProfileService {
       profileCompletePct: 0,
     });
 
-    if (
+    const hasHoroscopeData = Boolean(
       horoscope.birthTime ||
       horoscope.birthPlace ||
       horoscope.rashi ||
       horoscope.nakshatra ||
       horoscope.star ||
-      horoscope.horoscopeAvailable
-    ) {
-      await this.profileRepository.upsertAstrologyProfile(userId, {
-        birthDate: new Date(basic.dob as string),
-        birthTime: (horoscope.birthTime as string) || null,
-        birthPlace: (horoscope.birthPlace as string) || null,
-        rasi: (horoscope.rashi as string) || null,
-        // `star` is a UI duplicate of `nakshatra` in the wizard (both
-        // collected, same concept) — nakshatra wins when both are filled.
-        nakshatra:
-          (horoscope.nakshatra as string) || (horoscope.star as string) || null,
-        gotram: (religion.gothra as string) || null,
-        dosham: mapDosham(
-          horoscope.manglik as string | undefined,
-          horoscope.dosham as string | undefined,
-        ),
-        horoscopeAvailable: Boolean(horoscope.horoscopeAvailable),
-      });
-    }
+      horoscope.horoscopeAvailable,
+    );
+    const astrologyWrite: Promise<unknown> = hasHoroscopeData
+      ? this.profileRepository.upsertAstrologyProfile(userId, {
+          birthDate: new Date(basic.dob as string),
+          birthTime: (horoscope.birthTime as string) || null,
+          birthPlace: (horoscope.birthPlace as string) || null,
+          rasi: (horoscope.rashi as string) || null,
+          // `star` is a UI duplicate of `nakshatra` in the wizard (both
+          // collected, same concept) — nakshatra wins when both are filled.
+          nakshatra:
+            (horoscope.nakshatra as string) ||
+            (horoscope.star as string) ||
+            null,
+          gotram: (religion.gothra as string) || null,
+          dosham: mapDosham(
+            horoscope.manglik as string | undefined,
+            horoscope.dosham as string | undefined,
+          ),
+          horoscopeAvailable: Boolean(horoscope.horoscopeAvailable),
+        })
+      : Promise.resolve();
 
-    if (Object.keys(partnerPref).length > 0) {
+    const hasPartnerPrefData = Object.keys(partnerPref).length > 0;
+    let partnerPrefWrite: Promise<unknown> = Promise.resolve();
+    if (hasPartnerPrefData) {
       const [minAge, maxAge] = parseIntRange(
         partnerPref.preferredAgeRange as string | undefined,
         [18, 45],
@@ -435,41 +498,51 @@ export class ProfileService {
         partnerPref.preferredHeightRange as string | undefined,
         [140, 210],
       );
-      await this.profileRepository.upsertPartnerPreference(userId, {
-        minAge,
-        maxAge,
-        minHeightCm,
-        maxHeightCm,
-        preferredReligions: toStringArray(
-          partnerPref.religionPref as string | undefined,
-        ),
-        preferredCastes: toStringArray(
-          partnerPref.castePref as string | undefined,
-        ),
-        minIncomeLakhs:
-          parseLeadingNumber(
-            partnerPref.incomePref as string | undefined,
-          )?.toString() ?? null,
-        preferredCities: toStringArray(
-          partnerPref.locationPref as string | undefined,
-        ),
-        preferredStates: [],
-        preferredEducation: toStringArray(
-          partnerPref.educationPref as string | undefined,
-        ),
-        preferredOccupations: toStringArray(
-          partnerPref.occupationPref as string | undefined,
-        ),
-        preferredMotherTongues: toStringArray(
-          partnerPref.motherTonguePref as string | undefined,
-        ),
-        maritalStatusPref: toStringArray(
-          partnerPref.maritalStatusPref as string | undefined,
-        ),
-        extendedPreferences:
-          (partnerPref.extended as Prisma.InputJsonValue | undefined) ?? {},
-      });
+      partnerPrefWrite = this.profileRepository.upsertPartnerPreference(
+        userId,
+        {
+          minAge,
+          maxAge,
+          minHeightCm,
+          maxHeightCm,
+          preferredReligions: toStringArray(
+            partnerPref.religionPref as string | undefined,
+          ),
+          preferredCastes: toStringArray(
+            partnerPref.castePref as string | undefined,
+          ),
+          minIncomeLakhs:
+            parseLeadingNumber(
+              partnerPref.incomePref as string | undefined,
+            )?.toString() ?? null,
+          preferredCities: toStringArray(
+            partnerPref.locationPref as string | undefined,
+          ),
+          preferredStates: [],
+          preferredEducation: toStringArray(
+            partnerPref.educationPref as string | undefined,
+          ),
+          preferredOccupations: toStringArray(
+            partnerPref.occupationPref as string | undefined,
+          ),
+          preferredMotherTongues: toStringArray(
+            partnerPref.motherTonguePref as string | undefined,
+          ),
+          maritalStatusPref: toStringArray(
+            partnerPref.maritalStatusPref as string | undefined,
+          ),
+          extendedPreferences:
+            (partnerPref.extended as Prisma.InputJsonValue | undefined) ?? {},
+        },
+      );
     }
+
+    const [writtenProfile] = await Promise.all([
+      profileWrite,
+      astrologyWrite,
+      partnerPrefWrite,
+    ]);
+    return writtenProfile;
   }
 
   // Recomputes completion from the real, just-written rows and persists it
@@ -477,8 +550,12 @@ export class ProfileService {
   // directly — search/matching, once built — see a correct value without
   // going through ProfileService). Returns the same full shape as getOwn()
   // so finalize()'s response is consistent with GET /profiles/me.
-  async recalculateAndPersistCompletion(userId: string): Promise<ProfileEntity> {
-    const full = await this.getOwn(userId);
+  async recalculateAndPersistCompletion(
+    userId: string,
+    prefetchedProfile?: ProfileEntity,
+    prefetchedPhotos?: PhotoEntity[],
+  ): Promise<ProfileEntity> {
+    const full = await this.getOwn(userId, prefetchedProfile, prefetchedPhotos);
     await this.profileRepository.updateProfileCompletePct(
       userId,
       full.completion.percentage,

@@ -45,35 +45,54 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   // sync here. Steps 11 (photos) and 12 (verification) aren't sent here
   // either: photos persist immediately via PhotoController on upload, and
   // verification status is read-only, reflecting other modules.
-  Future<void> syncCurrentStepToBackend() async {
+  // [skipMaterialize] — set by ProfileWizardPage's edit-mode save
+  // (_saveAndFinalizeForEdit), which always calls finalizeToBackend()
+  // immediately after this. finalize() unconditionally redoes the same
+  // materialize-and-recompute work this step-save would otherwise trigger
+  // server-side (see ProfileDraftController.save's skipMaterialize doc), so
+  // without this flag every edit-mode "Continue" tap paid for that work
+  // twice — measured ~1.8s of pure duplication on top of finalize()'s own
+  // ~3s. CREATE mode never sets this; it never calls finalize per step, so
+  // this auto-materialize is the only thing that makes a user matchable
+  // before they reach Profile Review.
+  Future<void> syncCurrentStepToBackend({bool skipMaterialize = false}) async {
     final repo = ref.read(registrationRepositoryProvider);
     switch (state.currentStep) {
       case 0:
-        await repo.updateBasicDetails(state.basicDetails);
+        await repo.updateBasicDetails(state.basicDetails,
+            skipMaterialize: skipMaterialize);
         return;
       case 1:
-        await repo.updateReligionDetails(state.religionDetails);
+        await repo.updateReligionDetails(state.religionDetails,
+            skipMaterialize: skipMaterialize);
         return;
       case 2:
-        await repo.updateLanguageDetails(state.languageDetails);
+        await repo.updateLanguageDetails(state.languageDetails,
+            skipMaterialize: skipMaterialize);
         return;
       case 3:
-        await repo.updateLocationDetails(state.locationDetails);
+        await repo.updateLocationDetails(state.locationDetails,
+            skipMaterialize: skipMaterialize);
         return;
       case 4:
-        await repo.updateEducationDetails(state.educationDetails);
+        await repo.updateEducationDetails(state.educationDetails,
+            skipMaterialize: skipMaterialize);
         return;
       case 5:
-        await repo.updatePhysicalDetails(state.physicalDetails);
+        await repo.updatePhysicalDetails(state.physicalDetails,
+            skipMaterialize: skipMaterialize);
         return;
       case 6:
-        await repo.updateLifestyleDetails(state.lifestyleDetails);
+        await repo.updateLifestyleDetails(state.lifestyleDetails,
+            skipMaterialize: skipMaterialize);
         return;
       case 7:
-        await repo.updateFamilyDetails(state.familyDetails);
+        await repo.updateFamilyDetails(state.familyDetails,
+            skipMaterialize: skipMaterialize);
         return;
       case 8:
-        await repo.updateHoroscopeDetails(state.horoscopeDetails);
+        await repo.updateHoroscopeDetails(state.horoscopeDetails,
+            skipMaterialize: skipMaterialize);
         return;
       default:
         // Steps 9 (psychological quiz), 10 (partner preference), 11
