@@ -36,6 +36,19 @@ export interface DiscoverProfileDto {
   diet: string;
   distanceKm: number | null;
   gender: string;
+  // Additional public profile fields the card/tags render. Empty string / []
+  // when the (optional) source field wasn't filled — the client just omits the
+  // corresponding chip. All display-safe; no contact/identity data.
+  maritalStatus: string;
+  motherTongue: string;
+  smoking: string;
+  drinking: string;
+  physicalStatus: string;
+  company: string;
+  annualIncome: string;
+  bio: string;
+  languages: string[];
+  hobbies: string[];
   // Full-profile completeness (UserProfile.profileCompletePct >= 100) —
   // distinct from Discover eligibility, which only requires the mandatory
   // Steps 1-4 (see UserProfile.isProfileComplete / buildFeedWhere). A caller

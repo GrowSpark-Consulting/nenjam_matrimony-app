@@ -14,8 +14,8 @@ import '../../../../core/widgets/avatars/gender_placeholder.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
-import '../../../discover/presentation/providers/discover_providers.dart';
 import '../providers/matches_providers.dart';
+import '../providers/reel_feed_provider.dart';
 
 /// Nenjam Matches — Instagram Reels-style vertical swipeable feed.
 ///
@@ -51,30 +51,37 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Reel position only resets when the category actually changes, never
-    // on unrelated rebuilds (e.g. the header's own scroll-into-view).
+    // Category selection refreshes the paginated reel (the backend serves one
+    // preference-filtered feed; the category bar acts as a refresh + selector)
+    // and returns to the first card.
     ref.listen<MatchCategory>(matchCategoryProvider, (previous, next) {
-      if (previous != null && previous != next && _pageController.hasClients) {
-        _pageController.jumpToPage(0);
+      if (previous != null && previous != next) {
+        ref.invalidate(reelFeedProvider);
+        if (_pageController.hasClients) _pageController.jumpToPage(0);
       }
     });
 
-    final feedAsync = ref.watch(matchCategoryFeedProvider);
+    final feedAsync = ref.watch(reelFeedProvider);
 
     return Scaffold(
       backgroundColor: AppColors.primary,
       extendBodyBehindAppBar: true,
       body: feedAsync.when(
-        data: (profiles) {
-          if (profiles.isEmpty) {
+        data: (feed) {
+          if (feed.profiles.isEmpty) {
             return const _EmptyReel();
           }
-          return _ReelFeed(profiles: profiles, controller: _pageController);
+          return _ReelFeed(
+            profiles: feed.profiles,
+            controller: _pageController,
+            hasMore: feed.hasMore,
+            onNearEnd: () => ref.read(reelFeedProvider.notifier).loadMore(),
+          );
         },
         loading: () => const _ReelLoading(),
         error: (_, __) => Center(
           child: NmErrorWidget(
-            onRetry: () => ref.invalidate(discoverFeedProvider),
+            onRetry: () => ref.invalidate(reelFeedProvider),
           ),
         ),
       ),
@@ -89,8 +96,15 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
 class _ReelFeed extends StatelessWidget {
   final List<DiscoveryProfileEntity> profiles;
   final PageController controller;
+  final bool hasMore;
+  final VoidCallback onNearEnd;
 
-  const _ReelFeed({required this.profiles, required this.controller});
+  const _ReelFeed({
+    required this.profiles,
+    required this.controller,
+    required this.hasMore,
+    required this.onNearEnd,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -103,6 +117,12 @@ class _ReelFeed extends StatelessWidget {
           scrollDirection: Axis.vertical,
           physics: const PageScrollPhysics(parent: BouncingScrollPhysics()),
           itemCount: profiles.length,
+          // Fetch the next page as the user nears the end of the loaded set
+          // (loadMore is a safe no-op when a request is in flight or the feed
+          // is exhausted). Infinite scroll without reloading existing cards.
+          onPageChanged: (index) {
+            if (hasMore && index >= profiles.length - 3) onNearEnd();
+          },
           itemBuilder: (context, index) {
             return _KeepAlivePage(
               key: ValueKey(profiles[index].id),
@@ -729,10 +749,18 @@ class _ProfileInfo extends StatelessWidget {
   List<(String, IconData?)> _chips(DiscoveryProfileEntity p) {
     final chips = <(String, IconData?)>[];
     if (p.location.isNotEmpty) chips.add((p.location, null));
+    if (p.height.isNotEmpty) chips.add((p.height, Icons.height_rounded));
     if (p.religion.isNotEmpty) chips.add((p.religion, null));
     if (p.community.isNotEmpty) chips.add((p.community, null));
+    if (p.motherTongue.isNotEmpty) {
+      chips.add((p.motherTongue, Icons.translate_rounded));
+    }
     if (p.education.isNotEmpty) chips.add((p.education, Icons.school_rounded));
-    return chips.take(4).toList();
+    if (p.maritalStatus.isNotEmpty) {
+      chips.add((p.maritalStatus, Icons.favorite_border_rounded));
+    }
+    if (p.diet.isNotEmpty) chips.add((p.diet, Icons.restaurant_rounded));
+    return chips.take(6).toList();
   }
 }
 
