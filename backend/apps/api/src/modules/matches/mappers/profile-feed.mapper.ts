@@ -59,7 +59,41 @@ export class ProfileFeedMapper {
       distanceKm: null,
       gender: String(row.gender ?? '').toLowerCase(),
       profileComplete: Number(row.profileCompletePct ?? 0) >= 100,
+      maritalStatus: this.humanizeEnum(row.maritalStatus as string | null),
+      motherTongue: (row.motherTongue as string) ?? '',
+      smoking: (row.smokingHabits as string) ?? '',
+      drinking: (row.drinkingHabits as string) ?? '',
+      physicalStatus: (row.physicalStatus as string) ?? '',
+      company: (row.employerName as string) ?? '',
+      annualIncome: this.incomeLabel(row.annualIncomeLakhs),
+      bio: (row.bio as string) ?? '',
+      languages: this.toStringArray(row.languagesKnown),
+      hobbies: this.toStringArray(row.hobbies),
     };
+  }
+
+  /** "NEVER_MARRIED" -> "Never Married". Empty for a null enum. */
+  private humanizeEnum(value: string | null): string {
+    if (!value) return '';
+    return value
+      .toLowerCase()
+      .split('_')
+      .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+      .join(' ');
+  }
+
+  /** annualIncomeLakhs (Decimal) -> "12 LPA"; empty when unset/zero. */
+  private incomeLabel(value: unknown): string {
+    const n = value == null ? NaN : Number(value);
+    return Number.isFinite(n) && n > 0 ? `${n} LPA` : '';
+  }
+
+  /** Prisma Json array column -> string[]; tolerant of a stray non-array. */
+  private toStringArray(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map((v) => (typeof v === 'string' ? v.trim() : ''))
+      .filter((v) => v.length > 0);
   }
 
   private async presignPhotos(

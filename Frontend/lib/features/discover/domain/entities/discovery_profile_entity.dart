@@ -40,6 +40,19 @@ class DiscoveryProfileEntity {
   /// "Building profile" badge in that case.
   final bool profileComplete;
 
+  // Additional backend-driven profile fields the card / detail view render.
+  // Empty string / [] when the (optional) source field wasn't filled.
+  final String maritalStatus;
+  final String motherTongue;
+  final String smoking;
+  final String drinking;
+  final String physicalStatus;
+  final String company;
+  final String annualIncome;
+  final String bio;
+  final List<String> languages;
+  final List<String> hobbies;
+
   const DiscoveryProfileEntity({
     required this.id,
     required this.matrimonyId,
@@ -66,5 +79,15 @@ class DiscoveryProfileEntity {
     this.distanceKm,
     this.gender = '',
     this.profileComplete = false,
+    this.maritalStatus = '',
+    this.motherTongue = '',
+    this.smoking = '',
+    this.drinking = '',
+    this.physicalStatus = '',
+    this.company = '',
+    this.annualIncome = '',
+    this.bio = '',
+    this.languages = const [],
+    this.hobbies = const [],
   });
 }

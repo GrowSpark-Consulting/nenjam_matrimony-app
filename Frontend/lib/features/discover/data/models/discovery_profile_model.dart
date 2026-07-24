@@ -31,6 +31,16 @@ class DiscoveryProfileModel extends DiscoveryProfileEntity {
     super.distanceKm,
     super.gender,
     super.profileComplete,
+    super.maritalStatus,
+    super.motherTongue,
+    super.smoking,
+    super.drinking,
+    super.physicalStatus,
+    super.company,
+    super.annualIncome,
+    super.bio,
+    super.languages,
+    super.hobbies,
   });
 
   factory DiscoveryProfileModel.fromJson(Map<String, dynamic> json) {
@@ -71,6 +81,16 @@ class DiscoveryProfileModel extends DiscoveryProfileEntity {
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       gender: json['gender'] as String? ?? '',
       profileComplete: json['profileComplete'] as bool? ?? false,
+      maritalStatus: json['maritalStatus'] as String? ?? '',
+      motherTongue: json['motherTongue'] as String? ?? '',
+      smoking: json['smoking'] as String? ?? '',
+      drinking: json['drinking'] as String? ?? '',
+      physicalStatus: json['physicalStatus'] as String? ?? '',
+      company: json['company'] as String? ?? '',
+      annualIncome: json['annualIncome'] as String? ?? '',
+      bio: json['bio'] as String? ?? '',
+      languages: (json['languages'] as List?)?.cast<String>() ?? const [],
+      hobbies: (json['hobbies'] as List?)?.cast<String>() ?? const [],
     );
   }
 
@@ -105,5 +125,15 @@ class DiscoveryProfileModel extends DiscoveryProfileEntity {
         'distanceKm': distanceKm,
         'gender': gender,
         'profileComplete': profileComplete,
+        'maritalStatus': maritalStatus,
+        'motherTongue': motherTongue,
+        'smoking': smoking,
+        'drinking': drinking,
+        'physicalStatus': physicalStatus,
+        'company': company,
+        'annualIncome': annualIncome,
+        'bio': bio,
+        'languages': languages,
+        'hobbies': hobbies,
       };
 }

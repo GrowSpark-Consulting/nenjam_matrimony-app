@@ -2,6 +2,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../domain/entities/discover_feed_entity.dart';
+import '../../domain/entities/discover_profile_page.dart';
 import '../../domain/repositories/discover_repository.dart';
 import '../models/discovery_profile_model.dart';
 import '../models/story_model.dart';
@@ -41,16 +42,7 @@ class DiscoverRepositoryImpl implements DiscoverRepository {
     final data =
         unwrapOrThrow(response.statusCode, response.data) ?? const {};
 
-    // Parse, normalize gender casing (backend emits lowercase; the
-    // gender-aware photo placeholder keys off 'Male'/'Female'), and dedupe.
-    final seen = <String>{};
-    final profiles = <DiscoveryProfileModel>[];
-    for (final raw in (data['items'] as List<dynamic>? ?? const [])) {
-      final json = Map<String, dynamic>.from(raw as Map);
-      json['gender'] = _normalizeGender(json['gender']);
-      final profile = DiscoveryProfileModel.fromJson(json);
-      if (seen.add(profile.id)) profiles.add(profile);
-    }
+    final profiles = _parseProfiles(data);
 
     // Round-robin into disjoint buckets so ids never repeat across sections.
     final buckets = List.generate(
@@ -74,6 +66,40 @@ class DiscoverRepositoryImpl implements DiscoverRepository {
       fallbackUsed: data['fallbackUsed'] == true,
       fallbackReason: (data['reason'] as String?) ?? '',
     );
+  }
+
+  @override
+  Future<DiscoverProfilePage> getDiscoverProfilesPage({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      ApiEndpoints.discover,
+      queryParameters: {'page': page, 'limit': limit},
+    );
+    final data =
+        unwrapOrThrow(response.statusCode, response.data) ?? const {};
+    return DiscoverProfilePage(
+      items: _parseProfiles(data),
+      page: (data['page'] as num?)?.toInt() ?? page,
+      hasMore: data['hasMore'] == true,
+    );
+  }
+
+  /// Parses the `items` of a `/discover` response into deduped, gender-
+  /// normalized profiles. Shared by the sectioned feed and the paginated feed.
+  List<DiscoveryProfileModel> _parseProfiles(Map<String, dynamic> data) {
+    // Normalize gender casing (backend emits lowercase; the gender-aware photo
+    // placeholder keys off 'Male'/'Female') and dedupe by id.
+    final seen = <String>{};
+    final profiles = <DiscoveryProfileModel>[];
+    for (final raw in (data['items'] as List<dynamic>? ?? const [])) {
+      final json = Map<String, dynamic>.from(raw as Map);
+      json['gender'] = _normalizeGender(json['gender']);
+      final profile = DiscoveryProfileModel.fromJson(json);
+      if (seen.add(profile.id)) profiles.add(profile);
+    }
+    return profiles;
   }
 
   /// A "New Today" bubble wraps a real profile so tapping it opens Profile

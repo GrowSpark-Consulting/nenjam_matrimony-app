@@ -94,10 +94,14 @@ class ProfileInfoOverlay extends StatelessWidget {
   }
 
   List<String> get _secondaryDetails => [
+        if (profile.height.isNotEmpty) profile.height,
         if (profile.religion.isNotEmpty) profile.religion,
         if (profile.community.isNotEmpty) profile.community,
+        if (profile.motherTongue.isNotEmpty) profile.motherTongue,
         if (profile.education.isNotEmpty) profile.education,
-      ];
+        if (profile.maritalStatus.isNotEmpty) profile.maritalStatus,
+        if (profile.diet.isNotEmpty) profile.diet,
+      ].take(6).toList();
 
   List<String> get _tagPills {
     final pills = <String>[...profile.tags];
