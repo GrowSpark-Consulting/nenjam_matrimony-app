@@ -2537,6 +2537,26 @@ class AppLocalizationsTa extends AppLocalizations {
       'உங்கள் பொருத்தத்தை ஆழப்படுத்துங்கள்';
 
   @override
+  String get profileCompletionActionEducation =>
+      'உங்கள் கல்வி மற்றும் தொழிலை முடிக்கவும்';
+
+  @override
+  String get profileCompletionActionPhysical =>
+      'உங்கள் உடல் விவரங்களைச் சேர்க்கவும்';
+
+  @override
+  String get profileCompletionActionLifestyle =>
+      'உங்கள் வாழ்க்கை முறையைப் பகிரவும்';
+
+  @override
+  String get profileCompletionActionFamily =>
+      'உங்கள் குடும்ப விவரங்களை முடிக்கவும்';
+
+  @override
+  String get profileCompletionActionPsychology =>
+      'உளவியல் மதிப்பீட்டை மேற்கொள்ளுங்கள்';
+
+  @override
   String get profileCompletionGrowthPsychology => 'உளவியல் மதிப்பீடு';
 
   @override

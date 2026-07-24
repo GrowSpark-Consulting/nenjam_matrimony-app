@@ -2504,6 +2504,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileCompletionActionHoroscope => 'Deepen Your Compatibility';
 
   @override
+  String get profileCompletionActionEducation =>
+      'Complete Your Education & Career';
+
+  @override
+  String get profileCompletionActionPhysical => 'Add Your Physical Details';
+
+  @override
+  String get profileCompletionActionLifestyle => 'Share Your Lifestyle';
+
+  @override
+  String get profileCompletionActionFamily => 'Complete Your Family Details';
+
+  @override
+  String get profileCompletionActionPsychology =>
+      'Take the Psychology Assessment';
+
+  @override
   String get profileCompletionGrowthPsychology => 'Psychology Assessment';
 
   @override

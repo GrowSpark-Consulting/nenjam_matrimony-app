@@ -2,17 +2,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../profile/presentation/providers/profile_dashboard_providers.dart';
 import '../../domain/profile_completion_aggregator.dart';
-import '../../domain/profile_completion_module.dart';
 
 /// Ambient (not-mid-session) snapshot of profile completeness — for the
 /// drawer, the Profile Completion screen, and the Profile dashboard. Built
-/// on [myProfileDraftProvider] (itself a direct `RegistrationRepository
-/// .getDraft` call, bypassing `RegistrationNotifier.startEditMode()`) so it
-/// never flips `profileFlowModeProvider` or overwrites an in-progress edit
-/// session sitting in `registrationProvider`, and so the dashboard and this
-/// screen never fetch the draft twice. See plan doc "Critical gap" section.
+/// directly from [profileDraftResponseProvider]'s raw `completionPercentage`
+/// / `completionBreakdown` fields — the backend's ProfileCompletionService is
+/// the only place that ever decides a weight or a completion rule; this
+/// provider just shapes that same response for display, so it never fetches
+/// the draft a second time and never disagrees with the Profile dashboard.
 final profileCompletenessSnapshotProvider =
     FutureProvider.autoDispose<ProfileCompleteness>((ref) async {
-  final draft = await ref.watch(myProfileDraftProvider.future);
-  return aggregateProfileCompletion(ProfileCompletionContext(draft: draft));
+  final json = await ref.watch(profileDraftResponseProvider.future);
+  final percentage = (json['completionPercentage'] as num?)?.round() ?? 0;
+  final breakdown =
+      (json['completionBreakdown'] as List?)
+          ?.cast<Map<String, dynamic>>() ??
+      const <Map<String, dynamic>>[];
+  return profileCompletenessFromBackend(percentage, breakdown);
 });

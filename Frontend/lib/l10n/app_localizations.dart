@@ -4856,6 +4856,36 @@ abstract class AppLocalizations {
   /// **'Deepen Your Compatibility'**
   String get profileCompletionActionHoroscope;
 
+  /// No description provided for @profileCompletionActionEducation.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete Your Education & Career'**
+  String get profileCompletionActionEducation;
+
+  /// No description provided for @profileCompletionActionPhysical.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Your Physical Details'**
+  String get profileCompletionActionPhysical;
+
+  /// No description provided for @profileCompletionActionLifestyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share Your Lifestyle'**
+  String get profileCompletionActionLifestyle;
+
+  /// No description provided for @profileCompletionActionFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete Your Family Details'**
+  String get profileCompletionActionFamily;
+
+  /// No description provided for @profileCompletionActionPsychology.
+  ///
+  /// In en, this message translates to:
+  /// **'Take the Psychology Assessment'**
+  String get profileCompletionActionPsychology;
+
   /// No description provided for @profileCompletionGrowthPsychology.
   ///
   /// In en, this message translates to:
