@@ -1,13 +1,29 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import type { PrismaService } from '@app/database';
 import { ProfileRepository } from '../repositories/profile.repository';
 import { PhotoRepository } from '../repositories/photo.repository';
 import { ProfileDraftService } from '../services/profile-draft.service';
 import { ProfileService } from '../services/profile.service';
+import { ProfileCompletionService } from '../services/profile-completion.service';
 import { ProfileEntity } from '../entities/profile.entity';
 import { PhotoEntity } from '../entities/photo.entity';
 import { PartnerPreferenceEntity } from '../entities/partner-preference.entity';
 import { AstrologyProfileEntity } from '../entities/astrology-profile.entity';
+import { ProfileCompletionEntity } from '../entities/profile-completion.entity';
 import { DraftResponse } from '../services/profile-draft.service';
+
+function buildCompletion(
+  overrides: Partial<ProfileCompletionEntity> = {},
+): ProfileCompletionEntity {
+  return Object.assign(new ProfileCompletionEntity(), {
+    percentage: 42,
+    completedSections: ['registration'],
+    missingSections: ['photos'],
+    breakdown: [],
+    verificationBreakdown: [],
+    ...overrides,
+  });
+}
 
 function buildProfile(overrides: Partial<ProfileEntity> = {}): ProfileEntity {
   const entity = new ProfileEntity();
@@ -118,13 +134,13 @@ describe('ProfileService', () => {
     updateProfileCompletePct?: jest.Mock;
     findAllForUser?: jest.Mock;
     getDraft?: jest.Mock;
+    calculate?: jest.Mock;
   }) {
     const profileRepository = {
       findProfileByUserId: overrides?.findProfileByUserId ?? jest.fn(),
       upsertProfile: overrides?.upsertProfile ?? jest.fn(),
       upsertAstrologyProfile: overrides?.upsertAstrologyProfile ?? jest.fn(),
-      upsertPartnerPreference:
-        overrides?.upsertPartnerPreference ?? jest.fn(),
+      upsertPartnerPreference: overrides?.upsertPartnerPreference ?? jest.fn(),
       findPartnerPreference:
         overrides?.findPartnerPreference ?? jest.fn().mockResolvedValue(null),
       findAstrologyProfile:
@@ -135,9 +151,10 @@ describe('ProfileService', () => {
     } as unknown as ProfileRepository;
 
     const photoRepository = {
-      // Default: one photo present, so finalize()'s photo gate (now driven
-      // by findAllForUser().length rather than a separate countForUser())
-      // passes unless a test explicitly overrides this to [].
+      // Default: one photo present. Harmless either way — finalize() does
+      // NOT gate on photo count (see 'does not throw when no photo has
+      // been uploaded' below) — this only affects the "photos" 12%
+      // completion slice tests care about.
       findAllForUser:
         overrides?.findAllForUser ??
         jest.fn().mockResolvedValue([buildPhoto()]),
@@ -147,7 +164,20 @@ describe('ProfileService', () => {
       getDraft: overrides?.getDraft ?? jest.fn(),
     } as unknown as ProfileDraftService;
 
-    return new ProfileService(profileRepository, photoRepository, draftService);
+    // Scoring math is covered by profile-completion.service.spec.ts — these
+    // tests only care that ProfileService plumbs the result through
+    // unchanged and persists its percentage.
+    const completionService = {
+      calculate:
+        overrides?.calculate ?? jest.fn().mockResolvedValue(buildCompletion()),
+    } as unknown as ProfileCompletionService;
+
+    return new ProfileService(
+      profileRepository,
+      photoRepository,
+      draftService,
+      completionService,
+    );
   }
 
   describe('getOwn', () => {
@@ -156,12 +186,12 @@ describe('ProfileService', () => {
         findProfileByUserId: jest.fn().mockResolvedValue(null),
       });
 
-      await expect(service.getOwn('user-1')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.getOwn('user-1')).rejects.toThrow(NotFoundException);
     });
 
-    it('assembles photos, partnerPreference, astrology, and completion', async () => {
+    it('assembles photos, partnerPreference, astrology, and the completion score from ProfileCompletionService', async () => {
+      const completion = buildCompletion({ percentage: 87 });
+      const calculate = jest.fn().mockResolvedValue(completion);
       const service = buildService({
         findProfileByUserId: jest
           .fn()
@@ -173,6 +203,7 @@ describe('ProfileService', () => {
         findAstrologyProfile: jest
           .fn()
           .mockResolvedValue(buildAstrologyProfile()),
+        calculate,
       });
 
       const result = await service.getOwn('user-1');
@@ -180,29 +211,65 @@ describe('ProfileService', () => {
       expect(result.photos).toHaveLength(1);
       expect(result.partnerPreference).not.toBeNull();
       expect(result.astrology).not.toBeNull();
-      expect(result.completion.percentage).toBe(100);
-      expect(result.completion.missingSections).toEqual([]);
+      // getOwn never recomputes its own score — it trusts whatever
+      // ProfileCompletionService (the single authoritative calculator)
+      // returns, verbatim.
+      expect(result.completion).toBe(completion);
+      expect(calculate).toHaveBeenCalledWith('user-1', undefined);
     });
 
-    it('reports missing optional sections when photos/about/preferences/astrology are absent', async () => {
+    it('passes a prefetched draft through to ProfileCompletionService instead of triggering its own fetch', async () => {
+      const calculate = jest.fn().mockResolvedValue(buildCompletion());
       const service = buildService({
-        findProfileByUserId: jest
-          .fn()
-          .mockResolvedValue(buildProfile({ bio: null })),
-        findAllForUser: jest.fn().mockResolvedValue([]),
-        findPartnerPreference: jest.fn().mockResolvedValue(null),
-        findAstrologyProfile: jest.fn().mockResolvedValue(null),
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+        calculate,
+      });
+      const draftData = { basicDetails: { firstName: 'Arjun' } };
+
+      await service.getOwn('user-1', undefined, undefined, draftData);
+
+      expect(calculate).toHaveBeenCalledWith('user-1', draftData);
+    });
+  });
+
+  describe('recalculateCompletionIfMaterialized', () => {
+    it('persists the freshly-computed percentage when the profile already exists', async () => {
+      const updateProfileCompletePct = jest.fn().mockResolvedValue(undefined);
+      const calculate = jest
+        .fn()
+        .mockResolvedValue(buildCompletion({ percentage: 55 }));
+      const service = buildService({
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+        updateProfileCompletePct,
+        calculate,
       });
 
-      const result = await service.getOwn('user-1');
+      await service.recalculateCompletionIfMaterialized('user-1');
 
-      // basicInfo, religionCommunity, location, careerEducation are always
-      // true once a profile row exists (enforced at finalize()) — only the
-      // 4 optional sections are missing here.
-      expect(result.completion.missingSections.sort()).toEqual(
-        ['about', 'astrology', 'partnerPreference', 'photos'].sort(),
-      );
-      expect(result.completion.percentage).toBe(50);
+      expect(updateProfileCompletePct).toHaveBeenCalledWith('user-1', 55);
+    });
+
+    it('silently no-ops when the profile has not been finalized yet (photo uploaded pre-mandatory-completion)', async () => {
+      const updateProfileCompletePct = jest.fn();
+      const service = buildService({
+        findProfileByUserId: jest.fn().mockResolvedValue(null),
+        updateProfileCompletePct,
+      });
+
+      await expect(
+        service.recalculateCompletionIfMaterialized('user-1'),
+      ).resolves.toBeUndefined();
+      expect(updateProfileCompletePct).not.toHaveBeenCalled();
+    });
+
+    it("swallows unexpected errors too — a recalculation failure must never fail the caller's own action", async () => {
+      const service = buildService({
+        findProfileByUserId: jest.fn().mockRejectedValue(new Error('db down')),
+      });
+
+      await expect(
+        service.recalculateCompletionIfMaterialized('user-1'),
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -216,6 +283,8 @@ describe('ProfileService', () => {
         completedSteps: [1, 2, 3, 4, 5, 6],
         isComplete: false,
         completionPercentage: 100,
+        completionBreakdown: [],
+        verificationBreakdown: [],
         data: {
           basicDetails: {
             firstName: 'Arjun',
@@ -264,9 +333,9 @@ describe('ProfileService', () => {
 
     it('throws BadRequestException when required fields are missing', async () => {
       const service = buildService({
-        getDraft: jest.fn().mockResolvedValue(
-          buildValidDraft({ basicDetails: {} }),
-        ),
+        getDraft: jest
+          .fn()
+          .mockResolvedValue(buildValidDraft({ basicDetails: {} })),
       });
 
       await expect(service.finalize('user-1')).rejects.toThrow(
@@ -278,7 +347,11 @@ describe('ProfileService', () => {
       const service = buildService({
         getDraft: jest.fn().mockResolvedValue(
           buildValidDraft({
-            religionDetails: { religion: 'Hindu', caste: 'Iyer', community: 'Brahmin' },
+            religionDetails: {
+              religion: 'Hindu',
+              caste: 'Iyer',
+              community: 'Brahmin',
+            },
           }),
         ),
       });
@@ -508,7 +581,7 @@ describe('ProfileService', () => {
       );
     });
 
-    it('throws when no profile photo has been uploaded', async () => {
+    it('does not throw when no profile photo has been uploaded — photos are skippable and must never block finalize', async () => {
       const service = buildService({
         getDraft: jest.fn().mockResolvedValue(buildValidDraft()),
         upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
@@ -516,9 +589,7 @@ describe('ProfileService', () => {
         findAllForUser: jest.fn().mockResolvedValue([]),
       });
 
-      await expect(service.finalize('user-1')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.finalize('user-1')).resolves.toBeDefined();
     });
 
     it('throws when Physical is partially filled instead of skipped or completed', async () => {
@@ -537,9 +608,9 @@ describe('ProfileService', () => {
 
     it('does not throw when Physical is left entirely empty (skipped)', async () => {
       const service = buildService({
-        getDraft: jest.fn().mockResolvedValue(
-          buildValidDraft({ physicalDetails: {} }),
-        ),
+        getDraft: jest
+          .fn()
+          .mockResolvedValue(buildValidDraft({ physicalDetails: {} })),
         upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
         findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
       });
@@ -563,9 +634,9 @@ describe('ProfileService', () => {
 
     it('does not throw when Education is left entirely empty (skipped)', async () => {
       const service = buildService({
-        getDraft: jest.fn().mockResolvedValue(
-          buildValidDraft({ educationDetails: {} }),
-        ),
+        getDraft: jest
+          .fn()
+          .mockResolvedValue(buildValidDraft({ educationDetails: {} })),
         upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
         findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
       });
@@ -610,8 +681,18 @@ describe('ProfileService', () => {
               father: { name: 'Suresh', age: 58, occupation: 'Engineer' },
               mother: { name: 'Lakshmi', age: 54, occupation: 'Teacher' },
               siblings: [
-                { relation: 'BROTHER', name: 'Karthik', age: 30, occupation: 'Doctor' },
-                { relation: 'SISTER', name: 'Divya', age: 26, occupation: 'Designer' },
+                {
+                  relation: 'BROTHER',
+                  name: 'Karthik',
+                  age: 30,
+                  occupation: 'Doctor',
+                },
+                {
+                  relation: 'SISTER',
+                  name: 'Divya',
+                  age: 26,
+                  occupation: 'Designer',
+                },
               ],
               familyStatus: 'Middle Class',
             },
@@ -634,11 +715,326 @@ describe('ProfileService', () => {
           motherOccupation: 'Teacher',
           siblings: 2,
           siblingDetails: [
-            { relation: 'BROTHER', name: 'Karthik', age: 30, occupation: 'Doctor' },
-            { relation: 'SISTER', name: 'Divya', age: 26, occupation: 'Designer' },
+            {
+              relation: 'BROTHER',
+              name: 'Karthik',
+              age: 30,
+              occupation: 'Doctor',
+            },
+            {
+              relation: 'SISTER',
+              name: 'Divya',
+              age: 26,
+              occupation: 'Designer',
+            },
           ],
         }),
       );
+    });
+
+    // Regression coverage for a production bug: Step 5 (Education & Career)
+    // and Step 6 (Physical Details) are both skippable, but UserProfile's
+    // heightCm/highestEducation/profession columns were NOT NULL — so
+    // finalize() crashed with a Prisma "Argument `highestEducation` is
+    // missing" validation error for the single most common path through
+    // this whole feature: a user who only fills the mandatory Steps 1-4.
+    // Fixed by making those 3 columns nullable (see schema.prisma) and
+    // writing real `null`, never a placeholder like `0`/`''`/`'Other'`.
+    //
+    // These tests wire a REAL ProfileCompletionService (not the mocked one
+    // buildService() uses elsewhere in this file) so the asserted
+    // percentages are actually computed, not just echoed back from a mock —
+    // the mocked-completion tests above only prove ProfileService plumbs a
+    // result through; these prove the number itself is right for this
+    // exact scenario.
+    describe('skippable Step 5/6 persistence (regression)', () => {
+      // [photoCount] drives BOTH the photo repository's findAllForUser and
+      // countForUser (the "photos" 12% completion slice) consistently — in
+      // real Postgres they're the same profile_photos rows, so a test that
+      // gave them different counts would assert something that can't
+      // actually happen. Default 1: most tests below don't care about the
+      // photos slice one way or the other, so they default to earning it —
+      // see each test's own comment for the resulting total, and (A') above
+      // for the explicit photoCount: 0 proof that finalize() never requires
+      // a photo to succeed.
+      function buildServiceWithRealCompletion(overrides: {
+        getDraft: jest.Mock;
+        upsertProfile: jest.Mock;
+        findProfileByUserId: jest.Mock;
+        photoCount?: number;
+      }) {
+        const photoCount = overrides.photoCount ?? 1;
+        const updateProfileCompletePct = jest.fn();
+        const profileRepository = {
+          upsertProfile: overrides.upsertProfile,
+          upsertAstrologyProfile: jest.fn(),
+          upsertPartnerPreference: jest.fn(),
+          markComplete: jest.fn(),
+          findProfileByUserId: overrides.findProfileByUserId,
+          findPartnerPreference: jest.fn().mockResolvedValue(null),
+          findAstrologyProfile: jest.fn().mockResolvedValue(null),
+          updateProfileCompletePct,
+          // Not called on this path: recalculateAndPersistCompletion is
+          // given the just-finalized draftData directly (see finalize()),
+          // so ProfileCompletionService never has to re-fetch the step.
+          getOrCreateRegistrationStep: jest.fn(),
+        } as unknown as ProfileRepository;
+
+        const photoRepository = {
+          findAllForUser: jest
+            .fn()
+            .mockResolvedValue(
+              Array.from({ length: photoCount }, () => buildPhoto()),
+            ),
+          countForUser: jest.fn().mockResolvedValue(photoCount),
+        } as unknown as PhotoRepository;
+
+        const prisma = {
+          user: { findUnique: jest.fn().mockResolvedValue({ phone: null }) },
+          kycVerification: { findMany: jest.fn().mockResolvedValue([]) },
+          userQuizResponse: { count: jest.fn().mockResolvedValue(0) },
+        } as unknown as PrismaService;
+
+        const completionService = new ProfileCompletionService(
+          prisma,
+          profileRepository,
+          photoRepository,
+        );
+
+        const draftService = {
+          getDraft: overrides.getDraft,
+        } as unknown as ProfileDraftService;
+
+        const service = new ProfileService(
+          profileRepository,
+          photoRepository,
+          draftService,
+          completionService,
+        );
+        return { service, updateProfileCompletePct };
+      }
+
+      it('(A) Steps 1-4 complete, Step 5 skipped -> finalize succeeds (no crash) with education contributing 0%', async () => {
+        // buildServiceWithRealCompletion defaults to 1 photo (unrelated to
+        // this test's point — see the dedicated 0-photo regression test
+        // below for proof finalize() doesn't require one), so this earns
+        // the photos 12% too — total here is 20 (mandatory) + 12 (photos)
+        // = 32, not the pure 20 the spec describes for "mandatory only".
+        // That exact "20%, no photo yet" scenario is the real
+        // first-failure point in production (syncMatchableFromDraft fires
+        // — and used to crash — the moment Step 4 is saved, long before
+        // any photo exists) and is covered precisely by test (B) below and
+        // by profile-completion.service.spec.ts's "awards exactly 20 once
+        // all four mandatory steps are complete" test.
+        const upsertProfile = jest.fn().mockResolvedValue(buildProfile());
+        const { service } = buildServiceWithRealCompletion({
+          getDraft: jest
+            .fn()
+            .mockResolvedValue(
+              buildValidDraft({ educationDetails: {}, physicalDetails: {} }),
+            ),
+          upsertProfile,
+          findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+        });
+
+        const result = await service.finalize('user-1');
+
+        expect(result.completion.percentage).toBe(32);
+        expect(result.completion.missingSections).toContain('education');
+      });
+
+      it('(A\') Steps 1-4 complete, Steps 5-13 all skipped, no photo, mobile unverified -> finalize succeeds at exactly 20%', async () => {
+        // The exact scenario from the final access rule: only Steps 1-4
+        // are mandatory. Nothing else — not a photo, not any verification
+        // — may block finalize() or keep the user off Discover.
+        const upsertProfile = jest.fn().mockResolvedValue(buildProfile());
+        const { service } = buildServiceWithRealCompletion({
+          getDraft: jest
+            .fn()
+            .mockResolvedValue(
+              buildValidDraft({ educationDetails: {}, physicalDetails: {} }),
+            ),
+          upsertProfile,
+          findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+          photoCount: 0,
+        });
+
+        const result = await service.finalize('user-1');
+
+        expect(result.completion.percentage).toBe(20);
+        expect(result.completion.completedSections).toEqual(['registration']);
+        expect(upsertProfile).toHaveBeenCalledWith(
+          'user-1',
+          expect.objectContaining({ isProfileComplete: true }),
+        );
+      });
+
+      it('(B) Step 5 partially entered mid-wizard must not earn its 10% even though the partial value is persisted', async () => {
+        // finalize() itself rejects a partial Education (see the "throws
+        // when Education is partially filled" test above) — but
+        // syncMatchableFromDraft(), which runs on every wizard step save,
+        // does not enforce that same validity check (by design — see its
+        // own doc comment), so a partial value CAN reach
+        // writeProfileFromDraft() before the user ever reaches Review. That
+        // write must not crash (nullable columns) and must not earn credit
+        // for an incomplete section (completion is derived from draftData's
+        // validity, not from whatever ended up in the columns).
+        const upsertProfile = jest.fn().mockResolvedValue(buildProfile());
+        const { service, updateProfileCompletePct } =
+          buildServiceWithRealCompletion({
+            getDraft: jest.fn(),
+            upsertProfile,
+            findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+            // No photo yet — this is syncMatchableFromDraft, fired the
+            // moment Step 4 is saved, well before Step 12 (Photos).
+            photoCount: 0,
+          });
+        const partialDraft = {
+          basicDetails: {
+            firstName: 'Arjun',
+            lastName: 'Sundar',
+            gender: 'MALE',
+            maritalStatus: 'NEVER_MARRIED',
+            profileCreatedFor: 'Self',
+            dob: '1997-01-01',
+          },
+          religionDetails: {
+            religion: 'Hindu',
+            caste: 'Iyer',
+            subCaste: 'Vadama',
+            community: 'Brahmin',
+          },
+          languageDetails: {
+            motherTongue: 'Tamil',
+            languagesKnown: ['Tamil'],
+          },
+          locationDetails: {
+            country: 'India',
+            state: 'Tamil Nadu',
+            city: 'Chennai',
+            area: 'Anna Nagar',
+            pinCode: '600040',
+            nativePlace: 'Madurai',
+          },
+          // Touched but invalid — qualification only, no occupation/etc.
+          educationDetails: { qualification: "Bachelor's" },
+        };
+
+        await expect(
+          service.syncMatchableFromDraft('user-1', partialDraft),
+        ).resolves.toBeUndefined();
+
+        expect(upsertProfile).toHaveBeenCalledWith(
+          'user-1',
+          expect.objectContaining({
+            highestEducation: "Bachelor's",
+            profession: null,
+          }),
+        );
+        expect(updateProfileCompletePct).toHaveBeenCalledWith('user-1', 20);
+      });
+
+      it('(C) Steps 1-4 complete + valid Step 5 -> finalize succeeds (education contributing its 10%)', async () => {
+        // Same default-photo caveat as test (A) — buildServiceWithRealCompletion's
+        // default 1 photo means this lands at 42, not the pure 30 the spec
+        // describes for "mandatory + Education" alone; see the pure-30 case
+        // right below via syncMatchableFromDraft (no photo requirement).
+        const upsertProfile = jest.fn().mockResolvedValue(buildProfile());
+        const { service } = buildServiceWithRealCompletion({
+          getDraft: jest
+            .fn()
+            .mockResolvedValue(buildValidDraft({ physicalDetails: {} })),
+          upsertProfile,
+          findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+        });
+
+        const result = await service.finalize('user-1');
+
+        expect(result.completion.percentage).toBe(42);
+        expect(result.completion.completedSections).toContain('education');
+      });
+
+      it("(C') Steps 1-4 complete + valid Step 5, no photo yet -> completion is exactly 30%", async () => {
+        const upsertProfile = jest.fn().mockResolvedValue(buildProfile());
+        const { service, updateProfileCompletePct } =
+          buildServiceWithRealCompletion({
+            getDraft: jest.fn(),
+            upsertProfile,
+            findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+            photoCount: 0,
+          });
+        const draftWithValidEducation = {
+          basicDetails: {
+            firstName: 'Arjun',
+            lastName: 'Sundar',
+            gender: 'MALE',
+            maritalStatus: 'NEVER_MARRIED',
+            profileCreatedFor: 'Self',
+            dob: '1997-01-01',
+          },
+          religionDetails: {
+            religion: 'Hindu',
+            caste: 'Iyer',
+            subCaste: 'Vadama',
+            community: 'Brahmin',
+          },
+          languageDetails: {
+            motherTongue: 'Tamil',
+            languagesKnown: ['Tamil'],
+          },
+          locationDetails: {
+            country: 'India',
+            state: 'Tamil Nadu',
+            city: 'Chennai',
+            area: 'Anna Nagar',
+            pinCode: '600040',
+            nativePlace: 'Madurai',
+          },
+          educationDetails: {
+            qualification: "Bachelor's",
+            college: 'Anna University',
+            occupation: 'Engineer',
+            company: 'Acme Corp',
+            employmentType: 'Private',
+            annualIncome: '10',
+            workLocation: 'Chennai',
+          },
+        };
+
+        await service.syncMatchableFromDraft('user-1', draftWithValidEducation);
+
+        expect(updateProfileCompletePct).toHaveBeenCalledWith('user-1', 30);
+      });
+
+      it('(D) no fake/default education or height values are ever persisted when skipped', async () => {
+        const upsertProfile = jest
+          .fn<Promise<ProfileEntity>, [string, Record<string, unknown>]>()
+          .mockResolvedValue(buildProfile());
+        const { service } = buildServiceWithRealCompletion({
+          getDraft: jest
+            .fn()
+            .mockResolvedValue(
+              buildValidDraft({ educationDetails: {}, physicalDetails: {} }),
+            ),
+          upsertProfile,
+          findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+        });
+
+        await service.finalize('user-1');
+
+        expect(upsertProfile).toHaveBeenCalledWith(
+          'user-1',
+          expect.objectContaining({
+            heightCm: null,
+            highestEducation: null,
+            profession: null,
+          }),
+        );
+        const written = upsertProfile.mock.calls[0][1];
+        expect(Object.values(written)).not.toContain('Other');
+        expect(Object.values(written)).not.toContain('N/A');
+        expect(written.heightCm).not.toBe(0);
+      });
     });
   });
 });

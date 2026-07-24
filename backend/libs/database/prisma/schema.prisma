@@ -109,12 +109,22 @@ model UserProfile {
   denomination       String?
   motherTongue       String        @map("mother_tongue")
   languagesKnown     Json          @default("[]") @map("languages_known")
-  heightCm           Int           @map("height_cm")
+  /// Nullable: Step 6 (Physical Details) is skippable. Was NOT NULL with a
+  /// fake `0` written when skipped (see git blame) — that both violated the
+  /// "no fake/placeholder values" rule and, once education/profession below
+  /// hit the same issue, surfaced as a Prisma validation error on
+  /// POST /profiles/finalize whenever a user completed only the mandatory
+  /// Steps 1-4. Absence now means exactly what it says: never filled in.
+  heightCm           Int?          @map("height_cm")
   weightKg           Int?          @map("weight_kg")
   annualIncomeLakhs  Decimal?      @map("annual_income_lakhs") @db.Decimal(10, 2)
-  highestEducation   String        @map("highest_education")
+  /// Nullable: Step 5 (Education & Career) is skippable — see heightCm's
+  /// comment for why this must not be NOT NULL.
+  highestEducation   String?       @map("highest_education")
   educationDetails   String?       @map("education_details")
-  profession         String
+  /// Nullable: Step 5 (Education & Career) is skippable — see heightCm's
+  /// comment for why this must not be NOT NULL.
+  profession         String?
   employerName       String?       @map("employer_name")
   currentCity        String        @map("current_city")
   currentState       String        @map("current_state")
@@ -523,7 +533,23 @@ model MessageReaction {
   @@map("message_reactions")
 }
 
-/// Government ID document verification (Aadhaar, PAN, Passport, etc.).
+/// Document verification, submit-then-admin-review workflow (PENDING ->
+/// APPROVED/REJECTED). Originally scoped to government ID documents
+/// (Aadhaar, PAN, Passport, Voter ID, Driving Licence) — deliberately
+/// reused, not duplicated, for Income/Asset/NRI proof (see KycDocType)
+/// because the workflow is identical: a document + reference number/image,
+/// reviewed once by an admin into the same PENDING/APPROVED/REJECTED
+/// lifecycle. A separate table per proof category would just be this same
+/// shape three more times. Known friction from that reuse: `docNumber` is
+/// NOT NULL, which fits every identity doc (Aadhaar/PAN number, passport
+/// number) but has no natural equivalent for some income/asset proof
+/// documents (e.g. a salary slip) — revisit (likely: make it nullable) once
+/// an actual income/asset verification submission flow is built. Today
+/// nothing in the codebase creates a row for any of these 8 doc types yet
+/// (VerificationService/Controller and AdminVerificationService/Controller
+/// are still empty stubs) — see ProfileCompletionService, which reads this
+/// table for its verification scoring and correctly nets 0% for all of them
+/// until that submission/approval flow exists.
 model KycVerification {
   id              String             @id @default(uuid())
   userId          String             @map("user_id")
@@ -791,6 +817,17 @@ enum KycDocType {
   PASSPORT
   VOTER_ID
   DRIVING_LICENCE
+  /// Income proof document (salary slip / Form 16 / ITR) — used to compute
+  /// the "Income Verified" 5% slice of profile completion (see
+  /// ProfileCompletionService). No submission UI exists yet; this only makes
+  /// the doc type representable once that flow is built.
+  INCOME_PROOF
+  /// Asset ownership proof (property/vehicle documents) — "Asset Verified"
+  /// slice of profile completion. Same caveat as INCOME_PROOF.
+  ASSET_PROOF
+  /// NRI status proof (passport/visa/OCI card) — "NRI Verified" slice of
+  /// profile completion. Same caveat as INCOME_PROOF.
+  NRI_PROOF
 
   @@map("kyc_doc_type")
 }

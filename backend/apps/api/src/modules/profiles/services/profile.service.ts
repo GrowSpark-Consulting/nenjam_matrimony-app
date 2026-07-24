@@ -8,11 +8,9 @@ import type { Prisma } from '../../../../../../libs/database/generated/client';
 import { ProfileRepository } from '../repositories/profile.repository';
 import { PhotoRepository } from '../repositories/photo.repository';
 import { ProfileDraftService } from './profile-draft.service';
+import { ProfileCompletionService } from './profile-completion.service';
 import { ProfileEntity } from '../entities/profile.entity';
 import { PhotoEntity } from '../entities/photo.entity';
-import { PartnerPreferenceEntity } from '../entities/partner-preference.entity';
-import { AstrologyProfileEntity } from '../entities/astrology-profile.entity';
-import { ProfileCompletionEntity } from '../entities/profile-completion.entity';
 import {
   isBasicDetailsComplete,
   isEducationDetailsValid,
@@ -145,6 +143,7 @@ export class ProfileService {
     private readonly profileRepository: ProfileRepository,
     private readonly photoRepository: PhotoRepository,
     private readonly draftService: ProfileDraftService,
+    private readonly completionService: ProfileCompletionService,
   ) {}
 
   // Assembles the full response: the finalized UserProfile plus everything
@@ -155,25 +154,30 @@ export class ProfileService {
     userId: string,
     prefetchedProfile?: ProfileEntity,
     prefetchedPhotos?: PhotoEntity[],
+    prefetchedDraftData?: Record<string, unknown>,
   ): Promise<ProfileEntity> {
-    // All 4 reads are independent (keyed only by userId, no cross-dependency
+    // All 5 reads are independent (keyed only by userId, no cross-dependency
     // between them) — the only thing that used to make findProfileByUserId
     // run first was the null-check below, which doesn't need the other
-    // three results, so it can happen after they've all resolved together.
-    // Callers that just wrote/read the profile row or photos array
+    // results, so it can happen after they've all resolved together.
+    // Callers that just wrote/read the profile row, photos array, or draft
     // themselves (finalize(), syncMatchableFromDraft()) can pass them in
     // here to skip the redundant re-SELECT — see writeProfileFromDraft's
     // return value and finalize()'s photo fetch below.
-    const [profile, photos, partnerPreference, astrology] = await Promise.all([
-      prefetchedProfile
-        ? Promise.resolve(prefetchedProfile)
-        : this.profileRepository.findProfileByUserId(userId),
-      prefetchedPhotos
-        ? Promise.resolve(prefetchedPhotos)
-        : this.photoRepository.findAllForUser(userId),
-      this.profileRepository.findPartnerPreference(userId),
-      this.profileRepository.findAstrologyProfile(userId),
-    ]);
+    const [profile, photos, partnerPreference, astrology, completion] =
+      await Promise.all([
+        prefetchedProfile
+          ? Promise.resolve(prefetchedProfile)
+          : this.profileRepository.findProfileByUserId(userId),
+        prefetchedPhotos
+          ? Promise.resolve(prefetchedPhotos)
+          : this.photoRepository.findAllForUser(userId),
+        this.profileRepository.findPartnerPreference(userId),
+        this.profileRepository.findAstrologyProfile(userId),
+        // See ProfileCompletionService — the single authoritative scorer,
+        // shared with ProfileDraftService.getDraft()'s completionPercentage.
+        this.completionService.calculate(userId, prefetchedDraftData),
+      ]);
     if (!profile) {
       throw new NotFoundException('Profile has not been finalized yet.');
     }
@@ -181,56 +185,8 @@ export class ProfileService {
     profile.photos = photos;
     profile.partnerPreference = partnerPreference;
     profile.astrology = astrology;
-    profile.completion = this.calculateCompletion(
-      profile,
-      photos,
-      partnerPreference,
-      astrology,
-    );
+    profile.completion = completion;
     return profile;
-  }
-
-  // Distinct from ProfileDraftService's completionPercentage (which tracks
-  // in-progress wizard draftData before finalize() has ever run). This one
-  // reads the finalized row + related tables — the source of truth once a
-  // profile exists. basicInfo/religionCommunity/location/careerEducation are
-  // enforced by assertRequiredFieldsPresent() at finalize() and so are
-  // always complete for any profile that exists at all; the remaining
-  // sections are genuinely optional and carry the real signal.
-  private calculateCompletion(
-    profile: ProfileEntity,
-    photos: PhotoEntity[],
-    partnerPreference: PartnerPreferenceEntity | null,
-    astrology: AstrologyProfileEntity | null,
-  ): ProfileCompletionEntity {
-    const sections: Record<string, boolean> = {
-      basicInfo: Boolean(
-        profile.firstName && profile.lastName && profile.dob && profile.gender,
-      ),
-      religionCommunity: Boolean(profile.religion && profile.caste),
-      location: Boolean(profile.currentCity && profile.currentState),
-      careerEducation: Boolean(profile.profession && profile.highestEducation),
-      about: Boolean(profile.bio && profile.bio.trim().length > 0),
-      photos: photos.length > 0,
-      partnerPreference: partnerPreference !== null,
-      astrology: astrology !== null,
-    };
-
-    const completedSections = Object.keys(sections).filter(
-      (key) => sections[key],
-    );
-    const missingSections = Object.keys(sections).filter(
-      (key) => !sections[key],
-    );
-    const total = Object.keys(sections).length;
-    const percentage =
-      total === 0 ? 0 : Math.round((completedSections.length / total) * 100);
-
-    const completion = new ProfileCompletionEntity();
-    completion.percentage = percentage;
-    completion.completedSections = completedSections;
-    completion.missingSections = missingSections;
-    return completion;
   }
 
   // Reads the accumulated wizard draft (see ProfileDraftService) and writes
@@ -258,14 +214,17 @@ export class ProfileService {
     // These checks are finalize-only — deliberately NOT part of
     // missingRequiredFields()/syncMatchableFromDraft(), so a user can still
     // become matchable before touching the skippable Education/Lifestyle/
-    // Horoscope steps or uploading a photo. They only gate the final
-    // "complete registration" action.
+    // Horoscope steps. They only gate the final "complete registration"
+    // action, and only to reject a *half-filled* optional section — never
+    // an untouched one.
     //
-    // Mobile verification is intentionally NOT enforced here yet (no OTP
-    // module exists — see modules/verification, currently a stub). When
-    // it's built, add a check here against a real verified-phone signal
-    // (FirebaseAuthGuard already reads the ID token's `phone_number` claim
-    // into `User.phone`) rather than gating on anything client-supplied.
+    // Photos and mobile verification are intentionally NOT enforced here.
+    // Only Steps 1-4 are mandatory for this release: a user with zero
+    // photos and no verification must still be able to finalize and reach
+    // Discover at exactly 20%. Do not reintroduce a photo-count or
+    // verification check in this method — see ProfileCompletionService for
+    // how photos (12%) and verification (25%, 5% per independent flag)
+    // are scored instead, without gating finalize.
     const incomplete: string[] = [];
     if (!isPhysicalDetailsValid(data.physicalDetails ?? {})) {
       incomplete.push(
@@ -287,12 +246,14 @@ export class ProfileService {
         'horoscopeDetails.rashi (required once any horoscope field is filled)',
       );
     }
-    // `photos` was fetched up front (see the Promise.all above) — full rows,
-    // not just COUNT — and is reused below in recalculateAndPersistCompletion's
-    // getOwn() call, so profile_photos is queried only once per finalize().
-    if (photos.length === 0) {
-      incomplete.push('photos (at least one profile photo is required)');
-    }
+    // `photos` was already fetched above (Promise.all with the draft read) —
+    // full rows, not just COUNT — and is reused below in
+    // recalculateAndPersistCompletion's getOwn() call, so profile_photos is
+    // queried only once per finalize(). Not used to gate finalize — an
+    // empty array is a perfectly valid result here.
+    console.log(
+      `[STORY-PERF-SRV] ${Date.now()} finalize: findAllForUser complete`,
+    );
     if (incomplete.length > 0) {
       throw new BadRequestException(
         `Cannot finalize profile — ${incomplete.join('; ')}`,
@@ -301,7 +262,19 @@ export class ProfileService {
 
     const writtenProfile = await this.writeProfileFromDraft(userId, data);
     await this.profileRepository.markComplete(userId);
-    return this.recalculateAndPersistCompletion(userId, writtenProfile, photos);
+    console.log(
+      `[STORY-PERF-SRV] ${Date.now()} finalize: markComplete complete`,
+    );
+    const result = await this.recalculateAndPersistCompletion(
+      userId,
+      writtenProfile,
+      photos,
+      data,
+    );
+    console.log(
+      `[STORY-PERF-SRV] ${Date.now()} finalize: recalculateAndPersistCompletion complete`,
+    );
+    return result;
   }
 
   /**
@@ -334,7 +307,18 @@ export class ProfileService {
       if (this.missingRequiredFields(data).length > 0) return;
 
       const writtenProfile = await this.writeProfileFromDraft(userId, data);
-      await this.recalculateAndPersistCompletion(userId, writtenProfile);
+      console.log(
+        `[STORY-PERF-SRV] ${Date.now()} syncMatchableFromDraft: writeProfileFromDraft complete`,
+      );
+      await this.recalculateAndPersistCompletion(
+        userId,
+        writtenProfile,
+        undefined,
+        data,
+      );
+      console.log(
+        `[STORY-PERF-SRV] ${Date.now()} syncMatchableFromDraft: recalculateAndPersistCompletion complete`,
+      );
     } catch (error) {
       this.logger.warn(
         `Auto-materialise from draft skipped for ${userId}: ${(error as Error).message}`,
@@ -391,17 +375,20 @@ export class ProfileService {
       denomination: (religion.denomination as string) || null,
       motherTongue: language.motherTongue as string,
       languagesKnown: toArray(language.languagesKnown),
-      heightCm: heightCm ?? 0,
+      // heightCm/highestEducation/profession are null, never a placeholder,
+      // when Steps 5/6 are skipped — both are nullable columns precisely so
+      // this never has to fake a value (see schema.prisma's comments).
+      heightCm: heightCm ?? null,
       weightKg,
       annualIncomeLakhs: annualIncomeLakhs?.toString() ?? null,
-      highestEducation: education.qualification as string,
+      highestEducation: (education.qualification as string) || null,
       educationDetails:
         joinNonEmpty(
           education.college as string,
           education.employmentType as string,
           education.workLocation as string,
         ) ?? null,
-      profession: education.occupation as string,
+      profession: (education.occupation as string) || null,
       employerName: (education.company as string) || null,
       currentCity: location.city as string,
       currentState: location.state as string,
@@ -534,14 +521,43 @@ export class ProfileService {
     userId: string,
     prefetchedProfile?: ProfileEntity,
     prefetchedPhotos?: PhotoEntity[],
+    prefetchedDraftData?: Record<string, unknown>,
   ): Promise<ProfileEntity> {
-    const full = await this.getOwn(userId, prefetchedProfile, prefetchedPhotos);
+    const full = await this.getOwn(
+      userId,
+      prefetchedProfile,
+      prefetchedPhotos,
+      prefetchedDraftData,
+    );
     await this.profileRepository.updateProfileCompletePct(
       userId,
       full.completion.percentage,
     );
     full.profileCompletePct = full.completion.percentage;
     return full;
+  }
+
+  /**
+   * Same as recalculateAndPersistCompletion, but safe to call from anything
+   * that isn't itself part of the registration flow — photo upload/delete
+   * (see PhotoService), and eventually verification approval/rejection and
+   * psychology quiz submission once those modules exist (currently stubs;
+   * see modules/verification and the missing psychology module — wire this
+   * same call in from wherever their approve/submit action ends up living).
+   * getOwn() throws NotFoundException until the mandatory fields are done
+   * and UserProfile exists; that's expected here (e.g. a user can upload a
+   * photo before finishing Steps 1-4) and must not surface as an error to
+   * the caller's own action, which already succeeded.
+   */
+  async recalculateCompletionIfMaterialized(userId: string): Promise<void> {
+    try {
+      await this.recalculateAndPersistCompletion(userId);
+    } catch (error) {
+      if (error instanceof NotFoundException) return;
+      this.logger.warn(
+        `Completion recalculation skipped for ${userId}: ${(error as Error).message}`,
+      );
+    }
   }
 
   /**

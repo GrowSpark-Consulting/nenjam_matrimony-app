@@ -156,3 +156,70 @@ export function isHoroscopeSectionTouched(horoscope: Section): boolean {
 export function isHoroscopeDetailsValid(horoscope: Section): boolean {
   return !isHoroscopeSectionTouched(horoscope) || has(horoscope.rashi);
 }
+
+// ---- Step 8: skippable, no required-if-touched rule ----
+//
+// Family Details has no all-or-nothing rule in the wizard itself (partially
+// filled father/mother/sibling rows are fine) — but ProfileCompletionService
+// still needs a single yes/no gate for its 10% slice. familyType and
+// familyValues are the two fields ProfileDraftService's legacy field-count
+// formula already treated as "the" required pair for this section; reused
+// here so the completion gate matches what the wizard UI has always implied
+// is the section's core.
+const FAMILY_TOUCH_FIELDS = ['familyType', 'familyValues', 'familyStatus'];
+
+export function isFamilySectionTouched(family: Section): boolean {
+  const father = (family.father ?? {}) as Section;
+  const mother = (family.mother ?? {}) as Section;
+  return (
+    anyPresent(family, FAMILY_TOUCH_FIELDS) ||
+    has(father.name) ||
+    has(mother.name) ||
+    hasNonEmptyArray(family.siblings)
+  );
+}
+
+export function isFamilyDetailsComplete(family: Section): boolean {
+  return has(family.familyType) && has(family.familyValues);
+}
+
+// ---- Step 11: skippable, genuinely no required-if-touched rule ----
+//
+// Unlike Education/Physical/Lifestyle/Horoscope, Partner Preference has no
+// "all fields required once you touch any" rule anywhere in the system:
+// every field on PartnerPreferenceDto (backend) is @IsOptional(), and the
+// standalone Partner Preferences page's Save button
+// (features/partner_preferences/presentation/pages/partner_preferences_page.dart)
+// has no validation gate — any subset of filters, including a single one,
+// is a complete, save-able preference set by product design (it's a filter
+// list, not a form describing one fact about the user). So there is no
+// distinct "touched but invalid" state to guard against here — touched and
+// complete are the same thing. isPartnerPreferenceComplete is this
+// function's real name for that reason; it is not a stricter check layered
+// on top of "touched", it is a confirmed alias of it.
+const PARTNER_PREFERENCE_FIELDS = [
+  'preferredAgeRange',
+  'preferredHeightRange',
+  'religionPref',
+  'castePref',
+  'educationPref',
+  'occupationPref',
+  'incomePref',
+  'locationPref',
+  'motherTonguePref',
+  'maritalStatusPref',
+];
+
+export function isPartnerPreferenceTouched(partnerPref: Section): boolean {
+  if (anyPresent(partnerPref, PARTNER_PREFERENCE_FIELDS)) return true;
+  const extended = partnerPref.extended;
+  return (
+    extended != null &&
+    typeof extended === 'object' &&
+    Object.keys(extended).length > 0
+  );
+}
+
+export function isPartnerPreferenceComplete(partnerPref: Section): boolean {
+  return isPartnerPreferenceTouched(partnerPref);
+}

@@ -6,6 +6,7 @@ import { PhotoController } from './controllers/photo.controller';
 import { PromptsController } from './controllers/prompts.controller';
 import { ProfileDraftService } from './services/profile-draft.service';
 import { ProfileService } from './services/profile.service';
+import { ProfileCompletionService } from './services/profile-completion.service';
 import { PhotoService } from './services/photo.service';
 import { PromptsService } from './services/prompts.service';
 import { ProfileRepository } from './repositories/profile.repository';
@@ -23,6 +24,7 @@ import { PromptsRepository } from './repositories/prompts.repository';
   providers: [
     ProfileDraftService,
     ProfileService,
+    ProfileCompletionService,
     PhotoService,
     PromptsService,
     ProfileRepository,

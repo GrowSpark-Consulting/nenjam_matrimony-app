@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { S3Service } from '@app/storage';
 import { PhotoService } from '../services/photo.service';
 import { PhotoRepository } from '../repositories/photo.repository';
+import { ProfileService } from '../services/profile.service';
 import { PhotoEntity } from '../entities/photo.entity';
 import type { UploadedImageFile } from '../pipes/photo-file.pipe';
 
@@ -13,7 +14,8 @@ function buildPhoto(overrides: Partial<PhotoEntity> = {}): PhotoEntity {
       id: '11111111-1111-4111-8111-111111111111',
       userId: 'user-1',
       s3Key: 'profile-photos/user-1/abc.jpg',
-      cdnUrl: 'https://bucket.s3.ap-south-1.amazonaws.com/profile-photos/user-1/abc.jpg',
+      cdnUrl:
+        'https://bucket.s3.ap-south-1.amazonaws.com/profile-photos/user-1/abc.jpg',
       isPrimary: false,
       order: 0,
       isApproved: false,
@@ -23,7 +25,9 @@ function buildPhoto(overrides: Partial<PhotoEntity> = {}): PhotoEntity {
   return p;
 }
 
-function buildFile(overrides: Partial<UploadedImageFile> = {}): UploadedImageFile {
+function buildFile(
+  overrides: Partial<UploadedImageFile> = {},
+): UploadedImageFile {
   return {
     originalname: 'x.jpg',
     mimetype: 'image/jpeg',
@@ -72,14 +76,32 @@ function setup(repoOverrides: Partial<RepoMock> = {}) {
     uploadObject: jest.fn().mockResolvedValue(undefined),
     deleteObject: jest.fn().mockResolvedValue(undefined),
     deleteObjects: jest.fn().mockResolvedValue(undefined),
-    getPresignedGetUrl: jest.fn().mockResolvedValue('https://signed.example/get'),
-    getObjectUrl: jest.fn((k: string) => `https://bucket.s3.ap-south-1.amazonaws.com/${k}`),
+    getPresignedGetUrl: jest
+      .fn()
+      .mockResolvedValue('https://signed.example/get'),
+    getObjectUrl: jest.fn(
+      (k: string) => `https://bucket.s3.ap-south-1.amazonaws.com/${k}`,
+    ),
   };
+  // Photo count is the only signal the "photos" completion slice reads, so
+  // upload/remove must trigger a recalculation — see the matching comments
+  // in PhotoService.upload/remove. Mocked here as a spy, not a real
+  // ProfileService, since scoring math itself is covered by
+  // profile-completion.service.spec.ts. Kept as its own reference (not
+  // read back off `profileService`) so assertions target a plain jest.fn(),
+  // not a value typed as ProfileService's instance method.
+  const recalculateCompletionIfMaterialized = jest
+    .fn()
+    .mockResolvedValue(undefined);
+  const profileService = {
+    recalculateCompletionIfMaterialized,
+  } as unknown as ProfileService;
   const service = new PhotoService(
     repo as unknown as PhotoRepository,
     s3 as unknown as S3Service,
+    profileService,
   );
-  return { service, repo, s3 };
+  return { service, repo, s3, recalculateCompletionIfMaterialized };
 }
 
 describe('PhotoService', () => {
@@ -90,16 +112,20 @@ describe('PhotoService', () => {
       });
       const result = await service.list('user-1');
       expect(result[0].cdnUrl).toBe('https://signed.example/get');
-      expect(s3.getPresignedGetUrl).toHaveBeenCalledWith('profile-photos/user-1/abc.jpg');
+      expect(s3.getPresignedGetUrl).toHaveBeenCalledWith(
+        'profile-photos/user-1/abc.jpg',
+      );
     });
   });
 
   describe('upload', () => {
     it('rejects when the user already has the max number of photos', async () => {
-      const { service, s3 } = setup({ countForUser: jest.fn().mockResolvedValue(6) });
-      await expect(service.upload('user-1', buildFile())).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      const { service, s3 } = setup({
+        countForUser: jest.fn().mockResolvedValue(6),
+      });
+      await expect(
+        service.upload('user-1', buildFile()),
+      ).rejects.toBeInstanceOf(BadRequestException);
       expect(s3.uploadObject).not.toHaveBeenCalled();
     });
 
@@ -116,23 +142,40 @@ describe('PhotoService', () => {
       expect(createArg.s3Key).toMatch(/^profile-photos\/user-1\/.*\.jpg$/);
     });
 
+    it('recalculates profile completion after a successful upload (photos slice can flip 0 -> 12%)', async () => {
+      const { service, recalculateCompletionIfMaterialized } = setup({
+        countForUser: jest.fn().mockResolvedValue(0),
+        create: jest.fn().mockResolvedValue(buildPhoto()),
+      });
+      await service.upload('user-1', buildFile());
+      expect(recalculateCompletionIfMaterialized).toHaveBeenCalledWith(
+        'user-1',
+      );
+    });
+
     it('rolls back the S3 object if the DB write fails (no orphan)', async () => {
       const { service, s3 } = setup({
         countForUser: jest.fn().mockResolvedValue(0),
         create: jest.fn().mockRejectedValue(new Error('db down')),
       });
-      await expect(service.upload('user-1', buildFile())).rejects.toThrow('db down');
+      await expect(service.upload('user-1', buildFile())).rejects.toThrow(
+        'db down',
+      );
       expect(s3.deleteObject).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('replace', () => {
-    it('404s when the photo is not the user\'s', async () => {
+    it("404s when the photo is not the user's", async () => {
       const { service, s3 } = setup({
         findByIdForUser: jest.fn().mockResolvedValue(null),
       });
       await expect(
-        service.replace('user-1', '11111111-1111-4111-8111-111111111111', buildFile()),
+        service.replace(
+          'user-1',
+          '11111111-1111-4111-8111-111111111111',
+          buildFile(),
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(s3.uploadObject).not.toHaveBeenCalled();
     });
@@ -146,7 +189,9 @@ describe('PhotoService', () => {
       await service.replace('user-1', old.id, buildFile());
       expect(s3.uploadObject).toHaveBeenCalledTimes(1);
       expect(repo.updateStorage).toHaveBeenCalledTimes(1);
-      expect(s3.deleteObject).toHaveBeenCalledWith('profile-photos/user-1/OLD.jpg');
+      expect(s3.deleteObject).toHaveBeenCalledWith(
+        'profile-photos/user-1/OLD.jpg',
+      );
     });
 
     it('rolls back the new object if the DB update fails, keeps the old', async () => {
@@ -160,13 +205,17 @@ describe('PhotoService', () => {
       ).rejects.toThrow('db down');
       // Deleted the NEW key, never the old one.
       expect(s3.deleteObject).toHaveBeenCalledTimes(1);
-      expect(s3.deleteObject).not.toHaveBeenCalledWith('profile-photos/user-1/OLD.jpg');
+      expect(s3.deleteObject).not.toHaveBeenCalledWith(
+        'profile-photos/user-1/OLD.jpg',
+      );
     });
   });
 
   describe('remove', () => {
-    it('404s when the photo is not the user\'s', async () => {
-      const { service } = setup({ findByIdForUser: jest.fn().mockResolvedValue(null) });
+    it("404s when the photo is not the user's", async () => {
+      const { service } = setup({
+        findByIdForUser: jest.fn().mockResolvedValue(null),
+      });
       await expect(
         service.remove('user-1', '11111111-1111-4111-8111-111111111111'),
       ).rejects.toBeInstanceOf(NotFoundException);
@@ -192,10 +241,21 @@ describe('PhotoService', () => {
       await service.remove('user-1', nonPrimary.id);
       expect(repo.promoteFirstToPrimary).not.toHaveBeenCalled();
     });
+
+    it('recalculates profile completion after deleting a photo (photos slice can flip 12% -> 0)', async () => {
+      const nonPrimary = buildPhoto({ isPrimary: false });
+      const { service, recalculateCompletionIfMaterialized } = setup({
+        findByIdForUser: jest.fn().mockResolvedValue(nonPrimary),
+      });
+      await service.remove('user-1', nonPrimary.id);
+      expect(recalculateCompletionIfMaterialized).toHaveBeenCalledWith(
+        'user-1',
+      );
+    });
   });
 
   describe('reorder', () => {
-    it('rejects when the id set does not match the user\'s photos exactly', async () => {
+    it("rejects when the id set does not match the user's photos exactly", async () => {
       const a = buildPhoto({ id: 'aaaaaaaa-1111-4111-8111-111111111111' });
       const b = buildPhoto({ id: 'bbbbbbbb-1111-4111-8111-111111111111' });
       const { service, repo } = setup({
@@ -219,8 +279,10 @@ describe('PhotoService', () => {
   });
 
   describe('setPrimary', () => {
-    it('404s when the photo is not the user\'s', async () => {
-      const { service } = setup({ findByIdForUser: jest.fn().mockResolvedValue(null) });
+    it("404s when the photo is not the user's", async () => {
+      const { service } = setup({
+        findByIdForUser: jest.fn().mockResolvedValue(null),
+      });
       await expect(
         service.setPrimary('user-1', '11111111-1111-4111-8111-111111111111'),
       ).rejects.toBeInstanceOf(NotFoundException);

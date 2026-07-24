@@ -1,6 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { RegistrationStep } from '../../../../../../libs/database/generated/client';
 import { ProfileRepository } from '../repositories/profile.repository';
+import { ProfileCompletionService } from './profile-completion.service';
+import {
+  ProfileCompletionModuleEntity,
+  VerificationSubStatusEntity,
+} from '../entities/profile-completion.entity';
 
 // Order matches the Flutter wizard's 12 steps (profile_draft.dart). Steps 11
 // (photos) and 12 (verification) aren't stored here — see PhotoController
@@ -26,17 +31,22 @@ export interface DraftResponse {
   completedSteps: number[];
   isComplete: boolean;
   completionPercentage: number;
+  completionBreakdown: ProfileCompletionModuleEntity[];
+  verificationBreakdown: VerificationSubStatusEntity[];
   data: Record<string, unknown>;
 }
 
 @Injectable()
 export class ProfileDraftService {
-  constructor(private readonly profileRepository: ProfileRepository) {}
+  constructor(
+    private readonly profileRepository: ProfileRepository,
+    private readonly completionService: ProfileCompletionService,
+  ) {}
 
   async getDraft(userId: string): Promise<DraftResponse> {
     const step =
       await this.profileRepository.getOrCreateRegistrationStep(userId);
-    return this.toDraftResponse(step);
+    return this.toDraftResponse(userId, step);
   }
 
   async updateSection(
@@ -59,79 +69,31 @@ export class ProfileDraftService {
       sectionData as Record<string, unknown>,
       stepNumber,
     );
-    return this.toDraftResponse(step);
+    return this.toDraftResponse(userId, step);
   }
 
-  private toDraftResponse(step: RegistrationStep): DraftResponse {
+  // completionPercentage comes from ProfileCompletionService — the single
+  // authoritative scorer also used by ProfileService (GET /profiles/me) —
+  // rather than a separately-weighted local formula, so the figure shown
+  // mid-wizard never disagrees with the one shown after finalize().
+  private async toDraftResponse(
+    userId: string,
+    step: RegistrationStep,
+  ): Promise<DraftResponse> {
     const draftData = step.draftData as Record<string, unknown>;
+    const completion = await this.completionService.calculate(
+      userId,
+      draftData,
+    );
     return {
       currentStep: step.currentStep,
       totalSteps: step.totalSteps,
       completedSteps: (step.completedSteps as number[]) ?? [],
       isComplete: step.isComplete,
-      completionPercentage: this.computeCompletionPercentage(draftData),
+      completionPercentage: completion.percentage,
+      completionBreakdown: completion.breakdown,
+      verificationBreakdown: completion.verificationBreakdown,
       data: draftData,
     };
-  }
-
-  // Mirrors ProfileDraft.completionPercentage in
-  // Frontend/lib/features/registration/domain/models/profile_draft.dart —
-  // same required-field weighting, kept in sync deliberately.
-  private computeCompletionPercentage(
-    draftData: Record<string, unknown>,
-  ): number {
-    let filled = 0;
-    let total = 0;
-
-    const section = (name: DraftSection): Record<string, unknown> =>
-      (draftData[name] as Record<string, unknown>) ?? {};
-    const has = (value: unknown): boolean =>
-      typeof value === 'string' ? value.length > 0 : value != null;
-
-    const basic = section('basicDetails');
-    total += 6;
-    filled += [
-      'firstName',
-      'lastName',
-      'gender',
-      'dob',
-      'maritalStatus',
-      'profileCreatedFor',
-    ].filter((field) => has(basic[field])).length;
-
-    const religion = section('religionDetails');
-    total += 3;
-    filled += ['religion', 'caste', 'community'].filter((field) =>
-      has(religion[field]),
-    ).length;
-
-    const language = section('languageDetails');
-    total += 1;
-    if (has(language.motherTongue)) filled++;
-
-    const location = section('locationDetails');
-    total += 3;
-    filled += ['country', 'state', 'city'].filter((field) =>
-      has(location[field]),
-    ).length;
-
-    const education = section('educationDetails');
-    total += 2;
-    filled += ['qualification', 'occupation'].filter((field) =>
-      has(education[field]),
-    ).length;
-
-    const physical = section('physicalDetails');
-    total += 1;
-    if (has(physical.height)) filled++;
-
-    const family = section('familyDetails');
-    total += 2;
-    filled += ['familyType', 'familyValues'].filter((field) =>
-      has(family[field]),
-    ).length;
-
-    if (total === 0) return 0;
-    return Math.min(100, Math.round((filled / total) * 100));
   }
 }

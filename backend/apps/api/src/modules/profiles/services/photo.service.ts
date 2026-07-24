@@ -8,10 +8,8 @@ import { randomUUID } from 'node:crypto';
 import { S3Service, StoragePrefix } from '@app/storage';
 import { PhotoRepository } from '../repositories/photo.repository';
 import { PhotoEntity } from '../entities/photo.entity';
-import {
-  extensionForMime,
-  UploadedImageFile,
-} from '../pipes/photo-file.pipe';
+import { ProfileService } from './profile.service';
+import { extensionForMime, UploadedImageFile } from '../pipes/photo-file.pipe';
 
 const MAX_PHOTOS_PER_USER = 6;
 
@@ -22,6 +20,7 @@ export class PhotoService {
   constructor(
     private readonly photoRepository: PhotoRepository,
     private readonly s3: S3Service,
+    private readonly profileService: ProfileService,
   ) {}
 
   /**
@@ -65,6 +64,12 @@ export class PhotoService {
         order: existingCount,
       });
       this.logger.log(`User ${userId} uploaded photo ${created.id}.`);
+      // The "photos" completion slice (12%) flips on count > 0 — only
+      // matters on the first photo, but recalculating unconditionally
+      // avoids tracking "was this the first" here and keeps
+      // UserProfile.profileCompletePct (read directly by Discover's
+      // feed mapper) from ever going stale. Never fails the upload itself.
+      await this.profileService.recalculateCompletionIfMaterialized(userId);
       return this.attachPresignedUrl(created);
     } catch (error) {
       // DB write failed — remove the just-stored object so it can't orphan.
@@ -86,7 +91,10 @@ export class PhotoService {
     photoId: string,
     file: UploadedImageFile,
   ): Promise<PhotoEntity> {
-    const existing = await this.photoRepository.findByIdForUser(photoId, userId);
+    const existing = await this.photoRepository.findByIdForUser(
+      photoId,
+      userId,
+    );
     if (!existing) {
       throw new NotFoundException('Photo not found.');
     }
@@ -124,7 +132,10 @@ export class PhotoService {
    * always has a display photo. Returns the remaining list.
    */
   async remove(userId: string, photoId: string): Promise<PhotoEntity[]> {
-    const existing = await this.photoRepository.findByIdForUser(photoId, userId);
+    const existing = await this.photoRepository.findByIdForUser(
+      photoId,
+      userId,
+    );
     if (!existing) {
       throw new NotFoundException('Photo not found.');
     }
@@ -135,6 +146,9 @@ export class PhotoService {
     if (existing.isPrimary) {
       await this.photoRepository.promoteFirstToPrimary(userId);
     }
+    // Deleting the user's last photo must drop the "photos" completion
+    // slice (12%) back to 0 — see the matching comment in upload().
+    await this.profileService.recalculateCompletionIfMaterialized(userId);
     this.logger.log(`User ${userId} deleted photo ${photoId}.`);
     return this.list(userId);
   }
@@ -166,7 +180,10 @@ export class PhotoService {
 
   /** Sets the primary/display photo (unsets any previous primary). */
   async setPrimary(userId: string, photoId: string): Promise<PhotoEntity[]> {
-    const existing = await this.photoRepository.findByIdForUser(photoId, userId);
+    const existing = await this.photoRepository.findByIdForUser(
+      photoId,
+      userId,
+    );
     if (!existing) {
       throw new NotFoundException('Photo not found.');
     }

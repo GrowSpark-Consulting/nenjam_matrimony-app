@@ -2,6 +2,8 @@ import { ProfileService } from './profile.service';
 import type { ProfileRepository } from '../repositories/profile.repository';
 import type { PhotoRepository } from '../repositories/photo.repository';
 import type { ProfileDraftService } from './profile-draft.service';
+import type { ProfileCompletionService } from './profile-completion.service';
+import { ProfileCompletionEntity } from '../entities/profile-completion.entity';
 
 // A draft whose sections satisfy every mandatory (NOT NULL) field.
 const COMPLETE_DRAFT = {
@@ -19,7 +21,10 @@ const COMPLETE_DRAFT = {
     subCaste: 'Siddiqui',
     community: 'Sunni',
   },
-  languageDetails: { motherTongue: 'Urdu', languagesKnown: ['Urdu', 'English'] },
+  languageDetails: {
+    motherTongue: 'Urdu',
+    languagesKnown: ['Urdu', 'English'],
+  },
   locationDetails: {
     country: 'India',
     state: 'Karnataka',
@@ -28,7 +33,10 @@ const COMPLETE_DRAFT = {
     pinCode: '560038',
     nativePlace: 'Bangalore',
   },
-  educationDetails: { qualification: 'B.Tech', occupation: 'Software Engineer' },
+  educationDetails: {
+    qualification: 'B.Tech',
+    occupation: 'Software Engineer',
+  },
   physicalDetails: { height: `5'9"`, weight: '68 kg', disability: 'None' },
   partnerPreference: {},
 };
@@ -55,10 +63,26 @@ function buildService(draftData: Record<string, unknown>) {
     getDraft: jest.fn().mockResolvedValue({ data: draftData }),
   } as unknown as ProfileDraftService;
 
+  // Scoring itself is covered by profile-completion.service.spec.ts — these
+  // tests only care that syncMatchableFromDraft materialises the profile,
+  // so a benign completion result is enough here.
+  const completionService = {
+    calculate: jest.fn().mockResolvedValue(
+      Object.assign(new ProfileCompletionEntity(), {
+        percentage: 0,
+        completedSections: [],
+        missingSections: [],
+        breakdown: [],
+        verificationBreakdown: [],
+      }),
+    ),
+  } as unknown as ProfileCompletionService;
+
   const service = new ProfileService(
     profileRepository,
     photoRepository,
     draftService,
+    completionService,
   );
   return { service, upsertProfile };
 }
@@ -94,8 +118,10 @@ describe('ProfileService.syncMatchableFromDraft', () => {
 
   it('never throws — a materialisation failure must not fail the step save', async () => {
     const { service, upsertProfile } = buildService(COMPLETE_DRAFT);
-    (upsertProfile as jest.Mock).mockRejectedValueOnce(new Error('db down'));
+    upsertProfile.mockRejectedValueOnce(new Error('db down'));
 
-    await expect(service.syncMatchableFromDraft('user-1')).resolves.toBeUndefined();
+    await expect(
+      service.syncMatchableFromDraft('user-1'),
+    ).resolves.toBeUndefined();
   });
 });

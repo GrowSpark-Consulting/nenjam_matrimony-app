@@ -23,12 +23,16 @@ export class ProfileEntity {
   denomination!: string | null;
   motherTongue!: string;
   languagesKnown!: string[];
-  heightCm!: number;
+  // Nullable: Step 6 (Physical) is skippable — see schema.prisma's comment
+  // on UserProfile.heightCm.
+  heightCm!: number | null;
   weightKg!: number | null;
   annualIncomeLakhs!: string | null;
-  highestEducation!: string;
+  // Nullable: Step 5 (Education & Career) is skippable — see schema.prisma's
+  // comment on UserProfile.highestEducation.
+  highestEducation!: string | null;
   educationDetails!: string | null;
-  profession!: string;
+  profession!: string | null;
   employerName!: string | null;
   currentCity!: string;
   currentState!: string;
