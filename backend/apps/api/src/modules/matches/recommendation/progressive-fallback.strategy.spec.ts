@@ -110,9 +110,9 @@ describe('ProgressiveFallbackStrategy', () => {
     expect(findRows).toHaveBeenCalledTimes(1);
   });
 
-  it('exact match missing, Tier 2 returns users: stops at tier 2, fallbackUsed=true', async () => {
+  it('Tier 1 empty, Tier 2 has candidates: returns Tier 2 (lowest non-empty), fallbackUsed=true', async () => {
     const { strategy, countMatching, findRows } = buildStrategy({
-      countSequence: [0, 3], // tier1 empty, tier2 has 3
+      countSequence: [0, 3, 4, 5, 6, 7, 8, 9, 10, 11], // tier1 empty; tier2 lowest non-empty
       rows: [makeRow('a'), makeRow('b'), makeRow('c')],
     });
 
@@ -121,13 +121,17 @@ describe('ProgressiveFallbackStrategy', () => {
     expect(result.tier).toBe(2);
     expect(result.fallbackUsed).toBe(true);
     expect(result.relaxedFilters).toEqual(['Age']);
-    expect(countMatching).toHaveBeenCalledTimes(2);
+    expect(result.total).toBe(3);
+    // On a Tier 1 miss, every wider tier is probed in ONE parallel batch (the
+    // plan is monotonically relaxing, so the lowest-numbered non-empty tier is
+    // the winner) — 1 (Tier 1) + 9 (wider) count probes, regardless of winner.
+    expect(countMatching).toHaveBeenCalledTimes(10);
     expect(findRows).toHaveBeenCalledTimes(1); // only the winning tier fetches rows
   });
 
-  it('Tier 3 returns users: tiers 1-2 tried and logged as empty first', async () => {
+  it('Tier 1-2 empty, Tier 3 has candidates: returns Tier 3', async () => {
     const { strategy, countMatching } = buildStrategy({
-      countSequence: [0, 0, 6], // tier1, tier2 empty, tier3 has 6
+      countSequence: [0, 0, 6, 7, 8, 9, 10, 11, 12, 13], // tier1-2 empty, tier3 lowest non-empty
       rows: [makeRow('a')],
     });
 
@@ -135,7 +139,24 @@ describe('ProgressiveFallbackStrategy', () => {
 
     expect(result.tier).toBe(3);
     expect(result.relaxedFilters).toEqual(['Age', 'City']);
-    expect(countMatching).toHaveBeenCalledTimes(3);
+    expect(result.total).toBe(6);
+    expect(countMatching).toHaveBeenCalledTimes(10);
+  });
+
+  it('multiple wider tiers non-empty: the LOWEST-numbered one wins (guards the parallel-probe pick)', async () => {
+    const { strategy, findRows } = buildStrategy({
+      // Tiers 2-3 empty; tiers 4+ all have candidates. Tier 4 must win — not
+      // whichever count promise happens to resolve first.
+      countSequence: [0, 0, 0, 7, 8, 9, 10, 11, 12, 20],
+      rows: [makeRow('a')],
+    });
+
+    const result = await strategy.getFeedForUser('me', { skip: 0, take: 20 });
+
+    expect(result.tier).toBe(4);
+    expect(result.total).toBe(7);
+    expect(result.relaxedFilters).toEqual(['Age', 'City', 'Caste']);
+    expect(findRows).toHaveBeenCalledTimes(1);
   });
 
   it('Tier 10 returns users: every relaxation exhausted before the gender-only tier succeeds', async () => {

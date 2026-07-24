@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AppConfigService } from '@app/config';
+import type { Prisma } from '../../../../../../libs/database/generated/client';
 import { FeedRepository } from '../repositories/feed.repository';
 import { PreferenceRepository } from '../repositories/preference.repository';
 import { buildFeedWhere } from '../filters/partner-preference-where.builder';
@@ -74,47 +75,91 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
       maxTier: config.enabled ? config.maxTier : 1,
     });
 
-    let lastTier: TierDefinition = plan[0];
-
-    for (const tierDef of plan) {
-      lastTier = tierDef;
+    const whereFor = (tierDef: TierDefinition): Prisma.UserProfileWhereInput => {
       const baseWhere = buildFeedWhere({
         currentUserId: userId,
         myGender,
         self,
         pref: tierDef.pref,
       });
-      const where =
-        tierDef.tier === 1 ? baseWhere : withSafetyExclusions(baseWhere, userId);
+      // Tier 1 mirrors the original engine exactly (no extra exclusions); the
+      // widened tiers layer on the blocked/rejected/inactive safety filter.
+      return tierDef.tier === 1
+        ? baseWhere
+        : withSafetyExclusions(baseWhere, userId);
+    };
 
-      const candidateCount = await this.feedRepository.countMatching(where);
-      this.logger.log(`Tier ${tierDef.tier}\nCandidates: ${candidateCount}`);
-
-      if (candidateCount > 0) {
-        this.logger.log(`Returning Tier ${tierDef.tier}`);
-        const rows = await this.feedRepository.findRows(where, { skip, take });
-        return {
-          rows,
-          total: candidateCount,
-          tier: tierDef.tier,
-          fallbackUsed: tierDef.tier > 1,
-          reason: tierDef.reason,
-          relaxedFilters: tierDef.relaxedFilters,
-        };
-      }
+    // Tier 1 (the caller's exact saved preferences) is the overwhelmingly
+    // common hit, so probe it alone first — the normal case pays exactly one
+    // count + one row fetch and never touches the wider tiers.
+    const tier1 = plan[0];
+    const tier1Where = whereFor(tier1);
+    const tier1Count = await this.feedRepository.countMatching(tier1Where);
+    if (tier1Count > 0) {
+      return this.page(tier1, tier1Where, tier1Count, { skip, take });
     }
 
-    // Every tier up to the configured ceiling returned zero — e.g. an empty
-    // database, or no opposite-gender profiles exist at all. Not an error:
-    // an honest empty feed, tagged with the loosest tier that was tried.
-    this.logger.log('No candidates at any tier — returning empty feed.');
+    // Tier 1 was empty. The tier plan is *monotonically relaxing* — every
+    // later tier matches a superset of the previous one — so the first
+    // non-empty tier is simply the lowest-numbered tier whose count > 0.
+    // That lets us probe every remaining tier's count in ONE parallel batch
+    // instead of walking them one slow round trip at a time (the old path did
+    // up to 9 sequential ~250-300ms COUNTs against Neon before giving up).
+    const widerTiers = plan.slice(1);
+    if (widerTiers.length === 0) {
+      // No preferences to relax (caller has none saved) — Tier 1 was already
+      // the loosest possible query, so an empty result is genuinely empty.
+      return this.emptyFeed(tier1);
+    }
+
+    const widerWheres = widerTiers.map(whereFor);
+    const counts = await Promise.all(
+      widerWheres.map((where) => this.feedRepository.countMatching(where)),
+    );
+    const winnerIndex = counts.findIndex((count) => count > 0);
+
+    if (winnerIndex === -1) {
+      // Every tier up to the configured ceiling returned zero — an honest
+      // empty feed, tagged with the loosest tier that was tried.
+      this.logger.debug('No candidates at any tier — returning empty feed.');
+      return this.emptyFeed(widerTiers[widerTiers.length - 1]);
+    }
+
+    this.logger.debug(`Returning Tier ${widerTiers[winnerIndex].tier}`);
+    return this.page(
+      widerTiers[winnerIndex],
+      widerWheres[winnerIndex],
+      counts[winnerIndex],
+      { skip, take },
+    );
+  }
+
+  /** Fetches the page for a chosen tier and shapes the RecommendationResult. */
+  private async page(
+    tierDef: TierDefinition,
+    where: Prisma.UserProfileWhereInput,
+    total: number,
+    { skip, take }: FeedPageQuery,
+  ): Promise<RecommendationResult> {
+    const rows = await this.feedRepository.findRows(where, { skip, take });
+    return {
+      rows,
+      total,
+      tier: tierDef.tier,
+      fallbackUsed: tierDef.tier > 1,
+      reason: tierDef.reason,
+      relaxedFilters: tierDef.relaxedFilters,
+    };
+  }
+
+  private emptyFeed(tierDef: TierDefinition): RecommendationResult {
     return {
       rows: [],
       total: 0,
-      tier: lastTier.tier,
-      fallbackUsed: lastTier.tier > 1,
+      tier: tierDef.tier,
+      fallbackUsed: tierDef.tier > 1,
       reason: 'No compatible profiles found.',
-      relaxedFilters: lastTier.relaxedFilters,
+      relaxedFilters: tierDef.relaxedFilters,
     };
   }
 }

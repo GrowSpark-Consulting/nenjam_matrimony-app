@@ -2,6 +2,8 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@app/database';
 import { S3Service } from '@app/storage';
 import { FirebaseService } from '@app/firebase';
+import { RedisService } from '@app/cache';
+import { invalidateCachedUserId } from '@app/common';
 
 /**
  * Hard account deletion. Permanently removes every trace of a user:
@@ -30,6 +32,7 @@ export class AccountDeletionService {
     private readonly prisma: PrismaService,
     private readonly s3: S3Service,
     private readonly firebase: FirebaseService,
+    private readonly redis: RedisService,
   ) {}
 
   async deleteAccount(userId: string): Promise<void> {
@@ -67,6 +70,11 @@ export class AccountDeletionService {
 
     // 3. Database — one atomic cascade delete of the user and every child row.
     await this.prisma.user.delete({ where: { id: userId } });
+
+    // 4. Auth cache — drop the firebaseUid → user.id mapping so the deleted
+    // account can't keep resolving from a warm FirebaseAuthGuard cache entry
+    // until its TTL lapses. Best-effort (no-op when Redis is down).
+    await invalidateCachedUserId(this.redis, user.firebaseUid);
 
     this.logger.log(
       `Hard-deleted account ${userId} (database + ${objectKeys.length} storage object(s) + auth).`,

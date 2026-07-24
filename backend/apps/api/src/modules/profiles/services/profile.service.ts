@@ -236,9 +236,16 @@ export class ProfileService {
   // Reads the accumulated wizard draft (see ProfileDraftService) and writes
   // it into UserProfile / AstrologyProfile / PartnerPreference.
   async finalize(userId: string): Promise<ProfileEntity> {
-    console.log(`[STORY-PERF-SRV] ${Date.now()} finalize: getDraft started`);
-    const draft = await this.draftService.getDraft(userId);
-    console.log(`[STORY-PERF-SRV] ${Date.now()} finalize: getDraft complete`);
+    // getDraft and the photos fetch are independent reads (both keyed only by
+    // userId, neither depends on the other's result) — issuing them together
+    // saves one full Neon round trip versus the previous fetch-draft →
+    // validate → fetch-photos sequence. The validation order below is
+    // unchanged, so a missing-mandatory-field error still takes precedence
+    // over the "no photos" error exactly as before.
+    const [draft, photos] = await Promise.all([
+      this.draftService.getDraft(userId),
+      this.photoRepository.findAllForUser(userId),
+    ]);
     const data = draft.data as Record<string, Record<string, unknown>>;
 
     const missing = this.missingRequiredFields(data);
@@ -280,13 +287,9 @@ export class ProfileService {
         'horoscopeDetails.rashi (required once any horoscope field is filled)',
       );
     }
-    // Fetched once here (full rows, not just COUNT) and reused below in
-    // recalculateAndPersistCompletion's getOwn() call — avoids querying
-    // profile_photos twice for the same data within a single finalize().
-    const photos = await this.photoRepository.findAllForUser(userId);
-    console.log(
-      `[STORY-PERF-SRV] ${Date.now()} finalize: findAllForUser complete`,
-    );
+    // `photos` was fetched up front (see the Promise.all above) — full rows,
+    // not just COUNT — and is reused below in recalculateAndPersistCompletion's
+    // getOwn() call, so profile_photos is queried only once per finalize().
     if (photos.length === 0) {
       incomplete.push('photos (at least one profile photo is required)');
     }
@@ -297,22 +300,8 @@ export class ProfileService {
     }
 
     const writtenProfile = await this.writeProfileFromDraft(userId, data);
-    console.log(
-      `[STORY-PERF-SRV] ${Date.now()} finalize: writeProfileFromDraft complete`,
-    );
     await this.profileRepository.markComplete(userId);
-    console.log(
-      `[STORY-PERF-SRV] ${Date.now()} finalize: markComplete complete`,
-    );
-    const result = await this.recalculateAndPersistCompletion(
-      userId,
-      writtenProfile,
-      photos,
-    );
-    console.log(
-      `[STORY-PERF-SRV] ${Date.now()} finalize: recalculateAndPersistCompletion complete`,
-    );
-    return result;
+    return this.recalculateAndPersistCompletion(userId, writtenProfile, photos);
   }
 
   /**
@@ -344,17 +333,8 @@ export class ProfileService {
         >);
       if (this.missingRequiredFields(data).length > 0) return;
 
-      console.log(
-        `[STORY-PERF-SRV] ${Date.now()} syncMatchableFromDraft: writeProfileFromDraft started`,
-      );
       const writtenProfile = await this.writeProfileFromDraft(userId, data);
-      console.log(
-        `[STORY-PERF-SRV] ${Date.now()} syncMatchableFromDraft: writeProfileFromDraft complete`,
-      );
       await this.recalculateAndPersistCompletion(userId, writtenProfile);
-      console.log(
-        `[STORY-PERF-SRV] ${Date.now()} syncMatchableFromDraft: recalculateAndPersistCompletion complete`,
-      );
     } catch (error) {
       this.logger.warn(
         `Auto-materialise from draft skipped for ${userId}: ${(error as Error).message}`,

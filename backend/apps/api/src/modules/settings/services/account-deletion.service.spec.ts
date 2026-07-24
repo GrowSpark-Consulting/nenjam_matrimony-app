@@ -3,6 +3,7 @@ import { AccountDeletionService } from './account-deletion.service';
 import type { PrismaService } from '@app/database';
 import type { S3Service } from '@app/storage';
 import type { FirebaseService } from '@app/firebase';
+import type { RedisService } from '@app/cache';
 
 function build(user: unknown) {
   const findUnique = jest.fn().mockResolvedValue(user);
@@ -17,8 +18,16 @@ function build(user: unknown) {
   const deleteUser = jest.fn().mockResolvedValue(undefined);
   const firebase = { deleteUser } as unknown as FirebaseService;
 
-  const service = new AccountDeletionService(prisma, s3, firebase);
-  return { service, findUnique, del, deleteObjects, deleteUser };
+  // Cache invalidation is best-effort and fails open: a non-'ready' client
+  // makes invalidateCachedUserId a no-op, so these tests exercise the deletion
+  // path without needing a live Redis.
+  const redisDel = jest.fn().mockResolvedValue(undefined);
+  const redis = {
+    getClient: () => ({ status: 'end', del: redisDel }),
+  } as unknown as RedisService;
+
+  const service = new AccountDeletionService(prisma, s3, firebase, redis);
+  return { service, findUnique, del, deleteObjects, deleteUser, redisDel };
 }
 
 describe('AccountDeletionService', () => {

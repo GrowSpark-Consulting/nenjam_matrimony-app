@@ -22,10 +22,7 @@ export class ProfileController {
   // AstrologyProfile / PartnerPreference. Idempotent: re-finalizing updates
   // the existing row rather than creating a duplicate.
   @Post('finalize')
-  async finalize(@CurrentUser('id') userId: string): Promise<ProfileEntity> {
-    console.log(`[STORY-PERF-SRV] ${Date.now()} finalize() started`);
-    const result = await this.profileService.finalize(userId);
-    console.log(`[STORY-PERF-SRV] ${Date.now()} finalize() DB work complete`);
-    return result;
+  finalize(@CurrentUser('id') userId: string): Promise<ProfileEntity> {
+    return this.profileService.finalize(userId);
   }
 }

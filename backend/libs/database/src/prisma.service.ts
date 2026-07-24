@@ -34,10 +34,9 @@ export class PrismaService
           password: db.password,
           database: db.name,
         };
-    // TEMP — constructing the pg.Pool ourselves (identical config to what
-    // PrismaPg would build internally) purely so we have a handle to read
-    // totalCount/idleCount/waitingCount for the A/B pool-contention
-    // investigation below. Not a config change.
+    // We construct the pg.Pool explicitly (rather than letting PrismaPg build
+    // it internally) so we can tune pool sizing for a high-latency managed
+    // Postgres (Neon) — see the min / idleTimeoutMillis rationale below.
     const pool = new Pool({
       ...poolConfig,
       // Without a timeout, a query that can't get a pooled connection (pool
@@ -65,41 +64,11 @@ export class PrismaService
     super({
       adapter: new PrismaPg(pool),
       log: [
-        { emit: 'event', level: 'query' },
         { emit: 'stdout', level: 'warn' },
         { emit: 'stdout', level: 'error' },
       ],
     });
-    this.pool = pool;
-    // TEMP — diagnosing the registration wizard "Continue"/finalize delay.
-    // Remove with the other [STORY-PERF-SRV] instrumentation once done.
-    (this as unknown as { $on: Function }).$on(
-      'query',
-      (e: { query: string; duration: number }) => {
-        console.log(
-          `[STORY-PERF-SQL] ${e.duration}ms pool(total=${pool.totalCount} idle=${pool.idleCount} waiting=${pool.waitingCount}) :: ${e.query}`,
-        );
-      },
-    );
-    // TEMP — direct evidence of NEW physical connections being opened
-    // (vs. an existing pooled client being reused). If the multi-second SQL
-    // outliers line up with 'connect' events, the cause is cold TCP+TLS
-    // handshakes to Neon triggered by concurrent requests needing more than
-    // the 1 warm connection — not query execution itself.
-    pool.on('connect', () => {
-      console.log(
-        `[STORY-PERF-POOL] ${Date.now()} new physical connection opened (total=${pool.totalCount} idle=${pool.idleCount} waiting=${pool.waitingCount})`,
-      );
-    });
-    pool.on('remove', () => {
-      console.log(
-        `[STORY-PERF-POOL] ${Date.now()} connection removed (total=${pool.totalCount} idle=${pool.idleCount} waiting=${pool.waitingCount})`,
-      );
-    });
   }
-
-  // TEMP — see constructor comment above.
-  private readonly pool: Pool;
 
   // Managed Postgres (Neon) auto-suspends an idle compute; waking it can
   // intermittently exceed a single connection attempt's window (observed:
