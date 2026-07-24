@@ -8,6 +8,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProfilesModule } from './modules/profiles/profiles.module';
 import { MatchesModule } from './modules/matches/matches.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { MatchesModule } from './modules/matches/matches.module';
     FirebaseModule,
     ProfilesModule,
     MatchesModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
