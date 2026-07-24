@@ -5,9 +5,39 @@ import type {
   Gender,
 } from '../../../../../../libs/database/generated/client';
 
-// The columns every feed/search card needs. Centralised so the feed query,
-// the search query, and the mapper all agree on one row shape.
-export const FEED_PROFILE_INCLUDE: Prisma.UserProfileInclude = {
+// The exact columns ProfileFeedMapper reads — nothing more. An explicit
+// `select` (vs. a bare `include`, which hydrates all ~48 UserProfile columns)
+// keeps each feed/search row to the ~25 fields the card actually uses, so the
+// query returns a narrower payload from Postgres and Prisma hydrates less per
+// page. Centralised so the feed query, the search query, and the mapper all
+// agree on one row shape — update this set whenever the mapper reads a new
+// column, or that column silently comes back undefined.
+export const FEED_PROFILE_SELECT = {
+  userId: true,
+  firstName: true,
+  lastName: true,
+  dob: true,
+  gender: true,
+  maritalStatus: true,
+  religion: true,
+  caste: true,
+  community: true,
+  motherTongue: true,
+  languagesKnown: true,
+  heightCm: true,
+  physicalStatus: true,
+  annualIncomeLakhs: true,
+  highestEducation: true,
+  profession: true,
+  employerName: true,
+  currentCity: true,
+  currentState: true,
+  bio: true,
+  dietaryHabits: true,
+  smokingHabits: true,
+  drinkingHabits: true,
+  hobbies: true,
+  profileCompletePct: true,
   user: {
     select: {
       phone: true,
@@ -17,7 +47,7 @@ export const FEED_PROFILE_INCLUDE: Prisma.UserProfileInclude = {
       },
     },
   },
-};
+} satisfies Prisma.UserProfileSelect;
 
 // A finalized profile row plus the joined user/photos the card needs.
 export type FeedProfileRow = Record<string, unknown>;
@@ -69,7 +99,7 @@ export class FeedRepository {
         orderBy: { createdAt: 'desc' },
         skip,
         take,
-        include: FEED_PROFILE_INCLUDE,
+        select: FEED_PROFILE_SELECT,
       }),
       this.prisma.userProfile.count({ where }),
     ]);
@@ -98,7 +128,7 @@ export class FeedRepository {
       orderBy: { createdAt: 'desc' },
       skip,
       take,
-      include: FEED_PROFILE_INCLUDE,
+      select: FEED_PROFILE_SELECT,
     });
     return rows as FeedProfileRow[];
   }
