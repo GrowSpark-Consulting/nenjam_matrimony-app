@@ -192,22 +192,13 @@ export class ProfileDraftController {
     dto: object,
     skipMaterialize: boolean,
   ): Promise<DraftResponse> {
-    console.log(
-      `[STORY-PERF-SRV] ${Date.now()} save() started :: ${section} skipMaterialize=${skipMaterialize}`,
-    );
     const draft = await this.draftService.updateSection(userId, section, dto);
-    console.log(
-      `[STORY-PERF-SRV] ${Date.now()} updateSection complete :: ${section}`,
-    );
     if (!skipMaterialize) {
       await this.profileService.syncMatchableFromDraft(
         userId,
         draft.data as Record<string, Record<string, unknown>>,
       );
     }
-    console.log(
-      `[STORY-PERF-SRV] ${Date.now()} save() DB work complete :: ${section}`,
-    );
     return draft;
   }
 }

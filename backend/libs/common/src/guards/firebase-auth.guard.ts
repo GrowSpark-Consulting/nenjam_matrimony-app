@@ -9,7 +9,9 @@ import {
 import type { Request } from 'express';
 import { FirebaseService } from '@app/firebase';
 import { PrismaService } from '@app/database';
+import { RedisService } from '@app/cache';
 import type { AuthenticatedUser } from '../decorators/current-user.decorator';
+import { getCachedUserId, setCachedUserId } from '../auth/auth-user-cache';
 
 interface RequestWithUser extends Request {
   user?: AuthenticatedUser;
@@ -29,11 +31,11 @@ export class FirebaseAuthGuard implements CanActivate {
   constructor(
     private readonly firebaseService: FirebaseService,
     private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
-    console.log(`[STORY-PERF-SRV] ${Date.now()} NestJS request received :: ${request.method} ${request.url}`);
 
     const authHeader = request.headers.authorization;
 
@@ -48,9 +50,7 @@ export class FirebaseAuthGuard implements CanActivate {
     }
 
     const decoded = await this.verify(idToken);
-    console.log(`[STORY-PERF-SRV] ${Date.now()} verifyIdToken complete :: ${request.method} ${request.url}`);
     request.user = await this.resolveUser(decoded);
-    console.log(`[STORY-PERF-SRV] ${Date.now()} Auth guard complete :: ${request.method} ${request.url}`);
     return true;
   }
 
@@ -75,6 +75,22 @@ export class FirebaseAuthGuard implements CanActivate {
     email?: string;
     phone_number?: string;
   }): Promise<AuthenticatedUser> {
+    // Fast path: the firebaseUid → internal user.id mapping is near-immutable,
+    // so a cache hit lets us skip the DB round trip entirely (the only DB hop
+    // on the hot path of every authenticated request). uid/email/phone_number
+    // below come from the verified token, not the DB, so a cached id is enough
+    // to build the full AuthenticatedUser. Fails open — a miss / Redis-down
+    // just falls through to the authoritative DB reconciliation below.
+    const cachedId = await getCachedUserId(this.redis, decoded.uid);
+    if (cachedId) {
+      return {
+        id: cachedId,
+        uid: decoded.uid,
+        email: decoded.email,
+        phone_number: decoded.phone_number,
+      };
+    }
+
     // User.email is required + unique in the schema; phone-only Firebase
     // accounts have no email, so we synthesize a stable placeholder keyed to
     // the uid — it's never shown to the user and never collides.
@@ -141,6 +157,10 @@ export class FirebaseAuthGuard implements CanActivate {
         phone: decoded.phone_number,
       },
     });
+
+    // Populate the cache so subsequent requests for this UID skip the DB. Best
+    // effort — a Redis failure here must not fail the request.
+    await setCachedUserId(this.redis, decoded.uid, user.id);
 
     return {
       id: user.id,
