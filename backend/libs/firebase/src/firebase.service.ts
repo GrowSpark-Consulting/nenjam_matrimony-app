@@ -62,6 +62,40 @@ export class FirebaseService implements OnModuleInit {
     );
   }
 
+  /**
+   * Permanently deletes the Firebase Auth user, revoking every session plus all
+   * ID/refresh tokens so a deleted account can never authenticate again. Used by
+   * the hard account-deletion flow.
+   *
+   * Idempotent and non-fatal by design: a missing user (`auth/user-not-found`)
+   * is treated as already-done, and a missing Admin SDK config or any other
+   * failure is logged rather than thrown — account deletion (the DB + storage
+   * cleanup) must not be blocked by an auth-provider hiccup.
+   */
+  async deleteUser(firebaseUid: string): Promise<void> {
+    if (!this.app) {
+      this.logger.warn(
+        'Firebase Admin SDK not configured — skipping auth user deletion.',
+      );
+      return;
+    }
+    try {
+      await this.withTimeout(
+        getAuth(this.app).deleteUser(firebaseUid),
+        10_000,
+        'Firebase deleteUser timed out — check outbound connectivity to Google.',
+      );
+      this.logger.log(`Deleted Firebase auth user "${firebaseUid}".`);
+    } catch (error) {
+      if ((error as { code?: string }).code === 'auth/user-not-found') {
+        return;
+      }
+      this.logger.error(
+        `Failed to delete Firebase auth user "${firebaseUid}": ${(error as Error).message}`,
+      );
+    }
+  }
+
   private withTimeout<T>(
     promise: Promise<T>,
     timeoutMs: number,
