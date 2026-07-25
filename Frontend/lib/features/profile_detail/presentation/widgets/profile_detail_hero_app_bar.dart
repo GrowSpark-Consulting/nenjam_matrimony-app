@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
@@ -7,6 +8,8 @@ import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/avatars/gender_placeholder.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../shortlist/presentation/providers/shortlist_provider.dart';
+import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
 import '../../domain/entities/profile_detail_entity.dart';
 
 /// Collapsing parallax hero for the Profile Detail page — cover photo,
@@ -16,17 +19,38 @@ import '../../domain/entities/profile_detail_entity.dart';
 /// Bespoke rather than built on [NmSliverAppBar]: that widget has no
 /// gradient scrim, badge, or name overlay, so reusing it would mean
 /// immediately overriding most of its `flexibleSpace`.
-class ProfileDetailHeroAppBar extends StatelessWidget {
+class ProfileDetailHeroAppBar extends ConsumerStatefulWidget {
   final ProfileDetailEntity detail;
+  /// The scoped Hero tag the tapped card used (Discover/Matches), when
+  /// applicable — see `ProfileDetailArgs`'s doc comment for why those two
+  /// screens need a scoped tag instead of the plain `'profile-photo-$id'`
+  /// one. Null falls back to that plain scheme (Search/Similar
+  /// Profiles/Shortlisted, or a direct/deep link).
+  final String? heroTag;
 
-  const ProfileDetailHeroAppBar({super.key, required this.detail});
+  const ProfileDetailHeroAppBar({super.key, required this.detail, this.heroTag});
+
+  @override
+  ConsumerState<ProfileDetailHeroAppBar> createState() => _ProfileDetailHeroAppBarState();
+}
+
+class _ProfileDetailHeroAppBarState extends ConsumerState<ProfileDetailHeroAppBar> {
+  // Prevents a rapid double-tap from firing two toggles before the first
+  // resolves, and — combined with `shortlistLoading` below — makes sure a
+  // tap that arrives before `shortlistNotifierProvider`'s initial (mock-
+  // delayed) fetch resolves gets a disabled button instead of silently
+  // doing nothing: the notifier's own guard (`state.valueOrNull == null`)
+  // would otherwise no-op that tap with zero visual feedback.
+  bool _isToggling = false;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final base = detail.base;
+    final base = widget.detail.base;
+    final shortlisted = ref.watch(isShortlistedProvider(base.id));
+    final shortlistLoading = ref.watch(shortlistNotifierProvider).isLoading;
     final photoUrl = base.photoUrls.isNotEmpty ? base.photoUrls.first : null;
-    final heroTag = 'profile-photo-${base.id}';
+    final effectiveHeroTag = widget.heroTag ?? 'profile-photo-${base.id}';
 
     // Half the viewport on tall/portrait screens, capped at 420 so it
     // never dominates a tablet or landscape viewport where half the
@@ -46,6 +70,19 @@ class ProfileDetailHeroAppBar extends StatelessWidget {
       ),
       actions: [
         _CircleIconButton(
+          icon: shortlisted ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+          iconColor: shortlisted ? AppColors.accentGold : Colors.white,
+          isLoading: _isToggling || shortlistLoading,
+          onTap: (_isToggling || shortlistLoading)
+              ? null
+              : () async {
+                  setState(() => _isToggling = true);
+                  await handleShortlistToggle(context, ref, base);
+                  if (mounted) setState(() => _isToggling = false);
+                },
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        _CircleIconButton(
           icon: Icons.ios_share_rounded,
           onTap: () {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -61,7 +98,7 @@ class ProfileDetailHeroAppBar extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Hero(
-              tag: heroTag,
+              tag: effectiveHeroTag,
               child: photoUrl == null
                   ? NmGenderPlaceholder(gender: base.gender, iconSize: 72)
                   : (photoUrl.startsWith('assets/')
@@ -166,9 +203,16 @@ class ProfileDetailHeroAppBar extends StatelessWidget {
 
 class _CircleIconButton extends StatelessWidget {
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final Color iconColor;
+  final bool isLoading;
 
-  const _CircleIconButton({required this.icon, required this.onTap});
+  const _CircleIconButton({
+    required this.icon,
+    required this.onTap,
+    this.iconColor = Colors.white,
+    this.isLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -183,7 +227,15 @@ class _CircleIconButton extends StatelessWidget {
           child: SizedBox(
             width: 40,
             height: 40,
-            child: Icon(icon, size: 20, color: Colors.white),
+            child: isLoading
+                ? Center(
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: iconColor),
+                    ),
+                  )
+                : Icon(icon, size: 20, color: iconColor),
           ),
         ),
       ),

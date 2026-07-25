@@ -12,6 +12,7 @@ import '../../../../core/widgets/relationship_intelligence/profile_prompt_sectio
 import '../../../../core/widgets/relationship_intelligence/psychology_section.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../astro/presentation/providers/compatibility_provider.dart';
+import '../../../discover/presentation/providers/discover_providers.dart';
 import '../../../profile/presentation/providers/profile_dashboard_providers.dart';
 import '../../../profile_completion/presentation/providers/profile_completeness_provider.dart';
 import '../../../profile_photos/domain/models/user_photo.dart';
@@ -79,6 +80,13 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
     // change immediately instead of a stale pre-edit snapshot.
     ref.invalidate(profileDraftResponseProvider);
     ref.invalidate(profileCompletenessSnapshotProvider);
+    // discoverFeedProvider is a plain (non-autoDispose) FutureProvider kept
+    // alive by the always-mounted Discover screen — without invalidating it
+    // here, a user who just went from 0 rows in user_profiles to their first
+    // successful finalize (e.g. the height_cm P2011 regression) would land
+    // back on Discover still showing its cached "INCOMPLETE_SELF_PROFILE"
+    // empty state from before this save, even though they're now eligible.
+    ref.invalidate(discoverFeedProvider);
 
     // EDIT MODE: publish confirmation, reset to CREATE for hygiene, and
     // return to Discover — never back into onboarding/registration.

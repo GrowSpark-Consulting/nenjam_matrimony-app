@@ -17,6 +17,8 @@ import '../../../../core/widgets/sheets/app_sheets.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../../discover/presentation/providers/discover_providers.dart';
+import '../../../shortlist/presentation/providers/shortlist_provider.dart';
+import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
 import '../../domain/entities/search_filters_entity.dart';
 import '../providers/search_providers.dart';
 import '../widgets/search_filter_sheet.dart';
@@ -253,13 +255,17 @@ class _SearchResultsGrid extends StatelessWidget {
       itemCount: profiles.length,
       itemBuilder: (context, index) {
         final profile = profiles[index];
-        return SearchResultCard(
-          profile: profile,
-          onTap: () => openProfileDetail(context, profile),
-          onInterested: () =>
-              _notify(context, '${l10n.actionInterested}: ${profile.name}'),
-          onShortlist: () =>
-              _notify(context, '${l10n.profileCardShortlist}: ${profile.name}'),
+        // Scoped Consumer so a shortlist change only rebuilds this one grid
+        // cell, not the whole results grid.
+        return Consumer(
+          builder: (context, ref, _) => SearchResultCard(
+            profile: profile,
+            onTap: () => openProfileDetail(context, profile),
+            onInterested: () =>
+                _notify(context, '${l10n.actionInterested}: ${profile.name}'),
+            onShortlist: () => handleShortlistToggle(context, ref, profile),
+            isShortlisted: ref.watch(isShortlistedProvider(profile.id)),
+          ),
         );
       },
     );

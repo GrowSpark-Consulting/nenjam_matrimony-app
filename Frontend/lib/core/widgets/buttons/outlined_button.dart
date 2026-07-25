@@ -27,6 +27,17 @@ class NmOutlinedButton extends StatelessWidget {
       width: width ?? double.infinity,
       height: height,
       child: OutlinedButton(
+        // See NmPrimaryButton's matching comment — the app-wide
+        // OutlinedButtonTheme hardcodes 32dp of vertical padding sized for
+        // this widget's own 56dp default, which clips the label at smaller
+        // custom [height]s (e.g. the Accept/Decline/Withdraw buttons at
+        // 44dp). Overriding padding/minimumSize/tapTargetSize here makes
+        // this SizedBox's [height] the actual authority on total size.
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
         onPressed: isLoading ? null : onPressed,
         child: isLoading
             ? SizedBox(

@@ -24,6 +24,12 @@ class NmProfileCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onLikeTap;
   final VoidCallback? onShortlistTap;
+  /// True when [onShortlistTap] represents "remove" rather than "save" —
+  /// swaps the footer icon to the filled bookmark so a card already known
+  /// to be shortlisted (e.g. on the Shortlisted Profiles screen, where
+  /// every card is by definition already saved) doesn't show the same
+  /// "not yet saved" outline icon a fresh Discover/Search card would.
+  final bool isShortlisted;
   /// When set, wraps the card photo in a [Hero] with this tag so tapping
   /// through to Profile Detail animates the same photo into its hero.
   /// Defaults to null (no [Hero]) so existing call sites are unaffected.
@@ -43,6 +49,7 @@ class NmProfileCard extends StatelessWidget {
     this.onTap,
     this.onLikeTap,
     this.onShortlistTap,
+    this.isShortlisted = false,
     this.heroTag,
   });
 
@@ -190,8 +197,11 @@ class NmProfileCard extends StatelessWidget {
                   ),
                   if (onShortlistTap != null)
                     _ActionIcon(
-                      icon: Icons.bookmark_border_rounded,
+                      icon: isShortlisted
+                          ? Icons.bookmark_rounded
+                          : Icons.bookmark_border_rounded,
                       onTap: onShortlistTap!,
+                      color: isShortlisted ? AppColors.accentGold : null,
                       tooltip: l10n.profileCardShortlist,
                     ),
                   if (onLikeTap != null) ...[

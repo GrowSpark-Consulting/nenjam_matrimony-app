@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
+import '../avatars/app_avatars.dart';
 import '../buttons/primary_button.dart';
 
 /// Reusable Verification Prompt Card.
@@ -55,6 +56,13 @@ class NmNotificationCard extends StatelessWidget {
   final String time;
   final IconData icon;
   final bool isUnread;
+  final VoidCallback? onTap;
+  /// When set, shows a photo avatar (with gender-aware fallback) instead of
+  /// the icon-in-circle — used for actor-driven notifications (interest,
+  /// message, etc). Leave null for actor-less notifications (system,
+  /// reminders), which keep the original icon look.
+  final String? avatarUrl;
+  final String avatarGender;
 
   const NmNotificationCard({
     super.key,
@@ -63,34 +71,65 @@ class NmNotificationCard extends StatelessWidget {
     required this.time,
     this.icon = Icons.notifications_rounded,
     this.isUnread = true,
+    this.onTap,
+    this.avatarUrl,
+    this.avatarGender = '',
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: AppDecorations.card(isDark: isDark).copyWith(
-        color: isUnread ? (isDark ? AppColors.surfaceVariantDark : AppColors.infoLight.withValues(alpha: 0.5)) : null,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(radius: 20, backgroundColor: AppColors.primarySurface, child: Icon(icon, size: 20, color: AppColors.primary)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: AppTypography.titleSmall.copyWith(fontWeight: isUnread ? FontWeight.w700 : FontWeight.w600)),
-                const SizedBox(height: 2),
-                Text(subtitle, style: AppTypography.bodySmall),
-              ],
-            ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: AppDecorations.card(isDark: isDark).copyWith(
+            color: isUnread ? (isDark ? AppColors.surfaceVariantDark : AppColors.infoLight.withValues(alpha: 0.5)) : null,
           ),
-          const SizedBox(width: 8),
-          Text(time, style: AppTypography.labelSmall.copyWith(color: AppColors.textTertiaryLight)),
-        ],
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              avatarUrl != null
+                  ? NmCircleAvatar(imageUrl: avatarUrl, size: 40, gender: avatarGender)
+                  : CircleAvatar(radius: 20, backgroundColor: AppColors.primarySurface, child: Icon(icon, size: 20, color: AppColors.primary)),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.titleSmall.copyWith(fontWeight: isUnread ? FontWeight.w700 : FontWeight.w600),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: AppTypography.bodySmall,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(time, style: AppTypography.labelSmall.copyWith(color: AppColors.textTertiaryLight)),
+                  ],
+                ),
+              ),
+              if (isUnread) ...[
+                const SizedBox(width: 8),
+                Container(
+                  width: 8,
+                  height: 8,
+                  margin: const EdgeInsets.only(top: 4),
+                  decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

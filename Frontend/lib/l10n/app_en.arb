@@ -123,6 +123,7 @@
   "discoverChipBuildingProfile": "Building Profile",
   "homePhotoProtectedLabel": "Photo Protected",
   "discoverInterestSentLabel": "Interest Sent",
+  "discoverRespondToInterest": "Respond to Interest",
   "homeAiMatchScoreLabel": "AI Match",
   "homeAstroMatchScoreLabel": "Astro Match",
   "homePsychologyMatchScoreLabel": "Psychology Match",
@@ -131,6 +132,7 @@
   "actionViewProfile": "View Profile",
   "actionShare": "Share",
   "actionSave": "Save",
+  "actionMessage": "Message",
   "discoverFilterLabel": "Filter",
   "homeProfileDetailsLabel": "Details",
 
@@ -243,8 +245,8 @@
   "inboxNotificationsTooltip": "Notifications",
   "inboxFilterTooltip": "Filters",
   "inboxSearchHint": "Search conversations...",
-  "inboxTabInterestsReceived": "Interests Received",
-  "inboxTabInterestsSent": "Interests Sent",
+  "inboxTabInterestsReceived": "Received",
+  "inboxTabInterestsSent": "Sent",
   "inboxTabMessages": "Messages",
   "inboxEmptyTitle": "No conversations yet",
   "inboxEmptySubtitle": "Start discovering matches to begin a conversation.",
@@ -295,6 +297,26 @@
   "inboxComposerVoice": "Voice message",
 
   "notificationsTitle": "Notifications",
+  "notificationsMarkAllRead": "Mark all as read",
+  "notificationsSectionToday": "Today",
+  "notificationsSectionYesterday": "Yesterday",
+  "notificationsSectionEarlier": "Earlier",
+  "notificationsJustNow": "Just now",
+  "notificationsMinutesAgo": "{count} min ago",
+  "@notificationsMinutesAgo": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "notificationsHoursAgo": "{count} hr ago",
+  "@notificationsHoursAgo": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "notificationsDaysAgo": "{count} d ago",
+  "@notificationsDaysAgo": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "notificationsEmptyTitle": "You're all caught up!",
+  "notificationsEmptyMessage": "New interests, matches, messages and updates will appear here.",
+  "notificationsComingSoon": "This will be available soon.",
 
   "profileTitle": "My Profile",
   "profileAboutMeTitle": "About Me",
@@ -929,6 +951,11 @@
   "drawerInterestSent": "Interests Sent",
   "drawerInterestReceived": "Interests Received",
   "drawerShortlist": "Shortlisted Profiles",
+  "shortlistRemoveButton": "Remove from Shortlist",
+  "shortlistEmptyTitle": "No shortlisted profiles yet",
+  "shortlistEmptyMessage": "Save profiles you're interested in and find them here.",
+  "shortlistExploreProfiles": "Explore Profiles",
+  "shortlistActionFailed": "Failed to update shortlist. Please try again.",
   "drawerLanguage": "Language",
   "drawerSettings": "Account Settings",
   "drawerPrivacy": "Privacy & Safety",
@@ -949,6 +976,16 @@
   "profileDetailVideoCall": "Video Call",
   "profileDetailVideoComingSoon": "Video calling is coming soon",
   "profileDetailShareComingSoon": "Share coming soon",
+
+  "interestStatusPending": "Pending",
+  "interestStatusAccepted": "Accepted",
+  "interestStatusDeclined": "Declined",
+  "interestsWithdraw": "Withdraw",
+  "interestsActionFailed": "Something went wrong. Please try again.",
+  "interestsReceivedEmptyTitle": "No new interests yet",
+  "interestsReceivedEmptyMessage": "When someone sends you an interest, it will show up here.",
+  "interestsSentEmptyTitle": "No interests sent yet",
+  "interestsSentEmptyMessage": "Interests you send will show up here so you can track their status.",
   "profileDetailTabAbout": "About",
   "profileDetailTabPhotos": "Photos",
   "profileDetailTabFamily": "Family",

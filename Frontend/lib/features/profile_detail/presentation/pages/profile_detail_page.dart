@@ -30,8 +30,12 @@ import '../widgets/verification_trust_section.dart';
 /// a profile card from Discover, Matches, Search, or Similar Profiles.
 class ProfileDetailPage extends ConsumerWidget {
   final DiscoveryProfileEntity profile;
+  /// The exact Hero tag the tapped card used, when it used a scoped one
+  /// (Discover/Matches) — see `ProfileDetailArgs`'s doc comment for why.
+  /// Null falls back to the plain `'profile-photo-$id'` scheme.
+  final String? heroTag;
 
-  const ProfileDetailPage({super.key, required this.profile});
+  const ProfileDetailPage({super.key, required this.profile, this.heroTag});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,7 +43,7 @@ class ProfileDetailPage extends ConsumerWidget {
 
     return Scaffold(
       body: detailAsync.when(
-        data: (detail) => _ProfileDetailScrollView(detail: detail),
+        data: (detail) => _ProfileDetailScrollView(detail: detail, heroTag: heroTag),
         loading: () => const NmLoadingWidget(),
         error: (_, __) => NmErrorWidget(
           onRetry: () => ref.invalidate(profileDetailProvider(profile)),
@@ -55,8 +59,9 @@ class ProfileDetailPage extends ConsumerWidget {
 
 class _ProfileDetailScrollView extends StatefulWidget {
   final ProfileDetailEntity detail;
+  final String? heroTag;
 
-  const _ProfileDetailScrollView({required this.detail});
+  const _ProfileDetailScrollView({required this.detail, this.heroTag});
 
   @override
   State<_ProfileDetailScrollView> createState() => _ProfileDetailScrollViewState();
@@ -98,7 +103,7 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
 
     return CustomScrollView(
       slivers: [
-        ProfileDetailHeroAppBar(detail: detail),
+        ProfileDetailHeroAppBar(detail: detail, heroTag: widget.heroTag),
         SliverPersistentHeader(
           pinned: true,
           delegate: ProfileDetailTabBarDelegate(

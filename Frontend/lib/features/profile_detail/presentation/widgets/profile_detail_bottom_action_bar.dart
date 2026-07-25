@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
@@ -8,6 +9,9 @@ import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../interests/domain/repositories/interests_repository.dart';
+import '../../../interests/presentation/providers/interests_provider.dart';
+import '../../../interests/presentation/utils/interest_button_copy.dart';
 import '../../domain/entities/profile_detail_entity.dart';
 
 /// Sticky bottom bar: gold "Send Interest" pill + chat + video icon
@@ -16,36 +20,42 @@ import '../../domain/entities/profile_detail_entity.dart';
 /// "Start Conversation" pushes the single existing [RouteNames.messages]
 /// route — there is no per-target-user chat thread concept anywhere in the
 /// app yet. Video calling doesn't exist at all, so that button is a stub.
-class ProfileDetailBottomActionBar extends StatefulWidget {
+class ProfileDetailBottomActionBar extends ConsumerStatefulWidget {
   final ProfileDetailEntity detail;
 
   const ProfileDetailBottomActionBar({super.key, required this.detail});
 
   @override
-  State<ProfileDetailBottomActionBar> createState() =>
+  ConsumerState<ProfileDetailBottomActionBar> createState() =>
       _ProfileDetailBottomActionBarState();
 }
 
 class _ProfileDetailBottomActionBarState
-    extends State<ProfileDetailBottomActionBar> {
-  bool _interestSent = false;
+    extends ConsumerState<ProfileDetailBottomActionBar> {
+  bool _isSending = false;
 
-  Future<void> _handleSendInterest(AppLocalizations l10n) async {
-    if (_interestSent) return;
-    setState(() => _interestSent = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${l10n.actionInterested}: ${widget.detail.base.name}'),
-      ),
+  Future<void> _handleSendInterest(
+    AppLocalizations l10n,
+    InterestRelationshipStatus status,
+  ) async {
+    if (_isSending) return;
+    setState(() => _isSending = true);
+    await handleInterestButtonTap(
+      context,
+      ref,
+      profile: widget.detail.base,
+      status: status,
+      l10n: l10n,
     );
-    await Future<void>.delayed(const Duration(seconds: 3));
-    if (mounted) setState(() => _interestSent = false);
+    if (mounted) setState(() => _isSending = false);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final status = ref.watch(interestRelationshipStatusProvider(widget.detail.base.id));
+    final settled = interestButtonIsSettled(status);
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -66,41 +76,43 @@ class _ProfileDetailBottomActionBarState
               borderRadius: AppSpacing.borderRadiusXl,
               clipBehavior: Clip.antiAlias,
               child: InkWell(
-                onTap: () => _handleSendInterest(l10n),
+                onTap: _isSending ? null : () => _handleSendInterest(l10n, status),
                 child: Ink(
                   height: 52,
                   decoration: BoxDecoration(
-                    gradient: _interestSent ? null : AppGradients.gold,
-                    color: _interestSent
-                        ? AppColors.faceVerificationGreen
-                        : null,
+                    gradient: settled ? null : AppGradients.gold,
+                    color: settled ? AppColors.faceVerificationGreen : null,
                     borderRadius: AppSpacing.borderRadiusXl,
-                    boxShadow: _interestSent ? null : AppShadows.goldGlow,
+                    boxShadow: settled ? null : AppShadows.goldGlow,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        _interestSent
-                            ? Icons.check_circle_rounded
-                            : Icons.favorite_rounded,
-                        size: 20,
-                        color: _interestSent
-                            ? Colors.white
-                            : AppColors.textOnGold,
-                      ),
+                      if (_isSending)
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      else
+                        Icon(
+                          settled ? Icons.check_circle_rounded : Icons.favorite_rounded,
+                          size: 20,
+                          color: settled ? Colors.white : AppColors.textOnGold,
+                        ),
                       const SizedBox(width: AppSpacing.sm),
                       Flexible(
                         child: Text(
-                          _interestSent
-                              ? l10n.profileDetailInterestSent
-                              : l10n.profileDetailSendInterest,
+                          interestButtonLabel(
+                            status,
+                            l10n,
+                            noneLabel: l10n.profileDetailSendInterest,
+                            sentLabel: l10n.profileDetailInterestSent,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.button.copyWith(
-                            color: _interestSent
-                                ? Colors.white
-                                : AppColors.textOnGold,
+                            color: settled ? Colors.white : AppColors.textOnGold,
                             fontWeight: FontWeight.w700,
                           ),
                         ),

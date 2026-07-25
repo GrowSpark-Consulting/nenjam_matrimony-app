@@ -80,6 +80,9 @@ abstract final class ApiEndpoints {
   // `interests` backend module exists but is an empty stub) ──────────
   static const String interestsReceived = '/interests/received';
   static const String interestsSent = '/interests/sent';
+  // Base resource path for a single interest record — proposed
+  // `DELETE {interests}/:id` to withdraw a pending sent interest.
+  static const String interests = '/interests';
 
   // ─── Chat ────────────────────────────────────────────────────────
   static const String conversations = '/chat/conversations';

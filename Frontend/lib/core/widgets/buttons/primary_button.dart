@@ -28,6 +28,21 @@ class NmPrimaryButton extends StatelessWidget {
       width: width ?? double.infinity,
       height: height,
       child: ElevatedButton(
+        // The app-wide ElevatedButtonTheme (app_theme.dart) hardcodes
+        // `padding: vertical 16` (32dp total) + `minimumSize.height: 56`,
+        // sized for this widget's own 56dp default. At a smaller custom
+        // [height] (e.g. 44dp, used by Accept/Decline/Withdraw), that fixed
+        // 32dp padding left less than the label's own line-height worth of
+        // room inside the tightly-constrained SizedBox, clipping the text —
+        // not a font-size problem, a padding/height mismatch. Overriding
+        // padding to horizontal-only and zeroing minimumSize/tapTargetSize
+        // here lets this SizedBox's [height] be the single source of truth
+        // for total size at any height, with the label centered inside it.
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
         onPressed: isLoading ? null : onPressed,
         child: isLoading
             ? const SizedBox(

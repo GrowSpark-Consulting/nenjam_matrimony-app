@@ -120,6 +120,7 @@
   "discoverChipBuildingProfile": "சுயவிவரம் உருவாகிறது",
   "homePhotoProtectedLabel": "புகைப்படம் பாதுகாக்கப்பட்டது",
   "discoverInterestSentLabel": "ஆர்வம் அனுப்பப்பட்டது",
+  "discoverRespondToInterest": "ஆர்வத்திற்கு பதிலளி",
   "homeAiMatchScoreLabel": "AI பொருத்தம்",
   "homeAstroMatchScoreLabel": "ஜோதிட பொருத்தம்",
   "homePsychologyMatchScoreLabel": "உளவியல் பொருத்தம்",
@@ -128,6 +129,7 @@
   "actionViewProfile": "சுயவிவரத்தைப் பார்",
   "actionShare": "பகிர்",
   "actionSave": "சேமி",
+  "actionMessage": "செய்தி",
   "discoverFilterLabel": "வடிகட்டி",
   "homeProfileDetailsLabel": "விவரங்கள்",
 
@@ -240,8 +242,8 @@
   "inboxNotificationsTooltip": "அறிவிப்புகள்",
   "inboxFilterTooltip": "வடிகட்டிகள்",
   "inboxSearchHint": "உரையாடல்களைத் தேடுங்கள்...",
-  "inboxTabInterestsReceived": "பெறப்பட்ட ஆர்வங்கள்",
-  "inboxTabInterestsSent": "அனுப்பப்பட்ட ஆர்வங்கள்",
+  "inboxTabInterestsReceived": "பெறப்பட்டவை",
+  "inboxTabInterestsSent": "அனுப்பியவை",
   "inboxTabMessages": "செய்திகள்",
   "inboxEmptyTitle": "இதுவரை உரையாடல்கள் இல்லை",
   "inboxEmptySubtitle": "உரையாடலைத் தொடங்க பொருத்தங்களைக் கண்டறியவும்.",
@@ -292,6 +294,26 @@
   "inboxComposerVoice": "குரல் செய்தி",
 
   "notificationsTitle": "அறிவிப்புகள்",
+  "notificationsMarkAllRead": "அனைத்தையும் படித்ததாகக் குறி",
+  "notificationsSectionToday": "இன்று",
+  "notificationsSectionYesterday": "நேற்று",
+  "notificationsSectionEarlier": "முந்தையவை",
+  "notificationsJustNow": "இப்போதுதான்",
+  "notificationsMinutesAgo": "{count} நிமிடங்களுக்கு முன்",
+  "@notificationsMinutesAgo": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "notificationsHoursAgo": "{count} மணி நேரத்திற்கு முன்",
+  "@notificationsHoursAgo": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "notificationsDaysAgo": "{count} நாட்களுக்கு முன்",
+  "@notificationsDaysAgo": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "notificationsEmptyTitle": "நீங்கள் முழுவதுமாகப் பார்த்துவிட்டீர்கள்!",
+  "notificationsEmptyMessage": "புதிய ஆர்வங்கள், பொருத்தங்கள், செய்திகள் மற்றும் புதுப்பிப்புகள் இங்கே தோன்றும்.",
+  "notificationsComingSoon": "இது விரைவில் கிடைக்கும்.",
 
   "profileTitle": "என் சுயவிவரம்",
   "profileAboutMeTitle": "என்னைப் பற்றி",
@@ -920,6 +942,11 @@
   "drawerInterestSent": "அனுப்பிய விருப்பங்கள்",
   "drawerInterestReceived": "பெற்ற விருப்பங்கள்",
   "drawerShortlist": "சேமித்த சுயவிவரங்கள்",
+  "shortlistRemoveButton": "பட்டியலிலிருந்து அகற்று",
+  "shortlistEmptyTitle": "இதுவரை சேமிக்கப்பட்ட சுயவிவரங்கள் இல்லை",
+  "shortlistEmptyMessage": "நீங்கள் ஆர்வமுள்ள சுயவிவரங்களை சேமித்து இங்கே காணலாம்.",
+  "shortlistExploreProfiles": "சுயவிவரங்களை ஆராயுங்கள்",
+  "shortlistActionFailed": "பட்டியலைப் புதுப்பிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
   "drawerLanguage": "மொழி",
   "drawerSettings": "கணக்கு அமைப்புகள்",
   "drawerPrivacy": "தனியுரிமை & பாதுகாப்பு",
@@ -940,6 +967,16 @@
   "profileDetailVideoCall": "வீடியோ அழைப்பு",
   "profileDetailVideoComingSoon": "வீடியோ அழைப்பு விரைவில் வருகிறது",
   "profileDetailShareComingSoon": "பகிர்வு விரைவில் வருகிறது",
+
+  "interestStatusPending": "நிலுவையில்",
+  "interestStatusAccepted": "ஏற்றுக்கொள்ளப்பட்டது",
+  "interestStatusDeclined": "நிராகரிக்கப்பட்டது",
+  "interestsWithdraw": "திரும்பப் பெறு",
+  "interestsActionFailed": "ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.",
+  "interestsReceivedEmptyTitle": "இதுவரை புதிய ஆர்வங்கள் இல்லை",
+  "interestsReceivedEmptyMessage": "யாராவது உங்களுக்கு ஆர்வம் அனுப்பும்போது, அது இங்கே தோன்றும்.",
+  "interestsSentEmptyTitle": "இதுவரை ஆர்வம் எதுவும் அனுப்பப்படவில்லை",
+  "interestsSentEmptyMessage": "நீங்கள் அனுப்பும் ஆர்வங்கள் இங்கே தோன்றும், அதன் நிலையை நீங்கள் கண்காணிக்கலாம்.",
   "profileDetailTabAbout": "பற்றி",
   "profileDetailTabPhotos": "புகைப்படங்கள்",
   "profileDetailTabFamily": "குடும்பம்",

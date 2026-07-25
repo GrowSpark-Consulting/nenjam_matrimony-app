@@ -2,6 +2,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../discover/data/models/discovery_profile_model.dart';
+import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../domain/repositories/interests_repository.dart';
 
 /// Real backend implementation — dormant, not wired to any provider.
@@ -55,6 +56,34 @@ class InterestsRepositoryImpl implements InterestsRepository {
     final response = await _apiClient.post<Map<String, dynamic>>(
       ApiEndpoints.matchInterest,
       data: {'interestId': interestId, 'accept': accept},
+    );
+    unwrapOrThrow(response.statusCode, response.data);
+  }
+
+  @override
+  Future<InterestRecord> sendInterest(DiscoveryProfileEntity profile) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      ApiEndpoints.matchInterest,
+      data: {'profileId': profile.id},
+    );
+    final data = unwrapOrThrow(response.statusCode, response.data) ?? {};
+    return InterestRecord(
+      id: data['id'] as String,
+      profile: profile,
+      sentAt: data['sentAt'] != null
+          ? DateTime.parse(data['sentAt'] as String)
+          : DateTime.now(),
+      status: InterestStatus.values.firstWhere(
+        (s) => s.name == data['status'],
+        orElse: () => InterestStatus.pending,
+      ),
+    );
+  }
+
+  @override
+  Future<void> withdraw(String interestId) async {
+    final response = await _apiClient.delete<Map<String, dynamic>>(
+      '${ApiEndpoints.interests}/$interestId',
     );
     unwrapOrThrow(response.statusCode, response.data);
   }

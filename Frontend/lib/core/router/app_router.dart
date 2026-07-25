@@ -13,6 +13,7 @@ import '../../features/authentication/presentation/pages/login_page.dart';
 import '../../features/authentication/presentation/pages/otp_page.dart';
 import '../../features/authentication/presentation/pages/phone_verify_screen.dart';
 import '../../features/discover/domain/entities/discovery_profile_entity.dart';
+import 'profile_navigation.dart';
 import '../../features/discover/presentation/pages/discover_page.dart';
 import '../../features/help/presentation/pages/help_page.dart';
 import '../../features/inbox/domain/entities/conversation_entity.dart';
@@ -80,7 +81,18 @@ class _DebugNavObserver extends NavigatorObserver {
   _DebugNavObserver(this.label);
   final String label;
 
-  String _name(Route<dynamic>? r) => r?.settings.name ?? r?.settings.toString() ?? 'null';
+  // `route.settings` for a go_router (Page-API) route IS the Page itself
+  // (`Page<T> extends RouteSettings`), so this recovers the exact
+  // `Page.key` that `Navigator._debugCheckDuplicatedPageKeys` checks for
+  // duplicates — printing it here surfaces the actual colliding key the
+  // next time `!keyReservation.contains(key)` fires, since that assertion's
+  // own message never includes it.
+  String _name(Route<dynamic>? r) {
+    final settings = r?.settings;
+    final name = settings?.name ?? settings?.toString() ?? 'null';
+    final key = settings is Page ? settings.key : null;
+    return key == null ? name : '$name [key=$key]';
+  }
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
@@ -150,6 +162,23 @@ GoRouter createRouter(WidgetRef ref) {
         ref.read(authRepositoryProvider).authStateChanges(),
       ),
       redirect: (context, state) async {
+        // TEMP DEBUG — remove once the keyReservation crash is root-caused.
+        // Dumps the CURRENT top-level match list (what the root Navigator's
+        // `pages` will be built from) on every navigation — unlike
+        // _DebugNavObserver (which only logs actual push/pop/replace
+        // events), this reveals the full list's composition even when a
+        // duplicate arises from two matches landing in the same rebuild
+        // without either individually registering as a fresh push/pop.
+        try {
+          final matches = GoRouter.of(context).routerDelegate.currentConfiguration.matches;
+          debugPrint('[MATCHLIST] location=${state.matchedLocation} count=${matches.length}');
+          for (final m in matches) {
+            debugPrint('[MATCHLIST]   ${m.runtimeType} pageKey=${m.pageKey.value}');
+          }
+        } catch (e) {
+          debugPrint('[MATCHLIST] error reading currentConfiguration: $e');
+        }
+
         final location = state.matchedLocation;
         if (RouteNames.publicRoutes.contains(location)) return null;
 
@@ -348,21 +377,45 @@ GoRouter createRouter(WidgetRef ref) {
         GoRoute(
           path: RouteNames.profileDetail,
           name: RouteNames.profileDetailName,
-          builder: (context, state) {
+          // pageBuilder (not builder) so this route's Page can carry its
+          // own unique `key:` — see ProfileDetailArgs.pageKey's doc comment
+          // for why go_router's default `state.pageKey` isn't safe here:
+          // this static, extra-carrying path is reachable recursively
+          // (Profile Detail's own Similar Profiles shelf pushes it again),
+          // so two simultaneously-mounted instances need distinct keys or
+          // Flutter's Navigator throws '!keyReservation.contains(key)'.
+          pageBuilder: (context, state) {
             final extra = state.extra;
-            if (extra is! DiscoveryProfileEntity) {
+            // Accepts a bare DiscoveryProfileEntity too (not just
+            // ProfileDetailArgs) — defensive backward compatibility for
+            // any call site that pushes this route directly rather than
+            // through `openProfileDetail`.
+            final args = switch (extra) {
+              final ProfileDetailArgs a => a,
+              final DiscoveryProfileEntity p => ProfileDetailArgs(p),
+              _ => null,
+            };
+            if (args == null) {
               // Defensive fallback — nothing in-app pushes this route
               // without `extra`, but a raw/deep link could theoretically
               // hit it directly.
-              return Scaffold(
-                body: Center(
-                  child: Text(
-                    AppLocalizations.of(context).profileDetailProfileNotAvailable,
+              return MaterialPage<void>(
+                key: state.pageKey,
+                child: Scaffold(
+                  body: Center(
+                    child: Text(
+                      AppLocalizations.of(context).profileDetailProfileNotAvailable,
+                    ),
                   ),
                 ),
               );
             }
-            return ProfileDetailPage(profile: extra);
+            return MaterialPage<void>(
+              key: args.pageKey,
+              name: state.name ?? state.path,
+              restorationId: args.pageKey.value,
+              child: ProfileDetailPage(profile: args.profile, heroTag: args.heroTag),
+            );
           },
         ),
         GoRoute(

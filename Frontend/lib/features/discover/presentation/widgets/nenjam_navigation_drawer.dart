@@ -6,7 +6,11 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/avatars/app_avatars.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../inbox/presentation/widgets/unread_badge.dart';
+import '../../../interests/domain/repositories/interests_repository.dart';
+import '../../../interests/presentation/providers/interests_provider.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
+import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // NenjamNavigationDrawer
@@ -240,29 +244,50 @@ class NenjamNavigationDrawer extends StatelessWidget {
                         onVisitorsTap?.call();
                       },
                     ),
-                    _DrawerItem(
-                      icon: Icons.outbox_outlined,
-                      label: l10n.drawerInterestSent,
-                      onTap: () {
-                        Navigator.pop(context);
-                        onInterestSentTap?.call();
-                      },
+                    Consumer(
+                      builder: (context, ref, _) => _DrawerItem(
+                        icon: Icons.outbox_outlined,
+                        label: l10n.drawerInterestSent,
+                        count: ref
+                            .watch(sentInterestsProvider)
+                            .valueOrNull
+                            ?.where((r) => r.status == InterestStatus.pending)
+                            .length,
+                        onTap: () {
+                          Navigator.pop(context);
+                          onInterestSentTap?.call();
+                        },
+                      ),
                     ),
-                    _DrawerItem(
-                      icon: Icons.move_to_inbox_outlined,
-                      label: l10n.drawerInterestReceived,
-                      onTap: () {
-                        Navigator.pop(context);
-                        onInterestReceivedTap?.call();
-                      },
+                    Consumer(
+                      builder: (context, ref, _) => _DrawerItem(
+                        icon: Icons.move_to_inbox_outlined,
+                        label: l10n.drawerInterestReceived,
+                        count: ref
+                            .watch(receivedInterestsProvider)
+                            .valueOrNull
+                            ?.where((r) => r.status == InterestStatus.pending)
+                            .length,
+                        onTap: () {
+                          Navigator.pop(context);
+                          onInterestReceivedTap?.call();
+                        },
+                      ),
                     ),
-                    _DrawerItem(
-                      icon: Icons.favorite_border_rounded,
-                      label: l10n.drawerShortlist,
-                      onTap: () {
-                        Navigator.pop(context);
-                        onShortlistTap?.call();
-                      },
+                    Consumer(
+                      builder: (context, ref, _) => _DrawerItem(
+                        // Bookmark (not the heart already used by Partner
+                        // Preferences above) to match the icon used
+                        // everywhere else for this exact concept — Discover,
+                        // Matches, Search, Profile Detail.
+                        icon: Icons.bookmark_border_rounded,
+                        label: l10n.drawerShortlist,
+                        count: ref.watch(shortlistCountProvider),
+                        onTap: () {
+                          Navigator.pop(context);
+                          onShortlistTap?.call();
+                        },
+                      ),
                     ),
 
                     _MenuDivider(),
@@ -716,6 +741,9 @@ class _DrawerItem extends StatefulWidget {
   final Color? labelColor;
   final Color? iconColor;
   final VoidCallback? onTap;
+  /// Live count badge (e.g. pending received interests) — null/0 hides it.
+  /// Never a hardcoded placeholder; callers derive this from real state.
+  final int? count;
 
   const _DrawerItem({
     required this.icon,
@@ -725,6 +753,7 @@ class _DrawerItem extends StatefulWidget {
     this.labelColor,
     this.iconColor,
     this.onTap,
+    this.count,
   });
 
   @override
@@ -818,6 +847,10 @@ class _DrawerItemState extends State<_DrawerItem>
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                if (widget.count != null && widget.count! > 0) ...[
+                  UnreadBadge(count: widget.count!),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
                 if (widget.showChevron)
                   const Icon(
                     Icons.chevron_right_rounded,

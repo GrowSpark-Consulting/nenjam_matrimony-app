@@ -680,6 +680,12 @@ abstract class AppLocalizations {
   /// **'Interest Sent'**
   String get discoverInterestSentLabel;
 
+  /// No description provided for @discoverRespondToInterest.
+  ///
+  /// In en, this message translates to:
+  /// **'Respond to Interest'**
+  String get discoverRespondToInterest;
+
   /// No description provided for @homeAiMatchScoreLabel.
   ///
   /// In en, this message translates to:
@@ -727,6 +733,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save'**
   String get actionSave;
+
+  /// No description provided for @actionMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get actionMessage;
 
   /// No description provided for @discoverFilterLabel.
   ///
@@ -1301,13 +1313,13 @@ abstract class AppLocalizations {
   /// No description provided for @inboxTabInterestsReceived.
   ///
   /// In en, this message translates to:
-  /// **'Interests Received'**
+  /// **'Received'**
   String get inboxTabInterestsReceived;
 
   /// No description provided for @inboxTabInterestsSent.
   ///
   /// In en, this message translates to:
-  /// **'Interests Sent'**
+  /// **'Sent'**
   String get inboxTabInterestsSent;
 
   /// No description provided for @inboxTabMessages.
@@ -1585,6 +1597,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notifications'**
   String get notificationsTitle;
+
+  /// No description provided for @notificationsMarkAllRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark all as read'**
+  String get notificationsMarkAllRead;
+
+  /// No description provided for @notificationsSectionToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get notificationsSectionToday;
+
+  /// No description provided for @notificationsSectionYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get notificationsSectionYesterday;
+
+  /// No description provided for @notificationsSectionEarlier.
+  ///
+  /// In en, this message translates to:
+  /// **'Earlier'**
+  String get notificationsSectionEarlier;
+
+  /// No description provided for @notificationsJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get notificationsJustNow;
+
+  /// No description provided for @notificationsMinutesAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min ago'**
+  String notificationsMinutesAgo(int count);
+
+  /// No description provided for @notificationsHoursAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} hr ago'**
+  String notificationsHoursAgo(int count);
+
+  /// No description provided for @notificationsDaysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} d ago'**
+  String notificationsDaysAgo(int count);
+
+  /// No description provided for @notificationsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re all caught up!'**
+  String get notificationsEmptyTitle;
+
+  /// No description provided for @notificationsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'New interests, matches, messages and updates will appear here.'**
+  String get notificationsEmptyMessage;
+
+  /// No description provided for @notificationsComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'This will be available soon.'**
+  String get notificationsComingSoon;
 
   /// No description provided for @profileTitle.
   ///
@@ -5072,6 +5150,36 @@ abstract class AppLocalizations {
   /// **'Shortlisted Profiles'**
   String get drawerShortlist;
 
+  /// No description provided for @shortlistRemoveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from Shortlist'**
+  String get shortlistRemoveButton;
+
+  /// No description provided for @shortlistEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No shortlisted profiles yet'**
+  String get shortlistEmptyTitle;
+
+  /// No description provided for @shortlistEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Save profiles you\'re interested in and find them here.'**
+  String get shortlistEmptyMessage;
+
+  /// No description provided for @shortlistExploreProfiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore Profiles'**
+  String get shortlistExploreProfiles;
+
+  /// No description provided for @shortlistActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update shortlist. Please try again.'**
+  String get shortlistActionFailed;
+
   /// No description provided for @drawerLanguage.
   ///
   /// In en, this message translates to:
@@ -5185,6 +5293,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share coming soon'**
   String get profileDetailShareComingSoon;
+
+  /// No description provided for @interestStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get interestStatusPending;
+
+  /// No description provided for @interestStatusAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get interestStatusAccepted;
+
+  /// No description provided for @interestStatusDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'Declined'**
+  String get interestStatusDeclined;
+
+  /// No description provided for @interestsWithdraw.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw'**
+  String get interestsWithdraw;
+
+  /// No description provided for @interestsActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get interestsActionFailed;
+
+  /// No description provided for @interestsReceivedEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No new interests yet'**
+  String get interestsReceivedEmptyTitle;
+
+  /// No description provided for @interestsReceivedEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'When someone sends you an interest, it will show up here.'**
+  String get interestsReceivedEmptyMessage;
+
+  /// No description provided for @interestsSentEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No interests sent yet'**
+  String get interestsSentEmptyTitle;
+
+  /// No description provided for @interestsSentEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Interests you send will show up here so you can track their status.'**
+  String get interestsSentEmptyMessage;
 
   /// No description provided for @profileDetailTabAbout.
   ///

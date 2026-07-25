@@ -317,6 +317,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverInterestSentLabel => 'Interest Sent';
 
   @override
+  String get discoverRespondToInterest => 'Respond to Interest';
+
+  @override
   String get homeAiMatchScoreLabel => 'AI Match';
 
   @override
@@ -339,6 +342,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get actionSave => 'Save';
+
+  @override
+  String get actionMessage => 'Message';
 
   @override
   String get discoverFilterLabel => 'Filter';
@@ -631,10 +637,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inboxSearchHint => 'Search conversations...';
 
   @override
-  String get inboxTabInterestsReceived => 'Interests Received';
+  String get inboxTabInterestsReceived => 'Received';
 
   @override
-  String get inboxTabInterestsSent => 'Interests Sent';
+  String get inboxTabInterestsSent => 'Sent';
 
   @override
   String get inboxTabMessages => 'Messages';
@@ -777,6 +783,46 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationsTitle => 'Notifications';
+
+  @override
+  String get notificationsMarkAllRead => 'Mark all as read';
+
+  @override
+  String get notificationsSectionToday => 'Today';
+
+  @override
+  String get notificationsSectionYesterday => 'Yesterday';
+
+  @override
+  String get notificationsSectionEarlier => 'Earlier';
+
+  @override
+  String get notificationsJustNow => 'Just now';
+
+  @override
+  String notificationsMinutesAgo(int count) {
+    return '$count min ago';
+  }
+
+  @override
+  String notificationsHoursAgo(int count) {
+    return '$count hr ago';
+  }
+
+  @override
+  String notificationsDaysAgo(int count) {
+    return '$count d ago';
+  }
+
+  @override
+  String get notificationsEmptyTitle => 'You\'re all caught up!';
+
+  @override
+  String get notificationsEmptyMessage =>
+      'New interests, matches, messages and updates will appear here.';
+
+  @override
+  String get notificationsComingSoon => 'This will be available soon.';
 
   @override
   String get profileTitle => 'My Profile';
@@ -2621,6 +2667,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drawerShortlist => 'Shortlisted Profiles';
 
   @override
+  String get shortlistRemoveButton => 'Remove from Shortlist';
+
+  @override
+  String get shortlistEmptyTitle => 'No shortlisted profiles yet';
+
+  @override
+  String get shortlistEmptyMessage =>
+      'Save profiles you\'re interested in and find them here.';
+
+  @override
+  String get shortlistExploreProfiles => 'Explore Profiles';
+
+  @override
+  String get shortlistActionFailed =>
+      'Failed to update shortlist. Please try again.';
+
+  @override
   String get drawerLanguage => 'Language';
 
   @override
@@ -2676,6 +2739,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileDetailShareComingSoon => 'Share coming soon';
+
+  @override
+  String get interestStatusPending => 'Pending';
+
+  @override
+  String get interestStatusAccepted => 'Accepted';
+
+  @override
+  String get interestStatusDeclined => 'Declined';
+
+  @override
+  String get interestsWithdraw => 'Withdraw';
+
+  @override
+  String get interestsActionFailed => 'Something went wrong. Please try again.';
+
+  @override
+  String get interestsReceivedEmptyTitle => 'No new interests yet';
+
+  @override
+  String get interestsReceivedEmptyMessage =>
+      'When someone sends you an interest, it will show up here.';
+
+  @override
+  String get interestsSentEmptyTitle => 'No interests sent yet';
+
+  @override
+  String get interestsSentEmptyMessage =>
+      'Interests you send will show up here so you can track their status.';
 
   @override
   String get profileDetailTabAbout => 'About';

@@ -319,6 +319,9 @@ class AppLocalizationsTa extends AppLocalizations {
   String get discoverInterestSentLabel => 'ஆர்வம் அனுப்பப்பட்டது';
 
   @override
+  String get discoverRespondToInterest => 'ஆர்வத்திற்கு பதிலளி';
+
+  @override
   String get homeAiMatchScoreLabel => 'AI பொருத்தம்';
 
   @override
@@ -341,6 +344,9 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get actionSave => 'சேமி';
+
+  @override
+  String get actionMessage => 'செய்தி';
 
   @override
   String get discoverFilterLabel => 'வடிகட்டி';
@@ -635,10 +641,10 @@ class AppLocalizationsTa extends AppLocalizations {
   String get inboxSearchHint => 'உரையாடல்களைத் தேடுங்கள்...';
 
   @override
-  String get inboxTabInterestsReceived => 'பெறப்பட்ட ஆர்வங்கள்';
+  String get inboxTabInterestsReceived => 'பெறப்பட்டவை';
 
   @override
-  String get inboxTabInterestsSent => 'அனுப்பப்பட்ட ஆர்வங்கள்';
+  String get inboxTabInterestsSent => 'அனுப்பியவை';
 
   @override
   String get inboxTabMessages => 'செய்திகள்';
@@ -782,6 +788,47 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get notificationsTitle => 'அறிவிப்புகள்';
+
+  @override
+  String get notificationsMarkAllRead => 'அனைத்தையும் படித்ததாகக் குறி';
+
+  @override
+  String get notificationsSectionToday => 'இன்று';
+
+  @override
+  String get notificationsSectionYesterday => 'நேற்று';
+
+  @override
+  String get notificationsSectionEarlier => 'முந்தையவை';
+
+  @override
+  String get notificationsJustNow => 'இப்போதுதான்';
+
+  @override
+  String notificationsMinutesAgo(int count) {
+    return '$count நிமிடங்களுக்கு முன்';
+  }
+
+  @override
+  String notificationsHoursAgo(int count) {
+    return '$count மணி நேரத்திற்கு முன்';
+  }
+
+  @override
+  String notificationsDaysAgo(int count) {
+    return '$count நாட்களுக்கு முன்';
+  }
+
+  @override
+  String get notificationsEmptyTitle =>
+      'நீங்கள் முழுவதுமாகப் பார்த்துவிட்டீர்கள்!';
+
+  @override
+  String get notificationsEmptyMessage =>
+      'புதிய ஆர்வங்கள், பொருத்தங்கள், செய்திகள் மற்றும் புதுப்பிப்புகள் இங்கே தோன்றும்.';
+
+  @override
+  String get notificationsComingSoon => 'இது விரைவில் கிடைக்கும்.';
 
   @override
   String get profileTitle => 'என் சுயவிவரம்';
@@ -2657,6 +2704,23 @@ class AppLocalizationsTa extends AppLocalizations {
   String get drawerShortlist => 'சேமித்த சுயவிவரங்கள்';
 
   @override
+  String get shortlistRemoveButton => 'பட்டியலிலிருந்து அகற்று';
+
+  @override
+  String get shortlistEmptyTitle => 'இதுவரை சேமிக்கப்பட்ட சுயவிவரங்கள் இல்லை';
+
+  @override
+  String get shortlistEmptyMessage =>
+      'நீங்கள் ஆர்வமுள்ள சுயவிவரங்களை சேமித்து இங்கே காணலாம்.';
+
+  @override
+  String get shortlistExploreProfiles => 'சுயவிவரங்களை ஆராயுங்கள்';
+
+  @override
+  String get shortlistActionFailed =>
+      'பட்டியலைப் புதுப்பிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
   String get drawerLanguage => 'மொழி';
 
   @override
@@ -2712,6 +2776,37 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get profileDetailShareComingSoon => 'பகிர்வு விரைவில் வருகிறது';
+
+  @override
+  String get interestStatusPending => 'நிலுவையில்';
+
+  @override
+  String get interestStatusAccepted => 'ஏற்றுக்கொள்ளப்பட்டது';
+
+  @override
+  String get interestStatusDeclined => 'நிராகரிக்கப்பட்டது';
+
+  @override
+  String get interestsWithdraw => 'திரும்பப் பெறு';
+
+  @override
+  String get interestsActionFailed =>
+      'ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get interestsReceivedEmptyTitle => 'இதுவரை புதிய ஆர்வங்கள் இல்லை';
+
+  @override
+  String get interestsReceivedEmptyMessage =>
+      'யாராவது உங்களுக்கு ஆர்வம் அனுப்பும்போது, அது இங்கே தோன்றும்.';
+
+  @override
+  String get interestsSentEmptyTitle =>
+      'இதுவரை ஆர்வம் எதுவும் அனுப்பப்படவில்லை';
+
+  @override
+  String get interestsSentEmptyMessage =>
+      'நீங்கள் அனுப்பும் ஆர்வங்கள் இங்கே தோன்றும், அதன் நிலையை நீங்கள் கண்காணிக்கலாம்.';
 
   @override
   String get profileDetailTabAbout => 'பற்றி';

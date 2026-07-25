@@ -20,6 +20,7 @@ class SearchResultCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onInterested;
   final VoidCallback? onShortlist;
+  final bool isShortlisted;
 
   const SearchResultCard({
     super.key,
@@ -27,6 +28,7 @@ class SearchResultCard extends StatelessWidget {
     this.onTap,
     this.onInterested,
     this.onShortlist,
+    this.isShortlisted = false,
   });
 
   @override
@@ -52,6 +54,7 @@ class SearchResultCard extends StatelessWidget {
           onTap: onTap,
           onLikeTap: onInterested,
           onShortlistTap: onShortlist,
+          isShortlisted: isShortlisted,
           heroTag: 'profile-photo-${profile.id}',
         ),
         if (profile.compatibility.aiMatchPercent > 0)

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../widgets/interest_list_view.dart';
 
-/// Interests Received placeholder — route wired from the navigation drawer.
+/// Interests Received — route wired from the navigation drawer. Shares its
+/// entire body (states, list rendering, Accept/Decline) with the Inbox's
+/// "Interests Received" tab via [InterestListView], so the two surfaces can
+/// never disagree.
 class InterestsReceivedPage extends StatelessWidget {
   const InterestsReceivedPage({super.key});
 
@@ -12,20 +14,8 @@ class InterestsReceivedPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.drawerInterestReceived),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.move_to_inbox_outlined,
-                size: 64, color: AppColors.accentGold),
-            const SizedBox(height: 16),
-            Text('Coming Soon', style: AppTypography.titleLarge),
-          ],
-        ),
-      ),
+      appBar: AppBar(title: Text(l10n.drawerInterestReceived)),
+      body: const SafeArea(child: InterestListView(isReceived: true)),
     );
   }
 }

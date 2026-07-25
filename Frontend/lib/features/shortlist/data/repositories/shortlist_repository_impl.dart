@@ -33,6 +33,15 @@ class ShortlistRepositoryImpl implements ShortlistRepository {
   }
 
   @override
+  Future<void> add(DiscoveryProfileEntity profile) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      ApiEndpoints.matchShortlist,
+      data: {'profileId': profile.id},
+    );
+    unwrapOrThrow(response.statusCode, response.data);
+  }
+
+  @override
   Future<void> remove(String profileId) async {
     final response = await _apiClient.delete<Map<String, dynamic>>(
       ApiEndpoints.matchShortlist,

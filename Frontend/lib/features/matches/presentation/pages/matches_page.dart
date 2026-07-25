@@ -14,6 +14,11 @@ import '../../../../core/widgets/avatars/gender_placeholder.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
+import '../../../interests/domain/repositories/interests_repository.dart';
+import '../../../interests/presentation/providers/interests_provider.dart';
+import '../../../interests/presentation/utils/interest_button_copy.dart';
+import '../../../shortlist/presentation/providers/shortlist_provider.dart';
+import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
 import '../providers/matches_providers.dart';
 import '../providers/reel_feed_provider.dart';
 
@@ -347,16 +352,16 @@ class _MatchesCategoryChip extends StatelessWidget {
 // Single reel card
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ReelCard extends StatefulWidget {
+class _ReelCard extends ConsumerStatefulWidget {
   final DiscoveryProfileEntity profile;
 
   const _ReelCard({required this.profile});
 
   @override
-  State<_ReelCard> createState() => _ReelCardState();
+  ConsumerState<_ReelCard> createState() => _ReelCardState();
 }
 
-class _ReelCardState extends State<_ReelCard>
+class _ReelCardState extends ConsumerState<_ReelCard>
     with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   @override
   bool get wantKeepAlive => true;
@@ -369,8 +374,7 @@ class _ReelCardState extends State<_ReelCard>
   late final Animation<double> _heartOpacity;
 
   // Action states
-  bool _interested = false;
-  bool _shortlisted = false;
+  bool _isSending = false;
 
   @override
   void initState() {
@@ -407,14 +411,35 @@ class _ReelCardState extends State<_ReelCard>
     setState(() {
       _showHeart = true;
       _heartPosition = details.localPosition;
-      _interested = true;
     });
     _heartCtrl.forward(from: 0);
+    _sendInterest();
+  }
+
+  Future<void> _sendInterest() async {
+    if (_isSending) return;
+    final status = ref.read(interestRelationshipStatusProvider(widget.profile.id));
+    if (status != InterestRelationshipStatus.none &&
+        status != InterestRelationshipStatus.cancelled) {
+      return;
+    }
+    setState(() => _isSending = true);
+    await handleInterestButtonTap(
+      context,
+      ref,
+      profile: widget.profile,
+      status: status,
+      l10n: AppLocalizations.of(context),
+    );
+    if (mounted) setState(() => _isSending = false);
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final status = ref.watch(interestRelationshipStatusProvider(widget.profile.id));
+    final settled = interestButtonIsSettled(status);
+    final shortlisted = ref.watch(isShortlistedProvider(widget.profile.id));
 
     return GestureDetector(
       // Tapping anywhere on the card (outside the action column and the
@@ -424,7 +449,11 @@ class _ReelCardState extends State<_ReelCard>
       // already coexists with the action buttons — GestureDetector
       // natively defers a single tap until the double-tap window elapses
       // whenever both are registered on the same detector.
-      onTap: () => openProfileDetail(context, widget.profile),
+      onTap: () => openProfileDetail(
+        context,
+        widget.profile,
+        heroTag: 'profile-photo-matches-${widget.profile.id}',
+      ),
       onDoubleTapDown: _onDoubleTap,
       onDoubleTap: () {}, // needed to activate onDoubleTapDown
       child: RepaintBoundary(
@@ -433,7 +462,7 @@ class _ReelCardState extends State<_ReelCard>
           children: [
             // ── Full-bleed photo ─────────────────────────────────────
             Hero(
-              tag: 'profile-photo-${widget.profile.id}',
+              tag: 'profile-photo-matches-${widget.profile.id}',
               child: _ProfilePhoto(
                 photoUrls: widget.profile.photoUrls,
                 gender: widget.profile.gender,
@@ -461,10 +490,11 @@ class _ReelCardState extends State<_ReelCard>
               right: 16,
               bottom: 48,
               child: _ActionColumn(
-                interested: _interested,
-                shortlisted: _shortlisted,
-                onInterested: () => setState(() => _interested = !_interested),
-                onShortlist: () => setState(() => _shortlisted = !_shortlisted),
+                interested: settled,
+                interestedLabel: interestButtonLabel(status, AppLocalizations.of(context)),
+                shortlisted: shortlisted,
+                onInterested: _sendInterest,
+                onShortlist: () => handleShortlistToggle(context, ref, widget.profile),
                 onShare: () {},
                 onReport: () {},
               ),
@@ -518,6 +548,7 @@ class _ReelCardState extends State<_ReelCard>
 
 class _ActionColumn extends StatelessWidget {
   final bool interested;
+  final String interestedLabel;
   final bool shortlisted;
   final VoidCallback onInterested;
   final VoidCallback onShortlist;
@@ -526,6 +557,7 @@ class _ActionColumn extends StatelessWidget {
 
   const _ActionColumn({
     required this.interested,
+    required this.interestedLabel,
     required this.shortlisted,
     required this.onInterested,
     required this.onShortlist,
@@ -542,14 +574,16 @@ class _ActionColumn extends StatelessWidget {
       children: [
         _ActionButton(
           icon: Icons.favorite_rounded,
-          label: l10n.actionInterested,
+          label: interestedLabel,
           active: interested,
           activeColor: const Color(0xFFFED977),
           onTap: onInterested,
         ),
         const SizedBox(height: 24),
         _ActionButton(
-          icon: Icons.star_rounded,
+          // Bookmark (not star) to match Discover/Search's icon for the
+          // same concept — filled once shortlisted, outlined otherwise.
+          icon: shortlisted ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
           label: l10n.profileCardShortlist,
           active: shortlisted,
           activeColor: const Color(0xFFFED977),

@@ -15,6 +15,8 @@ import '../../../astro/presentation/providers/compatibility_provider.dart';
 import '../../../authentication/presentation/providers/auth_providers.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../../discover/presentation/providers/discover_providers.dart';
+import '../../../interests/domain/repositories/interests_repository.dart';
+import '../../../interests/presentation/providers/interests_provider.dart';
 import '../../../profile_completion/presentation/providers/profile_completeness_provider.dart';
 import '../../../partner_preferences/presentation/utils/open_partner_preferences.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
@@ -263,12 +265,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   child: Column(
                     children: [
                       NmActivityStatsCard(
-                        // TODO(backend): Interests/Visitors/Matches
-                        // counts have no backing endpoint yet
-                        // (lib/features/interests and lib/features/
-                        // visitors are still stub pages) — placeholder
-                        // until wired.
-                        interestsReceived: 0,
+                        // Interests now reads the real (mock-backed today,
+                        // backend-ready) shared Interest state — see
+                        // interests_provider.dart. Visitors/Matches still
+                        // have no backing data source.
+                        interestsReceived: ref
+                                .watch(receivedInterestsProvider)
+                                .valueOrNull
+                                ?.where((r) => r.status == InterestStatus.pending)
+                                .length ??
+                            0,
                         visitors: 0,
                         matches: 0,
                         onInterestsTap: () =>

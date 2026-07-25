@@ -7,6 +7,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/utils/story_perf.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../discover/presentation/providers/discover_providers.dart';
+import '../../../profile/presentation/providers/profile_dashboard_providers.dart';
+import '../../../profile_completion/presentation/providers/profile_completeness_provider.dart';
 import '../../data/repositories/registration_repository.dart';
 import '../../domain/models/profile_draft.dart';
 import '../../domain/models/profile_flow_mode.dart';
@@ -41,6 +44,21 @@ class ProfileWizardPage extends ConsumerStatefulWidget {
 
 class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   bool _isSaving = false;
+
+  // EDIT MODE only — the draft exactly as it was when this wizard screen
+  // was opened (either fresh from startEditMode()'s GET /profiles/draft, or
+  // whatever ProfileReviewPage was already holding when the user tapped
+  // "Edit" on a section). System/hardware back restores this snapshot
+  // instead of leaving whatever the user typed in place, so cancelling an
+  // edit never persists — even locally in the shared draft — and never
+  // steps backward through the wizard the way CREATE mode's Back does.
+  late final ProfileDraft _entryDraft;
+
+  @override
+  void initState() {
+    super.initState();
+    _entryDraft = ref.read(registrationProvider);
+  }
 
   Future<void> _onNext() async {
     StoryPerf.start('Continue tapped');
@@ -206,6 +224,29 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     }
   }
 
+  /// EDIT MODE only — single source of truth for cancelling an edit
+  /// session. Both the bottom-left Back arrow and system/hardware back
+  /// (PopScope, below) call this exact method so their behaviour can never
+  /// diverge: it must leave Edit Profile immediately, discarding whatever
+  /// was typed in this session, rather than stepping backward through
+  /// wizard steps the way CREATE mode's [_onBack] does — and it must never
+  /// call any save/update/finalize API. Restoring [_entryDraft] rather than
+  /// wiping the draft matters when this wizard was pushed on top of
+  /// ProfileReviewPage (editing a single section): popping must leave the
+  /// review screen's other, untouched sections exactly as they were, not
+  /// force a full re-fetch.
+  void _exitEditProfileWithoutSaving() {
+    if (_isSaving) return; // guard against duplicate execution mid-save
+    ref
+        .read(registrationProvider.notifier)
+        .restore(_entryDraft, ProfileFlowMode.edit);
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(RouteNames.discover);
+    }
+  }
+
   /// EDIT MODE only — persists the section currently open and re-finalizes
   /// the profile (idempotent) so Discover/Matches reflect the change.
   /// Returns false and shows an error snackbar on failure.
@@ -242,6 +283,20 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   /// the success confirmation, and returns to Discover (never onboarding).
   void _exitEditModeToDiscover(RegistrationNotifier notifier) {
     notifier.startCreateMode();
+    // Mirrors ProfileReviewPage._onEnterApp()'s edit-mode success handling —
+    // the backend has already recomputed completion inside finalizeToBackend()
+    // (awaited by the caller before this runs), so refetching these here is
+    // what makes the drawer/Profile dashboard show the new percentage/fields
+    // immediately, without requiring a separate trip through
+    // Edit Profile -> Save Changes to pick up the same data.
+    ref.invalidate(profileDraftResponseProvider);
+    ref.invalidate(profileCompletenessSnapshotProvider);
+    // discoverFeedProvider is a plain (non-autoDispose) FutureProvider kept
+    // alive by the always-mounted Discover screen — invalidate it so a user
+    // who just created their first user_profiles row (e.g. after the
+    // height_cm P2011 regression) sees the real feed instead of a cached
+    // "INCOMPLETE_SELF_PROFILE" empty state from before this save.
+    ref.invalidate(discoverFeedProvider);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Profile updated successfully')),
@@ -258,6 +313,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     final l10n = AppLocalizations.of(context);
     final draft = ref.watch(registrationProvider);
     final notifier = ref.read(registrationProvider.notifier);
+    final mode = ref.watch(profileFlowModeProvider);
+    final isEditMode = mode == ProfileFlowMode.edit;
     final stepIndex = draft.currentStep;
     final isLastStep = stepIndex == ProfileDraft.totalSteps - 1;
     final (_, milestoneLabel) = milestoneEmojiAndLabel(
@@ -266,15 +323,24 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     );
 
     return PopScope(
-      // System back (Android hardware back / iOS swipe) must behave
-      // exactly like the on-screen back button — step backward through the
-      // wizard one step at a time, not jump straight out of the whole
-      // 13-step flow. Only the real route pop is allowed once already on
-      // step 0, mirroring _onBack()'s own logic.
-      canPop: stepIndex == 0,
+      // CREATE mode: system back (Android hardware back / iOS swipe) must
+      // behave exactly like the on-screen back button — step backward
+      // through the wizard one step at a time, not jump straight out of the
+      // whole 13-step flow. Only the real route pop is allowed once already
+      // on step 0, mirroring _onBack()'s own logic.
+      //
+      // EDIT mode: Edit Profile is a single quick-edit session, not a
+      // multi-step wizard the user is expected to walk backward through —
+      // back must always exit immediately (see _exitEditProfileWithoutSaving),
+      // regardless of which step it was opened on.
+      canPop: !isEditMode && stepIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        _onBack();
+        if (isEditMode) {
+          _exitEditProfileWithoutSaving();
+        } else {
+          _onBack();
+        }
       },
       child: Scaffold(
         body: SafeArea(
@@ -321,9 +387,18 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                     ? Icons.check_rounded
                     : Icons.arrow_forward_rounded,
                 backLabel: l10n.registrationBack,
-                showBack: stepIndex > 0,
+                // Edit Profile keeps the same Back arrow as registration —
+                // only its behaviour differs (see
+                // _exitEditProfileWithoutSaving): it discards this
+                // session's draft and exits straight to Profile Drawer
+                // instead of stepping backward. Same method the PopScope
+                // above calls for system/gesture back, so the two paths
+                // can never diverge.
+                showBack: isEditMode || stepIndex > 0,
                 isLoading: _isSaving,
-                onBack: _isSaving ? null : _onBack,
+                onBack: _isSaving
+                    ? null
+                    : (isEditMode ? _exitEditProfileWithoutSaving : _onBack),
                 // Gate "Continue" on the current step's required fields being
                 // present (see [_isCurrentStepValid]) so a user can't click
                 // through with empty required fields and hit an untraceable

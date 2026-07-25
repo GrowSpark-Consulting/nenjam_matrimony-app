@@ -15,6 +15,11 @@ import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/presentation/providers/auth_providers.dart';
 import '../../../authentication/presentation/utils/logout_flow.dart';
+import '../../../interests/presentation/providers/interests_provider.dart';
+import '../../../interests/presentation/utils/interest_button_copy.dart';
+import '../../../notifications/presentation/providers/notification_providers.dart';
+import '../../../shortlist/presentation/providers/shortlist_provider.dart';
+import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
 import '../../../profile/presentation/providers/profile_dashboard_providers.dart';
 import '../../../profile/presentation/utils/profile_dashboard_mapper.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
@@ -335,30 +340,53 @@ class _DiscoverAppBar extends StatelessWidget {
           icon: const Icon(Icons.search_rounded, color: AppColors.primary),
           tooltip: l10n.discoverSearchTooltip,
         ),
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(
-                Icons.notifications_none_rounded,
-                color: AppColors.primary,
-              ),
-              tooltip: l10n.notificationsTitle,
-            ),
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: AppColors.error,
-                  shape: BoxShape.circle,
+        // Scoped Consumer so an unread-count change only rebuilds this small
+        // icon+badge, not the whole sticky app bar (same reasoning as the
+        // avatar Consumer above).
+        Consumer(
+          builder: (context, ref, _) {
+            final unreadCount = ref.watch(unreadNotificationsCountProvider);
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  // Pushed (not `go`) for the same reason as Search above —
+                  // Discover stays on the navigator stack so Back returns to
+                  // this exact instance.
+                  onPressed: () => context.push(RouteNames.notifications),
+                  icon: const Icon(
+                    Icons.notifications_none_rounded,
+                    color: AppColors.primary,
+                  ),
+                  tooltip: l10n.notificationsTitle,
                 ),
-              ),
-            ),
-          ],
+                if (unreadCount > 0)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      decoration: const BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.all(Radius.circular(999)),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        unreadCount > 9 ? '9+' : '$unreadCount',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
         const SizedBox(width: AppSpacing.xs),
       ],
@@ -486,7 +514,13 @@ class _StoryBubble extends StatelessWidget {
       // "New Today" bubbles represent newly-joined members, not
       // ephemeral stories — tapping one opens Profile Detail exactly
       // like any other profile card.
-      onTap: profile == null ? null : () => openProfileDetail(context, profile),
+      onTap: profile == null
+          ? null
+          : () => openProfileDetail(
+                context,
+                profile,
+                heroTag: 'profile-photo-discover-${profile.id}',
+              ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -516,7 +550,7 @@ class _StoryBubble extends StatelessWidget {
               child: Hero(
                 tag: profile == null
                     ? 'story-photo-${story.id}'
-                    : 'profile-photo-${profile.id}',
+                    : 'profile-photo-discover-${profile.id}',
                 child: story.imageUrl.isEmpty
                     ? _fallback()
                     : (story.imageUrl.startsWith('http')
@@ -677,13 +711,17 @@ class _LargeProfileCard extends StatelessWidget {
           // their own taps since they're the deeper, more-specific
           // recognizers, so they keep working independently.
           child: GestureDetector(
-            onTap: () => openProfileDetail(context, profile),
+            onTap: () => openProfileDetail(
+              context,
+              profile,
+              heroTag: 'profile-photo-discover-${profile.id}',
+            ),
             child: Stack(
               fit: StackFit.expand,
               children: [
                 // ── Profile photo ────────────────────────────────────
                 Hero(
-                  tag: 'profile-photo-${profile.id}',
+                  tag: 'profile-photo-discover-${profile.id}',
                   child: _CardImage(
                     photoUrls: profile.photoUrls,
                     gender: profile.gender,
@@ -926,22 +964,24 @@ class _Divider extends StatelessWidget {
 }
 
 /// Interested (full-width gold) + Shortlist / View Profile buttons.
-class _CardButtons extends StatefulWidget {
+class _CardButtons extends ConsumerStatefulWidget {
   final DiscoveryProfileEntity profile;
 
   const _CardButtons({required this.profile});
 
   @override
-  State<_CardButtons> createState() => _CardButtonsState();
+  ConsumerState<_CardButtons> createState() => _CardButtonsState();
 }
 
-class _CardButtonsState extends State<_CardButtons> {
-  bool _sent = false;
-  bool _shortlisted = false;
+class _CardButtonsState extends ConsumerState<_CardButtons> {
+  bool _isSending = false;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final status = ref.watch(interestRelationshipStatusProvider(widget.profile.id));
+    final settled = interestButtonIsSettled(status);
+    final shortlisted = ref.watch(isShortlistedProvider(widget.profile.id));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -952,24 +992,29 @@ class _CardButtonsState extends State<_CardButtons> {
           borderRadius: BorderRadius.circular(16),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: _sent
+            onTap: _isSending
                 ? null
                 : () async {
-                    setState(() => _sent = true);
-                    await Future<void>.delayed(const Duration(seconds: 3));
-                    if (mounted) setState(() => _sent = false);
+                    setState(() => _isSending = true);
+                    await handleInterestButtonTap(
+                      context,
+                      ref,
+                      profile: widget.profile,
+                      status: status,
+                      l10n: l10n,
+                    );
+                    if (mounted) setState(() => _isSending = false);
                   },
             child: Ink(
               decoration: BoxDecoration(
-                color: _sent ? AppColors.faceVerificationGreen : null,
-                gradient: _sent ? null : null,
+                color: settled ? AppColors.faceVerificationGreen : null,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: _sent ? null : AppShadows.goldGlow,
+                boxShadow: settled ? null : AppShadows.goldGlow,
               ),
               child: Container(
                 height: 54,
                 decoration: BoxDecoration(
-                  color: _sent
+                  color: settled
                       ? AppColors.faceVerificationGreen
                       : const Color(0xFFFFE08F),
                   borderRadius: BorderRadius.circular(16),
@@ -977,21 +1022,24 @@ class _CardButtonsState extends State<_CardButtons> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      _sent
-                          ? Icons.check_circle_rounded
-                          : Icons.favorite_rounded,
-                      size: 20,
-                      color: _sent ? Colors.white : const Color(0xFF241A00),
-                    ),
+                    if (_isSending)
+                      const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    else
+                      Icon(
+                        settled ? Icons.check_circle_rounded : Icons.favorite_rounded,
+                        size: 20,
+                        color: settled ? Colors.white : const Color(0xFF241A00),
+                      ),
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        _sent
-                            ? l10n.discoverInterestSentLabel
-                            : l10n.actionInterested,
+                        interestButtonLabel(status, l10n),
                         style: AppTypography.button.copyWith(
-                          color: _sent ? Colors.white : const Color(0xFF241A00),
+                          color: settled ? Colors.white : const Color(0xFF241A00),
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
                         ),
@@ -1012,12 +1060,12 @@ class _CardButtonsState extends State<_CardButtons> {
           children: [
             Expanded(
               child: _GlassBtn(
-                icon: _shortlisted
+                icon: shortlisted
                     ? Icons.bookmark_rounded
                     : Icons.bookmark_border_rounded,
                 label: l10n.profileCardShortlist,
-                onTap: () => setState(() => _shortlisted = !_shortlisted),
-                iconColor: _shortlisted
+                onTap: () => handleShortlistToggle(context, ref, widget.profile),
+                iconColor: shortlisted
                     ? AppColors.accentGoldLight
                     : Colors.white,
               ),
@@ -1027,7 +1075,11 @@ class _CardButtonsState extends State<_CardButtons> {
               child: _GlassBtn(
                 icon: Icons.person_rounded,
                 label: l10n.actionViewProfile,
-                onTap: () => openProfileDetail(context, widget.profile),
+                onTap: () => openProfileDetail(
+                  context,
+                  widget.profile,
+                  heroTag: 'profile-photo-discover-${widget.profile.id}',
+                ),
               ),
             ),
           ],
@@ -1155,20 +1207,34 @@ class _HorizontalCompactCards extends StatelessWidget {
   }
 }
 
-class _CompactProfileCard extends StatelessWidget {
+class _CompactProfileCard extends ConsumerStatefulWidget {
   final DiscoveryProfileEntity profile;
 
   const _CompactProfileCard({required this.profile});
 
   @override
+  ConsumerState<_CompactProfileCard> createState() => _CompactProfileCardState();
+}
+
+class _CompactProfileCardState extends ConsumerState<_CompactProfileCard> {
+  bool _isSending = false;
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final profile = widget.profile;
+    final status = ref.watch(interestRelationshipStatusProvider(profile.id));
+    final settled = interestButtonIsSettled(status);
 
     // Tapping anywhere on the card opens Profile Detail; the "Interested"
     // button below wins the gesture arena for its own tap since it's the
     // deeper, more-specific recognizer.
     return GestureDetector(
-      onTap: () => openProfileDetail(context, profile),
+      onTap: () => openProfileDetail(
+        context,
+        profile,
+        heroTag: 'profile-photo-discover-${profile.id}',
+      ),
       child: Container(
         width: 176,
         decoration: BoxDecoration(
@@ -1191,7 +1257,7 @@ class _CompactProfileCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   Hero(
-                    tag: 'profile-photo-${profile.id}',
+                    tag: 'profile-photo-discover-${profile.id}',
                     child: _CardImage(
                       photoUrls: profile.photoUrls,
                       gender: profile.gender,
@@ -1280,10 +1346,24 @@ class _CompactProfileCard extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
-                      onPressed: () {},
+                      onPressed: _isSending
+                          ? null
+                          : () async {
+                              setState(() => _isSending = true);
+                              await handleInterestButtonTap(
+                                context,
+                                ref,
+                                profile: profile,
+                                status: status,
+                                l10n: l10n,
+                              );
+                              if (mounted) setState(() => _isSending = false);
+                            },
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.accentGold,
-                        side: const BorderSide(color: AppColors.accentGold),
+                        foregroundColor: settled ? AppColors.success : AppColors.accentGold,
+                        side: BorderSide(
+                          color: settled ? AppColors.success : AppColors.accentGold,
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1293,15 +1373,21 @@ class _CompactProfileCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      child: Text(
-                        l10n.actionInterested,
-                        style: AppTypography.labelSmall.copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 11,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      child: _isSending
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(
+                              interestButtonLabel(status, l10n),
+                              style: AppTypography.labelSmall.copyWith(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 11,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                     ),
                   ),
                 ],
@@ -1344,17 +1430,31 @@ class _NearYouGrid extends StatelessWidget {
   }
 }
 
-class _NearYouCard extends StatelessWidget {
+class _NearYouCard extends ConsumerStatefulWidget {
   final DiscoveryProfileEntity profile;
 
   const _NearYouCard({required this.profile});
 
   @override
+  ConsumerState<_NearYouCard> createState() => _NearYouCardState();
+}
+
+class _NearYouCardState extends ConsumerState<_NearYouCard> {
+  bool _isSending = false;
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final profile = widget.profile;
+    final status = ref.watch(interestRelationshipStatusProvider(profile.id));
+    final settled = interestButtonIsSettled(status);
 
     return GestureDetector(
-      onTap: () => openProfileDetail(context, profile),
+      onTap: () => openProfileDetail(
+        context,
+        profile,
+        heroTag: 'profile-photo-discover-${profile.id}',
+      ),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surfaceVariantLight,
@@ -1369,7 +1469,7 @@ class _NearYouCard extends StatelessWidget {
           children: [
             Expanded(
               child: Hero(
-                tag: 'profile-photo-${profile.id}',
+                tag: 'profile-photo-discover-${profile.id}',
                 child: _CardImage(
                   photoUrls: profile.photoUrls,
                   gender: profile.gender,
@@ -1406,10 +1506,24 @@ class _NearYouCard extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
-                      onPressed: () {},
+                      onPressed: _isSending
+                          ? null
+                          : () async {
+                              setState(() => _isSending = true);
+                              await handleInterestButtonTap(
+                                context,
+                                ref,
+                                profile: profile,
+                                status: status,
+                                l10n: l10n,
+                              );
+                              if (mounted) setState(() => _isSending = false);
+                            },
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.accentGold,
-                        side: const BorderSide(color: AppColors.accentGold),
+                        foregroundColor: settled ? AppColors.success : AppColors.accentGold,
+                        side: BorderSide(
+                          color: settled ? AppColors.success : AppColors.accentGold,
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1420,7 +1534,7 @@ class _NearYouCard extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        l10n.actionInterested,
+                        _isSending ? '…' : interestButtonLabel(status, l10n),
                         style: AppTypography.labelSmall.copyWith(
                           fontWeight: FontWeight.w700,
                           fontSize: 10,
@@ -1539,7 +1653,11 @@ class _PremiumMemberCard extends StatelessWidget {
     // button below wins the gesture arena for its own tap since it's the
     // deeper, more-specific recognizer.
     return GestureDetector(
-      onTap: () => openProfileDetail(context, profile),
+      onTap: () => openProfileDetail(
+        context,
+        profile,
+        heroTag: 'profile-photo-discover-${profile.id}',
+      ),
       child: SizedBox(
         width: 260,
         child: Container(
@@ -1554,7 +1672,7 @@ class _PremiumMemberCard extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               Hero(
-                tag: 'profile-photo-${profile.id}',
+                tag: 'profile-photo-discover-${profile.id}',
                 child: _CardImage(
                   photoUrls: profile.photoUrls,
                   gender: profile.gender,
