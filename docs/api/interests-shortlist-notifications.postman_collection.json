@@ -1,0 +1,127 @@
+{
+  "info": {
+    "name": "Nenjam — Interests, Shortlist & Notifications",
+    "description": "Interests, Shortlist and Notifications endpoints. Set collection variables `baseUrl` and `firebaseIdToken`. Every request sends `Authorization: Bearer {{firebaseIdToken}}`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{firebaseIdToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "firebaseIdToken", "value": "" },
+    { "key": "profileId", "value": "" },
+    { "key": "interestId", "value": "" },
+    { "key": "notificationId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Interests",
+      "item": [
+        {
+          "name": "Send interest",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/matches/interest", "host": ["{{baseUrl}}"], "path": ["matches", "interest"] },
+            "body": { "mode": "raw", "raw": "{\n  \"profileId\": \"{{profileId}}\"\n}" }
+          }
+        },
+        {
+          "name": "Respond (accept / decline)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/matches/interest", "host": ["{{baseUrl}}"], "path": ["matches", "interest"] },
+            "body": { "mode": "raw", "raw": "{\n  \"interestId\": \"{{interestId}}\",\n  \"accept\": true\n}" }
+          }
+        },
+        {
+          "name": "List received",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/interests/received?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["interests", "received"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "List sent",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/interests/sent?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["interests", "sent"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Withdraw (delete pending sent)",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/interests/{{interestId}}", "host": ["{{baseUrl}}"], "path": ["interests", "{{interestId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shortlist",
+      "item": [
+        {
+          "name": "List shortlist",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/matches/shortlist?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["matches", "shortlist"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Add to shortlist",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/matches/shortlist", "host": ["{{baseUrl}}"], "path": ["matches", "shortlist"] },
+            "body": { "mode": "raw", "raw": "{\n  \"profileId\": \"{{profileId}}\"\n}" }
+          }
+        },
+        {
+          "name": "Remove from shortlist",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/matches/shortlist", "host": ["{{baseUrl}}"], "path": ["matches", "shortlist"] },
+            "body": { "mode": "raw", "raw": "{\n  \"profileId\": \"{{profileId}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List notifications",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/notifications?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["notifications"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Unread count",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/notifications/unread-count", "host": ["{{baseUrl}}"], "path": ["notifications", "unread-count"] }
+          }
+        },
+        {
+          "name": "Mark one read",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{baseUrl}}/notifications/{{notificationId}}/read", "host": ["{{baseUrl}}"], "path": ["notifications", "{{notificationId}}", "read"] }
+          }
+        },
+        {
+          "name": "Mark all read",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{baseUrl}}/notifications/read-all", "host": ["{{baseUrl}}"], "path": ["notifications", "read-all"] }
+          }
+        }
+      ]
+    }
+  ]
+}
