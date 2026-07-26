@@ -5,13 +5,10 @@ import '../../../discover/data/models/discovery_profile_model.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../domain/repositories/interests_repository.dart';
 
-/// Real backend implementation — dormant, not wired to any provider.
-///
-/// TODO(backend): `ApiEndpoints.interestsReceived`/`.interestsSent` are
-/// proposed paths, not confirmed with the backend team — the `interests`
-/// controller is currently an empty stub (zero routes). Proposed response
-/// shape: a bare JSON array of
-///   { id, sentAt, status: 'pending'|'accepted'|'declined', profile: DiscoveryProfileDto }
+/// Live backend implementation, wired via `interestsRepositoryProvider`.
+/// `POST /matches/interest` sends / accepts / declines; `GET /interests/received`
+/// and `/sent` return bare arrays of
+/// `{ id, sentAt, status, profile }`; `DELETE /interests/:id` withdraws.
 class InterestsRepositoryImpl implements InterestsRepository {
   InterestsRepositoryImpl(this._apiClient);
 

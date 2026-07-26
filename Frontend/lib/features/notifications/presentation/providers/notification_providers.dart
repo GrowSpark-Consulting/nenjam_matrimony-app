@@ -1,20 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/datasources/notification_mock_datasource.dart';
-import '../../data/repositories/notification_repository_impl.dart';
+import '../../../../core/network/api_providers.dart';
+import '../../data/repositories/notification_api_repository_impl.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../../domain/repositories/notification_repository.dart';
 
-final notificationMockDataSourceProvider = Provider<NotificationMockDataSource>(
-  (ref) => NotificationMockDataSource(),
-);
-
-/// Swap point for a real backend: replace with
-/// `NotificationApiRepositoryImpl(ref.watch(apiClientProvider))` once the
-/// `notifications` controller ships (see that class's doc comment for the
-/// proposed wire shapes) — nothing else in this file needs to change.
+/// Real backend, live against the `notifications` module (GET /notifications,
+/// GET /notifications/unread-count, PATCH /:id/read, PATCH /read-all). Swapped
+/// from the dormant mock now that the controller ships — nothing else in this
+/// file changed.
 final notificationRepositoryProvider = Provider<NotificationRepository>(
-  (ref) => NotificationRepositoryImpl(ref.watch(notificationMockDataSourceProvider)),
+  (ref) => NotificationApiRepositoryImpl(ref.watch(apiClientProvider)),
 );
 
 /// Owns the notifications list — every mutation (tapping an unread card,

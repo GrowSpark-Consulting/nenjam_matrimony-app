@@ -1,15 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_providers.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
-import '../../data/repositories/mock_shortlist_repository.dart';
+import '../../data/repositories/shortlist_repository_impl.dart';
 import '../../domain/repositories/shortlist_repository.dart';
 
-/// Swap point for a real backend: replace with
-/// `ShortlistRepositoryImpl(ref.watch(apiClientProvider))` once the
-/// backend's `matches`/shortlist routes ship (see that class's doc comment
-/// for the proposed wire shape) — nothing else in this file needs to change.
+/// Real backend, live against `/matches/shortlist` (GET/POST/DELETE). Swapped
+/// from the dormant mock now that the routes ship — nothing else in this file
+/// changed.
 final shortlistRepositoryProvider = Provider<ShortlistRepository>(
-  (ref) => MockShortlistRepository(),
+  (ref) => ShortlistRepositoryImpl(ref.watch(apiClientProvider)),
 );
 
 /// Single source of truth for shortlist state across the whole app —
