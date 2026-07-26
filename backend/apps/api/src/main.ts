@@ -1,12 +1,48 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppConfigService } from '@app/config';
 import { AppModule } from './app.module';
+
+/**
+ * Interactive API docs. Documents the existing API — it never changes routes or
+ * shapes. Auth is a Firebase ID token: click "Authorize" and paste the token as
+ * the bearer value (the same `Authorization: Bearer <token>` every client sends).
+ */
+function setupSwagger(app: INestApplication): void {
+  const config = new DocumentBuilder()
+    .setTitle('Nenjam Matrimony API')
+    .setDescription(
+      'Matrimonial platform API. All endpoints require a Firebase ID token — ' +
+        'authorize with `Bearer <token>`.',
+    )
+    .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'Firebase ID Token',
+        description: 'Firebase ID token from the signed-in client.',
+      },
+      'firebase',
+    )
+    .addTag('Interests', 'Send / respond / withdraw / list interests')
+    .addTag('Shortlist', 'Add / remove / list shortlisted profiles')
+    .addTag('Notifications', 'Notification center + unread count')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: { persistAuthorization: true },
+  });
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableShutdownHooks();
+
+  setupSwagger(app);
 
   const configForCors = app.get(AppConfigService);
   // Browsers block cross-origin XHR/fetch by default (native/mobile builds

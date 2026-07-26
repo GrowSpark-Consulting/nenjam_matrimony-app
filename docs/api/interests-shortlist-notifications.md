@@ -1,25 +1,33 @@
 # Interests, Shortlist & Notifications — Backend
 
-Production backend for the three features whose Flutter UI already shipped
-(against mocks). This document is the API reference, the frontend cutover guide,
-and the architecture notes.
+Production backend for the three features whose Flutter UI already shipped. This
+document is the API reference, the frontend integration record, and the
+architecture notes.
+
+**Interactive docs:** live Swagger UI at **`/api/docs`** (OpenAPI JSON at
+`/api/docs-json`). Click *Authorize* and paste a Firebase ID token as the bearer
+value. Every endpoint below is documented there with request/response examples.
+
+**Frontend status:** the Flutter cutover is **done** — the three providers now
+bind to the real API repositories and the mock repositories were removed. No
+Riverpod/widget/navigation changes were needed.
 
 ---
 
-## 1. Frontend integration (one-line cutover per feature)
+## 1. Frontend integration (done)
 
-The endpoints below match the **dormant** `*ApiRepositoryImpl` / `*RepositoryImpl`
-classes exactly. To go live, swap each mock provider for the real impl — nothing
-else (Riverpod, widgets, routing, optimistic updates) changes.
+Each feature's provider now binds to the real API repository; the mock
+repositories were deleted. Only the provider binding changed — Riverpod
+notifiers, widgets, routing, and optimistic updates are untouched.
 
-| Feature | File | Change |
+| Feature | Provider file | Binding (now live) |
 |---|---|---|
-| Interests | `interests/presentation/providers/interests_provider.dart` | `interestsRepositoryProvider` → `InterestsRepositoryImpl(ref.watch(apiClientProvider))` |
-| Shortlist | `shortlist/presentation/providers/shortlist_provider.dart` | `shortlistRepositoryProvider` → `ShortlistRepositoryImpl(ref.watch(apiClientProvider))` |
-| Notifications | `notifications/presentation/providers/notification_providers.dart` | `notificationRepositoryProvider` → `NotificationApiRepositoryImpl(ref.watch(apiClientProvider))` |
+| Interests | `interests/presentation/providers/interests_provider.dart` | `InterestsRepositoryImpl(ref.watch(apiClientProvider))` |
+| Shortlist | `shortlist/presentation/providers/shortlist_provider.dart` | `ShortlistRepositoryImpl(ref.watch(apiClientProvider))` |
+| Notifications | `notifications/presentation/providers/notification_providers.dart` | `NotificationApiRepositoryImpl(ref.watch(apiClientProvider))` |
 
 All routes are behind `FirebaseAuthGuard` — the client's existing `AuthInterceptor`
-already attaches the Firebase ID token, so no auth wiring changes.
+already attaches the Firebase ID token, so no auth wiring changed.
 
 ---
 
@@ -127,5 +135,9 @@ values to a generic category, so new types never break the contract.
 ## 4. Verification
 
 `nest build` ✓ · `jest` 39 suites / 235 tests ✓ (44 new) · `prisma validate` ✓ ·
-`prisma migrate status` up-to-date ✓ · `flutter analyze` unaffected (no client
-changes in this branch).
+`prisma migrate status` up-to-date ✓ · Swagger UI boots and lists all 9 endpoints
+at `/api/docs` ✓ · `flutter analyze` clean after the cutover ✓.
+
+> Dependency note: `@nestjs/swagger` was added to `package.json`. This
+> environment has no `pnpm`, so `pnpm-lock.yaml` was **not** regenerated — run
+> `pnpm install` once before merge to update the lockfile.
