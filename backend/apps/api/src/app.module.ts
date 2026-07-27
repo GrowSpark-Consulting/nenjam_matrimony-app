@@ -10,6 +10,7 @@ import { ProfilesModule } from './modules/profiles/profiles.module';
 import { MatchesModule } from './modules/matches/matches.module';
 import { InterestsModule } from './modules/interests/interests.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { RealtimeModule } from './modules/realtime/realtime.module';
 import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
@@ -19,6 +20,7 @@ import { SettingsModule } from './modules/settings/settings.module';
     RedisModule,
     ElasticsearchModule,
     FirebaseModule,
+    RealtimeModule,
     ProfilesModule,
     MatchesModule,
     InterestsModule,

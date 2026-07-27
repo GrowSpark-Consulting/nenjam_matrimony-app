@@ -46,6 +46,7 @@ function build() {
     invalidateUnread: jest.fn().mockResolvedValue(undefined),
   };
   const mapper = { toDtoList: jest.fn().mockResolvedValue([]) };
+  const realtime = { emitToUser: jest.fn() };
   // Transparent transaction: run the callback with a passthrough tx client.
   const prisma = {
     $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
@@ -56,8 +57,9 @@ function build() {
     repo as never,
     notifications as never,
     mapper as never,
+    realtime as never,
   );
-  return { service, repo, notifications, mapper };
+  return { service, repo, notifications, mapper, realtime };
 }
 
 describe('InterestsService.send', () => {
@@ -127,7 +129,7 @@ describe('InterestsService.send', () => {
   });
 
   it('creates a PENDING interest + INTEREST_RECEIVED notification atomically', async () => {
-    const { service, repo, notifications } = build();
+    const { service, repo, notifications, realtime } = build();
     const result = await service.send('sender-1', 'receiver-1');
 
     expect(repo.create).toHaveBeenCalledTimes(1);
@@ -140,6 +142,12 @@ describe('InterestsService.send', () => {
       }),
     );
     expect(notifications.invalidateUnread).toHaveBeenCalledWith('receiver-1');
+    // Real-time signal delivered to the receiver after commit.
+    expect(realtime.emitToUser).toHaveBeenCalledWith(
+      'receiver-1',
+      'interest.created',
+      expect.objectContaining({ id: 'int-1' }),
+    );
     expect(result).toEqual({
       id: 'int-1',
       sentAt: '2026-01-01T00:00:00.000Z',

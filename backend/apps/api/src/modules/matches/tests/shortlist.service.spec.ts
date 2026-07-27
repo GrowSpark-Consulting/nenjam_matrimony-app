@@ -16,6 +16,7 @@ function build() {
     invalidateUnread: jest.fn().mockResolvedValue(undefined),
   };
   const mapper = { toDtoList: jest.fn().mockResolvedValue([]) };
+  const realtime = { emitToUser: jest.fn() };
   const prisma = {
     $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
   };
@@ -24,8 +25,9 @@ function build() {
     repo as never,
     notifications as never,
     mapper as never,
+    realtime as never,
   );
-  return { service, repo, notifications, mapper };
+  return { service, repo, notifications, mapper, realtime };
 }
 
 describe('ShortlistService.add', () => {

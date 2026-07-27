@@ -9,6 +9,8 @@ import type { Shortlist } from '../../../../../../libs/database/generated/client
 import { DiscoverProfileDto } from '../dto/discover-profile.response.dto';
 import { ProfileFeedMapper } from '../mappers/profile-feed.mapper';
 import { NotificationsService } from '../../notifications/services/notifications.service';
+import { RealtimeGateway } from '../../realtime/realtime.gateway';
+import { RealtimeEvents } from '../../realtime/realtime.events';
 import { ShortlistRepository } from '../repositories/shortlist.repository';
 
 function isUniqueViolation(error: unknown): boolean {
@@ -29,6 +31,7 @@ export class ShortlistService {
     private readonly shortlistRepository: ShortlistRepository,
     private readonly notifications: NotificationsService,
     private readonly profileMapper: ProfileFeedMapper,
+    private readonly realtime: RealtimeGateway,
   ) {}
 
   /** Adds [targetUserId] to [userId]'s shortlist. Idempotent — re-adding an
@@ -66,6 +69,18 @@ export class ShortlistService {
         });
       });
       await this.notifications.invalidateUnread(targetUserId);
+
+      // Real-time: signal the shortlisted member's devices (after commit).
+      const at = new Date().toISOString();
+      this.realtime.emitToUser(targetUserId, RealtimeEvents.shortlistCreated, {
+        id: targetUserId,
+        at,
+      });
+      this.realtime.emitToUser(
+        targetUserId,
+        RealtimeEvents.notificationCreated,
+        { id: targetUserId, at },
+      );
     } catch (error) {
       // Concurrent add lost the unique race — the end state is identical
       // (shortlisted), so treat as a successful no-op.

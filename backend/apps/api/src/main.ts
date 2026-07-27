@@ -2,7 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppConfigService } from '@app/config';
+import { RedisService } from '@app/cache';
 import { AppModule } from './app.module';
+import { RedisIoAdapter } from './adapters/redis-io.adapter';
 
 /**
  * Interactive API docs. Documents the existing API — it never changes routes or
@@ -41,6 +43,13 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableShutdownHooks();
+
+  // Real-time WebSocket transport. The Redis adapter fans emits out across API
+  // instances when Redis is available; otherwise it's a single-instance
+  // in-memory adapter. Must be set before the gateways start.
+  const redisAdapter = new RedisIoAdapter(app, app.get(RedisService));
+  await redisAdapter.connect();
+  app.useWebSocketAdapter(redisAdapter);
 
   setupSwagger(app);
 

@@ -13,6 +13,8 @@ import type {
 } from '../../../../../../libs/database/generated/client';
 import { ProfileFeedMapper } from '../../matches/mappers/profile-feed.mapper';
 import { NotificationsService } from '../../notifications/services/notifications.service';
+import { RealtimeGateway } from '../../realtime/realtime.gateway';
+import { RealtimeEvents } from '../../realtime/realtime.events';
 import { InterestsRepository } from '../repositories/interests.repository';
 import { MatchInterestDto } from '../dto/match-interest.dto';
 import {
@@ -51,6 +53,7 @@ export class InterestsService {
     private readonly interestsRepository: InterestsRepository,
     private readonly notifications: NotificationsService,
     private readonly profileMapper: ProfileFeedMapper,
+    private readonly realtime: RealtimeGateway,
   ) {}
 
   /** Dispatches the polymorphic `POST /matches/interest` body to send or
@@ -79,30 +82,35 @@ export class InterestsService {
       throw new BadRequestException('You cannot send an interest to yourself.');
     }
 
-    const receiver =
-      await this.interestsRepository.findReceiverState(receiverId);
+    // These four eligibility reads are independent — run them in one parallel
+    // batch instead of four sequential Neon round trips, then evaluate in the
+    // same precedence order (this is the dominant cost of the send latency,
+    // and thus of how fast the receiver's real-time event arrives).
+    const [receiver, blocked, senderProfileComplete, reverseActive] =
+      await Promise.all([
+        this.interestsRepository.findReceiverState(receiverId),
+        this.interestsRepository.isBlockedBetween(senderId, receiverId),
+        this.interestsRepository.isProfileComplete(senderId),
+        this.interestsRepository.findReverseActive(senderId, receiverId),
+      ]);
+
     if (!receiver || receiver.deletedAt) {
       throw new NotFoundException('This member is no longer available.');
     }
     if (NON_RECEIVING_STATUSES.has(receiver.status)) {
       throw new ForbiddenException('This member cannot receive interests.');
     }
-
-    if (await this.interestsRepository.isBlockedBetween(senderId, receiverId)) {
+    if (blocked) {
       throw new ForbiddenException(
         'You cannot send an interest to this member.',
       );
     }
-
-    if (!(await this.interestsRepository.isProfileComplete(senderId))) {
+    if (!senderProfileComplete) {
       throw new ForbiddenException(
         'Complete your profile before sending interests.',
       );
     }
-
-    if (
-      await this.interestsRepository.findReverseActive(senderId, receiverId)
-    ) {
+    if (reverseActive) {
       throw new ConflictException(
         'This member has already sent you an interest.',
       );
@@ -147,6 +155,18 @@ export class InterestsService {
       });
 
       await this.notifications.invalidateUnread(receiverId);
+
+      // Real-time: signal the receiver's devices to refresh (after commit).
+      const at = interest.createdAt.toISOString();
+      this.realtime.emitToUser(receiverId, RealtimeEvents.interestCreated, {
+        id: interest.id,
+        at,
+      });
+      this.realtime.emitToUser(receiverId, RealtimeEvents.notificationCreated, {
+        id: interest.id,
+        at,
+      });
+
       return this.toSendResponse(interest);
     } catch (error) {
       // A concurrent create for the same pair loses the unique race — surface
@@ -210,6 +230,20 @@ export class InterestsService {
     });
 
     await this.notifications.invalidateUnread(interest.senderId);
+
+    // Real-time: tell the original sender's devices their interest was answered.
+    const at = new Date().toISOString();
+    this.realtime.emitToUser(
+      interest.senderId,
+      accept ? RealtimeEvents.interestAccepted : RealtimeEvents.interestRejected,
+      { id: interest.id, at },
+    );
+    this.realtime.emitToUser(
+      interest.senderId,
+      RealtimeEvents.notificationCreated,
+      { id: interest.id, at },
+    );
+
     return {
       id: interest.id,
       sentAt: interest.createdAt.toISOString(),
