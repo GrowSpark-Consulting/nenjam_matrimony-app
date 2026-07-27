@@ -2,9 +2,22 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/database';
 import type {
   ChatMessage,
+  ChatParticipantState,
   ChatRoom,
   Prisma,
 } from '../../../../../../libs/database/generated/client';
+
+/** The per-user room-state fields a caller may patch. */
+export interface ChatStatePatch {
+  isPinned?: boolean;
+  isMuted?: boolean;
+  isArchived?: boolean;
+  markUnread?: boolean;
+  lastReadMessageId?: string | null;
+  lastReadAt?: Date | null;
+  deletedUntil?: Date | null;
+  customNotification?: string | null;
+}
 import {
   FEED_PROFILE_SELECT,
   type FeedProfileRow,
@@ -179,6 +192,34 @@ export class ConversationRepository {
   async unblock(blockerId: string, blockedUserId: string): Promise<void> {
     await this.prisma.userBlock.deleteMany({
       where: { blockerId, blockedUserId },
+    });
+  }
+
+  // ── per-user room state ────────────────────────────────────────────────────
+
+  /** The caller's ChatParticipantState for a set of rooms, in one query — keyed
+   *  by roomId. Rooms with no row yet just aren't present (all-defaults). */
+  async statesByRoom(
+    userId: string,
+    roomIds: string[],
+  ): Promise<Map<string, ChatParticipantState>> {
+    if (roomIds.length === 0) return new Map();
+    const states = await this.prisma.chatParticipantState.findMany({
+      where: { userId, roomId: { in: roomIds } },
+    });
+    return new Map(states.map((s) => [s.roomId, s]));
+  }
+
+  /** Upserts the caller's state for a room (creates the row on first use). */
+  upsertState(
+    userId: string,
+    roomId: string,
+    patch: ChatStatePatch,
+  ): Promise<ChatParticipantState> {
+    return this.prisma.chatParticipantState.upsert({
+      where: { roomId_userId: { roomId, userId } },
+      create: { roomId, userId, ...patch },
+      update: patch,
     });
   }
 }

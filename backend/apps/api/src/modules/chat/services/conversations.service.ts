@@ -13,7 +13,10 @@ import type {
 import { ProfileFeedMapper } from '../../matches/mappers/profile-feed.mapper';
 import { RealtimeGateway } from '../../realtime/realtime.gateway';
 import { RealtimeEvents } from '../../realtime/realtime.events';
-import { ConversationRepository } from '../repositories/conversation.repository';
+import {
+  ChatStatePatch,
+  ConversationRepository,
+} from '../repositories/conversation.repository';
 import { MessageRepository } from '../repositories/message.repository';
 import {
   ConversationDto,
@@ -58,17 +61,17 @@ export class ConversationsService {
       };
     }
 
+    const roomIds = rooms.map((r) => r.id);
     const peerIds = rooms.map((room) => this.peerOf(room, userId));
-    const [unreadByRoom, blockedPeers, profileRows] = await Promise.all([
-      this.conversationRepository.unreadCountsByRoom(
-        userId,
-        rooms.map((r) => r.id),
-      ),
-      this.conversationRepository.blockedPeerIds(userId, peerIds),
-      this.conversationRepository.findFeedProfilesByUserIds([
-        ...new Set(peerIds),
-      ]),
-    ]);
+    const [unreadByRoom, blockedPeers, profileRows, statesByRoom] =
+      await Promise.all([
+        this.conversationRepository.unreadCountsByRoom(userId, roomIds),
+        this.conversationRepository.blockedPeerIds(userId, peerIds),
+        this.conversationRepository.findFeedProfilesByUserIds([
+          ...new Set(peerIds),
+        ]),
+        this.conversationRepository.statesByRoom(userId, roomIds),
+      ]);
     const profileDtos = await this.profileMapper.toDtoList(profileRows);
     const profileByUserId = new Map(profileDtos.map((dto) => [dto.id, dto]));
 
@@ -77,26 +80,40 @@ export class ConversationsService {
       const peerId = this.peerOf(room, userId);
       const profile = profileByUserId.get(peerId);
       if (!profile) continue; // peer has no finalized profile — can't render
+      const state = statesByRoom.get(room.id);
+      const lastAt = room.lastMessageAt ?? room.createdAt;
+      // Delete-for-me: the room stays hidden until a message NEWER than the
+      // delete point arrives — then it reappears with only that fresh history.
+      if (state?.deletedUntil && lastAt <= state.deletedUntil) continue;
       const last = room.messages[0] as ChatMessage | undefined;
       const fromMe = last?.senderId === userId;
+      const realUnread = unreadByRoom.get(room.id) ?? 0;
+      // "Mark as unread" is a UI affordance — surface at least one unread when
+      // the user set it and nothing genuinely unread already covers it.
+      const unreadCount =
+        state?.markUnread && realUnread === 0 ? 1 : realUnread;
       items.push({
         id: room.id,
         profile,
         lastMessage: last ? this.lastMessageLabel(last) : '',
-        lastMessageAt: (room.lastMessageAt ?? room.createdAt).toISOString(),
-        unreadCount: unreadByRoom.get(room.id) ?? 0,
+        lastMessageAt: lastAt.toISOString(),
+        unreadCount,
         lastMessageFromMe: Boolean(fromMe),
         isBlocked: blockedPeers.has(peerId),
         lastMessageStatus:
           last && fromMe ? (last.isRead ? 'read' : 'sent') : null,
-        isPinned: false,
-        isMuted: false,
-        isArchived: false,
+        isPinned: state?.isPinned ?? false,
+        isMuted: state?.isMuted ?? false,
+        isArchived: state?.isArchived ?? false,
         isTyping: false,
         isLocked: false,
         smartIndicator: 'none',
       });
     }
+
+    // Pinned conversations float to the top of the page; the sort is stable
+    // (V8), so within each group the newest-activity order from the query holds.
+    items.sort((a, b) => Number(b.isPinned) - Number(a.isPinned));
 
     return {
       items,
@@ -143,6 +160,12 @@ export class ConversationsService {
       conversationId,
       userId,
     );
+    // Opening a room always clears a manual "mark unread" and advances the
+    // caller's read position, even when no unread messages were actually turned.
+    await this.conversationRepository.upsertState(userId, conversationId, {
+      markUnread: false,
+      lastReadAt: new Date(),
+    });
     if (changed > 0) {
       // Read receipt: tell the peer their messages in this room were read.
       this.realtime.emitToUser(
@@ -154,6 +177,38 @@ export class ConversationsService {
         },
       );
     }
+  }
+
+  /** Pin / mute / archive — per-user flags, upserted onto the caller's state.
+   *  Only the fields present in `patch` change. Participant-gated. */
+  async updateState(
+    userId: string,
+    conversationId: string,
+    patch: Pick<ChatStatePatch, 'isPinned' | 'isMuted' | 'isArchived'>,
+  ): Promise<void> {
+    await this.requireParticipantRoom(conversationId, userId);
+    await this.conversationRepository.upsertState(
+      userId,
+      conversationId,
+      patch,
+    );
+  }
+
+  /** "Mark as unread" — a UI flag the caller sets; cleared on next open. */
+  async markUnread(userId: string, conversationId: string): Promise<void> {
+    await this.requireParticipantRoom(conversationId, userId);
+    await this.conversationRepository.upsertState(userId, conversationId, {
+      markUnread: true,
+    });
+  }
+
+  /** Delete-for-me: hides the room for the caller only, up to now. The peer is
+   *  unaffected, and the room reappears if a newer message arrives. */
+  async deleteForMe(userId: string, conversationId: string): Promise<void> {
+    await this.requireParticipantRoom(conversationId, userId);
+    await this.conversationRepository.upsertState(userId, conversationId, {
+      deletedUntil: new Date(),
+    });
   }
 
   async setBlocked(

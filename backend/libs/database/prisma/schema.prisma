@@ -23,6 +23,7 @@ model User {
   adminAccount      AdminAccount?
   astrologyProfile  AstrologyProfile?
   sentMessages      ChatMessage[]        @relation("SentMessages")
+  chatStates        ChatParticipantState[]
   chatRoomsAsUser1  ChatRoom[]           @relation("ChatUser1")
   chatRoomsAsUser2  ChatRoom[]           @relation("ChatUser2")
   deviceTokens      DevicePushToken[]
@@ -492,6 +493,7 @@ model ChatRoom {
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
   messages      ChatMessage[]
+  participantStates ChatParticipantState[]
   user1         User          @relation("ChatUser1", fields: [user1Id], references: [id], onDelete: Cascade)
   user2         User          @relation("ChatUser2", fields: [user2Id], references: [id], onDelete: Cascade)
 
@@ -500,6 +502,33 @@ model ChatRoom {
   @@index([user2Id])
   @@index([lastMessageAt])
   @@map("chat_rooms")
+}
+
+/// Per-user, per-room state — the settings that belong to ONE participant, not
+/// the shared room: pin/mute/archive, "mark unread", per-user delete
+/// (`deletedUntil` — the room stays hidden until a newer message arrives),
+/// read-position, and per-conversation notification override. One row per
+/// (room, user).
+model ChatParticipantState {
+  id                 String    @id @default(uuid())
+  roomId             String    @map("room_id")
+  userId             String    @map("user_id")
+  isPinned           Boolean   @default(false) @map("is_pinned")
+  isMuted            Boolean   @default(false) @map("is_muted")
+  isArchived         Boolean   @default(false) @map("is_archived")
+  markUnread         Boolean   @default(false) @map("mark_unread")
+  lastReadMessageId  String?   @map("last_read_message_id")
+  lastReadAt         DateTime? @map("last_read_at")
+  deletedUntil       DateTime? @map("deleted_until")
+  customNotification String?   @map("custom_notification")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  room               ChatRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId])
+  @@map("chat_participant_states")
 }
 
 /// Individual chat message within a room.

@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   HttpCode,
   HttpStatus,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -17,6 +19,7 @@ import {
 import { ConversationsService } from '../services/conversations.service';
 import { ConversationParticipantGuard } from '../guards/conversation-participant.guard';
 import { GetOrCreateConversationDto } from '../dto/get-or-create-conversation.dto';
+import { UpdateConversationDto } from '../dto/update-conversation.dto';
 import {
   ConversationPageDto,
   GetOrCreateConversationResponseDto,
@@ -50,6 +53,23 @@ export class ConversationsController {
     return this.conversationsService.getOrCreate(userId, dto.peerId);
   }
 
+  /** PATCH /chat/conversations/:id — toggle per-user pin/mute/archive. Only the
+   *  flags present in the body change; these are per-caller, never shared. */
+  @Patch(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(ConversationParticipantGuard)
+  update(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateConversationDto,
+  ): Promise<void> {
+    return this.conversationsService.updateState(userId, id, {
+      isPinned: dto.pinned,
+      isMuted: dto.muted,
+      isArchived: dto.archived,
+    });
+  }
+
   /** POST /chat/conversations/:id/read — mark the peer's messages read. */
   @Post(':id/read')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -59,6 +79,30 @@ export class ConversationsController {
     @Param('id') id: string,
   ): Promise<void> {
     return this.conversationsService.markRead(userId, id);
+  }
+
+  /** POST /chat/conversations/:id/unread — flag the room unread for the caller
+   *  (cleared automatically the next time they open it). */
+  @Post(':id/unread')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(ConversationParticipantGuard)
+  markUnread(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ): Promise<void> {
+    return this.conversationsService.markUnread(userId, id);
+  }
+
+  /** DELETE /chat/conversations/:id — delete the thread for the caller only.
+   *  The peer keeps it; it reappears for the caller if a newer message lands. */
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(ConversationParticipantGuard)
+  remove(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ): Promise<void> {
+    return this.conversationsService.deleteForMe(userId, id);
   }
 
   /** POST /chat/conversations/:id/block — block the room's other participant. */
