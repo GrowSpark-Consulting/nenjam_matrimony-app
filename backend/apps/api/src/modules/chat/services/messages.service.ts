@@ -17,9 +17,17 @@ import { RealtimeEvents } from '../../realtime/realtime.events';
 import { ConversationRepository } from '../repositories/conversation.repository';
 import { MessageRepository } from '../repositories/message.repository';
 import { SendMessageDto } from '../dto/send-message.dto';
-import { MessageDto, MessagePageDto } from '../dto/message.response.dto';
+import {
+  MessageDto,
+  MessagePageDto,
+  deliveryStatusToWire,
+} from '../dto/message.response.dto';
 
 const MAX_TEXT_LENGTH = 4000;
+
+function isUniqueViolation(error: unknown): boolean {
+  return (error as { code?: string })?.code === 'P2002';
+}
 
 /**
  * Message read/send. Every path re-derives authorization from the DB, never the
@@ -84,21 +92,54 @@ export class MessagesService {
       throw new BadRequestException('Message is too long.');
     }
 
-    const message = await this.prisma.$transaction(async (tx) => {
-      const created = await this.messageRepository.create(tx, {
-        roomId: dto.roomId,
-        senderId: userId,
-        content,
-        type,
-        mediaUrl: dto.mediaUrl ?? null,
-      });
-      await this.messageRepository.touchRoomActivity(
-        tx,
-        dto.roomId,
-        created.createdAt,
+    // Idempotency: a retried send with the same client key returns the message
+    // the first request created — never a duplicate insert.
+    if (dto.clientMessageId) {
+      const existing = await this.messageRepository.findByClientKey(
+        userId,
+        dto.clientMessageId,
       );
-      return created;
-    });
+      if (existing) return this.toDto(existing, userId, dto.clientMessageId);
+    }
+
+    // Delivery state: if the recipient has a live socket, the message goes out
+    // DELIVERED; otherwise SENT, and the reconnect-replay path (chat.sync)
+    // promotes it to DELIVERED when they come back online.
+    const deliveredNow = this.realtime.isOnline(peerId);
+    const now = new Date();
+
+    let message: ChatMessage;
+    try {
+      message = await this.prisma.$transaction(async (tx) => {
+        const created = await this.messageRepository.create(tx, {
+          roomId: dto.roomId,
+          senderId: userId,
+          content,
+          type,
+          mediaUrl: dto.mediaUrl ?? null,
+          clientMessageId: dto.clientMessageId ?? null,
+          status: deliveredNow ? 'DELIVERED' : 'SENT',
+          deliveredAt: deliveredNow ? now : null,
+        });
+        await this.messageRepository.touchRoomActivity(
+          tx,
+          dto.roomId,
+          created.createdAt,
+        );
+        return created;
+      });
+    } catch (error) {
+      // Concurrent retry with the same client key lost the unique race — return
+      // the message the winner created.
+      if (isUniqueViolation(error) && dto.clientMessageId) {
+        const existing = await this.messageRepository.findByClientKey(
+          userId,
+          dto.clientMessageId,
+        );
+        if (existing) return this.toDto(existing, userId, dto.clientMessageId);
+      }
+      throw error;
+    }
 
     // Real-time (after commit): push the full message inline to the recipient
     // (renders instantly, no round trip) and to the sender's OTHER devices.
@@ -157,6 +198,7 @@ export class MessagesService {
     viewerId: string,
     clientMessageId?: string,
   ): Promise<MessageDto> {
+    const echoedClientId = clientMessageId ?? message.clientMessageId;
     return {
       id: message.id,
       roomId: message.roomId,
@@ -166,8 +208,10 @@ export class MessagesService {
       type: message.type,
       mediaUrl: await this.presignMedia(message.mediaUrl),
       isRead: message.isRead,
+      status: deliveryStatusToWire(message.status),
       createdAt: message.createdAt.toISOString(),
-      ...(clientMessageId ? { clientMessageId } : {}),
+      editedAt: message.editedAt ? message.editedAt.toISOString() : null,
+      ...(echoedClientId ? { clientMessageId: echoedClientId } : {}),
     };
   }
 

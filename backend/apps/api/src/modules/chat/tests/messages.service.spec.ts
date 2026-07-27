@@ -30,8 +30,12 @@ function message(over: Partial<ChatMessage> = {}): ChatMessage {
     content: 'hi',
     type: 'TEXT',
     mediaUrl: null,
+    clientMessageId: null,
+    status: 'SENT',
+    deliveredAt: null,
     isRead: false,
     readAt: null,
+    editedAt: null,
     deletedAt: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     ...over,
@@ -47,13 +51,17 @@ function build() {
   const messageRepository = {
     create: jest.fn().mockResolvedValue(message()),
     touchRoomActivity: jest.fn().mockResolvedValue({}),
+    findByClientKey: jest.fn().mockResolvedValue(null),
     listPaged: jest.fn(),
   };
   const s3 = {
     isConfigured: jest.fn().mockReturnValue(true),
     getPresignedGetUrl: jest.fn().mockResolvedValue('https://signed/x'),
   };
-  const realtime = { emitToUser: jest.fn() };
+  const realtime = {
+    emitToUser: jest.fn(),
+    isOnline: jest.fn().mockReturnValue(false),
+  };
   const prisma = {
     $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
   };
@@ -145,6 +153,34 @@ describe('MessagesService.send', () => {
       content: 'hi',
       clientMessageId: 'c-123',
     });
+  });
+
+  it('is idempotent: a repeated clientMessageId returns the existing message, no second insert', async () => {
+    const { service, messageRepository } = build();
+    messageRepository.findByClientKey.mockResolvedValue(
+      message({ id: 'existing' }),
+    );
+    const result = await service.send('me', {
+      roomId: 'r1',
+      content: 'hi',
+      clientMessageId: 'c-1',
+    });
+    expect(result.id).toBe('existing');
+    expect(messageRepository.create).not.toHaveBeenCalled();
+  });
+
+  it('marks DELIVERED when the recipient is online', async () => {
+    const { service, messageRepository, realtime } = build();
+    realtime.isOnline.mockReturnValue(true);
+    messageRepository.create.mockResolvedValue(
+      message({ status: 'DELIVERED' }),
+    );
+    const result = await service.send('me', { roomId: 'r1', content: 'hi' });
+    expect(messageRepository.create).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: 'DELIVERED' }),
+    );
+    expect(result.status).toBe('delivered');
   });
 });
 

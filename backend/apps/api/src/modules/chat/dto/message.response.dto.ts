@@ -1,4 +1,23 @@
-import type { MessageType } from '../../../../../../libs/database/generated/client';
+import type {
+  MessageDeliveryStatus,
+  MessageType,
+} from '../../../../../../libs/database/generated/client';
+
+/** Lowercase wire values matching Flutter's MessageDeliveryStatus/MessageStatus
+ *  names (`sent`/`delivered`/`read`). */
+export type MessageStatusWire = 'sent' | 'delivered' | 'read';
+
+const STATUS_TO_WIRE: Record<MessageDeliveryStatus, MessageStatusWire> = {
+  SENT: 'sent',
+  DELIVERED: 'delivered',
+  READ: 'read',
+};
+
+export function deliveryStatusToWire(
+  status: MessageDeliveryStatus,
+): MessageStatusWire {
+  return STATUS_TO_WIRE[status];
+}
 
 /**
  * One chat message on the wire. Field names match what Flutter's
@@ -18,7 +37,9 @@ export interface MessageDto {
   type: MessageType;
   mediaUrl: string | null;
   isRead: boolean;
+  status: MessageStatusWire;
   createdAt: string;
+  editedAt: string | null;
   clientMessageId?: string;
 }
 

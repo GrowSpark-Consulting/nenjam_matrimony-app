@@ -68,6 +68,10 @@ export class RealtimeGateway
       await client.join(userRoom(userId));
       this.onlineUserIds.add(userId);
       this.logger.log(`Socket ${client.id} authenticated for user ${userId}.`);
+      // Signal the client that the socket is fully authenticated and joined.
+      // Clients should emit `chat.sync` (reconnect replay) on THIS event, not on
+      // transport `connect`, which fires before this async auth completes.
+      client.emit('ready');
     } catch (error) {
       this.reject(client, `Auth failed: ${(error as Error).message}`);
     }

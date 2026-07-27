@@ -8,6 +8,8 @@ import {
 import type { Server, Socket } from 'socket.io';
 import { RealtimeEvents, userRoom } from '../../realtime/realtime.events';
 import { ConversationRepository } from '../repositories/conversation.repository';
+import { MessageRepository } from '../repositories/message.repository';
+import { MessagesService } from '../services/messages.service';
 
 interface TypingPayload {
   roomId?: string;
@@ -36,7 +38,47 @@ export class ChatGateway {
 
   constructor(
     private readonly conversationRepository: ConversationRepository,
+    private readonly messageRepository: MessageRepository,
+    private readonly messagesService: MessagesService,
   ) {}
+
+  /**
+   * Reconnect replay. The client emits `chat.sync` after (re)connecting; the
+   * server delivers every message that arrived while it was offline (status
+   * still SENT), promotes those to DELIVERED, and notifies each sender via
+   * `chat.delivered`. This is how a client that missed live pushes catches up
+   * without a manual refresh, and how delivery receipts converge after an
+   * offline stretch. Idempotent — messages already delivered are skipped, and a
+   * re-emitted message is deduped by id on the client.
+   */
+  @SubscribeMessage('chat.sync')
+  async handleSync(@ConnectedSocket() client: Socket): Promise<void> {
+    const userId = (client.data as { userId?: string }).userId;
+    if (!userId) return;
+
+    const undelivered =
+      await this.messageRepository.findUndeliveredForUser(userId);
+    if (undelivered.length === 0) return;
+
+    await this.messageRepository.markDelivered(undelivered.map((m) => m.id));
+    const now = new Date();
+
+    for (const message of undelivered) {
+      message.status = 'DELIVERED';
+      message.deliveredAt = now;
+      const dto = await this.messagesService.toDto(message, userId);
+      this.server.to(userRoom(userId)).emit(RealtimeEvents.chatMessage, {
+        ...dto,
+      });
+      this.server
+        .to(userRoom(message.senderId))
+        .emit(RealtimeEvents.chatDelivered, {
+          id: message.id,
+          roomId: message.roomId,
+          at: now.toISOString(),
+        });
+    }
+  }
 
   @SubscribeMessage(RealtimeEvents.chatTyping)
   async handleTyping(

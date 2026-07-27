@@ -20,6 +20,7 @@ export const RealtimeEvents = {
   // `chat.typing` are lightweight receipts.
   chatMessage: 'chat.message',
   chatRead: 'chat.read',
+  chatDelivered: 'chat.delivered',
   chatTyping: 'chat.typing',
 } as const;
 

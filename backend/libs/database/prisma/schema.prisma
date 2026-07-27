@@ -510,17 +510,28 @@ model ChatMessage {
   content   String
   type      MessageType       @default(TEXT)
   mediaUrl  String?           @map("media_url")
+  /// Client-generated idempotency key. Unique per sender so a retried send
+  /// (same key) returns the existing message instead of inserting a duplicate.
+  clientMessageId String?     @map("client_message_id")
+  /// Server-side delivery progression: SENT -> DELIVERED (recipient's socket
+  /// received it) -> READ. PENDING/FAILED are client-only optimistic states.
+  status    MessageDeliveryStatus @default(SENT)
+  deliveredAt DateTime?       @map("delivered_at")
   isRead    Boolean           @default(false) @map("is_read")
   readAt    DateTime?         @map("read_at")
+  editedAt  DateTime?         @map("edited_at")
   deletedAt DateTime?         @map("deleted_at")
   createdAt DateTime          @default(now()) @map("created_at")
   room      ChatRoom          @relation(fields: [roomId], references: [id], onDelete: Cascade)
   sender    User              @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   reactions MessageReaction[]
 
+  @@unique([senderId, clientMessageId])
   @@index([roomId])
   @@index([senderId])
   @@index([createdAt])
+  // Serve the reconnect-replay query (undelivered messages addressed to a user).
+  @@index([roomId, status])
   @@map("chat_messages")
 }
 
@@ -817,6 +828,14 @@ enum MessageType {
   VIDEO
 
   @@map("message_type")
+}
+
+enum MessageDeliveryStatus {
+  SENT
+  DELIVERED
+  READ
+
+  @@map("message_delivery_status")
 }
 
 enum KycDocType {
