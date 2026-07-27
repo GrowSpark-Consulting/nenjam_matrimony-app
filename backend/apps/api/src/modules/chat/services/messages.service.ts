@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@app/database';
 import { S3Service } from '@app/storage';
-import { PaginationQueryDto } from '@app/common';
+import { MessageListQueryDto } from '../dto/message-list-query.dto';
 import type {
   ChatMessage,
   ChatRoom,
@@ -48,13 +48,38 @@ export class MessagesService {
 
   async list(
     userId: string,
-    conversationId: string,
-    pagination: PaginationQueryDto,
+    query: MessageListQueryDto,
   ): Promise<MessagePageDto> {
-    const room = await this.requireParticipantRoom(conversationId, userId);
-    void room;
+    const conversationId = query.conversationId;
+    await this.requireParticipantRoom(conversationId, userId);
 
-    const { skip, take, pageNumber } = pagination;
+    const { take, pageNumber } = query;
+
+    // Keyset mode — opt-in by sending `cursor` (even empty, for the first page).
+    // Stable under concurrent inserts, so it's the preferred path for scrollback.
+    if (query.cursor !== undefined) {
+      const {
+        items: rows,
+        hasMore,
+        nextCursor,
+      } = await this.messageRepository.listByCursor(
+        conversationId,
+        query.cursor || null,
+        take,
+      );
+      const items = await Promise.all(rows.map((m) => this.toDto(m, userId)));
+      return {
+        items,
+        page: pageNumber,
+        limit: take,
+        total: items.length,
+        hasMore,
+        nextCursor,
+      };
+    }
+
+    // Legacy offset mode (`?page=&limit=`) — unchanged, still the default.
+    const { skip } = query;
     const [rows, total] = await this.messageRepository.listPaged(
       conversationId,
       skip,
@@ -67,6 +92,7 @@ export class MessagesService {
       limit: take,
       total,
       hasMore: skip + rows.length < total,
+      nextCursor: null,
     };
   }
 

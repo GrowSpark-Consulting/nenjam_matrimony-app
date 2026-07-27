@@ -80,6 +80,36 @@ export class MessageRepository {
     ]);
   }
 
+  /**
+   * Keyset (cursor) page of a room's messages, newest-first. `cursorId` is the
+   * id of the last (oldest) message the caller already holds; the page returned
+   * is strictly older than it — unlike offset paging this doesn't shift or
+   * duplicate rows when new messages arrive mid-scroll. A null cursor returns the
+   * newest page. `take + 1` is fetched so `hasMore`/`nextCursor` come for free
+   * (no separate COUNT). The secondary `id` ordering breaks same-millisecond
+   * `createdAt` ties so the keyset is total and stable.
+   */
+  async listByCursor(
+    roomId: string,
+    cursorId: string | null,
+    take: number,
+  ): Promise<{
+    items: ChatMessage[];
+    hasMore: boolean;
+    nextCursor: string | null;
+  }> {
+    const rows = await this.prisma.chatMessage.findMany({
+      where: { roomId, deletedAt: null },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: take + 1,
+      ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+    });
+    const hasMore = rows.length > take;
+    const items = hasMore ? rows.slice(0, take) : rows;
+    const nextCursor = hasMore ? items[items.length - 1].id : null;
+    return { items, hasMore, nextCursor };
+  }
+
   /** Marks every message the OTHER participant sent in this room READ (also
    *  covers the delivered step). Returns how many flipped. */
   async markRoomRead(roomId: string, readerId: string): Promise<number> {

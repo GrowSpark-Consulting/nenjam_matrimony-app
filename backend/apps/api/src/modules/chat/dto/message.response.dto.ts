@@ -44,11 +44,15 @@ export interface MessageDto {
 }
 
 /** Paginated messages — page 1 is the newest slice, higher pages go further
- *  into the past (matching the client's `loadOlder()`). */
+ *  into the past (matching the client's `loadOlder()`). `nextCursor` is set only
+ *  in keyset mode (the caller passed `?cursor=`): pass it back as the next
+ *  `cursor` to load the page immediately older, or null when the history ends.
+ *  In legacy offset mode it is null and the client keeps using `page`. */
 export interface MessagePageDto {
   items: MessageDto[];
   page: number;
   limit: number;
   total: number;
   hasMore: boolean;
+  nextCursor: string | null;
 }

@@ -14,13 +14,15 @@ export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 
   /** GET /chat/messages?conversationId&page&limit — page 1 is the newest slice;
-   *  higher pages go further into the past. */
+   *  higher pages go further into the past. Pass `cursor` instead of `page` to
+   *  use keyset pagination (stable under concurrent inserts); the response's
+   *  `nextCursor` is the next page's cursor. */
   @Get()
   list(
     @CurrentUser('id') userId: string,
     @Query() query: MessageListQueryDto,
   ): Promise<MessagePageDto> {
-    return this.messagesService.list(userId, query.conversationId, query);
+    return this.messagesService.list(userId, query);
   }
 
   /** POST /chat/messages — send a text/image/audio message. Echoes
