@@ -4,27 +4,14 @@ import '../../../../core/network/api_exception.dart';
 import '../../domain/repositories/notification_repository.dart';
 import '../models/notification_model.dart';
 
-/// Real backend implementation — dormant, not wired to any provider.
+/// Live backend implementation, wired via `notificationRepositoryProvider`.
 ///
-/// TODO(backend): `ApiEndpoints.notifications` already exists as a path
-/// constant, and the Prisma `Notification` model/migration are already live
-/// (`backend/libs/database/prisma/schema.prisma`), but
-/// `backend/apps/api/src/modules/notifications/` is an empty scaffold
-/// (controller/service/repository/DTO all unimplemented) and isn't imported
-/// into `app.module.ts` — so there is no working endpoint to call yet.
-/// Proposed shapes once it ships:
-///  - `GET {notifications}?page&limit` -> `{ items: [...], page, limit,
-///    total, hasMore }`, each item shaped per [NotificationModel.fromJson]
-///    (`id, type, title, message|body, isRead, createdAt,
-///    actor: { id, name, photoUrl } | null, referenceId, metadata`), `type`
-///    being one of the backend's `NotificationType` enum values.
-///  - `GET {notifications}/unread-count` -> `{ count: number }`.
-///  - `PATCH {notifications}/:id/read` -> marks one notification read.
-///  - `PATCH {notifications}/read-all` -> marks every notification read.
-///
-/// Swap `notificationRepositoryProvider` (notification_providers.dart) from
-/// [NotificationRepositoryImpl] to this class once that controller ships —
-/// nothing else in the feature needs to change.
+/// Endpoints (backend `notifications` module):
+///  - `GET /notifications?page&limit` -> `{ items, page, limit, total, hasMore }`,
+///    each item shaped per `NotificationModel.fromJson`.
+///  - `GET /notifications/unread-count` -> `{ count }`.
+///  - `PATCH /notifications/:id/read` -> marks one read.
+///  - `PATCH /notifications/read-all` -> marks every notification read.
 class NotificationApiRepositoryImpl implements NotificationRepository {
   NotificationApiRepositoryImpl(this._apiClient);
 

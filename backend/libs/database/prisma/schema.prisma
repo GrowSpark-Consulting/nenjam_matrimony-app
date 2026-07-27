@@ -294,6 +294,10 @@ model ExpressInterest {
   @@index([senderId])
   @@index([receiverId])
   @@index([status])
+  // Serve the paginated received/sent lists (WHERE receiver/sender ORDER BY
+  // created_at DESC) from a single index instead of a filter + sort.
+  @@index([receiverId, createdAt])
+  @@index([senderId, createdAt])
   @@map("express_interests")
 }
 
@@ -309,6 +313,8 @@ model Shortlist {
   @@unique([userId, targetUserId])
   @@index([userId])
   @@index([targetUserId])
+  // Serve the paginated shortlist list (WHERE user ORDER BY created_at DESC).
+  @@index([userId, createdAt])
   @@map("shortlists")
 }
 
@@ -615,6 +621,8 @@ model Notification {
   @@index([userId])
   @@index([userId, isRead])
   @@index([createdAt])
+  // Serve the paginated notification list (WHERE user ORDER BY created_at DESC).
+  @@index([userId, createdAt])
   @@map("notifications")
 }
 

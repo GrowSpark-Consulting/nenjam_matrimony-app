@@ -5,12 +5,9 @@ import '../../../discover/data/models/discovery_profile_model.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../domain/repositories/shortlist_repository.dart';
 
-/// Real backend implementation — dormant, not wired to any provider.
-///
-/// TODO(backend): the `matches` controller (which owns `/matches/shortlist`)
-/// is currently an empty stub — zero routes. Proposed response shape for
-/// the list call: a bare JSON array of `DiscoveryProfileDto` (same shape
-/// [DiscoveryProfileModel.fromJson] already parses).
+/// Live backend implementation, wired via `shortlistRepositoryProvider`.
+/// `GET /matches/shortlist` returns a bare JSON array of `DiscoveryProfileDto`;
+/// `POST`/`DELETE /matches/shortlist` add/remove by `{ profileId }`.
 class ShortlistRepositoryImpl implements ShortlistRepository {
   ShortlistRepositoryImpl(this._apiClient);
 

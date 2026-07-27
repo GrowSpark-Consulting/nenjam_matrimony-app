@@ -162,23 +162,11 @@ GoRouter createRouter(WidgetRef ref) {
         ref.read(authRepositoryProvider).authStateChanges(),
       ),
       redirect: (context, state) async {
-        // TEMP DEBUG — remove once the keyReservation crash is root-caused.
-        // Dumps the CURRENT top-level match list (what the root Navigator's
-        // `pages` will be built from) on every navigation — unlike
-        // _DebugNavObserver (which only logs actual push/pop/replace
-        // events), this reveals the full list's composition even when a
-        // duplicate arises from two matches landing in the same rebuild
-        // without either individually registering as a fresh push/pop.
-        try {
-          final matches = GoRouter.of(context).routerDelegate.currentConfiguration.matches;
-          debugPrint('[MATCHLIST] location=${state.matchedLocation} count=${matches.length}');
-          for (final m in matches) {
-            debugPrint('[MATCHLIST]   ${m.runtimeType} pageKey=${m.pageKey.value}');
-          }
-        } catch (e) {
-          debugPrint('[MATCHLIST] error reading currentConfiguration: $e');
-        }
-
+        // NB: never call GoRouter.of(context) / read routerDelegate here — the
+        // redirect's `context` is NOT under the GoRouter InheritedWidget during
+        // initial resolution or a refreshListenable firing (e.g. sign-out),
+        // which throws "No GoRouter found in context". Everything routing
+        // decisions need is already on `state`.
         final location = state.matchedLocation;
         if (RouteNames.publicRoutes.contains(location)) return null;
 

@@ -1,13 +1,18 @@
 import { Module } from '@nestjs/common';
 import { AppConfigModule } from '@app/config';
 import { StorageModule } from '@app/storage';
+import { InterestsModule } from '../interests/interests.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { DiscoverController } from './controllers/discover.controller';
+import { MatchesController } from './controllers/matches.controller';
 import { FeedService } from './services/feed.service';
 import { SearchService } from './services/search.service';
 import { PreferencesService } from './services/preferences.service';
+import { ShortlistService } from './services/shortlist.service';
 import { ProfileFeedMapper } from './mappers/profile-feed.mapper';
 import { FeedRepository } from './repositories/feed.repository';
 import { PreferenceRepository } from './repositories/preference.repository';
+import { ShortlistRepository } from './repositories/shortlist.repository';
 import { RECOMMENDATION_SERVICE } from './recommendation/recommendation.service';
 import { FilteredFeedStrategy } from './recommendation/filtered-feed.strategy';
 import { ProgressiveFallbackStrategy } from './recommendation/progressive-fallback.strategy';
@@ -24,15 +29,17 @@ import { PostgresSearchStrategy } from './search/postgres-search.strategy';
  * imported for presigning photo URLs.
  */
 @Module({
-  imports: [StorageModule, AppConfigModule],
-  controllers: [DiscoverController],
+  imports: [StorageModule, AppConfigModule, InterestsModule, NotificationsModule],
+  controllers: [DiscoverController, MatchesController],
   providers: [
     FeedService,
     SearchService,
     PreferencesService,
+    ShortlistService,
     ProfileFeedMapper,
     FeedRepository,
     PreferenceRepository,
+    ShortlistRepository,
     // Strategy bindings — the only lines that change when the algorithm
     // behind the feed/search evolves. ProgressiveFallbackStrategy is Tier 1
     // (FilteredFeedStrategy's exact `buildFeedWhere` query) plus progressive

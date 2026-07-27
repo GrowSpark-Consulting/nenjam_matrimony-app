@@ -16,6 +16,7 @@ import 'core/network/backend_connectivity_checker.dart';
 import 'core/widgets/backend_diagnostic_banner.dart';
 import 'firebase_options.dart';
 import 'core/providers/locale_provider.dart';
+import 'core/realtime/realtime_providers.dart';
 import 'core/router/app_router.dart';
 import 'core/router/route_names.dart';
 import 'core/services/storage_service.dart';
@@ -253,6 +254,11 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
 
     // Rebuilds the app instantly whenever the user changes language.
     final locale = ref.watch(localeProvider);
+
+    // Keeps the real-time socket connected to the signed-in user and turns
+    // inbound interest/notification/shortlist events into targeted provider
+    // refreshes (no manual pull-to-refresh needed). Alive for the whole session.
+    ref.watch(realtimeSyncProvider);
 
     // Initialize responsive screen scaling (design size based on standard phone: 375x812)
     return ScreenUtilInit(

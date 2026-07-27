@@ -1,17 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_providers.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
-import '../../data/repositories/mock_interests_repository.dart';
+import '../../data/repositories/interests_repository_impl.dart';
 import '../../domain/repositories/interests_repository.dart';
 
-/// [InterestsRepository]/[InterestRecord] and the real
-/// `InterestsRepositoryImpl` already existed — this file is the missing
-/// piece: nothing wired them to a provider before, since the backend
-/// `interests` controller those endpoints target is still an empty stub.
-/// Swap [MockInterestsRepository] for `InterestsRepositoryImpl` (already
-/// implemented, just dormant) once that controller ships.
+/// Real backend, live against the `interests` module (POST /matches/interest,
+/// GET /interests/received|sent, DELETE /interests/:id). Swapped from the
+/// dormant mock now that the controller ships — nothing else in the feature
+/// changed.
 final interestsRepositoryProvider = Provider<InterestsRepository>(
-  (ref) => MockInterestsRepository(),
+  (ref) => InterestsRepositoryImpl(ref.watch(apiClientProvider)),
 );
 
 /// Both lists together — sent and received interests are two views over
