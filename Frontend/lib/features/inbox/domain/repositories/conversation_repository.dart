@@ -2,6 +2,18 @@ import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../entities/conversation_entity.dart';
 import '../entities/message_entity.dart';
 
+/// Thrown by [ConversationRepository.uploadVoiceAttachment] when there is no
+/// working chat attachment-upload endpoint to send a recording to — see
+/// that method's doc comment. Never thrown as a "fake" failure; it means
+/// exactly what it says.
+class MediaUploadUnavailableException implements Exception {
+  const MediaUploadUnavailableException(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 /// A single page of a conversation's messages, oldest-to-newest within the
 /// page. [page] 1 is the most recent slice (what a freshly-opened thread
 /// shows); increasing [page] moves further into the past — i.e. what
@@ -72,6 +84,19 @@ abstract interface class ConversationRepository {
     MessageType type,
     String? attachmentUrl,
   });
+
+  /// Uploads a local voice-note recording and returns its hosted media URL
+  /// — call this BEFORE [sendMessage] for `type == MessageType.voice`,
+  /// mirroring the existing "upload attachment, then POST the message"
+  /// pattern already proposed for images (see
+  /// docs/development/chat-backend-handoff.md, §5.8). There is no real
+  /// endpoint for this yet on either implementation: the mock always throws
+  /// [MediaUploadUnavailableException] — there is nothing legitimate to
+  /// fake — and the API implementation attempts a real call to the
+  /// proposed (not-yet-registered) endpoint, so it fails for real rather
+  /// than pretending. Callers must never treat [localFilePath] itself as a
+  /// sendable `attachmentUrl`.
+  Future<String> uploadVoiceAttachment(String localFilePath);
 
   Future<void> pin(String conversationId, bool pinned);
 

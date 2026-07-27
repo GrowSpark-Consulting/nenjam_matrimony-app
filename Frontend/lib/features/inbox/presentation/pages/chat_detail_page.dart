@@ -175,6 +175,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                   ChatComposer(
                     onSend: (text) => messagesNotifier.send(text),
                     onSendAttachment: (File file) => messagesNotifier.sendImage(file.path),
+                    onSendVoice: (path, duration) => messagesNotifier.sendVoice(path, duration),
                     onTypingChanged: (isTyping) => ref
                         .read(conversationRepositoryProvider)
                         .setTyping(conversation.id, isTyping),

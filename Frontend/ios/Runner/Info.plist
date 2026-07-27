@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Allow Nenjam to use your camera to take profile and chat photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allow Nenjam to access photos you choose for your profile and chats.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Allow Nenjam to use your microphone to record voice messages.</string>
 </dict>
 </plist>

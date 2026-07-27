@@ -38,6 +38,22 @@ dependencies:
   # package needed.
   image_picker: ^1.1.2
   flutter_animate: ^4.5.2
+  # Runtime permission status/request for camera + notifications only —
+  # gallery access goes through the system photo picker and needs no
+  # runtime permission, so it deliberately does not use this package.
+  permission_handler: ^11.3.1
+  # Emoji keyboard for the chat composer — inserts plain Unicode text at the
+  # cursor via a TextEditingController, no custom message type involved.
+  emoji_picker_flutter: ^4.4.0
+  # Voice message recording (local file) and local playback preview. No
+  # chat media-upload endpoint exists yet — see
+  # docs/development/chat-backend-handoff.md — so these are wired for
+  # record/preview/cancel only until that lands.
+  record: ^6.2.1
+  audioplayers: ^6.0.0
+  # Already pulled in transitively (cached_network_image -> flutter_cache_manager)
+  # but voice recording needs its temp-directory API directly.
+  path_provider: ^2.1.5
 
   # Utilities
   cupertino_icons: ^1.0.8

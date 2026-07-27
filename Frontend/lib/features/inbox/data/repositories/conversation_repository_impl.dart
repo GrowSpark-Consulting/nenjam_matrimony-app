@@ -105,6 +105,17 @@ class ConversationRepositoryImpl implements ConversationRepository {
   }
 
   @override
+  Future<String> uploadVoiceAttachment(String localFilePath) async {
+    // Deliberately not faked — see this method's doc comment on the
+    // interface. Unlike [sendMessage]'s local-path passthrough (an
+    // already-documented shortcut for images), a voice message must never
+    // be reported as sent when nothing was actually uploaded.
+    throw const MediaUploadUnavailableException(
+      'Voice message upload is not available yet.',
+    );
+  }
+
+  @override
   Future<ConversationEntity> getOrCreateConversation(DiscoveryProfileEntity profile) async {
     final all = await _load();
     for (final c in all) {

@@ -157,7 +157,8 @@ class _DiscoverFeedView extends ConsumerWidget {
     // opposite-gender rule closed), or nobody matches even after the backend's
     // progressive fallback. Show a real empty state instead of the perpetual
     // "Searching for more souls…" footer, which reads like a stuck spinner.
-    final bool isEmpty = feed.stories.isEmpty &&
+    final bool isEmpty =
+        feed.stories.isEmpty &&
         feed.aiRecommended.isEmpty &&
         feed.recentlyJoined.isEmpty &&
         feed.verifiedProfiles.isEmpty &&
@@ -179,81 +180,85 @@ class _DiscoverFeedView extends ConsumerWidget {
               child: _DiscoverEmptyState(reason: feed.fallbackReason),
             )
           else ...[
-          // ── Fallback banner (backend widened the search) ───────────
-          if (feed.fallbackUsed)
-            const SliverToBoxAdapter(child: _FallbackBanner()),
+            // ── Fallback banner (backend widened the search) ───────────
+            if (feed.fallbackUsed)
+              const SliverToBoxAdapter(child: _FallbackBanner()),
 
-          // ── 2. New Today stories ───────────────────────────────────
-          if (feed.stories.isNotEmpty)
-            SliverToBoxAdapter(child: _NewTodaySection(stories: feed.stories)),
+            // ── 2. New Today stories ───────────────────────────────────
+            if (feed.stories.isNotEmpty)
+              SliverToBoxAdapter(
+                child: _NewTodaySection(stories: feed.stories),
+              ),
 
-          // ── 3. AI Recommended card ────────────────────────────────
-          if (feed.aiRecommended.isNotEmpty)
-            SliverToBoxAdapter(
-              child: _SectionPadding(
-                child: _FeedSection(
-                  title: l10n.discoverAiRecommendedTitle,
-                  icon: Icons.auto_awesome_rounded,
-                  iconColor: AppColors.accentGold,
-                  child: _LargeProfileCard(
-                    profile: feed.aiRecommended.first,
-                    showStats: false,
+            // ── 3. AI Recommended card ────────────────────────────────
+            if (feed.aiRecommended.isNotEmpty)
+              SliverToBoxAdapter(
+                child: _SectionPadding(
+                  child: _FeedSection(
+                    title: l10n.discoverAiRecommendedTitle,
+                    icon: Icons.auto_awesome_rounded,
+                    iconColor: AppColors.accentGold,
+                    child: _LargeProfileCard(
+                      profile: feed.aiRecommended.first,
+                      showStats: false,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-          // ── 4. Recently Joined ─────────────────────────────────────
-          if (feed.recentlyJoined.isNotEmpty)
-            SliverToBoxAdapter(
-              child: _SectionPadding(
-                child: _FeedSection(
-                  title: l10n.discoverRecentlyJoinedTitle,
-                  child: _HorizontalCompactCards(profiles: feed.recentlyJoined),
-                ),
-              ),
-            ),
-
-          // ── 5. Verified Profiles card ─────────────────────────────
-          if (feed.verifiedProfiles.isNotEmpty)
-            SliverToBoxAdapter(
-              child: _SectionPadding(
-                child: _FeedSection(
-                  title: l10n.discoverVerifiedProfilesTitle,
-                  icon: Icons.verified_rounded,
-                  iconColor: AppColors.verifiedBlue,
-                  child: _LargeProfileCard(
-                    profile: feed.verifiedProfiles.first,
-                    showStats: true,
+            // ── 4. Recently Joined ─────────────────────────────────────
+            if (feed.recentlyJoined.isNotEmpty)
+              SliverToBoxAdapter(
+                child: _SectionPadding(
+                  child: _FeedSection(
+                    title: l10n.discoverRecentlyJoinedTitle,
+                    child: _HorizontalCompactCards(
+                      profiles: feed.recentlyJoined,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-          // ── 6. Near You grid ──────────────────────────────────────
-          if (feed.nearYou.isNotEmpty)
-            SliverToBoxAdapter(
-              child: _SectionPadding(
-                child: _FeedSection(
-                  title: l10n.discoverNearYouTitle,
-                  icon: Icons.location_on_rounded,
-                  iconColor: AppColors.accentGold,
-                  child: _NearYouGrid(profiles: feed.nearYou),
+            // ── 5. Verified Profiles card ─────────────────────────────
+            if (feed.verifiedProfiles.isNotEmpty)
+              SliverToBoxAdapter(
+                child: _SectionPadding(
+                  child: _FeedSection(
+                    title: l10n.discoverVerifiedProfilesTitle,
+                    icon: Icons.verified_rounded,
+                    iconColor: AppColors.verifiedBlue,
+                    child: _LargeProfileCard(
+                      profile: feed.verifiedProfiles.first,
+                      showStats: true,
+                    ),
+                  ),
                 ),
               ),
-            ),
 
-          // ── 7. Premium Members ─────────────────────────────────────
-          if (feed.premiumMembers.isNotEmpty)
-            SliverToBoxAdapter(
-              child: _PremiumMembersSection(profiles: feed.premiumMembers),
-            ),
+            // ── 6. Near You grid ──────────────────────────────────────
+            if (feed.nearYou.isNotEmpty)
+              SliverToBoxAdapter(
+                child: _SectionPadding(
+                  child: _FeedSection(
+                    title: l10n.discoverNearYouTitle,
+                    icon: Icons.location_on_rounded,
+                    iconColor: AppColors.accentGold,
+                    child: _NearYouGrid(profiles: feed.nearYou),
+                  ),
+                ),
+              ),
 
-          // ── Footer ────────────────────────────────────────────────
-          const SliverToBoxAdapter(child: _FeedFooter()),
+            // ── 7. Premium Members ─────────────────────────────────────
+            if (feed.premiumMembers.isNotEmpty)
+              SliverToBoxAdapter(
+                child: _PremiumMembersSection(profiles: feed.premiumMembers),
+              ),
 
-          // Bottom padding for nav bar
-          const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl3)),
+            // ── Footer ────────────────────────────────────────────────
+            const SliverToBoxAdapter(child: _FeedFooter()),
+
+            // Bottom padding for nav bar
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl3)),
           ],
         ],
       ),
@@ -365,8 +370,14 @@ class _DiscoverAppBar extends StatelessWidget {
                     top: 6,
                     right: 6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
                       decoration: const BoxDecoration(
                         color: AppColors.error,
                         borderRadius: BorderRadius.all(Radius.circular(999)),
@@ -423,7 +434,9 @@ class _FallbackBanner extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.accentGold.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          border: Border.all(color: AppColors.accentGold.withValues(alpha: 0.25)),
+          border: Border.all(
+            color: AppColors.accentGold.withValues(alpha: 0.25),
+          ),
         ),
         child: Row(
           children: [
@@ -517,10 +530,10 @@ class _StoryBubble extends StatelessWidget {
       onTap: profile == null
           ? null
           : () => openProfileDetail(
-                context,
-                profile,
-                heroTag: 'profile-photo-discover-${profile.id}',
-              ),
+              context,
+              profile,
+              heroTag: 'profile-photo-discover-${profile.id}',
+            ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -979,7 +992,9 @@ class _CardButtonsState extends ConsumerState<_CardButtons> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final status = ref.watch(interestRelationshipStatusProvider(widget.profile.id));
+    final status = ref.watch(
+      interestRelationshipStatusProvider(widget.profile.id),
+    );
     final settled = interestButtonIsSettled(status);
     final shortlisted = ref.watch(isShortlistedProvider(widget.profile.id));
 
@@ -1026,11 +1041,16 @@ class _CardButtonsState extends ConsumerState<_CardButtons> {
                       const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     else
                       Icon(
-                        settled ? Icons.check_circle_rounded : Icons.favorite_rounded,
+                        settled
+                            ? Icons.check_circle_rounded
+                            : Icons.favorite_rounded,
                         size: 20,
                         color: settled ? Colors.white : const Color(0xFF241A00),
                       ),
@@ -1039,7 +1059,9 @@ class _CardButtonsState extends ConsumerState<_CardButtons> {
                       child: Text(
                         interestButtonLabel(status, l10n),
                         style: AppTypography.button.copyWith(
-                          color: settled ? Colors.white : const Color(0xFF241A00),
+                          color: settled
+                              ? Colors.white
+                              : const Color(0xFF241A00),
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
                         ),
@@ -1064,7 +1086,8 @@ class _CardButtonsState extends ConsumerState<_CardButtons> {
                     ? Icons.bookmark_rounded
                     : Icons.bookmark_border_rounded,
                 label: l10n.profileCardShortlist,
-                onTap: () => handleShortlistToggle(context, ref, widget.profile),
+                onTap: () =>
+                    handleShortlistToggle(context, ref, widget.profile),
                 iconColor: shortlisted
                     ? AppColors.accentGoldLight
                     : Colors.white,
@@ -1213,7 +1236,8 @@ class _CompactProfileCard extends ConsumerStatefulWidget {
   const _CompactProfileCard({required this.profile});
 
   @override
-  ConsumerState<_CompactProfileCard> createState() => _CompactProfileCardState();
+  ConsumerState<_CompactProfileCard> createState() =>
+      _CompactProfileCardState();
 }
 
 class _CompactProfileCardState extends ConsumerState<_CompactProfileCard> {
@@ -1360,9 +1384,13 @@ class _CompactProfileCardState extends ConsumerState<_CompactProfileCard> {
                               if (mounted) setState(() => _isSending = false);
                             },
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: settled ? AppColors.success : AppColors.accentGold,
+                        foregroundColor: settled
+                            ? AppColors.success
+                            : AppColors.accentGold,
                         side: BorderSide(
-                          color: settled ? AppColors.success : AppColors.accentGold,
+                          color: settled
+                              ? AppColors.success
+                              : AppColors.accentGold,
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         minimumSize: Size.zero,
@@ -1520,9 +1548,13 @@ class _NearYouCardState extends ConsumerState<_NearYouCard> {
                               if (mounted) setState(() => _isSending = false);
                             },
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: settled ? AppColors.success : AppColors.accentGold,
+                        foregroundColor: settled
+                            ? AppColors.success
+                            : AppColors.accentGold,
                         side: BorderSide(
-                          color: settled ? AppColors.success : AppColors.accentGold,
+                          color: settled
+                              ? AppColors.success
+                              : AppColors.accentGold,
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         minimumSize: Size.zero,

@@ -1,4 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Camera capture for profile/chat photos (Profile > Camera, Chat > Camera). -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Runtime notification permission on Android 13+ (API 33); requested only
+         after the user opts in via the in-app "Enable Notifications" prompt. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Voice message recording (Chat composer's mic button). Requested only
+         when the user actually taps to record, never at startup. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Gallery photo selection deliberately requests NO storage/media
+         permission — image_picker uses the system Photo Picker, which needs
+         none, so READ_MEDIA_IMAGES/READ_EXTERNAL_STORAGE are intentionally
+         NOT declared here. -->
+
     <application
         android:label="nenjam_matrimony"
         android:name="${applicationName}"

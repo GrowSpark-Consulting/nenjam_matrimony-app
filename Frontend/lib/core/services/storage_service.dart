@@ -133,6 +133,16 @@ class StorageService {
     await _prefs.setBool(AppConstants.keyNotificationsEnabled, enabled);
   }
 
+  /// Whether [NotificationPermissionGate] has already shown its one-time
+  /// explanation dialog (regardless of the user's choice) — prevents
+  /// repeatedly prompting on every app launch.
+  bool get hasPromptedNotificationPermission =>
+      _prefs.getBool(AppConstants.keyNotificationPermissionPrompted) ?? false;
+
+  Future<void> setNotificationPermissionPrompted() async {
+    await _prefs.setBool(AppConstants.keyNotificationPermissionPrompted, true);
+  }
+
   // ─── Navigation / App State Restoration ───────────────────────────
   String? get lastRoute => _prefs.getString(AppConstants.keyLastRoute);
 

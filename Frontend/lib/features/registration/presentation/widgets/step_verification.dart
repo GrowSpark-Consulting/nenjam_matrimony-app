@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/errors/auth_error_mapper.dart';
+import '../../../../core/services/media/attachment_picker.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
@@ -57,7 +58,7 @@ class StepVerification extends ConsumerStatefulWidget {
 }
 
 class _StepVerificationState extends ConsumerState<StepVerification> {
-  final _picker = ImagePicker();
+  final _attachmentPicker = AttachmentPicker();
   final Set<VerificationDocumentType> _pickingInProgress = {};
   bool _mobileSheetOpen = false;
   bool _emailSheetOpen = false;
@@ -178,20 +179,14 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
       final source = await _chooseSource();
       if (source == null || !mounted) return;
 
-      XFile? picked;
-      try {
-        picked = await _picker.pickImage(
-          source: source,
-          maxWidth: 2000,
-          imageQuality: 85,
-        );
-      } catch (_) {
-        _snack('Could not open the image picker.');
-        return;
-      }
-      if (picked == null || !mounted) return; // user cancelled
+      final file = await _attachmentPicker.pick(
+        context,
+        source,
+        maxWidth: 2000,
+        imageQuality: 85,
+      );
+      if (file == null || !mounted) return; // cancelled, denied, or failed
 
-      final file = File(picked.path);
       final sizeBytes = await file.length();
       if (!mounted) return;
       if (sizeBytes > _kMaxDocumentBytes) {

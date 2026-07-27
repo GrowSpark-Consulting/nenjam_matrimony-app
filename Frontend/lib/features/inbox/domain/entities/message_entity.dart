@@ -3,11 +3,15 @@
 /// as the thread's state advances, or `failed` if it errors.
 enum MessageStatus { sending, sent, delivered, read, failed }
 
-/// Only `text` and `image` are actually composable today — `document`/
-/// `voice` exist so [MessageEntity]/message bubbles already know how to
-/// render the mock history's non-text entries and so the composer's
-/// document/voice affordances have a real type to hand off to once they're
-/// wired to a backend.
+/// `text`, `image`, and `voice` are composable today — `voice` recording is
+/// real (see `ChatComposer`'s mic button / `VoiceRecorderService`), but
+/// sending one always ends in [MessageStatus.failed] because no chat
+/// attachment-upload endpoint exists yet (see
+/// docs/development/chat-backend-handoff.md and
+/// `ConversationRepository.uploadVoiceAttachment`) — recording and local
+/// playback preview work standalone regardless. `document` exists only so
+/// [MessageEntity]/message bubbles already know how to render that shape if
+/// the mock history ever seeds one; nothing produces it yet.
 enum MessageType { text, image, document, voice }
 
 /// A single message inside a [ConversationEntity]'s thread.
@@ -23,6 +27,15 @@ class MessageEntity {
   /// URL (or, before a real upload endpoint exists, a local file path) for
   /// `type == image`/`document`/`voice` messages. Null for plain text.
   final String? attachmentUrl;
+
+  /// Recording length for `type == voice` messages — known immediately for
+  /// one this client just recorded, or derived on playback (decoded from
+  /// the audio file) for one arriving from elsewhere. Like
+  /// [clientMessageId], this has NO backing `ChatMessage` column (see
+  /// docs/development/chat-backend-handoff.md) — it's never sent to or read
+  /// from the backend, purely a local/derived display value. Null for
+  /// every other type.
+  final Duration? voiceDuration;
 
   /// Client-generated id set on an outgoing message the moment it's
   /// optimistically appended to the thread — a real backend is expected to
@@ -44,6 +57,7 @@ class MessageEntity {
     this.status = MessageStatus.sent,
     this.type = MessageType.text,
     this.attachmentUrl,
+    this.voiceDuration,
     this.clientMessageId,
   });
 
@@ -51,6 +65,7 @@ class MessageEntity {
     String? id,
     MessageStatus? status,
     String? attachmentUrl,
+    Duration? voiceDuration,
   }) {
     return MessageEntity(
       id: id ?? this.id,
@@ -61,6 +76,7 @@ class MessageEntity {
       status: status ?? this.status,
       type: type,
       attachmentUrl: attachmentUrl ?? this.attachmentUrl,
+      voiceDuration: voiceDuration ?? this.voiceDuration,
       clientMessageId: clientMessageId,
     );
   }

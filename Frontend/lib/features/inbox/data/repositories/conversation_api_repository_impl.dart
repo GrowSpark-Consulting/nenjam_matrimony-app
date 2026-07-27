@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_exception.dart';
@@ -187,6 +189,31 @@ class ConversationApiRepositoryImpl implements ConversationRepository {
   @override
   Future<void> setTyping(String conversationId, bool isTyping) async {
     // No-op — see this class's doc comment.
+  }
+
+  @override
+  Future<String> uploadVoiceAttachment(String localFilePath) async {
+    // Real call against the proposed (not-yet-registered — see
+    // ApiEndpoints.chatAttachmentUpload's doc comment) endpoint. Nothing
+    // here fakes success: until that endpoint exists this fails with a
+    // genuine network/HTTP error, which `MessagesNotifier` surfaces as the
+    // same truthful `MessageStatus.failed` any other real send failure
+    // would.
+    final response = await _apiClient.upload<Map<String, dynamic>>(
+      ApiEndpoints.chatAttachmentUpload,
+      data: FormData.fromMap({
+        'file': await MultipartFile.fromFile(localFilePath),
+        'type': 'AUDIO',
+      }),
+    );
+    final data = unwrapOrThrow(response.statusCode, response.data) ?? {};
+    final mediaUrl = data['mediaUrl'] as String?;
+    if (mediaUrl == null) {
+      throw const MediaUploadUnavailableException(
+        'Voice message upload is not available yet.',
+      );
+    }
+    return mediaUrl;
   }
 
   @override

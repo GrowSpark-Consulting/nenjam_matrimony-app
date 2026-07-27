@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -105,6 +107,13 @@ class _MessageBubbleContent extends StatelessWidget {
         children: [
           if (message.type == MessageType.image && message.attachmentUrl != null)
             _MessageImage(url: message.attachmentUrl!, sending: message.status == MessageStatus.sending)
+          else if (message.type == MessageType.voice && message.attachmentUrl != null)
+            _VoiceBubblePlayer(
+              url: message.attachmentUrl!,
+              knownDuration: message.voiceDuration,
+              color: textColor,
+              sending: message.status == MessageStatus.sending,
+            )
           else
             Text(message.text, style: AppTypography.chatMessages.copyWith(color: textColor)),
           Padding(
@@ -229,4 +238,141 @@ class _MessageImageError extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A voice message bubble's play/pause + progress + duration row.
+///
+/// [url] is either a real `http(s)` URL (once a real upload/fetch exists)
+/// or a local file path (this client's own not-yet-uploaded recording — see
+/// docs/development/chat-backend-handoff.md). [knownDuration] comes from
+/// [MessageEntity.voiceDuration] when this client is the one that recorded
+/// it; for anything else, duration is only known once
+/// `onDurationChanged` fires after the first play — shown as `--:--` until
+/// then, never faked.
+///
+/// Lazily creates its own [AudioPlayer] on first play so a long message
+/// list doesn't instantiate one player per bubble up front; disposed with
+/// this widget.
+class _VoiceBubblePlayer extends StatefulWidget {
+  final String url;
+  final Duration? knownDuration;
+  final Color color;
+  final bool sending;
+
+  const _VoiceBubblePlayer({
+    required this.url,
+    required this.knownDuration,
+    required this.color,
+    required this.sending,
+  });
+
+  @override
+  State<_VoiceBubblePlayer> createState() => _VoiceBubblePlayerState();
+}
+
+class _VoiceBubblePlayerState extends State<_VoiceBubblePlayer> {
+  AudioPlayer? _player;
+  bool _isPlaying = false;
+  Duration _position = Duration.zero;
+  Duration? _duration;
+  StreamSubscription<Duration>? _positionSub;
+  StreamSubscription<Duration>? _durationSub;
+  StreamSubscription<PlayerState>? _stateSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _duration = widget.knownDuration;
+  }
+
+  @override
+  void dispose() {
+    unawaited(_positionSub?.cancel());
+    unawaited(_durationSub?.cancel());
+    unawaited(_stateSub?.cancel());
+    unawaited(_player?.dispose());
+    super.dispose();
+  }
+
+  void _ensurePlayer() {
+    if (_player != null) return;
+    final player = AudioPlayer();
+    _positionSub = player.onPositionChanged.listen((position) {
+      if (mounted) setState(() => _position = position);
+    });
+    _durationSub = player.onDurationChanged.listen((duration) {
+      if (mounted) setState(() => _duration = duration);
+    });
+    _stateSub = player.onPlayerStateChanged.listen((playerState) {
+      if (!mounted) return;
+      setState(() {
+        _isPlaying = playerState == PlayerState.playing;
+        if (playerState == PlayerState.completed) _position = Duration.zero;
+      });
+    });
+    _player = player;
+  }
+
+  Future<void> _togglePlay() async {
+    if (widget.sending) return;
+    _ensurePlayer();
+    final player = _player!;
+    if (_isPlaying) {
+      await player.pause();
+      return;
+    }
+    final source =
+        widget.url.startsWith('http') ? UrlSource(widget.url) : DeviceFileSource(widget.url);
+    await player.play(source);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total = _duration;
+    final progress = total == null || total.inMilliseconds == 0
+        ? 0.0
+        : (_position.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0);
+    final displayed = _isPlaying || _position > Duration.zero ? _position : total;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          visualDensity: VisualDensity.compact,
+          tooltip: _isPlaying ? 'Pause' : 'Play',
+          onPressed: widget.sending ? null : _togglePlay,
+          icon: Icon(
+            _isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
+            color: widget.color,
+            size: 30,
+          ),
+        ),
+        SizedBox(
+          width: 100,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 3,
+              backgroundColor: widget.color.withValues(alpha: 0.25),
+              color: widget.color,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          displayed == null ? '--:--' : _formatVoiceDuration(displayed),
+          style: AppTypography.labelSmall.copyWith(color: widget.color),
+        ),
+      ],
+    );
+  }
+}
+
+String _formatVoiceDuration(Duration d) {
+  final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+  final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+  return '$m:$s';
 }

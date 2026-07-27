@@ -1,10 +1,9 @@
-import 'dart:io';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/services/media/attachment_picker.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../data/repositories/photo_repository.dart';
@@ -27,7 +26,7 @@ class PhotoManagerSection extends ConsumerStatefulWidget {
 }
 
 class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
-  final _picker = ImagePicker();
+  final _attachmentPicker = AttachmentPicker();
 
   @override
   Widget build(BuildContext context) {
@@ -167,22 +166,16 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
     String? replaceId,
   }) async {
     final source = await _chooseSource();
-    if (source == null) return;
+    if (source == null || !mounted) return;
 
-    final XFile? picked;
-    try {
-      picked = await _picker.pickImage(
-        source: source,
-        maxWidth: 1080,
-        imageQuality: 85,
-      );
-    } catch (_) {
-      _snack('Could not open the image picker.');
-      return;
-    }
-    if (picked == null) return; // user cancelled
+    final file = await _attachmentPicker.pick(
+      context,
+      source,
+      maxWidth: 1080,
+      imageQuality: 85,
+    );
+    if (file == null || !mounted) return; // cancelled, denied, or failed
 
-    final file = File(picked.path);
     final notifier = ref.read(myPhotosProvider.notifier);
     final currentCount = ref.read(myPhotosProvider).valueOrNull?.length ?? 0;
 

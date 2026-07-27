@@ -50,6 +50,12 @@ abstract final class AppConstants {
   static const String keyOnboardingDone = 'onboarding_done';
   static const String keyNotificationsEnabled = 'notifications_enabled';
 
+  /// Whether the Nenjam notification-permission explanation dialog has
+  /// already been shown once. Gates [NotificationPermissionGate] so the
+  /// user is never re-prompted every app launch after choosing "Not now".
+  static const String keyNotificationPermissionPrompted =
+      'notification_permission_prompted';
+
   /// Phone number captured during signup, held locally only until the number
   /// is verified and linked to the Firebase account. Not a profile store.
   static const String keyPendingPhone = 'pending_signup_phone';

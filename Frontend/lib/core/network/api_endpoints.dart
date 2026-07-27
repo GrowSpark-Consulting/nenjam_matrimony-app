@@ -88,6 +88,13 @@ abstract final class ApiEndpoints {
   static const String conversations = '/chat/conversations';
   static const String messages = '/chat/messages';
 
+  /// Proposed — no chat attachment-upload endpoint exists on the backend
+  /// yet (see docs/development/chat-backend-handoff.md, §5.8). Used by
+  /// `ConversationApiRepositoryImpl.uploadVoiceAttachment` so that call is
+  /// real code ready to work the moment this endpoint ships, rather than
+  /// something invented and faked client-side.
+  static const String chatAttachmentUpload = '/chat/attachments';
+
   // ─── Notifications ───────────────────────────────────────────────
   static const String notifications = '/notifications';
   static const String notificationSettings = '/notifications/settings';

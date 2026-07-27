@@ -319,7 +319,16 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
       for (final m in current)
         if (m.clientMessageId == clientMessageId) m.copyWith(status: MessageStatus.sending) else m,
     ]);
-    await _resolve(target.copyWith(status: MessageStatus.sending));
+    final retrying = target.copyWith(status: MessageStatus.sending);
+    // Voice must always retry through the upload-first path — never
+    // [_resolve], which would hand the mock repository the local
+    // recording's file path as if it were already hosted (see
+    // [_resolveVoice]'s doc comment).
+    if (target.type == MessageType.voice) {
+      await _resolveVoice(retrying);
+    } else {
+      await _resolve(retrying);
+    }
   }
 
   /// Sends [file] as an image attachment — same optimistic/reconcile
@@ -343,6 +352,83 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
     final current = state.valueOrNull ?? const <MessageEntity>[];
     state = AsyncValue.data([...current, optimistic]);
     await _resolve(optimistic);
+  }
+
+  /// Sends a recorded voice note. Unlike [send]/[sendImage], this does NOT
+  /// go through [_resolve] — that shared path hands `attachmentUrl`
+  /// straight to `sendMessage`, which the mock repository accepts as-is
+  /// (already documented as a shortcut for images, see
+  /// [ConversationRepositoryImpl.sendMessage]). Doing that for a voice note
+  /// would report an unuploaded local recording as sent, which this
+  /// feature must never do (see docs/development/chat-backend-handoff.md).
+  /// [_resolveVoice] uploads first and only ever gives `sendMessage` a real
+  /// hosted URL — today that upload has nothing to succeed against, so the
+  /// message truthfully lands in [MessageStatus.failed] with the existing
+  /// tap-to-retry affordance, exactly like any other real send failure.
+  Future<void> sendVoice(String localFilePath, Duration duration) async {
+    final clientMessageId = _newClientMessageId(arg);
+    final optimistic = MessageEntity(
+      id: clientMessageId,
+      conversationId: arg,
+      text: '',
+      sentAt: DateTime.now(),
+      isMine: true,
+      status: MessageStatus.sending,
+      type: MessageType.voice,
+      attachmentUrl: localFilePath,
+      voiceDuration: duration,
+      clientMessageId: clientMessageId,
+    );
+    final current = state.valueOrNull ?? const <MessageEntity>[];
+    state = AsyncValue.data([...current, optimistic]);
+    await _resolveVoice(optimistic);
+  }
+
+  /// Upload-first resolution for [sendVoice]/[retry] — never hands
+  /// [ConversationRepository.sendMessage] a local file path directly.
+  /// [optimistic.attachmentUrl] must still be the local recording path;
+  /// [optimistic.voiceDuration] is preserved onto the confirmed message
+  /// since the backend has no column to echo it back from (see
+  /// [MessageEntity.voiceDuration]'s doc comment).
+  Future<void> _resolveVoice(MessageEntity optimistic) async {
+    final conversationId = arg;
+    final clientMessageId = optimistic.clientMessageId!;
+    try {
+      final hostedUrl = await ref
+          .read(conversationRepositoryProvider)
+          .uploadVoiceAttachment(optimistic.attachmentUrl!);
+      final sent = await ref.read(conversationRepositoryProvider).sendMessage(
+            conversationId,
+            '',
+            clientMessageId: clientMessageId,
+            type: MessageType.voice,
+            attachmentUrl: hostedUrl,
+          );
+      final withDuration = sent.copyWith(voiceDuration: optimistic.voiceDuration);
+      final latest = state.valueOrNull;
+      if (latest != null) {
+        state = AsyncValue.data([
+          for (final m in latest)
+            if (m.clientMessageId == clientMessageId) withDuration else m,
+        ]);
+      }
+      ref.read(conversationsNotifierProvider.notifier).applyLastMessage(
+            conversationId,
+            withDuration,
+            preview: '🎤 Voice message',
+          );
+    } catch (_) {
+      final latest = state.valueOrNull;
+      if (latest != null) {
+        state = AsyncValue.data([
+          for (final m in latest)
+            if (m.clientMessageId == clientMessageId)
+              m.copyWith(status: MessageStatus.failed)
+            else
+              m,
+        ]);
+      }
+    }
   }
 
   /// Shared tail end of [send]/[retry]/[sendImage]: calls the repository

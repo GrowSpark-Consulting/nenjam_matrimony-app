@@ -281,14 +281,15 @@ of the empty stubs listed in §1:
 7. **Delivered status** (see §2.1) — either add a column/event for it, or the frontend
    accepts that real conversations will only ever show sent/read, never delivered,
    which is a product decision worth making explicitly rather than by omission.
-8. **Attachment upload endpoint** — nothing proposed yet. `ConversationApiRepositoryImpl.
-   sendMessage`'s `mediaUrl` assumes the file was already uploaded through a *separate*
-   call before the message POST, mirroring the existing pattern
-   `PhotoRepository`/`ApiClient.upload()` uses for profile photos — but no endpoint
-   exists for chat attachments specifically. Until one does, the mock repository just
-   accepts the local file path as-is so the send/preview/failed-state UI can be
-   exercised end-to-end (see §7) — this is explicitly not a real upload and must not be
-   mistaken for one.
+8. **Attachment upload endpoint** — `ConversationApiRepositoryImpl.uploadVoiceAttachment`
+   now calls a proposed `POST {ApiEndpoints.chatAttachmentUpload}` (`/chat/attachments`)
+   for voice notes specifically — see §10 for the full voice-message requirements. For
+   images, `sendMessage`'s `mediaUrl` still assumes the file was already uploaded
+   through a *separate* call before the message POST (same pattern), and the mock
+   repository still just accepts the local file path as-is for images so that
+   send/preview/failed-state UI can be exercised end-to-end (see §7) — this is
+   explicitly not a real upload and must not be mistaken for one. Voice notes
+   deliberately do NOT get this same mock shortcut — see §10.
 9. **Realtime chat events** (§6) — the entire `ChatGateway` implementation.
 
 ---
@@ -379,3 +380,78 @@ Explicitly not real, isolated to `ConversationRepositoryImpl`/`ConversationMockD
 6. `ChatGateway` + realtime event contract (§6) — chat is fully usable via polling/
    refresh without this (same as Interests/Notifications/Shortlist today), but won't
    feel "live" until it exists.
+7. Voice message upload endpoint (§10) — blocks voice messages specifically; text/image
+   chat can ship without it, exactly like #5 above.
+
+---
+
+## 10. Voice messages
+
+Frontend now has real microphone recording (`VoiceRecorderService`, using the `record`
+package, gated by `AppPermissionService`/`Permission.microphone` — same
+explain-then-request-then-Open-Settings flow as Camera), local playback preview before
+sending (`_VoicePreviewBar` in `chat_composer.dart`), and a voice message bubble with
+play/pause/progress/duration (`_VoiceBubblePlayer` in `message_bubble.dart`) — all of
+this works standalone against a local `.m4a` file with zero backend involvement.
+
+**Sending one always resolves to `MessageStatus.failed` today, on purpose.**
+`MessagesNotifier.sendVoice`/`_resolveVoice` call
+`ConversationRepository.uploadVoiceAttachment` *before* ever calling `sendMessage`, and
+never hand `sendMessage` a local file path as if it were a hosted `mediaUrl` (contrast
+with images, §5.7/§7, which still do this as a documented, image-only shortcut). The
+mock implementation of `uploadVoiceAttachment` always throws
+`MediaUploadUnavailableException` — there is nothing legitimate to fake — and the API
+implementation attempts a real call to the endpoint below, so it fails with a genuine
+HTTP/network error until that endpoint exists. Either way the user sees the existing
+`MessageStatus.failed` bubble with tap-to-retry, never a false "sent".
+
+What `ConversationApiRepositoryImpl.uploadVoiceAttachment` already calls, ready to work
+the moment the endpoint exists — `POST {ApiEndpoints.chatAttachmentUpload}`
+(`/chat/attachments`, proposed) as multipart form data (`file`, `type: "AUDIO"`),
+expecting `{ mediaUrl }` back:
+
+1. **Authenticated upload** — same `AuthInterceptor`-attached Firebase ID token every
+   other endpoint already gets; the real access-control guard is #9 below, not a
+   separate auth mechanism.
+2. **Allowed audio MIME types** — the frontend records AAC-LC in an MPEG-4 container
+   (`record` package's `AudioEncoder.aacLc` default, `.m4a` file extension) — expect
+   `audio/mp4`, `audio/m4a`, or `audio/aac` depending on how the client reports it;
+   reject anything else server-side.
+3. **Max file size/duration** — not enforced client-side beyond a 500ms minimum (guards
+   against an accidental instant tap producing an unplayable clip, not a security
+   control). Pick and enforce real caps server-side (e.g. a couple of minutes / a few
+   MB) — frontend checks are UX only, never authorization, and must not be trusted as
+   validation.
+4. **Storage** — not decided here; same open question as image uploads (§5.7) —
+   presumably the same object-storage backend once one exists for profile/chat photos.
+5. **Returned media URL/key** — `{ mediaUrl }` in the upload response, matching the
+   shape `uploadVoiceAttachment` already expects.
+6. **`ChatMessage.type = AUDIO`** — already the correct enum value (§2); the frontend's
+   `MessageType.voice` <-> backend `AUDIO` mapping already exists in
+   `_messageTypeToBackend`/`_messageTypeFromBackend`, no change needed.
+7. **`mediaUrl`** on the created `ChatMessage` — the same column images will use; no
+   schema change needed for this part.
+8. **Duration** — `ChatMessage` has NO column for this (§2) and none is proposed here.
+   The frontend derives/displays duration purely client-side
+   (`MessageEntity.voiceDuration` — known immediately for a message this client just
+   recorded, or decoded from the audio file on first playback for anything else) and
+   never depends on the backend for it. Add a column only if a real product need
+   emerges for showing duration without fetching/decoding audio first (e.g. a list
+   preview) — not required for the bubble itself to work.
+9. **Authorization based on accepted interest** — exactly the chat-eligibility gating
+   §5.4 already specifies for `sendMessage`/`getOrCreateConversation`: reject the
+   upload (or at minimum the follow-up `sendMessage`) unless an ACCEPTED
+   `ExpressInterest` exists between the uploader and the room's other participant.
+   Uploading media into a room you can't message into should not be possible.
+10. **Realtime delivery** — no new event type needed beyond whatever §6 ultimately
+    defines for "new message" — a voice message is just a `ChatMessage` with
+    `type: AUDIO` and a `mediaUrl`; the same payload-push design decision in §6 covers
+    it without a voice-specific event.
+11. **Deletion/access rules** — the same `ConversationParticipantGuard` gating (§5.3)
+    should apply to *reading* a voice message's `mediaUrl` (e.g. a signed/expiring URL,
+    or at minimum checking the requester is a room participant before resolving it) — a
+    raw permanent public URL would let anyone with the link listen regardless of room
+    membership. Not designed here, flagging that it needs an explicit decision.
+
+None of the above blocks recording, cancelling, re-recording, or local playback preview
+— only "Send" is gated on it, and it fails visibly today, never silently or falsely.
