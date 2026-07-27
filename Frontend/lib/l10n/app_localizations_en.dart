@@ -782,6 +782,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inboxComposerVoice => 'Voice message';
 
   @override
+  String inboxBlockConfirmTitle(String name) {
+    return 'Block $name?';
+  }
+
+  @override
+  String get inboxBlockConfirmMessage =>
+      'They won\'t be able to message you, and you won\'t see each other in Discover anymore.';
+
+  @override
+  String get inboxDeleteConfirmTitle => 'Delete conversation?';
+
+  @override
+  String get inboxDeleteConfirmMessage =>
+      'This removes the conversation from your inbox. This can\'t be undone.';
+
+  @override
+  String get inboxRetrySend => 'Tap to retry';
+
+  @override
+  String get inboxNewMessages => 'New messages';
+
+  @override
+  String get inboxChooseFromGallery => 'Choose from gallery';
+
+  @override
+  String get inboxTakePhoto => 'Take a photo';
+
+  @override
+  String get inboxRemoveAttachment => 'Remove';
+
+  @override
+  String get messageGateNoInterest =>
+      'Send an interest first to start chatting.';
+
+  @override
+  String get messageGatePending =>
+      'Your interest is pending. You can start chatting once they accept it.';
+
+  @override
+  String get messageGateRespondFirst =>
+      'Respond to their interest first to start chatting.';
+
+  @override
+  String get messageGateDeclined => 'This interest was declined.';
+
+  @override
+  String get messageGateBlocked => 'You can\'t message this conversation.';
+
+  @override
+  String get messageGateError => 'Unable to open chat. Please try again.';
+
+  @override
   String get notificationsTitle => 'Notifications';
 
   @override

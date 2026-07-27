@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -15,7 +17,12 @@ import '../../domain/entities/message_entity.dart';
 class MessageBubble extends StatefulWidget {
   final MessageEntity message;
 
-  const MessageBubble({super.key, required this.message});
+  /// Called when the user taps a [MessageStatus.failed] bubble to resend
+  /// it. Null (the default) hides that affordance — Chat Detail always
+  /// supplies it via [MessagesNotifier.retry].
+  final ValueChanged<String>? onRetry;
+
+  const MessageBubble({super.key, required this.message, this.onRetry});
 
   @override
   State<MessageBubble> createState() => _MessageBubbleState();
@@ -45,7 +52,7 @@ class _MessageBubbleState extends State<MessageBubble> with SingleTickerProvider
         opacity: _fade,
         child: SlideTransition(
           position: _slide,
-          child: _MessageBubbleContent(message: widget.message),
+          child: _MessageBubbleContent(message: widget.message, onRetry: widget.onRetry),
         ),
       ),
     );
@@ -54,14 +61,18 @@ class _MessageBubbleState extends State<MessageBubble> with SingleTickerProvider
 
 class _MessageBubbleContent extends StatelessWidget {
   final MessageEntity message;
+  final ValueChanged<String>? onRetry;
 
-  const _MessageBubbleContent({required this.message});
+  const _MessageBubbleContent({required this.message, this.onRetry});
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context);
     final isMine = message.isMine;
+    final canRetry = message.status == MessageStatus.failed &&
+        message.clientMessageId != null &&
+        onRetry != null;
 
     final bubbleColor = isMine
         ? AppColors.primary
@@ -70,28 +81,38 @@ class _MessageBubbleContent extends StatelessWidget {
         ? Colors.white
         : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
 
-    return Align(
-      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        margin: const EdgeInsets.symmetric(vertical: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: bubbleColor,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isMine ? 16 : 4),
-            bottomRight: Radius.circular(isMine ? 4 : 16),
-          ),
+    final bubble = Container(
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      padding: EdgeInsets.fromLTRB(
+        message.type == MessageType.image ? 6 : 14,
+        message.type == MessageType.image ? 6 : 10,
+        message.type == MessageType.image ? 6 : 14,
+        10,
+      ),
+      decoration: BoxDecoration(
+        color: bubbleColor,
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(16),
+          topRight: const Radius.circular(16),
+          bottomLeft: Radius.circular(isMine ? 16 : 4),
+          bottomRight: Radius.circular(isMine ? 4 : 16),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (message.type == MessageType.image && message.attachmentUrl != null)
+            _MessageImage(url: message.attachmentUrl!, sending: message.status == MessageStatus.sending)
+          else
             Text(message.text, style: AppTypography.chatMessages.copyWith(color: textColor)),
-            const SizedBox(height: 4),
-            Row(
+          Padding(
+            padding: EdgeInsets.only(
+              top: 4,
+              right: message.type == MessageType.image ? 6 : 0,
+            ),
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
@@ -106,16 +127,30 @@ class _MessageBubbleContent extends StatelessWidget {
                 ],
               ],
             ),
-            if (message.status == MessageStatus.failed) ...[
-              const SizedBox(height: 2),
-              Text(
-                l10n.inboxMessageFailed,
-                style: AppTypography.labelSmall.copyWith(color: AppColors.error),
+          ),
+          if (message.status == MessageStatus.failed) ...[
+            const SizedBox(height: 2),
+            Text(
+              canRetry ? l10n.inboxRetrySend : l10n.inboxMessageFailed,
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.error,
+                decoration: canRetry ? TextDecoration.underline : null,
               ),
-            ],
+            ),
           ],
-        ),
+        ],
       ),
+    );
+
+    return Align(
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+      child: canRetry
+          ? InkWell(
+              onTap: () => onRetry!(message.clientMessageId!),
+              borderRadius: BorderRadius.circular(16),
+              child: bubble,
+            )
+          : bubble,
     );
   }
 
@@ -136,4 +171,62 @@ class _MessageBubbleContent extends StatelessWidget {
 
   Color _statusColor(Color textColor) =>
       message.status == MessageStatus.read ? AppColors.accentGoldLight : textColor.withValues(alpha: 0.7);
+}
+
+/// An image message's thumbnail — [url] is either a real `http(s)` URL (a
+/// received message, or one this client sent that's since been confirmed
+/// with a hosted URL) or a local file path (an attachment still `sending`,
+/// before any real upload endpoint exists — see
+/// docs/development/chat-backend-handoff.md). Shows a dimming overlay +
+/// spinner while `sending`.
+class _MessageImage extends StatelessWidget {
+  final String url;
+  final bool sending;
+
+  const _MessageImage({required this.url, required this.sending});
+
+  @override
+  Widget build(BuildContext context) {
+    final image = url.startsWith('http')
+        ? Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const _MessageImageError())
+        : Image.file(File(url), fit: BoxFit.cover, errorBuilder: (_, __, ___) => const _MessageImageError());
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 160, minHeight: 160, maxHeight: 260),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            image,
+            if (sending)
+              Container(
+                color: Colors.black.withValues(alpha: 0.35),
+                child: const Center(
+                  child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MessageImageError extends StatelessWidget {
+  const _MessageImageError();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: AppColors.surfaceVariantLight,
+      child: Center(
+        child: Icon(Icons.broken_image_outlined, color: AppColors.textTertiaryLight),
+      ),
+    );
+  }
 }

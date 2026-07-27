@@ -7,17 +7,26 @@ import '../../../../core/theme/app_typography.dart';
 /// Horizontally-scrollable underline tab row pinned under the collapsed
 /// hero. Tapping a tab scrolls the page to the matching section — the
 /// page owns the actual [Scrollable.ensureVisible] call via [onTap].
+///
+/// [itemKeys] (one per label, same order) lets the page also reveal the
+/// active tab *within this row's own horizontal scroll* — via
+/// `Scrollable.ensureVisible` on the tab's own context, same technique as
+/// the vertical section scroll, rather than a hardcoded pixel offset —
+/// whenever the active section changes, including from manual vertical
+/// scrolling (not just a tap here).
 class ProfileDetailSectionTabBar extends StatelessWidget {
   final List<String> labels;
+  final List<GlobalKey> itemKeys;
   final int selectedIndex;
   final ValueChanged<int> onTap;
 
   const ProfileDetailSectionTabBar({
     super.key,
     required this.labels,
+    required this.itemKeys,
     required this.selectedIndex,
     required this.onTap,
-  });
+  }) : assert(labels.length == itemKeys.length);
 
   static const double height = 52;
 
@@ -42,11 +51,14 @@ class ProfileDetailSectionTabBar extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.lg),
         itemBuilder: (context, index) {
           final selected = index == selectedIndex;
-          return _UnderlineTab(
-            label: labels[index],
-            selected: selected,
-            isDark: isDark,
-            onTap: () => onTap(index),
+          return KeyedSubtree(
+            key: itemKeys[index],
+            child: _UnderlineTab(
+              label: labels[index],
+              selected: selected,
+              isDark: isDark,
+              onTap: () => onTap(index),
+            ),
           );
         },
       ),

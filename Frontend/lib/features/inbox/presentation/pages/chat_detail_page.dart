@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,9 +8,11 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/avatars/app_avatars.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
+import '../../../../core/widgets/dialogs/app_dialogs.dart';
 import '../../../../core/widgets/sheets/app_sheets.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/conversation_entity.dart';
+import '../../domain/entities/message_entity.dart';
 import '../providers/inbox_providers.dart';
 import '../widgets/chat_composer.dart';
 import '../widgets/date_separator.dart';
@@ -34,8 +38,25 @@ class ChatDetailPage extends ConsumerStatefulWidget {
 class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   final _scrollController = ScrollController();
 
+  // How close to the bottom counts as "already there" for auto-scroll
+  // purposes, and how close to the top triggers loading older history —
+  // both in logical pixels.
+  static const _bottomThreshold = 120.0;
+  static const _topThreshold = 200.0;
+
+  bool _isNearBottom = true;
+  int _unseenNewMessages = 0;
+  bool _isLoadingOlder = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
@@ -49,15 +70,68 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     );
   }
 
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+
+    final nearBottom = position.pixels >= position.maxScrollExtent - _bottomThreshold;
+    if (nearBottom != _isNearBottom || (nearBottom && _unseenNewMessages > 0)) {
+      setState(() {
+        _isNearBottom = nearBottom;
+        if (nearBottom) _unseenNewMessages = 0;
+      });
+    }
+
+    if (position.pixels <= _topThreshold) _loadOlder();
+  }
+
+  Future<void> _loadOlder() async {
+    if (_isLoadingOlder) return;
+    final notifier = ref.read(messagesProvider(widget.conversation.id).notifier);
+    if (!notifier.hasMoreHistory) return;
+
+    setState(() => _isLoadingOlder = true);
+    // Prepending older messages grows maxScrollExtent — without correcting
+    // `pixels` by exactly that growth, the currently-visible messages would
+    // visually jump down the screen once the new (taller) content lays out.
+    final oldExtent = _scrollController.hasClients ? _scrollController.position.maxScrollExtent : 0.0;
+    await notifier.loadOlder();
+    if (!mounted) return;
+    setState(() => _isLoadingOlder = false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final delta = _scrollController.position.maxScrollExtent - oldExtent;
+      if (delta > 0) {
+        _scrollController.jumpTo(_scrollController.position.pixels + delta);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final conversation = widget.conversation;
+    final messagesNotifier = ref.read(messagesProvider(conversation.id).notifier);
 
     ref.listen(messagesProvider(conversation.id), (previous, next) {
-      final prevLen = previous?.valueOrNull?.length ?? -1;
-      final nextLen = next.valueOrNull?.length ?? -1;
-      if (nextLen > prevLen) {
+      final prevMessages = previous?.valueOrNull;
+      final nextMessages = next.valueOrNull;
+      if (nextMessages == null) return;
+      final prevLen = prevMessages?.length ?? -1;
+      if (nextMessages.length <= prevLen) return;
+
+      // A load-older prepend also grows the list — distinguish it from a
+      // genuinely new message by checking whether the *tail* changed. Only
+      // a changed tail should ever trigger auto-scroll or the unseen-count.
+      final tailUnchanged = prevMessages != null &&
+          prevMessages.isNotEmpty &&
+          nextMessages.last.id == prevMessages.last.id;
+      if (tailUnchanged) return;
+
+      final newest = nextMessages.last;
+      if (newest.isMine || _isNearBottom) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      } else {
+        setState(() => _unseenNewMessages++);
       }
     });
 
@@ -68,21 +142,80 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
           : Column(
               children: [
                 Expanded(
-                  child: _MessagesList(
-                    conversationId: conversation.id,
-                    isTyping: conversation.isTyping,
-                    scrollController: _scrollController,
+                  child: Stack(
+                    children: [
+                      _MessagesList(
+                        conversationId: conversation.id,
+                        isTyping: conversation.isTyping,
+                        scrollController: _scrollController,
+                        isLoadingOlder: _isLoadingOlder,
+                        onRetry: (clientMessageId) => messagesNotifier.retry(clientMessageId),
+                      ),
+                      if (_unseenNewMessages > 0)
+                        Positioned(
+                          bottom: 12,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: _NewMessagesPill(
+                              count: _unseenNewMessages,
+                              onTap: () {
+                                setState(() => _unseenNewMessages = 0);
+                                _scrollToBottom();
+                              },
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 if (conversation.isBlocked)
                   _BlockedBanner(conversation: conversation)
                 else
                   ChatComposer(
-                    onSend: (text) =>
-                        ref.read(messagesProvider(conversation.id).notifier).send(text),
+                    onSend: (text) => messagesNotifier.send(text),
+                    onSendAttachment: (File file) => messagesNotifier.sendImage(file.path),
+                    onTypingChanged: (isTyping) => ref
+                        .read(conversationRepositoryProvider)
+                        .setTyping(conversation.id, isTyping),
                   ),
               ],
             ),
+    );
+  }
+}
+
+class _NewMessagesPill extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+
+  const _NewMessagesPill({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Material(
+      color: AppColors.primary,
+      borderRadius: BorderRadius.circular(20),
+      elevation: 2,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.arrow_downward_rounded, size: 16, color: Colors.white),
+              const SizedBox(width: 6),
+              Text(
+                '${l10n.inboxNewMessages} ($count)',
+                style: AppTypography.labelMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -158,15 +291,35 @@ class _ChatDetailAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 icon: Icons.block_rounded,
                 label: l10n.inboxActionBlock,
                 isDestructive: true,
-                onTap: () => ref
-                    .read(conversationsNotifierProvider.notifier)
-                    .block(conversation.id, !conversation.isBlocked),
+                onTap: () => _confirmBlock(context, ref, conversation, l10n),
               ),
             ],
           ),
         ),
       ],
     );
+  }
+
+  Future<void> _confirmBlock(
+    BuildContext context,
+    WidgetRef ref,
+    ConversationEntity conversation,
+    AppLocalizations l10n,
+  ) async {
+    if (conversation.isBlocked) {
+      // Unblocking is reversible — no confirmation needed.
+      ref.read(conversationsNotifierProvider.notifier).block(conversation.id, false);
+      return;
+    }
+    final confirmed = await AppDialogs.showConfirmation(
+      context,
+      title: l10n.inboxBlockConfirmTitle(conversation.profile.name),
+      message: l10n.inboxBlockConfirmMessage,
+      confirmLabel: l10n.inboxActionBlock,
+    );
+    if (confirmed ?? false) {
+      ref.read(conversationsNotifierProvider.notifier).block(conversation.id, true);
+    }
   }
 
   @override
@@ -177,11 +330,15 @@ class _MessagesList extends ConsumerWidget {
   final String conversationId;
   final bool isTyping;
   final ScrollController scrollController;
+  final bool isLoadingOlder;
+  final ValueChanged<String> onRetry;
 
   const _MessagesList({
     required this.conversationId,
     required this.isTyping,
     required this.scrollController,
+    required this.isLoadingOlder,
+    required this.onRetry,
   });
 
   @override
@@ -192,6 +349,11 @@ class _MessagesList extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => Center(child: Text(AppLocalizations.of(context).inboxLoadError)),
       data: (messages) {
+        // itemCount layout: [0] older-history spinner (optional) ... [n]
+        // messages ... [last] typing indicator (optional).
+        final leadingCount = isLoadingOlder ? 1 : 0;
+        final trailingCount = isTyping ? 1 : 0;
+
         return ListView.builder(
           controller: scrollController,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -199,24 +361,37 @@ class _MessagesList extends ConsumerWidget {
           // — a wider cache extent keeps fast flings from ever showing an
           // unbuilt gap.
           cacheExtent: 800,
-          itemCount: messages.length + (isTyping ? 1 : 0),
+          itemCount: leadingCount + messages.length + trailingCount,
           itemBuilder: (context, index) {
-            if (index == messages.length) {
+            if (isLoadingOlder && index == 0) {
+              return const Padding(
+                key: ValueKey('loading-older'),
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+              );
+            }
+            final messageIndex = index - leadingCount;
+            if (messageIndex == messages.length) {
               return const Padding(
                 key: ValueKey('typing-indicator'),
                 padding: EdgeInsets.only(top: 4),
                 child: TypingIndicator(),
               );
             }
-            final message = messages[index];
-            final showDateSeparator = index == 0 ||
-                !_isSameDay(messages[index - 1].sentAt, message.sentAt);
+            final message = messages[messageIndex];
+            final showDateSeparator = messageIndex == 0 ||
+                !_isSameDay(messages[messageIndex - 1].sentAt, message.sentAt);
             return Column(
               key: ValueKey(message.id),
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (showDateSeparator) DateSeparator(date: message.sentAt),
-                MessageBubble(message: message),
+                MessageBubble(
+                  message: message,
+                  onRetry: message.status == MessageStatus.failed ? onRetry : null,
+                ),
               ],
             );
           },

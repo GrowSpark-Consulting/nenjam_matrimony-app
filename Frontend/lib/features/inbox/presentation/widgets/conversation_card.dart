@@ -5,6 +5,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../../core/router/profile_navigation.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/cards/chat_card.dart';
+import '../../../../core/widgets/dialogs/app_dialogs.dart';
 import '../../../../core/widgets/sheets/app_sheets.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/conversation_entity.dart';
@@ -68,16 +69,35 @@ class ConversationCard extends ConsumerWidget {
           icon: Icons.block_rounded,
           label: l10n.inboxActionBlock,
           isDestructive: true,
-          onTap: () => notifier.block(conversation.id, true),
+          onTap: () => _confirmBlock(context, notifier, l10n),
         ),
         AppSheetAction(
           icon: Icons.delete_outline_rounded,
           label: l10n.inboxActionDelete,
           isDestructive: true,
-          onTap: () => notifier.delete(conversation.id),
+          onTap: () => _confirmDelete(context, notifier, l10n),
         ),
       ],
     );
+  }
+
+  Future<void> _confirmBlock(BuildContext context, ConversationsNotifier notifier, AppLocalizations l10n) async {
+    final confirmed = await AppDialogs.showConfirmation(
+      context,
+      title: l10n.inboxBlockConfirmTitle(conversation.profile.name),
+      message: l10n.inboxBlockConfirmMessage,
+      confirmLabel: l10n.inboxActionBlock,
+    );
+    if (confirmed ?? false) notifier.block(conversation.id, true);
+  }
+
+  Future<void> _confirmDelete(BuildContext context, ConversationsNotifier notifier, AppLocalizations l10n) async {
+    final confirmed = await AppDialogs.showDelete(
+      context,
+      title: l10n.inboxDeleteConfirmTitle,
+      message: l10n.inboxDeleteConfirmMessage,
+    );
+    if (confirmed ?? false) notifier.delete(conversation.id);
   }
 
   @override
@@ -149,7 +169,7 @@ class ConversationCard extends ConsumerWidget {
             padding: EdgeInsets.zero,
           ),
           SlidableAction(
-            onPressed: (_) => notifier.delete(conversation.id),
+            onPressed: (actionContext) => _confirmDelete(actionContext, notifier, l10n),
             backgroundColor: AppColors.error,
             foregroundColor: Colors.white,
             icon: Icons.delete_rounded,

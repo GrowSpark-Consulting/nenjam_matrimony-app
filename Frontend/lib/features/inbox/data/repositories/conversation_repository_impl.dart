@@ -1,3 +1,4 @@
+import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../domain/entities/conversation_entity.dart';
 import '../../domain/entities/message_entity.dart';
 import '../../domain/repositories/conversation_repository.dart';
@@ -37,15 +38,42 @@ class ConversationRepositoryImpl implements ConversationRepository {
     );
   }
 
-  @override
-  Future<List<MessageEntity>> getMessages(String conversationId, {int page = 1, int limit = 30}) async {
+  Future<List<MessageEntity>> _fullThread(String conversationId) async {
     return _messageCache[conversationId] ??=
         await _dataSource.fetchMessages(conversationId);
   }
 
   @override
-  Future<MessageEntity> sendMessage(String conversationId, String text) async {
+  Future<MessagePage> getMessages(String conversationId, {int page = 1, int limit = 30}) async {
+    final thread = await _fullThread(conversationId);
+    // Oldest-to-newest storage; "page 1" is the newest slice (the tail),
+    // increasing page walks backwards toward the start — see MessagePage's
+    // doc comment.
+    final endExclusive = (thread.length - (page - 1) * limit).clamp(0, thread.length);
+    final start = (endExclusive - limit).clamp(0, thread.length);
+    return MessagePage(
+      items: thread.sublist(start, endExclusive),
+      page: page,
+      hasMore: start > 0,
+    );
+  }
+
+  @override
+  Future<MessageEntity> sendMessage(
+    String conversationId,
+    String text, {
+    String? clientMessageId,
+    MessageType type = MessageType.text,
+    String? attachmentUrl,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 300));
+    // Mock-only failure simulation, isolated to this in-memory
+    // implementation — never present in ConversationApiRepositoryImpl — so
+    // the retry UI has a deterministic way to be exercised without relying
+    // on random flakiness: send the literal text "fail" (case-insensitive).
+    if (type == MessageType.text && text.trim().toLowerCase() == 'fail') {
+      throw Exception('Mock send failure (message text was "fail")');
+    }
     final message = MessageEntity(
       id: '$conversationId-${DateTime.now().microsecondsSinceEpoch}',
       conversationId: conversationId,
@@ -53,16 +81,44 @@ class ConversationRepositoryImpl implements ConversationRepository {
       sentAt: DateTime.now(),
       isMine: true,
       status: MessageStatus.sent,
+      type: type,
+      // No real upload endpoint exists yet (see chat-backend-handoff.md) —
+      // this mock just accepts whatever URL/local path it was given as
+      // already "hosted", so the UI can be exercised end-to-end.
+      attachmentUrl: attachmentUrl,
+      clientMessageId: clientMessageId,
     );
-    final thread = await getMessages(conversationId);
+    final thread = await _fullThread(conversationId);
     _messageCache[conversationId] = [...thread, message];
     await _mutate(conversationId, (c) => c.copyWith(
-          lastMessage: text,
+          lastMessage: type == MessageType.text ? text : c.lastMessage,
           lastMessageAt: message.sentAt,
           lastMessageFromMe: true,
           lastMessageStatus: MessageDeliveryStatus.sent,
         ));
     return message;
+  }
+
+  @override
+  Future<void> setTyping(String conversationId, bool isTyping) async {
+    // No-op — see ConversationRepository.setTyping's doc comment.
+  }
+
+  @override
+  Future<ConversationEntity> getOrCreateConversation(DiscoveryProfileEntity profile) async {
+    final all = await _load();
+    for (final c in all) {
+      if (c.profile.id == profile.id) return c;
+    }
+    final created = ConversationEntity(
+      id: 'room-${profile.id}-${DateTime.now().microsecondsSinceEpoch}',
+      profile: profile,
+      lastMessage: '',
+      lastMessageAt: DateTime.now(),
+    );
+    _cache = [created, ...all];
+    _messageCache[created.id] = const [];
+    return created;
   }
 
   @override

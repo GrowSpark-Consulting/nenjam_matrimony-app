@@ -68,8 +68,36 @@ class _ProfileDetailScrollView extends StatefulWidget {
 }
 
 class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
-  final _sectionKeys = List.generate(8, (_) => GlobalKey());
+  static const _sectionCount = 8;
+
+  final _sectionKeys = List.generate(_sectionCount, (_) => GlobalKey());
+  // One key per tab label, mirroring _sectionKeys — lets the active tab be
+  // revealed inside the tab bar's own horizontal scroll via the same
+  // GlobalKey + ensureVisible technique used for the vertical section
+  // scroll below, instead of a hardcoded pixel offset.
+  final _tabKeys = List.generate(_sectionCount, (_) => GlobalKey());
+  final _scrollController = ScrollController();
   int _selectedTab = 0;
+
+  // While a tab tap is driving a programmatic scroll, the scroll listener
+  // below would otherwise see every section it flies past and thrash
+  // _selectedTab through each one before landing on the tapped target —
+  // this suppresses that until the programmatic scroll finishes, so manual
+  // scrolling is still the only thing driving the sync the rest of the time.
+  bool _isProgrammaticScroll = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_syncActiveTabWithScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_syncActiveTabWithScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   List<String> _tabLabels(AppLocalizations l10n) => [
         l10n.profileDetailTabAbout,
@@ -82,16 +110,62 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
         l10n.profileDetailTabTimeline,
       ];
 
-  void _scrollToSection(int index) {
+  Future<void> _scrollToSection(int index) async {
     setState(() => _selectedTab = index);
-    final context = _sectionKeys[index].currentContext;
-    if (context != null) {
-      Scrollable.ensureVisible(
-        context,
+    _isProgrammaticScroll = true;
+    final sectionContext = _sectionKeys[index].currentContext;
+    if (sectionContext != null) {
+      await Scrollable.ensureVisible(
+        sectionContext,
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeOutCubic,
         alignment: 0.05,
       );
+    }
+    _revealActiveTab(index);
+    if (mounted) _isProgrammaticScroll = false;
+  }
+
+  void _revealActiveTab(int index) {
+    final tabContext = _tabKeys[index].currentContext;
+    if (tabContext != null) {
+      Scrollable.ensureVisible(
+        tabContext,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+        alignment: 0.5,
+      );
+    }
+  }
+
+  // Scrollspy for the other direction: as the user scrolls the page by
+  // hand, whichever section's top edge has crossed up past the pinned
+  // header stack (collapsed hero + tab bar) becomes the active tab. Reads
+  // actual on-screen section positions via their GlobalKeys rather than
+  // any assumed/measured content height, so it stays correct regardless of
+  // photo count, text wrapping, or missing/loading data.
+  void _syncActiveTabWithScroll() {
+    if (_isProgrammaticScroll || !mounted) return;
+
+    final activationLine = kToolbarHeight +
+        MediaQuery.paddingOf(context).top +
+        ProfileDetailSectionTabBar.height;
+
+    var activeIndex = 0;
+    for (var i = 0; i < _sectionKeys.length; i++) {
+      final renderObject = _sectionKeys[i].currentContext?.findRenderObject();
+      if (renderObject is! RenderBox) continue;
+      final sectionTop = renderObject.localToGlobal(Offset.zero).dy;
+      if (sectionTop <= activationLine) {
+        activeIndex = i;
+      } else {
+        break;
+      }
+    }
+
+    if (activeIndex != _selectedTab) {
+      setState(() => _selectedTab = activeIndex);
+      _revealActiveTab(activeIndex);
     }
   }
 
@@ -102,6 +176,7 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
     final base = detail.base;
 
     return CustomScrollView(
+      controller: _scrollController,
       slivers: [
         ProfileDetailHeroAppBar(detail: detail, heroTag: widget.heroTag),
         SliverPersistentHeader(
@@ -109,6 +184,7 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
           delegate: ProfileDetailTabBarDelegate(
             child: ProfileDetailSectionTabBar(
               labels: _tabLabels(l10n),
+              itemKeys: _tabKeys,
               selectedIndex: _selectedTab,
               onTap: _scrollToSection,
             ),

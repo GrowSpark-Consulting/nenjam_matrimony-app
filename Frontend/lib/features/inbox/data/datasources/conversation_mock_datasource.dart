@@ -235,6 +235,10 @@ class ConversationMockDataSource {
       }
       final base = conversation.lastMessageAt.subtract(const Duration(hours: 2));
       result[conversation.id] = [
+        // c1 alone gets a long back-history so pagination ("scroll up to
+        // load older messages") has something real to exercise in the
+        // mock — every other conversation keeps a short 5-message thread.
+        if (conversation.id == 'c1') ..._olderFillerMessages(conversation.id, base),
         MessageEntity(
           id: '${conversation.id}-m1',
           conversationId: conversation.id,
@@ -282,5 +286,27 @@ class ConversationMockDataSource {
     }
 
     return result;
+  }
+
+  /// 40 generated messages ending well before [threadStart] — combined with
+  /// the 5 messages appended after this, c1's thread totals 45, comfortably
+  /// past `getMessages`' default 30-per-page limit, so `MessagesNotifier.
+  /// loadOlder()` has a real older page to fetch when testing pagination
+  /// instead of always getting everything back on the first load.
+  List<MessageEntity> _olderFillerMessages(String conversationId, DateTime threadStart) {
+    final start = threadStart.subtract(const Duration(days: 6));
+    return List.generate(40, (i) {
+      final mine = i.isOdd;
+      return MessageEntity(
+        id: '$conversationId-older-$i',
+        conversationId: conversationId,
+        text: mine
+            ? 'Just checking in — how has your week been so far?'
+            : 'Going well, thanks for asking! Busy with work but no complaints.',
+        sentAt: start.add(Duration(hours: i * 3)),
+        isMine: mine,
+        status: mine ? MessageStatus.read : MessageStatus.sent,
+      );
+    });
   }
 }

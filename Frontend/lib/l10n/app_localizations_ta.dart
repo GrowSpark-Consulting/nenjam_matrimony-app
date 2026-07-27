@@ -787,6 +787,60 @@ class AppLocalizationsTa extends AppLocalizations {
   String get inboxComposerVoice => 'குரல் செய்தி';
 
   @override
+  String inboxBlockConfirmTitle(String name) {
+    return '$name ஐத் தடுக்கவா?';
+  }
+
+  @override
+  String get inboxBlockConfirmMessage =>
+      'அவர்களால் உங்களுக்கு செய்தி அனுப்ப முடியாது, மேலும் டிஸ்கவரில் ஒருவரையொருவர் காண முடியாது.';
+
+  @override
+  String get inboxDeleteConfirmTitle => 'உரையாடலை நீக்கவா?';
+
+  @override
+  String get inboxDeleteConfirmMessage =>
+      'இது உங்கள் இன்பாக்ஸிலிருந்து உரையாடலை அகற்றும். இதை மீட்டெடுக்க முடியாது.';
+
+  @override
+  String get inboxRetrySend => 'மீண்டும் முயற்சிக்க தட்டவும்';
+
+  @override
+  String get inboxNewMessages => 'புதிய செய்திகள்';
+
+  @override
+  String get inboxChooseFromGallery => 'கேலரியிலிருந்து தேர்ந்தெடு';
+
+  @override
+  String get inboxTakePhoto => 'புகைப்படம் எடு';
+
+  @override
+  String get inboxRemoveAttachment => 'அகற்று';
+
+  @override
+  String get messageGateNoInterest =>
+      'அரட்டையைத் தொடங்க முதலில் ஆர்வத்தை அனுப்பவும்.';
+
+  @override
+  String get messageGatePending =>
+      'உங்கள் ஆர்வம் நிலுவையில் உள்ளது. அவர்கள் ஏற்றவுடன் அரட்டையடிக்கலாம்.';
+
+  @override
+  String get messageGateRespondFirst =>
+      'அரட்டையைத் தொடங்க முதலில் அவர்களின் ஆர்வத்திற்கு பதிலளிக்கவும்.';
+
+  @override
+  String get messageGateDeclined => 'இந்த ஆர்வம் நிராகரிக்கப்பட்டது.';
+
+  @override
+  String get messageGateBlocked =>
+      'இந்த உரையாடலுக்கு உங்களால் செய்தி அனுப்ப முடியாது.';
+
+  @override
+  String get messageGateError =>
+      'அரட்டையைத் திறக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
   String get notificationsTitle => 'அறிவிப்புகள்';
 
   @override

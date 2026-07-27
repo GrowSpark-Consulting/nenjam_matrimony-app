@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
-import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_shadows.dart';
@@ -14,12 +12,16 @@ import '../../../interests/presentation/providers/interests_provider.dart';
 import '../../../interests/presentation/utils/interest_button_copy.dart';
 import '../../domain/entities/profile_detail_entity.dart';
 
-/// Sticky bottom bar: gold "Send Interest" pill + chat + video icon
-/// buttons, matching the design reference's bottom action bar.
+/// Sticky bottom bar: gold "Send Interest"/"Message" pill + chat icon
+/// button, matching the design reference's bottom action bar.
 ///
-/// "Start Conversation" pushes the single existing [RouteNames.messages]
-/// route — there is no per-target-user chat thread concept anywhere in the
-/// app yet. Video calling doesn't exist at all, so that button is a stub.
+/// Both buttons route through `handleInterestButtonTap`/
+/// `handleMessageButtonTap` (`interest_button_copy.dart`) — the single
+/// place that decides what tapping either one actually does, based on the
+/// current [InterestRelationshipStatus], never on the button's own label.
+/// Only an ACCEPTED interest opens Chat Detail directly; every other
+/// status shows guidance instead (send an interest, wait for acceptance,
+/// respond to theirs) — see that file's doc comments for the full mapping.
 class ProfileDetailBottomActionBar extends ConsumerStatefulWidget {
   final ProfileDetailEntity detail;
 
@@ -33,6 +35,7 @@ class ProfileDetailBottomActionBar extends ConsumerStatefulWidget {
 class _ProfileDetailBottomActionBarState
     extends ConsumerState<ProfileDetailBottomActionBar> {
   bool _isSending = false;
+  bool _isResolvingChat = false;
 
   Future<void> _handleSendInterest(
     AppLocalizations l10n,
@@ -48,6 +51,22 @@ class _ProfileDetailBottomActionBarState
       l10n: l10n,
     );
     if (mounted) setState(() => _isSending = false);
+  }
+
+  Future<void> _handleMessageTap(
+    AppLocalizations l10n,
+    InterestRelationshipStatus status,
+  ) async {
+    if (_isResolvingChat) return; // guards rapid taps from opening >1 Chat Detail
+    setState(() => _isResolvingChat = true);
+    await handleMessageButtonTap(
+      context,
+      ref,
+      profile: widget.detail.base,
+      status: status,
+      l10n: l10n,
+    );
+    if (mounted) setState(() => _isResolvingChat = false);
   }
 
   @override
@@ -126,16 +145,8 @@ class _ProfileDetailBottomActionBarState
           const SizedBox(width: AppSpacing.sm),
           _CircleActionButton(
             icon: Icons.chat_bubble_rounded,
-            onTap: () => context.push(RouteNames.messages),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          _CircleActionButton(
-            icon: Icons.videocam_rounded,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.profileDetailVideoComingSoon)),
-              );
-            },
+            isLoading: _isResolvingChat,
+            onTap: _isResolvingChat ? null : () => _handleMessageTap(l10n, status),
           ),
         ],
       ),
@@ -145,9 +156,10 @@ class _ProfileDetailBottomActionBarState
 
 class _CircleActionButton extends StatelessWidget {
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool isLoading;
 
-  const _CircleActionButton({required this.icon, required this.onTap});
+  const _CircleActionButton({required this.icon, required this.onTap, this.isLoading = false});
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +172,15 @@ class _CircleActionButton extends StatelessWidget {
         child: SizedBox(
           width: 52,
           height: 52,
-          child: Icon(icon, color: Colors.white, size: 22),
+          child: isLoading
+              ? const Center(
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  ),
+                )
+              : Icon(icon, color: Colors.white, size: 22),
         ),
       ),
     );

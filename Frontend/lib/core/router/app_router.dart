@@ -78,8 +78,17 @@ final GlobalKey<NavigatorState> rootNavigatorKey =
 // it's attached to, tagged with [label] so root-vs-branch is unambiguous
 // in the console.
 class _DebugNavObserver extends NavigatorObserver {
-  _DebugNavObserver(this.label);
+  _DebugNavObserver(this.label) {
+    _all.add(this);
+  }
   final String label;
+
+  // Every instance registers itself here so [dumpAllNavigatorPages] can
+  // reach every Navigator's *current* `widget.pages` — the literal
+  // `List<Page>` the Page API just handed to (or is about to hand to) the
+  // Navigator — from one place, keyed by which Navigator (root vs. which
+  // shell branch) each observer is attached to.
+  static final List<_DebugNavObserver> _all = <_DebugNavObserver>[];
 
   // `route.settings` for a go_router (Page-API) route IS the Page itself
   // (`Page<T> extends RouteSettings`), so this recovers the exact
@@ -115,6 +124,37 @@ class _DebugNavObserver extends NavigatorObserver {
   }
 }
 
+// TEMP DEBUG — instrumentation for the keyReservation crash investigation,
+// remove once root-caused.
+//
+// `NavigatorObserver.navigator` (a stdlib getter) returns the NavigatorState
+// currently bound to that observer; `State.widget` returns the exact
+// `Navigator(pages: ...)` widget the framework most recently attached —
+// i.e. the literal list `NavigatorState._debugCheckDuplicatedPageKeys` walks.
+// `Element.update()` binds the new widget to the State *before* `build()`
+// (and therefore before that assertion) runs, so even when the assertion
+// throws mid-build, by the time this is called from the `FlutterError.onError`
+// hook below, `navigator.widget.pages` is already the exact — possibly
+// duplicate-containing — list that triggered it, for every Navigator in the
+// app (root + every shell branch) at once.
+void _dumpAllNavigatorPages() {
+  for (final observer in _DebugNavObserver._all) {
+    final pages = observer.navigator?.widget.pages;
+    if (pages == null) {
+      debugPrint('[PAGES:${observer.label}] navigator not attached');
+      continue;
+    }
+    debugPrint('[PAGES:${observer.label}] ${pages.length} page(s):');
+    for (var i = 0; i < pages.length; i++) {
+      final p = pages[i];
+      debugPrint(
+        '[PAGES:${observer.label}]   index=$i type=${p.runtimeType} '
+        'name=${p.name} key=${p.key} arguments=${p.arguments}',
+      );
+    }
+  }
+}
+
 /// Adapts a [Stream] into a [Listenable] so GoRouter's [GoRouter.refresh]
 /// fires — and `redirect` re-runs — on every event, not just on explicit
 /// navigation. go_router shipped this itself pre-6.0; since then it's the
@@ -122,8 +162,19 @@ class _DebugNavObserver extends NavigatorObserver {
 /// Navigators" guide).
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<dynamic> stream) {
+    // TEMP DEBUG — instrumentation for the keyReservation crash
+    // investigation, remove once root-caused. Answers whether a refresh
+    // (which triggers go_router's internal reparse/restore machinery) is
+    // firing around the moment Profile Detail gets pushed.
+    debugPrint('[REFRESH] notifyListeners (constructor) ts=${DateTime.now().toIso8601String()}');
     notifyListeners();
-    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+    _subscription = stream.asBroadcastStream().listen((event) {
+      debugPrint(
+        '[REFRESH] notifyListeners (stream event, user=${event?.toString()}) '
+        'ts=${DateTime.now().toIso8601String()}',
+      );
+      notifyListeners();
+    });
   }
 
   late final StreamSubscription<dynamic> _subscription;
@@ -152,6 +203,20 @@ class GoRouterRefreshStream extends ChangeNotifier {
 /// to Login automatically without every call site needing its own
 /// navigation logic.
 GoRouter createRouter(WidgetRef ref) {
+  // TEMP DEBUG — instrumentation for the keyReservation crash investigation,
+  // remove once root-caused. Wraps (not replaces) the existing handler so
+  // the red screen still shows normally; on the specific assertion we're
+  // chasing, also dumps every Navigator's actual page list right as it
+  // fires — see _dumpAllNavigatorPages's doc comment for why that's safe
+  // to read even from inside the error handler.
+  final previousOnError = FlutterError.onError;
+  FlutterError.onError = (FlutterErrorDetails details) {
+    if (details.exception.toString().contains('keyReservation')) {
+      debugPrint('[KEY_RESERVATION_CRASH] dumping all Navigator page lists:');
+      _dumpAllNavigatorPages();
+    }
+    previousOnError?.call(details);
+  };
   return GoRouter(
       navigatorKey: rootNavigatorKey,
       initialLocation: RouteNames.splash,
@@ -168,10 +233,21 @@ GoRouter createRouter(WidgetRef ref) {
         // which throws "No GoRouter found in context". Everything routing
         // decisions need is already on `state`.
         final location = state.matchedLocation;
-        if (RouteNames.publicRoutes.contains(location)) return null;
+        // TEMP DEBUG — instrumentation for the keyReservation crash
+        // investigation, remove once root-caused.
+        final entryTs = DateTime.now().toIso8601String();
+        debugPrint('[REDIRECT] enter location=$location ts=$entryTs');
+        if (RouteNames.publicRoutes.contains(location)) {
+          debugPrint('[REDIRECT] exit location=$location result=null (public) ts=${DateTime.now().toIso8601String()}');
+          return null;
+        }
 
         final user = await ref.read(authStateChangesProvider.future);
-        if (user == null) return RouteNames.login;
+        if (user == null) {
+          debugPrint('[REDIRECT] exit location=$location result=${RouteNames.login} (unauthenticated) ts=${DateTime.now().toIso8601String()}');
+          return RouteNames.login;
+        }
+        debugPrint('[REDIRECT] exit location=$location result=null ts=${DateTime.now().toIso8601String()}');
         return null;
       },
       routes: [

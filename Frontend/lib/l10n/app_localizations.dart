@@ -1592,6 +1592,96 @@ abstract class AppLocalizations {
   /// **'Voice message'**
   String get inboxComposerVoice;
 
+  /// No description provided for @inboxBlockConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Block {name}?'**
+  String inboxBlockConfirmTitle(String name);
+
+  /// No description provided for @inboxBlockConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'They won\'t be able to message you, and you won\'t see each other in Discover anymore.'**
+  String get inboxBlockConfirmMessage;
+
+  /// No description provided for @inboxDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete conversation?'**
+  String get inboxDeleteConfirmTitle;
+
+  /// No description provided for @inboxDeleteConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes the conversation from your inbox. This can\'t be undone.'**
+  String get inboxDeleteConfirmMessage;
+
+  /// No description provided for @inboxRetrySend.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to retry'**
+  String get inboxRetrySend;
+
+  /// No description provided for @inboxNewMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'New messages'**
+  String get inboxNewMessages;
+
+  /// No description provided for @inboxChooseFromGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from gallery'**
+  String get inboxChooseFromGallery;
+
+  /// No description provided for @inboxTakePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo'**
+  String get inboxTakePhoto;
+
+  /// No description provided for @inboxRemoveAttachment.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get inboxRemoveAttachment;
+
+  /// No description provided for @messageGateNoInterest.
+  ///
+  /// In en, this message translates to:
+  /// **'Send an interest first to start chatting.'**
+  String get messageGateNoInterest;
+
+  /// No description provided for @messageGatePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Your interest is pending. You can start chatting once they accept it.'**
+  String get messageGatePending;
+
+  /// No description provided for @messageGateRespondFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Respond to their interest first to start chatting.'**
+  String get messageGateRespondFirst;
+
+  /// No description provided for @messageGateDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'This interest was declined.'**
+  String get messageGateDeclined;
+
+  /// No description provided for @messageGateBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'You can\'t message this conversation.'**
+  String get messageGateBlocked;
+
+  /// No description provided for @messageGateError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open chat. Please try again.'**
+  String get messageGateError;
+
   /// No description provided for @notificationsTitle.
   ///
   /// In en, this message translates to:
