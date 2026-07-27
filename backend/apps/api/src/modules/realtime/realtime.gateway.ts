@@ -14,10 +14,8 @@ import {
   RealtimeEvent,
   RealtimeEvents,
   RealtimePayload,
+  userRoom,
 } from './realtime.events';
-
-/** socket.io room that fans an event out to every device a user has connected. */
-const userRoom = (userId: string): string => `user:${userId}`;
 
 /** Per-socket state we attach after authenticating the handshake. */
 interface AuthedSocketData {
@@ -97,7 +95,7 @@ export class RealtimeGateway
   emitToUser(
     userId: string,
     event: RealtimeEvent,
-    payload: RealtimePayload,
+    payload: RealtimePayload | Record<string, unknown>,
   ): void {
     if (!this.server) return;
     this.server.to(userRoom(userId)).emit(event, payload);
