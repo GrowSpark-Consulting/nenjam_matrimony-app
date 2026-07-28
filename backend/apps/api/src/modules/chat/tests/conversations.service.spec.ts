@@ -47,6 +47,8 @@ function build() {
     unreadCountsByRoom: jest.fn().mockResolvedValue(new Map()),
     blockedPeerIds: jest.fn().mockResolvedValue(new Set()),
     findFeedProfilesByUserIds: jest.fn().mockResolvedValue([]),
+    statesByRoom: jest.fn().mockResolvedValue(new Map()),
+    upsertState: jest.fn().mockResolvedValue({}),
     block: jest.fn().mockResolvedValue({ id: 'b1' }),
     unblock: jest.fn().mockResolvedValue(undefined),
   };
@@ -141,6 +143,95 @@ describe('ConversationsService.list', () => {
       lastMessageFromMe: false,
       profile: { id: 'peer1' },
     });
+  });
+});
+
+describe('ConversationsService.list per-user state', () => {
+  it('floats pinned to the top, applies the mark-unread override, and hides delete-for-me rows', async () => {
+    const { service, conversationRepository, profileMapper } = build();
+    conversationRepository.listForUser.mockResolvedValue([
+      [
+        {
+          ...room({ id: 'r2', user2Id: 'peer2' }),
+          lastMessageAt: new Date('2026-01-03T00:00:00.000Z'),
+          messages: [message({ senderId: 'peer2' })],
+        },
+        {
+          ...room({ id: 'r1', user2Id: 'peer1' }),
+          lastMessageAt: new Date('2026-01-02T00:00:00.000Z'),
+          messages: [message({ senderId: 'peer1' })],
+        },
+        {
+          ...room({ id: 'r3', user2Id: 'peer3' }),
+          lastMessageAt: new Date('2026-01-02T00:00:00.000Z'),
+          messages: [message({ senderId: 'peer3' })],
+        },
+      ],
+      3,
+    ]);
+    conversationRepository.statesByRoom.mockResolvedValue(
+      new Map<string, unknown>([
+        ['r1', { roomId: 'r1', markUnread: true }],
+        ['r2', { roomId: 'r2', isPinned: true }],
+        [
+          'r3',
+          { roomId: 'r3', deletedUntil: new Date('2026-01-05T00:00:00.000Z') },
+        ],
+      ]),
+    );
+    profileMapper.toDtoList.mockResolvedValue([
+      { id: 'peer1', name: 'One' },
+      { id: 'peer2', name: 'Two' },
+      { id: 'peer3', name: 'Three' },
+    ]);
+
+    const page = await service.list('me', PAGE);
+
+    // r3 hidden (deletedUntil newer than its last activity); r2 pinned floats top.
+    expect(page.items.map((i) => i.id)).toEqual(['r2', 'r1']);
+    expect(page.items[0]).toMatchObject({ id: 'r2', isPinned: true });
+    // r1 has no real unread, but mark-unread surfaces one.
+    expect(page.items[1]).toMatchObject({ id: 'r1', unreadCount: 1 });
+  });
+});
+
+describe('ConversationsService per-user state mutators', () => {
+  it('updateState maps pinned/muted/archived and upserts the caller state', async () => {
+    const { service, conversationRepository } = build();
+    await service.updateState('me', 'r1', {
+      isPinned: true,
+      isMuted: false,
+      isArchived: undefined,
+    });
+    expect(conversationRepository.upsertState).toHaveBeenCalledWith(
+      'me',
+      'r1',
+      {
+        isPinned: true,
+        isMuted: false,
+        isArchived: undefined,
+      },
+    );
+  });
+
+  it('markUnread sets the flag', async () => {
+    const { service, conversationRepository } = build();
+    await service.markUnread('me', 'r1');
+    expect(conversationRepository.upsertState).toHaveBeenCalledWith(
+      'me',
+      'r1',
+      {
+        markUnread: true,
+      },
+    );
+  });
+
+  it('deleteForMe stamps deletedUntil', async () => {
+    const { service, conversationRepository } = build();
+    await service.deleteForMe('me', 'r1');
+    const calls = conversationRepository.upsertState.mock.calls as unknown[][];
+    const patch = calls[0][2] as { deletedUntil?: Date };
+    expect(patch.deletedUntil).toBeInstanceOf(Date);
   });
 });
 

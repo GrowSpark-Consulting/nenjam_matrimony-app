@@ -53,6 +53,7 @@ function build() {
     touchRoomActivity: jest.fn().mockResolvedValue({}),
     findByClientKey: jest.fn().mockResolvedValue(null),
     listPaged: jest.fn(),
+    listByCursor: jest.fn(),
   };
   const s3 = {
     isConfigured: jest.fn().mockReturnValue(true),
@@ -60,7 +61,9 @@ function build() {
   };
   const realtime = {
     emitToUser: jest.fn(),
-    isOnline: jest.fn().mockReturnValue(false),
+  };
+  const presence = {
+    isOnline: jest.fn().mockResolvedValue(false),
   };
   const prisma = {
     $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
@@ -71,11 +74,27 @@ function build() {
     messageRepository as never,
     s3 as never,
     realtime as never,
+    presence as never,
   );
-  return { service, conversationRepository, messageRepository, s3, realtime };
+  return {
+    service,
+    conversationRepository,
+    messageRepository,
+    s3,
+    realtime,
+    presence,
+  };
 }
 
-const PAGE = { skip: 0, take: 30, pageNumber: 1 } as never;
+// Offset-mode query (no cursor → legacy page path).
+const query = (over: Record<string, unknown> = {}) =>
+  ({
+    conversationId: 'r1',
+    skip: 0,
+    take: 30,
+    pageNumber: 1,
+    ...over,
+  }) as never;
 
 describe('MessagesService.send', () => {
   it('404s when the room does not exist', async () => {
@@ -170,8 +189,8 @@ describe('MessagesService.send', () => {
   });
 
   it('marks DELIVERED when the recipient is online', async () => {
-    const { service, messageRepository, realtime } = build();
-    realtime.isOnline.mockReturnValue(true);
+    const { service, messageRepository, presence } = build();
+    presence.isOnline.mockResolvedValue(true);
     messageRepository.create.mockResolvedValue(
       message({ status: 'DELIVERED' }),
     );
@@ -190,12 +209,12 @@ describe('MessagesService.list', () => {
     conversationRepository.findById.mockResolvedValue(
       room({ user1Id: 'x', user2Id: 'y' }),
     );
-    await expect(service.list('me', 'r1', PAGE)).rejects.toBeInstanceOf(
+    await expect(service.list('me', query())).rejects.toBeInstanceOf(
       ForbiddenException,
     );
   });
 
-  it('maps a page newest-first with isMine + presigned media', async () => {
+  it('maps a page newest-first with isMine + presigned media (offset mode)', async () => {
     const { service, messageRepository } = build();
     messageRepository.listPaged.mockResolvedValue([
       [
@@ -210,13 +229,15 @@ describe('MessagesService.list', () => {
       2,
     ]);
 
-    const page = await service.list('me', 'r1', PAGE);
+    const page = await service.list('me', query());
 
+    expect(messageRepository.listByCursor).not.toHaveBeenCalled();
     expect(page).toMatchObject({
       page: 1,
       limit: 30,
       total: 2,
       hasMore: false,
+      nextCursor: null,
     });
     expect(page.items[0]).toMatchObject({ id: 'a', isMine: true });
     expect(page.items[1]).toMatchObject({
@@ -224,5 +245,34 @@ describe('MessagesService.list', () => {
       isMine: false,
       mediaUrl: 'https://signed/x',
     });
+  });
+
+  it('uses keyset mode and echoes nextCursor when a cursor is supplied', async () => {
+    const { service, messageRepository } = build();
+    messageRepository.listByCursor.mockResolvedValue({
+      items: [message({ id: 'a', senderId: 'me' })],
+      hasMore: true,
+      nextCursor: 'a',
+    });
+
+    const page = await service.list('me', query({ cursor: 'z' }));
+
+    expect(messageRepository.listByCursor).toHaveBeenCalledWith('r1', 'z', 30);
+    expect(messageRepository.listPaged).not.toHaveBeenCalled();
+    expect(page).toMatchObject({ hasMore: true, nextCursor: 'a' });
+    expect(page.items[0]).toMatchObject({ id: 'a', isMine: true });
+  });
+
+  it('treats an empty cursor as the first keyset page (null cursorId)', async () => {
+    const { service, messageRepository } = build();
+    messageRepository.listByCursor.mockResolvedValue({
+      items: [],
+      hasMore: false,
+      nextCursor: null,
+    });
+
+    await service.list('me', query({ cursor: '' }));
+
+    expect(messageRepository.listByCursor).toHaveBeenCalledWith('r1', null, 30);
   });
 });

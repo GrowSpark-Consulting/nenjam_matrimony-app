@@ -13,6 +13,7 @@ import type {
   MessageType,
 } from '../../../../../../libs/database/generated/client';
 import { RealtimeGateway } from '../../realtime/realtime.gateway';
+import { PresenceService } from '../../realtime/presence.service';
 import { RealtimeEvents } from '../../realtime/realtime.events';
 import { ConversationRepository } from '../repositories/conversation.repository';
 import { MessageRepository } from '../repositories/message.repository';
@@ -44,6 +45,7 @@ export class MessagesService {
     private readonly messageRepository: MessageRepository,
     private readonly s3: S3Service,
     private readonly realtime: RealtimeGateway,
+    private readonly presence: PresenceService,
   ) {}
 
   async list(
@@ -128,10 +130,11 @@ export class MessagesService {
       if (existing) return this.toDto(existing, userId, dto.clientMessageId);
     }
 
-    // Delivery state: if the recipient has a live socket, the message goes out
-    // DELIVERED; otherwise SENT, and the reconnect-replay path (chat.sync)
-    // promotes it to DELIVERED when they come back online.
-    const deliveredNow = this.realtime.isOnline(peerId);
+    // Delivery state: if the recipient has a live socket (per cross-instance
+    // presence), the message goes out DELIVERED; otherwise SENT, and the
+    // reconnect-replay path (chat.sync) promotes it to DELIVERED when they come
+    // back online.
+    const deliveredNow = await this.presence.isOnline(peerId);
     const now = new Date();
 
     let message: ChatMessage;
