@@ -25,6 +25,9 @@ import {
 } from '../dto/message.response.dto';
 
 const MAX_TEXT_LENGTH = 4000;
+// A sender may edit their own text message only within this window after
+// sending it (matching the client's affordance); after that it's immutable.
+const EDIT_WINDOW_MS = 15 * 60 * 1000;
 
 function isUniqueViolation(error: unknown): boolean {
   return (error as { code?: string })?.code === 'P2002';
@@ -182,6 +185,99 @@ export class MessagesService {
     });
 
     return senderView;
+  }
+
+  /**
+   * Edit a message's text. Sender-only, text-only, and only within
+   * {@link EDIT_WINDOW_MS} of sending; media and already-deleted messages can't
+   * be edited. Stamps `editedAt` and broadcasts the updated message to both
+   * participants so their bubble re-renders in place.
+   */
+  async edit(
+    userId: string,
+    messageId: string,
+    rawContent: string,
+  ): Promise<MessageDto> {
+    const message = await this.messageRepository.findById(messageId);
+    if (!message || message.deletedAt) {
+      throw new NotFoundException('Message not found.');
+    }
+    if (message.senderId !== userId) {
+      throw new ForbiddenException('You can only edit your own messages.');
+    }
+    if (message.type !== 'TEXT') {
+      throw new BadRequestException('Only text messages can be edited.');
+    }
+    if (Date.now() - message.createdAt.getTime() > EDIT_WINDOW_MS) {
+      throw new ForbiddenException(
+        'The edit window for this message has passed.',
+      );
+    }
+    const content = (rawContent ?? '').trim();
+    if (content.length === 0) {
+      throw new BadRequestException('Message text cannot be empty.');
+    }
+    if (content.length > MAX_TEXT_LENGTH) {
+      throw new BadRequestException('Message is too long.');
+    }
+
+    const now = new Date();
+    const updated = await this.messageRepository.updateContent(
+      messageId,
+      content,
+      now,
+    );
+
+    const room = await this.conversationRepository.findById(updated.roomId);
+    if (room) {
+      const peerId = this.peerOf(room, userId);
+      const peerView = await this.toDto(updated, peerId);
+      const senderView = await this.toDto(updated, userId);
+      this.realtime.emitToUser(peerId, RealtimeEvents.chatMessageEdited, {
+        ...peerView,
+      });
+      this.realtime.emitToUser(userId, RealtimeEvents.chatMessageEdited, {
+        ...senderView,
+      });
+    }
+    return this.toDto(updated, userId);
+  }
+
+  /**
+   * Soft-delete a message (delete for everyone). Sender-only. The row is kept
+   * (audit) but disappears from history — every read path filters `deletedAt`.
+   * Broadcasts `chat.messageDeleted` so both participants drop the bubble live.
+   */
+  async remove(userId: string, messageId: string): Promise<void> {
+    const message = await this.messageRepository.findById(messageId);
+    if (!message || message.deletedAt) {
+      throw new NotFoundException('Message not found.');
+    }
+    if (message.senderId !== userId) {
+      throw new ForbiddenException('You can only delete your own messages.');
+    }
+
+    const now = new Date();
+    await this.messageRepository.softDelete(messageId, now);
+
+    const room = await this.conversationRepository.findById(message.roomId);
+    if (room) {
+      const payload = {
+        id: messageId,
+        roomId: message.roomId,
+        at: now.toISOString(),
+      };
+      this.realtime.emitToUser(
+        this.peerOf(room, userId),
+        RealtimeEvents.chatMessageDeleted,
+        payload,
+      );
+      this.realtime.emitToUser(
+        userId,
+        RealtimeEvents.chatMessageDeleted,
+        payload,
+      );
+    }
   }
 
   // ── internals ──────────────────────────────────────────────────────────

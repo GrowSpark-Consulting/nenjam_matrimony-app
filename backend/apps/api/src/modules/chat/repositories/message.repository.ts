@@ -41,6 +41,32 @@ export class MessageRepository {
     });
   }
 
+  findById(id: string): Promise<ChatMessage | null> {
+    return this.prisma.chatMessage.findUnique({ where: { id } });
+  }
+
+  /** Replaces a message's text and stamps `editedAt`. */
+  updateContent(
+    id: string,
+    content: string,
+    editedAt: Date,
+  ): Promise<ChatMessage> {
+    return this.prisma.chatMessage.update({
+      where: { id },
+      data: { content, editedAt },
+    });
+  }
+
+  /** Soft-deletes a message (sets `deletedAt`); the row is kept for audit but
+   *  excluded from every list/unread/replay query, all of which filter
+   *  `deletedAt: null`. */
+  softDelete(id: string, deletedAt: Date): Promise<ChatMessage> {
+    return this.prisma.chatMessage.update({
+      where: { id },
+      data: { deletedAt },
+    });
+  }
+
   /** Idempotency lookup — the existing message for this sender's client key, if
    *  a retried send already created it. */
   findByClientKey(

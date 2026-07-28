@@ -54,6 +54,13 @@ function build() {
     findByClientKey: jest.fn().mockResolvedValue(null),
     listPaged: jest.fn(),
     listByCursor: jest.fn(),
+    findById: jest.fn(),
+    updateContent: jest.fn((id: string, content: string, editedAt: Date) =>
+      Promise.resolve(message({ id, content, editedAt })),
+    ),
+    softDelete: jest.fn((id: string, deletedAt: Date) =>
+      Promise.resolve(message({ id, deletedAt })),
+    ),
   };
   const s3 = {
     isConfigured: jest.fn().mockReturnValue(true),
@@ -200,6 +207,127 @@ describe('MessagesService.send', () => {
       expect.objectContaining({ status: 'DELIVERED' }),
     );
     expect(result.status).toBe('delivered');
+  });
+});
+
+describe('MessagesService.edit', () => {
+  const recent = () =>
+    message({ senderId: 'me', type: 'TEXT', createdAt: new Date() });
+
+  it('404s an unknown or already-deleted message', async () => {
+    const { service, messageRepository } = build();
+    messageRepository.findById.mockResolvedValue(null);
+    await expect(service.edit('me', 'm1', 'x')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    messageRepository.findById.mockResolvedValue(
+      message({ senderId: 'me', deletedAt: new Date() }),
+    );
+    await expect(service.edit('me', 'm1', 'x')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('403s a non-sender', async () => {
+    const { service, messageRepository } = build();
+    messageRepository.findById.mockResolvedValue(
+      message({ senderId: 'peer', type: 'TEXT', createdAt: new Date() }),
+    );
+    await expect(service.edit('me', 'm1', 'x')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it('400s editing a non-text message', async () => {
+    const { service, messageRepository } = build();
+    messageRepository.findById.mockResolvedValue(
+      message({ senderId: 'me', type: 'IMAGE', createdAt: new Date() }),
+    );
+    await expect(service.edit('me', 'm1', 'x')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('403s once the edit window has passed', async () => {
+    const { service, messageRepository } = build();
+    messageRepository.findById.mockResolvedValue(
+      message({
+        senderId: 'me',
+        type: 'TEXT',
+        createdAt: new Date(Date.now() - 16 * 60 * 1000),
+      }),
+    );
+    await expect(service.edit('me', 'm1', 'x')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it('400s on empty new content', async () => {
+    const { service, messageRepository } = build();
+    messageRepository.findById.mockResolvedValue(recent());
+    await expect(service.edit('me', 'm1', '   ')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('updates content, stamps editedAt, and broadcasts to both parties', async () => {
+    const { service, messageRepository, realtime } = build();
+    messageRepository.findById.mockResolvedValue(recent());
+    const result = await service.edit('me', 'm1', '  fixed  ');
+    expect(messageRepository.updateContent).toHaveBeenCalledWith(
+      'm1',
+      'fixed',
+      expect.any(Date),
+    );
+    expect(result.content).toBe('fixed');
+    expect(realtime.emitToUser).toHaveBeenCalledWith(
+      'peer',
+      'chat.messageEdited',
+      expect.objectContaining({ id: 'm1', content: 'fixed', isMine: false }),
+    );
+    expect(realtime.emitToUser).toHaveBeenCalledWith(
+      'me',
+      'chat.messageEdited',
+      expect.objectContaining({ id: 'm1', isMine: true }),
+    );
+  });
+});
+
+describe('MessagesService.remove', () => {
+  it('404s an unknown or already-deleted message', async () => {
+    const { service, messageRepository } = build();
+    messageRepository.findById.mockResolvedValue(null);
+    await expect(service.remove('me', 'm1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('403s a non-sender', async () => {
+    const { service, messageRepository } = build();
+    messageRepository.findById.mockResolvedValue(message({ senderId: 'peer' }));
+    await expect(service.remove('me', 'm1')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it('soft-deletes and broadcasts chat.messageDeleted to both parties', async () => {
+    const { service, messageRepository, realtime } = build();
+    messageRepository.findById.mockResolvedValue(message({ senderId: 'me' }));
+    await service.remove('me', 'm1');
+    expect(messageRepository.softDelete).toHaveBeenCalledWith(
+      'm1',
+      expect.any(Date),
+    );
+    expect(realtime.emitToUser).toHaveBeenCalledWith(
+      'peer',
+      'chat.messageDeleted',
+      expect.objectContaining({ id: 'm1', roomId: 'r1' }),
+    );
+    expect(realtime.emitToUser).toHaveBeenCalledWith(
+      'me',
+      'chat.messageDeleted',
+      expect.objectContaining({ id: 'm1' }),
+    );
   });
 });
 

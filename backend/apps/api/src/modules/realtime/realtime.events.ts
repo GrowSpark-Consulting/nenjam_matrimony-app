@@ -22,6 +22,11 @@ export const RealtimeEvents = {
   chatRead: 'chat.read',
   chatDelivered: 'chat.delivered',
   chatTyping: 'chat.typing',
+  // Edit carries the updated message inline (same shape as chat.message) so the
+  // bubble re-renders in place; delete carries only { id, roomId, at } so the
+  // client can drop/tombstone the bubble.
+  chatMessageEdited: 'chat.messageEdited',
+  chatMessageDeleted: 'chat.messageDeleted',
 } as const;
 
 export type RealtimeEvent =
