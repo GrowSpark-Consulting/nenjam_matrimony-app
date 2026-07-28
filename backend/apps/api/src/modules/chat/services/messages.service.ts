@@ -17,6 +17,7 @@ import { PresenceService } from '../../realtime/presence.service';
 import { RealtimeEvents } from '../../realtime/realtime.events';
 import { ConversationRepository } from '../repositories/conversation.repository';
 import { MessageRepository } from '../repositories/message.repository';
+import { ChatAuditService, ChatAuditAction } from './chat-audit.service';
 import { SendMessageDto } from '../dto/send-message.dto';
 import {
   MessageDto,
@@ -49,6 +50,7 @@ export class MessagesService {
     private readonly s3: S3Service,
     private readonly realtime: RealtimeGateway,
     private readonly presence: PresenceService,
+    private readonly audit: ChatAuditService,
   ) {}
 
   async list(
@@ -184,6 +186,14 @@ export class MessagesService {
       ...senderView,
     });
 
+    void this.audit.record({
+      actorId: userId,
+      action: ChatAuditAction.messageSend,
+      entity: 'ChatMessage',
+      entityId: message.id,
+      metadata: { roomId: message.roomId, type: message.type },
+    });
+
     return senderView;
   }
 
@@ -203,6 +213,9 @@ export class MessagesService {
       throw new NotFoundException('Message not found.');
     }
     if (message.senderId !== userId) {
+      this.audit.recordDenied(userId, 'ChatMessage', messageId, 'not-sender', {
+        op: 'edit',
+      });
       throw new ForbiddenException('You can only edit your own messages.');
     }
     if (message.type !== 'TEXT') {
@@ -240,6 +253,14 @@ export class MessagesService {
         ...senderView,
       });
     }
+
+    void this.audit.record({
+      actorId: userId,
+      action: ChatAuditAction.messageEdit,
+      entity: 'ChatMessage',
+      entityId: messageId,
+      metadata: { roomId: updated.roomId },
+    });
     return this.toDto(updated, userId);
   }
 
@@ -254,6 +275,9 @@ export class MessagesService {
       throw new NotFoundException('Message not found.');
     }
     if (message.senderId !== userId) {
+      this.audit.recordDenied(userId, 'ChatMessage', messageId, 'not-sender', {
+        op: 'delete',
+      });
       throw new ForbiddenException('You can only delete your own messages.');
     }
 
@@ -278,6 +302,14 @@ export class MessagesService {
         payload,
       );
     }
+
+    void this.audit.record({
+      actorId: userId,
+      action: ChatAuditAction.messageDelete,
+      entity: 'ChatMessage',
+      entityId: messageId,
+      metadata: { roomId: message.roomId },
+    });
   }
 
   // ── internals ──────────────────────────────────────────────────────────
@@ -289,6 +321,7 @@ export class MessagesService {
     const room = await this.conversationRepository.findById(roomId);
     if (!room) throw new NotFoundException('Conversation not found.');
     if (room.user1Id !== userId && room.user2Id !== userId) {
+      this.audit.recordDenied(userId, 'ChatRoom', roomId, 'not-a-participant');
       throw new ForbiddenException(
         'You are not a participant in this conversation.',
       );
@@ -305,11 +338,21 @@ export class MessagesService {
       this.conversationRepository.isBlockedBetween(userId, peerId),
     ]);
     if (!accepted) {
+      this.audit.recordDenied(
+        userId,
+        'ChatRoom',
+        null,
+        'interest-not-accepted',
+        {
+          peerId,
+        },
+      );
       throw new ForbiddenException(
         'Users cannot message until interest is accepted.',
       );
     }
     if (blocked) {
+      this.audit.recordDenied(userId, 'ChatRoom', null, 'blocked', { peerId });
       throw new ForbiddenException('You cannot message this member.');
     }
   }

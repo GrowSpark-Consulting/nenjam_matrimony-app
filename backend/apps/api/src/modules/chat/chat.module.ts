@@ -7,6 +7,7 @@ import { ConversationsService } from './services/conversations.service';
 import { MessagesService } from './services/messages.service';
 import { AttachmentsService } from './services/attachments.service';
 import { ChatAttachmentScanner } from './services/chat-attachment-scanner';
+import { ChatAuditService } from './services/chat-audit.service';
 import { ConversationRepository } from './repositories/conversation.repository';
 import { MessageRepository } from './repositories/message.repository';
 import { ConversationParticipantGuard } from './guards/conversation-participant.guard';
@@ -32,6 +33,7 @@ import { ProfileFeedMapper } from '../matches/mappers/profile-feed.mapper';
     MessagesService,
     AttachmentsService,
     ChatAttachmentScanner,
+    ChatAuditService,
     ConversationRepository,
     MessageRepository,
     ConversationParticipantGuard,

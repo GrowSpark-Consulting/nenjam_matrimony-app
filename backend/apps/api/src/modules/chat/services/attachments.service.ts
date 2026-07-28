@@ -9,6 +9,7 @@ import {
   ChatAttachmentScanner,
   UploadedAttachmentFile,
 } from './chat-attachment-scanner';
+import { ChatAuditService, ChatAuditAction } from './chat-audit.service';
 import { AttachmentUploadResponseDto } from '../dto/attachment.response.dto';
 
 type AttachmentKind = 'IMAGE' | 'AUDIO';
@@ -47,6 +48,7 @@ export class AttachmentsService {
   constructor(
     private readonly s3: S3Service,
     private readonly scanner: ChatAttachmentScanner,
+    private readonly audit: ChatAuditService,
   ) {}
 
   async upload(
@@ -85,6 +87,14 @@ export class AttachmentsService {
       key,
       body: file.buffer,
       contentType: file.mimetype,
+    });
+
+    void this.audit.record({
+      actorId: userId,
+      action: ChatAuditAction.attachmentUpload,
+      entity: 'ChatAttachment',
+      entityId: key,
+      metadata: { kind, contentType: file.mimetype, size: file.size },
     });
 
     return { mediaUrl: key, contentType: file.mimetype, size: file.size };

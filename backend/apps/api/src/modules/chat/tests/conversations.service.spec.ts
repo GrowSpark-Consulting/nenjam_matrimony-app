@@ -58,6 +58,10 @@ function build() {
   };
   const profileMapper = { toDtoList: jest.fn().mockResolvedValue([]) };
   const realtime = { emitToUser: jest.fn() };
+  const audit = {
+    record: jest.fn().mockResolvedValue(undefined),
+    recordDenied: jest.fn(),
+  };
   const prisma = {
     $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
   };
@@ -67,6 +71,7 @@ function build() {
     messageRepository as never,
     profileMapper as never,
     realtime as never,
+    audit as never,
   );
   return {
     service,
@@ -74,6 +79,7 @@ function build() {
     messageRepository,
     profileMapper,
     realtime,
+    audit,
   };
 }
 

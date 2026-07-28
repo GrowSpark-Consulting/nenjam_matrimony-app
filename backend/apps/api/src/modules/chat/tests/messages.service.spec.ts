@@ -72,6 +72,10 @@ function build() {
   const presence = {
     isOnline: jest.fn().mockResolvedValue(false),
   };
+  const audit = {
+    record: jest.fn().mockResolvedValue(undefined),
+    recordDenied: jest.fn(),
+  };
   const prisma = {
     $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
   };
@@ -82,6 +86,7 @@ function build() {
     s3 as never,
     realtime as never,
     presence as never,
+    audit as never,
   );
   return {
     service,
@@ -90,6 +95,7 @@ function build() {
     s3,
     realtime,
     presence,
+    audit,
   };
 }
 

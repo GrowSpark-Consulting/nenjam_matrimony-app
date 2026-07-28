@@ -18,6 +18,7 @@ import {
   ConversationRepository,
 } from '../repositories/conversation.repository';
 import { MessageRepository } from '../repositories/message.repository';
+import { ChatAuditService, ChatAuditAction } from './chat-audit.service';
 import {
   ConversationDto,
   ConversationPageDto,
@@ -39,6 +40,7 @@ export class ConversationsService {
     private readonly messageRepository: MessageRepository,
     private readonly profileMapper: ProfileFeedMapper,
     private readonly realtime: RealtimeGateway,
+    private readonly audit: ChatAuditService,
   ) {}
 
   async list(
@@ -136,6 +138,15 @@ export class ConversationsService {
     if (
       !(await this.conversationRepository.hasAcceptedInterest(userId, peerId))
     ) {
+      this.audit.recordDenied(
+        userId,
+        'ChatRoom',
+        null,
+        'interest-not-accepted',
+        {
+          peerId,
+        },
+      );
       throw new ForbiddenException(
         'Users cannot message until interest is accepted.',
       );
@@ -144,6 +155,14 @@ export class ConversationsService {
     const room = await this.prisma.$transaction((tx) =>
       this.conversationRepository.getOrCreate(tx, userId, peerId),
     );
+
+    void this.audit.record({
+      actorId: userId,
+      action: ChatAuditAction.conversationCreate,
+      entity: 'ChatRoom',
+      entityId: room.id,
+      metadata: { peerId },
+    });
 
     const [lastRows] = await this.messageRepository.listPaged(room.id, 0, 1);
     const last = lastRows[0];
@@ -223,6 +242,13 @@ export class ConversationsService {
     } else {
       await this.conversationRepository.unblock(userId, peerId);
     }
+    void this.audit.record({
+      actorId: userId,
+      action: blocked ? ChatAuditAction.block : ChatAuditAction.unblock,
+      entity: 'ChatRoom',
+      entityId: conversationId,
+      metadata: { peerId },
+    });
   }
 
   // ── internals ──────────────────────────────────────────────────────────
@@ -234,6 +260,7 @@ export class ConversationsService {
     const room = await this.conversationRepository.findById(roomId);
     if (!room) throw new NotFoundException('Conversation not found.');
     if (room.user1Id !== userId && room.user2Id !== userId) {
+      this.audit.recordDenied(userId, 'ChatRoom', roomId, 'not-a-participant');
       throw new ForbiddenException(
         'You are not a participant in this conversation.',
       );
