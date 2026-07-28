@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_providers.dart';
+import '../../../../core/realtime/realtime_providers.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../data/datasources/conversation_mock_datasource.dart';
+import '../../data/repositories/conversation_api_repository_impl.dart';
 import '../../data/repositories/conversation_repository_impl.dart';
 import '../../domain/entities/conversation_entity.dart';
 import '../../domain/entities/message_entity.dart';
@@ -11,14 +16,34 @@ final conversationMockDataSourceProvider = Provider<ConversationMockDataSource>(
   (ref) => ConversationMockDataSource(),
 );
 
-/// Swap point for a real backend: replace with
-/// `ConversationApiRepositoryImpl(ref.watch(apiClientProvider),
-/// currentUserId: () => ref.read(authRepositoryProvider).currentUser!.uid)`
-/// (confirm that's really the id `senderId` uses first — see that class's
-/// doc comment) once the `chat` controller ships.
+/// The live chat repository — talks to the real backend over REST + the shared
+/// realtime socket (typing). Incoming socket events are applied by
+/// `chatRealtimeSyncProvider`. Swap back to `ConversationRepositoryImpl(
+/// ref.watch(conversationMockDataSourceProvider))` for the in-memory mock.
 final conversationRepositoryProvider = Provider<ConversationRepository>(
-  (ref) => ConversationRepositoryImpl(ref.watch(conversationMockDataSourceProvider)),
+  (ref) => ConversationApiRepositoryImpl(
+    ref.watch(apiClientProvider),
+    realtime: ref.watch(realtimeServiceProvider),
+  ),
 );
+
+/// Conversation ids whose message thread is currently loaded (Chat Detail
+/// open). The realtime bridge applies incoming message/edit/delete/receipt
+/// events to a thread only when it's active — an event for an unopened room
+/// updates just the conversation list (unread + preview), and the thread picks
+/// up the change from a fresh history fetch when it's next opened.
+class ChatActiveThreads extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => const {};
+
+  void add(String conversationId) => state = {...state, conversationId};
+
+  void remove(String conversationId) =>
+      state = state.where((id) => id != conversationId).toSet();
+}
+
+final chatActiveThreadsProvider =
+    NotifierProvider<ChatActiveThreads, Set<String>>(ChatActiveThreads.new);
 
 /// The three Inbox tabs, left to right.
 enum InboxTab { interestsReceived, interestsSent, messages }
@@ -159,7 +184,71 @@ class ConversationsNotifier extends AsyncNotifier<List<ConversationEntity>> {
           c,
     ]);
   }
+
+  /// Applies a message that arrived over the socket (from the peer, or an echo
+  /// of this user's own send on another device) to the list: refreshes the
+  /// preview/timestamp, and bumps the unread badge for an incoming message.
+  /// If the conversation isn't in the list yet (a peer's very first message
+  /// starting a brand-new thread), re-fetches the list so it appears.
+  void applyIncomingMessage(MessageEntity message, {bool bumpUnread = true}) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    if (!current.any((c) => c.id == message.conversationId)) {
+      unawaited(refresh());
+      return;
+    }
+    // Don't bump unread for this user's own echo, or when the thread is open
+    // (the caller passes bumpUnread: false then — the reader is looking at it).
+    final increments = bumpUnread && !message.isMine;
+    state = AsyncValue.data([
+      for (final c in current)
+        if (c.id == message.conversationId)
+          c.copyWith(
+            lastMessage: conversationPreview(message),
+            lastMessageAt: message.sentAt,
+            lastMessageFromMe: message.isMine,
+            lastMessageStatus:
+                message.isMine ? MessageDeliveryStatus.sent : c.lastMessageStatus,
+            unreadCount: increments ? c.unreadCount + 1 : c.unreadCount,
+          )
+        else
+          c,
+    ]);
+  }
+
+  /// The peer read this user's messages in [id] — reflect it on the row's
+  /// last-message tick.
+  void applyPeerRead(String id) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncValue.data([
+      for (final c in current)
+        if (c.id == id && c.lastMessageFromMe)
+          c.copyWith(lastMessageStatus: MessageDeliveryStatus.read)
+        else
+          c,
+    ]);
+  }
+
+  /// The peer's typing state changed for [id].
+  void setTyping(String id, bool isTyping) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncValue.data([
+      for (final c in current)
+        if (c.id == id) c.copyWith(isTyping: isTyping) else c,
+    ]);
+  }
 }
+
+/// A human-readable last-message preview for the conversation list — mirrors the
+/// backend's own label logic for media so both sides read the same.
+String conversationPreview(MessageEntity message) => switch (message.type) {
+      MessageType.text => message.text,
+      MessageType.image => '📷 Photo',
+      MessageType.voice => '🎤 Voice message',
+      MessageType.document => '📄 Document',
+    };
 
 final conversationsNotifierProvider =
     AsyncNotifierProvider<ConversationsNotifier, List<ConversationEntity>>(
@@ -245,6 +334,16 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
 
   @override
   Future<List<MessageEntity>> build(String conversationId) async {
+    // Mark this thread active so the realtime bridge applies live events to it
+    // (see [chatActiveThreadsProvider]). Registered after build via a microtask
+    // so we never mutate another provider mid-build; deregistered on dispose.
+    ref.onDispose(
+      () => ref.read(chatActiveThreadsProvider.notifier).remove(conversationId),
+    );
+    Future.microtask(
+      () => ref.read(chatActiveThreadsProvider.notifier).add(conversationId),
+    );
+
     final result = await ref.watch(conversationRepositoryProvider).getMessages(conversationId);
     _page = result.page;
     _hasMore = result.hasMore;
@@ -463,6 +562,155 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
         state = AsyncValue.data([
           for (final m in latest)
             if (m.clientMessageId == clientMessageId) m.copyWith(status: MessageStatus.failed) else m,
+        ]);
+      }
+    }
+  }
+
+  // ── live socket application (driven by chatRealtimeSyncProvider) ─────────
+
+  /// Applies a message that arrived over the socket. Reconciles an optimistic
+  /// bubble by [MessageEntity.clientMessageId] and dedupes by server `id`, so
+  /// the REST send response, the multi-device echo, and the reconnect replay
+  /// all landing for the same message can't produce a duplicate.
+  void applyIncoming(MessageEntity message) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final index = current.indexWhere((m) =>
+        m.id == message.id ||
+        (message.clientMessageId != null &&
+            m.clientMessageId == message.clientMessageId));
+    if (index != -1) {
+      state = AsyncValue.data([
+        for (var i = 0; i < current.length; i++)
+          if (i == index) message else current[i],
+      ]);
+      return;
+    }
+    state = AsyncValue.data([...current, message]);
+  }
+
+  /// Replaces a message with its edited version (from a `chat.messageEdited`).
+  void applyEdited(MessageEntity message) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncValue.data([
+      for (final m in current) if (m.id == message.id) message else m,
+    ]);
+  }
+
+  /// Marks a message deleted-for-everyone (from a `chat.messageDeleted`).
+  void applyDeleted(String messageId) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncValue.data([
+      for (final m in current)
+        if (m.id == messageId) m.copyWith(isDeleted: true) else m,
+    ]);
+  }
+
+  /// The peer read this thread — advance every one of this user's sent/delivered
+  /// messages to read (from a `chat.read`).
+  void applyPeerRead() {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncValue.data([
+      for (final m in current)
+        if (m.isMine &&
+            (m.status == MessageStatus.sent ||
+                m.status == MessageStatus.delivered))
+          m.copyWith(status: MessageStatus.read)
+        else
+          m,
+    ]);
+  }
+
+  /// A message this user sent was delivered to the peer (from a
+  /// `chat.delivered`) — advance it from sent to delivered.
+  void applyDelivered(String messageId) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncValue.data([
+      for (final m in current)
+        if (m.id == messageId && m.status == MessageStatus.sent)
+          m.copyWith(status: MessageStatus.delivered)
+        else
+          m,
+    ]);
+  }
+
+  // ── user edit / delete actions ──────────────────────────────────────────
+
+  /// Edits [messageId]'s text — optimistic in-place update, reconciled with the
+  /// server's response (or reverted on failure). The server enforces
+  /// sender-only / text-only / edit-window; a rejection reverts the bubble.
+  Future<void> edit(String messageId, String newText) async {
+    final trimmed = newText.trim();
+    final current = state.valueOrNull;
+    if (current == null || trimmed.isEmpty) return;
+    MessageEntity? found;
+    for (final m in current) {
+      if (m.id == messageId) {
+        found = m;
+        break;
+      }
+    }
+    final original = found;
+    if (original == null || original.text == trimmed) return;
+
+    state = AsyncValue.data([
+      for (final m in current)
+        if (m.id == messageId)
+          m.copyWith(text: trimmed, editedAt: DateTime.now())
+        else
+          m,
+    ]);
+    try {
+      final updated = await ref
+          .read(conversationRepositoryProvider)
+          .editMessage(messageId, trimmed);
+      final latest = state.valueOrNull;
+      if (latest != null) {
+        state = AsyncValue.data([
+          for (final m in latest) if (m.id == messageId) updated else m,
+        ]);
+      }
+    } catch (_) {
+      final latest = state.valueOrNull;
+      if (latest != null) {
+        state = AsyncValue.data([
+          for (final m in latest) if (m.id == messageId) original else m,
+        ]);
+      }
+    }
+  }
+
+  /// Deletes [messageId] for everyone — optimistic tombstone, reverted if the
+  /// server rejects (e.g. not the sender).
+  Future<void> deleteMessage(String messageId) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    MessageEntity? found;
+    for (final m in current) {
+      if (m.id == messageId) {
+        found = m;
+        break;
+      }
+    }
+    final original = found;
+    if (original == null) return;
+
+    state = AsyncValue.data([
+      for (final m in current)
+        if (m.id == messageId) m.copyWith(isDeleted: true) else m,
+    ]);
+    try {
+      await ref.read(conversationRepositoryProvider).deleteMessage(messageId);
+    } catch (_) {
+      final latest = state.valueOrNull;
+      if (latest != null) {
+        state = AsyncValue.data([
+          for (final m in latest) if (m.id == messageId) original else m,
         ]);
       }
     }

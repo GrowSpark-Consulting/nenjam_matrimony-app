@@ -48,6 +48,17 @@ class MessageEntity {
   /// fetched from history rather than sent by this client this session.
   final String? clientMessageId;
 
+  /// When the sender last edited this message's text, or null if never edited.
+  /// The bubble shows an "edited" marker when set. Maps from the backend's
+  /// `editedAt` field.
+  final DateTime? editedAt;
+
+  /// True once the sender deleted the message for everyone. The row is kept so
+  /// the bubble can render a "message deleted" tombstone in place rather than
+  /// vanishing. Set live from a `chat.messageDeleted` push; deleted messages
+  /// are simply absent from a fresh history fetch (the backend filters them).
+  final bool isDeleted;
+
   const MessageEntity({
     required this.id,
     required this.conversationId,
@@ -59,18 +70,23 @@ class MessageEntity {
     this.attachmentUrl,
     this.voiceDuration,
     this.clientMessageId,
+    this.editedAt,
+    this.isDeleted = false,
   });
 
   MessageEntity copyWith({
     String? id,
+    String? text,
     MessageStatus? status,
     String? attachmentUrl,
     Duration? voiceDuration,
+    DateTime? editedAt,
+    bool? isDeleted,
   }) {
     return MessageEntity(
       id: id ?? this.id,
       conversationId: conversationId,
-      text: text,
+      text: text ?? this.text,
       sentAt: sentAt,
       isMine: isMine,
       status: status ?? this.status,
@@ -78,6 +94,8 @@ class MessageEntity {
       attachmentUrl: attachmentUrl ?? this.attachmentUrl,
       voiceDuration: voiceDuration ?? this.voiceDuration,
       clientMessageId: clientMessageId,
+      editedAt: editedAt ?? this.editedAt,
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 }
