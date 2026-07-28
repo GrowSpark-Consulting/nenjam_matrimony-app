@@ -17,6 +17,7 @@ import 'core/widgets/backend_diagnostic_banner.dart';
 import 'firebase_options.dart';
 import 'core/providers/locale_provider.dart';
 import 'core/realtime/realtime_providers.dart';
+import 'features/inbox/presentation/providers/chat_realtime_sync.dart';
 import 'core/router/app_router.dart';
 import 'core/router/route_names.dart';
 import 'core/services/storage_service.dart';
@@ -259,6 +260,10 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
     // inbound interest/notification/shortlist events into targeted provider
     // refreshes (no manual pull-to-refresh needed). Alive for the whole session.
     ref.watch(realtimeSyncProvider);
+
+    // Applies inbound chat socket events (messages, edits/deletes, read/
+    // delivered receipts, typing) to the inbox state. Also alive for the session.
+    ref.watch(chatRealtimeSyncProvider);
 
     // Initialize responsive screen scaling (design size based on standard phone: 375x812)
     return ScreenUtilInit(

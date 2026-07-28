@@ -162,6 +162,33 @@ class ConversationRepositoryImpl implements ConversationRepository {
   Future<void> markUnread(String conversationId) =>
       _mutate(conversationId, (c) => c.copyWith(unreadCount: c.unreadCount > 0 ? c.unreadCount : 1));
 
+  @override
+  Future<MessageEntity> editMessage(String messageId, String content) async {
+    for (final entry in _messageCache.entries) {
+      final index = entry.value.indexWhere((m) => m.id == messageId);
+      if (index == -1) continue;
+      final updated =
+          entry.value[index].copyWith(text: content, editedAt: DateTime.now());
+      _messageCache[entry.key] = [
+        for (final m in entry.value) if (m.id == messageId) updated else m,
+      ];
+      return updated;
+    }
+    throw Exception('Message not found: $messageId');
+  }
+
+  @override
+  Future<void> deleteMessage(String messageId) async {
+    for (final entry in _messageCache.entries) {
+      if (!entry.value.any((m) => m.id == messageId)) continue;
+      _messageCache[entry.key] = [
+        for (final m in entry.value)
+          if (m.id == messageId) m.copyWith(isDeleted: true) else m,
+      ];
+      return;
+    }
+  }
+
   Future<void> _mutate(
     String conversationId,
     ConversationEntity Function(ConversationEntity) update,

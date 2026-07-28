@@ -112,6 +112,16 @@ abstract interface class ConversationRepository {
 
   Future<void> markUnread(String conversationId);
 
+  /// Edits a text message's content. Only the sender may edit, only text
+  /// messages, and only within the backend's edit window — the server enforces
+  /// all three and returns the updated message (with `editedAt` set). The peer
+  /// is notified live via a `chat.messageEdited` push.
+  Future<MessageEntity> editMessage(String messageId, String content);
+
+  /// Deletes a message for everyone (soft delete). Only the sender may delete.
+  /// The peer is notified live via a `chat.messageDeleted` push.
+  Future<void> deleteMessage(String messageId);
+
   /// Signals this client's own typing state for [conversationId] so a real
   /// backend can relay it to the other participant. A no-op today (see
   /// [ConversationRepositoryImpl]) — deliberately NOT wired to

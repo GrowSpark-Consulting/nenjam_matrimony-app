@@ -384,6 +384,13 @@ class _MessagesList extends ConsumerWidget {
             final message = messages[messageIndex];
             final showDateSeparator = messageIndex == 0 ||
                 !_isSameDay(messages[messageIndex - 1].sentAt, message.sentAt);
+            // A confirmed message of this user's own can be edited/deleted via
+            // long-press (the server still enforces sender-only, text-only, and
+            // the edit window — a rejected edit just reverts).
+            final canManage = message.isMine &&
+                !message.isDeleted &&
+                message.status != MessageStatus.sending &&
+                message.status != MessageStatus.failed;
             return Column(
               key: ValueKey(message.id),
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -392,6 +399,8 @@ class _MessagesList extends ConsumerWidget {
                 MessageBubble(
                   message: message,
                   onRetry: message.status == MessageStatus.failed ? onRetry : null,
+                  onLongPress:
+                      canManage ? () => _showMessageActions(context, ref, message) : null,
                 ),
               ],
             );
@@ -403,7 +412,101 @@ class _MessagesList extends ConsumerWidget {
 
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
+
+  /// Long-press actions for this user's own message: edit (text only) or delete
+  /// for everyone. The server re-enforces every rule; a rejected action reverts.
+  Future<void> _showMessageActions(
+    BuildContext context,
+    WidgetRef ref,
+    MessageEntity message,
+  ) async {
+    final notifier = ref.read(messagesProvider(conversationId).notifier);
+    final action = await showModalBottomSheet<_MessageAction>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (message.type == MessageType.text)
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Edit'),
+                onTap: () => Navigator.of(sheetContext).pop(_MessageAction.edit),
+              ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: AppColors.error),
+              title: const Text('Delete', style: TextStyle(color: AppColors.error)),
+              onTap: () => Navigator.of(sheetContext).pop(_MessageAction.delete),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !context.mounted) return;
+    switch (action) {
+      case _MessageAction.edit:
+        final newText = await _promptEditText(context, message.text);
+        if (newText != null && newText.isNotEmpty) {
+          await notifier.edit(message.id, newText);
+        }
+      case _MessageAction.delete:
+        final confirmed = await _confirmDelete(context);
+        if (confirmed) await notifier.deleteMessage(message.id);
+    }
+  }
+
+  Future<String?> _promptEditText(BuildContext context, String initial) async {
+    final controller = TextEditingController(text: initial);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Edit message'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: null,
+          textCapitalization: TextCapitalization.sentences,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    return result;
+  }
+
+  Future<bool> _confirmDelete(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete message?'),
+        content: const Text('This message will be deleted for everyone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
 }
+
+/// Long-press action chosen for a message (see `_showMessageActions`).
+enum _MessageAction { edit, delete }
 
 class _LockedThread extends StatelessWidget {
   final ConversationEntity conversation;

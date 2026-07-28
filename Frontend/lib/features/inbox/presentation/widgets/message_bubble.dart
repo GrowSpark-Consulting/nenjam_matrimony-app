@@ -24,7 +24,16 @@ class MessageBubble extends StatefulWidget {
   /// supplies it via [MessagesNotifier.retry].
   final ValueChanged<String>? onRetry;
 
-  const MessageBubble({super.key, required this.message, this.onRetry});
+  /// Called when the user long-presses their own (non-deleted) message —
+  /// Chat Detail opens the edit/delete actions sheet. Null hides the gesture.
+  final VoidCallback? onLongPress;
+
+  const MessageBubble({
+    super.key,
+    required this.message,
+    this.onRetry,
+    this.onLongPress,
+  });
 
   @override
   State<MessageBubble> createState() => _MessageBubbleState();
@@ -54,7 +63,11 @@ class _MessageBubbleState extends State<MessageBubble> with SingleTickerProvider
         opacity: _fade,
         child: SlideTransition(
           position: _slide,
-          child: _MessageBubbleContent(message: widget.message, onRetry: widget.onRetry),
+          child: _MessageBubbleContent(
+            message: widget.message,
+            onRetry: widget.onRetry,
+            onLongPress: widget.onLongPress,
+          ),
         ),
       ),
     );
@@ -64,11 +77,18 @@ class _MessageBubbleState extends State<MessageBubble> with SingleTickerProvider
 class _MessageBubbleContent extends StatelessWidget {
   final MessageEntity message;
   final ValueChanged<String>? onRetry;
+  final VoidCallback? onLongPress;
 
-  const _MessageBubbleContent({required this.message, this.onRetry});
+  const _MessageBubbleContent({
+    required this.message,
+    this.onRetry,
+    this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (message.isDeleted) return _DeletedBubble(isMine: message.isMine);
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context);
     final isMine = message.isMine;
@@ -124,6 +144,16 @@ class _MessageBubbleContent extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (message.editedAt != null) ...[
+                  Text(
+                    'edited',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: textColor.withValues(alpha: 0.7),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
                 Text(
                   _time(message.sentAt),
                   style: AppTypography.labelSmall.copyWith(
@@ -151,15 +181,20 @@ class _MessageBubbleContent extends StatelessWidget {
       ),
     );
 
+    Widget interactive = bubble;
+    if (canRetry) {
+      interactive = InkWell(
+        onTap: () => onRetry!(message.clientMessageId!),
+        borderRadius: BorderRadius.circular(16),
+        child: bubble,
+      );
+    } else if (onLongPress != null) {
+      interactive = GestureDetector(onLongPress: onLongPress, child: bubble);
+    }
+
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: canRetry
-          ? InkWell(
-              onTap: () => onRetry!(message.clientMessageId!),
-              borderRadius: BorderRadius.circular(16),
-              child: bubble,
-            )
-          : bubble,
+      child: interactive,
     );
   }
 
@@ -180,6 +215,51 @@ class _MessageBubbleContent extends StatelessWidget {
 
   Color _statusColor(Color textColor) =>
       message.status == MessageStatus.read ? AppColors.accentGoldLight : textColor.withValues(alpha: 0.7);
+}
+
+/// The tombstone shown in place of a message that was deleted for everyone —
+/// keeps the sender-side alignment but strips content, status, and any
+/// long-press actions.
+class _DeletedBubble extends StatelessWidget {
+  final bool isMine;
+
+  const _DeletedBubble({required this.isMine});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
+    final bg = isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight;
+
+    return Align(
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        margin: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.block_rounded, size: 14, color: color),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                'This message was deleted',
+                style: AppTypography.chatMessages.copyWith(
+                  color: color,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// An image message's thumbnail — [url] is either a real `http(s)` URL (a
