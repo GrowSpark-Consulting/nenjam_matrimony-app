@@ -13,15 +13,33 @@ export const RealtimeEvents = {
   interestRejected: 'interest.rejected',
   notificationCreated: 'notification.created',
   shortlistCreated: 'shortlist.created',
+  // Chat. Unlike the refresh signals above, `chat.message` carries the full
+  // message payload inline so a chat feels instant (the recipient renders it
+  // with no round trip) — safe because it's delivered only to that
+  // conversation's authenticated participants' rooms. `chat.read` and
+  // `chat.typing` are lightweight receipts.
+  chatMessage: 'chat.message',
+  chatRead: 'chat.read',
+  chatDelivered: 'chat.delivered',
+  chatTyping: 'chat.typing',
+  // Edit carries the updated message inline (same shape as chat.message) so the
+  // bubble re-renders in place; delete carries only { id, roomId, at } so the
+  // client can drop/tombstone the bubble.
+  chatMessageEdited: 'chat.messageEdited',
+  chatMessageDeleted: 'chat.messageDeleted',
 } as const;
 
 export type RealtimeEvent =
   (typeof RealtimeEvents)[keyof typeof RealtimeEvents];
 
-/** The one payload shape every event carries. `id` identifies the affected
+/** The payload the refresh-signal events carry. `id` identifies the affected
  *  record (for optional optimistic use + client-side dedup); `at` is the server
  *  commit time (ISO) so the client can order/dedupe if it wants. */
 export interface RealtimePayload {
   id: string;
   at: string;
 }
+
+/** socket.io room that fans an event out to every device a user has connected.
+ *  Shared by every gateway so the room-naming convention is defined once. */
+export const userRoom = (userId: string): string => `user:${userId}`;

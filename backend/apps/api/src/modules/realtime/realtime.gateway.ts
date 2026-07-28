@@ -1,7 +1,9 @@
 import { Logger } from '@nestjs/common';
 import {
+  ConnectedSocket,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
@@ -10,14 +12,13 @@ import { FirebaseService } from '@app/firebase';
 import { PrismaService } from '@app/database';
 import { RedisService } from '@app/cache';
 import { getCachedUserId, setCachedUserId } from '@app/common';
+import { PresenceService } from './presence.service';
 import {
   RealtimeEvent,
   RealtimeEvents,
   RealtimePayload,
+  userRoom,
 } from './realtime.events';
-
-/** socket.io room that fans an event out to every device a user has connected. */
-const userRoom = (userId: string): string => `user:${userId}`;
 
 /** Per-socket state we attach after authenticating the handshake. */
 interface AuthedSocketData {
@@ -48,13 +49,11 @@ export class RealtimeGateway
   @WebSocketServer()
   private server!: Server;
 
-  // Presence/debug only — delivery uses socket.io rooms, not this map.
-  private readonly onlineUserIds = new Set<string>();
-
   constructor(
     private readonly firebase: FirebaseService,
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
+    private readonly presence: PresenceService,
   ) {}
 
   async handleConnection(client: Socket): Promise<void> {
@@ -68,8 +67,13 @@ export class RealtimeGateway
 
       (client.data as AuthedSocketData).userId = userId;
       await client.join(userRoom(userId));
-      this.onlineUserIds.add(userId);
+      // Record this device in the (Redis-backed, cross-instance) presence set.
+      await this.presence.touch(userId, client.id);
       this.logger.log(`Socket ${client.id} authenticated for user ${userId}.`);
+      // Signal the client that the socket is fully authenticated and joined.
+      // Clients should emit `chat.sync` (reconnect replay) on THIS event, not on
+      // transport `connect`, which fires before this async auth completes.
+      client.emit('ready');
     } catch (error) {
       this.reject(client, `Auth failed: ${(error as Error).message}`);
     }
@@ -78,15 +82,24 @@ export class RealtimeGateway
   handleDisconnect(client: Socket): void {
     const userId = (client.data as AuthedSocketData).userId;
     if (!userId) return;
-    // socket.io already removed the socket from its room; only refresh the
-    // presence set (best-effort — a stale entry is harmless).
-    void this.server
-      .in(userRoom(userId))
-      .fetchSockets()
-      .then((sockets) => {
-        if (sockets.length === 0) this.onlineUserIds.delete(userId);
-      })
-      .catch(() => this.onlineUserIds.delete(userId));
+    // socket.io already removed the socket from its room; drop this device from
+    // presence too (best-effort — a leftover member ages out via the stale
+    // window regardless).
+    void this.presence.remove(userId, client.id);
+  }
+
+  /**
+   * Presence heartbeat. The client emits `presence.ping` on an interval (see
+   * PresenceService.HEARTBEAT_INTERVAL_MS) so a device that's connected but idle
+   * keeps its presence fresh and doesn't age out of the stale window. Replies
+   * `presence.pong` so the client can also use it as a liveness/RTT probe.
+   */
+  @SubscribeMessage('presence.ping')
+  async handlePresencePing(@ConnectedSocket() client: Socket): Promise<void> {
+    const userId = (client.data as AuthedSocketData).userId;
+    if (!userId) return;
+    await this.presence.touch(userId, client.id);
+    client.emit('presence.pong', { at: Date.now() });
   }
 
   /**
@@ -97,14 +110,10 @@ export class RealtimeGateway
   emitToUser(
     userId: string,
     event: RealtimeEvent,
-    payload: RealtimePayload,
+    payload: RealtimePayload | Record<string, unknown>,
   ): void {
     if (!this.server) return;
     this.server.to(userRoom(userId)).emit(event, payload);
-  }
-
-  isOnline(userId: string): boolean {
-    return this.onlineUserIds.has(userId);
   }
 
   // ── internals ──────────────────────────────────────────────────────────
