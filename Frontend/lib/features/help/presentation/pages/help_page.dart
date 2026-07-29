@@ -1,13 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../../support/domain/models/support_ticket.dart';
 
 /// Help & Support center screen.
 class HelpPage extends StatelessWidget {
   const HelpPage({super.key});
 
+  Future<void> _emailSupport(BuildContext context) async {
+    final uri = Uri(scheme: 'mailto', path: 'support@nenjammatrimony.com');
+    final launched = await launchUrl(uri);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No email app found on this device.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Help & Support')),
       body: SafeArea(
@@ -36,16 +53,51 @@ class HelpPage extends StatelessWidget {
             const SizedBox(height: 16),
             ListTile(
               leading: const Icon(Icons.support_agent_rounded),
-              title: const Text('Chat with Support'),
-              subtitle: const Text('Available 24/7 for VIP members'),
+              title: Text(l10n.supportContactTitle),
               trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () {},
+              onTap: () => context.push(
+                RouteNames.supportTicketForm,
+                extra: SupportTicketType.contactSupport,
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.email_outlined),
-              title: const Text('Email Us'),
-              subtitle: const Text('support@nenjammatrimony.com'),
-              onTap: () {},
+              title: Text(l10n.supportEmailTitle),
+              subtitle: Text(l10n.supportEmailSubtitle),
+              onTap: () => _emailSupport(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.bug_report_outlined),
+              title: Text(l10n.supportBugReportTitle),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => context.push(
+                RouteNames.supportTicketForm,
+                extra: SupportTicketType.bugReport,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.lightbulb_outline_rounded),
+              title: Text(l10n.supportFeatureRequestTitle),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => context.push(
+                RouteNames.supportTicketForm,
+                extra: SupportTicketType.featureRequest,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.rate_review_outlined),
+              title: Text(l10n.supportAppFeedbackTitle),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => context.push(
+                RouteNames.supportTicketForm,
+                extra: SupportTicketType.appFeedback,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.history_rounded),
+              title: Text(l10n.supportTicketHistoryTitle),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => context.push(RouteNames.ticketHistory),
             ),
           ],
         ),

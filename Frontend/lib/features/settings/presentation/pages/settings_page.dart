@@ -4,12 +4,17 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/permissions/nm_permission.dart';
 import '../../../../core/permissions/permission_providers.dart';
+import '../../../../core/providers/theme_mode_provider.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/dialogs/app_dialogs.dart';
+import '../../../../core/widgets/inputs/nm_toggle_row.dart';
 import '../../../../core/widgets/permissions/permission_dialogs.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../authentication/presentation/providers/auth_providers.dart';
 import '../../../authentication/presentation/utils/logout_flow.dart';
+import '../providers/settings_providers.dart';
 
 /// App settings screen.
 class SettingsPage extends ConsumerStatefulWidget {
@@ -21,6 +26,8 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage>
     with WidgetsBindingObserver {
+  bool _deletingAccount = false;
+
   @override
   void initState() {
     super.initState();
@@ -86,6 +93,35 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     ref.invalidate(notificationPermissionStatusProvider);
   }
 
+  Future<void> _handleDeleteAccount() async {
+    if (_deletingAccount) return;
+    final l10n = AppLocalizations.of(context);
+
+    final confirmed = await AppDialogs.showDelete(
+      context,
+      title: l10n.settingsDeleteAccount,
+      message: l10n.settingsDeleteAccountConfirmMessage,
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _deletingAccount = true);
+    AppDialogs.showProgress(context, message: l10n.settingsDeleteAccountProgressMessage);
+    try {
+      await ref.read(settingsRepositoryProvider).deleteAccount();
+      if (!mounted) return;
+      Navigator.of(context).pop(); // dismiss progress dialog
+      await ref.read(authRepositoryProvider).logout();
+      if (!mounted) return;
+      context.go(RouteNames.login);
+    } catch (_) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // dismiss progress dialog
+      await AppDialogs.showError(context, message: l10n.settingsDeleteAccountErrorMessage);
+    } finally {
+      if (mounted) setState(() => _deletingAccount = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -94,6 +130,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
         ? l10n.languageTamil
         : l10n.languageEnglish;
     final notificationStatus = ref.watch(notificationPermissionStatusProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
@@ -113,15 +150,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => context.push(RouteNames.verification),
             ),
-            ListTile(
-              leading: const Icon(Icons.notifications_outlined),
-              title: Text(l10n.settingsPushNotifications),
-              trailing: Switch(
-                value: notificationStatus.valueOrNull?.isGranted ?? false,
-                onChanged: notificationStatus.isLoading
-                    ? null
-                    : _onNotificationsToggle,
-              ),
+            NmToggleRow(
+              icon: Icons.notifications_outlined,
+              title: l10n.settingsPushNotifications,
+              value: notificationStatus.valueOrNull?.isGranted ?? false,
+              onChanged: notificationStatus.isLoading ? null : _onNotificationsToggle,
             ),
             const Divider(height: 32),
             Text(
@@ -129,10 +162,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
               style: AppTypography.labelLarge,
             ),
             const SizedBox(height: 8),
-            ListTile(
-              leading: const Icon(Icons.dark_mode_outlined),
-              title: Text(l10n.settingsDarkMode),
-              trailing: Switch(value: false, onChanged: (_) {}),
+            NmToggleRow(
+              icon: Icons.dark_mode_outlined,
+              title: l10n.settingsDarkMode,
+              value: themeMode == ThemeMode.dark,
+              onChanged: (isDark) => ref
+                  .read(themeModeProvider.notifier)
+                  .setThemeMode(isDark ? ThemeMode.dark : ThemeMode.light),
             ),
             ListTile(
               leading: const Icon(Icons.translate_rounded),
@@ -155,6 +191,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                 style: AppTypography.bodyLarge.copyWith(color: AppColors.error),
               ),
               onTap: () => confirmAndLogout(context, ref),
+            ),
+            const Divider(height: 32),
+            Text(
+              l10n.settingsDangerZoneSection,
+              style: AppTypography.labelLarge.copyWith(color: AppColors.error),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.delete_forever_rounded, color: AppColors.error),
+              title: Text(
+                l10n.settingsDeleteAccount,
+                style: AppTypography.bodyLarge.copyWith(color: AppColors.error),
+              ),
+              subtitle: Text(l10n.settingsDeleteAccountSubtitle),
+              trailing: _deletingAccount
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : null,
+              onTap: _deletingAccount ? null : _handleDeleteAccount,
             ),
           ],
         ),

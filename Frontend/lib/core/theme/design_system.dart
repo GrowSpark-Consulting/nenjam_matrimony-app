@@ -41,7 +41,6 @@ export '../widgets/cards/premium_banner.dart';
 export '../widgets/cards/profile_card.dart';
 export '../widgets/cards/profile_completion_card.dart';
 export '../widgets/cards/subscription_card.dart';
-export '../widgets/cards/visitor_card.dart';
 
 export '../widgets/chips/app_chips.dart';
 export '../widgets/chips/info_chip.dart';

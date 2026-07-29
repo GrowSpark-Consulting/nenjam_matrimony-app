@@ -5,10 +5,14 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/avatars/app_avatars.dart';
+import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../authentication/presentation/providers/auth_providers.dart';
 import '../../../inbox/presentation/widgets/unread_badge.dart';
 import '../../../interests/domain/repositories/interests_repository.dart';
 import '../../../interests/presentation/providers/interests_provider.dart';
+import '../../../profile/presentation/providers/profile_dashboard_providers.dart';
+import '../../../profile/presentation/utils/profile_dashboard_mapper.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 
@@ -30,35 +34,7 @@ import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 //   5. Fixed bottom footer     (version + Rate Us)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class NenjamNavigationDrawer extends StatelessWidget {
-  /// URL of the user's profile photo.
-  final String? profileImageUrl;
-
-  /// 'Male' / 'Female' / '' — picks the gender-aware placeholder icon
-  /// when [profileImageUrl] is null/fails to load.
-  final String gender;
-
-  /// Display name (e.g. "Dhatri Patel").
-  final String userName;
-
-  /// Age shown in the subtitle line.
-  final int age;
-
-  /// Location shown in the subtitle line (e.g. "Chennai").
-  final String location;
-
-  /// Community label (e.g. "Tamil Community").
-  final String community;
-
-  /// Profile ID string (e.g. "NM112345").
-  final String profileId;
-
-  /// Profile completion 0–100.
-  final int profileCompletionPercent;
-
-  /// Whether the profile has a verification badge.
-  final bool isVerified;
-
+class NenjamNavigationDrawer extends ConsumerStatefulWidget {
   /// Whether the user is a premium subscriber.
   final bool isPremium;
 
@@ -73,7 +49,6 @@ class NenjamNavigationDrawer extends StatelessWidget {
   final VoidCallback? onProfileIntelligenceTap;
   final VoidCallback? onVerificationCenterTap;
   final VoidCallback? onTrustScoreTap;
-  final VoidCallback? onVisitorsTap;
   final VoidCallback? onInterestSentTap;
   final VoidCallback? onInterestReceivedTap;
   final VoidCallback? onShortlistTap;
@@ -81,22 +56,16 @@ class NenjamNavigationDrawer extends StatelessWidget {
   final VoidCallback? onSettingsTap;
   final VoidCallback? onPrivacyTap;
   final VoidCallback? onHelpTap;
-  final VoidCallback? onLogoutTap;
+  /// Future-returning so the drawer can show a loading state and guard
+  /// against double-taps while the confirm dialog / sign-out call is
+  /// in flight — see [_NenjamNavigationDrawerState._handleLogout].
+  final Future<void> Function()? onLogoutTap;
   final VoidCallback? onUpgradeTap;
   final VoidCallback? onCompleteProfileTap;
   final VoidCallback? onRateUsTap;
 
   const NenjamNavigationDrawer({
     super.key,
-    this.profileImageUrl,
-    this.gender = '',
-    this.userName = 'Dhatri Patel',
-    this.age = 23,
-    this.location = 'Chennai',
-    this.community = 'Tamil Community',
-    this.profileId = 'NM112345',
-    this.profileCompletionPercent = 85,
-    this.isVerified = true,
     this.isPremium = false,
     this.onAvatarTap,
     this.onMyProfileTap,
@@ -105,7 +74,6 @@ class NenjamNavigationDrawer extends StatelessWidget {
     this.onProfileIntelligenceTap,
     this.onVerificationCenterTap,
     this.onTrustScoreTap,
-    this.onVisitorsTap,
     this.onInterestSentTap,
     this.onInterestReceivedTap,
     this.onShortlistTap,
@@ -120,16 +88,58 @@ class NenjamNavigationDrawer extends StatelessWidget {
   });
 
   @override
+  ConsumerState<NenjamNavigationDrawer> createState() =>
+      _NenjamNavigationDrawerState();
+}
+
+class _NenjamNavigationDrawerState extends ConsumerState<NenjamNavigationDrawer> {
+  bool _loggingOut = false;
+
+  /// Re-fetches every provider this drawer (and its badge counts) already
+  /// reads — no new data sources, just re-triggering existing ones.
+  Future<void> _onRefresh() async {
+    await Future.wait([
+      ref.refresh(profileDraftResponseProvider.future),
+      ref.refresh(myPhotosProvider.future),
+      ref.refresh(interestsNotifierProvider.future),
+      ref.refresh(shortlistNotifierProvider.future),
+    ]);
+  }
+
+  Future<void> _handleLogout() async {
+    if (_loggingOut) return;
+    setState(() => _loggingOut = true);
+    try {
+      await widget.onLogoutTap?.call();
+    } finally {
+      if (mounted) setState(() => _loggingOut = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Drawer width: 78% of screen, max 330px
     final drawerWidth = (screenWidth * 0.78).clamp(0.0, 330.0);
 
+    // Single fetch shared by the header + strength bar — same provider the
+    // Profile page and Profile Completion screen already read, so this
+    // drawer never disagrees with them about who the user is or how
+    // complete their profile is.
+    final draftAsync = ref.watch(myProfileDraftProvider);
+    final completionAsync = ref.watch(backendProfileCompletionProvider);
+    final authUser = ref.watch(currentAuthUserProvider);
+    final draft = draftAsync.valueOrNull;
+
+    final identityLoading = draftAsync.isLoading && !draftAsync.hasValue;
+    final identityError = draftAsync.hasError && !draftAsync.hasValue;
+
     return Drawer(
       width: drawerWidth,
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
       elevation: 16,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
@@ -140,44 +150,51 @@ class NenjamNavigationDrawer extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
-            // ── 1. Compact profile header ──────────────────────────────────
-            _ProfileHeader(
-              imageUrl: profileImageUrl,
-              gender: gender,
-              name: userName,
-              age: age,
-              location: location,
-              community: community,
-              profileId: profileId,
-              isVerified: isVerified,
-              isPremium: isPremium,
-              onAvatarTap: onAvatarTap,
-            ),
-
-            // ── 2. Profile Strength bar ────────────────────────────────────
-            _ProfileStrengthBar(
-              percent: profileCompletionPercent,
-              l10n: l10n,
-              onTap: () {
-                Navigator.pop(context);
-                onCompleteProfileTap?.call();
-              },
-            ),
+            // ── 1 & 2. Compact profile header + Profile Strength bar ───────
+            if (identityLoading)
+              const _IdentitySkeleton()
+            else if (identityError)
+              _IdentityError(onRetry: () => ref.invalidate(profileDraftResponseProvider))
+            else ...[
+              _ProfileHeader(
+                imageUrl: null,
+                gender: draft?.basicDetails.gender ?? '',
+                name: profileDisplayName(draft, authUser),
+                age: profileDisplayAge(draft) ?? 0,
+                location: profileDisplayLocation(draft),
+                community: draft?.religionDetails.community ?? '',
+                profileId: profileDisplayId(authUser),
+                isVerified: authUser?.isFullyVerified ?? false,
+                isPremium: widget.isPremium,
+                onAvatarTap: widget.onAvatarTap,
+              ),
+              _ProfileStrengthBar(
+                percent: completionAsync.valueOrNull ?? 85,
+                l10n: l10n,
+                onTap: () {
+                  Navigator.pop(context);
+                  widget.onCompleteProfileTap?.call();
+                },
+              ),
+            ],
 
             // Thin divider
-            const Divider(
+            Divider(
               height: 1,
               thickness: 1,
-              color: AppColors.dividerLight,
+              color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
               indent: AppSpacing.base,
               endIndent: AppSpacing.base,
             ),
 
             // ── 3. Scrollable menu ─────────────────────────────────────────
             Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
+              child: RefreshIndicator(
+                onRefresh: _onRefresh,
+                color: AppColors.accentGold,
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: AppSpacing.xs),
@@ -189,7 +206,7 @@ class NenjamNavigationDrawer extends StatelessWidget {
                       isActive: true,
                       onTap: () {
                         Navigator.pop(context);
-                        onMyProfileTap?.call();
+                        widget.onMyProfileTap?.call();
                       },
                     ),
                     _DrawerItem(
@@ -197,7 +214,7 @@ class NenjamNavigationDrawer extends StatelessWidget {
                       label: l10n.drawerEditProfile,
                       onTap: () {
                         Navigator.pop(context);
-                        onEditProfileTap?.call();
+                        widget.onEditProfileTap?.call();
                       },
                     ),
                     _DrawerItem(
@@ -205,45 +222,37 @@ class NenjamNavigationDrawer extends StatelessWidget {
                       label: l10n.drawerPartnerPreferences,
                       onTap: () {
                         Navigator.pop(context);
-                        onPartnerPreferencesTap?.call();
+                        widget.onPartnerPreferencesTap?.call();
                       },
                     ),
                     _DrawerItem(
                       icon: Icons.auto_awesome_rounded,
-                      label: 'Profile Intelligence',
+                      label: l10n.drawerProfileIntelligence,
                       onTap: () {
                         Navigator.pop(context);
-                        onProfileIntelligenceTap?.call();
+                        widget.onProfileIntelligenceTap?.call();
                       },
                     ),
                     _DrawerItem(
                       icon: Icons.shield_outlined,
-                      label: 'Verification Center',
+                      label: l10n.drawerVerificationCenter,
                       onTap: () {
                         Navigator.pop(context);
-                        onVerificationCenterTap?.call();
+                        widget.onVerificationCenterTap?.call();
                       },
                     ),
                     _DrawerItem(
                       icon: Icons.star_outline_rounded,
-                      label: 'Trust Score',
+                      label: l10n.drawerTrustScore,
                       onTap: () {
                         Navigator.pop(context);
-                        onTrustScoreTap?.call();
+                        widget.onTrustScoreTap?.call();
                       },
                     ),
 
                     _MenuDivider(),
 
                     // Match Activity group
-                    _DrawerItem(
-                      icon: Icons.visibility_outlined,
-                      label: l10n.drawerVisitors,
-                      onTap: () {
-                        Navigator.pop(context);
-                        onVisitorsTap?.call();
-                      },
-                    ),
                     Consumer(
                       builder: (context, ref, _) => _DrawerItem(
                         icon: Icons.outbox_outlined,
@@ -255,7 +264,7 @@ class NenjamNavigationDrawer extends StatelessWidget {
                             .length,
                         onTap: () {
                           Navigator.pop(context);
-                          onInterestSentTap?.call();
+                          widget.onInterestSentTap?.call();
                         },
                       ),
                     ),
@@ -270,7 +279,7 @@ class NenjamNavigationDrawer extends StatelessWidget {
                             .length,
                         onTap: () {
                           Navigator.pop(context);
-                          onInterestReceivedTap?.call();
+                          widget.onInterestReceivedTap?.call();
                         },
                       ),
                     ),
@@ -285,7 +294,7 @@ class NenjamNavigationDrawer extends StatelessWidget {
                         count: ref.watch(shortlistCountProvider),
                         onTap: () {
                           Navigator.pop(context);
-                          onShortlistTap?.call();
+                          widget.onShortlistTap?.call();
                         },
                       ),
                     ),
@@ -298,7 +307,7 @@ class NenjamNavigationDrawer extends StatelessWidget {
                       label: l10n.drawerLanguage,
                       onTap: () {
                         Navigator.pop(context);
-                        onLanguageTap?.call();
+                        widget.onLanguageTap?.call();
                       },
                     ),
                     _DrawerItem(
@@ -306,7 +315,7 @@ class NenjamNavigationDrawer extends StatelessWidget {
                       label: l10n.drawerSettings,
                       onTap: () {
                         Navigator.pop(context);
-                        onSettingsTap?.call();
+                        widget.onSettingsTap?.call();
                       },
                     ),
                     _DrawerItem(
@@ -314,7 +323,7 @@ class NenjamNavigationDrawer extends StatelessWidget {
                       label: l10n.drawerPrivacy,
                       onTap: () {
                         Navigator.pop(context);
-                        onPrivacyTap?.call();
+                        widget.onPrivacyTap?.call();
                       },
                     ),
                     _DrawerItem(
@@ -322,45 +331,124 @@ class NenjamNavigationDrawer extends StatelessWidget {
                       label: l10n.drawerHelp,
                       onTap: () {
                         Navigator.pop(context);
-                        onHelpTap?.call();
+                        widget.onHelpTap?.call();
                       },
                     ),
 
                     _MenuDivider(),
 
-                    // Logout
+                    // Logout — no Navigator.pop before the call: confirmAndLogout
+                    // shows its confirm dialog over the still-open drawer, and
+                    // its final context.go(RouteNames.login) replaces the whole
+                    // page (drawer included) once confirmed, so popping first
+                    // would only hide the loading state below without helping.
                     _DrawerItem(
                       icon: Icons.logout_rounded,
                       label: l10n.drawerLogout,
                       labelColor: AppColors.error,
                       iconColor: AppColors.error,
                       showChevron: false,
-                      onTap: () {
-                        Navigator.pop(context);
-                        onLogoutTap?.call();
-                      },
+                      isLoading: _loggingOut,
+                      onTap: _handleLogout,
                     ),
 
                     const SizedBox(height: AppSpacing.sm),
                   ],
                 ),
+                ),
               ),
             ),
 
             // ── 4. Premium upgrade strip ───────────────────────────────────
-            if (!isPremium)
+            if (!widget.isPremium)
               _PremiumStrip(
                 l10n: l10n,
                 onTap: () {
                   Navigator.pop(context);
-                  onUpgradeTap?.call();
+                  widget.onUpgradeTap?.call();
                 },
               ),
 
             // ── 5. Fixed footer ────────────────────────────────────────────
-            _DrawerFooter(onRateUsTap: onRateUsTap, l10n: l10n),
+            _DrawerFooter(onRateUsTap: widget.onRateUsTap, l10n: l10n),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Header/strength-bar loading + error placeholders — shown only on a cold
+// start with no cached draft yet; a failed pull-to-refresh keeps showing the
+// last-known values instead (see NenjamNavigationDrawer.build).
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _IdentitySkeleton extends StatelessWidget {
+  const _IdentitySkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.base,
+        AppSpacing.base,
+        AppSpacing.base,
+        AppSpacing.sm,
+      ),
+      child: Column(
+        children: [
+          NmShimmer.circle(size: 72),
+          SizedBox(height: AppSpacing.sm),
+          NmShimmer(width: 140, height: 18, borderRadius: AppSpacing.radiusSm),
+          SizedBox(height: AppSpacing.xs2),
+          NmShimmer(width: 100, height: 13, borderRadius: AppSpacing.radiusSm),
+          SizedBox(height: AppSpacing.sm),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+            child: NmShimmer(height: 46, borderRadius: AppSpacing.radiusSm),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IdentityError extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _IdentityError({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.base),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline_rounded, size: 18, color: AppColors.error),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              "Couldn't load profile",
+              style: AppTypography.bodySmall.copyWith(
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          TextButton(
+            onPressed: onRetry,
+            child: Text(
+              'Retry',
+              style: AppTypography.labelMedium.copyWith(
+                color: AppColors.accentGoldDark,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -397,6 +485,9 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final badgeRingColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.base,
@@ -428,9 +519,9 @@ class _ProfileHeader extends StatelessWidget {
                       ),
                     ),
                     child: Container(
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.primarySurface,
+                        color: isDark ? AppColors.surfaceVariantDark : AppColors.primarySurface,
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: _LiveAvatarImage(imageUrl: imageUrl, gender: gender),
@@ -453,7 +544,7 @@ class _ProfileHeader extends StatelessWidget {
                         shape: BoxShape.circle,
                         color: AppColors.verifiedBlue,
                         border: Border.all(
-                          color: AppColors.backgroundLight,
+                          color: badgeRingColor,
                           width: 1.5,
                         ),
                       ),
@@ -477,7 +568,7 @@ class _ProfileHeader extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: AppColors.verifiedBlue,
                       border: Border.all(
-                        color: AppColors.backgroundLight,
+                        color: badgeRingColor,
                         width: 1.5,
                       ),
                     ),
@@ -500,7 +591,7 @@ class _ProfileHeader extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: AppColors.accentGold,
                       border: Border.all(
-                        color: AppColors.backgroundLight,
+                        color: badgeRingColor,
                         width: 1.5,
                       ),
                     ),
@@ -525,7 +616,7 @@ class _ProfileHeader extends StatelessWidget {
                 child: Text(
                   name,
                   style: AppTypography.titleMedium.copyWith(
-                    color: AppColors.primary,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.primary,
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 1,
@@ -549,7 +640,7 @@ class _ProfileHeader extends StatelessWidget {
           Text(
             [if (age > 0) '$age', location].join(' • '),
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondaryLight,
+              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -581,7 +672,7 @@ class _ProfileHeader extends StatelessWidget {
                 vertical: 3,
               ),
               decoration: BoxDecoration(
-                color: AppColors.accentGoldSurface,
+                color: AppColors.accentGoldSurface.withValues(alpha: isDark ? 0.16 : 1.0),
                 borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
                 border: Border.all(
                   color: AppColors.accentGold.withValues(alpha: 0.4),
@@ -646,6 +737,7 @@ class _ProfileStrengthBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final clamped = percent.clamp(0, 100);
 
     return GestureDetector(
@@ -661,7 +753,7 @@ class _ProfileStrengthBar extends StatelessWidget {
           vertical: AppSpacing.xs,
         ),
         decoration: BoxDecoration(
-          color: AppColors.accentGoldSurface,
+          color: AppColors.accentGoldSurface.withValues(alpha: isDark ? 0.16 : 1.0),
           borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
           border: Border.all(
             color: AppColors.accentGold.withValues(alpha: 0.25),
@@ -677,7 +769,7 @@ class _ProfileStrengthBar extends StatelessWidget {
                 Text(
                   l10n.drawerProfileStrength,
                   style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.textSecondaryLight,
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -698,7 +790,7 @@ class _ProfileStrengthBar extends StatelessWidget {
                 height: 4,
                 child: LinearProgressIndicator(
                   value: clamped / 100.0,
-                  backgroundColor: AppColors.borderLight,
+                  backgroundColor: isDark ? AppColors.borderDark : AppColors.borderLight,
                   valueColor: const AlwaysStoppedAnimation<Color>(
                     AppColors.accentGold,
                   ),
@@ -719,10 +811,11 @@ class _ProfileStrengthBar extends StatelessWidget {
 class _MenuDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const Divider(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Divider(
       height: 12,
       thickness: 1,
-      color: AppColors.dividerLight,
+      color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
       indent: AppSpacing.base,
       endIndent: AppSpacing.base,
     );
@@ -744,6 +837,10 @@ class _DrawerItem extends StatefulWidget {
   /// Live count badge (e.g. pending received interests) — null/0 hides it.
   /// Never a hardcoded placeholder; callers derive this from real state.
   final int? count;
+  /// Shows a small spinner in place of the trailing chevron and disables
+  /// the tile — used by Logout while the confirm dialog / sign-out call is
+  /// in flight, to prevent double-taps.
+  final bool isLoading;
 
   const _DrawerItem({
     required this.icon,
@@ -754,6 +851,7 @@ class _DrawerItem extends StatefulWidget {
     this.iconColor,
     this.onTap,
     this.count,
+    this.isLoading = false,
   });
 
   @override
@@ -764,6 +862,8 @@ class _DrawerItemState extends State<_DrawerItem>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
+
+  bool get _enabled => widget.onTap != null && !widget.isLoading;
 
   @override
   void initState() {
@@ -788,76 +888,102 @@ class _DrawerItemState extends State<_DrawerItem>
       widget.iconColor ??
       (widget.isActive ? AppColors.accentGoldDark : AppColors.accentGold);
 
-  Color get _effectiveLabelColor =>
-      widget.labelColor ?? AppColors.primary;
+  Color _effectiveLabelColor(bool isDark) =>
+      widget.labelColor ?? (isDark ? AppColors.textPrimaryDark : AppColors.primary);
 
   @override
   Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: _scale,
-      child: GestureDetector(
-        onTapDown: (_) => _ctrl.reverse(),
-        onTapUp: (_) {
-          _ctrl.forward();
-          widget.onTap?.call();
-        },
-        onTapCancel: () => _ctrl.forward(),
-        child: Container(
-          height: 52,
-          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-          decoration: BoxDecoration(
-            color: widget.isActive
-                ? AppColors.accentGoldSurface
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-            border: widget.isActive
-                ? const Border(
-                    left: BorderSide(
-                      color: AppColors.accentGold,
-                      width: 3,
-                    ),
-                  )
-                : null,
-          ),
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: widget.isActive
-                  ? AppSpacing.sm
-                  : AppSpacing.sm + 3,
-              right: AppSpacing.sm,
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  widget.icon,
-                  size: 20,
-                  color: _effectiveIconColor,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = _effectiveIconColor;
+
+    return Semantics(
+      button: true,
+      enabled: _enabled,
+      label: widget.label,
+      child: Opacity(
+        opacity: _enabled ? 1.0 : 0.4,
+        child: ScaleTransition(
+          scale: _scale,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              onTapDown: _enabled ? (_) => _ctrl.reverse() : null,
+              onTapCancel: _enabled ? () => _ctrl.forward() : null,
+              onTap: _enabled
+                  ? () {
+                      _ctrl.forward();
+                      widget.onTap?.call();
+                    }
+                  : null,
+              child: Container(
+                height: 52,
+                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                decoration: BoxDecoration(
+                  color: widget.isActive
+                      ? AppColors.accentGoldSurface.withValues(alpha: isDark ? 0.16 : 1.0)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                  border: widget.isActive
+                      ? const Border(
+                          left: BorderSide(
+                            color: AppColors.accentGold,
+                            width: 3,
+                          ),
+                        )
+                      : null,
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    widget.label,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: _effectiveLabelColor,
-                      fontWeight: widget.isActive
-                          ? FontWeight.w600
-                          : FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: widget.isActive
+                        ? AppSpacing.sm
+                        : AppSpacing.sm + 3,
+                    right: AppSpacing.sm,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        widget.icon,
+                        size: 20,
+                        color: iconColor,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          widget.label,
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: _effectiveLabelColor(isDark),
+                            fontWeight: widget.isActive
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (widget.count != null && widget.count! > 0) ...[
+                        UnreadBadge(count: widget.count!),
+                        const SizedBox(width: AppSpacing.sm),
+                      ],
+                      if (widget.isLoading)
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(iconColor),
+                          ),
+                        )
+                      else if (widget.showChevron)
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                        ),
+                    ],
                   ),
                 ),
-                if (widget.count != null && widget.count! > 0) ...[
-                  UnreadBadge(count: widget.count!),
-                  const SizedBox(width: AppSpacing.sm),
-                ],
-                if (widget.showChevron)
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 18,
-                    color: AppColors.textTertiaryLight,
-                  ),
-              ],
+              ),
             ),
           ),
         ),
@@ -952,14 +1078,15 @@ class _DrawerFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.base,
         vertical: AppSpacing.xs,
       ),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: AppColors.dividerLight),
+          top: BorderSide(color: isDark ? AppColors.dividerDark : AppColors.dividerLight),
         ),
       ),
       child: Row(
@@ -969,7 +1096,7 @@ class _DrawerFooter extends StatelessWidget {
             child: Text(
               '${l10n.drawerVersionLabel} v2.4',
               style: AppTypography.labelSmall.copyWith(
-                color: AppColors.textTertiaryLight,
+                color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
                 fontSize: 10,
               ),
               maxLines: 1,

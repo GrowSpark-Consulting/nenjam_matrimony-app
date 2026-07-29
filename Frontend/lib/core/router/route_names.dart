@@ -33,11 +33,12 @@ abstract final class RouteNames {
   static const String verification = '/verification';
   static const String subscription = '/subscription';
   static const String help = '/help';
+  static const String supportTicketForm = '/help/ticket';
+  static const String ticketHistory = '/help/tickets';
   static const String privacy = '/privacy';
   static const String about = '/about';
   static const String trustScore = '/trust-score';
   static const String partnerPreferences = '/partner-preferences';
-  static const String visitors = '/visitors';
   static const String interestsSent = '/interests-sent';
   static const String interestsReceived = '/interests-received';
   static const String shortlisted = '/shortlisted';
@@ -80,11 +81,12 @@ abstract final class RouteNames {
   static const String verificationName = 'verification';
   static const String subscriptionName = 'subscription';
   static const String helpName = 'help';
+  static const String supportTicketFormName = 'supportTicketForm';
+  static const String ticketHistoryName = 'ticketHistory';
   static const String privacyName = 'privacy';
   static const String aboutName = 'about';
   static const String trustScoreName = 'trustScore';
   static const String partnerPreferencesName = 'partnerPreferences';
-  static const String visitorsName = 'visitors';
   static const String interestsSentName = 'interestsSent';
   static const String interestsReceivedName = 'interestsReceived';
   static const String shortlistedName = 'shortlisted';

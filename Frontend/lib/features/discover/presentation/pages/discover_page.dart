@@ -13,15 +13,12 @@ import '../../../../core/widgets/avatars/gender_placeholder.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../authentication/presentation/providers/auth_providers.dart';
 import '../../../authentication/presentation/utils/logout_flow.dart';
 import '../../../interests/presentation/providers/interests_provider.dart';
 import '../../../interests/presentation/utils/interest_button_copy.dart';
 import '../../../notifications/presentation/providers/notification_providers.dart';
 import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
-import '../../../profile/presentation/providers/profile_dashboard_providers.dart';
-import '../../../profile/presentation/utils/profile_dashboard_mapper.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../../partner_preferences/presentation/utils/open_partner_preferences.dart';
 import '../../../profile_photos/presentation/widgets/photo_manager_bottom_sheet.dart';
@@ -53,30 +50,10 @@ class DiscoverPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feedAsync = ref.watch(discoverFeedProvider);
-    // Backend-computed completion — the single source of truth shared with the
-    // Profile page, Edit Profile, and the completion screen.
-    final completionAsync = ref.watch(backendProfileCompletionProvider);
-    // Same real profile data the Profile dashboard reads (`profile_page.dart`)
-    // — reused here via the same mapper functions rather than re-deriving
-    // display strings a second way. The drawer's own avatar image is NOT
-    // read here (see `_LiveAvatarImage` inside the drawer) so a photo change
-    // doesn't rebuild this whole page.
-    final draft = ref.watch(myProfileDraftProvider).valueOrNull;
-    final authUser = ref.watch(currentAuthUserProvider);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       drawer: NenjamNavigationDrawer(
-        // Falls back to the previous static default while loading/on error
-        // so the drawer never regresses to a broken state.
-        profileCompletionPercent: completionAsync.valueOrNull ?? 85,
-        userName: profileDisplayName(draft, authUser),
-        age: profileDisplayAge(draft) ?? 0,
-        location: profileDisplayLocation(draft),
-        gender: draft?.basicDetails.gender ?? '',
-        community: draft?.religionDetails.community ?? '',
-        profileId: profileDisplayId(authUser),
-        isVerified: authUser?.isFullyVerified ?? false,
         // TODO(backend): no subscription/premium-status endpoint is wired
         // yet — same placeholder used on the Profile page.
         isPremium: false,
@@ -89,7 +66,6 @@ class DiscoverPage extends ConsumerWidget {
         onVerificationCenterTap: () =>
             openEditProfile(context, ref, wizardStep: 12),
         onTrustScoreTap: () => context.push(RouteNames.trustScore),
-        onVisitorsTap: () => context.push(RouteNames.visitors),
         onInterestSentTap: () => context.push(RouteNames.interestsSent),
         onInterestReceivedTap: () => context.push(RouteNames.interestsReceived),
         onShortlistTap: () => context.push(RouteNames.shortlisted),

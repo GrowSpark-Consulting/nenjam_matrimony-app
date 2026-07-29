@@ -4,22 +4,18 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 
-/// Recent Activity stats card — 3-column grid showing Interests Received,
-/// Visitors, and Matches with count-up animation.
+/// Recent Activity stats card — 2-column grid showing Interests Received
+/// and Matches with count-up animation.
 class NmActivityStatsCard extends StatelessWidget {
   final int interestsReceived;
-  final int visitors;
   final int matches;
-  final VoidCallback? onVisitorsTap;
   final VoidCallback? onInterestsTap;
   final VoidCallback? onMatchesTap;
 
   const NmActivityStatsCard({
     super.key,
     this.interestsReceived = 24,
-    this.visitors = 156,
     this.matches = 8,
-    this.onVisitorsTap,
     this.onInterestsTap,
     this.onMatchesTap,
   });
@@ -64,16 +60,6 @@ class NmActivityStatsCard extends StatelessWidget {
                   color: AppColors.liked,
                   isDark: isDark,
                   onTap: onInterestsTap,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _StatTile(
-                  value: visitors,
-                  label: 'Visitors',
-                  color: AppColors.primary,
-                  isDark: isDark,
-                  onTap: onVisitorsTap,
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),

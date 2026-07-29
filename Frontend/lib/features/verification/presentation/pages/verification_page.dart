@@ -1,113 +1,50 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/buttons/primary_button.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../registration/domain/models/profile_draft.dart';
+import '../../../registration/presentation/widgets/step_verification.dart';
+import '../providers/verification_providers.dart';
 
 /// Trust & Verification center screen.
-class VerificationPage extends StatelessWidget {
+///
+/// Renders the same [StepVerification] widget the registration wizard's
+/// step 13 uses — real Firebase mobile/email checks, real document
+/// upload/progress/retry via [verificationStatusesProvider] — rather than a
+/// second, static implementation. [status]/`onChanged` only exist so that
+/// widget can mirror results into a `ProfileDraft` mid-wizard; standalone
+/// here, there is no draft to mirror into, so a throwaway value and a
+/// no-op are passed.
+class VerificationPage extends ConsumerWidget {
   const VerificationPage({super.key});
 
+  static void _noop(VerificationStatus _) {}
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.registrationVerificationTitle),
       ),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Center(
-                  child: Icon(Icons.verified_rounded,
-                      size: 72, color: AppColors.verified),
-                ),
-                const SizedBox(height: 24),
-                Center(
-                  child: Text(
-                    l10n.registrationVerificationSubtitle,
-                    style: AppTypography.headlineSmall.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Center(
-                  child: Text(
-                    l10n.registrationPrivacySubtitle,
-                    style: AppTypography.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 36),
-                _VerifyStep(
-                  icon: Icons.badge_outlined,
-                  title: l10n.registrationVerifyIdTitle,
-                  subtitle: l10n.registrationVerifyIdSubtitle,
-                ),
-                const SizedBox(height: 20),
-                _VerifyStep(
-                  icon: Icons.camera_front_outlined,
-                  title: l10n.registrationVerifyFaceTitle,
-                  subtitle: l10n.registrationVerifyFaceSubtitle,
-                ),
-                const SizedBox(height: 36),
-                NmPrimaryButton(
-                  label: l10n.registrationVerifyButton,
-                  onPressed: () => context.pop(),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
+        // StepVerification already wraps its own content in a
+        // SingleChildScrollView — RefreshIndicator only needs a Scrollable
+        // descendant somewhere in its subtree to detect the pull gesture,
+        // not to be the scrollable itself, so it's not wrapped again here
+        // (nesting two vertical scroll views causes an unbounded-height
+        // layout assertion).
+        child: RefreshIndicator(
+          color: AppColors.accentGold,
+          onRefresh: () => ref.read(verificationStatusesProvider.notifier).refresh(),
+          child: const StepVerification(
+            status: VerificationStatus(),
+            onChanged: _noop,
           ),
         ),
       ),
-    );
-  }
-}
-
-class _VerifyStep extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  const _VerifyStep({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.verified.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: AppColors.verified),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: AppTypography.titleSmall),
-              Text(subtitle, style: AppTypography.bodySmall),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

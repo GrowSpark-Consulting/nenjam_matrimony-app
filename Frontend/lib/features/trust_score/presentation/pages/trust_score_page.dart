@@ -1,32 +1,146 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/feedback/empty_state.dart';
+import '../../../../core/widgets/feedback/shimmer_widget.dart';
+import '../../../../core/widgets/indicators/nm_score_ring.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../profile/presentation/widgets/verification_card.dart';
+import '../../../profile_detail/domain/entities/trust_score_entity.dart';
+import '../providers/trust_score_providers.dart';
 
-/// Trust Score placeholder — route wired from the navigation drawer.
-/// No design spec yet; content to follow once trust-scoring is defined.
-class TrustScorePage extends StatelessWidget {
+class TrustScorePage extends ConsumerWidget {
   const TrustScorePage({super.key});
+
+  NmVerificationStatus _mapStatus(TrustItemStatus status) => switch (status) {
+        TrustItemStatus.verified => NmVerificationStatus.verified,
+        TrustItemStatus.pending => NmVerificationStatus.pending,
+        TrustItemStatus.incomplete => NmVerificationStatus.incomplete,
+      };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scoreAsync = ref.watch(myTrustScoreProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.drawerTrustScore)),
+      body: RefreshIndicator(
+        color: AppColors.accentGold,
+        onRefresh: () => ref.refresh(myTrustScoreProvider.future),
+        child: scoreAsync.when(
+          data: (score) => _TrustScoreContent(
+            score: score,
+            isDark: isDark,
+            mapStatus: _mapStatus,
+          ),
+          loading: () => const _TrustScoreSkeleton(),
+          error: (error, _) => SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: SizedBox(
+              height: 480,
+              child: NmEmptyState(
+                icon: Icons.star_outline_rounded,
+                title: 'Trust Score Unavailable',
+                message:
+                    "We can't show your trust score yet — this feature isn't "
+                    'live on the backend yet. Check back soon.',
+                action: OutlinedButton.icon(
+                  onPressed: () => ref.invalidate(myTrustScoreProvider),
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Retry'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TrustScoreContent extends StatelessWidget {
+  final TrustScoreEntity score;
+  final bool isDark;
+  final NmVerificationStatus Function(TrustItemStatus) mapStatus;
+
+  const _TrustScoreContent({
+    required this.score,
+    required this.isDark,
+    required this.mapStatus,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.drawerTrustScore),
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Column(
+              children: [
+                NmScoreRing(
+                  value: score.overallPercent / 100,
+                  displayText: '${score.overallPercent}',
+                  color: AppColors.accentGold,
+                  textColor: isDark ? AppColors.textPrimaryDark : AppColors.primary,
+                  size: 140,
+                  strokeWidth: 10,
+                  fontSize: 40,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Trust Score',
+                  style: AppTypography.titleMedium.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          if (score.items.isNotEmpty)
+            NmVerificationCard(
+              items: [
+                for (final item in score.items)
+                  NmVerificationItem(
+                    icon: item.icon,
+                    label: item.label,
+                    status: mapStatus(item.status),
+                  ),
+              ],
+            )
+          else
+            const NmEmptyState(
+              icon: Icons.checklist_rtl_rounded,
+              title: 'No Trust Signals Yet',
+              message: 'Complete verification steps to build your trust score.',
+            ),
+        ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.star_outline_rounded,
-                size: 64, color: AppColors.accentGold),
-            const SizedBox(height: 16),
-            Text('Coming Soon', style: AppTypography.titleLarge),
-          ],
-        ),
-      ),
+    );
+  }
+}
+
+class _TrustScoreSkeleton extends StatelessWidget {
+  const _TrustScoreSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const Center(child: NmShimmer.circle(size: 140)),
+        const SizedBox(height: 32),
+        const NmShimmer(height: 180, borderRadius: 20),
+      ],
     );
   }
 }
