@@ -935,6 +935,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLogout => 'Logout';
 
   @override
+  String get settingsDangerZoneSection => 'Danger Zone';
+
+  @override
+  String get settingsDeleteAccount => 'Delete Account';
+
+  @override
+  String get settingsDeleteAccountSubtitle =>
+      'Permanently delete your profile and all data';
+
+  @override
+  String get settingsDeleteAccountConfirmMessage =>
+      'This permanently deletes your profile, photos, and all data. This action cannot be undone.';
+
+  @override
+  String get settingsDeleteAccountProgressMessage => 'Deleting your account…';
+
+  @override
+  String get settingsDeleteAccountErrorMessage =>
+      'Couldn\'t delete your account. Please check your connection and try again.';
+
+  @override
   String registrationStepIndicator(int current, int total) {
     return 'Step $current of $total';
   }
@@ -2701,13 +2722,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drawerEditProfile => 'Edit Profile';
 
   @override
+  String get drawerProfileIntelligence => 'Profile Intelligence';
+
+  @override
   String get drawerVerificationCenter => 'Verification Center';
 
   @override
   String get drawerTrustScore => 'Trust Score';
-
-  @override
-  String get drawerVisitors => 'Visitors';
 
   @override
   String get drawerInterestSent => 'Interests Sent';
@@ -2736,6 +2757,47 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to update shortlist. Please try again.';
 
   @override
+  String get privacyVisibilitySection => 'Profile Visibility';
+
+  @override
+  String get privacyPremiumOnlyTitle => 'Show Profile to Premium Members Only';
+
+  @override
+  String get privacyPremiumOnlySubtitle =>
+      'Only premium members can view your full profile';
+
+  @override
+  String get privacyHidePhotosTitle => 'Hide Photos from Non-Connections';
+
+  @override
+  String get privacyHidePhotosSubtitle =>
+      'Only accepted connections can see your photos';
+
+  @override
+  String get privacyLoadErrorMessage =>
+      'Privacy settings aren\'t available from the backend yet.';
+
+  @override
+  String get privacySaveErrorMessage =>
+      'Couldn\'t save your changes. Please try again.';
+
+  @override
+  String get privacyBlockedSection => 'Blocked Profiles';
+
+  @override
+  String get privacyBlockedEmptyTitle => 'No Blocked Profiles';
+
+  @override
+  String get privacyBlockedEmptyMessage =>
+      'Profiles you block in chat will appear here.';
+
+  @override
+  String get privacyUnblockLabel => 'Unblock';
+
+  @override
+  String get privacyBlockedStatusLabel => 'Blocked';
+
+  @override
   String get drawerLanguage => 'Language';
 
   @override
@@ -2749,6 +2811,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get drawerLogout => 'Logout';
+
+  @override
+  String get supportContactTitle => 'Contact Support';
+
+  @override
+  String get supportBugReportTitle => 'Report a Bug';
+
+  @override
+  String get supportFeatureRequestTitle => 'Feature Request';
+
+  @override
+  String get supportAppFeedbackTitle => 'App Feedback';
+
+  @override
+  String get supportEmailTitle => 'Email Support';
+
+  @override
+  String get supportEmailSubtitle => 'support@nenjammatrimony.com';
+
+  @override
+  String get supportTicketHistoryTitle => 'Ticket History';
+
+  @override
+  String get supportTicketFormSubjectLabel => 'Subject';
+
+  @override
+  String get supportTicketFormSubjectHint => 'Briefly describe your request';
+
+  @override
+  String get supportTicketFormMessageLabel => 'Message';
+
+  @override
+  String get supportTicketFormMessageHint => 'Share as much detail as you can';
+
+  @override
+  String get supportTicketFormSubmit => 'Submit';
+
+  @override
+  String get supportTicketFormValidationError => 'Please fill in both fields';
+
+  @override
+  String get supportTicketFormSuccessTitle => 'Submitted';
+
+  @override
+  String get supportTicketFormSuccessMessage =>
+      'Thanks — we\'ve received your request.';
+
+  @override
+  String get supportTicketFormErrorMessage =>
+      'Couldn\'t submit your request — this feature isn\'t live on the backend yet.';
+
+  @override
+  String get supportTicketHistoryEmptyTitle => 'No Tickets Yet';
+
+  @override
+  String get supportTicketHistoryEmptyMessage =>
+      'Requests you submit will show up here.';
+
+  @override
+  String get supportTicketHistoryErrorMessage =>
+      'Ticket history isn\'t available from the backend yet.';
 
   @override
   String get drawerProfileStrength => 'Profile Strength';

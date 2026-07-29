@@ -267,19 +267,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       NmActivityStatsCard(
                         // Interests now reads the real (mock-backed today,
                         // backend-ready) shared Interest state — see
-                        // interests_provider.dart. Visitors/Matches still
-                        // have no backing data source.
+                        // interests_provider.dart. Matches still has no
+                        // backing data source.
                         interestsReceived: ref
                                 .watch(receivedInterestsProvider)
                                 .valueOrNull
                                 ?.where((r) => r.status == InterestStatus.pending)
                                 .length ??
                             0,
-                        visitors: 0,
                         matches: 0,
                         onInterestsTap: () =>
                             context.push(RouteNames.interestsReceived),
-                        onVisitorsTap: () => context.push(RouteNames.visitors),
                         // Matches is a bottom-nav tab — switch via the
                         // shell's go navigation, not a stacked push.
                         onMatchesTap: () => context.go(RouteNames.matches),

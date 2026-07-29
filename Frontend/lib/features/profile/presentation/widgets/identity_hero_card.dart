@@ -6,6 +6,7 @@ import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/badges/premium_badge.dart' show NmBadgeSize;
 import '../../../../core/widgets/badges/verification_badge.dart';
+import '../../../../core/widgets/indicators/nm_score_ring.dart';
 
 /// Identity Hero Card — the profile header for the Personal Matchmaking HQ.
 ///
@@ -268,8 +269,8 @@ class _HeroDetailsBlock extends StatelessWidget {
   }
 }
 
-/// Animated circular trust-score gauge with a "TRUST" tag hanging off its
-/// bottom edge.
+/// Animated circular trust-score gauge (ring itself is the shared
+/// [NmScoreRing]) with a "TRUST" tag hanging off its bottom edge.
 class _TrustScoreRing extends StatelessWidget {
   final int score;
   const _TrustScoreRing({required this.score});
@@ -288,41 +289,13 @@ class _TrustScoreRing extends StatelessWidget {
         clipBehavior: Clip.none,
         alignment: Alignment.topCenter,
         children: [
-          SizedBox(
-            width: ringSize,
-            height: ringSize,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: (score / 100).clamp(0.0, 1.0)),
-              duration: const Duration(milliseconds: 900),
-              curve: Curves.easeOutCubic,
-              builder: (_, value, __) => CircularProgressIndicator(
-                value: value,
-                strokeWidth: 5,
-                backgroundColor: AppColors.surfaceVariantLight,
-                valueColor: const AlwaysStoppedAnimation(AppColors.accentGold),
-                strokeCap: StrokeCap.round,
-              ),
-            ),
-          ),
-          // The score is also conveyed visually by the ring's progress, so
-          // this compact label is exempted from system font scaling —
-          // otherwise a fixed-diameter ring like this has no room to grow
-          // into at large accessibility text sizes.
-          SizedBox(
-            width: ringSize,
-            height: ringSize,
-            child: Center(
-              child: MediaQuery.withNoTextScaling(
-                child: Text(
-                  '$score',
-                  style: AppTypography.titleLarge.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 20,
-                  ),
-                ),
-              ),
-            ),
+          NmScoreRing(
+            value: score / 100,
+            displayText: '$score',
+            color: AppColors.accentGold,
+            backgroundColor: AppColors.surfaceVariantLight,
+            textColor: AppColors.primary,
+            size: ringSize,
           ),
           Positioned(
             top: ringSize - 12,

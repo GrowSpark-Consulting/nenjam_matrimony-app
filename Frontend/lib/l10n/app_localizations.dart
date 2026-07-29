@@ -1868,6 +1868,42 @@ abstract class AppLocalizations {
   /// **'Logout'**
   String get settingsLogout;
 
+  /// No description provided for @settingsDangerZoneSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Danger Zone'**
+  String get settingsDangerZoneSection;
+
+  /// No description provided for @settingsDeleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Account'**
+  String get settingsDeleteAccount;
+
+  /// No description provided for @settingsDeleteAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently delete your profile and all data'**
+  String get settingsDeleteAccountSubtitle;
+
+  /// No description provided for @settingsDeleteAccountConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This permanently deletes your profile, photos, and all data. This action cannot be undone.'**
+  String get settingsDeleteAccountConfirmMessage;
+
+  /// No description provided for @settingsDeleteAccountProgressMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting your account…'**
+  String get settingsDeleteAccountProgressMessage;
+
+  /// No description provided for @settingsDeleteAccountErrorMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t delete your account. Please check your connection and try again.'**
+  String get settingsDeleteAccountErrorMessage;
+
   /// No description provided for @registrationStepIndicator.
   ///
   /// In en, this message translates to:
@@ -5204,6 +5240,12 @@ abstract class AppLocalizations {
   /// **'Edit Profile'**
   String get drawerEditProfile;
 
+  /// No description provided for @drawerProfileIntelligence.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Intelligence'**
+  String get drawerProfileIntelligence;
+
   /// No description provided for @drawerVerificationCenter.
   ///
   /// In en, this message translates to:
@@ -5215,12 +5257,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Trust Score'**
   String get drawerTrustScore;
-
-  /// No description provided for @drawerVisitors.
-  ///
-  /// In en, this message translates to:
-  /// **'Visitors'**
-  String get drawerVisitors;
 
   /// No description provided for @drawerInterestSent.
   ///
@@ -5270,6 +5306,78 @@ abstract class AppLocalizations {
   /// **'Failed to update shortlist. Please try again.'**
   String get shortlistActionFailed;
 
+  /// No description provided for @privacyVisibilitySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Visibility'**
+  String get privacyVisibilitySection;
+
+  /// No description provided for @privacyPremiumOnlyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Profile to Premium Members Only'**
+  String get privacyPremiumOnlyTitle;
+
+  /// No description provided for @privacyPremiumOnlySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Only premium members can view your full profile'**
+  String get privacyPremiumOnlySubtitle;
+
+  /// No description provided for @privacyHidePhotosTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide Photos from Non-Connections'**
+  String get privacyHidePhotosTitle;
+
+  /// No description provided for @privacyHidePhotosSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Only accepted connections can see your photos'**
+  String get privacyHidePhotosSubtitle;
+
+  /// No description provided for @privacyLoadErrorMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy settings aren\'t available from the backend yet.'**
+  String get privacyLoadErrorMessage;
+
+  /// No description provided for @privacySaveErrorMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save your changes. Please try again.'**
+  String get privacySaveErrorMessage;
+
+  /// No description provided for @privacyBlockedSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked Profiles'**
+  String get privacyBlockedSection;
+
+  /// No description provided for @privacyBlockedEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Blocked Profiles'**
+  String get privacyBlockedEmptyTitle;
+
+  /// No description provided for @privacyBlockedEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Profiles you block in chat will appear here.'**
+  String get privacyBlockedEmptyMessage;
+
+  /// No description provided for @privacyUnblockLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock'**
+  String get privacyUnblockLabel;
+
+  /// No description provided for @privacyBlockedStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked'**
+  String get privacyBlockedStatusLabel;
+
   /// No description provided for @drawerLanguage.
   ///
   /// In en, this message translates to:
@@ -5299,6 +5407,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Logout'**
   String get drawerLogout;
+
+  /// No description provided for @supportContactTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Support'**
+  String get supportContactTitle;
+
+  /// No description provided for @supportBugReportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report a Bug'**
+  String get supportBugReportTitle;
+
+  /// No description provided for @supportFeatureRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Feature Request'**
+  String get supportFeatureRequestTitle;
+
+  /// No description provided for @supportAppFeedbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'App Feedback'**
+  String get supportAppFeedbackTitle;
+
+  /// No description provided for @supportEmailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Email Support'**
+  String get supportEmailTitle;
+
+  /// No description provided for @supportEmailSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'support@nenjammatrimony.com'**
+  String get supportEmailSubtitle;
+
+  /// No description provided for @supportTicketHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ticket History'**
+  String get supportTicketHistoryTitle;
+
+  /// No description provided for @supportTicketFormSubjectLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Subject'**
+  String get supportTicketFormSubjectLabel;
+
+  /// No description provided for @supportTicketFormSubjectHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Briefly describe your request'**
+  String get supportTicketFormSubjectHint;
+
+  /// No description provided for @supportTicketFormMessageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get supportTicketFormMessageLabel;
+
+  /// No description provided for @supportTicketFormMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Share as much detail as you can'**
+  String get supportTicketFormMessageHint;
+
+  /// No description provided for @supportTicketFormSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get supportTicketFormSubmit;
+
+  /// No description provided for @supportTicketFormValidationError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please fill in both fields'**
+  String get supportTicketFormValidationError;
+
+  /// No description provided for @supportTicketFormSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted'**
+  String get supportTicketFormSuccessTitle;
+
+  /// No description provided for @supportTicketFormSuccessMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks — we\'ve received your request.'**
+  String get supportTicketFormSuccessMessage;
+
+  /// No description provided for @supportTicketFormErrorMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t submit your request — this feature isn\'t live on the backend yet.'**
+  String get supportTicketFormErrorMessage;
+
+  /// No description provided for @supportTicketHistoryEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Tickets Yet'**
+  String get supportTicketHistoryEmptyTitle;
+
+  /// No description provided for @supportTicketHistoryEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests you submit will show up here.'**
+  String get supportTicketHistoryEmptyMessage;
+
+  /// No description provided for @supportTicketHistoryErrorMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Ticket history isn\'t available from the backend yet.'**
+  String get supportTicketHistoryErrorMessage;
 
   /// No description provided for @drawerProfileStrength.
   ///

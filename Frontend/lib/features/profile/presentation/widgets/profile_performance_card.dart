@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/indicators/nm_score_ring.dart';
 
 /// Profile Performance card — 3 circular progress gauges:
 /// Strength, Visibility, and Response time.
@@ -105,41 +106,14 @@ class _GaugeWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        SizedBox(
-          width: 68,
-          height: 68,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: value),
-                duration: const Duration(milliseconds: 1200),
-                curve: Curves.easeOutCubic,
-                builder: (_, v, __) => CircularProgressIndicator(
-                  value: v,
-                  strokeWidth: 5,
-                  strokeCap: StrokeCap.round,
-                  backgroundColor: color.withValues(alpha: 0.15),
-                  valueColor: AlwaysStoppedAnimation(color),
-                ),
-              ),
-              // Exempted from system font scaling: the value is also
-              // conveyed by the ring's progress, and this fixed-diameter
-              // gauge has no room to grow into at large text sizes.
-              MediaQuery.withNoTextScaling(
-                child: Text(
-                  displayText,
-                  style: AppTypography.labelMedium.copyWith(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
-          ),
+        NmScoreRing(
+          value: value,
+          displayText: displayText,
+          color: color,
+          textColor: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          duration: const Duration(milliseconds: 1200),
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(

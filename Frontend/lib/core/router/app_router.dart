@@ -16,6 +16,9 @@ import '../../features/discover/domain/entities/discovery_profile_entity.dart';
 import 'profile_navigation.dart';
 import '../../features/discover/presentation/pages/discover_page.dart';
 import '../../features/help/presentation/pages/help_page.dart';
+import '../../features/support/domain/models/support_ticket.dart';
+import '../../features/support/presentation/pages/support_ticket_form_page.dart';
+import '../../features/support/presentation/pages/ticket_history_page.dart';
 import '../../features/inbox/domain/entities/conversation_entity.dart';
 import '../../features/inbox/presentation/pages/chat_detail_page.dart';
 import '../../features/inbox/presentation/pages/inbox_page.dart';
@@ -49,7 +52,6 @@ import '../../features/splash/presentation/pages/splash_page.dart';
 import '../../features/subscription/presentation/pages/subscription_page.dart';
 import '../../features/trust_score/presentation/pages/trust_score_page.dart';
 import '../../features/verification/presentation/pages/verification_page.dart';
-import '../../features/visitors/presentation/pages/visitors_page.dart';
 import '../../features/authentication/presentation/providers/auth_providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../widgets/navigation/app_bottom_nav.dart';
@@ -404,6 +406,18 @@ GoRouter createRouter(WidgetRef ref) {
           builder: (context, state) => const HelpPage(),
         ),
         GoRoute(
+          path: RouteNames.supportTicketForm,
+          name: RouteNames.supportTicketFormName,
+          builder: (context, state) => SupportTicketFormPage(
+            type: state.extra as SupportTicketType? ?? SupportTicketType.contactSupport,
+          ),
+        ),
+        GoRoute(
+          path: RouteNames.ticketHistory,
+          name: RouteNames.ticketHistoryName,
+          builder: (context, state) => const TicketHistoryPage(),
+        ),
+        GoRoute(
           path: RouteNames.privacy,
           name: RouteNames.privacyName,
           builder: (context, state) => const PrivacyPage(),
@@ -417,11 +431,6 @@ GoRouter createRouter(WidgetRef ref) {
           path: RouteNames.partnerPreferences,
           name: RouteNames.partnerPreferencesName,
           builder: (context, state) => const PartnerPreferencesPage(),
-        ),
-        GoRoute(
-          path: RouteNames.visitors,
-          name: RouteNames.visitorsName,
-          builder: (context, state) => const VisitorsPage(),
         ),
         GoRoute(
           path: RouteNames.interestsSent,

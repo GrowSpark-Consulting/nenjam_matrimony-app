@@ -944,6 +944,28 @@ class AppLocalizationsTa extends AppLocalizations {
   String get settingsLogout => 'வெளியேறு';
 
   @override
+  String get settingsDangerZoneSection => 'அபாய மண்டலம்';
+
+  @override
+  String get settingsDeleteAccount => 'கணக்கை நீக்கு';
+
+  @override
+  String get settingsDeleteAccountSubtitle =>
+      'உங்கள் சுயவிவரம் மற்றும் அனைத்து தரவையும் நிரந்தரமாக நீக்கவும்';
+
+  @override
+  String get settingsDeleteAccountConfirmMessage =>
+      'இது உங்கள் சுயவிவரம், புகைப்படங்கள் மற்றும் அனைத்து தரவையும் நிரந்தரமாக நீக்கும். இச்செயலை மீட்க முடியாது.';
+
+  @override
+  String get settingsDeleteAccountProgressMessage =>
+      'உங்கள் கணக்கு நீக்கப்படுகிறது…';
+
+  @override
+  String get settingsDeleteAccountErrorMessage =>
+      'உங்கள் கணக்கை நீக்க முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
   String registrationStepIndicator(int current, int total) {
     return 'படி $current / $total';
   }
@@ -2740,13 +2762,13 @@ class AppLocalizationsTa extends AppLocalizations {
   String get drawerEditProfile => 'சுயவிவரம் திருத்து';
 
   @override
+  String get drawerProfileIntelligence => 'சுயவிவர நுண்ணறிவு';
+
+  @override
   String get drawerVerificationCenter => 'சரிபார்ப்பு மையம்';
 
   @override
   String get drawerTrustScore => 'நம்பிக்கை மதிப்பெண்';
-
-  @override
-  String get drawerVisitors => 'பார்வையாளர்கள்';
 
   @override
   String get drawerInterestSent => 'அனுப்பிய விருப்பங்கள்';
@@ -2775,6 +2797,49 @@ class AppLocalizationsTa extends AppLocalizations {
       'பட்டியலைப் புதுப்பிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
 
   @override
+  String get privacyVisibilitySection => 'சுயவிவரக் காட்சி';
+
+  @override
+  String get privacyPremiumOnlyTitle =>
+      'பிரீமியம் உறுப்பினர்களுக்கு மட்டும் சுயவிவரத்தைக் காட்டு';
+
+  @override
+  String get privacyPremiumOnlySubtitle =>
+      'பிரீமியம் உறுப்பினர்கள் மட்டுமே உங்கள் முழு சுயவிவரத்தைப் பார்க்க முடியும்';
+
+  @override
+  String get privacyHidePhotosTitle =>
+      'இணைப்பில்லாதவர்களிடமிருந்து புகைப்படங்களை மறை';
+
+  @override
+  String get privacyHidePhotosSubtitle =>
+      'ஏற்கப்பட்ட தொடர்புகள் மட்டுமே உங்கள் புகைப்படங்களைப் பார்க்க முடியும்';
+
+  @override
+  String get privacyLoadErrorMessage =>
+      'தனியுரிமை அமைப்புகள் இன்னும் பின்தளத்தில் கிடைக்கவில்லை.';
+
+  @override
+  String get privacySaveErrorMessage =>
+      'உங்கள் மாற்றங்களைச் சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get privacyBlockedSection => 'தடுக்கப்பட்ட சுயவிவரங்கள்';
+
+  @override
+  String get privacyBlockedEmptyTitle => 'தடுக்கப்பட்ட சுயவிவரங்கள் இல்லை';
+
+  @override
+  String get privacyBlockedEmptyMessage =>
+      'நீங்கள் அரட்டையில் தடுக்கும் சுயவிவரங்கள் இங்கே தோன்றும்.';
+
+  @override
+  String get privacyUnblockLabel => 'தடையை நீக்கு';
+
+  @override
+  String get privacyBlockedStatusLabel => 'தடுக்கப்பட்டது';
+
+  @override
   String get drawerLanguage => 'மொழி';
 
   @override
@@ -2788,6 +2853,69 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get drawerLogout => 'வெளியேறு';
+
+  @override
+  String get supportContactTitle => 'ஆதரவைத் தொடர்பு கொள்ளவும்';
+
+  @override
+  String get supportBugReportTitle => 'பிழையைப் புகாரளிக்கவும்';
+
+  @override
+  String get supportFeatureRequestTitle => 'அம்சக் கோரிக்கை';
+
+  @override
+  String get supportAppFeedbackTitle => 'செயலி கருத்து';
+
+  @override
+  String get supportEmailTitle => 'மின்னஞ்சல் ஆதரவு';
+
+  @override
+  String get supportEmailSubtitle => 'support@nenjammatrimony.com';
+
+  @override
+  String get supportTicketHistoryTitle => 'கோரிக்கை வரலாறு';
+
+  @override
+  String get supportTicketFormSubjectLabel => 'பொருள்';
+
+  @override
+  String get supportTicketFormSubjectHint =>
+      'உங்கள் கோரிக்கையை சுருக்கமாக விவரிக்கவும்';
+
+  @override
+  String get supportTicketFormMessageLabel => 'செய்தி';
+
+  @override
+  String get supportTicketFormMessageHint => 'முடிந்தவரை விவரங்களைப் பகிரவும்';
+
+  @override
+  String get supportTicketFormSubmit => 'சமர்ப்பி';
+
+  @override
+  String get supportTicketFormValidationError =>
+      'இரண்டு புலங்களையும் நிரப்பவும்';
+
+  @override
+  String get supportTicketFormSuccessTitle => 'சமர்ப்பிக்கப்பட்டது';
+
+  @override
+  String get supportTicketFormSuccessMessage =>
+      'நன்றி — உங்கள் கோரிக்கையைப் பெற்றுள்ளோம்.';
+
+  @override
+  String get supportTicketFormErrorMessage =>
+      'உங்கள் கோரிக்கையைச் சமர்ப்பிக்க முடியவில்லை — இந்த அம்சம் இன்னும் பின்தளத்தில் இயங்கவில்லை.';
+
+  @override
+  String get supportTicketHistoryEmptyTitle => 'இதுவரை கோரிக்கைகள் இல்லை';
+
+  @override
+  String get supportTicketHistoryEmptyMessage =>
+      'நீங்கள் சமர்ப்பிக்கும் கோரிக்கைகள் இங்கே தோன்றும்.';
+
+  @override
+  String get supportTicketHistoryErrorMessage =>
+      'கோரிக்கை வரலாறு இன்னும் பின்தளத்தில் கிடைக்கவில்லை.';
 
   @override
   String get drawerProfileStrength => 'சுயவிவர வலிமை';

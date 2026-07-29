@@ -16,6 +16,7 @@ import 'core/network/backend_connectivity_checker.dart';
 import 'core/widgets/backend_diagnostic_banner.dart';
 import 'firebase_options.dart';
 import 'core/providers/locale_provider.dart';
+import 'core/providers/theme_mode_provider.dart';
 import 'core/realtime/realtime_providers.dart';
 import 'features/inbox/presentation/providers/chat_realtime_sync.dart';
 import 'core/router/app_router.dart';
@@ -277,7 +278,7 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
           debugShowCheckedModeBanner: false,
 
           // Theme Configuration
-          themeMode: storageService.themeMode,
+          themeMode: ref.watch(themeModeProvider),
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
 
