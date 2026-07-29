@@ -356,7 +356,12 @@ describe('MessagesService.list', () => {
     // list with no client-side sort/reverse of its own.
     messageRepository.listPaged.mockResolvedValue([
       [
-        message({ id: 'b', senderId: 'peer', type: 'IMAGE', mediaUrl: 'chat-media/k' }),
+        message({
+          id: 'b',
+          senderId: 'peer',
+          type: 'IMAGE',
+          mediaUrl: 'chat-media/k',
+        }),
         message({ id: 'a', senderId: 'me' }),
       ],
       2,
@@ -387,8 +392,16 @@ describe('MessagesService.list', () => {
     const { service, messageRepository } = build();
     messageRepository.listByCursor.mockResolvedValue({
       items: [
-        message({ id: 'b', senderId: 'peer', createdAt: new Date('2026-01-02T00:00:00.000Z') }),
-        message({ id: 'a', senderId: 'me', createdAt: new Date('2026-01-01T00:00:00.000Z') }),
+        message({
+          id: 'b',
+          senderId: 'peer',
+          createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        }),
+        message({
+          id: 'a',
+          senderId: 'me',
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        }),
       ],
       hasMore: true,
       nextCursor: 'a',
