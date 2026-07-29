@@ -24,6 +24,10 @@ export const validationSchema = Joi.object({
   REDIS_PASSWORD: Joi.string().allow('').optional(),
 
   ELASTICSEARCH_NODE: Joi.string().uri().required(),
+  // Optional: Basic Auth for a secured cluster (e.g. local dev with security
+  // enabled). Left unset, the client connects without auth.
+  ELASTICSEARCH_USERNAME: Joi.string().allow('').optional(),
+  ELASTICSEARCH_PASSWORD: Joi.string().allow('').optional(),
 
   SMTP_HOST: Joi.string().required(),
   SMTP_PORT: Joi.number().port().required(),

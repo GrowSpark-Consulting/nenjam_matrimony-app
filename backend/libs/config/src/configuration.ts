@@ -21,6 +21,10 @@ export interface AppConfig {
   };
   elasticsearch: {
     node: string;
+    /** Basic Auth for a secured cluster (e.g. local dev with security
+     *  enabled). Left unset, the client connects without auth. */
+    username?: string;
+    password?: string;
   };
   smtp: {
     host: string;
@@ -73,6 +77,8 @@ export default (): AppConfig => ({
   },
   elasticsearch: {
     node: process.env.ELASTICSEARCH_NODE ?? 'http://localhost:9200',
+    username: process.env.ELASTICSEARCH_USERNAME || undefined,
+    password: process.env.ELASTICSEARCH_PASSWORD || undefined,
   },
   smtp: {
     host: process.env.SMTP_HOST ?? 'localhost',

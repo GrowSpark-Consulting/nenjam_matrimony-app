@@ -1,0 +1,2 @@
+[35m.env.example[m[36m:[m[32m22[m[36m:[m[1;31mREDIS_[mHOST=localhost
+[35m.env.example[m[36m:[m[32m23[m[36m:[m[1;31mREDIS_[mPORT=6379
