@@ -74,7 +74,7 @@ export class AppConfigService implements OnModuleInit {
       envFileLoaded: Boolean(this.nodeEnv),
       port: Boolean(this.port),
       database: Boolean(this.database?.host && this.database?.name),
-      redis: Boolean(this.redis?.host),
+      redis: Boolean(this.redis?.url || this.redis?.host),
       elasticsearch: Boolean(this.elasticsearch?.node),
       smtp: Boolean(this.smtp?.host),
       jwt: Boolean(this.jwt?.secret),
@@ -94,7 +94,7 @@ export class AppConfigService implements OnModuleInit {
       `Environment : ${this.nodeEnv}`,
       `Port        : ${this.port}`,
       `Database    : ${this.describeDatabaseTarget()}`,
-      `Redis       : ${this.redis.host}:${this.redis.port}`,
+      `Redis       : ${this.describeRedisTarget()}`,
       `Elastic     : ${this.elasticsearch.node}`,
       `SMTP        : ${this.smtp.host}:${this.smtp.port}`,
       '',
@@ -113,6 +113,21 @@ export class AppConfigService implements OnModuleInit {
       try {
         const u = new URL(url);
         return `${u.hostname}:${u.port || 5432} (via DATABASE_URL)`;
+      } catch {
+        /* fall through */
+      }
+    }
+    return `${host}:${port}`;
+  }
+
+  /** Shows the real Redis endpoint in the boot banner: the REDIS_URL host
+   *  when set (e.g. Redis Cloud), otherwise the discrete host:port. */
+  private describeRedisTarget(): string {
+    const { host, port, url } = this.redis;
+    if (url) {
+      try {
+        const u = new URL(url);
+        return `${u.hostname}:${u.port || 6379} (via REDIS_URL)`;
       } catch {
         /* fall through */
       }

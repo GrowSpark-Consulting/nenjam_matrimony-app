@@ -35,24 +35,21 @@ describe('validationSchema', () => {
     expect(error).toBeUndefined();
   });
 
-  // DATABASE_* are intentionally optional: a deployment may point at a shared
-  // managed DB with a single DATABASE_URL instead of the discrete fields
-  // (see validation.ts / PrismaService). They are covered separately below.
-  it.each([
-    'REDIS_HOST',
-    'REDIS_PORT',
-    'ELASTICSEARCH_NODE',
-    'SMTP_HOST',
-    'SMTP_PORT',
-    'JWT_SECRET',
-  ])('fails when required variable %s is missing', (key) => {
-    const env = { ...validEnv };
-    delete (env as Record<string, string>)[key];
+  // DATABASE_* and REDIS_HOST/REDIS_PORT are intentionally optional: a
+  // deployment may point at a shared managed instance with a single
+  // DATABASE_URL / REDIS_URL instead of the discrete fields (see
+  // validation.ts). They are covered separately below.
+  it.each(['ELASTICSEARCH_NODE', 'SMTP_HOST', 'SMTP_PORT', 'JWT_SECRET'])(
+    'fails when required variable %s is missing',
+    (key) => {
+      const env = { ...validEnv };
+      delete (env as Record<string, string>)[key];
 
-    const { error } = validationSchema.validate(env, { abortEarly: false });
-    expect(error).toBeDefined();
-    expect(error?.message).toContain(key);
-  });
+      const { error } = validationSchema.validate(env, { abortEarly: false });
+      expect(error).toBeDefined();
+      expect(error?.message).toContain(key);
+    },
+  );
 
   it('passes with a single DATABASE_URL and no discrete DATABASE_* fields', () => {
     const env = { ...validEnv } as Record<string, string>;
@@ -68,6 +65,24 @@ describe('validationSchema', () => {
     env.DATABASE_URL = 'postgresql://u:p@host/db?sslmode=require';
 
     const { error } = validationSchema.validate(env, { abortEarly: false });
+    expect(error).toBeUndefined();
+  });
+
+  it('passes with a single REDIS_URL and no discrete REDIS_* fields', () => {
+    const env = { ...validEnv } as Record<string, string>;
+    delete env.REDIS_HOST;
+    delete env.REDIS_PORT;
+    env.REDIS_URL = 'rediss://default:secret@redis-cloud.example.com:6379';
+
+    const { error } = validationSchema.validate(env, { abortEarly: false });
+    expect(error).toBeUndefined();
+  });
+
+  it('accepts REDIS_USERNAME and REDIS_DB alongside the discrete fields', () => {
+    const { error } = validationSchema.validate(
+      { ...validEnv, REDIS_USERNAME: 'default', REDIS_DB: '2' },
+      { abortEarly: false },
+    );
     expect(error).toBeUndefined();
   });
 

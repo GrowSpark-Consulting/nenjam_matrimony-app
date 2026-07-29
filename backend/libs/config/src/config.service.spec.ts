@@ -85,6 +85,27 @@ describe('AppConfigService', () => {
     expect(JSON.stringify(health)).not.toContain(mockConfig.database.password);
   });
 
+  it('treats a REDIS_URL-only configuration as healthy and describes it in the banner', async () => {
+    const service = await buildService({
+      redis: {
+        host: '',
+        port: NaN,
+        url: 'rediss://default:secret@redis-cloud.example.com:6379',
+      },
+    });
+    const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+
+    const health = service.checkHealth();
+    service.onModuleInit();
+
+    expect(health.details.redis).toBe(true);
+    const output = logSpy.mock.calls.map((call) => String(call[0])).join('\n');
+    expect(output).toContain('redis-cloud.example.com:6379 (via REDIS_URL)');
+    expect(output).not.toContain('secret');
+
+    logSpy.mockRestore();
+  });
+
   it('logs the startup banner without leaking secrets', async () => {
     const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
     const service = await buildService();

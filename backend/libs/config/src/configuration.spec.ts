@@ -54,6 +54,37 @@ describe('configuration', () => {
     expect(config.jwt.secret).toBe('a-very-long-secret-value');
   });
 
+  it('surfaces REDIS_URL alongside the discrete fields, without altering them', () => {
+    process.env.REDIS_URL =
+      'rediss://default:secret@redis-cloud.example.com:6379';
+    process.env.REDIS_HOST = 'redis.internal';
+    process.env.REDIS_PORT = '6380';
+    process.env.REDIS_USERNAME = 'default';
+    process.env.REDIS_DB = '2';
+
+    const config = configuration();
+
+    expect(config.redis.url).toBe(
+      'rediss://default:secret@redis-cloud.example.com:6379',
+    );
+    expect(config.redis.host).toBe('redis.internal');
+    expect(config.redis.port).toBe(6380);
+    expect(config.redis.username).toBe('default');
+    expect(config.redis.db).toBe(2);
+  });
+
+  it('leaves REDIS_URL/username/db undefined when unset', () => {
+    delete process.env.REDIS_URL;
+    delete process.env.REDIS_USERNAME;
+    delete process.env.REDIS_DB;
+
+    const config = configuration();
+
+    expect(config.redis.url).toBeUndefined();
+    expect(config.redis.username).toBeUndefined();
+    expect(config.redis.db).toBeUndefined();
+  });
+
   it('parses numeric env vars as numbers, not strings', () => {
     process.env.PORT = '4000';
     process.env.DATABASE_PORT = '5432';

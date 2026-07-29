@@ -39,7 +39,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       const start = Date.now();
       const pong = await this.client.ping();
       const latencyMs = Date.now() - start;
-      const { host, port } = this.configService.redis;
+      const { host, port } = this.resolveLoggedTarget();
 
       this.logger.log(
         [
@@ -81,6 +81,22 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     this.logger.error(`Redis connection failed: ${description}`);
     throw cause;
+  }
+
+  // Display-only: resolves the host/port actually in use for the startup
+  // banner, whether from REDIS_URL or the discrete fields — pure logging,
+  // no effect on the connection itself (already established above).
+  private resolveLoggedTarget(): { host: string; port: number | string } {
+    const { host, port, url } = this.configService.redis;
+    if (url) {
+      try {
+        const parsed = new URL(url);
+        return { host: parsed.hostname, port: parsed.port || 6379 };
+      } catch {
+        /* fall through */
+      }
+    }
+    return { host, port };
   }
 
   private describeConnectionError(error: unknown): string {

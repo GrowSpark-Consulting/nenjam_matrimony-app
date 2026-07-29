@@ -19,9 +19,19 @@ export const validationSchema = Joi.object({
   DATABASE_PASSWORD: Joi.string().allow('').optional(),
   DATABASE_NAME: Joi.string().optional(),
 
-  REDIS_HOST: Joi.string().required(),
-  REDIS_PORT: Joi.number().port().required(),
+  // Either a single REDIS_URL (managed Redis, e.g. Redis Cloud — redis:// or
+  // rediss://, preferred) OR the discrete fields below (local Redis/Memurai).
+  // The discrete fields are optional so a teammate can point at a managed
+  // instance by setting only REDIS_URL, exactly like DATABASE_URL above.
+  // .empty('') treats a blank value the same as an absent one (rather than a
+  // validation error) — REDIS_HOST/PORT/DB are typically left blank on
+  // purpose once REDIS_URL is in use.
+  REDIS_URL: Joi.string().allow('').optional(),
+  REDIS_HOST: Joi.string().empty('').optional(),
+  REDIS_PORT: Joi.number().port().empty('').optional(),
+  REDIS_USERNAME: Joi.string().allow('').optional(),
   REDIS_PASSWORD: Joi.string().allow('').optional(),
+  REDIS_DB: Joi.number().integer().min(0).empty('').optional(),
 
   ELASTICSEARCH_NODE: Joi.string().uri().required(),
   // Optional: Basic Auth for a secured cluster (e.g. local dev with security

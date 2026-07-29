@@ -18,6 +18,13 @@ export interface AppConfig {
     host: string;
     port: number;
     password?: string;
+    username?: string;
+    db?: number;
+    /** Full connection string (e.g. Redis Cloud) — redis:// or rediss://
+     *  (TLS auto-detected from the scheme by ioredis). When set, takes
+     *  precedence over the discrete fields below, mirroring DATABASE_URL's
+     *  precedence over the discrete DATABASE_* fields. */
+    url?: string;
   };
   elasticsearch: {
     node: string;
@@ -74,6 +81,9 @@ export default (): AppConfig => ({
     host: process.env.REDIS_HOST ?? 'localhost',
     port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
     password: process.env.REDIS_PASSWORD || undefined,
+    username: process.env.REDIS_USERNAME || undefined,
+    db: process.env.REDIS_DB ? parseInt(process.env.REDIS_DB, 10) : undefined,
+    url: process.env.REDIS_URL?.trim() || undefined,
   },
   elasticsearch: {
     node: process.env.ELASTICSEARCH_NODE ?? 'http://localhost:9200',
