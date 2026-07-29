@@ -93,10 +93,20 @@ class ConversationApiRepositoryImpl implements ConversationRepository {
   }
 
   @override
-  Future<MessagePage> getMessages(String conversationId, {int page = 1, int limit = 30}) async {
+  Future<MessagePage> getMessages(
+    String conversationId, {
+    int page = 1,
+    int limit = 30,
+    String? cursor,
+  }) async {
     final response = await _apiClient.get<Map<String, dynamic>>(
       ApiEndpoints.messages,
-      queryParameters: {'conversationId': conversationId, 'page': page, 'limit': limit},
+      queryParameters: {
+        'conversationId': conversationId,
+        'page': page,
+        'limit': limit,
+        if (cursor != null) 'cursor': cursor,
+      },
     );
     final data = unwrapOrThrow(response.statusCode, response.data) ?? {};
     final items = (data['items'] as List<dynamic>? ?? [])
@@ -107,6 +117,7 @@ class ConversationApiRepositoryImpl implements ConversationRepository {
       items: items,
       page: data['page'] as int? ?? page,
       hasMore: data['hasMore'] as bool? ?? false,
+      nextCursor: data['nextCursor'] as String?,
     );
   }
 
@@ -168,16 +179,17 @@ class ConversationApiRepositoryImpl implements ConversationRepository {
 
   @override
   Future<String> uploadVoiceAttachment(String localFilePath) async {
-    // Real call against the proposed (not-yet-registered — see
-    // ApiEndpoints.chatAttachmentUpload's doc comment) endpoint. Nothing
-    // here fakes success: until that endpoint exists this fails with a
-    // genuine network/HTTP error, which `MessagesNotifier` surfaces as the
-    // same truthful `MessageStatus.failed` any other real send failure
-    // would.
+    // The `record` package writes AAC-LC in an MP4 container (.m4a) — the
+    // Content-Type MUST be set explicitly: Dio's MultipartFile.fromFile
+    // defaults to application/octet-stream when it's omitted, which the
+    // backend's audio MIME allow-list rejects outright.
     final response = await _apiClient.upload<Map<String, dynamic>>(
       ApiEndpoints.chatAttachmentUpload,
       data: FormData.fromMap({
-        'file': await MultipartFile.fromFile(localFilePath),
+        'file': await MultipartFile.fromFile(
+          localFilePath,
+          contentType: DioMediaType('audio', 'mp4'),
+        ),
         'type': 'AUDIO',
       }),
     );
@@ -189,6 +201,41 @@ class ConversationApiRepositoryImpl implements ConversationRepository {
       );
     }
     return mediaUrl;
+  }
+
+  @override
+  Future<String> uploadImageAttachment(String localFilePath) async {
+    final response = await _apiClient.upload<Map<String, dynamic>>(
+      ApiEndpoints.chatAttachmentUpload,
+      data: FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          localFilePath,
+          contentType: DioMediaType('image', _imageSubtype(localFilePath)),
+        ),
+        'type': 'IMAGE',
+      }),
+    );
+    final data = unwrapOrThrow(response.statusCode, response.data) ?? {};
+    final mediaUrl = data['mediaUrl'] as String?;
+    if (mediaUrl == null) {
+      throw const MediaUploadUnavailableException(
+        'Image upload is not available yet.',
+      );
+    }
+    return mediaUrl;
+  }
+
+  /// Backend's image allow-list is `image/jpeg|png|webp|heic` — mirrors the
+  /// extension-to-subtype mapping already used for profile photo uploads.
+  String _imageSubtype(String filePath) {
+    final dot = filePath.lastIndexOf('.');
+    final ext = dot >= 0 ? filePath.substring(dot).toLowerCase() : '';
+    return switch (ext) {
+      '.png' => 'png',
+      '.webp' => 'webp',
+      '.heic' || '.heif' => 'heic',
+      _ => 'jpeg',
+    };
   }
 
   @override

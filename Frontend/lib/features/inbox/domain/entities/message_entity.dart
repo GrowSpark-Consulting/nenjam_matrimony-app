@@ -1,17 +1,14 @@
-/// Client-side lifecycle of an outgoing message — `sending` while the
-/// (currently mocked) send call is in flight, then `sent`/`delivered`/`read`
-/// as the thread's state advances, or `failed` if it errors.
+/// Client-side lifecycle of an outgoing message — `sending` while the send
+/// call (upload, for image/voice, then the message POST) is in flight, then
+/// `sent`/`delivered`/`read` as the thread's state advances, or `failed` if
+/// it errors.
 enum MessageStatus { sending, sent, delivered, read, failed }
 
-/// `text`, `image`, and `voice` are composable today — `voice` recording is
-/// real (see `ChatComposer`'s mic button / `VoiceRecorderService`), but
-/// sending one always ends in [MessageStatus.failed] because no chat
-/// attachment-upload endpoint exists yet (see
-/// docs/development/chat-backend-handoff.md and
-/// `ConversationRepository.uploadVoiceAttachment`) — recording and local
-/// playback preview work standalone regardless. `document` exists only so
-/// [MessageEntity]/message bubbles already know how to render that shape if
-/// the mock history ever seeds one; nothing produces it yet.
+/// `text`, `image`, and `voice` all send for real against the chat backend
+/// (`ConversationRepository.uploadImageAttachment`/`uploadVoiceAttachment`
+/// upload the file first, then `sendMessage` with the hosted URL). `document`
+/// exists only so [MessageEntity]/message bubbles already know how to render
+/// that shape if the mock history ever seeds one; nothing produces it yet.
 enum MessageType { text, image, document, voice }
 
 /// A single message inside a [ConversationEntity]'s thread.
@@ -24,17 +21,17 @@ class MessageEntity {
   final MessageStatus status;
   final MessageType type;
 
-  /// URL (or, before a real upload endpoint exists, a local file path) for
-  /// `type == image`/`document`/`voice` messages. Null for plain text.
+  /// A hosted `http(s)` URL once confirmed, or a local file path while the
+  /// optimistic bubble is still `sending`/uploading, for `type ==
+  /// image`/`document`/`voice` messages. Null for plain text.
   final String? attachmentUrl;
 
   /// Recording length for `type == voice` messages — known immediately for
   /// one this client just recorded, or derived on playback (decoded from
   /// the audio file) for one arriving from elsewhere. Like
-  /// [clientMessageId], this has NO backing `ChatMessage` column (see
-  /// docs/development/chat-backend-handoff.md) — it's never sent to or read
-  /// from the backend, purely a local/derived display value. Null for
-  /// every other type.
+  /// [clientMessageId], this has NO backing `ChatMessage` column — it's
+  /// never sent to or read from the backend, purely a local/derived display
+  /// value. Null for every other type.
   final Duration? voiceDuration;
 
   /// Client-generated id set on an outgoing message the moment it's

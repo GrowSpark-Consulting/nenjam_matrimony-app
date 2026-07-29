@@ -74,7 +74,12 @@ export class MessagesService {
         query.cursor || null,
         take,
       );
-      const items = await Promise.all(rows.map((m) => this.toDto(m, userId)));
+      // Repository rows come back newest-first (the DB order needed to grab
+      // "the last N"/"the N before this cursor"); the wire contract for a page
+      // is oldest-first, matching how the client renders/prepends it.
+      const items = await Promise.all(
+        rows.map((m) => this.toDto(m, userId)),
+      ).then((dtos) => dtos.reverse());
       return {
         items,
         page: pageNumber,
@@ -92,7 +97,10 @@ export class MessagesService {
       skip,
       take,
     );
-    const items = await Promise.all(rows.map((m) => this.toDto(m, userId)));
+    // Same newest-first -> oldest-first reversal as the keyset branch above.
+    const items = await Promise.all(
+      rows.map((m) => this.toDto(m, userId)),
+    ).then((dtos) => dtos.reverse());
     return {
       items,
       page: pageNumber,

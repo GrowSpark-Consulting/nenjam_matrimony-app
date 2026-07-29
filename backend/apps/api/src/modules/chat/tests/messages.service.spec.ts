@@ -348,17 +348,16 @@ describe('MessagesService.list', () => {
     );
   });
 
-  it('maps a page newest-first with isMine + presigned media (offset mode)', async () => {
+  it('maps a page oldest-first for the client despite the DB returning it newest-first (offset mode)', async () => {
     const { service, messageRepository } = build();
+    // The repository queries `createdAt desc` (newest first) to grab "the
+    // last N" — the service must reverse that to oldest-first before it
+    // reaches the wire, since the client renders index 0 as the top of the
+    // list with no client-side sort/reverse of its own.
     messageRepository.listPaged.mockResolvedValue([
       [
+        message({ id: 'b', senderId: 'peer', type: 'IMAGE', mediaUrl: 'chat-media/k' }),
         message({ id: 'a', senderId: 'me' }),
-        message({
-          id: 'b',
-          senderId: 'peer',
-          type: 'IMAGE',
-          mediaUrl: 'chat-media/k',
-        }),
       ],
       2,
     ]);
@@ -373,7 +372,10 @@ describe('MessagesService.list', () => {
       hasMore: false,
       nextCursor: null,
     });
-    expect(page.items[0]).toMatchObject({ id: 'a', isMine: true });
+    expect(page.items[0]).toMatchObject({
+      id: 'a',
+      isMine: true,
+    });
     expect(page.items[1]).toMatchObject({
       id: 'b',
       isMine: false,
@@ -381,10 +383,13 @@ describe('MessagesService.list', () => {
     });
   });
 
-  it('uses keyset mode and echoes nextCursor when a cursor is supplied', async () => {
+  it('uses keyset mode, echoes nextCursor, and reverses the DB order to oldest-first', async () => {
     const { service, messageRepository } = build();
     messageRepository.listByCursor.mockResolvedValue({
-      items: [message({ id: 'a', senderId: 'me' })],
+      items: [
+        message({ id: 'b', senderId: 'peer', createdAt: new Date('2026-01-02T00:00:00.000Z') }),
+        message({ id: 'a', senderId: 'me', createdAt: new Date('2026-01-01T00:00:00.000Z') }),
+      ],
       hasMore: true,
       nextCursor: 'a',
     });
@@ -394,7 +399,7 @@ describe('MessagesService.list', () => {
     expect(messageRepository.listByCursor).toHaveBeenCalledWith('r1', 'z', 30);
     expect(messageRepository.listPaged).not.toHaveBeenCalled();
     expect(page).toMatchObject({ hasMore: true, nextCursor: 'a' });
-    expect(page.items[0]).toMatchObject({ id: 'a', isMine: true });
+    expect(page.items.map((i) => i.id)).toEqual(['a', 'b']);
   });
 
   it('treats an empty cursor as the first keyset page (null cursorId)', async () => {

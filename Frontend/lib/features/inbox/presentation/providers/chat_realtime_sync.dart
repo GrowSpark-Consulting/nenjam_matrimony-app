@@ -65,6 +65,7 @@ final chatRealtimeSyncProvider = Provider<void>((ref) {
         final id = data['id'] as String?;
         if (roomId != null && id != null) {
           onOpenThread(roomId, (n) => n.applyDelivered(id));
+          ref.read(conversationsNotifierProvider.notifier).applyDelivered(roomId);
         }
 
       case ChatRealtimeEvent.typing:

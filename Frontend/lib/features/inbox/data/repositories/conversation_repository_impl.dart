@@ -44,7 +44,16 @@ class ConversationRepositoryImpl implements ConversationRepository {
   }
 
   @override
-  Future<MessagePage> getMessages(String conversationId, {int page = 1, int limit = 30}) async {
+  Future<MessagePage> getMessages(
+    String conversationId, {
+    int page = 1,
+    int limit = 30,
+    String? cursor,
+  }) async {
+    // No keyset support in the in-memory mock — a fixed local list has no
+    // concurrent-insert-during-scroll hazard for `cursor` to guard against,
+    // so plain page/limit slicing is exact. `nextCursor` is always null,
+    // which tells callers to keep using [page].
     final thread = await _fullThread(conversationId);
     // Oldest-to-newest storage; "page 1" is the newest slice (the tail),
     // increasing page walks backwards toward the start — see MessagePage's
@@ -113,6 +122,16 @@ class ConversationRepositoryImpl implements ConversationRepository {
     throw const MediaUploadUnavailableException(
       'Voice message upload is not available yet.',
     );
+  }
+
+  @override
+  Future<String> uploadImageAttachment(String localFilePath) async {
+    // No real upload endpoint to fake against in-memory — same "accept the
+    // local path as already hosted" shortcut [sendMessage] has always used
+    // for images, just reached through the same upload-first call shape the
+    // real repository now uses. See ApiRepositoryImpl for the real upload.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    return localFilePath;
   }
 
   @override

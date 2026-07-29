@@ -150,6 +150,29 @@ describe('ConversationsService.list', () => {
       profile: { id: 'peer1' },
     });
   });
+
+  it('reports the real DELIVERED status on the last-message tick, not just sent/read', async () => {
+    const { service, conversationRepository, profileMapper } = build();
+    conversationRepository.listForUser.mockResolvedValue([
+      [
+        {
+          ...room({ id: 'r1', user2Id: 'peer1' }),
+          messages: [
+            message({ senderId: 'me', status: 'DELIVERED', isRead: false }),
+          ],
+        },
+      ],
+      1,
+    ]);
+    profileMapper.toDtoList.mockResolvedValue([{ id: 'peer1', name: 'One' }]);
+
+    const page = await service.list('me', PAGE);
+
+    expect(page.items[0]).toMatchObject({
+      lastMessageFromMe: true,
+      lastMessageStatus: 'delivered',
+    });
+  });
 });
 
 describe('ConversationsService.list per-user state', () => {

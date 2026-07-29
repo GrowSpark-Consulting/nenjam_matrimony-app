@@ -23,6 +23,7 @@ class MessagePage {
     required this.items,
     required this.page,
     required this.hasMore,
+    this.nextCursor,
   });
 
   final List<MessageEntity> items;
@@ -30,6 +31,15 @@ class MessagePage {
 
   /// Whether an older page still exists beyond this one.
   final bool hasMore;
+
+  /// Opaque keyset cursor for the next-older page — pass it back as
+  /// [ConversationRepository.getMessages]'s `cursor` to continue in keyset
+  /// mode, which stays correct even if new messages arrive mid-scroll
+  /// (unlike plain offset paging, where a concurrent insert can shift the
+  /// window and reproduce an already-loaded message). Null when the
+  /// repository doesn't support keyset mode (e.g. the in-memory mock), in
+  /// which case callers fall back to [page].
+  final String? nextCursor;
 }
 
 /// A single page of the conversations list — mirrors
@@ -52,10 +62,10 @@ class ConversationResultPage {
 }
 
 /// Pure abstract Dart interface. Concrete implementations live in `data/`:
-/// [ConversationRepositoryImpl] (in-memory, mock-backed — what's actually
-/// wired via `conversationRepositoryProvider` today) and
-/// [ConversationApiRepositoryImpl] (dormant, hits `ApiEndpoints.conversations`
-/// /`.messages` — the swap-in once a real chat backend exists).
+/// [ConversationApiRepositoryImpl] (what's actually wired via
+/// `conversationRepositoryProvider` today — talks to the real chat backend
+/// under `backend/apps/api/src/modules/chat/`) and [ConversationRepositoryImpl]
+/// (in-memory mock, kept for local UI iteration without a backend).
 abstract interface class ConversationRepository {
   Future<ConversationResultPage> getConversations({int page = 1, int limit = 20});
 
@@ -71,7 +81,16 @@ abstract interface class ConversationRepository {
   /// frontend checks first.
   Future<ConversationEntity> getOrCreateConversation(DiscoveryProfileEntity profile);
 
-  Future<MessagePage> getMessages(String conversationId, {int page = 1, int limit = 30});
+  /// [cursor], when supplied (even as an empty string), opts into keyset
+  /// pagination — pass [MessagePage.nextCursor] back in on the following
+  /// call to walk further into the past. Omit it to use legacy offset
+  /// (`page`/`limit`) paging. See [MessagePage.nextCursor].
+  Future<MessagePage> getMessages(
+    String conversationId, {
+    int page = 1,
+    int limit = 30,
+    String? cursor,
+  });
 
   /// [clientMessageId], when supplied, must be echoed back unchanged on the
   /// returned [MessageEntity] — see that field's doc comment for why. [type]/
@@ -97,6 +116,13 @@ abstract interface class ConversationRepository {
   /// than pretending. Callers must never treat [localFilePath] itself as a
   /// sendable `attachmentUrl`.
   Future<String> uploadVoiceAttachment(String localFilePath);
+
+  /// Uploads a local image attachment and returns its hosted media URL —
+  /// call this BEFORE [sendMessage] for `type == MessageType.image`, the
+  /// same upload-first pattern as [uploadVoiceAttachment]. Callers must
+  /// never hand [localFilePath] itself to [sendMessage] as if it were
+  /// already a hosted URL.
+  Future<String> uploadImageAttachment(String localFilePath);
 
   Future<void> pin(String conversationId, bool pinned);
 

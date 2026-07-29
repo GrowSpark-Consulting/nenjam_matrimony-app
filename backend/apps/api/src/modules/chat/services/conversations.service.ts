@@ -24,6 +24,7 @@ import {
   ConversationPageDto,
   GetOrCreateConversationResponseDto,
 } from '../dto/conversation.response.dto';
+import { deliveryStatusToWire } from '../dto/message.response.dto';
 
 /**
  * Conversation lifecycle. Creating (or opening) a conversation is gated on an
@@ -103,7 +104,7 @@ export class ConversationsService {
         lastMessageFromMe: Boolean(fromMe),
         isBlocked: blockedPeers.has(peerId),
         lastMessageStatus:
-          last && fromMe ? (last.isRead ? 'read' : 'sent') : null,
+          last && fromMe ? deliveryStatusToWire(last.status) : null,
         isPinned: state?.isPinned ?? false,
         isMuted: state?.isMuted ?? false,
         isArchived: state?.isArchived ?? false,

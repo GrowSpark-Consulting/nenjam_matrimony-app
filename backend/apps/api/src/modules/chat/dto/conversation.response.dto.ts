@@ -1,4 +1,5 @@
 import type { DiscoverProfileDto } from '../../matches/dto/discover-profile.response.dto';
+import type { MessageStatusWire } from './message.response.dto';
 
 /**
  * One conversation row for the Inbox list. Field names match Flutter's
@@ -18,7 +19,7 @@ export interface ConversationDto {
   unreadCount: number;
   lastMessageFromMe: boolean;
   isBlocked: boolean;
-  lastMessageStatus: 'sent' | 'read' | null;
+  lastMessageStatus: MessageStatusWire | null;
   isPinned: boolean;
   isMuted: boolean;
   isArchived: boolean;

@@ -264,10 +264,8 @@ class _DeletedBubble extends StatelessWidget {
 
 /// An image message's thumbnail — [url] is either a real `http(s)` URL (a
 /// received message, or one this client sent that's since been confirmed
-/// with a hosted URL) or a local file path (an attachment still `sending`,
-/// before any real upload endpoint exists — see
-/// docs/development/chat-backend-handoff.md). Shows a dimming overlay +
-/// spinner while `sending`.
+/// with a hosted URL) or a local file path (an attachment still
+/// `sending`/uploading). Shows a dimming overlay + spinner while `sending`.
 class _MessageImage extends StatelessWidget {
   final String url;
   final bool sending;
@@ -322,9 +320,9 @@ class _MessageImageError extends StatelessWidget {
 
 /// A voice message bubble's play/pause + progress + duration row.
 ///
-/// [url] is either a real `http(s)` URL (once a real upload/fetch exists)
-/// or a local file path (this client's own not-yet-uploaded recording — see
-/// docs/development/chat-backend-handoff.md). [knownDuration] comes from
+/// [url] is either a real `http(s)` URL (once uploaded/confirmed) or a
+/// local file path (this client's own not-yet-uploaded recording).
+/// [knownDuration] comes from
 /// [MessageEntity.voiceDuration] when this client is the one that recorded
 /// it; for anything else, duration is only known once
 /// `onDurationChanged` fires after the first play — shown as `--:--` until

@@ -7,7 +7,6 @@ import '../../../../core/realtime/realtime_providers.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../data/datasources/conversation_mock_datasource.dart';
 import '../../data/repositories/conversation_api_repository_impl.dart';
-import '../../data/repositories/conversation_repository_impl.dart';
 import '../../domain/entities/conversation_entity.dart';
 import '../../domain/entities/message_entity.dart';
 import '../../domain/repositories/conversation_repository.dart';
@@ -230,6 +229,24 @@ class ConversationsNotifier extends AsyncNotifier<List<ConversationEntity>> {
     ]);
   }
 
+  /// A message this user sent in [id] was delivered to the peer — advance
+  /// the row's tick from sent to delivered (mirrors [MessagesNotifier.
+  /// applyDelivered] for the open thread). Never regresses an already-read
+  /// tick back to delivered.
+  void applyDelivered(String id) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncValue.data([
+      for (final c in current)
+        if (c.id == id &&
+            c.lastMessageFromMe &&
+            c.lastMessageStatus == MessageDeliveryStatus.sent)
+          c.copyWith(lastMessageStatus: MessageDeliveryStatus.delivered)
+        else
+          c,
+    ]);
+  }
+
   /// The peer's typing state changed for [id].
   void setTyping(String id, bool isTyping) {
     final current = state.valueOrNull;
@@ -326,6 +343,11 @@ String _newClientMessageId(String conversationId) =>
 /// Oldest-to-newest, exactly as rendered (index 0 is the top of the list).
 class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> {
   int _page = 1;
+  // Set from the repository's echoed `nextCursor` once the first page loads.
+  // Non-null means the repository supports keyset pagination — [loadOlder]
+  // then always walks by cursor (stable under concurrent inserts) rather
+  // than by [_page]; null (e.g. the in-memory mock) falls back to paging.
+  String? _cursor;
   bool _hasMore = false;
   bool _isLoadingOlder = false;
 
@@ -344,15 +366,22 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
       () => ref.read(chatActiveThreadsProvider.notifier).add(conversationId),
     );
 
-    final result = await ref.watch(conversationRepositoryProvider).getMessages(conversationId);
+    // Empty-string cursor opts into keyset mode's first page; a repository
+    // that doesn't support it (the mock) just ignores the argument.
+    final result = await ref
+        .watch(conversationRepositoryProvider)
+        .getMessages(conversationId, cursor: '');
     _page = result.page;
+    _cursor = result.nextCursor;
     _hasMore = result.hasMore;
     return result.items;
   }
 
   /// Fetches the next-older page and prepends it — called when the user
   /// scrolls near the top of the thread. No-ops while already loading or
-  /// once the repository has said there's nothing older.
+  /// once the repository has said there's nothing older. A defensive
+  /// id-based dedup guards the prepend regardless of paging mode — cheap,
+  /// and it's the same reconciliation key [applyIncoming] already uses.
   Future<void> loadOlder() async {
     if (_isLoadingOlder || !_hasMore) return;
     final current = state.valueOrNull;
@@ -360,13 +389,18 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
 
     _isLoadingOlder = true;
     try {
-      final result = await ref
-          .read(conversationRepositoryProvider)
-          .getMessages(arg, page: _page + 1);
+      final result = await ref.read(conversationRepositoryProvider).getMessages(
+            arg,
+            page: _page + 1,
+            cursor: _cursor,
+          );
       _page = result.page;
+      _cursor = result.nextCursor;
       _hasMore = result.hasMore;
       if (result.items.isNotEmpty) {
-        state = AsyncValue.data([...result.items, ...current]);
+        final existingIds = current.map((m) => m.id).toSet();
+        final fresh = result.items.where((m) => !existingIds.contains(m.id));
+        state = AsyncValue.data([...fresh, ...current]);
       }
     } finally {
       _isLoadingOlder = false;
@@ -419,22 +453,31 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
         if (m.clientMessageId == clientMessageId) m.copyWith(status: MessageStatus.sending) else m,
     ]);
     final retrying = target.copyWith(status: MessageStatus.sending);
-    // Voice must always retry through the upload-first path — never
-    // [_resolve], which would hand the mock repository the local
-    // recording's file path as if it were already hosted (see
-    // [_resolveVoice]'s doc comment).
-    if (target.type == MessageType.voice) {
-      await _resolveVoice(retrying);
-    } else {
-      await _resolve(retrying);
+    // Image/voice must always retry through the upload-first path — never
+    // [_resolve], which would hand the repository the local file's path as
+    // if it were already hosted (see [_resolveMediaUpload]'s doc comment).
+    switch (retrying.type) {
+      case MessageType.voice:
+        await _resolveMediaUpload(
+          retrying,
+          (repo, path) => repo.uploadVoiceAttachment(path),
+          '🎤 Voice message',
+        );
+      case MessageType.image:
+        await _resolveMediaUpload(
+          retrying,
+          (repo, path) => repo.uploadImageAttachment(path),
+          '📷 Photo',
+        );
+      case MessageType.text:
+      case MessageType.document:
+        await _resolve(retrying);
     }
   }
 
-  /// Sends [file] as an image attachment — same optimistic/reconcile
-  /// lifecycle as [send]. The mock repository accepts the local file path
-  /// as-is (no real upload endpoint exists yet — see
-  /// docs/development/chat-backend-handoff.md); [ConversationApiRepositoryImpl]
-  /// documents the proposed contract without implementing a fake one.
+  /// Sends [file] as an image attachment — uploads it first (see
+  /// [_resolveMediaUpload]), then the same optimistic/reconcile lifecycle
+  /// as [send].
   Future<void> sendImage(String localFilePath) async {
     final clientMessageId = _newClientMessageId(arg);
     final optimistic = MessageEntity(
@@ -450,20 +493,16 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
     );
     final current = state.valueOrNull ?? const <MessageEntity>[];
     state = AsyncValue.data([...current, optimistic]);
-    await _resolve(optimistic);
+    await _resolveMediaUpload(
+      optimistic,
+      (repo, path) => repo.uploadImageAttachment(path),
+      '📷 Photo',
+    );
   }
 
-  /// Sends a recorded voice note. Unlike [send]/[sendImage], this does NOT
-  /// go through [_resolve] — that shared path hands `attachmentUrl`
-  /// straight to `sendMessage`, which the mock repository accepts as-is
-  /// (already documented as a shortcut for images, see
-  /// [ConversationRepositoryImpl.sendMessage]). Doing that for a voice note
-  /// would report an unuploaded local recording as sent, which this
-  /// feature must never do (see docs/development/chat-backend-handoff.md).
-  /// [_resolveVoice] uploads first and only ever gives `sendMessage` a real
-  /// hosted URL — today that upload has nothing to succeed against, so the
-  /// message truthfully lands in [MessageStatus.failed] with the existing
-  /// tap-to-retry affordance, exactly like any other real send failure.
+  /// Sends a recorded voice note — uploads it first (see
+  /// [_resolveMediaUpload]), then the same optimistic/reconcile lifecycle
+  /// as [send].
   Future<void> sendVoice(String localFilePath, Duration duration) async {
     final clientMessageId = _newClientMessageId(arg);
     final optimistic = MessageEntity(
@@ -480,41 +519,51 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
     );
     final current = state.valueOrNull ?? const <MessageEntity>[];
     state = AsyncValue.data([...current, optimistic]);
-    await _resolveVoice(optimistic);
+    await _resolveMediaUpload(
+      optimistic,
+      (repo, path) => repo.uploadVoiceAttachment(path),
+      '🎤 Voice message',
+    );
   }
 
-  /// Upload-first resolution for [sendVoice]/[retry] — never hands
-  /// [ConversationRepository.sendMessage] a local file path directly.
-  /// [optimistic.attachmentUrl] must still be the local recording path;
-  /// [optimistic.voiceDuration] is preserved onto the confirmed message
-  /// since the backend has no column to echo it back from (see
-  /// [MessageEntity.voiceDuration]'s doc comment).
-  Future<void> _resolveVoice(MessageEntity optimistic) async {
+  /// Shared upload-first resolution for [sendImage]/[sendVoice]/[retry] on a
+  /// media message — never hands [ConversationRepository.sendMessage] a
+  /// local file path directly; [upload] must return a real hosted URL
+  /// first. [optimistic.attachmentUrl] is the local file path;
+  /// [optimistic.voiceDuration] (voice only) is preserved onto the
+  /// confirmed message since the backend has no column to echo it back
+  /// from (see [MessageEntity.voiceDuration]'s doc comment).
+  Future<void> _resolveMediaUpload(
+    MessageEntity optimistic,
+    Future<String> Function(ConversationRepository repo, String localPath) upload,
+    String preview,
+  ) async {
     final conversationId = arg;
     final clientMessageId = optimistic.clientMessageId!;
+    final repo = ref.read(conversationRepositoryProvider);
     try {
-      final hostedUrl = await ref
-          .read(conversationRepositoryProvider)
-          .uploadVoiceAttachment(optimistic.attachmentUrl!);
-      final sent = await ref.read(conversationRepositoryProvider).sendMessage(
-            conversationId,
-            '',
-            clientMessageId: clientMessageId,
-            type: MessageType.voice,
-            attachmentUrl: hostedUrl,
-          );
-      final withDuration = sent.copyWith(voiceDuration: optimistic.voiceDuration);
+      final hostedUrl = await upload(repo, optimistic.attachmentUrl!);
+      final sent = await repo.sendMessage(
+        conversationId,
+        '',
+        clientMessageId: clientMessageId,
+        type: optimistic.type,
+        attachmentUrl: hostedUrl,
+      );
+      final resolved = optimistic.voiceDuration == null
+          ? sent
+          : sent.copyWith(voiceDuration: optimistic.voiceDuration);
       final latest = state.valueOrNull;
       if (latest != null) {
         state = AsyncValue.data([
           for (final m in latest)
-            if (m.clientMessageId == clientMessageId) withDuration else m,
+            if (m.clientMessageId == clientMessageId) resolved else m,
         ]);
       }
       ref.read(conversationsNotifierProvider.notifier).applyLastMessage(
             conversationId,
-            withDuration,
-            preview: '🎤 Voice message',
+            resolved,
+            preview: preview,
           );
     } catch (_) {
       final latest = state.valueOrNull;
