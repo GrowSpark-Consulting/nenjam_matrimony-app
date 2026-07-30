@@ -160,6 +160,44 @@ export class PresenceService {
     }
   }
 
+  /**
+   * Drops ALL of a user's devices at once and stamps last-seen — used when the
+   * client signals it's going to the background (an intentional, immediate "I'm
+   * offline now" rather than waiting for each socket to disconnect or age out).
+   */
+  async removeAll(userId: string): Promise<void> {
+    const now = Date.now();
+    const client = this.readyClient();
+    if (!client) {
+      this.memDevices.delete(userId);
+      this.memLastSeen.set(userId, now);
+      return;
+    }
+    try {
+      await client.del(this.key(userId));
+      await client.set(
+        this.lastSeenKey(userId),
+        String(now),
+        'EX',
+        LAST_SEEN_TTL_SECONDS,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `presence removeAll fell back to memory: ${asMsg(error)}`,
+      );
+      this.memDevices.delete(userId);
+      this.memLastSeen.set(userId, now);
+    }
+  }
+
+  /** Presence for many users at once (e.g. a conversation-list page). Runs the
+   *  per-user lookups concurrently; keyed by userId. */
+  async presenceOfMany(userIds: string[]): Promise<Map<string, PresenceInfo>> {
+    const unique = [...new Set(userIds)];
+    const infos = await Promise.all(unique.map((id) => this.presenceOf(id)));
+    return new Map(unique.map((id, i) => [id, infos[i]]));
+  }
+
   /** Online flag + last-seen for one user. Online users report `lastSeenAt` as
    *  now; offline users report their stored last-seen (or null if unknown). */
   async presenceOf(userId: string): Promise<PresenceInfo> {

@@ -67,25 +67,30 @@ export class RealtimeGateway
 
       (client.data as AuthedSocketData).userId = userId;
       await client.join(userRoom(userId));
-      // Record this device in the (Redis-backed, cross-instance) presence set.
+      // Record this device. If the user had no other device online, this is an
+      // offline→online transition worth telling their conversation peers about.
+      const wasOnline = await this.presence.isOnline(userId);
       await this.presence.touch(userId, client.id);
       this.logger.log(`Socket ${client.id} authenticated for user ${userId}.`);
       // Signal the client that the socket is fully authenticated and joined.
       // Clients should emit `chat.sync` (reconnect replay) on THIS event, not on
       // transport `connect`, which fires before this async auth completes.
       client.emit('ready');
+      if (!wasOnline) void this.broadcastPresence(userId, true, null);
     } catch (error) {
       this.reject(client, `Auth failed: ${(error as Error).message}`);
     }
   }
 
-  handleDisconnect(client: Socket): void {
+  async handleDisconnect(client: Socket): Promise<void> {
     const userId = (client.data as AuthedSocketData).userId;
     if (!userId) return;
     // socket.io already removed the socket from its room; drop this device from
-    // presence too (best-effort — a leftover member ages out via the stale
-    // window regardless).
-    void this.presence.remove(userId, client.id);
+    // presence too. If it was the user's last device, tell their peers they're
+    // now offline (with a fresh last-seen).
+    await this.presence.remove(userId, client.id);
+    const stillOnline = await this.presence.isOnline(userId);
+    if (!stillOnline) await this.broadcastPresence(userId, false, new Date());
   }
 
   /**
@@ -98,8 +103,29 @@ export class RealtimeGateway
   async handlePresencePing(@ConnectedSocket() client: Socket): Promise<void> {
     const userId = (client.data as AuthedSocketData).userId;
     if (!userId) return;
+    // A heartbeat also re-establishes presence after an explicit background
+    // (`presence.offline`) or a stale-window age-out, so detect that transition
+    // and re-announce online to peers.
+    const wasOnline = await this.presence.isOnline(userId);
     await this.presence.touch(userId, client.id);
     client.emit('presence.pong', { at: Date.now() });
+    if (!wasOnline) void this.broadcastPresence(userId, true, null);
+  }
+
+  /**
+   * The client signals it's backgrounding (app paused). Mark the user offline
+   * immediately — dropping all their devices and stamping last-seen — and tell
+   * their peers, rather than waiting for each socket to disconnect or age out.
+   * The next `presence.ping` (on resume) re-announces online.
+   */
+  @SubscribeMessage('presence.offline')
+  async handlePresenceOffline(
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    const userId = (client.data as AuthedSocketData).userId;
+    if (!userId) return;
+    await this.presence.removeAll(userId);
+    await this.broadcastPresence(userId, false, new Date());
   }
 
   /**
@@ -117,6 +143,45 @@ export class RealtimeGateway
   }
 
   // ── internals ──────────────────────────────────────────────────────────
+
+  /**
+   * Announces a user's online/offline transition to everyone they share an
+   * active conversation with — presence is only ever visible to conversation
+   * peers, never broadcast globally. `lastSeenAt` is null when coming online.
+   * Lives here (rather than the chat module) because it's driven by the socket
+   * connection lifecycle this gateway owns; the peer lookup is a single indexed
+   * query via the already-injected Prisma client, so no dependency on the chat
+   * module — and thus no import cycle — is introduced.
+   */
+  private async broadcastPresence(
+    userId: string,
+    isOnline: boolean,
+    lastSeenAt: Date | null,
+  ): Promise<void> {
+    const peerIds = await this.findConversationPeerIds(userId);
+    if (peerIds.length === 0) return;
+    const payload = {
+      userId,
+      isOnline,
+      lastSeenAt: lastSeenAt ? lastSeenAt.toISOString() : null,
+    };
+    for (const peerId of peerIds) {
+      this.emitToUser(peerId, RealtimeEvents.chatPresence, payload);
+    }
+  }
+
+  /** The distinct other-participant ids across all of a user's active rooms. */
+  private async findConversationPeerIds(userId: string): Promise<string[]> {
+    const rooms = await this.prisma.chatRoom.findMany({
+      where: { isActive: true, OR: [{ user1Id: userId }, { user2Id: userId }] },
+      select: { user1Id: true, user2Id: true },
+    });
+    const peers = new Set<string>();
+    for (const room of rooms) {
+      peers.add(room.user1Id === userId ? room.user2Id : room.user1Id);
+    }
+    return [...peers];
+  }
 
   private extractToken(client: Socket): string | null {
     const fromAuth = (client.handshake.auth?.token ?? '') as string;

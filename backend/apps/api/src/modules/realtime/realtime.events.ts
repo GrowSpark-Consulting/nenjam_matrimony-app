@@ -27,6 +27,10 @@ export const RealtimeEvents = {
   // client can drop/tombstone the bubble.
   chatMessageEdited: 'chat.messageEdited',
   chatMessageDeleted: 'chat.messageDeleted',
+  // Presence: a participant this user shares a conversation with came online or
+  // went offline. Payload `{ userId, isOnline, lastSeenAt }` — pushed only to
+  // that user's conversation peers, never broadcast globally.
+  chatPresence: 'chat.presence',
 } as const;
 
 export type RealtimeEvent =

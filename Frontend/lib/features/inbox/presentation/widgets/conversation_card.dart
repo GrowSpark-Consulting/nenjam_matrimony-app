@@ -10,6 +10,7 @@ import '../../../../core/widgets/sheets/app_sheets.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/conversation_entity.dart';
 import '../providers/inbox_providers.dart';
+import '../providers/presence_providers.dart';
 import '../utils/handle_unblock_conversation.dart';
 import '../utils/inbox_date_format.dart';
 import '../utils/open_chat_detail.dart';
@@ -112,12 +113,19 @@ class ConversationCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final notifier = ref.read(conversationsNotifierProvider.notifier);
 
+    // Live presence for this peer only — a narrow `select` so just this row
+    // rebuilds (and only when its peer's online/typing flips), never the list.
+    final presence =
+        ref.watch(presenceProvider.select((m) => m[conversation.profile.id]));
+    final isOnline = presence?.isOnline ?? conversation.isOnline;
+    final isTyping = presence?.isTyping ?? conversation.isTyping;
+
     final card = NmChatCard(
       name: conversation.profile.name,
       lastMessage: conversation.lastMessage,
       time: formatConversationTime(conversation.lastMessageAt, l10n),
       unreadCount: conversation.unreadCount,
-      isOnline: conversation.profile.isOnline,
+      isOnline: isOnline,
       gender: conversation.profile.gender,
       avatarUrl: conversation.profile.photoUrls.isNotEmpty ? conversation.profile.photoUrls.first : null,
       subtitleMeta: _subtitleMeta(l10n),
@@ -125,7 +133,7 @@ class ConversationCard extends ConsumerWidget {
       isPremium: conversation.profile.isPremium,
       isPinned: conversation.isPinned,
       isMuted: conversation.isMuted,
-      isTyping: conversation.isTyping,
+      isTyping: isTyping,
       readStatus: _readStatus(),
       indicator: conversation.smartIndicator == ConversationSmartIndicator.none
           ? null

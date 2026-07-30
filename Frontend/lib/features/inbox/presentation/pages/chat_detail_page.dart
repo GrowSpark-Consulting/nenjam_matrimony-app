@@ -6,19 +6,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/router/profile_navigation.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/avatars/app_avatars.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
 import '../../../../core/widgets/dialogs/app_dialogs.dart';
 import '../../../../core/widgets/sheets/app_sheets.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/conversation_entity.dart';
 import '../../domain/entities/message_entity.dart';
+import '../controllers/typing_controller.dart';
 import '../providers/inbox_providers.dart';
+import '../providers/presence_providers.dart';
 import '../utils/handle_unblock_conversation.dart';
 import '../widgets/chat_composer.dart';
+import '../widgets/chat_presence.dart';
 import '../widgets/date_separator.dart';
 import '../widgets/message_bubble.dart';
-import '../widgets/online_indicator.dart';
 import '../widgets/typing_indicator.dart';
 
 /// Production-quality Chat Detail thread — header, message history (with
@@ -49,14 +50,24 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   int _unseenNewMessages = 0;
   bool _isLoadingOlder = false;
 
+  /// Debounces this client's outgoing typing signal (start once per burst, stop
+  /// on idle / send / leaving) and forwards it to the repository's socket emit.
+  late final TypingController _typing;
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _typing = TypingController(
+      onTyping: (isTyping) => ref
+          .read(conversationRepositoryProvider)
+          .setTyping(widget.conversation.id, isTyping),
+    );
   }
 
   @override
   void dispose() {
+    _typing.dispose(); // emits a final typing_stop so the peer isn't left stuck
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -147,7 +158,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                     children: [
                       _MessagesList(
                         conversationId: conversation.id,
-                        isTyping: conversation.isTyping,
+                        peerUserId: conversation.profile.id,
                         scrollController: _scrollController,
                         isLoadingOlder: _isLoadingOlder,
                         onRetry: (clientMessageId) => messagesNotifier.retry(clientMessageId),
@@ -174,12 +185,16 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                   _BlockedBanner(conversation: conversation)
                 else
                   ChatComposer(
-                    onSend: (text) => messagesNotifier.send(text),
+                    onSend: (text) {
+                      _typing.stop(); // sending ends the typing burst at once
+                      messagesNotifier.send(text);
+                    },
                     onSendAttachment: (File file) => messagesNotifier.sendImage(file.path),
                     onSendVoice: (path, duration) => messagesNotifier.sendVoice(path, duration),
-                    onTypingChanged: (isTyping) => ref
-                        .read(conversationRepositoryProvider)
-                        .setTyping(conversation.id, isTyping),
+                    // The composer signals activity per change; the controller
+                    // debounces it into a single typing_start + an idle stop.
+                    onTypingChanged: (active) =>
+                        active ? _typing.onChanged('typing') : _typing.stop(),
                   ),
               ],
             ),
@@ -240,9 +255,9 @@ class _ChatDetailAppBar extends ConsumerWidget implements PreferredSizeWidget {
           children: [
             Hero(
               tag: 'conversation-avatar-${conversation.id}',
-              child: NmOnlineAvatar(
+              child: PresenceAvatar(
+                userId: profile.id,
                 imageUrl: profile.photoUrls.isNotEmpty ? profile.photoUrls.first : null,
-                isOnline: profile.isOnline,
                 size: 40,
                 gender: profile.gender,
               ),
@@ -259,9 +274,10 @@ class _ChatDetailAppBar extends ConsumerWidget implements PreferredSizeWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  OnlineIndicator(
-                    isOnline: profile.isOnline,
+                  ChatPresenceSubtitle(
+                    userId: profile.id,
                     onlineLabel: l10n.inboxOnline,
+                    locale: Localizations.localeOf(context).toString(),
                   ),
                 ],
               ),
@@ -329,14 +345,14 @@ class _ChatDetailAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
 class _MessagesList extends ConsumerWidget {
   final String conversationId;
-  final bool isTyping;
+  final String peerUserId;
   final ScrollController scrollController;
   final bool isLoadingOlder;
   final ValueChanged<String> onRetry;
 
   const _MessagesList({
     required this.conversationId,
-    required this.isTyping,
+    required this.peerUserId,
     required this.scrollController,
     required this.isLoadingOlder,
     required this.onRetry,
@@ -345,6 +361,11 @@ class _MessagesList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final messagesAsync = ref.watch(messagesProvider(conversationId));
+    // Live typing for the in-thread indicator — narrow watch so only this list
+    // rebuilds when the peer starts/stops typing (never the whole page).
+    final isTyping = ref.watch(
+      presenceProvider.select((m) => m[peerUserId]?.isTyping ?? false),
+    );
 
     return messagesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),

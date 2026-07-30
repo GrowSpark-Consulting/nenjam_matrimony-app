@@ -134,6 +134,29 @@ class RealtimeService {
     socket.connect();
   }
 
+  /// App went to the background: mark this device offline right away (the server
+  /// broadcasts it to peers with a last-seen) and pause the heartbeat so we
+  /// don't keep re-announcing online while backgrounded.
+  void handleAppBackgrounded() {
+    emit(ChatClientEvent.presenceOffline);
+    _stopHeartbeat();
+  }
+
+  /// App returned to the foreground: reconnect if the socket dropped while away,
+  /// otherwise resume the heartbeat — which immediately re-announces online.
+  void handleAppForegrounded() {
+    final socket = _socket;
+    if (socket == null) {
+      unawaited(connect());
+      return;
+    }
+    if (!socket.connected) {
+      socket.connect(); // 'ready' will restart the heartbeat
+      return;
+    }
+    _startHeartbeat(); // still connected — re-announce online now
+  }
+
   void _startHeartbeat() {
     _heartbeat?.cancel();
     // Fire once immediately so presence is fresh the moment we're ready, then on

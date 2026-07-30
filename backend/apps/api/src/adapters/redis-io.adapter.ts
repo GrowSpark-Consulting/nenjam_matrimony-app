@@ -1,8 +1,13 @@
 import { INestApplicationContext, Logger } from '@nestjs/common';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
+import type { Redis } from 'ioredis';
 import type { Server, ServerOptions } from 'socket.io';
 import { RedisService } from '@app/cache';
+
+// Bound the initial connect so a hung/blackholed Redis can never stall boot —
+// on timeout we simply degrade to the in-memory adapter.
+const CONNECT_TIMEOUT_MS = 5000;
 
 /**
  * socket.io adapter backed by Redis pub/sub so a `server.to(room).emit(...)`
@@ -11,13 +16,14 @@ import { RedisService } from '@app/cache';
  * "10k+ concurrent, multiple instances" requirement) with no app-code change.
  *
  * Degrades gracefully: if Redis isn't reachable (e.g. local dev without Redis),
- * [connect] is a no-op and socket.io uses its default in-memory adapter — the
- * gateway still works for a single instance. Call [connect] before
- * `useWebSocketAdapter`.
+ * [connect] falls back to socket.io's default in-memory adapter and the gateway
+ * still works for a single instance. Call [connect] before `useWebSocketAdapter`.
  */
 export class RedisIoAdapter extends IoAdapter {
   private readonly logger = new Logger(RedisIoAdapter.name);
   private adapterConstructor?: ReturnType<typeof createAdapter>;
+  private pubClient?: Redis;
+  private subClient?: Redis;
 
   constructor(
     app: INestApplicationContext,
@@ -27,25 +33,41 @@ export class RedisIoAdapter extends IoAdapter {
   }
 
   async connect(): Promise<void> {
-    const base = this.redis.getClient();
-    if (base.status !== 'ready') {
-      this.logger.warn(
-        'Redis not ready — WebSocket using in-memory adapter (single-instance only).',
-      );
-      return;
-    }
+    // Connect a dedicated pub/sub pair for the adapter. We deliberately do NOT
+    // gate on the base client's `status`: this runs at bootstrap, BEFORE
+    // `app.init()`, whereas the base client only connects later in
+    // RedisService.onModuleInit — so a `status === 'ready'` check here would
+    // always be false and wrongly fall back to the in-memory adapter even when
+    // Redis is perfectly reachable. `duplicate()` clones the same connection
+    // options (host / REDIS_URL / TLS); the override below gives these
+    // long-lived infra clients a persistent reconnect policy (the base client's
+    // strategy gives up after 3 tries — right for the cache, wrong for the
+    // adapter, which must survive a transient Redis blip and resume fan-out).
+    const pubClient = this.redis.getClient().duplicate({
+      // Never stop reconnecting; back off up to 5s.
+      retryStrategy: (times: number) => Math.min(times * 200, 5000),
+      // Queue commands across a reconnect instead of failing them.
+      maxRetriesPerRequest: null,
+    });
+    const subClient = pubClient.duplicate();
     try {
-      const pubClient = base.duplicate();
-      const subClient = base.duplicate();
-      await Promise.all([pubClient.connect(), subClient.connect()]);
+      await this.withTimeout(
+        Promise.all([pubClient.connect(), subClient.connect()]),
+        CONNECT_TIMEOUT_MS,
+      );
+      this.pubClient = pubClient;
+      this.subClient = subClient;
       this.adapterConstructor = createAdapter(pubClient, subClient);
       this.logger.log(
         'WebSocket Redis adapter connected (multi-instance ready).',
       );
     } catch (error) {
       this.logger.warn(
-        `WebSocket Redis adapter unavailable, falling back to in-memory: ${(error as Error).message}`,
+        `WebSocket Redis adapter unavailable — using in-memory (single-instance only): ${(error as Error).message}`,
       );
+      // Don't leave orphaned clients reconnecting in the background.
+      pubClient.disconnect();
+      subClient.disconnect();
     }
   }
 
@@ -53,5 +75,27 @@ export class RedisIoAdapter extends IoAdapter {
     const server = super.createIOServer(port, options) as Server;
     if (this.adapterConstructor) server.adapter(this.adapterConstructor);
     return server;
+  }
+
+  /** Release the adapter's Redis pub/sub connections on app shutdown so they
+   *  don't linger (or keep reconnecting) after the server closes. */
+  async close(server: Server): Promise<void> {
+    await super.close(server);
+    // quit() drains in flight commands then closes; allSettled so one failing
+    // never masks the other and shutdown always proceeds.
+    await Promise.allSettled([this.pubClient?.quit(), this.subClient?.quit()]);
+    this.pubClient = undefined;
+    this.subClient = undefined;
+  }
+
+  private withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    let timer: ReturnType<typeof setTimeout>;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`Redis connect timed out after ${ms}ms`)),
+        ms,
+      );
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
   }
 }
