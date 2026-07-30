@@ -44,6 +44,7 @@ function build() {
   const notifications = {
     create: jest.fn().mockResolvedValue({}),
     invalidateUnread: jest.fn().mockResolvedValue(undefined),
+    dispatchPush: jest.fn().mockResolvedValue(undefined),
   };
   const mapper = { toDtoList: jest.fn().mockResolvedValue([]) };
   const realtime = { emitToUser: jest.fn() };

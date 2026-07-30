@@ -297,6 +297,16 @@
     "placeholders": { "name": { "type": "String" } }
   },
   "inboxBlockConfirmMessage": "அவர்களால் உங்களுக்கு செய்தி அனுப்ப முடியாது, மேலும் டிஸ்கவரில் ஒருவரையொருவர் காண முடியாது.",
+  "inboxUnblockConfirmTitle": "{name} இன் தடையை நீக்கவா?",
+  "@inboxUnblockConfirmTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "inboxUnblockConfirmMessage": "நீங்கள் மீண்டும் ஒருவருக்கொருவர் செய்தி அனுப்பலாம்.",
+  "inboxUnblockLoading": "தடையை நீக்குகிறது…",
+  "inboxUnblockSuccess": "{name} இன் தடை நீக்கப்பட்டது.",
+  "@inboxUnblockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "inboxDeleteConfirmTitle": "உரையாடலை நீக்கவா?",
   "inboxDeleteConfirmMessage": "இது உங்கள் இன்பாக்ஸிலிருந்து உரையாடலை அகற்றும். இதை மீட்டெடுக்க முடியாது.",
   "inboxRetrySend": "மீண்டும் முயற்சிக்க தட்டவும்",
@@ -980,9 +990,13 @@
   "privacySaveErrorMessage": "உங்கள் மாற்றங்களைச் சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
   "privacyBlockedSection": "தடுக்கப்பட்ட சுயவிவரங்கள்",
   "privacyBlockedEmptyTitle": "தடுக்கப்பட்ட சுயவிவரங்கள் இல்லை",
-  "privacyBlockedEmptyMessage": "நீங்கள் அரட்டையில் தடுக்கும் சுயவிவரங்கள் இங்கே தோன்றும்.",
+  "privacyBlockedEmptyMessage": "நீங்கள் தடுக்கும் சுயவிவரங்கள் இங்கே தோன்றும்.",
   "privacyUnblockLabel": "தடையை நீக்கு",
   "privacyBlockedStatusLabel": "தடுக்கப்பட்டது",
+  "privacyBlockedOnLabel": "{date} அன்று தடுக்கப்பட்டது",
+  "@privacyBlockedOnLabel": {
+    "placeholders": { "date": { "type": "String" } }
+  },
   "drawerLanguage": "மொழி",
   "drawerSettings": "கணக்கு அமைப்புகள்",
   "drawerPrivacy": "தனியுரிமை & பாதுகாப்பு",
@@ -1040,5 +1054,48 @@
   "profileDetailTabPreferences": "விருப்பத்தேர்வுகள்",
   "profileDetailTabVerification": "சரிபார்ப்பு",
   "profileDetailTabTimeline": "காலவரிசை",
-  "profileDetailProfileNotAvailable": "சுயவிவரம் கிடைக்கவில்லை"
+  "profileDetailProfileNotAvailable": "சுயவிவரம் கிடைக்கவில்லை",
+
+  "profileDetailActionBlock": "பயனரைத் தடு",
+  "profileDetailActionUnblock": "தடையை நீக்கு",
+  "profileDetailActionReport": "பயனரைப் புகாரளி",
+  "profileDetailUnblockConfirmTitle": "இந்த உறுப்பினரின் தடையை நீக்கவா?",
+  "profileDetailUnblockConfirmMessage": "நீங்கள் மீண்டும் டிஸ்கவர், மேட்சஸ் மற்றும் தேடலில் ஒருவரையொருவர் காணலாம், மேலும் ஆர்வங்கள் மற்றும் செய்திகளை அனுப்பலாம்.",
+  "profileDetailUnblockConfirmButton": "தடையை நீக்கு",
+  "profileDetailUnblockLoading": "உறுப்பினரின் தடையை நீக்குகிறது…",
+  "profileDetailUnblockSuccess": "{name} இன் தடை நீக்கப்பட்டது.",
+  "@profileDetailUnblockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "profileDetailBlockConfirmTitle": "இந்த உறுப்பினரைத் தடுக்கவா?",
+  "profileDetailBlockConfirmMessage": "இவர்கள் டிஸ்கவர், மேட்சஸ் மற்றும் தேடலில் இருந்து மறைந்துவிடுவார்கள். ஏற்கனவே உள்ள உரையாடல் 'தடுக்கப்பட்டது' என்ற பட்டையுடன் தொடரும். சாட்டிலிருந்து பின்னர் தடையை நீக்கலாம்.",
+  "profileDetailBlockConfirmButton": "தடு",
+  "profileDetailBlockLoading": "உறுப்பினரைத் தடுக்கிறது…",
+  "profileDetailBlockSuccess": "{name} தடுக்கப்பட்டுள்ளார்.",
+  "@profileDetailBlockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "profileDetailReportReasonTitle": "{name} ஐ ஏன் புகாரளிக்கிறீர்கள்?",
+  "@profileDetailReportReasonTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "profileDetailReportReasonFakeProfile": "போலி சுயவிவரம்",
+  "profileDetailReportReasonSpam": "ஸ்பேம்",
+  "profileDetailReportReasonHarassment": "தொந்தரவு",
+  "profileDetailReportReasonInappropriateContent": "பொருத்தமற்ற புகைப்படங்கள்",
+  "profileDetailReportReasonUnderage": "வயது நிரம்பாதவர்",
+  "profileDetailReportReasonOther": "மற்றவை",
+  "profileDetailReportDescriptionLabel": "கூடுதல் விவரங்கள் (விருப்பத்தேர்வு)",
+  "profileDetailReportDescriptionHint": "எங்கள் மதிப்பாய்வுக் குழுவுக்கு உதவும் கூடுதல் தகவலைச் சேர்க்கவும்",
+  "profileDetailReportSubmit": "சமர்ப்பி",
+  "profileDetailReportLoading": "உங்கள் புகார் சமர்ப்பிக்கப்படுகிறது…",
+  "profileDetailReportSuccess": "நன்றி — உங்கள் புகார் சமர்ப்பிக்கப்பட்டது.",
+  "profileDetailMoreLabel": "மேலும்",
+
+  "safetyErrorNetwork": "இணைய இணைப்பு இல்லை. உங்கள் நெட்வொர்க்கைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
+  "safetyErrorUnauthorized": "உங்கள் அமர்வு காலாவதியானது. மீண்டும் உள்நுழையவும்.",
+  "safetyErrorValidation": "இந்தக் கோரிக்கையில் ஏதோ தவறு உள்ளது. மீண்டும் முயற்சிக்கவும்.",
+  "safetyErrorNotFound": "இந்த உறுப்பினர் இனி கிடைக்கவில்லை.",
+  "safetyErrorConflict": "இது ஏற்கனவே இந்த உறுப்பினருக்குச் செய்யப்பட்டது.",
+  "safetyErrorGeneric": "ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்."
 }

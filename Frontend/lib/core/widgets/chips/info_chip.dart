@@ -83,15 +83,19 @@ class NmInfoChip extends StatelessWidget {
               ),
               const SizedBox(width: 6),
             ],
-            Text(
-              label,
-              style: AppTypography.labelMedium.copyWith(
-                color: isSelected
-                    ? chipColor
-                    : (isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight),
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.labelMedium.copyWith(
+                  color: isSelected
+                      ? chipColor
+                      : (isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight),
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                ),
               ),
             ),
           ],

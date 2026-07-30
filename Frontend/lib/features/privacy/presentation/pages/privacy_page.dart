@@ -8,14 +8,24 @@ import '../../../../core/widgets/feedback/empty_state.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../core/widgets/inputs/nm_toggle_row.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../inbox/presentation/providers/inbox_providers.dart';
+import '../../../safety/presentation/providers/blocked_users_provider.dart';
+import '../../../safety/presentation/utils/handle_unblock_user.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
 
+const _shortMonths = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+String _formatBlockedDate(DateTime date) =>
+    '${_shortMonths[date.month - 1]} ${date.day}, ${date.year}';
+
 /// Privacy & Safety screen — profile-visibility toggles (wired to the real,
-/// if backend-dormant, `SettingsRepository`) and a Blocked Profiles list
-/// (real data: reuses the existing chat-level block/unblock already built
-/// for Inbox — there is no separate "block from Discover" flow in this app
-/// today, so this only reflects profiles blocked via chat).
+/// if backend-dormant, `SettingsRepository`) and a Blocked Profiles list,
+/// backed by `GET /users/blocked` via the existing `SafetyRepository` (the
+/// same repository Profile Detail/Matches use to block/unblock) — so this
+/// reflects every member the caller has ever blocked, not just the ones
+/// reachable through an existing chat thread.
 class PrivacyPage extends ConsumerStatefulWidget {
   const PrivacyPage({super.key});
 
@@ -48,7 +58,7 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final settingsAsync = ref.watch(mySettingsProvider);
-    final conversationsAsync = ref.watch(conversationsNotifierProvider);
+    final blockedUsersAsync = ref.watch(blockedUsersNotifierProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.drawerPrivacy)),
@@ -56,7 +66,7 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
         color: AppColors.accentGold,
         onRefresh: () => Future.wait([
           ref.refresh(mySettingsProvider.future),
-          ref.refresh(conversationsNotifierProvider.future),
+          ref.refresh(blockedUsersNotifierProvider.future),
         ]),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -112,10 +122,9 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
             const Divider(height: 40),
             Text(l10n.privacyBlockedSection, style: AppTypography.labelLarge),
             const SizedBox(height: 8),
-            conversationsAsync.when(
-              data: (conversations) {
-                final blocked = conversations.where((c) => c.isBlocked).toList();
-                if (blocked.isEmpty) {
+            blockedUsersAsync.when(
+              data: (blockedUsers) {
+                if (blockedUsers.isEmpty) {
                   return NmEmptyState(
                     icon: Icons.block_rounded,
                     title: l10n.privacyBlockedEmptyTitle,
@@ -124,25 +133,36 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
                 }
                 return Column(
                   children: [
-                    for (final conversation in blocked)
+                    for (final blockedUser in blockedUsers)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: NmInterestCard(
-                          name: conversation.profile.name,
-                          details: '${conversation.profile.age} • ${conversation.profile.location}',
+                          name: blockedUser.profile.name,
+                          details: '${blockedUser.profile.age} • '
+                              '${blockedUser.profile.location} • '
+                              '${l10n.privacyBlockedOnLabel(_formatBlockedDate(blockedUser.blockedAt))}',
                           message: '',
-                          imageUrl: conversation.profile.photoUrls.isNotEmpty
-                              ? conversation.profile.photoUrls.first
+                          imageUrl: blockedUser.profile.photoUrls.isNotEmpty
+                              ? blockedUser.profile.photoUrls.first
                               : null,
-                          gender: conversation.profile.gender,
+                          gender: blockedUser.profile.gender,
                           isReceived: false,
                           statusLabel: l10n.privacyBlockedStatusLabel,
                           statusBackgroundColor: AppColors.errorLight,
                           statusTextColor: AppColors.error,
                           withdrawLabel: l10n.privacyUnblockLabel,
-                          onWithdraw: () => ref
-                              .read(conversationsNotifierProvider.notifier)
-                              .block(conversation.id, false),
+                          // Reuses the same confirmation -> loading -> unblock
+                          // -> SnackBar flow Profile Detail's "More" menu
+                          // already uses — no second unblock implementation.
+                          onWithdraw: () => handleUnblockUser(
+                            context,
+                            ref,
+                            userId: blockedUser.profile.id,
+                            userName: blockedUser.profile.name,
+                            onUnblocked: () => ref
+                                .read(blockedUsersNotifierProvider.notifier)
+                                .removeBlockedUser(blockedUser.profile.id),
+                          ),
                         ),
                       ),
                   ],
@@ -154,7 +174,7 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
                 title: l10n.privacyBlockedEmptyTitle,
                 message: l10n.privacyLoadErrorMessage,
                 action: TextButton(
-                  onPressed: () => ref.invalidate(conversationsNotifierProvider),
+                  onPressed: () => ref.invalidate(blockedUsersNotifierProvider),
                   child: const Text('Retry'),
                 ),
               ),

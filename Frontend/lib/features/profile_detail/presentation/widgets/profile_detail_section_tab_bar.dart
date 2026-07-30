@@ -8,13 +8,17 @@ import '../../../../core/theme/app_typography.dart';
 /// hero. Tapping a tab scrolls the page to the matching section — the
 /// page owns the actual [Scrollable.ensureVisible] call via [onTap].
 ///
-/// [itemKeys] (one per label, same order) lets the page also reveal the
-/// active tab *within this row's own horizontal scroll* — via
-/// `Scrollable.ensureVisible` on the tab's own context, same technique as
-/// the vertical section scroll, rather than a hardcoded pixel offset —
+/// [controller] is this row's *own* horizontal [ScrollController], owned by
+/// the page alongside its vertical one. [itemKeys] (one per label, same
+/// order) lets the page find the active tab's on-screen position and center
+/// it within [controller] directly (`controller.position.ensureVisible`)
 /// whenever the active section changes, including from manual vertical
-/// scrolling (not just a tap here).
+/// scrolling (not just a tap here). This deliberately does *not* go through
+/// the static `Scrollable.ensureVisible` helper on the tab's own context —
+/// see `_revealActiveTab`'s doc comment on the page for why that walked the
+/// outer vertical scroll too and snapped the whole page back to the top.
 class ProfileDetailSectionTabBar extends StatelessWidget {
+  final ScrollController controller;
   final List<String> labels;
   final List<GlobalKey> itemKeys;
   final int selectedIndex;
@@ -22,6 +26,7 @@ class ProfileDetailSectionTabBar extends StatelessWidget {
 
   const ProfileDetailSectionTabBar({
     super.key,
+    required this.controller,
     required this.labels,
     required this.itemKeys,
     required this.selectedIndex,
@@ -45,6 +50,7 @@ class ProfileDetailSectionTabBar extends StatelessWidget {
         ),
       ),
       child: ListView.separated(
+        controller: controller,
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
         itemCount: labels.length,

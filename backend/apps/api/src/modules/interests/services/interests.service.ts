@@ -13,6 +13,7 @@ import type {
 } from '../../../../../../libs/database/generated/client';
 import { ProfileFeedMapper } from '../../matches/mappers/profile-feed.mapper';
 import { NotificationsService } from '../../notifications/services/notifications.service';
+import type { CreateNotificationData } from '../../notifications/repositories/notification.repository';
 import { RealtimeGateway } from '../../realtime/realtime.gateway';
 import { RealtimeEvents } from '../../realtime/realtime.events';
 import { InterestsRepository } from '../repositories/interests.repository';
@@ -116,6 +117,8 @@ export class InterestsService {
       );
     }
 
+    let notificationData: CreateNotificationData | undefined;
+
     try {
       const interest = await this.prisma.$transaction(async (tx) => {
         const existing = await this.interestsRepository.findByPair(
@@ -143,18 +146,22 @@ export class InterestsService {
           );
         }
 
-        await this.notifications.create(tx, {
+        notificationData = {
           userId: receiverId,
           type: 'INTEREST_RECEIVED',
           title: 'New interest received',
           body: 'Someone has expressed interest in your profile.',
           data: { actorId: senderId, referenceId: record.id },
-        });
+        };
+        await this.notifications.create(tx, notificationData);
 
         return record;
       });
 
       await this.notifications.invalidateUnread(receiverId);
+      // Push, like the cache invalidation above, only happens after the
+      // transaction has actually committed.
+      void this.notifications.dispatchPush(notificationData!);
 
       // Real-time: signal the receiver's devices to refresh (after commit).
       const at = interest.createdAt.toISOString();
@@ -206,6 +213,8 @@ export class InterestsService {
       );
     }
 
+    let notificationData: CreateNotificationData | undefined;
+
     await this.prisma.$transaction(async (tx) => {
       const changed = await this.interestsRepository.respondIfPending(
         tx,
@@ -218,7 +227,7 @@ export class InterestsService {
           'This interest has already been responded to.',
         );
       }
-      await this.notifications.create(tx, {
+      notificationData = {
         userId: interest.senderId,
         type: accept ? 'INTEREST_ACCEPTED' : 'INTEREST_DECLINED',
         title: accept ? 'Interest accepted' : 'Interest declined',
@@ -226,10 +235,14 @@ export class InterestsService {
           ? 'Your interest was accepted.'
           : 'Your interest was declined.',
         data: { actorId: currentUserId, referenceId: interestId },
-      });
+      };
+      await this.notifications.create(tx, notificationData);
     });
 
     await this.notifications.invalidateUnread(interest.senderId);
+    // Push, like the cache invalidation above, only happens after the
+    // transaction has actually committed.
+    void this.notifications.dispatchPush(notificationData!);
 
     // Real-time: tell the original sender's devices their interest was answered.
     const at = new Date().toISOString();

@@ -1,10 +1,13 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -24,11 +27,16 @@ import {
   PaginationQueryDto,
 } from '@app/common';
 import { NotificationsService } from '../services/notifications.service';
+import { PushDispatchService } from '../services/push-dispatch.service';
 import {
   NOTIFICATIONS_PAGE_EXAMPLE,
   NotificationsPageDto,
   UnreadCountDto,
 } from '../dto/notification-response.dto';
+import {
+  RegisterDeviceDto,
+  UnregisterDeviceDto,
+} from '../dto/device-token.dto';
 
 // Notification center. Every route is user-scoped via the verified Firebase
 // token — a caller only ever sees or mutates their own notifications.
@@ -38,7 +46,10 @@ import {
 @Controller('notifications')
 @UseGuards(FirebaseAuthGuard)
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly pushDispatchService: PushDispatchService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -88,5 +99,52 @@ export class NotificationsController {
     @Param('id') id: string,
   ): Promise<void> {
     return this.notificationsService.markRead(userId, id);
+  }
+
+  @Post('device')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Register a device for push notifications',
+    description:
+      "Registers (or reactivates) an FCM token for the calling user's device. Idempotent — re-registering the same token retargets/reactivates it.",
+  })
+  @ApiNoContentResponse({ description: 'Registered.' })
+  registerDevice(
+    @CurrentUser('id') userId: string,
+    @Body() dto: RegisterDeviceDto,
+  ): Promise<void> {
+    return this.pushDispatchService.registerDevice(
+      userId,
+      dto.fcmToken,
+      dto.platform,
+    );
+  }
+
+  @Delete('device')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Unregister a device from push notifications',
+    description:
+      "`fcmToken` is sent in the request body (matching DELETE /matches/shortlist). Scoped to the caller's own devices — deactivating a token that is not theirs (or does not exist) is a silent no-op.",
+  })
+  @ApiNoContentResponse({ description: 'Deactivated (or was not registered).' })
+  unregisterDevice(
+    @CurrentUser('id') userId: string,
+    @Body() dto: UnregisterDeviceDto,
+  ): Promise<void> {
+    return this.pushDispatchService.unregisterDevice(userId, dto.fcmToken);
+  }
+
+  @Post('test')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Send a test push notification',
+    description:
+      "Sends a test push to the caller's most-recently-registered active device.",
+  })
+  @ApiNoContentResponse({ description: 'Test push sent.' })
+  @ApiNotFoundResponse({ description: 'No registered device for this user.' })
+  sendTestPush(@CurrentUser('id') userId: string): Promise<void> {
+    return this.pushDispatchService.sendTestToLatestDevice(userId);
   }
 }

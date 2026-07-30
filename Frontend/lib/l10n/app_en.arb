@@ -300,6 +300,16 @@
     "placeholders": { "name": { "type": "String" } }
   },
   "inboxBlockConfirmMessage": "They won't be able to message you, and you won't see each other in Discover anymore.",
+  "inboxUnblockConfirmTitle": "Unblock {name}?",
+  "@inboxUnblockConfirmTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "inboxUnblockConfirmMessage": "You'll be able to message each other again.",
+  "inboxUnblockLoading": "Unblocking…",
+  "inboxUnblockSuccess": "{name} has been unblocked.",
+  "@inboxUnblockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "inboxDeleteConfirmTitle": "Delete conversation?",
   "inboxDeleteConfirmMessage": "This removes the conversation from your inbox. This can't be undone.",
   "inboxRetrySend": "Tap to retry",
@@ -989,9 +999,13 @@
   "privacySaveErrorMessage": "Couldn't save your changes. Please try again.",
   "privacyBlockedSection": "Blocked Profiles",
   "privacyBlockedEmptyTitle": "No Blocked Profiles",
-  "privacyBlockedEmptyMessage": "Profiles you block in chat will appear here.",
+  "privacyBlockedEmptyMessage": "Profiles you block will appear here.",
   "privacyUnblockLabel": "Unblock",
   "privacyBlockedStatusLabel": "Blocked",
+  "privacyBlockedOnLabel": "Blocked on {date}",
+  "@privacyBlockedOnLabel": {
+    "placeholders": { "date": { "type": "String" } }
+  },
   "drawerLanguage": "Language",
   "drawerSettings": "Account Settings",
   "drawerPrivacy": "Privacy & Safety",
@@ -1049,5 +1063,48 @@
   "profileDetailTabPreferences": "Preferences",
   "profileDetailTabVerification": "Verification",
   "profileDetailTabTimeline": "Timeline",
-  "profileDetailProfileNotAvailable": "Profile not available"
+  "profileDetailProfileNotAvailable": "Profile not available",
+
+  "profileDetailActionBlock": "Block User",
+  "profileDetailActionUnblock": "Unblock User",
+  "profileDetailActionReport": "Report User",
+  "profileDetailUnblockConfirmTitle": "Unblock this member?",
+  "profileDetailUnblockConfirmMessage": "You'll be able to see each other again in Discover, Matches, and Search, and can send interests and messages.",
+  "profileDetailUnblockConfirmButton": "Unblock",
+  "profileDetailUnblockLoading": "Unblocking member…",
+  "profileDetailUnblockSuccess": "{name} has been unblocked.",
+  "@profileDetailUnblockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "profileDetailBlockConfirmTitle": "Block this member?",
+  "profileDetailBlockConfirmMessage": "They will disappear from Discover, Matches and Search. Existing chat remains available with a blocked banner. You can unblock later from Chat.",
+  "profileDetailBlockConfirmButton": "Block",
+  "profileDetailBlockLoading": "Blocking member…",
+  "profileDetailBlockSuccess": "{name} has been blocked.",
+  "@profileDetailBlockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "profileDetailReportReasonTitle": "Why are you reporting {name}?",
+  "@profileDetailReportReasonTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "profileDetailReportReasonFakeProfile": "Fake Profile",
+  "profileDetailReportReasonSpam": "Spam",
+  "profileDetailReportReasonHarassment": "Harassment",
+  "profileDetailReportReasonInappropriateContent": "Inappropriate Photos",
+  "profileDetailReportReasonUnderage": "Underage",
+  "profileDetailReportReasonOther": "Other",
+  "profileDetailReportDescriptionLabel": "Additional details (optional)",
+  "profileDetailReportDescriptionHint": "Add any extra context that could help our review team",
+  "profileDetailReportSubmit": "Submit",
+  "profileDetailReportLoading": "Submitting your report…",
+  "profileDetailReportSuccess": "Thanks — your report has been submitted.",
+  "profileDetailMoreLabel": "More",
+
+  "safetyErrorNetwork": "No internet connection. Please check your network and try again.",
+  "safetyErrorUnauthorized": "Your session has expired. Please sign in again.",
+  "safetyErrorValidation": "Something about this request wasn't valid. Please try again.",
+  "safetyErrorNotFound": "This member is no longer available.",
+  "safetyErrorConflict": "This was already done for this member.",
+  "safetyErrorGeneric": "Something went wrong. Please try again."
 }

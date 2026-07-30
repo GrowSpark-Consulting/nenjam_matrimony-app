@@ -1,9 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_providers.dart';
+import '../../../../core/permissions/permission_providers.dart';
+import '../../../authentication/presentation/providers/auth_providers.dart';
 import '../../data/repositories/notification_api_repository_impl.dart';
+import '../../data/services/local_notification_service.dart';
+import '../../data/services/push_notification_service.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../../domain/repositories/notification_repository.dart';
+import '../utils/notification_navigation.dart';
 
 /// Real backend, live against the `notifications` module (GET /notifications,
 /// GET /notifications/unread-count, PATCH /:id/read, PATCH /read-all). Swapped
@@ -12,6 +19,39 @@ import '../../domain/repositories/notification_repository.dart';
 final notificationRepositoryProvider = Provider<NotificationRepository>(
   (ref) => NotificationApiRepositoryImpl(ref.watch(apiClientProvider)),
 );
+
+final localNotificationServiceProvider = Provider<LocalNotificationService>(
+  (ref) => LocalNotificationService(),
+);
+
+final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
+  return PushNotificationService(
+    notificationRepository: ref.watch(notificationRepositoryProvider),
+    localNotificationService: ref.watch(localNotificationServiceProvider),
+    permissionService: ref.watch(appPermissionServiceProvider),
+    onNotificationTap: navigateForNotificationData,
+  );
+});
+
+/// Starts FCM (permission + token registration/refresh + foreground/tap
+/// listeners) while signed in, and deactivates the device token on
+/// sign-out — mirrors `realtimeSyncProvider`'s auth-reactive lifecycle
+/// (`core/realtime/realtime_providers.dart`). Watch this once at the app
+/// root (see main.dart).
+final pushNotificationSyncProvider = Provider<void>((ref) {
+  final service = ref.watch(pushNotificationServiceProvider);
+  ref.listen<Object?>(
+    currentAuthUserProvider,
+    (previous, next) {
+      if (next != null) {
+        unawaited(service.start());
+      } else {
+        unawaited(service.stop());
+      }
+    },
+    fireImmediately: true,
+  );
+});
 
 /// Owns the notifications list — every mutation (tapping an unread card,
 /// "Mark all as read") goes through this notifier so the in-memory

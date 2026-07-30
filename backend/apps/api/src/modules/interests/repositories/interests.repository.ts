@@ -10,6 +10,7 @@ import {
   FEED_PROFILE_SELECT,
   type FeedProfileRow,
 } from '../../matches/repositories/feed.repository';
+import { notBlockedWith } from '../../blocks/filters/block-exclusion.builder';
 
 /** A Prisma client that is either the base service or a transaction client, so
  *  interest writes can run inside the service's `$transaction`. */
@@ -136,35 +137,48 @@ export class InterestsRepository {
 
   // ── paginated lists ───────────────────────────────────────────────────────
 
+  /** Newest-first, excluding rows whose SENDER has a mutual block with
+   *  [userId] — a block hides prior interests from list views, not just future
+   *  sends (mirrors Discover/Search's block exclusion). */
   listReceived(
     userId: string,
     skip: number,
     take: number,
   ): Promise<[ExpressInterest[], number]> {
+    const where: Prisma.ExpressInterestWhereInput = {
+      receiverId: userId,
+      sender: { is: notBlockedWith(userId) },
+    };
     return this.prisma.$transaction([
       this.prisma.expressInterest.findMany({
-        where: { receiverId: userId },
+        where,
         orderBy: { createdAt: 'desc' },
         skip,
         take,
       }),
-      this.prisma.expressInterest.count({ where: { receiverId: userId } }),
+      this.prisma.expressInterest.count({ where }),
     ]);
   }
 
+  /** Newest-first, excluding rows whose RECEIVER has a mutual block with
+   *  [userId] — see [listReceived]. */
   listSent(
     userId: string,
     skip: number,
     take: number,
   ): Promise<[ExpressInterest[], number]> {
+    const where: Prisma.ExpressInterestWhereInput = {
+      senderId: userId,
+      receiver: { is: notBlockedWith(userId) },
+    };
     return this.prisma.$transaction([
       this.prisma.expressInterest.findMany({
-        where: { senderId: userId },
+        where,
         orderBy: { createdAt: 'desc' },
         skip,
         take,
       }),
-      this.prisma.expressInterest.count({ where: { senderId: userId } }),
+      this.prisma.expressInterest.count({ where }),
     ]);
   }
 

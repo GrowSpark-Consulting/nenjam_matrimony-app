@@ -17,6 +17,8 @@ import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../../interests/domain/repositories/interests_repository.dart';
 import '../../../interests/presentation/providers/interests_provider.dart';
 import '../../../interests/presentation/utils/interest_button_copy.dart';
+import '../../../safety/presentation/providers/blocked_users_provider.dart';
+import '../../../safety/presentation/utils/show_safety_action_sheet.dart';
 import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
 import '../providers/matches_providers.dart';
@@ -29,7 +31,8 @@ import '../providers/reel_feed_provider.dart';
 ///   • Black gradient overlay top + bottom
 ///   • Fixed header: title + Search/New/Daily/My Matches/Near Me/More
 ///     Matches category selector + avatar
-///   • Right-side action column: ❤ Interested / ☆ Shortlist / ↗ Share / ⚑ Report
+///   • Right-side action column: ❤ Interested / ☆ Shortlist / ↗ Share / ⚑ More
+///     (opens the Report User / Block User sheet)
 ///   • Bottom info: gold AI Match pill, name + profession, glass chips
 ///   • Double-tap anywhere → heart burst animation
 class MatchesPage extends ConsumerStatefulWidget {
@@ -496,7 +499,19 @@ class _ReelCardState extends ConsumerState<_ReelCard>
                 onInterested: _sendInterest,
                 onShortlist: () => handleShortlistToggle(context, ref, widget.profile),
                 onShare: () {},
-                onReport: () {},
+                onMore: () => showSafetyActionSheet(
+                  context,
+                  ref,
+                  userId: widget.profile.id,
+                  userName: widget.profile.name,
+                  onBlocked: () {
+                    ref.read(reelFeedProvider.notifier).removeProfile(widget.profile.id);
+                    // So this member shows up next time the Blocked Users
+                    // list (Privacy & Safety) is opened, even if it was
+                    // already loaded before this block happened.
+                    ref.invalidate(blockedUsersNotifierProvider);
+                  },
+                ),
               ),
             ),
 
@@ -553,7 +568,7 @@ class _ActionColumn extends StatelessWidget {
   final VoidCallback onInterested;
   final VoidCallback onShortlist;
   final VoidCallback onShare;
-  final VoidCallback onReport;
+  final VoidCallback onMore;
 
   const _ActionColumn({
     required this.interested,
@@ -562,7 +577,7 @@ class _ActionColumn extends StatelessWidget {
     required this.onInterested,
     required this.onShortlist,
     required this.onShare,
-    required this.onReport,
+    required this.onMore,
   });
 
   @override
@@ -596,13 +611,10 @@ class _ActionColumn extends StatelessWidget {
           onTap: onShare,
         ),
         const SizedBox(height: 24),
-        Opacity(
-          opacity: 0.6,
-          child: _ActionButton(
-            icon: Icons.report_rounded,
-            label: '',
-            onTap: onReport,
-          ),
+        _ActionButton(
+          icon: Icons.flag_rounded,
+          label: l10n.profileDetailMoreLabel,
+          onTap: onMore,
         ),
       ],
     );

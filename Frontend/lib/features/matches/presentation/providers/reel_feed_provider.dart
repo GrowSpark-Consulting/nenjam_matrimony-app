@@ -77,6 +77,25 @@ class ReelFeedNotifier extends AutoDisposeAsyncNotifier<ReelFeedState> {
       state = AsyncData(current.copyWith(isLoadingMore: false));
     }
   }
+
+  /// Drops [profileId] from the loaded reel — e.g. right after the caller
+  /// blocks that member. The `PageView` above this notifier tracks a numeric
+  /// page index, not an item identity, so shrinking [profiles] is all that's
+  /// needed for the next card to slide into place; no separate "advance to
+  /// next" call exists or is required. No rollback on failure: by the time
+  /// this is called the block request has already succeeded (see
+  /// `SafetyRepository`'s doc comment — Discover/Search/Matches simply stop
+  /// returning a blocked member once the request completes).
+  void removeProfile(String profileId) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    if (!current.profiles.any((p) => p.id == profileId)) return;
+    state = AsyncData(
+      current.copyWith(
+        profiles: current.profiles.where((p) => p.id != profileId).toList(),
+      ),
+    );
+  }
 }
 
 final reelFeedProvider =

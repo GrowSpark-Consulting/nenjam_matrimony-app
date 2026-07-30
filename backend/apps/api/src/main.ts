@@ -31,6 +31,8 @@ function setupSwagger(app: INestApplication): void {
     .addTag('Interests', 'Send / respond / withdraw / list interests')
     .addTag('Shortlist', 'Add / remove / list shortlisted profiles')
     .addTag('Notifications', 'Notification center + unread count')
+    .addTag('Blocks', 'Block / unblock a member by user id')
+    .addTag('Reports', 'Report a member for moderation review')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

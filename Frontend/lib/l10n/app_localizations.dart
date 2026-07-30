@@ -1604,6 +1604,30 @@ abstract class AppLocalizations {
   /// **'They won\'t be able to message you, and you won\'t see each other in Discover anymore.'**
   String get inboxBlockConfirmMessage;
 
+  /// No description provided for @inboxUnblockConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock {name}?'**
+  String inboxUnblockConfirmTitle(String name);
+
+  /// No description provided for @inboxUnblockConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll be able to message each other again.'**
+  String get inboxUnblockConfirmMessage;
+
+  /// No description provided for @inboxUnblockLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Unblocking…'**
+  String get inboxUnblockLoading;
+
+  /// No description provided for @inboxUnblockSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has been unblocked.'**
+  String inboxUnblockSuccess(String name);
+
   /// No description provided for @inboxDeleteConfirmTitle.
   ///
   /// In en, this message translates to:
@@ -5363,7 +5387,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyBlockedEmptyMessage.
   ///
   /// In en, this message translates to:
-  /// **'Profiles you block in chat will appear here.'**
+  /// **'Profiles you block will appear here.'**
   String get privacyBlockedEmptyMessage;
 
   /// No description provided for @privacyUnblockLabel.
@@ -5377,6 +5401,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Blocked'**
   String get privacyBlockedStatusLabel;
+
+  /// No description provided for @privacyBlockedOnLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked on {date}'**
+  String privacyBlockedOnLabel(String date);
 
   /// No description provided for @drawerLanguage.
   ///
@@ -5713,6 +5743,198 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Profile not available'**
   String get profileDetailProfileNotAvailable;
+
+  /// No description provided for @profileDetailActionBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Block User'**
+  String get profileDetailActionBlock;
+
+  /// No description provided for @profileDetailActionUnblock.
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock User'**
+  String get profileDetailActionUnblock;
+
+  /// No description provided for @profileDetailActionReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Report User'**
+  String get profileDetailActionReport;
+
+  /// No description provided for @profileDetailUnblockConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock this member?'**
+  String get profileDetailUnblockConfirmTitle;
+
+  /// No description provided for @profileDetailUnblockConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll be able to see each other again in Discover, Matches, and Search, and can send interests and messages.'**
+  String get profileDetailUnblockConfirmMessage;
+
+  /// No description provided for @profileDetailUnblockConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock'**
+  String get profileDetailUnblockConfirmButton;
+
+  /// No description provided for @profileDetailUnblockLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Unblocking member…'**
+  String get profileDetailUnblockLoading;
+
+  /// No description provided for @profileDetailUnblockSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has been unblocked.'**
+  String profileDetailUnblockSuccess(String name);
+
+  /// No description provided for @profileDetailBlockConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Block this member?'**
+  String get profileDetailBlockConfirmTitle;
+
+  /// No description provided for @profileDetailBlockConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'They will disappear from Discover, Matches and Search. Existing chat remains available with a blocked banner. You can unblock later from Chat.'**
+  String get profileDetailBlockConfirmMessage;
+
+  /// No description provided for @profileDetailBlockConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Block'**
+  String get profileDetailBlockConfirmButton;
+
+  /// No description provided for @profileDetailBlockLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocking member…'**
+  String get profileDetailBlockLoading;
+
+  /// No description provided for @profileDetailBlockSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has been blocked.'**
+  String profileDetailBlockSuccess(String name);
+
+  /// No description provided for @profileDetailReportReasonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Why are you reporting {name}?'**
+  String profileDetailReportReasonTitle(String name);
+
+  /// No description provided for @profileDetailReportReasonFakeProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Fake Profile'**
+  String get profileDetailReportReasonFakeProfile;
+
+  /// No description provided for @profileDetailReportReasonSpam.
+  ///
+  /// In en, this message translates to:
+  /// **'Spam'**
+  String get profileDetailReportReasonSpam;
+
+  /// No description provided for @profileDetailReportReasonHarassment.
+  ///
+  /// In en, this message translates to:
+  /// **'Harassment'**
+  String get profileDetailReportReasonHarassment;
+
+  /// No description provided for @profileDetailReportReasonInappropriateContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Inappropriate Photos'**
+  String get profileDetailReportReasonInappropriateContent;
+
+  /// No description provided for @profileDetailReportReasonUnderage.
+  ///
+  /// In en, this message translates to:
+  /// **'Underage'**
+  String get profileDetailReportReasonUnderage;
+
+  /// No description provided for @profileDetailReportReasonOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get profileDetailReportReasonOther;
+
+  /// No description provided for @profileDetailReportDescriptionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional details (optional)'**
+  String get profileDetailReportDescriptionLabel;
+
+  /// No description provided for @profileDetailReportDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add any extra context that could help our review team'**
+  String get profileDetailReportDescriptionHint;
+
+  /// No description provided for @profileDetailReportSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get profileDetailReportSubmit;
+
+  /// No description provided for @profileDetailReportLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitting your report…'**
+  String get profileDetailReportLoading;
+
+  /// No description provided for @profileDetailReportSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks — your report has been submitted.'**
+  String get profileDetailReportSuccess;
+
+  /// No description provided for @profileDetailMoreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get profileDetailMoreLabel;
+
+  /// No description provided for @safetyErrorNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection. Please check your network and try again.'**
+  String get safetyErrorNetwork;
+
+  /// No description provided for @safetyErrorUnauthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has expired. Please sign in again.'**
+  String get safetyErrorUnauthorized;
+
+  /// No description provided for @safetyErrorValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Something about this request wasn\'t valid. Please try again.'**
+  String get safetyErrorValidation;
+
+  /// No description provided for @safetyErrorNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This member is no longer available.'**
+  String get safetyErrorNotFound;
+
+  /// No description provided for @safetyErrorConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'This was already done for this member.'**
+  String get safetyErrorConflict;
+
+  /// No description provided for @safetyErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get safetyErrorGeneric;
 }
 
 class _AppLocalizationsDelegate

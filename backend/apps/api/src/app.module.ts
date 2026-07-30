@@ -13,6 +13,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { ChatModule } from './modules/chat/chat.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { BlocksModule } from './modules/blocks/blocks.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { SettingsModule } from './modules/settings/settings.module';
     NotificationsModule,
     ChatModule,
     SettingsModule,
+    BlocksModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

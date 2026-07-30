@@ -791,6 +791,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'They won\'t be able to message you, and you won\'t see each other in Discover anymore.';
 
   @override
+  String inboxUnblockConfirmTitle(String name) {
+    return 'Unblock $name?';
+  }
+
+  @override
+  String get inboxUnblockConfirmMessage =>
+      'You\'ll be able to message each other again.';
+
+  @override
+  String get inboxUnblockLoading => 'Unblocking…';
+
+  @override
+  String inboxUnblockSuccess(String name) {
+    return '$name has been unblocked.';
+  }
+
+  @override
   String get inboxDeleteConfirmTitle => 'Delete conversation?';
 
   @override
@@ -2789,13 +2806,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacyBlockedEmptyMessage =>
-      'Profiles you block in chat will appear here.';
+      'Profiles you block will appear here.';
 
   @override
   String get privacyUnblockLabel => 'Unblock';
 
   @override
   String get privacyBlockedStatusLabel => 'Blocked';
+
+  @override
+  String privacyBlockedOnLabel(String date) {
+    return 'Blocked on $date';
+  }
 
   @override
   String get drawerLanguage => 'Language';
@@ -2970,4 +2992,115 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileDetailProfileNotAvailable => 'Profile not available';
+
+  @override
+  String get profileDetailActionBlock => 'Block User';
+
+  @override
+  String get profileDetailActionUnblock => 'Unblock User';
+
+  @override
+  String get profileDetailActionReport => 'Report User';
+
+  @override
+  String get profileDetailUnblockConfirmTitle => 'Unblock this member?';
+
+  @override
+  String get profileDetailUnblockConfirmMessage =>
+      'You\'ll be able to see each other again in Discover, Matches, and Search, and can send interests and messages.';
+
+  @override
+  String get profileDetailUnblockConfirmButton => 'Unblock';
+
+  @override
+  String get profileDetailUnblockLoading => 'Unblocking member…';
+
+  @override
+  String profileDetailUnblockSuccess(String name) {
+    return '$name has been unblocked.';
+  }
+
+  @override
+  String get profileDetailBlockConfirmTitle => 'Block this member?';
+
+  @override
+  String get profileDetailBlockConfirmMessage =>
+      'They will disappear from Discover, Matches and Search. Existing chat remains available with a blocked banner. You can unblock later from Chat.';
+
+  @override
+  String get profileDetailBlockConfirmButton => 'Block';
+
+  @override
+  String get profileDetailBlockLoading => 'Blocking member…';
+
+  @override
+  String profileDetailBlockSuccess(String name) {
+    return '$name has been blocked.';
+  }
+
+  @override
+  String profileDetailReportReasonTitle(String name) {
+    return 'Why are you reporting $name?';
+  }
+
+  @override
+  String get profileDetailReportReasonFakeProfile => 'Fake Profile';
+
+  @override
+  String get profileDetailReportReasonSpam => 'Spam';
+
+  @override
+  String get profileDetailReportReasonHarassment => 'Harassment';
+
+  @override
+  String get profileDetailReportReasonInappropriateContent =>
+      'Inappropriate Photos';
+
+  @override
+  String get profileDetailReportReasonUnderage => 'Underage';
+
+  @override
+  String get profileDetailReportReasonOther => 'Other';
+
+  @override
+  String get profileDetailReportDescriptionLabel =>
+      'Additional details (optional)';
+
+  @override
+  String get profileDetailReportDescriptionHint =>
+      'Add any extra context that could help our review team';
+
+  @override
+  String get profileDetailReportSubmit => 'Submit';
+
+  @override
+  String get profileDetailReportLoading => 'Submitting your report…';
+
+  @override
+  String get profileDetailReportSuccess =>
+      'Thanks — your report has been submitted.';
+
+  @override
+  String get profileDetailMoreLabel => 'More';
+
+  @override
+  String get safetyErrorNetwork =>
+      'No internet connection. Please check your network and try again.';
+
+  @override
+  String get safetyErrorUnauthorized =>
+      'Your session has expired. Please sign in again.';
+
+  @override
+  String get safetyErrorValidation =>
+      'Something about this request wasn\'t valid. Please try again.';
+
+  @override
+  String get safetyErrorNotFound => 'This member is no longer available.';
+
+  @override
+  String get safetyErrorConflict => 'This was already done for this member.';
+
+  @override
+  String get safetyErrorGeneric => 'Something went wrong. Please try again.';
 }
