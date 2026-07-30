@@ -49,7 +49,11 @@ enum ChatRealtimeEvent {
   messageEdited('chat.messageEdited'),
 
   /// A message was deleted for everyone — `{ id, roomId, at }`.
-  messageDeleted('chat.messageDeleted');
+  messageDeleted('chat.messageDeleted'),
+
+  /// A conversation peer came online / went offline —
+  /// `{ userId, isOnline, lastSeenAt }` (`lastSeenAt` ISO string or null).
+  presence('chat.presence');
 
   const ChatRealtimeEvent(this.wireName);
 
@@ -87,4 +91,8 @@ class ChatClientEvent {
 
   /// Presence heartbeat, so an idle-but-connected device stays "online".
   static const String presencePing = 'presence.ping';
+
+  /// Sent when the app backgrounds — marks this user offline immediately (with
+  /// a last-seen) rather than waiting for the socket to drop or age out.
+  static const String presenceOffline = 'presence.offline';
 }

@@ -89,7 +89,15 @@ class ConversationApiRepositoryImpl implements ConversationRepository {
       profile: profile,
       lastMessage: data['lastMessage'] as String? ?? '',
       lastMessageAt: DateTime.parse(data['lastMessageAt'] as String),
+      isOnline: data['isOnline'] as bool? ?? false,
+      lastSeen: _parseLastSeen(data['lastSeenAt']),
     );
+  }
+
+  /// Parses the backend `lastSeenAt` (ISO-8601 string or null) into local time.
+  DateTime? _parseLastSeen(dynamic value) {
+    if (value is! String) return null;
+    return DateTime.tryParse(value)?.toLocal();
   }
 
   @override
@@ -315,6 +323,8 @@ class ConversationApiRepositoryImpl implements ConversationRepository {
           (s) => s.name == json['smartIndicator'],
           orElse: () => ConversationSmartIndicator.none,
         ),
+        isOnline: json['isOnline'] as bool? ?? false,
+        lastSeen: _parseLastSeen(json['lastSeenAt']),
       );
 
   MessageEntity _messageFromJson(Map<String, dynamic> json, {String? clientMessageId}) =>

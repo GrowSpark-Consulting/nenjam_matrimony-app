@@ -43,6 +43,12 @@ class ConversationEntity {
   final MessageDeliveryStatus? lastMessageStatus;
   final ConversationSmartIndicator smartIndicator;
 
+  /// The peer's presence at fetch time — used only to seed the live presence
+  /// cache (see `presenceProvider`); the UI reads presence from that cache, not
+  /// these snapshots, so live socket updates always win.
+  final bool isOnline;
+  final DateTime? lastSeen;
+
   const ConversationEntity({
     required this.id,
     required this.profile,
@@ -58,6 +64,8 @@ class ConversationEntity {
     this.lastMessageFromMe = false,
     this.lastMessageStatus,
     this.smartIndicator = ConversationSmartIndicator.none,
+    this.isOnline = false,
+    this.lastSeen,
   });
 
   ConversationEntity copyWith({
@@ -73,6 +81,8 @@ class ConversationEntity {
     bool? lastMessageFromMe,
     MessageDeliveryStatus? lastMessageStatus,
     ConversationSmartIndicator? smartIndicator,
+    bool? isOnline,
+    DateTime? lastSeen,
   }) {
     return ConversationEntity(
       id: id,
@@ -89,6 +99,8 @@ class ConversationEntity {
       lastMessageFromMe: lastMessageFromMe ?? this.lastMessageFromMe,
       lastMessageStatus: lastMessageStatus ?? this.lastMessageStatus,
       smartIndicator: smartIndicator ?? this.smartIndicator,
+      isOnline: isOnline ?? this.isOnline,
+      lastSeen: lastSeen ?? this.lastSeen,
     );
   }
 }

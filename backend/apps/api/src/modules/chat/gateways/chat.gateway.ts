@@ -96,8 +96,11 @@ export class ChatGateway {
     if (room.user1Id !== userId && room.user2Id !== userId) return; // not a participant
 
     const peerId = room.user1Id === userId ? room.user2Id : room.user1Id;
+    // `userId` is the typer, so the recipient can key typing by peer user id
+    // (its presence cache) without a room→user lookup.
     this.server.to(userRoom(peerId)).emit(RealtimeEvents.chatTyping, {
       roomId,
+      userId,
       isTyping: Boolean(body.isTyping),
     });
   }

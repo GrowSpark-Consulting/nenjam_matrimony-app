@@ -165,13 +165,21 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
         // Flush immediately — do not wait out the debounce — this is the
         // last guaranteed moment before the OS may reclaim the process.
         _saveDebounce?.cancel();
         _saveNavStateSnapshot();
+        // Tell peers we're offline now (with a last-seen) and pause the
+        // presence heartbeat — see RealtimeService.handleAppBackgrounded.
+        ref.read(realtimeServiceProvider).handleAppBackgrounded();
       case AppLifecycleState.resumed:
         _checkSessionOnResume();
+        // Reconnect if needed and re-announce online instantly.
+        ref.read(realtimeServiceProvider).handleAppForegrounded();
       default:
+        // inactive / hidden are transient (app switcher, incoming call) —
+        // acting here would flap presence; let paused/resumed drive it.
         break;
     }
   }

@@ -4,6 +4,12 @@ import '../../../../core/realtime/realtime_event.dart';
 import '../../../../core/realtime/realtime_providers.dart';
 import '../../data/mappers/message_wire_mapper.dart';
 import 'inbox_providers.dart';
+import 'presence_providers.dart';
+
+DateTime? _parseLastSeen(dynamic value) {
+  if (value is! String) return null;
+  return DateTime.tryParse(value)?.toLocal();
+}
 
 /// Bridges inbound chat socket events ([RealtimeService.chatEvents]) into the
 /// inbox Riverpod state — live messages, edits, deletes, read/delivered
@@ -17,6 +23,19 @@ import 'inbox_providers.dart';
 /// unconditionally (its unread badge is app-wide).
 final chatRealtimeSyncProvider = Provider<void>((ref) {
   final service = ref.watch(realtimeServiceProvider);
+
+  // Seed the live presence cache from each conversation's REST snapshot — once
+  // per peer (seed() ignores peers already tracked live), so socket events are
+  // never clobbered by a later list refresh. fireImmediately covers an
+  // already-loaded list.
+  ref.listen(conversationsNotifierProvider, (previous, next) {
+    final convs = next.valueOrNull;
+    if (convs == null) return;
+    final presence = ref.read(presenceProvider.notifier);
+    for (final c in convs) {
+      presence.seed(c.profile.id, isOnline: c.isOnline, lastSeen: c.lastSeen);
+    }
+  }, fireImmediately: true);
 
   bool isThreadOpen(String roomId) =>
       ref.read(chatActiveThreadsProvider).contains(roomId);
@@ -40,6 +59,12 @@ final chatRealtimeSyncProvider = Provider<void>((ref) {
         ref
             .read(conversationsNotifierProvider.notifier)
             .applyIncomingMessage(message, bumpUnread: !open);
+        // A message arriving from the peer ends their typing immediately, even
+        // if the matching typing_stop hasn't landed yet.
+        final senderId = data['senderId'] as String?;
+        if (senderId != null && !message.isMine) {
+          ref.read(presenceProvider.notifier).setTyping(senderId, false);
+        }
 
       case ChatRealtimeEvent.messageEdited:
         final message = messageEntityFromWire(data);
@@ -69,11 +94,30 @@ final chatRealtimeSyncProvider = Provider<void>((ref) {
         }
 
       case ChatRealtimeEvent.typing:
+        // Payload is { roomId, userId, isTyping }. Key typing by the typer's
+        // user id in the presence cache (drives the header + list dot), and
+        // keep the room-keyed conversation flag in sync for the list.
         final roomId = data['roomId'] as String?;
+        final typerId = data['userId'] as String?;
+        final isTyping = data['isTyping'] as bool? ?? false;
+        if (typerId != null) {
+          ref.read(presenceProvider.notifier).setTyping(typerId, isTyping);
+        }
         if (roomId != null) {
           ref
               .read(conversationsNotifierProvider.notifier)
-              .setTyping(roomId, data['isTyping'] as bool? ?? false);
+              .setTyping(roomId, isTyping);
+        }
+
+      case ChatRealtimeEvent.presence:
+        // Payload is { userId, isOnline, lastSeenAt }.
+        final userId = data['userId'] as String?;
+        if (userId != null) {
+          ref.read(presenceProvider.notifier).applyPresence(
+                userId,
+                isOnline: data['isOnline'] as bool? ?? false,
+                lastSeen: _parseLastSeen(data['lastSeenAt']),
+              );
         }
     }
   });

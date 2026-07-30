@@ -12,6 +12,7 @@ import type {
 } from '../../../../../../libs/database/generated/client';
 import { ProfileFeedMapper } from '../../matches/mappers/profile-feed.mapper';
 import { RealtimeGateway } from '../../realtime/realtime.gateway';
+import { PresenceService } from '../../realtime/presence.service';
 import { RealtimeEvents } from '../../realtime/realtime.events';
 import {
   ChatStatePatch,
@@ -41,6 +42,7 @@ export class ConversationsService {
     private readonly messageRepository: MessageRepository,
     private readonly profileMapper: ProfileFeedMapper,
     private readonly realtime: RealtimeGateway,
+    private readonly presence: PresenceService,
     private readonly audit: ChatAuditService,
   ) {}
 
@@ -66,15 +68,21 @@ export class ConversationsService {
 
     const roomIds = rooms.map((r) => r.id);
     const peerIds = rooms.map((room) => this.peerOf(room, userId));
-    const [unreadByRoom, blockedPeers, profileRows, statesByRoom] =
-      await Promise.all([
-        this.conversationRepository.unreadCountsByRoom(userId, roomIds),
-        this.conversationRepository.blockedPeerIds(userId, peerIds),
-        this.conversationRepository.findFeedProfilesByUserIds([
-          ...new Set(peerIds),
-        ]),
-        this.conversationRepository.statesByRoom(userId, roomIds),
-      ]);
+    const [
+      unreadByRoom,
+      blockedPeers,
+      profileRows,
+      statesByRoom,
+      presenceByUser,
+    ] = await Promise.all([
+      this.conversationRepository.unreadCountsByRoom(userId, roomIds),
+      this.conversationRepository.blockedPeerIds(userId, peerIds),
+      this.conversationRepository.findFeedProfilesByUserIds([
+        ...new Set(peerIds),
+      ]),
+      this.conversationRepository.statesByRoom(userId, roomIds),
+      this.presence.presenceOfMany(peerIds),
+    ]);
     const profileDtos = await this.profileMapper.toDtoList(profileRows);
     const profileByUserId = new Map(profileDtos.map((dto) => [dto.id, dto]));
 
@@ -95,6 +103,7 @@ export class ConversationsService {
       // the user set it and nothing genuinely unread already covers it.
       const unreadCount =
         state?.markUnread && realUnread === 0 ? 1 : realUnread;
+      const presence = presenceByUser.get(peerId);
       items.push({
         id: room.id,
         profile,
@@ -111,6 +120,8 @@ export class ConversationsService {
         isTyping: false,
         isLocked: false,
         smartIndicator: 'none',
+        isOnline: presence?.online ?? false,
+        lastSeenAt: presence?.lastSeenAt?.toISOString() ?? null,
       });
     }
 
@@ -165,12 +176,17 @@ export class ConversationsService {
       metadata: { peerId },
     });
 
-    const [lastRows] = await this.messageRepository.listPaged(room.id, 0, 1);
+    const [[lastRows], presence] = await Promise.all([
+      this.messageRepository.listPaged(room.id, 0, 1),
+      this.presence.presenceOf(peerId),
+    ]);
     const last = lastRows[0];
     return {
       id: room.id,
       lastMessage: last ? this.lastMessageLabel(last) : '',
       lastMessageAt: (room.lastMessageAt ?? room.createdAt).toISOString(),
+      isOnline: presence.online,
+      lastSeenAt: presence.lastSeenAt?.toISOString() ?? null,
     };
   }
 

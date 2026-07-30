@@ -58,6 +58,12 @@ function build() {
   };
   const profileMapper = { toDtoList: jest.fn().mockResolvedValue([]) };
   const realtime = { emitToUser: jest.fn() };
+  const presence = {
+    presenceOfMany: jest.fn().mockResolvedValue(new Map()),
+    presenceOf: jest
+      .fn()
+      .mockResolvedValue({ online: false, lastSeenAt: null }),
+  };
   const audit = {
     record: jest.fn().mockResolvedValue(undefined),
     recordDenied: jest.fn(),
@@ -71,6 +77,7 @@ function build() {
     messageRepository as never,
     profileMapper as never,
     realtime as never,
+    presence as never,
     audit as never,
   );
   return {
@@ -79,6 +86,7 @@ function build() {
     messageRepository,
     profileMapper,
     realtime,
+    presence,
     audit,
   };
 }
