@@ -103,7 +103,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     const err = error as { code?: string; message?: string } | undefined;
     const code = err?.code;
     const message = err?.message ?? String(error);
-    const { host, port } = this.configService.redis;
+    const { host, port } = this.resolveLoggedTarget();
 
     switch (code) {
       case 'ECONNREFUSED':

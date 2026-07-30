@@ -34,6 +34,14 @@ int _pageKeySeq = 0;
 class ProfileDetailArgs {
   final DiscoveryProfileEntity profile;
   final String? heroTag;
+  /// Whether the caller already knows this member is currently blocked (only
+  /// ever true from Chat, which carries its own `ConversationEntity.
+  /// isBlocked` — there's no `GET` endpoint for block status, and every
+  /// other entry point — Discover, Search, Matches, Similar Profiles — can
+  /// never reach a blocked member's card in the first place, since those
+  /// feeds already exclude blocked members server-side). Drives whether
+  /// Profile Detail's "More" menu offers Block or Unblock.
+  final bool isBlocked;
 
   /// Uniquely identifies THIS push of Profile Detail, for use as the
   /// route's `Page.key`.
@@ -62,7 +70,7 @@ class ProfileDetailArgs {
   /// the leaf route's `Page`, not only the imperative stack bookkeeping.
   final ValueKey<String> pageKey;
 
-  ProfileDetailArgs(this.profile, {this.heroTag})
+  ProfileDetailArgs(this.profile, {this.heroTag, this.isBlocked = false})
       : pageKey = ValueKey<String>('profile-detail-${profile.id}-${_pageKeySeq++}');
 }
 
@@ -82,9 +90,10 @@ void openProfileDetail(
   BuildContext context,
   DiscoveryProfileEntity profile, {
   String? heroTag,
+  bool isBlocked = false,
 }) {
   context.push(
     RouteNames.profileDetail,
-    extra: ProfileDetailArgs(profile, heroTag: heroTag),
+    extra: ProfileDetailArgs(profile, heroTag: heroTag, isBlocked: isBlocked),
   );
 }

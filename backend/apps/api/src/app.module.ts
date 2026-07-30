@@ -14,6 +14,8 @@ import { ChatModule } from './modules/chat/chat.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { SupportModule } from './modules/support/support.module';
+import { BlocksModule } from './modules/blocks/blocks.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { SupportModule } from './modules/support/support.module';
     ChatModule,
     SettingsModule,
     SupportModule,
+    BlocksModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

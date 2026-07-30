@@ -796,6 +796,23 @@ class AppLocalizationsTa extends AppLocalizations {
       'அவர்களால் உங்களுக்கு செய்தி அனுப்ப முடியாது, மேலும் டிஸ்கவரில் ஒருவரையொருவர் காண முடியாது.';
 
   @override
+  String inboxUnblockConfirmTitle(String name) {
+    return '$name இன் தடையை நீக்கவா?';
+  }
+
+  @override
+  String get inboxUnblockConfirmMessage =>
+      'நீங்கள் மீண்டும் ஒருவருக்கொருவர் செய்தி அனுப்பலாம்.';
+
+  @override
+  String get inboxUnblockLoading => 'தடையை நீக்குகிறது…';
+
+  @override
+  String inboxUnblockSuccess(String name) {
+    return '$name இன் தடை நீக்கப்பட்டது.';
+  }
+
+  @override
   String get inboxDeleteConfirmTitle => 'உரையாடலை நீக்கவா?';
 
   @override
@@ -2831,13 +2848,18 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get privacyBlockedEmptyMessage =>
-      'நீங்கள் அரட்டையில் தடுக்கும் சுயவிவரங்கள் இங்கே தோன்றும்.';
+      'நீங்கள் தடுக்கும் சுயவிவரங்கள் இங்கே தோன்றும்.';
 
   @override
   String get privacyUnblockLabel => 'தடையை நீக்கு';
 
   @override
   String get privacyBlockedStatusLabel => 'தடுக்கப்பட்டது';
+
+  @override
+  String privacyBlockedOnLabel(String date) {
+    return '$date அன்று தடுக்கப்பட்டது';
+  }
 
   @override
   String get drawerLanguage => 'மொழி';
@@ -3016,4 +3038,118 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get profileDetailProfileNotAvailable => 'சுயவிவரம் கிடைக்கவில்லை';
+
+  @override
+  String get profileDetailActionBlock => 'பயனரைத் தடு';
+
+  @override
+  String get profileDetailActionUnblock => 'தடையை நீக்கு';
+
+  @override
+  String get profileDetailActionReport => 'பயனரைப் புகாரளி';
+
+  @override
+  String get profileDetailUnblockConfirmTitle =>
+      'இந்த உறுப்பினரின் தடையை நீக்கவா?';
+
+  @override
+  String get profileDetailUnblockConfirmMessage =>
+      'நீங்கள் மீண்டும் டிஸ்கவர், மேட்சஸ் மற்றும் தேடலில் ஒருவரையொருவர் காணலாம், மேலும் ஆர்வங்கள் மற்றும் செய்திகளை அனுப்பலாம்.';
+
+  @override
+  String get profileDetailUnblockConfirmButton => 'தடையை நீக்கு';
+
+  @override
+  String get profileDetailUnblockLoading => 'உறுப்பினரின் தடையை நீக்குகிறது…';
+
+  @override
+  String profileDetailUnblockSuccess(String name) {
+    return '$name இன் தடை நீக்கப்பட்டது.';
+  }
+
+  @override
+  String get profileDetailBlockConfirmTitle => 'இந்த உறுப்பினரைத் தடுக்கவா?';
+
+  @override
+  String get profileDetailBlockConfirmMessage =>
+      'இவர்கள் டிஸ்கவர், மேட்சஸ் மற்றும் தேடலில் இருந்து மறைந்துவிடுவார்கள். ஏற்கனவே உள்ள உரையாடல் \'தடுக்கப்பட்டது\' என்ற பட்டையுடன் தொடரும். சாட்டிலிருந்து பின்னர் தடையை நீக்கலாம்.';
+
+  @override
+  String get profileDetailBlockConfirmButton => 'தடு';
+
+  @override
+  String get profileDetailBlockLoading => 'உறுப்பினரைத் தடுக்கிறது…';
+
+  @override
+  String profileDetailBlockSuccess(String name) {
+    return '$name தடுக்கப்பட்டுள்ளார்.';
+  }
+
+  @override
+  String profileDetailReportReasonTitle(String name) {
+    return '$name ஐ ஏன் புகாரளிக்கிறீர்கள்?';
+  }
+
+  @override
+  String get profileDetailReportReasonFakeProfile => 'போலி சுயவிவரம்';
+
+  @override
+  String get profileDetailReportReasonSpam => 'ஸ்பேம்';
+
+  @override
+  String get profileDetailReportReasonHarassment => 'தொந்தரவு';
+
+  @override
+  String get profileDetailReportReasonInappropriateContent =>
+      'பொருத்தமற்ற புகைப்படங்கள்';
+
+  @override
+  String get profileDetailReportReasonUnderage => 'வயது நிரம்பாதவர்';
+
+  @override
+  String get profileDetailReportReasonOther => 'மற்றவை';
+
+  @override
+  String get profileDetailReportDescriptionLabel =>
+      'கூடுதல் விவரங்கள் (விருப்பத்தேர்வு)';
+
+  @override
+  String get profileDetailReportDescriptionHint =>
+      'எங்கள் மதிப்பாய்வுக் குழுவுக்கு உதவும் கூடுதல் தகவலைச் சேர்க்கவும்';
+
+  @override
+  String get profileDetailReportSubmit => 'சமர்ப்பி';
+
+  @override
+  String get profileDetailReportLoading =>
+      'உங்கள் புகார் சமர்ப்பிக்கப்படுகிறது…';
+
+  @override
+  String get profileDetailReportSuccess =>
+      'நன்றி — உங்கள் புகார் சமர்ப்பிக்கப்பட்டது.';
+
+  @override
+  String get profileDetailMoreLabel => 'மேலும்';
+
+  @override
+  String get safetyErrorNetwork =>
+      'இணைய இணைப்பு இல்லை. உங்கள் நெட்வொர்க்கைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get safetyErrorUnauthorized =>
+      'உங்கள் அமர்வு காலாவதியானது. மீண்டும் உள்நுழையவும்.';
+
+  @override
+  String get safetyErrorValidation =>
+      'இந்தக் கோரிக்கையில் ஏதோ தவறு உள்ளது. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get safetyErrorNotFound => 'இந்த உறுப்பினர் இனி கிடைக்கவில்லை.';
+
+  @override
+  String get safetyErrorConflict =>
+      'இது ஏற்கனவே இந்த உறுப்பினருக்குச் செய்யப்பட்டது.';
+
+  @override
+  String get safetyErrorGeneric => 'ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.';
 }

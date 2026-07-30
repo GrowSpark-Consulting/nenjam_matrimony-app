@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/database';
 import type {
+  DevicePlatform,
+  DevicePushToken,
   Notification,
   NotificationType,
   Prisma,
@@ -126,6 +128,58 @@ export class NotificationRepository {
           },
         },
       },
+    });
+  }
+
+  // ── Device push tokens (FCM) ────────────────────────────────────────────
+
+  /** Registers or refreshes a device's FCM token. `fcmToken` is globally
+   *  unique, so re-registering the same token — even for a different user,
+   *  e.g. a shared/reset device — retargets it rather than erroring, and
+   *  reactivates it if it had gone stale. */
+  upsertDeviceToken(
+    userId: string,
+    fcmToken: string,
+    platform: DevicePlatform,
+  ): Promise<DevicePushToken> {
+    return this.prisma.devicePushToken.upsert({
+      where: { fcmToken },
+      create: { userId, fcmToken, platform, isActive: true },
+      update: { userId, platform, isActive: true },
+    });
+  }
+
+  /** Deactivates one of the caller's own tokens (e.g. on logout). Scoped by
+   *  userId in the WHERE so a caller can only ever deactivate their own
+   *  device — a missing/foreign token is a silent no-op. */
+  async deactivateOwnToken(userId: string, fcmToken: string): Promise<void> {
+    await this.prisma.devicePushToken.updateMany({
+      where: { userId, fcmToken },
+      data: { isActive: false },
+    });
+  }
+
+  /** Marks tokens FCM reported as permanently dead so they're never retried.
+   *  Not scoped by user — the token value alone identifies the dead row. */
+  async deactivateTokens(fcmTokens: string[]): Promise<void> {
+    if (fcmTokens.length === 0) return;
+    await this.prisma.devicePushToken.updateMany({
+      where: { fcmToken: { in: fcmTokens } },
+      data: { isActive: false },
+    });
+  }
+
+  findActiveTokens(userId: string): Promise<DevicePushToken[]> {
+    return this.prisma.devicePushToken.findMany({
+      where: { userId, isActive: true },
+    });
+  }
+
+  /** Most-recently-registered active device — used by POST /notifications/test. */
+  findLatestActiveToken(userId: string): Promise<DevicePushToken | null> {
+    return this.prisma.devicePushToken.findFirst({
+      where: { userId, isActive: true },
+      orderBy: { updatedAt: 'desc' },
     });
   }
 }

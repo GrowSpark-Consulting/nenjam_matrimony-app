@@ -14,6 +14,7 @@ import {
   NotificationItemDto,
   NotificationsPageDto,
 } from '../dto/notification-response.dto';
+import { PushDispatchService } from './push-dispatch.service';
 
 // Unread-count cache: keyed per user, short TTL as a backstop so a missed
 // invalidation self-heals quickly. Invalidated eagerly on every event that
@@ -39,6 +40,7 @@ export class NotificationsService {
     private readonly notificationRepository: NotificationRepository,
     private readonly redis: RedisService,
     private readonly s3: S3Service,
+    private readonly pushDispatch: PushDispatchService,
   ) {}
 
   /**
@@ -46,13 +48,33 @@ export class NotificationsService {
    * transaction client to make it atomic with the caller's domain write. Cache
    * invalidation is deliberately NOT done here (a transaction can roll back
    * after this line); the caller invalidates via [invalidateUnread] once
-   * committed.
+   * committed. Push delivery follows the identical rule — see [dispatchPush].
    */
   create(
     client: PrismaClientLike,
     data: CreateNotificationData,
   ): Promise<Notification> {
     return this.notificationRepository.create(client, data);
+  }
+
+  /**
+   * Sends `data` as a push notification to every active device of
+   * `data.userId`. Call this AFTER the transaction that [create]d the
+   * matching in-app notification has committed — same rule as
+   * [invalidateUnread], and for the same reason: a transaction can still roll
+   * back, and a rolled-back write must never reach a device as a push. Never
+   * throws (best-effort — see PushDispatchService.dispatchToUser).
+   */
+  async dispatchPush(data: CreateNotificationData): Promise<void> {
+    const payloadData = {
+      type: data.type,
+      ...((data.data as Record<string, unknown> | undefined) ?? {}),
+    };
+    await this.pushDispatch.dispatchToUser(data.userId, {
+      title: data.title,
+      body: data.body,
+      data: payloadData,
+    });
   }
 
   async list(

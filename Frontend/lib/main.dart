@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +20,8 @@ import 'core/providers/locale_provider.dart';
 import 'core/providers/theme_mode_provider.dart';
 import 'core/realtime/realtime_providers.dart';
 import 'features/inbox/presentation/providers/chat_realtime_sync.dart';
+import 'features/notifications/data/services/push_notification_service.dart';
+import 'features/notifications/presentation/providers/notification_providers.dart';
 import 'core/router/app_router.dart';
 import 'core/router/route_names.dart';
 import 'core/services/storage_service.dart';
@@ -54,6 +57,11 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Must be registered before runApp — a top-level function so the OS can
+  // invoke it in a separate background isolate while the app is backgrounded
+  // or terminated. See firebaseMessagingBackgroundHandler's doc comment.
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   // Load environment variables (.env.dev) and set config. Without this,
   // AppConfig().envConfig is never assigned and any code that touches it
@@ -171,6 +179,11 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
         _saveNavStateSnapshot();
       case AppLifecycleState.resumed:
         _checkSessionOnResume();
+        // Detects a permission grant made from Android Settings while the
+        // app was backgrounded (the user denied the prompt initially, then
+        // came back and enabled it manually) — completes FCM registration
+        // immediately, no logout/login required.
+        unawaited(ref.read(pushNotificationServiceProvider).checkPermissionOnResume());
       default:
         break;
     }
@@ -265,6 +278,10 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
     // Applies inbound chat socket events (messages, edits/deletes, read/
     // delivered receipts, typing) to the inbox state. Also alive for the session.
     ref.watch(chatRealtimeSyncProvider);
+
+    // Starts/stops FCM (permission, token registration/refresh, foreground
+    // and tap handling) with the signed-in session. Also alive for the session.
+    ref.watch(pushNotificationSyncProvider);
 
     // Initialize responsive screen scaling (design size based on standard phone: 375x812)
     return ScreenUtilInit(

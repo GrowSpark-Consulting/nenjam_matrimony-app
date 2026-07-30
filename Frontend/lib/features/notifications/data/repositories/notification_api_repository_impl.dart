@@ -12,6 +12,8 @@ import '../models/notification_model.dart';
 ///  - `GET /notifications/unread-count` -> `{ count }`.
 ///  - `PATCH /notifications/:id/read` -> marks one read.
 ///  - `PATCH /notifications/read-all` -> marks every notification read.
+///  - `POST /notifications/device` -> registers/reactivates an FCM token.
+///  - `DELETE /notifications/device` -> deactivates an FCM token.
 class NotificationApiRepositoryImpl implements NotificationRepository {
   NotificationApiRepositoryImpl(this._apiClient);
 
@@ -58,6 +60,27 @@ class NotificationApiRepositoryImpl implements NotificationRepository {
   Future<void> markAllRead() async {
     final response = await _apiClient.patch<Map<String, dynamic>>(
       '${ApiEndpoints.notifications}/read-all',
+    );
+    unwrapOrThrow(response.statusCode, response.data);
+  }
+
+  @override
+  Future<void> registerDevice({
+    required String fcmToken,
+    required String platform,
+  }) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      ApiEndpoints.registerDevice,
+      data: {'fcmToken': fcmToken, 'platform': platform},
+    );
+    unwrapOrThrow(response.statusCode, response.data);
+  }
+
+  @override
+  Future<void> unregisterDevice(String fcmToken) async {
+    final response = await _apiClient.delete<Map<String, dynamic>>(
+      ApiEndpoints.registerDevice,
+      data: {'fcmToken': fcmToken},
     );
     unwrapOrThrow(response.statusCode, response.data);
   }
