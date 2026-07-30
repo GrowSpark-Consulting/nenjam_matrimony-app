@@ -127,5 +127,10 @@ abstract final class ApiEndpoints {
   static const String help = '/help';
   static const String faq = '/help/faq';
   static const String contactSupport = '/help/contact';
-  static const String reportUser = '/help/report';
+
+  // ─── Safety (Block / Report — backend/apps/api/src/modules/blocks and
+  // /reports; both keyed by the target member's user id) ────────────
+  static String blockUser(String userId) => '/users/$userId/block';
+  static String reportUser(String userId) => '/users/$userId/report';
+  static const String blockedUsers = '/users/blocked';
 }

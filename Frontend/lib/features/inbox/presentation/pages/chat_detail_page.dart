@@ -15,6 +15,7 @@ import '../../domain/entities/message_entity.dart';
 import '../controllers/typing_controller.dart';
 import '../providers/inbox_providers.dart';
 import '../providers/presence_providers.dart';
+import '../utils/handle_unblock_conversation.dart';
 import '../widgets/chat_composer.dart';
 import '../widgets/chat_presence.dart';
 import '../widgets/date_separator.dart';
@@ -249,7 +250,7 @@ class _ChatDetailAppBar extends ConsumerWidget implements PreferredSizeWidget {
     return AppBar(
       titleSpacing: 0,
       title: InkWell(
-        onTap: () => openProfileDetail(context, profile),
+        onTap: () => openProfileDetail(context, profile, isBlocked: conversation.isBlocked),
         child: Row(
           children: [
             Hero(
@@ -295,7 +296,7 @@ class _ChatDetailAppBar extends ConsumerWidget implements PreferredSizeWidget {
               AppSheetAction(
                 icon: Icons.person_outline_rounded,
                 label: l10n.inboxActionViewProfile,
-                onTap: () => openProfileDetail(context, profile),
+                onTap: () => openProfileDetail(context, profile, isBlocked: conversation.isBlocked),
               ),
               AppSheetAction(
                 icon: conversation.isMuted ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
@@ -305,9 +306,9 @@ class _ChatDetailAppBar extends ConsumerWidget implements PreferredSizeWidget {
                     .mute(conversation.id, !conversation.isMuted),
               ),
               AppSheetAction(
-                icon: Icons.block_rounded,
-                label: l10n.inboxActionBlock,
-                isDestructive: true,
+                icon: conversation.isBlocked ? Icons.lock_open_rounded : Icons.block_rounded,
+                label: conversation.isBlocked ? l10n.inboxActionUnblock : l10n.inboxActionBlock,
+                isDestructive: !conversation.isBlocked,
                 onTap: () => _confirmBlock(context, ref, conversation, l10n),
               ),
             ],
@@ -324,8 +325,7 @@ class _ChatDetailAppBar extends ConsumerWidget implements PreferredSizeWidget {
     AppLocalizations l10n,
   ) async {
     if (conversation.isBlocked) {
-      // Unblocking is reversible — no confirmation needed.
-      ref.read(conversationsNotifierProvider.notifier).block(conversation.id, false);
+      await handleUnblockConversation(context, ref, conversation);
       return;
     }
     final confirmed = await AppDialogs.showConfirmation(
@@ -592,8 +592,7 @@ class _BlockedBanner extends ConsumerWidget {
             ),
           ),
           TextButton(
-            onPressed: () =>
-                ref.read(conversationsNotifierProvider.notifier).block(conversation.id, false),
+            onPressed: () => handleUnblockConversation(context, ref, conversation),
             child: Text(l10n.inboxActionUnblock),
           ),
         ],

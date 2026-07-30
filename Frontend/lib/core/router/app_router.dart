@@ -487,7 +487,11 @@ GoRouter createRouter(WidgetRef ref) {
               key: args.pageKey,
               name: state.name ?? state.path,
               restorationId: args.pageKey.value,
-              child: ProfileDetailPage(profile: args.profile, heroTag: args.heroTag),
+              child: ProfileDetailPage(
+                profile: args.profile,
+                heroTag: args.heroTag,
+                isBlocked: args.isBlocked,
+              ),
             );
           },
         ),

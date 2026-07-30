@@ -11,6 +11,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/conversation_entity.dart';
 import '../providers/inbox_providers.dart';
 import '../providers/presence_providers.dart';
+import '../utils/handle_unblock_conversation.dart';
 import '../utils/inbox_date_format.dart';
 import '../utils/open_chat_detail.dart';
 import 'smart_indicator_chip.dart';
@@ -54,7 +55,7 @@ class ConversationCard extends ConsumerWidget {
         AppSheetAction(
           icon: Icons.person_outline_rounded,
           label: l10n.inboxActionViewProfile,
-          onTap: () => openProfileDetail(context, conversation.profile),
+          onTap: () => openProfileDetail(context, conversation.profile, isBlocked: conversation.isBlocked),
         ),
         AppSheetAction(
           icon: conversation.isMuted ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
@@ -67,10 +68,10 @@ class ConversationCard extends ConsumerWidget {
           onTap: () => notifier.archive(conversation.id, !conversation.isArchived),
         ),
         AppSheetAction(
-          icon: Icons.block_rounded,
-          label: l10n.inboxActionBlock,
-          isDestructive: true,
-          onTap: () => _confirmBlock(context, notifier, l10n),
+          icon: conversation.isBlocked ? Icons.lock_open_rounded : Icons.block_rounded,
+          label: conversation.isBlocked ? l10n.inboxActionUnblock : l10n.inboxActionBlock,
+          isDestructive: !conversation.isBlocked,
+          onTap: () => _confirmBlock(context, ref, l10n),
         ),
         AppSheetAction(
           icon: Icons.delete_outline_rounded,
@@ -82,14 +83,20 @@ class ConversationCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _confirmBlock(BuildContext context, ConversationsNotifier notifier, AppLocalizations l10n) async {
+  Future<void> _confirmBlock(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
+    if (conversation.isBlocked) {
+      await handleUnblockConversation(context, ref, conversation);
+      return;
+    }
     final confirmed = await AppDialogs.showConfirmation(
       context,
       title: l10n.inboxBlockConfirmTitle(conversation.profile.name),
       message: l10n.inboxBlockConfirmMessage,
       confirmLabel: l10n.inboxActionBlock,
     );
-    if (confirmed ?? false) notifier.block(conversation.id, true);
+    if (confirmed ?? false) {
+      ref.read(conversationsNotifierProvider.notifier).block(conversation.id, true);
+    }
   }
 
   Future<void> _confirmDelete(BuildContext context, ConversationsNotifier notifier, AppLocalizations l10n) async {
@@ -132,7 +139,7 @@ class ConversationCard extends ConsumerWidget {
           ? null
           : SmartIndicatorChip(indicator: conversation.smartIndicator),
       heroTag: 'conversation-avatar-${conversation.id}',
-      onAvatarTap: () => openProfileDetail(context, conversation.profile),
+      onAvatarTap: () => openProfileDetail(context, conversation.profile, isBlocked: conversation.isBlocked),
       onTap: () {
         if (conversation.unreadCount > 0) notifier.markRead(conversation.id);
         openChatDetail(context, conversation);

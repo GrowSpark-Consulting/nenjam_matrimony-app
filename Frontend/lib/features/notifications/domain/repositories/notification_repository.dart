@@ -36,4 +36,14 @@ abstract interface class NotificationRepository {
   Future<void> markRead(String id);
 
   Future<void> markAllRead();
+
+  /// Registers (or reactivates) this device's FCM token with the backend so
+  /// it starts receiving push notifications. `platform` is `'ANDROID'` or
+  /// `'IOS'`, matching the backend's `DevicePlatform` enum.
+  Future<void> registerDevice({required String fcmToken, required String platform});
+
+  /// Deactivates this device's FCM token — called on sign-out so a
+  /// signed-out device stops receiving pushes meant for the account that
+  /// just logged out.
+  Future<void> unregisterDevice(String fcmToken);
 }

@@ -34,8 +34,17 @@ class ProfileDetailPage extends ConsumerWidget {
   /// (Discover/Matches) — see `ProfileDetailArgs`'s doc comment for why.
   /// Null falls back to the plain `'profile-photo-$id'` scheme.
   final String? heroTag;
+  /// Whether the caller already knows this member is blocked — see
+  /// `ProfileDetailArgs.isBlocked`'s doc comment. Drives whether the hero
+  /// app bar's "More" menu offers Block or Unblock.
+  final bool isBlocked;
 
-  const ProfileDetailPage({super.key, required this.profile, this.heroTag});
+  const ProfileDetailPage({
+    super.key,
+    required this.profile,
+    this.heroTag,
+    this.isBlocked = false,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,7 +52,11 @@ class ProfileDetailPage extends ConsumerWidget {
 
     return Scaffold(
       body: detailAsync.when(
-        data: (detail) => _ProfileDetailScrollView(detail: detail, heroTag: heroTag),
+        data: (detail) => _ProfileDetailScrollView(
+          detail: detail,
+          heroTag: heroTag,
+          isBlocked: isBlocked,
+        ),
         loading: () => const NmLoadingWidget(),
         error: (_, __) => NmErrorWidget(
           onRetry: () => ref.invalidate(profileDetailProvider(profile)),
@@ -60,8 +73,13 @@ class ProfileDetailPage extends ConsumerWidget {
 class _ProfileDetailScrollView extends StatefulWidget {
   final ProfileDetailEntity detail;
   final String? heroTag;
+  final bool isBlocked;
 
-  const _ProfileDetailScrollView({required this.detail, this.heroTag});
+  const _ProfileDetailScrollView({
+    required this.detail,
+    this.heroTag,
+    this.isBlocked = false,
+  });
 
   @override
   State<_ProfileDetailScrollView> createState() => _ProfileDetailScrollViewState();
@@ -71,12 +89,17 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
   static const _sectionCount = 8;
 
   final _sectionKeys = List.generate(_sectionCount, (_) => GlobalKey());
-  // One key per tab label, mirroring _sectionKeys — lets the active tab be
-  // revealed inside the tab bar's own horizontal scroll via the same
-  // GlobalKey + ensureVisible technique used for the vertical section
-  // scroll below, instead of a hardcoded pixel offset.
+  // One key per tab label, mirroring _sectionKeys — lets the active tab's
+  // RenderObject be found so it can be centered within the tab bar's own
+  // horizontal scroll (see _revealActiveTab) instead of a hardcoded pixel
+  // offset.
   final _tabKeys = List.generate(_sectionCount, (_) => GlobalKey());
   final _scrollController = ScrollController();
+  // Owned separately from _scrollController so _revealActiveTab can target
+  // *only* the tab bar's own horizontal ScrollPosition directly — see that
+  // method's doc comment for why the static Scrollable.ensureVisible()
+  // helper is deliberately not used here.
+  final _tabBarScrollController = ScrollController();
   int _selectedTab = 0;
 
   // While a tab tap is driving a programmatic scroll, the scroll listener
@@ -96,6 +119,7 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
   void dispose() {
     _scrollController.removeListener(_syncActiveTabWithScroll);
     _scrollController.dispose();
+    _tabBarScrollController.dispose();
     super.dispose();
   }
 
@@ -126,16 +150,36 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
     if (mounted) _isProgrammaticScroll = false;
   }
 
+  // Centers the active tab within the tab bar's own horizontal scroll.
+  //
+  // Deliberately calls ScrollPosition.ensureVisible() on _tabBarScrollController
+  // directly rather than the static Scrollable.ensureVisible() helper this
+  // used to call on `tabContext`. That helper walks *every* ancestor
+  // Scrollable, not just the nearest one (see its doc comment/source in
+  // package:flutter/src/widgets/scrollable.dart) — specifically so a target
+  // nested several scroll views deep gets revealed in all of them. But the
+  // tab bar lives inside a pinned SliverPersistentHeader, and pinned slivers
+  // are trivially "already visible" to the outer scrollable, so the walk's
+  // "already visible → align the outer object itself" fallback (see
+  // ScrollPosition.ensureVisible's doc comment) handed the outer *vertical*
+  // CustomScrollView a request to align the pinned tab bar container at
+  // alignment 0.5 — which a pinned sliver's RevealedOffset geometry resolves
+  // to 0. Net effect: every time the active tab changed while the user was
+  // manually scrolling (_syncActiveTabWithScroll below), the whole page
+  // silently snapped back to the top. Targeting this one ScrollPosition
+  // directly reproduces the exact same "center the tab" math (it's the same
+  // getOffsetToReveal/animateTo call ensureVisible makes internally) without
+  // ever consulting an ancestor Scrollable.
   void _revealActiveTab(int index) {
-    final tabContext = _tabKeys[index].currentContext;
-    if (tabContext != null) {
-      Scrollable.ensureVisible(
-        tabContext,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-        alignment: 0.5,
-      );
-    }
+    if (!_tabBarScrollController.hasClients) return;
+    final tabRenderObject = _tabKeys[index].currentContext?.findRenderObject();
+    if (tabRenderObject == null) return;
+    _tabBarScrollController.position.ensureVisible(
+      tabRenderObject,
+      alignment: 0.5,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
   }
 
   // Scrollspy for the other direction: as the user scrolls the page by
@@ -178,11 +222,16 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
     return CustomScrollView(
       controller: _scrollController,
       slivers: [
-        ProfileDetailHeroAppBar(detail: detail, heroTag: widget.heroTag),
+        ProfileDetailHeroAppBar(
+          detail: detail,
+          heroTag: widget.heroTag,
+          isBlocked: widget.isBlocked,
+        ),
         SliverPersistentHeader(
           pinned: true,
           delegate: ProfileDetailTabBarDelegate(
             child: ProfileDetailSectionTabBar(
+              controller: _tabBarScrollController,
               labels: _tabLabels(l10n),
               itemKeys: _tabKeys,
               selectedIndex: _selectedTab,

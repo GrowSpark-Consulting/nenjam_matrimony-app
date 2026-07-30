@@ -114,6 +114,37 @@ class ConversationsNotifier extends AsyncNotifier<List<ConversationEntity>> {
         (repo) => repo.block(id, blocked),
       );
 
+  /// Unblock with rollback: `_apply` (shared with `block`, `pin`, `mute`, …)
+  /// applies its optimistic update unconditionally and never reverts it if
+  /// `persist` throws — fine for a first cut, but wrong for unblock, whose
+  /// failure the caller needs to react to (Chat's confirmation flow rolls
+  /// back to a "still blocked" banner and shows an error). Wraps `block`
+  /// rather than duplicating its logic; only adds a rollback on top.
+  Future<void> unblock(String id) async {
+    final previous = state.valueOrNull;
+    try {
+      await block(id, false);
+    } catch (_) {
+      if (previous != null) state = AsyncValue.data(previous);
+      rethrow;
+    }
+  }
+
+  /// Syncs the blocked flag onto whichever conversation belongs to
+  /// [profileId] — local-state-only, no repository call. Used after a
+  /// block/unblock performed through a different entry point (Profile
+  /// Detail's "More" menu calls `SafetyRepository` directly, not this
+  /// notifier) so the Inbox list and Chat Detail banner don't go stale until
+  /// the next full refresh. No-ops if there's no conversation with them yet.
+  void applyBlockedFlag(String profileId, bool isBlocked) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncValue.data([
+      for (final c in current)
+        if (c.profile.id == profileId) c.copyWith(isBlocked: isBlocked) else c,
+    ]);
+  }
+
   Future<void> markRead(String id) => _apply(
         id,
         (c) => c.copyWith(unreadCount: 0),

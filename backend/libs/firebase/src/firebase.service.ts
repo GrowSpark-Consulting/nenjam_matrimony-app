@@ -6,7 +6,25 @@ import {
 } from '@nestjs/common';
 import { cert, getApps, initializeApp, App } from 'firebase-admin/app';
 import { getAuth, DecodedIdToken } from 'firebase-admin/auth';
+import { getMessaging, MulticastMessage } from 'firebase-admin/messaging';
 import { AppConfigService } from '@app/config';
+
+// FCM error codes that mean the token itself is dead and will never succeed
+// again — as opposed to a transient failure (quota, network) that should
+// leave the token alone and just be retried later.
+const UNREGISTERED_TOKEN_ERROR_CODES = new Set([
+  'messaging/registration-token-not-registered',
+  'messaging/invalid-registration-token',
+]);
+
+// sendEachForMulticast caps out at 500 tokens per call.
+const FCM_MULTICAST_BATCH_SIZE = 500;
+
+export interface PushSendResult {
+  /** Tokens FCM rejected as permanently dead — the caller should deactivate
+   *  these so they're never retried. */
+  invalidTokens: string[];
+}
 
 @Injectable()
 export class FirebaseService implements OnModuleInit {
@@ -94,6 +112,49 @@ export class FirebaseService implements OnModuleInit {
         `Failed to delete Firebase auth user "${firebaseUid}": ${(error as Error).message}`,
       );
     }
+  }
+
+  /**
+   * Sends one notification + data payload to a batch of FCM device tokens.
+   * `data` values must already be strings (FCM's wire requirement — callers
+   * are responsible for stringifying). Never throws for a bad individual
+   * token — those come back via `invalidTokens` so the caller can deactivate
+   * them; only a total transport/config failure throws.
+   */
+  async sendMulticastPush(
+    tokens: string[],
+    notification: { title: string; body: string },
+    data?: Record<string, string>,
+  ): Promise<PushSendResult> {
+    if (!this.app) {
+      this.logger.warn(
+        'Firebase Admin SDK not configured — skipping push send.',
+      );
+      return { invalidTokens: [] };
+    }
+    if (tokens.length === 0) return { invalidTokens: [] };
+
+    const messaging = getMessaging(this.app);
+    const invalidTokens: string[] = [];
+
+    for (let i = 0; i < tokens.length; i += FCM_MULTICAST_BATCH_SIZE) {
+      const batch = tokens.slice(i, i + FCM_MULTICAST_BATCH_SIZE);
+      const message: MulticastMessage = { tokens: batch, notification, data };
+      const response = await messaging.sendEachForMulticast(message);
+      response.responses.forEach((result, index) => {
+        if (result.success) return;
+        const code = result.error?.code;
+        if (code && UNREGISTERED_TOKEN_ERROR_CODES.has(code)) {
+          invalidTokens.push(batch[index]);
+        } else {
+          this.logger.warn(
+            `Push send failed for a device token (${code ?? 'unknown error'}): ${result.error?.message}`,
+          );
+        }
+      });
+    }
+
+    return { invalidTokens };
   }
 
   private withTimeout<T>(

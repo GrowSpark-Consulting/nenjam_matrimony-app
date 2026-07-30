@@ -5,6 +5,7 @@ import type {
   Shortlist,
 } from '../../../../../../libs/database/generated/client';
 import { FEED_PROFILE_SELECT, type FeedProfileRow } from './feed.repository';
+import { notBlockedWith } from '../../blocks/filters/block-exclusion.builder';
 
 /** A Prisma client that is either the base service or a transaction client, so
  *  a shortlist add can commit atomically with its notification. */
@@ -58,19 +59,26 @@ export class ShortlistRepository {
     return result.count;
   }
 
+  /** Newest-first, excluding rows whose TARGET has a mutual block with
+   *  [userId] — a block hides prior shortlist entries from list views, not
+   *  just future adds (mirrors Discover/Search's block exclusion). */
   list(
     userId: string,
     skip: number,
     take: number,
   ): Promise<[Shortlist[], number]> {
+    const where: Prisma.ShortlistWhereInput = {
+      userId,
+      targetUser: { is: notBlockedWith(userId) },
+    };
     return this.prisma.$transaction([
       this.prisma.shortlist.findMany({
-        where: { userId },
+        where,
         orderBy: { createdAt: 'desc' },
         skip,
         take,
       }),
-      this.prisma.shortlist.count({ where: { userId } }),
+      this.prisma.shortlist.count({ where }),
     ]);
   }
 

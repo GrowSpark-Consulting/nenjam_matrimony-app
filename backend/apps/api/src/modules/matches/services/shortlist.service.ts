@@ -9,6 +9,7 @@ import type { Shortlist } from '../../../../../../libs/database/generated/client
 import { DiscoverProfileDto } from '../dto/discover-profile.response.dto';
 import { ProfileFeedMapper } from '../mappers/profile-feed.mapper';
 import { NotificationsService } from '../../notifications/services/notifications.service';
+import type { CreateNotificationData } from '../../notifications/repositories/notification.repository';
 import { RealtimeGateway } from '../../realtime/realtime.gateway';
 import { RealtimeEvents } from '../../realtime/realtime.events';
 import { ShortlistRepository } from '../repositories/shortlist.repository';
@@ -53,6 +54,8 @@ export class ShortlistService {
       return; // already shortlisted — idempotent no-op
     }
 
+    let notificationData: CreateNotificationData | undefined;
+
     try {
       await this.prisma.$transaction(async (tx) => {
         const created = await this.shortlistRepository.create(
@@ -60,15 +63,19 @@ export class ShortlistService {
           userId,
           targetUserId,
         );
-        await this.notifications.create(tx, {
+        notificationData = {
           userId: targetUserId,
           type: 'SHORTLIST_ADDED',
           title: 'You were shortlisted',
           body: 'Someone added you to their shortlist.',
           data: { actorId: userId, referenceId: created.id },
-        });
+        };
+        await this.notifications.create(tx, notificationData);
       });
       await this.notifications.invalidateUnread(targetUserId);
+      // Push, like the cache invalidation above, only happens after the
+      // transaction has actually committed.
+      void this.notifications.dispatchPush(notificationData!);
 
       // Real-time: signal the shortlisted member's devices (after commit).
       const at = new Date().toISOString();

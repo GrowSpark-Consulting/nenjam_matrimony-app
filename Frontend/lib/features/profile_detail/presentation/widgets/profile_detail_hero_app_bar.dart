@@ -8,6 +8,10 @@ import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/avatars/gender_placeholder.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../discover/presentation/providers/discover_providers.dart';
+import '../../../matches/presentation/providers/reel_feed_provider.dart';
+import '../../../safety/presentation/providers/blocked_users_provider.dart';
+import '../../../safety/presentation/utils/show_safety_action_sheet.dart';
 import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
 import '../../domain/entities/profile_detail_entity.dart';
@@ -27,8 +31,17 @@ class ProfileDetailHeroAppBar extends ConsumerStatefulWidget {
   /// one. Null falls back to that plain scheme (Search/Similar
   /// Profiles/Shortlisted, or a direct/deep link).
   final String? heroTag;
+  /// Whether the caller already knows this member is blocked — see
+  /// `ProfileDetailArgs.isBlocked`'s doc comment. Only ever `true` when this
+  /// page was opened from Chat.
+  final bool isBlocked;
 
-  const ProfileDetailHeroAppBar({super.key, required this.detail, this.heroTag});
+  const ProfileDetailHeroAppBar({
+    super.key,
+    required this.detail,
+    this.heroTag,
+    this.isBlocked = false,
+  });
 
   @override
   ConsumerState<ProfileDetailHeroAppBar> createState() => _ProfileDetailHeroAppBarState();
@@ -42,6 +55,12 @@ class _ProfileDetailHeroAppBarState extends ConsumerState<ProfileDetailHeroAppBa
   // doing nothing: the notifier's own guard (`state.valueOrNull == null`)
   // would otherwise no-op that tap with zero visual feedback.
   bool _isToggling = false;
+
+  // Local override of `widget.isBlocked` — there's no backend read endpoint
+  // for block status (see `ProfileDetailArgs.isBlocked`'s doc comment), so a
+  // successful block/unblock from this page's own "More" menu can only ever
+  // update this widget's own copy, not re-fetch a fresher one.
+  late bool _isBlocked = widget.isBlocked;
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +108,39 @@ class _ProfileDetailHeroAppBarState extends ConsumerState<ProfileDetailHeroAppBa
               SnackBar(content: Text(l10n.profileDetailShareComingSoon)),
             );
           },
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        _CircleIconButton(
+          icon: Icons.more_vert_rounded,
+          onTap: () => showSafetyActionSheet(
+            context,
+            ref,
+            userId: base.id,
+            userName: base.name,
+            isBlocked: _isBlocked,
+            onBlocked: () {
+              // This page was reached by tapping a card somewhere — Matches,
+              // Discover, or Search (or Similar Profiles/Shortlisted, which
+              // re-project the same feed) — that screen doesn't know about
+              // the block yet. Invalidating forces a refetch next time
+              // either is shown, so the blocked member doesn't linger in a
+              // stale list; cheap even when the provider isn't currently
+              // being watched (Riverpod just drops the cached value).
+              // `handleBlockUser` only calls this after the block has
+              // actually succeeded, the loading dialog has fully closed, and
+              // the success SnackBar has been shown — see its doc comment.
+              ref.invalidate(reelFeedProvider);
+              ref.invalidate(discoverFeedProvider);
+              // So this member shows up next time the Blocked Users list
+              // (Privacy & Safety) is opened, even if it was already loaded
+              // before this block happened.
+              ref.invalidate(blockedUsersNotifierProvider);
+              if (context.mounted && context.canPop()) context.pop();
+            },
+            onUnblocked: () {
+              if (mounted) setState(() => _isBlocked = false);
+            },
+          ),
         ),
         const SizedBox(width: AppSpacing.sm),
       ],

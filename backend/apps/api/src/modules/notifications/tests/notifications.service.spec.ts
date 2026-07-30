@@ -50,12 +50,16 @@ function build(redisStatus: 'ready' | 'end' = 'ready') {
     isConfigured: jest.fn().mockReturnValue(true),
     getPresignedGetUrl: jest.fn().mockResolvedValue('https://signed/photo.jpg'),
   };
+  const pushDispatch = {
+    dispatchToUser: jest.fn().mockResolvedValue(undefined),
+  };
   const service = new NotificationsService(
     repo as never,
     redis as never,
     s3 as never,
+    pushDispatch as never,
   );
-  return { service, repo, client, s3 };
+  return { service, repo, client, s3, pushDispatch };
 }
 
 describe('NotificationsService.getUnreadCount', () => {
