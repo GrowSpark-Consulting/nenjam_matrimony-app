@@ -17,6 +17,8 @@ model User {
   role              UserRole             @default(USER)
   status            UserStatus           @default(PENDING_VERIFICATION)
   trustScore        Int                  @default(0) @map("trust_score")
+  profileVisibleToPremiumOnly  Boolean         @default(false) @map("profile_visible_to_premium_only")
+  hidePhotosFromNonConnections Boolean         @default(false) @map("hide_photos_from_non_connections")
   createdAt         DateTime             @default(now()) @map("created_at")
   updatedAt         DateTime             @updatedAt @map("updated_at")
   deletedAt         DateTime?            @map("deleted_at")
@@ -719,18 +721,22 @@ model UserBlock {
 
 /// Customer support tickets.
 model SupportTicket {
-  id            String        @id @default(uuid())
-  userId        String        @map("user_id")
+  id            String            @id @default(uuid())
+  userId        String            @map("user_id")
+  type          SupportTicketType @default(CONTACT_SUPPORT)
   subject       String
   body          String
-  status        SupportStatus @default(OPEN)
+  status        SupportStatus     @default(OPEN)
   adminResponse String?       @map("admin_response")
   resolvedAt    DateTime?     @map("resolved_at")
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  // Composite (userId, createdAt) backs the only hot query — a user's own
+  // tickets, newest first — as an index range scan + ordered read, and still
+  // serves userId-prefix lookups, so no separate single-column index is needed.
+  @@index([userId, createdAt])
   @@index([status])
   @@map("support_tickets")
 }
@@ -945,4 +951,15 @@ enum SupportStatus {
   CLOSED
 
   @@map("support_status")
+}
+
+/// What kind of request a support ticket is — drives client-side copy/grouping
+/// and lets a single intake endpoint categorize submissions.
+enum SupportTicketType {
+  CONTACT_SUPPORT
+  BUG_REPORT
+  FEATURE_REQUEST
+  APP_FEEDBACK
+
+  @@map("support_ticket_type")
 }

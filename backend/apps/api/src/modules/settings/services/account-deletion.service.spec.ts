@@ -36,7 +36,10 @@ describe('AccountDeletionService', () => {
       firebaseUid: 'fb-uid-1',
       photos: [{ s3Key: 'photos/a.jpg' }, { s3Key: 'photos/b.jpg' }],
       faceVerification: { selfieS3Key: 'kyc/selfie.jpg' },
-      kycVerifications: [{ s3DocKey: 'kyc/aadhaar.pdf' }, { s3DocKey: 'kyc/income.pdf' }],
+      kycVerifications: [
+        { s3DocKey: 'kyc/aadhaar.pdf' },
+        { s3DocKey: 'kyc/income.pdf' },
+      ],
     });
 
     await service.deleteAccount('user-1');

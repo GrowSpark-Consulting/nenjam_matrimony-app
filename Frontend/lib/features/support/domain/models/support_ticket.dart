@@ -3,7 +3,7 @@
 /// categorize submissions instead of needing four separate routes.
 enum SupportTicketType { contactSupport, bugReport, featureRequest, appFeedback }
 
-enum SupportTicketStatus { open, inProgress, resolved }
+enum SupportTicketStatus { open, inProgress, resolved, closed }
 
 class SupportTicket {
   final String id;
