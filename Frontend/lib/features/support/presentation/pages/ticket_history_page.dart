@@ -16,12 +16,14 @@ class TicketHistoryPage extends ConsumerWidget {
         SupportTicketStatus.open => AppColors.info,
         SupportTicketStatus.inProgress => AppColors.warning,
         SupportTicketStatus.resolved => AppColors.success,
+        SupportTicketStatus.closed => AppColors.textTertiaryLight,
       };
 
   String _statusLabel(SupportTicketStatus status) => switch (status) {
         SupportTicketStatus.open => 'Open',
         SupportTicketStatus.inProgress => 'In Progress',
         SupportTicketStatus.resolved => 'Resolved',
+        SupportTicketStatus.closed => 'Closed',
       };
 
   @override

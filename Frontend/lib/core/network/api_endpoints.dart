@@ -128,4 +128,7 @@ abstract final class ApiEndpoints {
   static const String faq = '/help/faq';
   static const String contactSupport = '/help/contact';
   static const String reportUser = '/help/report';
+
+  /// Support tickets — POST to submit, GET for the caller's history.
+  static const String supportTickets = '/support/tickets';
 }
