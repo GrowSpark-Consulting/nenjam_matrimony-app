@@ -153,11 +153,14 @@ class _ProfileDetailHeroAppBarState extends ConsumerState<ProfileDetailHeroAppBa
               tag: effectiveHeroTag,
               child: photoUrl == null
                   ? NmGenderPlaceholder(gender: base.gender, iconSize: 72)
+                  // BoxFit.contain (not .cover) so the complete uploaded
+                  // photo stays visible — no top/bottom clipping — while
+                  // preserving its original aspect ratio.
                   : (photoUrl.startsWith('assets/')
-                        ? Image.asset(photoUrl, fit: BoxFit.cover)
+                        ? Image.asset(photoUrl, fit: BoxFit.contain)
                         : Image.network(
                             photoUrl,
-                            fit: BoxFit.cover,
+                            fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => NmGenderPlaceholder(
                               gender: base.gender,
                               iconSize: 72,

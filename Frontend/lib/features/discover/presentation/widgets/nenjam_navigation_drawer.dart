@@ -716,6 +716,9 @@ class _LiveAvatarImage extends ConsumerWidget {
       imageUrl: liveUrl ?? imageUrl,
       size: 68,
       gender: gender,
+      // Bias the cover-crop upward so the face stays centered in the
+      // circle without the head's top being cut off by a dead-center crop.
+      alignment: const Alignment(0, -0.2),
     );
   }
 }
