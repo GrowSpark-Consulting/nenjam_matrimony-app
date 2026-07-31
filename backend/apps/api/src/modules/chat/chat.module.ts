@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { StorageModule } from '@app/storage';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { ConversationsController } from './controllers/conversations.controller';
 import { MessagesController } from './controllers/messages.controller';
 import { AttachmentsController } from './controllers/attachments.controller';
@@ -18,11 +19,14 @@ import { ProfileFeedMapper } from '../matches/mappers/profile-feed.mapper';
  * Chat: conversations, messages, attachment upload, and the typing socket
  * handler. RealtimeGateway (message/read push) is global (RealtimeModule);
  * PrismaService/RedisService are global; StorageModule supplies S3Service (for
- * attachment storage + presigned media). ProfileFeedMapper is provided here
- * (own stateless instance) so conversation rows carry the exact Discover card.
+ * attachment storage + presigned media). NotificationsModule supplies
+ * NotificationsService, used by MessagesService to raise a NEW_MESSAGE
+ * notification (+ push) the same way Interests/Shortlist already do.
+ * ProfileFeedMapper is provided here (own stateless instance) so conversation
+ * rows carry the exact Discover card.
  */
 @Module({
-  imports: [StorageModule],
+  imports: [StorageModule, NotificationsModule],
   controllers: [
     ConversationsController,
     MessagesController,
