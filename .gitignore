@@ -65,6 +65,8 @@ yarn-error.log*
 .nest/
 tmp/
 .cache/
+.claudecode/
+.claude/    
 
 # ─── Flutter (repo-wide backstop; Frontend/.gitignore is primary) ──
 .dart_tool/
