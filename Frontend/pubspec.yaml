@@ -33,10 +33,14 @@ dependencies:
   cached_network_image: ^3.4.1
   flutter_svg: ^2.0.17
   shimmer: ^3.0.0
-  # Profile photo picking. imageQuality/maxWidth downscale on-device to keep
-  # uploads well under the backend's 5 MB cap — no separate compression
-  # package needed.
+  # Profile photo picking. The crop screen (core/services/media) now owns
+  # final downscale/compression post-crop, so picking itself just needs a
+  # generous resolution ceiling — see PhotoCropScreen/ImageCompressor.
   image_picker: ^1.1.2
+  # Pure-Dart JPEG encode/decode for the crop & adjust screen's compression
+  # step — no native platform channel, so it works identically on every
+  # platform this app targets (including desktop, unlike native compressors).
+  image: ^4.8.0
   flutter_animate: ^4.5.2
   # Runtime permission status/request for camera + notifications only —
   # gallery access goes through the system photo picker and needs no
