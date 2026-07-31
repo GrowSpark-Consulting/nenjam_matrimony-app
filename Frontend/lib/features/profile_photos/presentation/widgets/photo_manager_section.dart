@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/services/media/attachment_picker.dart';
+import '../../../../core/services/media/crop_service.dart';
+import '../../../../core/services/media/photo_crop_screen.dart' show CropShape;
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../data/repositories/photo_repository.dart';
@@ -27,6 +29,7 @@ class PhotoManagerSection extends ConsumerStatefulWidget {
 
 class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
   final _attachmentPicker = AttachmentPicker();
+  final _cropService = const CropService();
 
   @override
   Widget build(BuildContext context) {
@@ -164,29 +167,47 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
   Future<void> _pickAndUpload({
     bool makePrimaryIfFirst = false,
     String? replaceId,
+    bool replacingPrimary = false,
   }) async {
     final source = await _chooseSource();
     if (source == null || !mounted) return;
 
+    // Fetch a generously high-res source — the crop screen now owns final
+    // downscale/compression post-crop (see CropService/ImageCompressor), so
+    // downscaling this early would soften the image if the user zooms in.
     final file = await _attachmentPicker.pick(
       context,
       source,
-      maxWidth: 1080,
-      imageQuality: 85,
+      maxWidth: 2048,
+      imageQuality: 95,
     );
     if (file == null || !mounted) return; // cancelled, denied, or failed
 
-    final notifier = ref.read(myPhotosProvider.notifier);
     final currentCount = ref.read(myPhotosProvider).valueOrNull?.length ?? 0;
+    final willBePrimary = replaceId != null
+        ? replacingPrimary
+        : (makePrimaryIfFirst && currentCount == 0);
+
+    final cropped = await _cropService.pickAndCrop(
+      context: context,
+      sourceFile: file,
+      shape: willBePrimary ? CropShape.circle : CropShape.square,
+    );
+    if (cropped == null || !mounted) return; // cancelled crop
+
+    try {
+      await file.delete();
+    } catch (_) {
+      // Best-effort cleanup of the uncropped source; not worth surfacing.
+    }
+
+    final notifier = ref.read(myPhotosProvider.notifier);
 
     await _run(() async {
       if (replaceId != null) {
-        await notifier.replace(replaceId, file);
+        await notifier.replace(replaceId, cropped);
       } else {
-        await notifier.upload(
-          file,
-          isPrimary: makePrimaryIfFirst && currentCount == 0 ? true : null,
-        );
+        await notifier.upload(cropped, isPrimary: willBePrimary ? true : null);
       }
     });
   }
@@ -247,7 +268,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
               title: const Text('Replace photo'),
               onTap: () {
                 Navigator.pop(ctx);
-                _pickAndUpload(replaceId: photo.id);
+                _pickAndUpload(replaceId: photo.id, replacingPrimary: photo.isPrimary);
               },
             ),
             ListTile(

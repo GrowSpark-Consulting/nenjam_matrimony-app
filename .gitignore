@@ -13,13 +13,19 @@ Thumbs.db
 *.swp
 *.swo
 
-# ─── IDEs ──────────────────────────────────────────────────────────
+# ─── IDEs / AI tooling ───────────────────────────────────────────────
 # Only the personal/machine-specific VS Code files are ignored —
 # extensions.json / tasks.json / launch.json (team-shared recommendations
 # and the "Start Development" USB-debug launch config) stay trackable.
 .vscode/settings.json
 .idea/
 *.iml
+
+# Claude Code — settings.local.json holds per-machine permission
+# allowlists (e.g. which Bash commands are auto-approved) and is
+# personal, same treatment as .vscode/settings.json above. Any shared
+# CLAUDE.md / commands / agents living under .claude/ stay trackable.
+**/.claude/settings.local.json
 
 # ─── Environment files ─────────────────────────────────────────────
 # Real secrets must never be committed, from either root or a nested
