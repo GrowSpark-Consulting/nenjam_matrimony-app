@@ -14,6 +14,11 @@ class NmCircleAvatar extends StatelessWidget {
   /// 'Male' / 'Female' / '' — picks the fallback icon when [imageUrl] is
   /// null/empty.
   final String gender;
+  /// Where [BoxFit.cover] anchors the crop — defaults to dead-center.
+  /// Callers displaying a face-focused avatar (e.g. the nav drawer) can
+  /// bias this slightly upward so the crop keeps the whole head in frame
+  /// instead of centering on the torso.
+  final Alignment alignment;
 
   const NmCircleAvatar({
     super.key,
@@ -21,6 +26,7 @@ class NmCircleAvatar extends StatelessWidget {
     this.size = 48.0,
     this.onTap,
     this.gender = '',
+    this.alignment = Alignment.center,
   });
 
   @override
@@ -37,11 +43,13 @@ class NmCircleAvatar extends StatelessWidget {
                 ? Image.asset(
                     imageUrl!,
                     fit: BoxFit.cover,
+                    alignment: alignment,
                     errorBuilder: (_, __, ___) => _fallback(),
                   )
                 : CachedNetworkImage(
                     imageUrl: imageUrl!,
                     fit: BoxFit.cover,
+                    alignment: alignment,
                     errorWidget: (_, __, ___) => _fallback(),
                   ))
             : _fallback(),
