@@ -13,6 +13,7 @@ import { MessageRepository } from './repositories/message.repository';
 import { ConversationParticipantGuard } from './guards/conversation-participant.guard';
 import { ChatGateway } from './gateways/chat.gateway';
 import { ProfileFeedMapper } from '../matches/mappers/profile-feed.mapper';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 /**
  * Chat: conversations, messages, attachment upload, and the typing socket
@@ -22,7 +23,7 @@ import { ProfileFeedMapper } from '../matches/mappers/profile-feed.mapper';
  * (own stateless instance) so conversation rows carry the exact Discover card.
  */
 @Module({
-  imports: [StorageModule],
+  imports: [StorageModule, NotificationsModule],
   controllers: [
     ConversationsController,
     MessagesController,

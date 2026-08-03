@@ -25,7 +25,14 @@
       "entryFile": "main",
       "sourceRoot": "apps/worker/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/worker/tsconfig.app.json"
+        "tsConfigPath": "apps/worker/tsconfig.app.json",
+        "assets": [
+          {
+            "include": "../../../libs/mail/src/templates/*.hbs",
+            "outDir": "dist/apps/worker",
+            "watchAssets": true
+          }
+        ]
       }
     },
     "scheduler": {
@@ -125,6 +132,15 @@
       "sourceRoot": "libs/storage/src",
       "compilerOptions": {
         "tsConfigPath": "libs/storage/tsconfig.lib.json"
+      }
+    },
+    "mail": {
+      "type": "library",
+      "root": "libs/mail",
+      "entryFile": "index",
+      "sourceRoot": "libs/mail/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/mail/tsconfig.lib.json"
       }
     }
   }

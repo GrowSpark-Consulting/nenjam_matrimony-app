@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { StorageModule } from '@app/storage';
+import { MailModule } from '@app/mail';
 import { NotificationsController } from './controllers/notifications.controller';
 import { NotificationsService } from './services/notifications.service';
 import { PushDispatchService } from './services/push-dispatch.service';
+import { EmailDispatchService } from './services/email-dispatch.service';
 import { NotificationRepository } from './repositories/notification.repository';
 
 /**
@@ -17,13 +19,19 @@ import { NotificationRepository } from './repositories/notification.repository';
  * once that transaction commits — see NotificationsService.dispatchPush.
  */
 @Module({
-  imports: [StorageModule],
+  // MailModule.forRoot() is the producer half — it registers the BullMQ email
+  // queue client and MailService, NOT the processor (that lives in the worker).
+  imports: [StorageModule, MailModule.forRoot()],
   controllers: [NotificationsController],
   providers: [
     NotificationsService,
     NotificationRepository,
     PushDispatchService,
+    EmailDispatchService,
   ],
-  exports: [NotificationsService],
+  // EmailDispatchService is exported alongside NotificationsService so domain
+  // modules queue email the same way they already raise push — one import,
+  // one post-commit call, no direct MailService coupling.
+  exports: [NotificationsService, EmailDispatchService],
 })
 export class NotificationsModule {}

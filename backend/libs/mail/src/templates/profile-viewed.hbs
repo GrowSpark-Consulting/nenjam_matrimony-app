@@ -1,0 +1,16 @@
+<h1 class="nm-h1" style="margin:0 0 16px;font-size:26px;line-height:34px;font-weight:600;color:#1B2B4B;">
+  {{#if (gt viewCount 1)}}{{viewCount}} people viewed your profile{{else}}Someone viewed your profile{{/if}}
+</h1>
+<p style="margin:0 0 20px;">
+  {{#if viewerName}}
+    {{viewerName}} looked at your profile {{viewedAgo}}.
+  {{else}}
+    Your profile is getting attention. Members who keep their photos and details current
+    get viewed noticeably more often.
+  {{/if}}
+</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" class="nm-cta" style="margin:0 0 8px;">
+  <tr><td align="center" bgcolor="#1B2B4B" style="border-radius:8px;">
+    <a href="{{appUrl}}/profile/views" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:8px;">See who viewed you</a>
+  </td></tr>
+</table>

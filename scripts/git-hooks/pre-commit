@@ -1,0 +1,146 @@
+#!/bin/sh
+#
+# Nenjam Matrimony — secret-leak pre-commit guard.
+#
+# Blocks a commit that would put real credentials into git history. Written
+# after a real incident: live Neon / Firebase / AWS / Elasticsearch secrets
+# were pasted into backend/.env.example, which is the ONE env file git
+# tracks (see the `!.env.example` negation in .gitignore). It was caught
+# before it was committed — this hook is what makes that repeatable.
+#
+# Install (per clone, one command):
+#   git config core.hooksPath scripts/git-hooks
+#
+# Bypass, when you are certain a match is a false positive:
+#   git commit --no-verify
+#
+# Design notes:
+#   - Only STAGED additions are scanned, so the cost is proportional to the
+#     change, not the repo.
+#   - Patterns target structured/high-entropy credentials. Loose rules that
+#     fire on the word "password" train people to reflexively --no-verify,
+#     which is worse than no hook at all.
+#   - PLACEHOLDER_RE exempts template values so .env.example stays committable.
+#   - PUBLIC_CLIENT_CONFIG exempts files whose API keys are public by design
+#     (Firebase client config ships inside every app binary).
+
+set -u
+
+RED=''; YELLOW=''; GREEN=''; BOLD=''; RESET=''
+if [ -t 1 ]; then
+    RED=$(printf '\033[31m'); YELLOW=$(printf '\033[33m')
+    GREEN=$(printf '\033[32m'); BOLD=$(printf '\033[1m'); RESET=$(printf '\033[0m')
+fi
+
+violations=0
+
+report() {
+    printf '%s  %s%s\n' "$RED" "$1" "$RESET"
+    violations=$((violations + 1))
+}
+
+# Values that mark a line as a template rather than a real credential.
+PLACEHOLDER_RE='CHANGEME|YOUR_|your_|xxxxx|XXXXX|placeholder|PLACEHOLDER|example\.com|EXAMPLE|dummy|DUMMY|MOCKKEY|REDACTED|username:password|user:pass|<[a-z-]*redacted[a-z-]*>'
+
+# Firebase/Google client config is public by design — project id, web API
+# key and app ids are compiled into every shipped APK/IPA/web bundle.
+# Security there comes from Firebase Security Rules, not from secrecy.
+is_public_client_config() {
+    case "$1" in
+        */google-services.json|google-services.json) return 0 ;;
+        */GoogleService-Info.plist|GoogleService-Info.plist) return 0 ;;
+        */firebase_options.dart|firebase_options.dart) return 0 ;;
+        */firebase.json|firebase.json) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+staged_files=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$staged_files" ] && exit 0
+
+printf '%s' "$BOLD"
+printf 'Scanning staged changes for credentials...\n'
+printf '%s' "$RESET"
+
+# ─── Layer 1: no real env file may ever enter the index ──────────────────
+# .gitignore already covers these, but `git add -f` overrides it and a
+# tracked-before-ignored file is not covered at all.
+for f in $staged_files; do
+    base=$(basename "$f")
+    case "$base" in
+        .env.example|.env.*.example) continue ;;
+        .env|.env.*)
+            report "$f — real env files must never be committed (only .env.example)"
+            ;;
+    esac
+    case "$base" in
+        serviceAccountKey.json|firebase-adminsdk*.json|*serviceAccount*.json)
+            report "$f — service-account key file"
+            ;;
+        *.pem|*.p12|*.pfx|*.jks|*.keystore|key.properties)
+            report "$f — private key / keystore / signing material"
+            ;;
+    esac
+done
+
+# ─── Layer 2: credential patterns inside staged additions ────────────────
+scan() {
+    pattern="$1"
+    label="$2"
+    skip_public="$3"
+
+    for f in $staged_files; do
+        # The scanner's own source necessarily contains every pattern it
+        # looks for, so content rules would flag it forever. Skipping it is
+        # safe: nothing here is a real credential, and the file-level rules
+        # in Layer 1 still apply to this path like any other.
+        case "$f" in scripts/git-hooks/*) continue ;; esac
+        if [ "$skip_public" = "public-ok" ] && is_public_client_config "$f"; then
+            continue
+        fi
+        # Added lines only ('+'), minus the '+++' file header.
+        # -e is required, not cosmetic: several patterns begin with '-'
+        # (e.g. the PEM header), which grep would otherwise parse as a flag.
+        hits=$(git diff --cached -U0 -- "$f" \
+                 | grep -e '^+' | grep -v -e '^+++' \
+                 | grep -E -e "$pattern" \
+                 | grep -E -v -e "$PLACEHOLDER_RE" \
+                 | head -3)
+        if [ -n "$hits" ]; then
+            report "$f — $label"
+            printf '%s      (matched %s added line(s); values not shown)%s\n' \
+                "$YELLOW" "$(printf '%s\n' "$hits" | grep -c .)" "$RESET"
+        fi
+    done
+}
+
+scan 'AKIA[0-9A-Z]{16}'                                  'AWS access key id'          any
+scan '(AWS_SECRET_ACCESS_KEY|aws_secret_access_key)[[:space:]]*[=:][[:space:]]*.?[A-Za-z0-9/+=]{40}' 'AWS secret access key' any
+scan 'BEGIN( RSA| EC| OPENSSH| PGP)? PRIVATE KEY.*MI[A-Za-z0-9+/]{20}' 'private key with real key material' any
+scan 'postgres(ql)?://[^:[:space:]]+:[^@[:space:]]+@'    'Postgres URL with inline password' any
+scan 'rediss?://[^:[:space:]]*:[^@[:space:]]+@'          'Redis URL with inline password'    any
+scan 'npg_[A-Za-z0-9]{10,}'                              'Neon database password'     any
+scan 'mongodb(\+srv)?://[^:[:space:]]+:[^@[:space:]]+@'  'MongoDB URL with password'  any
+scan 'AIza[0-9A-Za-z_-]{35}'                             'Google API key'             public-ok
+scan 'gh[pousr]_[A-Za-z0-9]{36}'                         'GitHub token'               any
+scan 'sk_live_[0-9a-zA-Z]{20,}'                          'Stripe live secret key'     any
+scan 're_[A-Za-z0-9]{12,}'                               'Resend API key'             any
+scan 'xox[baprs]-[0-9A-Za-z-]{10,}'                      'Slack token'                any
+scan 'eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.'      'JWT / signed token'         any
+scan '-----BEGIN OPENSSH PRIVATE KEY-----'               'OpenSSH private key'        any
+
+if [ "$violations" -gt 0 ]; then
+    printf '\n%s%sCOMMIT BLOCKED — %s potential credential leak(s).%s\n\n' \
+        "$BOLD" "$RED" "$violations" "$RESET"
+    printf 'Fix it, do not work around it:\n'
+    printf '  1. Move the real value into a gitignored .env (never .env.example).\n'
+    printf '  2. Put a placeholder in the template — YOUR_..., CHANGEME, username:password.\n'
+    printf '  3. Re-stage and commit again.\n\n'
+    printf '%sIf a value was already pushed, rotating it is the only real fix —\n' "$YELLOW"
+    printf 'deleting the line does not remove it from history.%s\n\n' "$RESET"
+    printf 'Genuine false positive? %sgit commit --no-verify%s\n' "$BOLD" "$RESET"
+    exit 1
+fi
+
+printf '%s  no credentials detected in staged changes%s\n' "$GREEN" "$RESET"
+exit 0

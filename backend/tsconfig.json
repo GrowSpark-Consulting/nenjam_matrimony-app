@@ -39,7 +39,9 @@
       "@app/firebase": ["libs/firebase/src"],
       "@app/firebase/*": ["libs/firebase/src/*"],
       "@app/storage": ["libs/storage/src"],
-      "@app/storage/*": ["libs/storage/src/*"]
+      "@app/storage/*": ["libs/storage/src/*"],
+      "@app/mail": ["libs/mail/src"],
+      "@app/mail/*": ["libs/mail/src/*"]
     }
   }
 }

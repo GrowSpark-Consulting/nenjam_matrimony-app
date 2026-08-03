@@ -13,6 +13,7 @@ import type {
 } from '../../../../../../libs/database/generated/client';
 import { ProfileFeedMapper } from '../../matches/mappers/profile-feed.mapper';
 import { NotificationsService } from '../../notifications/services/notifications.service';
+import { EmailDispatchService } from '../../notifications/services/email-dispatch.service';
 import type { CreateNotificationData } from '../../notifications/repositories/notification.repository';
 import { RealtimeGateway } from '../../realtime/realtime.gateway';
 import { RealtimeEvents } from '../../realtime/realtime.events';
@@ -55,6 +56,7 @@ export class InterestsService {
     private readonly notifications: NotificationsService,
     private readonly profileMapper: ProfileFeedMapper,
     private readonly realtime: RealtimeGateway,
+    private readonly emailDispatch: EmailDispatchService,
   ) {}
 
   /** Dispatches the polymorphic `POST /matches/interest` body to send or
@@ -248,7 +250,9 @@ export class InterestsService {
     const at = new Date().toISOString();
     this.realtime.emitToUser(
       interest.senderId,
-      accept ? RealtimeEvents.interestAccepted : RealtimeEvents.interestRejected,
+      accept
+        ? RealtimeEvents.interestAccepted
+        : RealtimeEvents.interestRejected,
       { id: interest.id, at },
     );
     this.realtime.emitToUser(
@@ -256,6 +260,19 @@ export class InterestsService {
       RealtimeEvents.notificationCreated,
       { id: interest.id, at },
     );
+
+    // Match email — only on acceptance, and only after commit. A declined
+    // interest deliberately sends nothing: the in-app notification above is
+    // enough, and emailing a rejection would be gratuitous.
+    if (accept) {
+      void this.emailDispatch
+        .sendMatchFound(interest.senderId, currentUserId)
+        // EmailDispatchService already swallows its own failures. This is
+        // belt-and-braces: an unhandled rejection from a `void`-ed promise
+        // terminates the Node process, so the API must not depend on that
+        // invariant holding through a future refactor.
+        .catch(() => undefined);
+    }
 
     return {
       id: interest.id,

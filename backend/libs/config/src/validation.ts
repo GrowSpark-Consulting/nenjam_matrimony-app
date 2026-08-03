@@ -46,6 +46,36 @@ export const validationSchema = Joi.object({
 
   JWT_SECRET: Joi.string().min(16).required(),
 
+  // Email. Optional by design, matching Firebase/AWS below: without
+  // RESEND_API_KEY the app still boots and MailModule binds a no-op provider
+  // that renders + logs instead of sending. Making it required would block
+  // every developer and every CI run on a third-party secret.
+  //
+  // The key format is still validated when present, so a truncated or
+  // wrong-provider paste fails at boot with a clear message rather than as a
+  // 401 from Resend on the first real send, hours later, inside a worker.
+  RESEND_API_KEY: Joi.string()
+    .pattern(/^re_[A-Za-z0-9_-]{10,}$/)
+    .allow('')
+    .optional()
+    .messages({
+      'string.pattern.base':
+        'RESEND_API_KEY must look like "re_xxxxxxxx" (copy it from https://resend.com/api-keys).',
+    }),
+  // RFC 5322: either `local@domain` or `Display Name <local@domain>`. Resend
+  // rejects anything else, and it rejects it per-send rather than at startup.
+  MAIL_FROM: Joi.string()
+    .pattern(/^(.*<\s*[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+\s*>|[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+)$/)
+    .optional()
+    .messages({
+      'string.pattern.base':
+        'MAIL_FROM must be "user@domain.com" or "Display Name <user@domain.com>".',
+    }),
+  MAIL_REPLY_TO: Joi.string().email().allow('').optional(),
+  MAIL_SUPPORT_EMAIL: Joi.string().email().allow('').optional(),
+  MAIL_LOGO_URL: Joi.string().uri().allow('').optional(),
+  APP_WEB_URL: Joi.string().uri().allow('').optional(),
+
   // Optional: Firebase Admin SDK service-account credentials, used by
   // FirebaseAuthGuard to verify client ID tokens. Left unset, the app still
   // boots (other modules don't need Firebase); any request hitting a

@@ -4,6 +4,8 @@ import { PrismaModule } from '@app/database';
 import { RedisModule } from '@app/cache';
 import { ElasticsearchModule } from '@app/search';
 import { FirebaseModule } from '@app/firebase';
+import { QueueModule } from '@app/queue';
+import { MailModule } from '@app/mail';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProfilesModule } from './modules/profiles/profiles.module';
@@ -24,6 +26,10 @@ import { ReportsModule } from './modules/reports/reports.module';
     RedisModule,
     ElasticsearchModule,
     FirebaseModule,
+    QueueModule,
+    // forRoot (not forWorker): the API enqueues only. Registering the
+    // processor here would make every API replica a consumer too.
+    MailModule.forRoot(),
     RealtimeModule,
     ProfilesModule,
     MatchesModule,

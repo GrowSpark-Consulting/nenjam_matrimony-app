@@ -12,9 +12,10 @@ import { PromptsService } from './services/prompts.service';
 import { ProfileRepository } from './repositories/profile.repository';
 import { PhotoRepository } from './repositories/photo.repository';
 import { PromptsRepository } from './repositories/prompts.repository';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [StorageModule],
+  imports: [StorageModule, NotificationsModule],
   controllers: [
     ProfileDraftController,
     ProfileController,

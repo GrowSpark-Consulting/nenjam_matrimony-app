@@ -56,6 +56,8 @@ model User {
   reportsMade       UserReport[]         @relation("ReportsMade")
   subscriptions     UserSubscription[]
   profilePrompts    UserProfilePrompt[]
+  emailLogs         EmailLog[]
+  settings          UserSettings?
 
   @@index([firebaseUid])
   @@index([email])
@@ -962,4 +964,94 @@ enum SupportTicketType {
   APP_FEEDBACK
 
   @@map("support_ticket_type")
+}
+
+/// Delivery record for every transactional/lifecycle email the platform sends.
+///
+/// Written by the worker, never by the API: the API only enqueues. One row per
+/// send attempt outcome, updated in place as BullMQ retries, so `attempts`
+/// reflects the true number of provider calls rather than the number of rows.
+///
+/// `provider` and `template` are plain strings on purpose — adding an
+/// AwsSesProvider or a new template must not require a schema migration.
+model EmailLog {
+  id                String      @id @default(uuid())
+  /// Nullable: verification and password-reset mail can precede a User row,
+  /// and account deletion nulls this out rather than destroying the audit trail.
+  userId            String?     @map("user_id")
+  recipient         String
+  subject           String
+  /// Template identifier, e.g. "otp" / "welcome" — matches the .hbs filename.
+  template          String
+  /// Provider identifier, e.g. "resend" / "ses" / "noop".
+  provider          String
+  status            EmailStatus @default(QUEUED)
+  /// Provider-side id, used to correlate with their dashboard/webhooks.
+  providerMessageId String?     @map("provider_message_id")
+  attempts          Int         @default(0)
+  /// Non-PII job context (jobId, emailType, durationMs, ...). Never the payload.
+  metadata          Json?
+  /// Last failure reason. Provider errors only — never credentials.
+  error             String?
+  sentAt            DateTime?   @map("sent_at")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+  user              User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([recipient])
+  @@index([createdAt])
+  /// Serves the "recent failures" ops view (WHERE status ORDER BY created_at DESC).
+  @@index([status, createdAt])
+  @@map("email_logs")
+}
+
+/// Lifecycle of a single email send.
+enum EmailStatus {
+  /// Job accepted onto the queue, not yet attempted.
+  QUEUED
+  /// Provider accepted it.
+  SENT
+  /// Attempt failed; BullMQ may still retry.
+  FAILED
+  /// All retries exhausted — moved to the dead-letter queue for manual replay.
+  DEAD_LETTER
+
+  @@map("email_status")
+}
+
+/// Per-user app preferences: theme, push opt-in, UI language.
+///
+/// Modelled from the live table rather than the other way round. The
+/// `20260724120000_add_user_settings` migration was applied to the shared
+/// database from a developer machine but its folder was never committed, so
+/// schema.prisma and the database had diverged — every `prisma migrate dev`
+/// demanded a full reset. The migration has since been reconstructed from the
+/// live DDL and this model added to close the gap.
+///
+/// Distinct from the two privacy flags on User (profileVisibleToPremiumOnly /
+/// hidePhotosFromNonConnections), which are matching-visibility rules rather
+/// than client preferences. No API reads this yet — the Flutter app currently
+/// keeps theme in local storage.
+model UserSettings {
+  id                       String    @id @default(uuid())
+  userId                   String    @unique @map("user_id")
+  theme                    ThemeMode @default(SYSTEM)
+  pushNotificationsEnabled Boolean   @default(true) @map("push_notifications_enabled")
+  language                 String    @default("en")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+/// Client theme preference. SYSTEM follows the OS setting.
+enum ThemeMode {
+  LIGHT
+  DARK
+  SYSTEM
+
+  @@map("theme_mode")
 }

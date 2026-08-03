@@ -53,14 +53,26 @@ function build() {
     $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
   };
 
+  const emailDispatch = {
+    sendMatchFound: jest.fn().mockResolvedValue(undefined),
+  };
   const service = new InterestsService(
     prisma as never,
     repo as never,
     notifications as never,
     mapper as never,
     realtime as never,
+    emailDispatch as never,
   );
-  return { service, repo, notifications, mapper, realtime };
+  return {
+    service,
+    repo,
+    notifications,
+    mapper,
+    realtime,
+    prisma,
+    emailDispatch,
+  };
 }
 
 describe('InterestsService.send', () => {
@@ -361,5 +373,89 @@ describe('InterestsService.dispatchMatchInterest', () => {
     await expect(
       service.dispatchMatchInterest('me', {}),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+describe('InterestsService — email workflow', () => {
+  it('queues a match email when an interest is ACCEPTED', async () => {
+    const { service, repo, emailDispatch } = build();
+    repo.findById.mockResolvedValue(
+      interest({
+        id: 'i1',
+        senderId: 'sender-1',
+        receiverId: 'me',
+        status: 'PENDING',
+      }),
+    );
+
+    await service.respond('me', 'i1', true);
+
+    expect(emailDispatch.sendMatchFound).toHaveBeenCalledWith('sender-1', 'me');
+  });
+
+  it('queues NOTHING when an interest is DECLINED', async () => {
+    // Emailing someone their rejection would be gratuitous; the in-app
+    // notification already covers it.
+    const { service, repo, emailDispatch } = build();
+    repo.findById.mockResolvedValue(
+      interest({
+        id: 'i1',
+        senderId: 'sender-1',
+        receiverId: 'me',
+        status: 'PENDING',
+      }),
+    );
+
+    await service.respond('me', 'i1', false);
+
+    expect(emailDispatch.sendMatchFound).not.toHaveBeenCalled();
+  });
+
+  it('queues the email only AFTER the transaction commits', async () => {
+    const { service, repo, prisma, emailDispatch } = build();
+    repo.findById.mockResolvedValue(
+      interest({
+        id: 'i1',
+        senderId: 'sender-1',
+        receiverId: 'me',
+        status: 'PENDING',
+      }),
+    );
+
+    const order: string[] = [];
+    prisma.$transaction.mockImplementation(
+      async (cb: (tx: unknown) => unknown) => {
+        const result = await cb({});
+        order.push('commit');
+        return result;
+      },
+    );
+    emailDispatch.sendMatchFound.mockImplementation(() => {
+      order.push('email');
+      return Promise.resolve();
+    });
+
+    await service.respond('me', 'i1', true);
+
+    // If this ever inverts, a rolled-back interest would still send mail
+    // claiming a match that does not exist.
+    expect(order).toEqual(['commit', 'email']);
+  });
+
+  it('still returns success when queuing the email fails', async () => {
+    const { service, repo, emailDispatch } = build();
+    repo.findById.mockResolvedValue(
+      interest({
+        id: 'i1',
+        senderId: 'sender-1',
+        receiverId: 'me',
+        status: 'PENDING',
+      }),
+    );
+    emailDispatch.sendMatchFound.mockRejectedValue(new Error('redis down'));
+
+    await expect(service.respond('me', 'i1', true)).resolves.toMatchObject({
+      status: 'accepted',
+    });
   });
 });

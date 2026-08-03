@@ -79,6 +79,9 @@ function build() {
   const prisma = {
     $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
   };
+  const emailDispatch = {
+    sendNewMessage: jest.fn().mockResolvedValue(undefined),
+  };
   const service = new MessagesService(
     prisma as never,
     conversationRepository as never,
@@ -87,6 +90,7 @@ function build() {
     realtime as never,
     presence as never,
     audit as never,
+    emailDispatch as never,
   );
   return {
     service,
@@ -96,6 +100,7 @@ function build() {
     realtime,
     presence,
     audit,
+    emailDispatch,
   };
 }
 
@@ -426,5 +431,61 @@ describe('MessagesService.list', () => {
     await service.list('me', query({ cursor: '' }));
 
     expect(messageRepository.listByCursor).toHaveBeenCalledWith('r1', null, 30);
+  });
+});
+
+describe('MessagesService — email workflow', () => {
+  it('emails the recipient when they were offline', async () => {
+    const { service, presence, emailDispatch } = build();
+    presence.isOnline.mockResolvedValue(false);
+
+    await service.send('me', {
+      roomId: 'r1',
+      content: 'are you free to talk?',
+    });
+
+    expect(emailDispatch.sendNewMessage).toHaveBeenCalledWith(
+      'peer',
+      'me',
+      'are you free to talk?',
+      'r1',
+    );
+  });
+
+  it('sends NO email when the recipient is online', async () => {
+    // They already got the real-time event; mail would just be noise.
+    const { service, presence, emailDispatch } = build();
+    presence.isOnline.mockResolvedValue(true);
+
+    await service.send('me', { roomId: 'r1', content: 'hi' });
+
+    expect(emailDispatch.sendNewMessage).not.toHaveBeenCalled();
+  });
+
+  it('never puts a media message body in the email preview', async () => {
+    // Media content is a signed S3 URL that expires long before the email is
+    // read — leaking it would also bypass the access check on re-fetch.
+    const { service, presence, emailDispatch } = build();
+    presence.isOnline.mockResolvedValue(false);
+
+    await service.send('me', {
+      roomId: 'r1',
+      type: 'IMAGE',
+      mediaUrl: 'https://s3.example.com/chat/r1/secret.jpg?X-Amz-Signature=abc',
+    } as never);
+
+    const preview = emailDispatch.sendNewMessage.mock.calls[0]?.[2] as string;
+    expect(preview).toBe('Sent you an attachment.');
+    expect(preview).not.toContain('secret.jpg');
+  });
+
+  it('still delivers the message when queuing the email fails', async () => {
+    const { service, presence, emailDispatch } = build();
+    presence.isOnline.mockResolvedValue(false);
+    emailDispatch.sendNewMessage.mockRejectedValue(new Error('redis down'));
+
+    await expect(
+      service.send('me', { roomId: 'r1', content: 'hi' }),
+    ).resolves.toBeDefined();
   });
 });

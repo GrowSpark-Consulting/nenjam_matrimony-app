@@ -135,6 +135,7 @@ describe('ProfileService', () => {
     findAllForUser?: jest.Mock;
     getDraft?: jest.Mock;
     calculate?: jest.Mock;
+    sendWelcome?: jest.Mock;
   }) {
     const profileRepository = {
       findProfileByUserId: overrides?.findProfileByUserId ?? jest.fn(),
@@ -177,6 +178,10 @@ describe('ProfileService', () => {
       photoRepository,
       draftService,
       completionService,
+      {
+        sendWelcome:
+          overrides?.sendWelcome ?? jest.fn().mockResolvedValue(undefined),
+      } as never,
     );
   }
 
@@ -341,6 +346,47 @@ describe('ProfileService', () => {
       await expect(service.finalize('user-1')).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    it('queues the welcome email once the profile is finalized', async () => {
+      const sendWelcome = jest.fn().mockResolvedValue(undefined);
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(buildValidDraft()),
+        upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+        sendWelcome,
+      });
+
+      await service.finalize('user-1');
+
+      expect(sendWelcome).toHaveBeenCalledWith('user-1');
+    });
+
+    it('queues NO welcome email when finalize is rejected', async () => {
+      // The registration never completed, so there is nothing to welcome them to.
+      const sendWelcome = jest.fn().mockResolvedValue(undefined);
+      const service = buildService({
+        getDraft: jest
+          .fn()
+          .mockResolvedValue(buildValidDraft({ basicDetails: {} })),
+        sendWelcome,
+      });
+
+      await expect(service.finalize('user-1')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(sendWelcome).not.toHaveBeenCalled();
+    });
+
+    it('still finalizes when queuing the welcome email fails', async () => {
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(buildValidDraft()),
+        upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+        sendWelcome: jest.fn().mockRejectedValue(new Error('redis down')),
+      });
+
+      await expect(service.finalize('user-1')).resolves.toBeDefined();
     });
 
     it('throws BadRequestException when Sub Caste is missing from Religion', async () => {
@@ -810,6 +856,7 @@ describe('ProfileService', () => {
           photoRepository,
           draftService,
           completionService,
+          { sendWelcome: jest.fn().mockResolvedValue(undefined) } as never,
         );
         return { service, updateProfileCompletePct };
       }
@@ -843,7 +890,7 @@ describe('ProfileService', () => {
         expect(result.completion.missingSections).toContain('education');
       });
 
-      it('(A\') Steps 1-4 complete, Steps 5-13 all skipped, no photo, mobile unverified -> finalize succeeds at exactly 20%', async () => {
+      it("(A') Steps 1-4 complete, Steps 5-13 all skipped, no photo, mobile unverified -> finalize succeeds at exactly 20%", async () => {
         // The exact scenario from the final access rule: only Steps 1-4
         // are mandatory. Nothing else — not a photo, not any verification
         // — may block finalize() or keep the user off Discover.

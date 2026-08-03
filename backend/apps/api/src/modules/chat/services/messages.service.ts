@@ -18,6 +18,7 @@ import { RealtimeEvents } from '../../realtime/realtime.events';
 import { ConversationRepository } from '../repositories/conversation.repository';
 import { MessageRepository } from '../repositories/message.repository';
 import { ChatAuditService, ChatAuditAction } from './chat-audit.service';
+import { EmailDispatchService } from '../../notifications/services/email-dispatch.service';
 import { SendMessageDto } from '../dto/send-message.dto';
 import {
   MessageDto,
@@ -51,6 +52,7 @@ export class MessagesService {
     private readonly realtime: RealtimeGateway,
     private readonly presence: PresenceService,
     private readonly audit: ChatAuditService,
+    private readonly emailDispatch: EmailDispatchService,
   ) {}
 
   async list(
@@ -201,6 +203,24 @@ export class MessagesService {
       entityId: message.id,
       metadata: { roomId: message.roomId, type: message.type },
     });
+
+    // Email the recipient only when they were NOT connected when this was
+    // sent — `deliveredNow` is the same presence read the delivery-status
+    // write above already made, so this costs no extra query. Someone with
+    // the app open gets the real-time event and would only be annoyed by mail.
+    //
+    // Media messages send no preview: their content is a signed S3 URL that
+    // expires long before the email is read.
+    if (!deliveredNow) {
+      void this.emailDispatch
+        .sendNewMessage(
+          peerId,
+          userId,
+          isMedia ? 'Sent you an attachment.' : content,
+          message.roomId,
+        )
+        .catch(() => undefined);
+    }
 
     return senderView;
   }
