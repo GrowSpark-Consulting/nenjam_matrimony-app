@@ -5,7 +5,6 @@ import { RedisModule } from '@app/cache';
 import { ElasticsearchModule } from '@app/search';
 import { FirebaseModule } from '@app/firebase';
 import { QueueModule } from '@app/queue';
-import { MailModule } from '@app/mail';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProfilesModule } from './modules/profiles/profiles.module';
@@ -26,10 +25,16 @@ import { ReportsModule } from './modules/reports/reports.module';
     RedisModule,
     ElasticsearchModule,
     FirebaseModule,
+    // Provides the shared BullMQ connection that MailModule's
+    // registerQueue() resolves against.
     QueueModule,
-    // forRoot (not forWorker): the API enqueues only. Registering the
-    // processor here would make every API replica a consumer too.
-    MailModule.forRoot(),
+    // MailModule is deliberately NOT imported here. Its only consumer in this
+    // app is EmailDispatchService, which lives in NotificationsModule and
+    // imports it there. Importing it in both places instantiated MailModule
+    // twice (verified: "MailModule dependencies initialized" x2), producing two
+    // EmailQueue instances and one extra Redis connection per API replica.
+    // Harmless functionally — both write to the same queue — but wasteful
+    // against a managed Redis connection cap.
     RealtimeModule,
     ProfilesModule,
     MatchesModule,

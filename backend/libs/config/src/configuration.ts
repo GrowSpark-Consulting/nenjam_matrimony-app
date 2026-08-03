@@ -125,7 +125,8 @@ export default (): AppConfig => ({
     replyTo: process.env.MAIL_REPLY_TO || undefined,
     resendApiKey: process.env.RESEND_API_KEY?.trim() || undefined,
     appUrl: process.env.APP_WEB_URL ?? 'https://nenjammatrimony.com',
-    supportEmail: process.env.MAIL_SUPPORT_EMAIL ?? 'support@nenjammatrimony.com',
+    supportEmail:
+      process.env.MAIL_SUPPORT_EMAIL ?? 'support@nenjammatrimony.com',
     logoUrl: process.env.MAIL_LOGO_URL || undefined,
   },
   firebase: {

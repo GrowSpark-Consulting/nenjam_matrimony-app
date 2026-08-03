@@ -12,16 +12,19 @@ export const QUEUE_NAMES = {
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 
 /**
- * Dead-letter queue naming. A job that exhausts its retries is copied here
- * with its failure history so it can be inspected and replayed by hand,
- * instead of only living in BullMQ's `failed` set where it silently ages out
- * once `removeOnFail` trims it.
+ * Dead-lettering, as it actually works today — there is no separate DLQ queue.
+ *
+ * A job that exhausts its retries (or fails unrecoverably) ends up in two
+ * places, which together are enough to find and replay it:
+ *
+ *   1. BullMQ's own `failed` set, retained for 7 days by DEFAULT_JOB_OPTIONS'
+ *      `removeOnFail`, holding the job payload and its failure history.
+ *   2. For email specifically, an EmailLog row moved to status DEAD_LETTER
+ *      with the provider's error message — queryable long after (1) ages out,
+ *      via the [status, createdAt] index.
+ *
+ * A genuine DLQ (re-enqueue onto `email-dlq` for manual replay) is deliberately
+ * NOT implemented: nothing consumes one yet, and an unattended queue that only
+ * grows is worse than the retained `failed` set. Add it alongside a replay
+ * tool, not before.
  */
-export const DEAD_LETTER_SUFFIX = 'dlq';
-
-export const deadLetterQueueName = (queue: QueueName): string =>
-  `${queue}-${DEAD_LETTER_SUFFIX}`;
-
-export const QUEUE_DLQ_NAMES = {
-  EMAIL: deadLetterQueueName(QUEUE_NAMES.EMAIL),
-} as const;

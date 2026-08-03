@@ -535,7 +535,8 @@ describe('MessagesService — email workflow', () => {
       mediaUrl: 'https://s3.example.com/chat/r1/secret.jpg?X-Amz-Signature=abc',
     } as never);
 
-    const preview = emailDispatch.sendNewMessage.mock.calls[0]?.[2] as string;
+    const call = emailDispatch.sendNewMessage.mock.calls[0] as unknown[];
+    const preview = call[2] as string;
     expect(preview).toBe('Sent you an attachment.');
     expect(preview).not.toContain('secret.jpg');
   });

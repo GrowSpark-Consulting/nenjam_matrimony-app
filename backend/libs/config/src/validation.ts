@@ -65,7 +65,9 @@ export const validationSchema = Joi.object({
   // RFC 5322: either `local@domain` or `Display Name <local@domain>`. Resend
   // rejects anything else, and it rejects it per-send rather than at startup.
   MAIL_FROM: Joi.string()
-    .pattern(/^(.*<\s*[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+\s*>|[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+)$/)
+    .pattern(
+      /^(.*<\s*[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+\s*>|[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+)$/,
+    )
     .optional()
     .messages({
       'string.pattern.base':
