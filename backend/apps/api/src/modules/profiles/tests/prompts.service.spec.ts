@@ -42,7 +42,8 @@ describe('PromptsService', () => {
     deleteUserPrompt?: jest.Mock;
   }) {
     const repository = {
-      findBank: overrides?.findBank ?? jest.fn().mockResolvedValue([buildBankItem()]),
+      findBank:
+        overrides?.findBank ?? jest.fn().mockResolvedValue([buildBankItem()]),
       findUserPrompts: overrides?.findUserPrompts ?? jest.fn(),
       replaceUserPrompts: overrides?.replaceUserPrompts ?? jest.fn(),
       deleteUserPrompt: overrides?.deleteUserPrompt ?? jest.fn(),
@@ -98,7 +99,9 @@ describe('PromptsService', () => {
 
     it('rejects a promptId that is not in the active bank', async () => {
       const { service } = buildService({
-        findBank: jest.fn().mockResolvedValue([buildBankItem({ id: 'prompt-1' })]),
+        findBank: jest
+          .fn()
+          .mockResolvedValue([buildBankItem({ id: 'prompt-1' })]),
       });
 
       await expect(
@@ -124,10 +127,12 @@ describe('PromptsService', () => {
         .fn()
         .mockResolvedValue([buildUserPrompt()]);
       const { service } = buildService({
-        findBank: jest.fn().mockResolvedValue([
-          buildBankItem({ id: 'prompt-1' }),
-          buildBankItem({ id: 'prompt-2' }),
-        ]),
+        findBank: jest
+          .fn()
+          .mockResolvedValue([
+            buildBankItem({ id: 'prompt-1' }),
+            buildBankItem({ id: 'prompt-2' }),
+          ]),
         replaceUserPrompts,
       });
 

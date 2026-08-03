@@ -63,7 +63,12 @@ async function bootstrap() {
   app.enableCors({
     origin: configForCors.isDevelopment ? true : false,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-App-Version', 'Accept'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-App-Version',
+      'Accept',
+    ],
   });
 
   app.useGlobalPipes(
@@ -78,9 +83,7 @@ async function bootstrap() {
 
   await app.listen(config.port, '0.0.0.0');
 
-  console.log(
-    `🚀 API running on http://0.0.0.0:${config.port}`,
-  );
+  console.log(`🚀 API running on http://0.0.0.0:${config.port}`);
 }
 
 void bootstrap();

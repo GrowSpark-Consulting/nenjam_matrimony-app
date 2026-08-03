@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PaginationQueryDto } from '@app/common';
 import { BlocksRepository } from '../repositories/blocks.repository';
 import { ProfileFeedMapper } from '../../matches/mappers/profile-feed.mapper';
@@ -51,7 +55,13 @@ export class BlocksService {
       take,
     );
     if (rows.length === 0) {
-      return { items: [], page: pageNumber, limit: take, total, hasMore: false };
+      return {
+        items: [],
+        page: pageNumber,
+        limit: take,
+        total,
+        hasMore: false,
+      };
     }
 
     const blockedIds = rows.map((row) => row.blockedUserId);
@@ -63,7 +73,13 @@ export class BlocksService {
     const items = rows.flatMap((row) => {
       const profile = profileByUserId.get(row.blockedUserId);
       return profile
-        ? [{ id: row.blockedUserId, blockedAt: row.createdAt.toISOString(), profile }]
+        ? [
+            {
+              id: row.blockedUserId,
+              blockedAt: row.createdAt.toISOString(),
+              profile,
+            },
+          ]
         : [];
     });
 

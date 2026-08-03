@@ -1,7 +1,14 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BlocksService } from '../services/blocks.service';
 
-function blockRow(over: Partial<{ id: string; blockerId: string; blockedUserId: string; createdAt: Date }> = {}) {
+function blockRow(
+  over: Partial<{
+    id: string;
+    blockerId: string;
+    blockedUserId: string;
+    createdAt: Date;
+  }> = {},
+) {
   return {
     id: 'b-1',
     blockerId: 'me',
@@ -61,7 +68,9 @@ describe('BlocksService.unblock', () => {
     // not an error, so the repository mock resolving undefined here is the
     // faithful "already unblocked" case.
     const { service, repo } = build();
-    await expect(service.unblock('me', 'never-blocked')).resolves.toBeUndefined();
+    await expect(
+      service.unblock('me', 'never-blocked'),
+    ).resolves.toBeUndefined();
     expect(repo.unblock).toHaveBeenCalledWith('me', 'never-blocked');
   });
 
@@ -80,7 +89,13 @@ describe('BlocksService.listBlocked', () => {
   it('returns an empty page when nothing is blocked', async () => {
     const { service, repo, profileMapper } = build();
     const page = await service.listBlocked('me', PAGE);
-    expect(page).toEqual({ items: [], page: 1, limit: 20, total: 0, hasMore: false });
+    expect(page).toEqual({
+      items: [],
+      page: 1,
+      limit: 20,
+      total: 0,
+      hasMore: false,
+    });
     expect(profileMapper.toDtoList).not.toHaveBeenCalled();
   });
 
@@ -104,7 +119,12 @@ describe('BlocksService.listBlocked', () => {
         profile: { id: 'target-1', name: 'Target One' },
       },
     ]);
-    expect(page).toMatchObject({ page: 1, limit: 20, total: 1, hasMore: false });
+    expect(page).toMatchObject({
+      page: 1,
+      limit: 20,
+      total: 1,
+      hasMore: false,
+    });
   });
 
   it('skips a blocked target with no finalized profile', async () => {

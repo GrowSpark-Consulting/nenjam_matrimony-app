@@ -13,7 +13,8 @@ import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
  */
 export class MatchInterestDto {
   @ApiPropertyOptional({
-    description: 'Send mode — the target profile (user) id to send an interest to.',
+    description:
+      'Send mode — the target profile (user) id to send an interest to.',
     example: '5f2b1c8e-1a2b-4c3d-9e8f-0a1b2c3d4e5f',
   })
   @IsOptional()
@@ -22,7 +23,8 @@ export class MatchInterestDto {
   profileId?: string;
 
   @ApiPropertyOptional({
-    description: 'Respond mode — the id of the received interest to accept/decline.',
+    description:
+      'Respond mode — the id of the received interest to accept/decline.',
     example: '9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d',
   })
   @IsOptional()
@@ -31,7 +33,8 @@ export class MatchInterestDto {
   interestId?: string;
 
   @ApiPropertyOptional({
-    description: 'Respond mode — true accepts, false declines. Required with interestId.',
+    description:
+      'Respond mode — true accepts, false declines. Required with interestId.',
     example: true,
   })
   @IsOptional()

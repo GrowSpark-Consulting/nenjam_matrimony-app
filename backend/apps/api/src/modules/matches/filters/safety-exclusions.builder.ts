@@ -33,7 +33,11 @@ export function withSafetyExclusions(
       // that ever promotes a user out of PENDING_VERIFICATION, so requiring
       // ACTIVE here would silently re-hide every real signup from every
       // fallback tier (2-10) even though Tier 1 already lets them through.
-      { user: { is: { status: { notIn: ['SUSPENDED', 'DEACTIVATED', 'BANNED'] } } } },
+      {
+        user: {
+          is: { status: { notIn: ['SUSPENDED', 'DEACTIVATED', 'BANNED'] } },
+        },
+      },
       // Neither direction of a block: candidate blocked me, or I blocked them.
       {
         user: {

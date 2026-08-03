@@ -27,7 +27,11 @@ const fullPref: PreferenceFilters = {
 describe('buildTierPlan', () => {
   it('Tier 1 is the original preference, untouched, with no relaxed filters', () => {
     const plan = buildTierPlan(fullPref, config);
-    expect(plan[0]).toMatchObject({ tier: 1, pref: fullPref, relaxedFilters: [] });
+    expect(plan[0]).toMatchObject({
+      tier: 1,
+      pref: fullPref,
+      relaxedFilters: [],
+    });
   });
 
   it('no saved preference at all -> single Tier 1 (nothing to relax)', () => {
@@ -53,7 +57,10 @@ describe('buildTierPlan', () => {
   });
 
   it('Tier 3 ignores City but keeps State (drops literal/"Same City" tokens, keeps "Same State")', () => {
-    const pref = { ...fullPref, preferredCities: ['Same City', 'Same State', 'Chennai'] };
+    const pref = {
+      ...fullPref,
+      preferredCities: ['Same City', 'Same State', 'Chennai'],
+    };
     const plan = buildTierPlan(pref, config);
     const tier3 = plan.find((t) => t.tier === 3)!;
     expect(tier3.pref?.preferredCities).toEqual(['Same State']);
@@ -70,12 +77,24 @@ describe('buildTierPlan', () => {
 
   it('Tiers 5-8 drop Mother Tongue, Education, Profession, Income in order, cumulatively', () => {
     const plan = buildTierPlan(fullPref, config);
-    expect(plan.find((t) => t.tier === 5)!.pref?.preferredMotherTongues).toEqual([]);
-    expect(plan.find((t) => t.tier === 6)!.pref?.preferredEducation).toEqual([]);
-    expect(plan.find((t) => t.tier === 7)!.pref?.preferredOccupations).toEqual([]);
+    expect(
+      plan.find((t) => t.tier === 5)!.pref?.preferredMotherTongues,
+    ).toEqual([]);
+    expect(plan.find((t) => t.tier === 6)!.pref?.preferredEducation).toEqual(
+      [],
+    );
+    expect(plan.find((t) => t.tier === 7)!.pref?.preferredOccupations).toEqual(
+      [],
+    );
     expect(plan.find((t) => t.tier === 8)!.pref?.minIncomeLakhs).toBeNull();
     expect(plan.find((t) => t.tier === 8)!.relaxedFilters).toEqual([
-      'Age', 'City', 'Caste', 'Mother Tongue', 'Education', 'Profession', 'Income',
+      'Age',
+      'City',
+      'Caste',
+      'Mother Tongue',
+      'Education',
+      'Profession',
+      'Income',
     ]);
   });
 

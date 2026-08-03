@@ -21,7 +21,9 @@ import {
 // verified Firebase token — a caller only ever reports on their own behalf.
 @ApiTags('Reports')
 @ApiBearerAuth('firebase')
-@ApiUnauthorizedResponse({ description: 'Missing or invalid Firebase ID token.' })
+@ApiUnauthorizedResponse({
+  description: 'Missing or invalid Firebase ID token.',
+})
 @Controller('users')
 @UseGuards(FirebaseAuthGuard)
 export class ReportsController {
@@ -41,7 +43,9 @@ export class ReportsController {
     schema: { example: REPORT_RESPONSE_EXAMPLE },
   })
   @ApiBadRequestResponse({ description: 'You cannot report yourself.' })
-  @ApiNotFoundResponse({ description: 'Member not found or no longer available.' })
+  @ApiNotFoundResponse({
+    description: 'Member not found or no longer available.',
+  })
   report(
     @CurrentUser('id') userId: string,
     @Param('id') targetUserId: string,

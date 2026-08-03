@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Put,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Put, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser, FirebaseAuthGuard } from '@app/common';
 import { FeedService } from '../services/feed.service';
 import { SearchService } from '../services/search.service';

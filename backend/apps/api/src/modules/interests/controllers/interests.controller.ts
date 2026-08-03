@@ -37,7 +37,9 @@ import {
 // verified Firebase token.
 @ApiTags('Interests')
 @ApiBearerAuth('firebase')
-@ApiUnauthorizedResponse({ description: 'Missing or invalid Firebase ID token.' })
+@ApiUnauthorizedResponse({
+  description: 'Missing or invalid Firebase ID token.',
+})
 @Controller('interests')
 @UseGuards(FirebaseAuthGuard)
 export class InterestsController {
@@ -85,7 +87,9 @@ export class InterestsController {
   })
   @ApiParam({ name: 'id', description: 'Interest id to withdraw.' })
   @ApiNoContentResponse({ description: 'Withdrawn.' })
-  @ApiForbiddenResponse({ description: 'The interest was not sent by the caller.' })
+  @ApiForbiddenResponse({
+    description: 'The interest was not sent by the caller.',
+  })
   @ApiNotFoundResponse({ description: 'Interest not found.' })
   @ApiConflictResponse({ description: 'Interest is no longer pending.' })
   withdraw(

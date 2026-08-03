@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  PipeTransform,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, PipeTransform } from '@nestjs/common';
 
 /** A multer file, kept local so this pipe doesn't depend on Express types. */
 export interface UploadedImageFile {
@@ -36,12 +32,15 @@ export function extensionForMime(mime: string): string {
  * a bad file reach S3. Runs on the `@UploadedFile()` param.
  */
 @Injectable()
-export class PhotoFilePipe
-  implements PipeTransform<UploadedImageFile | undefined, UploadedImageFile>
-{
+export class PhotoFilePipe implements PipeTransform<
+  UploadedImageFile | undefined,
+  UploadedImageFile
+> {
   transform(file: UploadedImageFile | undefined): UploadedImageFile {
     if (!file) {
-      throw new BadRequestException('No file was uploaded (field name "file").');
+      throw new BadRequestException(
+        'No file was uploaded (field name "file").',
+      );
     }
     if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.mimetype as never)) {
       throw new BadRequestException(

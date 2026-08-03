@@ -181,7 +181,10 @@ export function buildFeedWhere(
       else if (lower === 'same state') pushIf(stateValues, self?.currentState);
       else if (isLiteral(token)) cityValues.push(token);
     }
-    for (const value of resolveValues(pref.preferredStates, self?.currentState)) {
+    for (const value of resolveValues(
+      pref.preferredStates,
+      self?.currentState,
+    )) {
       stateValues.push(value);
     }
     addValues(and, 'currentCity', cityValues);

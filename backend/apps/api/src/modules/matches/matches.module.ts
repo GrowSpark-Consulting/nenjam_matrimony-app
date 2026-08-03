@@ -29,7 +29,12 @@ import { PostgresSearchStrategy } from './search/postgres-search.strategy';
  * imported for presigning photo URLs.
  */
 @Module({
-  imports: [StorageModule, AppConfigModule, InterestsModule, NotificationsModule],
+  imports: [
+    StorageModule,
+    AppConfigModule,
+    InterestsModule,
+    NotificationsModule,
+  ],
   controllers: [DiscoverController, MatchesController],
   providers: [
     FeedService,

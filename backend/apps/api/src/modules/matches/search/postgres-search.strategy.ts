@@ -3,11 +3,7 @@ import type { Prisma } from '../../../../../../libs/database/generated/client';
 import { buildFeedWhere } from '../filters/partner-preference-where.builder';
 import { FeedRepository } from '../repositories/feed.repository';
 import { PreferenceRepository } from '../repositories/preference.repository';
-import {
-  SearchQuery,
-  SearchResult,
-  SearchStrategy,
-} from './search.strategy';
+import { SearchQuery, SearchResult, SearchStrategy } from './search.strategy';
 
 /**
  * Interim search backend: case-insensitive PostgreSQL `contains` across the

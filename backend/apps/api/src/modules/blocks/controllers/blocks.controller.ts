@@ -20,7 +20,11 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { CurrentUser, FirebaseAuthGuard, PaginationQueryDto } from '@app/common';
+import {
+  CurrentUser,
+  FirebaseAuthGuard,
+  PaginationQueryDto,
+} from '@app/common';
 import { BlocksService } from '../services/blocks.service';
 import {
   BLOCKED_USERS_PAGE_EXAMPLE,
@@ -32,7 +36,9 @@ import {
 // caller only ever blocks (or lists their own blocks) on their own behalf.
 @ApiTags('Blocks')
 @ApiBearerAuth('firebase')
-@ApiUnauthorizedResponse({ description: 'Missing or invalid Firebase ID token.' })
+@ApiUnauthorizedResponse({
+  description: 'Missing or invalid Firebase ID token.',
+})
 @Controller('users')
 @UseGuards(FirebaseAuthGuard)
 export class BlocksController {
@@ -73,7 +79,9 @@ export class BlocksController {
   @ApiParam({ name: 'id', description: 'The member (user) id to block.' })
   @ApiNoContentResponse({ description: 'Blocked (or already blocked).' })
   @ApiBadRequestResponse({ description: 'You cannot block yourself.' })
-  @ApiNotFoundResponse({ description: 'Member not found or no longer available.' })
+  @ApiNotFoundResponse({
+    description: 'Member not found or no longer available.',
+  })
   block(
     @CurrentUser('id') userId: string,
     @Param('id') targetUserId: string,
@@ -85,7 +93,8 @@ export class BlocksController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Unblock a member',
-    description: 'Idempotent — unblocking a member who is not blocked is a no-op.',
+    description:
+      'Idempotent — unblocking a member who is not blocked is a no-op.',
   })
   @ApiParam({ name: 'id', description: 'The member (user) id to unblock.' })
   @ApiNoContentResponse({ description: 'Unblocked (or was not blocked).' })

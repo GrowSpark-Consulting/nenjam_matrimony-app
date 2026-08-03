@@ -42,7 +42,9 @@ import {
 // token — a caller only ever sees or mutates their own notifications.
 @ApiTags('Notifications')
 @ApiBearerAuth('firebase')
-@ApiUnauthorizedResponse({ description: 'Missing or invalid Firebase ID token.' })
+@ApiUnauthorizedResponse({
+  description: 'Missing or invalid Firebase ID token.',
+})
 @Controller('notifications')
 @UseGuards(FirebaseAuthGuard)
 export class NotificationsController {
@@ -70,9 +72,13 @@ export class NotificationsController {
   @Get('unread-count')
   @ApiOperation({
     summary: 'Unread notification count',
-    description: 'The bell-badge value. Redis-cached with automatic invalidation.',
+    description:
+      'The bell-badge value. Redis-cached with automatic invalidation.',
   })
-  @ApiOkResponse({ description: 'Unread count.', schema: { example: { count: 3 } } })
+  @ApiOkResponse({
+    description: 'Unread count.',
+    schema: { example: { count: 3 } },
+  })
   async unreadCount(
     @CurrentUser('id') userId: string,
   ): Promise<UnreadCountDto> {

@@ -1,4 +1,7 @@
-import { buildFeedWhere, FeedWhereParams } from './partner-preference-where.builder';
+import {
+  buildFeedWhere,
+  FeedWhereParams,
+} from './partner-preference-where.builder';
 import type { Prisma } from '../../../../../../libs/database/generated/client';
 
 // Pulls the AND clauses out for assertion. buildFeedWhere always returns
@@ -16,7 +19,9 @@ function has(
 
 // String matching is emitted as an OR of case-insensitive equals on one field.
 function ci(field: string, value: string): Prisma.UserProfileWhereInput {
-  return { [field]: { equals: value, mode: 'insensitive' } } as Prisma.UserProfileWhereInput;
+  return {
+    [field]: { equals: value, mode: 'insensitive' },
+  } as Prisma.UserProfileWhereInput;
 }
 function hasCiIn(
   params: FeedWhereParams,
@@ -66,12 +71,22 @@ describe('buildFeedWhere', () => {
   });
 
   it('applies opposite-gender matching when gender is known', () => {
-    expect(has({ ...base, myGender: 'MALE' }, (c) => 'gender' in c && c.gender === 'FEMALE')).toBe(true);
-    expect(has({ ...base, myGender: 'FEMALE' }, (c) => 'gender' in c && c.gender === 'MALE')).toBe(true);
+    expect(
+      has(
+        { ...base, myGender: 'MALE' },
+        (c) => 'gender' in c && c.gender === 'FEMALE',
+      ),
+    ).toBe(true);
+    expect(
+      has(
+        { ...base, myGender: 'FEMALE' },
+        (c) => 'gender' in c && c.gender === 'MALE',
+      ),
+    ).toBe(true);
     expect(clauses(base)).toHaveLength(BASE_CLAUSE_COUNT);
   });
 
-  it('fails closed (zero possible results) when the caller\'s own gender is unknown', () => {
+  it("fails closed (zero possible results) when the caller's own gender is unknown", () => {
     // No finalized profile → myGender is null. The exclusivity rule is
     // mandatory, so with no self-gender to anchor "opposite", it must never
     // fall back to "no constraint" (which would leak a mixed-gender feed).
@@ -95,21 +110,49 @@ describe('buildFeedWhere', () => {
   });
 
   it('applies literal values as case-insensitive filters', () => {
-    expect(hasCiIn({ ...base, pref: { preferredReligions: ['Hindu', 'Jain'] } }, 'religion', ['Hindu', 'Jain'])).toBe(true);
+    expect(
+      hasCiIn(
+        { ...base, pref: { preferredReligions: ['Hindu', 'Jain'] } },
+        'religion',
+        ['Hindu', 'Jain'],
+      ),
+    ).toBe(true);
   });
 
   it('resolves "Same Caste" to the caller\'s own caste', () => {
     expect(
-      hasCiIn({ ...base, self: { caste: 'Iyer' }, pref: { preferredCastes: ['Same Caste'] } }, 'caste', ['Iyer']),
+      hasCiIn(
+        {
+          ...base,
+          self: { caste: 'Iyer' },
+          pref: { preferredCastes: ['Same Caste'] },
+        },
+        'caste',
+        ['Iyer'],
+      ),
     ).toBe(true);
     // No own caste → "Same Caste" becomes a no-op (base clauses only).
-    expect(clauses({ ...base, pref: { preferredCastes: ['Same Caste'] } })).toHaveLength(BASE_CLAUSE_COUNT);
+    expect(
+      clauses({ ...base, pref: { preferredCastes: ['Same Caste'] } }),
+    ).toHaveLength(BASE_CLAUSE_COUNT);
   });
 
   it('routes "Same City" / "Same State" to the correct columns', () => {
     const self = { currentCity: 'Chennai', currentState: 'Tamil Nadu' };
-    expect(hasCiIn({ ...base, self, pref: { preferredCities: ['Same City'] } }, 'currentCity', ['Chennai'])).toBe(true);
-    expect(hasCiIn({ ...base, self, pref: { preferredCities: ['Same State'] } }, 'currentState', ['Tamil Nadu'])).toBe(true);
+    expect(
+      hasCiIn(
+        { ...base, self, pref: { preferredCities: ['Same City'] } },
+        'currentCity',
+        ['Chennai'],
+      ),
+    ).toBe(true);
+    expect(
+      hasCiIn(
+        { ...base, self, pref: { preferredCities: ['Same State'] } },
+        'currentState',
+        ['Tamil Nadu'],
+      ),
+    ).toBe(true);
   });
 
   it('drops grouped UI labels (with "/" or "+") that never match a profile', () => {
@@ -126,12 +169,20 @@ describe('buildFeedWhere', () => {
 
   it('normalizes marital-status labels to enum values', () => {
     expect(
-      has({ ...base, pref: { maritalStatusPref: ['Never Married'] } }, (c) =>
-        JSON.stringify(c) === JSON.stringify({ maritalStatus: { in: ['NEVER_MARRIED'] } }),
+      has(
+        { ...base, pref: { maritalStatusPref: ['Never Married'] } },
+        (c) =>
+          JSON.stringify(c) ===
+          JSON.stringify({ maritalStatus: { in: ['NEVER_MARRIED'] } }),
       ),
     ).toBe(true);
     // "Doesn't Matter" / "Any" are not valid enum values → dropped.
-    expect(clauses({ ...base, pref: { maritalStatusPref: ["Doesn't Matter", 'Any'] } })).toHaveLength(BASE_CLAUSE_COUNT);
+    expect(
+      clauses({
+        ...base,
+        pref: { maritalStatusPref: ["Doesn't Matter", 'Any'] },
+      }),
+    ).toHaveLength(BASE_CLAUSE_COUNT);
   });
 
   it('applies extended lifestyle preferences (diet/smoking/drinking/country)', () => {
@@ -146,9 +197,15 @@ describe('buildFeedWhere', () => {
         },
       },
     });
-    expect(c).toContainEqual({ dietaryHabits: { equals: 'Vegetarian', mode: 'insensitive' } });
-    expect(c).toContainEqual({ smokingHabits: { equals: 'No', mode: 'insensitive' } });
-    expect(c).toContainEqual({ country: { equals: 'India', mode: 'insensitive' } });
+    expect(c).toContainEqual({
+      dietaryHabits: { equals: 'Vegetarian', mode: 'insensitive' },
+    });
+    expect(c).toContainEqual({
+      smokingHabits: { equals: 'No', mode: 'insensitive' },
+    });
+    expect(c).toContainEqual({
+      country: { equals: 'India', mode: 'insensitive' },
+    });
     expect(c.some((x) => 'drinkingHabits' in x)).toBe(false);
   });
 
@@ -157,13 +214,19 @@ describe('buildFeedWhere', () => {
       ...base,
       pref: { extendedPreferences: { ethnicity: 'Iyer', subCaste: 'Vadama' } },
     });
-    expect(c).toContainEqual({ community: { equals: 'Iyer', mode: 'insensitive' } });
-    expect(c).toContainEqual({ subCaste: { equals: 'Vadama', mode: 'insensitive' } });
+    expect(c).toContainEqual({
+      community: { equals: 'Iyer', mode: 'insensitive' },
+    });
+    expect(c).toContainEqual({
+      subCaste: { equals: 'Vadama', mode: 'insensitive' },
+    });
   });
 
   it('excludes suspended/deactivated/banned users but not PENDING_VERIFICATION, and excludes both directions of a block', () => {
     const c = clauses({ ...base, currentUserId: 'user-42' });
-    const userClause = c.find((x) => 'user' in x) as { user: { is: Record<string, unknown> } };
+    const userClause = c.find((x) => 'user' in x) as {
+      user: { is: Record<string, unknown> };
+    };
     expect(userClause.user.is.status).toEqual({
       notIn: ['SUSPENDED', 'DEACTIVATED', 'BANNED'],
     });
@@ -174,7 +237,10 @@ describe('buildFeedWhere', () => {
   });
 
   it('applies age and height bounds', () => {
-    const c = clauses({ ...base, pref: { minAge: 25, maxAge: 30, minHeightCm: 150, maxHeightCm: 175 } });
+    const c = clauses({
+      ...base,
+      pref: { minAge: 25, maxAge: 30, minHeightCm: 150, maxHeightCm: 175 },
+    });
     expect(c.some((x) => 'dob' in x)).toBe(true);
     expect(c).toContainEqual({ heightCm: { gte: 150 } });
     expect(c).toContainEqual({ heightCm: { lte: 175 } });
