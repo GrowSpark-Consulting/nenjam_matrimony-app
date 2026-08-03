@@ -95,13 +95,17 @@ abstract interface class ConversationRepository {
   /// [clientMessageId], when supplied, must be echoed back unchanged on the
   /// returned [MessageEntity] — see that field's doc comment for why. [type]/
   /// [attachmentUrl] together describe a non-text message (an image today);
-  /// leave both at their defaults for plain text.
+  /// leave both at their defaults for plain text. [replyToMessageId], when
+  /// supplied, must be an existing message id in this same conversation —
+  /// the server re-validates this regardless of what the caller sends (see
+  /// `MessagesService.send`'s reply-target check).
   Future<MessageEntity> sendMessage(
     String conversationId,
     String text, {
     String? clientMessageId,
     MessageType type,
     String? attachmentUrl,
+    String? replyToMessageId,
   });
 
   /// Uploads a local voice-note recording and returns its hosted media URL
@@ -155,4 +159,13 @@ abstract interface class ConversationRepository {
   /// a guessed socket event name; wire it once the backend's actual chat
   /// event contract exists (see docs/development/chat-backend-handoff.md).
   Future<void> setTyping(String conversationId, bool isTyping);
+
+  /// Re-presigns [messageId]'s media URL — call when an image fails to load
+  /// with a 403 (its previous presigned URL expired; these are always
+  /// short-lived, never permanent public links). Returns null if the
+  /// message has no media or presigning failed server-side; never throws
+  /// for either of those — this is a best-effort background refresh, not a
+  /// critical action, so a caller should treat null the same as a thrown
+  /// error (fall back to showing the image as broken).
+  Future<String?> refreshMediaUrl(String messageId);
 }

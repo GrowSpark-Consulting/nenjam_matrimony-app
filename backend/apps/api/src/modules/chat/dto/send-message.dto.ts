@@ -35,4 +35,13 @@ export class SendMessageDto {
   @IsString()
   @MaxLength(512)
   mediaUrl?: string;
+
+  /** Id of the message this one replies to, if any — must belong to the same
+   *  room; MessagesService re-validates this regardless of what the client
+   *  sends. Replying to an already-edited or soft-deleted message is allowed
+   *  (the reply just carries whatever that message's current state is). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  replyToMessageId?: string;
 }

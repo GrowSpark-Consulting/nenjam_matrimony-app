@@ -16,7 +16,11 @@ import { MessagesService } from '../services/messages.service';
 import { SendMessageDto } from '../dto/send-message.dto';
 import { EditMessageDto } from '../dto/edit-message.dto';
 import { MessageListQueryDto } from '../dto/message-list-query.dto';
-import { MessageDto, MessagePageDto } from '../dto/message.response.dto';
+import {
+  MediaUrlRefreshDto,
+  MessageDto,
+  MessagePageDto,
+} from '../dto/message.response.dto';
 
 // Messages. Read/send are authorized inside the service (participant + still
 // chat-eligible), since the room id arrives in the query/body rather than as a
@@ -68,5 +72,17 @@ export class MessagesController {
     @Param('id') id: string,
   ): Promise<void> {
     return this.messagesService.remove(userId, id);
+  }
+
+  /** GET /chat/messages/:id/media-url — re-presigns a message's media URL.
+   *  Called by the client when an image fails to load with a 403 (the
+   *  previously-issued presigned URL expired) — never a permanent public
+   *  URL, just a fresh short-lived one for the same underlying S3 object. */
+  @Get(':id/media-url')
+  refreshMediaUrl(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ): Promise<MediaUrlRefreshDto> {
+    return this.messagesService.refreshMediaUrl(userId, id);
   }
 }

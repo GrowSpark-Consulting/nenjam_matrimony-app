@@ -12,6 +12,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/tokens/app_touch_target.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/entities/message_entity.dart';
+import '../providers/inbox_providers.dart' show conversationPreview;
 
 /// Message composer — the text field + send button are fully wired to
 /// [MessagesNotifier.send]/`.sendImage`/`.sendVoice`; the attach button
@@ -28,18 +30,40 @@ class ChatComposer extends StatefulWidget {
   final Future<void> Function(File file) onSendAttachment;
   final Future<void> Function(String path, Duration duration) onSendVoice;
 
-  /// Fires `true` the moment the user starts typing (from empty), `false`
-  /// ~2s after they stop, or immediately on send/clear/attachment-pick —
-  /// hands off to [MessagesNotifier]'s (currently no-op) `setTyping` hook.
-  /// Optional so this widget doesn't require a live typing backend to work.
-  final ValueChanged<bool>? onTypingChanged;
+  /// Fires on every text-field change with the CURRENT raw content (empty
+  /// string when cleared) — the sole signal this widget sends about typing
+  /// activity. All debounce/idle/start/stop timing is `TypingController`'s
+  /// job (the caller typically passes its `onChanged` method directly);
+  /// this widget doesn't run any timer of its own for it. Optional so this
+  /// widget doesn't require a live typing backend to work.
+  final ValueChanged<String>? onTypingTextChanged;
+
+  /// The message currently being replied to, or null. `ChatDetailPage` owns
+  /// this (set from a long-press "Reply" choice, cleared on send or via
+  /// [onClearReply]) — this widget only renders the preview banner and
+  /// provides the close affordance; it never decides what's attached to an
+  /// outgoing message itself (that's `ChatDetailPage`'s `onSend`/
+  /// `onSendAttachment`/`onSendVoice` closures, which already know
+  /// [replyTarget] from the same enclosing state).
+  final MessageEntity? replyTarget;
+
+  /// The peer's display name, for rendering "Replying to {name}" — the
+  /// composer has no other way to know who's on the other end of the
+  /// conversation.
+  final String peerName;
+
+  /// Closes the reply preview banner without sending anything.
+  final VoidCallback? onClearReply;
 
   const ChatComposer({
     super.key,
     required this.onSend,
     required this.onSendAttachment,
     required this.onSendVoice,
-    this.onTypingChanged,
+    this.onTypingTextChanged,
+    this.replyTarget,
+    this.peerName = '',
+    this.onClearReply,
   });
 
   @override
@@ -62,7 +86,6 @@ class _ChatComposerState extends State<ChatComposer> {
   bool _isSending = false;
   bool _showEmojiPicker = false;
   File? _pendingAttachment;
-  Timer? _typingStopTimer;
 
   bool _isRecording = false;
   DateTime? _recordingStartedAt;
@@ -80,12 +103,17 @@ class _ChatComposerState extends State<ChatComposer> {
         // happens (tapping the text field while the picker is open).
         if (hasFocus) _showEmojiPicker = false;
       });
+      // Losing focus (tapping away, switching to the emoji picker, another
+      // route covering this screen) means the user isn't actively editing
+      // anymore — stop typing regardless of what's still in the field.
+      // Regaining focus alone does NOT resume it; only an actual text
+      // change does (see _handleTextChanged).
+      if (!hasFocus) widget.onTypingTextChanged?.call('');
     });
   }
 
   @override
   void dispose() {
-    _typingStopTimer?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     unawaited(_voiceRecorder.dispose());
@@ -95,16 +123,10 @@ class _ChatComposerState extends State<ChatComposer> {
   void _handleTextChanged() {
     final hasText = _controller.text.trim().isNotEmpty;
     if (hasText != _hasText) setState(() => _hasText = hasText);
-
-    final onTypingChanged = widget.onTypingChanged;
-    if (onTypingChanged == null) return;
-    _typingStopTimer?.cancel();
-    if (hasText) {
-      onTypingChanged(true);
-      _typingStopTimer = Timer(const Duration(seconds: 2), () => onTypingChanged(false));
-    } else {
-      onTypingChanged(false);
-    }
+    // Forward the raw text on every change — TypingController owns all
+    // debounce/idle/start/stop timing from here; this widget runs no timer
+    // of its own for it.
+    widget.onTypingTextChanged?.call(_controller.text);
   }
 
   Future<void> _submit() async {
@@ -116,8 +138,7 @@ class _ChatComposerState extends State<ChatComposer> {
         _isSending = true;
         _pendingVoice = null;
       });
-      _typingStopTimer?.cancel();
-      widget.onTypingChanged?.call(false);
+      widget.onTypingTextChanged?.call('');
       await widget.onSendVoice(pendingVoice.path, pendingVoice.duration);
       if (mounted) setState(() => _isSending = false);
       return;
@@ -129,8 +150,7 @@ class _ChatComposerState extends State<ChatComposer> {
         _isSending = true;
         _pendingAttachment = null;
       });
-      _typingStopTimer?.cancel();
-      widget.onTypingChanged?.call(false);
+      widget.onTypingTextChanged?.call('');
       await widget.onSendAttachment(attachment);
       if (mounted) setState(() => _isSending = false);
       return;
@@ -142,10 +162,12 @@ class _ChatComposerState extends State<ChatComposer> {
     // rapid double-tap safe without an extra flag: the send button swaps
     // out for the mic icon (via _hasText) the instant this happens, so a
     // second tap on the same pixel hits an inert control, not this one
-    // again.
+    // again. This also fires _handleTextChanged (TextEditingController
+    // notifies synchronously), which already forwards the now-empty text —
+    // the explicit call right after is harmless, idempotent redundancy for
+    // clarity, not a second real stop.
     _controller.clear();
-    _typingStopTimer?.cancel();
-    widget.onTypingChanged?.call(false);
+    widget.onTypingTextChanged?.call('');
     widget.onSend(text);
   }
 
@@ -262,6 +284,12 @@ class _ChatComposerState extends State<ChatComposer> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (widget.replyTarget != null)
+              _ReplyPreviewBanner(
+                replyTarget: widget.replyTarget!,
+                peerName: widget.peerName,
+                onClose: widget.onClearReply,
+              ),
             if (_pendingAttachment != null)
               _AttachmentPreview(
                 file: _pendingAttachment!,
@@ -408,6 +436,93 @@ class _ChatComposerState extends State<ChatComposer> {
                 ),
         ),
       ],
+    );
+  }
+}
+
+/// Reply preview banner shown above the composer row while
+/// [ChatComposer.replyTarget] is set — sender name, a one-line preview of
+/// the original (text, or a type label for media, matching
+/// `conversationPreview`'s inbox-list labels), a thumbnail for an image
+/// reply, and a close button that clears the reply without sending
+/// anything.
+class _ReplyPreviewBanner extends StatelessWidget {
+  final MessageEntity replyTarget;
+  final String peerName;
+  final VoidCallback? onClose;
+
+  const _ReplyPreviewBanner({
+    required this.replyTarget,
+    required this.peerName,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final senderLabel = replyTarget.isMine ? 'You' : peerName;
+    final showThumbnail = !replyTarget.isDeleted &&
+        replyTarget.type == MessageType.image &&
+        replyTarget.attachmentUrl != null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
+        borderRadius: BorderRadius.circular(12),
+        border: const Border(left: BorderSide(color: AppColors.primary, width: 3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  senderLabel,
+                  style: AppTypography.labelMedium.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  replyTarget.isDeleted
+                      ? 'This message was deleted'
+                      : conversationPreview(replyTarget),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          if (showThumbnail) ...[
+            const SizedBox(width: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: replyTarget.attachmentUrl!.startsWith('http')
+                    ? Image.network(replyTarget.attachmentUrl!, fit: BoxFit.cover)
+                    : Image.file(File(replyTarget.attachmentUrl!), fit: BoxFit.cover),
+              ),
+            ),
+          ],
+          IconButton(
+            tooltip: 'Cancel reply',
+            onPressed: onClose,
+            icon: const Icon(Icons.close_rounded, size: 18),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
+      ),
     );
   }
 }

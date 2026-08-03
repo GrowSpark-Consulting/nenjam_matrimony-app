@@ -16,6 +16,10 @@ interface TypingPayload {
   isTyping?: boolean;
 }
 
+interface DeliveredAckPayload {
+  messageId?: string;
+}
+
 // Ignore typing events fired more often than this per socket+room — a cheap
 // anti-flood throttle on top of the client's own start/stop debouncing.
 const TYPING_THROTTLE_MS = 800;
@@ -60,16 +64,32 @@ export class ChatGateway {
       await this.messageRepository.findUndeliveredForUser(userId);
     if (undelivered.length === 0) return;
 
-    await this.messageRepository.markDelivered(undelivered.map((m) => m.id));
+    // `markDelivered` returns only the ids THIS call actually flipped —
+    // if the same recipient has another device also replaying `chat.sync`
+    // around the same time, each id is only ever "changed" by whichever
+    // call wins the race; see that method's doc comment.
+    const changedIds = await this.messageRepository.markDelivered(
+      undelivered.map((m) => m.id),
+    );
+    const changedSet = new Set(changedIds);
     const now = new Date();
 
     for (const message of undelivered) {
+      // This device always needs the content, regardless of whether it
+      // (or another of the recipient's devices replaying concurrently)
+      // won the race to mark this specific message delivered.
       message.status = 'DELIVERED';
       message.deliveredAt = now;
       const dto = await this.messagesService.toDto(message, userId);
       this.server.to(userRoom(userId)).emit(RealtimeEvents.chatMessage, {
         ...dto,
       });
+
+      // Only notify the sender for transitions THIS call actually made —
+      // otherwise two of the recipient's devices replaying at once would
+      // each broadcast `chat.delivered` for the same message, producing a
+      // duplicate on the sender's side.
+      if (!changedSet.has(message.id)) continue;
       this.server
         .to(userRoom(message.senderId))
         .emit(RealtimeEvents.chatDelivered, {
@@ -78,6 +98,30 @@ export class ChatGateway {
           at: now.toISOString(),
         });
     }
+  }
+
+  /**
+   * Explicit delivery acknowledgment — the client emits this the moment it
+   * actually processes a live `chat.message` push addressed to it. This is
+   * the authoritative "delivered" signal, correcting the one gap the
+   * presence-heuristic used at send time (`MessagesService.send`) can't
+   * cover on its own: a recipient reported "online" by presence whose
+   * actual push never landed (dropped packet, socket died mid-emit) would
+   * otherwise be permanently marked DELIVERED in the database without ever
+   * truly reaching them, since `chat.sync`'s replay only re-sends messages
+   * still in `SENT` status. Idempotent via the same guarded update
+   * `markDelivered` already uses — a duplicate ack (e.g. from a second
+   * device) changes nothing and emits nothing further.
+   */
+  @SubscribeMessage('chat.delivered.ack')
+  async handleDeliveredAck(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: DeliveredAckPayload,
+  ): Promise<void> {
+    const userId = (client.data as { userId?: string }).userId;
+    const messageId = body?.messageId;
+    if (!userId || !messageId) return;
+    await this.messagesService.acknowledgeDelivered(userId, messageId);
   }
 
   @SubscribeMessage(RealtimeEvents.chatTyping)

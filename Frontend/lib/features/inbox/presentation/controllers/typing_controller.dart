@@ -47,6 +47,19 @@ class TypingController {
     });
   }
 
+  /// Called when the socket reconnects after a drop — discards the
+  /// "already told the peer I'm typing" assumption WITHOUT emitting a stop,
+  /// since a `true` sent while disconnected never reached them in the first
+  /// place (there's nothing to "undo" on their end). If the user is still
+  /// actively typing, the next debounce cycle naturally re-sends `true`
+  /// (the very next keystroke re-arms [_startTimer] since [_startSent] is
+  /// now false); if they've gone idle, nothing fires, which is correct.
+  void resetForReconnect() {
+    _startTimer?.cancel();
+    _startTimer = null;
+    _startSent = false;
+  }
+
   /// Emit `typing_stop` now (send / cleared field / leaving the screen).
   void stop() {
     _startTimer?.cancel();

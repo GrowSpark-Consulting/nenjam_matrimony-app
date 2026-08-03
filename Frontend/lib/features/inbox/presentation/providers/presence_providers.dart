@@ -17,6 +17,16 @@ class PresenceNotifier extends Notifier<Map<String, PresenceState>> {
   final Map<String, Timer> _typingTimers = {};
   static const _typingTtl = Duration(seconds: 6);
 
+  // When each user's presence was last set by a LIVE `chat.presence` event
+  // (as opposed to a REST snapshot via [seed]) — lets [seed] tell "this peer
+  // was just updated live a moment ago, don't stomp it with a slightly
+  // older in-flight REST response" apart from "this entry is just old
+  // cached data that a fresh REST read should be allowed to correct". See
+  // [seed]'s doc comment for why this replaced the old "never touch again
+  // once tracked" rule.
+  final Map<String, DateTime> _liveUpdatedAt = {};
+  static const _liveGrace = Duration(seconds: 10);
+
   @override
   Map<String, PresenceState> build() {
     ref.onDispose(() {
@@ -24,6 +34,7 @@ class PresenceNotifier extends Notifier<Map<String, PresenceState>> {
         t.cancel();
       }
       _typingTimers.clear();
+      _liveUpdatedAt.clear();
     });
     return const {};
   }
@@ -36,6 +47,7 @@ class PresenceNotifier extends Notifier<Map<String, PresenceState>> {
     DateTime? lastSeen,
   }) {
     if (!isOnline) _clearTypingTimer(userId);
+    _liveUpdatedAt[userId] = DateTime.now();
     _mutate(
       userId,
       (s) => s.copyWith(
@@ -63,15 +75,45 @@ class PresenceNotifier extends Notifier<Map<String, PresenceState>> {
     _typingTimers.remove(userId)?.cancel();
   }
 
-  /// Seeds a peer's presence from a REST snapshot — only when we're not already
-  /// tracking them, so a fresher socket update is never clobbered by a
-  /// later-arriving initial fetch.
+  /// Reconciles a peer's presence from a REST snapshot (the conversations
+  /// list, refreshed on mount, pull-to-refresh, and every socket reconnect —
+  /// see `chatRealtimeSyncProvider`'s `onReady` listener). Always APPLIES the
+  /// fresh value, unless a live `chat.presence` event updated this exact
+  /// peer within [_liveGrace] — a near-simultaneous in-flight REST response
+  /// racing a live event is the one case worth deferring to the live value
+  /// for; anything older than that grace window is treated as a
+  /// possibly-stale cache entry a fresh read is trusted to correct.
+  ///
+  /// This replaces an earlier "only seed once, never touch again" rule that
+  /// caused a permanent leak: if a `chat.presence: offline` broadcast was
+  /// ever missed (e.g. this client's own socket was briefly down when a
+  /// peer disconnected), the peer would show "online" for the rest of the
+  /// session, since nothing was ever allowed to correct it — not even a
+  /// fresh conversations-list fetch confirming they're actually offline.
+  /// `isTyping` is preserved from the current cached value — a REST
+  /// snapshot carries no typing information.
   void seed(String userId, {required bool isOnline, DateTime? lastSeen}) {
-    if (state.containsKey(userId)) return;
-    state = {
-      ...state,
-      userId: PresenceState(isOnline: isOnline, lastSeen: lastSeen),
-    };
+    final liveAt = _liveUpdatedAt[userId];
+    if (liveAt != null && DateTime.now().difference(liveAt) < _liveGrace) {
+      return;
+    }
+    _mutate(
+      userId,
+      (s) => s.copyWith(isOnline: isOnline, lastSeen: lastSeen ?? s.lastSeen),
+    );
+  }
+
+  /// Wipes the entire cache — called on sign-out, since every entry belongs
+  /// to the session that just ended and would otherwise show stale (and
+  /// potentially wrong) presence for whoever signs in next on this device,
+  /// until each peer happens to get a fresh update.
+  void clear() {
+    for (final t in _typingTimers.values) {
+      t.cancel();
+    }
+    _typingTimers.clear();
+    _liveUpdatedAt.clear();
+    state = const {};
   }
 
   void _mutate(

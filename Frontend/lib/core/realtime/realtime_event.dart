@@ -95,4 +95,12 @@ class ChatClientEvent {
   /// Sent when the app backgrounds — marks this user offline immediately (with
   /// a last-seen) rather than waiting for the socket to drop or age out.
   static const String presenceOffline = 'presence.offline';
+
+  /// Explicit delivery acknowledgment — emitted the moment this client
+  /// actually processes a live `chat.message` push addressed to it (see
+  /// `chat_realtime_sync.dart`). `{ messageId }`. The authoritative
+  /// "delivered" signal, correcting the one gap the server's presence-based
+  /// guess at send time can't cover on its own — see the backend
+  /// `ChatGateway.handleDeliveredAck`'s doc comment.
+  static const String deliveredAck = 'chat.delivered.ack';
 }
