@@ -215,6 +215,25 @@ class ConversationsNotifier extends AsyncNotifier<List<ConversationEntity>> {
     ]);
   }
 
+  /// A message was edited (this user's own confirmed edit, or a
+  /// `chat.messageEdited` push from the peer/another device) — if it's
+  /// still this conversation's current last message (matched by `sentAt`,
+  /// which an edit never changes), refresh the preview text to the edited
+  /// content. An edit to an older message that's no longer the last one is
+  /// a no-op here — the preview must only ever reflect the actual last
+  /// message, exactly like a fresh fetch would show.
+  void applyEditedMessage(String conversationId, MessageEntity message) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncValue.data([
+      for (final c in current)
+        if (c.id == conversationId && c.lastMessageAt.isAtSameMomentAs(message.sentAt))
+          c.copyWith(lastMessage: message.text)
+        else
+          c,
+    ]);
+  }
+
   /// Applies a message that arrived over the socket (from the peer, or an echo
   /// of this user's own send on another device) to the list: refreshes the
   /// preview/timestamp, and bumps the unread badge for an incoming message.
@@ -370,6 +389,80 @@ int _clientMessageIdSeq = 0;
 String _newClientMessageId(String conversationId) =>
     'local-$conversationId-${DateTime.now().microsecondsSinceEpoch}-${_clientMessageIdSeq++}';
 
+/// Two [MessageEntity] values represent "the same logical message" if they
+/// share a server [MessageEntity.id] OR a [MessageEntity.clientMessageId] —
+/// checked both directions, since it doesn't matter whether the REST
+/// response, the socket echo, or a reconnect replay happens to be the one
+/// that arrives first, nor which side's `id` still holds a client-generated
+/// value at that moment (an unconfirmed optimistic entry's `id` IS its
+/// `clientMessageId`, until [MessagesNotifier._resolve] replaces it).
+bool _isSameMessage(MessageEntity a, MessageEntity b) {
+  if (a.id == b.id) return true;
+  if (a.clientMessageId != null && a.clientMessageId == b.clientMessageId) {
+    return true;
+  }
+  return false;
+}
+
+/// Stable chronological order: [MessageEntity.sentAt] first, then `id` as a
+/// tiebreaker (mirrors the backend's own keyset-pagination secondary sort —
+/// `[{createdAt:'desc'},{id:'desc'}]` in `message.repository.ts`) so two
+/// messages created in the same millisecond still compare consistently
+/// instead of by arrival order.
+int _compareMessages(MessageEntity a, MessageEntity b) {
+  final byTime = a.sentAt.compareTo(b.sentAt);
+  if (byTime != 0) return byTime;
+  return a.id.compareTo(b.id);
+}
+
+/// The index a genuinely new message should be inserted at to keep
+/// [messages] (assumed already correctly ordered) in order — a linear scan
+/// rather than a blind append, so an out-of-order arrival (reconnect replay
+/// delivering an old message after newer ones are already loaded, or a
+/// clock-skewed peer message) lands in the right place instead of at the
+/// tail. Every other message's index is left untouched.
+int _insertionIndex(List<MessageEntity> messages, MessageEntity toInsert) {
+  for (var i = 0; i < messages.length; i++) {
+    if (_compareMessages(toInsert, messages[i]) < 0) return i;
+  }
+  return messages.length;
+}
+
+/// The single place a full [MessageEntity] gets inserted into or reconciled
+/// with a thread's list — the one merge function every path that can
+/// produce or receive a complete message (the optimistic append in
+/// [MessagesNotifier.send]/[MessagesNotifier.sendImage]/
+/// [MessagesNotifier.sendVoice], the REST response in
+/// [MessagesNotifier._resolve]/[MessagesNotifier._resolveMediaUpload], and
+/// the socket's [MessagesNotifier.applyIncoming] — which also carries
+/// reconnect replay, since the server re-emits `chat.message` for that too)
+/// funnels through. So "does this message already exist, and where does it
+/// belong" is answered exactly once, the same way, everywhere — this is the
+/// single source of truth for message identity and order. A match (see
+/// [_isSameMessage]) is replaced in place at its existing index — a
+/// message's chronological position never changes after creation, only its
+/// content/status can. A genuinely new message is inserted at its correct
+/// sorted position (see [_insertionIndex]) rather than appended, without
+/// disturbing any other message's current index — in the overwhelmingly
+/// common case (a message newer than everything loaded) this still lands at
+/// the end, identical to a plain append; the sorted insert only changes
+/// behavior for the rare out-of-order arrival.
+List<MessageEntity> _mergeMessage(List<MessageEntity> current, MessageEntity incoming) {
+  final index = current.indexWhere((m) => _isSameMessage(m, incoming));
+  if (index != -1) {
+    return [
+      for (var i = 0; i < current.length; i++)
+        if (i == index) incoming else current[i],
+    ];
+  }
+  final insertAt = _insertionIndex(current, incoming);
+  return [
+    ...current.sublist(0, insertAt),
+    incoming,
+    ...current.sublist(insertAt),
+  ];
+}
+
 /// One thread's messages, keyed by conversation id — drives Chat Detail.
 /// Oldest-to-newest, exactly as rendered (index 0 is the top of the list).
 class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> {
@@ -410,13 +503,12 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
 
   /// Fetches the next-older page and prepends it — called when the user
   /// scrolls near the top of the thread. No-ops while already loading or
-  /// once the repository has said there's nothing older. A defensive
-  /// id-based dedup guards the prepend regardless of paging mode — cheap,
-  /// and it's the same reconciliation key [applyIncoming] already uses.
+  /// once the repository has said there's nothing older. Dedups by
+  /// [_isSameMessage] (id OR clientMessageId, same key every other merge
+  /// path uses) regardless of paging mode.
   Future<void> loadOlder() async {
     if (_isLoadingOlder || !_hasMore) return;
-    final current = state.valueOrNull;
-    if (current == null) return;
+    if (state.valueOrNull == null) return;
 
     _isLoadingOlder = true;
     try {
@@ -428,13 +520,57 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
       _page = result.page;
       _cursor = result.nextCursor;
       _hasMore = result.hasMore;
-      if (result.items.isNotEmpty) {
-        final existingIds = current.map((m) => m.id).toSet();
-        final fresh = result.items.where((m) => !existingIds.contains(m.id));
-        state = AsyncValue.data([...fresh, ...current]);
-      }
+      if (result.items.isEmpty) return;
+
+      // Re-read fresh here — NOT a `current` captured before the await
+      // above. State can change while this request is in flight (e.g. a
+      // live message arriving via the socket), and rebuilding from a stale
+      // pre-await snapshot would silently discard that update.
+      final latest = state.valueOrNull;
+      if (latest == null) return;
+      final fresh = result.items.where(
+        (item) => !latest.any((existing) => _isSameMessage(existing, item)),
+      );
+      // Older-page items are structurally guaranteed to predate everything
+      // already loaded (that's what makes them "older"), and are already
+      // correctly ordered relative to each other — a plain prepend of the
+      // deduped subset stays correctly ordered, no per-item sorted-insert
+      // needed here (unlike `_mergeMessage`, which handles the arbitrary
+      // "could belong anywhere" case for socket/REST arrivals).
+      state = AsyncValue.data([...fresh, ...latest]);
     } finally {
       _isLoadingOlder = false;
+    }
+  }
+
+  /// Re-fetches just the newest page and merges each item in via
+  /// [_mergeMessage] — called after a socket reconnect (see
+  /// `chatRealtimeSyncProvider`'s `onReady` listener) so this open thread
+  /// picks up any delivery/read status transition its live events might
+  /// have missed while disconnected (in particular: this user is the
+  /// SENDER of a message whose `chat.delivered`/`chat.read` broadcast
+  /// arrived with nobody home to receive it — nothing else ever re-tells
+  /// them). Deliberately does NOT touch `_page`/`_cursor`/`_hasMore` — this
+  /// is a top-up merge, not a pagination reset, so scroll position and
+  /// history already loaded further up are completely undisturbed.
+  /// Best-effort: a failed resync just waits for the next live event or the
+  /// next reconnect.
+  Future<void> resyncLatest() async {
+    if (state.valueOrNull == null) return;
+    try {
+      final result =
+          await ref.read(conversationRepositoryProvider).getMessages(arg, cursor: '');
+      // Re-read fresh — not a value captured before the await — same reason
+      // as [loadOlder].
+      final latest = state.valueOrNull;
+      if (latest == null) return;
+      var merged = latest;
+      for (final message in result.items) {
+        merged = _mergeMessage(merged, message);
+      }
+      state = AsyncValue.data(merged);
+    } catch (_) {
+      // Best-effort — see doc comment above.
     }
   }
 
@@ -445,7 +581,13 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
   /// [MessageEntity.clientMessageId], not by list position, so it stays
   /// correct even if other messages (an incoming one, an older page) land
   /// in between the optimistic append and the repository call resolving.
-  Future<void> send(String text) async {
+  ///
+  /// [replyTo], when supplied, is the message being replied to — the caller
+  /// (`ChatDetailPage`) is responsible for resolving it to its freshest
+  /// known state first (see that page's `_resolveReplyTarget`), so this
+  /// never has to special-case a reply target that was itself still
+  /// `sending` at the moment the user chose to reply to it.
+  Future<void> send(String text, {MessageEntity? replyTo}) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
     final clientMessageId = _newClientMessageId(arg);
@@ -457,9 +599,10 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
       isMine: true,
       status: MessageStatus.sending,
       clientMessageId: clientMessageId,
+      replyTo: replyTo == null ? null : MessageReplyPreview.fromMessage(replyTo),
     );
     final current = state.valueOrNull ?? const <MessageEntity>[];
-    state = AsyncValue.data([...current, optimistic]);
+    state = AsyncValue.data(_mergeMessage(current, optimistic));
     await _resolve(optimistic);
   }
 
@@ -508,8 +651,8 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
 
   /// Sends [file] as an image attachment — uploads it first (see
   /// [_resolveMediaUpload]), then the same optimistic/reconcile lifecycle
-  /// as [send].
-  Future<void> sendImage(String localFilePath) async {
+  /// as [send]. See [send]'s doc comment on [replyTo].
+  Future<void> sendImage(String localFilePath, {MessageEntity? replyTo}) async {
     final clientMessageId = _newClientMessageId(arg);
     final optimistic = MessageEntity(
       id: clientMessageId,
@@ -521,9 +664,10 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
       type: MessageType.image,
       attachmentUrl: localFilePath,
       clientMessageId: clientMessageId,
+      replyTo: replyTo == null ? null : MessageReplyPreview.fromMessage(replyTo),
     );
     final current = state.valueOrNull ?? const <MessageEntity>[];
-    state = AsyncValue.data([...current, optimistic]);
+    state = AsyncValue.data(_mergeMessage(current, optimistic));
     await _resolveMediaUpload(
       optimistic,
       (repo, path) => repo.uploadImageAttachment(path),
@@ -533,8 +677,8 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
 
   /// Sends a recorded voice note — uploads it first (see
   /// [_resolveMediaUpload]), then the same optimistic/reconcile lifecycle
-  /// as [send].
-  Future<void> sendVoice(String localFilePath, Duration duration) async {
+  /// as [send]. See [send]'s doc comment on [replyTo].
+  Future<void> sendVoice(String localFilePath, Duration duration, {MessageEntity? replyTo}) async {
     final clientMessageId = _newClientMessageId(arg);
     final optimistic = MessageEntity(
       id: clientMessageId,
@@ -547,9 +691,10 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
       attachmentUrl: localFilePath,
       voiceDuration: duration,
       clientMessageId: clientMessageId,
+      replyTo: replyTo == null ? null : MessageReplyPreview.fromMessage(replyTo),
     );
     final current = state.valueOrNull ?? const <MessageEntity>[];
-    state = AsyncValue.data([...current, optimistic]);
+    state = AsyncValue.data(_mergeMessage(current, optimistic));
     await _resolveMediaUpload(
       optimistic,
       (repo, path) => repo.uploadVoiceAttachment(path),
@@ -580,16 +725,23 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
         clientMessageId: clientMessageId,
         type: optimistic.type,
         attachmentUrl: hostedUrl,
+        replyToMessageId: optimistic.replyTo?.id,
       );
       final resolved = optimistic.voiceDuration == null
           ? sent
           : sent.copyWith(voiceDuration: optimistic.voiceDuration);
       final latest = state.valueOrNull;
       if (latest != null) {
-        state = AsyncValue.data([
-          for (final m in latest)
-            if (m.clientMessageId == clientMessageId) resolved else m,
-        ]);
+        // A `chat.messageDeleted` push (deleting a not-yet-confirmed
+        // message is a narrow, separate edge case, but this guard costs
+        // nothing to keep consistent with edit's own rule) can land while
+        // this was in flight — never resurrect it.
+        final alreadyDeleted = latest.any(
+          (m) => m.clientMessageId == clientMessageId && m.isDeleted,
+        );
+        if (!alreadyDeleted) {
+          state = AsyncValue.data(_mergeMessage(latest, resolved));
+        }
       }
       ref.read(conversationsNotifierProvider.notifier).applyLastMessage(
             conversationId,
@@ -624,12 +776,18 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
             clientMessageId: clientMessageId,
             type: optimistic.type,
             attachmentUrl: optimistic.type == MessageType.text ? null : optimistic.attachmentUrl,
+            replyToMessageId: optimistic.replyTo?.id,
           );
       final latest = state.valueOrNull;
       if (latest != null) {
-        state = AsyncValue.data([
-          for (final m in latest) if (m.clientMessageId == clientMessageId) sent else m,
-        ]);
+        // Same "don't resurrect a since-deleted message" guard as
+        // `_resolveMediaUpload`.
+        final alreadyDeleted = latest.any(
+          (m) => m.clientMessageId == clientMessageId && m.isDeleted,
+        );
+        if (!alreadyDeleted) {
+          state = AsyncValue.data(_mergeMessage(latest, sent));
+        }
       }
       ref.read(conversationsNotifierProvider.notifier).applyLastMessage(
             conversationId,
@@ -649,33 +807,30 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
 
   // ── live socket application (driven by chatRealtimeSyncProvider) ─────────
 
-  /// Applies a message that arrived over the socket. Reconciles an optimistic
-  /// bubble by [MessageEntity.clientMessageId] and dedupes by server `id`, so
-  /// the REST send response, the multi-device echo, and the reconnect replay
-  /// all landing for the same message can't produce a duplicate.
+  /// Applies a message that arrived over the socket — a live push, a
+  /// multi-device echo of this user's own send, or a reconnect replay (the
+  /// server re-emits `chat.message` for that too). Routed through
+  /// [_mergeMessage], the single merge point every full-message path
+  /// shares: reconciles an optimistic bubble by [MessageEntity.clientMessageId],
+  /// dedupes by server `id`, and inserts a genuinely new message at its
+  /// correct chronological position rather than blindly at the tail — which
+  /// matters specifically for reconnect replay, since it can deliver a
+  /// message older than others already loaded live during the outage.
   void applyIncoming(MessageEntity message) {
     final current = state.valueOrNull;
     if (current == null) return;
-    final index = current.indexWhere((m) =>
-        m.id == message.id ||
-        (message.clientMessageId != null &&
-            m.clientMessageId == message.clientMessageId));
-    if (index != -1) {
-      state = AsyncValue.data([
-        for (var i = 0; i < current.length; i++)
-          if (i == index) message else current[i],
-      ]);
-      return;
-    }
-    state = AsyncValue.data([...current, message]);
+    state = AsyncValue.data(_mergeMessage(current, message));
   }
 
   /// Replaces a message with its edited version (from a `chat.messageEdited`).
+  /// Never resurrects a message that's since been marked deleted locally —
+  /// a delete always wins over a (possibly stale) edit event for the same id.
   void applyEdited(MessageEntity message) {
     final current = state.valueOrNull;
     if (current == null) return;
     state = AsyncValue.data([
-      for (final m in current) if (m.id == message.id) message else m,
+      for (final m in current)
+        if (m.id == message.id && !m.isDeleted) message else m,
     ]);
   }
 
@@ -721,13 +876,28 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
 
   // ── user edit / delete actions ──────────────────────────────────────────
 
-  /// Edits [messageId]'s text — optimistic in-place update, reconciled with the
-  /// server's response (or reverted on failure). The server enforces
-  /// sender-only / text-only / edit-window; a rejection reverts the bubble.
+  /// Ids currently mid-edit — a message already saving can't be edited again
+  /// until this resolves (checked by [edit] itself, and exposed via
+  /// [isEditPending] so the UI can hide/disable the action too). This rules
+  /// out two overlapping `edit()` calls for the same id racing each other's
+  /// optimistic update/revert against different "original" snapshots.
+  final Set<String> _pendingEditIds = {};
+
+  bool isEditPending(String messageId) => _pendingEditIds.contains(messageId);
+
+  /// Edits [messageId]'s text — optimistic in-place update, reconciled with
+  /// the server's response (and reflected onto the conversation list's
+  /// preview if this is still its last message), or reverted and rethrown
+  /// on failure so the caller can show an error. [isMessageEditWindowExpired]
+  /// is only a fast client-side pre-check — the server independently
+  /// re-enforces sender-only / text-only / the edit window and is always the
+  /// final word.
   Future<void> edit(String messageId, String newText) async {
     final trimmed = newText.trim();
     final current = state.valueOrNull;
-    if (current == null || trimmed.isEmpty) return;
+    if (current == null || trimmed.isEmpty || _pendingEditIds.contains(messageId)) {
+      return;
+    }
     MessageEntity? found;
     for (final m in current) {
       if (m.id == messageId) {
@@ -736,8 +906,14 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
       }
     }
     final original = found;
-    if (original == null || original.text == trimmed) return;
+    if (original == null || original.isDeleted || original.text == trimmed) {
+      return;
+    }
+    if (isMessageEditWindowExpired(original.sentAt)) {
+      throw const MessageEditWindowExpiredException();
+    }
 
+    _pendingEditIds.add(messageId);
     state = AsyncValue.data([
       for (final m in current)
         if (m.id == messageId)
@@ -752,16 +928,24 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
       final latest = state.valueOrNull;
       if (latest != null) {
         state = AsyncValue.data([
-          for (final m in latest) if (m.id == messageId) updated else m,
+          for (final m in latest)
+            // A `chat.messageDeleted` push can land while this was in
+            // flight — never resurrect a message that's since been deleted.
+            if (m.id == messageId && !m.isDeleted) updated else m,
         ]);
       }
-    } catch (_) {
+      ref.read(conversationsNotifierProvider.notifier).applyEditedMessage(arg, updated);
+    } catch (error) {
       final latest = state.valueOrNull;
       if (latest != null) {
         state = AsyncValue.data([
-          for (final m in latest) if (m.id == messageId) original else m,
+          for (final m in latest)
+            if (m.id == messageId && !m.isDeleted) original else m,
         ]);
       }
+      rethrow;
+    } finally {
+      _pendingEditIds.remove(messageId);
     }
   }
 
@@ -793,6 +977,51 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
           for (final m in latest) if (m.id == messageId) original else m,
         ]);
       }
+    }
+  }
+
+  // ── expired media URL refresh (driven by ChatMediaImage) ─────────────────
+
+  /// In-flight refresh requests keyed by message id — a message's image
+  /// bubble and the fullscreen viewer can both detect the same expired URL
+  /// at once; sharing the same [Future] means they get exactly one HTTP
+  /// request and the same real outcome, instead of each firing its own and
+  /// possibly disagreeing about whether it succeeded.
+  final Map<String, Future<bool>> _mediaRefreshInFlight = {};
+
+  /// Called when a message's presigned media URL has expired (detected by a
+  /// 403 loading it, in `ChatMediaImage`) — fetches a fresh one and swaps it
+  /// into this message's [MessageEntity.attachmentUrl] in place. Every
+  /// widget currently showing this message (the bubble, and the fullscreen
+  /// viewer if it's open on it) picks up the fix through the normal
+  /// provider rebuild — no separate "retry" plumbing needed. Returns
+  /// whether it succeeded so the caller knows whether to keep waiting or
+  /// fall back to its error state (offline, or the backend couldn't
+  /// presign).
+  Future<bool> refreshMediaUrl(String messageId) {
+    final existing = _mediaRefreshInFlight[messageId];
+    if (existing != null) return existing;
+
+    final future = _doRefreshMediaUrl(messageId);
+    _mediaRefreshInFlight[messageId] = future;
+    unawaited(future.whenComplete(() => _mediaRefreshInFlight.remove(messageId)));
+    return future;
+  }
+
+  Future<bool> _doRefreshMediaUrl(String messageId) async {
+    try {
+      final freshUrl =
+          await ref.read(conversationRepositoryProvider).refreshMediaUrl(messageId);
+      if (freshUrl == null) return false;
+      final latest = state.valueOrNull;
+      if (latest == null) return false;
+      state = AsyncValue.data([
+        for (final m in latest)
+          if (m.id == messageId) m.copyWith(attachmentUrl: freshUrl) else m,
+      ]);
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 }

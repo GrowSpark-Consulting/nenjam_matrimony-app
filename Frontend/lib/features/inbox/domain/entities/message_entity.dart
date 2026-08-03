@@ -11,6 +11,47 @@ enum MessageStatus { sending, sent, delivered, read, failed }
 /// that shape if the mock history ever seeds one; nothing produces it yet.
 enum MessageType { text, image, document, voice }
 
+/// A slim, immutable snapshot of the message a [MessageEntity] replies to —
+/// enough to render a reply-quote (sender/preview/thumbnail/deleted-or-edited
+/// state) without looking the original up. Mirrors the backend's
+/// `MessageReplyDto` field-for-field. Built two ways: optimistically, from an
+/// already-loaded [MessageEntity] the user long-pressed
+/// ([MessageReplyPreview.fromMessage]), or parsed off the wire
+/// (`message_wire_mapper.dart`) once the server confirms/echoes it — both
+/// paths produce the same shape, so reconciliation never has to special-case
+/// which one it's looking at.
+class MessageReplyPreview {
+  final String id;
+  final bool isMine;
+  final MessageType type;
+  final String text;
+  final String? attachmentUrl;
+  final bool isDeleted;
+  final DateTime? editedAt;
+
+  const MessageReplyPreview({
+    required this.id,
+    required this.isMine,
+    required this.type,
+    required this.text,
+    this.attachmentUrl,
+    this.isDeleted = false,
+    this.editedAt,
+  });
+
+  factory MessageReplyPreview.fromMessage(MessageEntity message) {
+    return MessageReplyPreview(
+      id: message.id,
+      isMine: message.isMine,
+      type: message.type,
+      text: message.text,
+      attachmentUrl: message.attachmentUrl,
+      isDeleted: message.isDeleted,
+      editedAt: message.editedAt,
+    );
+  }
+}
+
 /// A single message inside a [ConversationEntity]'s thread.
 class MessageEntity {
   final String id;
@@ -56,6 +97,12 @@ class MessageEntity {
   /// are simply absent from a fresh history fetch (the backend filters them).
   final bool isDeleted;
 
+  /// The message this one replies to, or null. Immutable once set — like
+  /// [type]/[sentAt], a message's reply target never changes after it's
+  /// created, so it's never a [copyWith] parameter; every [copyWith] call
+  /// passes it through unchanged.
+  final MessageReplyPreview? replyTo;
+
   const MessageEntity({
     required this.id,
     required this.conversationId,
@@ -69,6 +116,7 @@ class MessageEntity {
     this.clientMessageId,
     this.editedAt,
     this.isDeleted = false,
+    this.replyTo,
   });
 
   MessageEntity copyWith({
@@ -93,6 +141,31 @@ class MessageEntity {
       clientMessageId: clientMessageId,
       editedAt: editedAt ?? this.editedAt,
       isDeleted: isDeleted ?? this.isDeleted,
+      replyTo: replyTo,
     );
   }
+}
+
+/// How long after sending a text message it can still be edited — mirrors
+/// the backend's own `EDIT_WINDOW_MS` in `messages.service.ts` (15 minutes).
+/// Duplicated here (rather than fetched from the server) so the edit action
+/// itself and its UI can both check it without a network round trip; the
+/// server re-enforces this independently on every edit request and is
+/// always the final word regardless of what the client thinks.
+const Duration kMessageEditWindow = Duration(minutes: 15);
+
+bool isMessageEditWindowExpired(DateTime sentAt) =>
+    DateTime.now().difference(sentAt) > kMessageEditWindow;
+
+/// Thrown by [MessageEntity]-editing callers (see
+/// `MessagesNotifier.edit`) when [isMessageEditWindowExpired] is true for
+/// the message being edited — mirrors the backend's own rejection for the
+/// same condition, just without the round trip.
+class MessageEditWindowExpiredException implements Exception {
+  const MessageEditWindowExpiredException();
+
+  String get message => 'This message can no longer be edited.';
+
+  @override
+  String toString() => message;
 }
