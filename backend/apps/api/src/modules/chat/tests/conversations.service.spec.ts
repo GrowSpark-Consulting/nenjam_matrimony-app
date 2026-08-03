@@ -33,6 +33,9 @@ function message(over: Partial<ChatMessage> = {}): ChatMessage {
     readAt: null,
     editedAt: null,
     deletedAt: null,
+    // Added with the reply-to-message feature; required on ChatMessage, so
+    // the fixture must supply it or the returned object is not a ChatMessage.
+    replyToMessageId: null,
     createdAt: new Date('2026-01-02T00:00:00.000Z'),
     ...over,
   };
