@@ -1,0 +1,91 @@
+{{!--
+  Shared shell for every email. Body templates render into {{{body}}}.
+
+  Constraints that explain the shape of this file:
+  - Tables, not flexbox/grid: Outlook renders via Word's HTML engine.
+  - Inline styles on every element: Gmail strips <style> from the <head> in
+    some contexts, so the <style> block below is progressive enhancement only
+    (media queries, which cannot be inlined) and never the sole source of a
+    critical style.
+  - Max width 600px: the widest that survives every major client's preview pane.
+  - Brand colours match Frontend/lib/core/theme/app_colors.dart, so mail and
+    app read as one product.
+--}}
+<!--[if mso]><style>*{font-family:Arial,Helvetica,sans-serif!important}</style><![endif]-->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<style>
+  /* Media queries cannot be inlined — this is the one thing the block is for. */
+  @media only screen and (max-width: 620px) {
+    .nm-wrap { width: 100% !important; }
+    .nm-pad { padding-left: 24px !important; padding-right: 24px !important; }
+    .nm-h1 { font-size: 22px !important; line-height: 30px !important; }
+    .nm-cta a { display: block !important; width: 100% !important; box-sizing: border-box; }
+    .nm-stack { display: block !important; width: 100% !important; }
+  }
+  a { color: #1B2B4B; }
+</style>
+
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">{{preheader}}</div>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+       style="background-color:#FBF9F4;margin:0;padding:0;width:100%;">
+  <tr>
+    <td align="center" style="padding:32px 12px;">
+
+      <table role="presentation" class="nm-wrap" cellpadding="0" cellspacing="0" border="0" width="600"
+             style="width:600px;max-width:600px;background-color:#FFFFFF;border-radius:14px;overflow:hidden;
+                    border:1px solid #E8EDF5;font-family:'Segoe UI',Helvetica,Arial,sans-serif;">
+
+        <!-- Header -->
+        <tr>
+          <td align="center" style="background-color:#1B2B4B;padding:28px 32px;">
+            {{#if logoUrl}}
+              <img src="{{logoUrl}}" alt="Nenjam Matrimony" width="150"
+                   style="display:block;border:0;max-width:150px;height:auto;">
+            {{else}}
+              {{!-- Logo placeholder: MAIL_LOGO_URL unset, so fall back to a
+                    wordmark. Never a broken-image icon. --}}
+              <span style="font-size:22px;font-weight:600;color:#FFFFFF;letter-spacing:.5px;">
+                Nenjam&nbsp;Matrimony
+              </span>
+            {{/if}}
+            <div style="height:3px;width:52px;background-color:#C9A84C;margin:14px auto 0;border-radius:2px;"></div>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td class="nm-pad" style="padding:36px 40px 8px;color:#1A1C20;font-size:16px;line-height:24px;">
+            {{{body}}}
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td class="nm-pad" style="padding:28px 40px 32px;border-top:1px solid #F5F3EE;">
+            <p style="margin:0 0 10px;font-size:13px;line-height:20px;color:#6B7280;">
+              Need help? Email us at
+              <a href="mailto:{{supportEmail}}" style="color:#1B2B4B;font-weight:600;">{{supportEmail}}</a>
+              and a real person will reply.
+            </p>
+            <p style="margin:0 0 10px;font-size:12px;line-height:18px;color:#9CA3AF;">
+              &copy; {{year}} Nenjam Matrimony. All rights reserved.
+            </p>
+            {{#unless transactional}}
+              {{!-- Only non-transactional mail gets an unsubscribe link.
+                    Offering one on an OTP would be misleading: we cannot honour
+                    it without locking the user out of their own account. --}}
+              <p style="margin:0;font-size:12px;line-height:18px;color:#9CA3AF;">
+                <a href="{{appUrl}}/settings/notifications" style="color:#9CA3AF;text-decoration:underline;">
+                  Manage email preferences
+                </a>
+              </p>
+            {{/unless}}
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>

@@ -75,7 +75,9 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
       maxTier: config.enabled ? config.maxTier : 1,
     });
 
-    const whereFor = (tierDef: TierDefinition): Prisma.UserProfileWhereInput => {
+    const whereFor = (
+      tierDef: TierDefinition,
+    ): Prisma.UserProfileWhereInput => {
       const baseWhere = buildFeedWhere({
         currentUserId: userId,
         myGender,

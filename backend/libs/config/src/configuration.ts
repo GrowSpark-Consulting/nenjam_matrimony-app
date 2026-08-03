@@ -42,6 +42,22 @@ export interface AppConfig {
   jwt: {
     secret: string;
   };
+  mail: {
+    /** Selects the EmailProvider binding at module init. Adding a provider
+     *  means adding a case here — no business-logic change. */
+    provider: 'resend' | 'noop';
+    /** RFC 5322 From header, e.g. `Nenjam Matrimony <no-reply@example.com>`. */
+    from: string;
+    replyTo?: string;
+    /** Absent -> MailModule binds NoopEmailProvider and only logs. */
+    resendApiKey?: string;
+    /** Base URL for CTA links rendered into templates. */
+    appUrl: string;
+    /** Shown in every template footer. */
+    supportEmail: string;
+    /** Absolute URL; templates fall back to a text wordmark when unset. */
+    logoUrl?: string;
+  };
   firebase: {
     projectId?: string;
     clientEmail?: string;
@@ -98,6 +114,20 @@ export default (): AppConfig => ({
   },
   jwt: {
     secret: process.env.JWT_SECRET ?? '',
+  },
+  // Email. Mirrors the Firebase/AWS treatment above: absent credentials must
+  // not stop the app booting. With no RESEND_API_KEY the MailModule binds a
+  // no-op provider that renders and logs but never calls out — so local dev
+  // and CI exercise the full queue -> worker -> template path for free.
+  mail: {
+    provider: process.env.RESEND_API_KEY?.trim() ? 'resend' : 'noop',
+    from: process.env.MAIL_FROM ?? 'Nenjam Matrimony <onboarding@resend.dev>',
+    replyTo: process.env.MAIL_REPLY_TO || undefined,
+    resendApiKey: process.env.RESEND_API_KEY?.trim() || undefined,
+    appUrl: process.env.APP_WEB_URL ?? 'https://nenjammatrimony.com',
+    supportEmail:
+      process.env.MAIL_SUPPORT_EMAIL ?? 'support@nenjammatrimony.com',
+    logoUrl: process.env.MAIL_LOGO_URL || undefined,
   },
   firebase: {
     projectId: process.env.FIREBASE_PROJECT_ID || undefined,

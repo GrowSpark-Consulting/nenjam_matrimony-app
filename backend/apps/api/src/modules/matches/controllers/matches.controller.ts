@@ -46,7 +46,9 @@ import { DiscoverProfileDto } from '../dto/discover-profile.response.dto';
  * InterestsService (owned by InterestsModule); this controller only routes.
  */
 @ApiBearerAuth('firebase')
-@ApiUnauthorizedResponse({ description: 'Missing or invalid Firebase ID token.' })
+@ApiUnauthorizedResponse({
+  description: 'Missing or invalid Firebase ID token.',
+})
 @Controller('matches')
 @UseGuards(FirebaseAuthGuard)
 export class MatchesController {
@@ -67,7 +69,10 @@ export class MatchesController {
   @ApiBody({
     type: MatchInterestDto,
     examples: {
-      send: { summary: 'Send', value: { profileId: DISCOVER_PROFILE_EXAMPLE.id } },
+      send: {
+        summary: 'Send',
+        value: { profileId: DISCOVER_PROFILE_EXAMPLE.id },
+      },
       respond: {
         summary: 'Accept / decline',
         value: { interestId: SEND_INTEREST_RESPONSE_EXAMPLE.id, accept: true },
@@ -78,8 +83,12 @@ export class MatchesController {
     description: 'The created/updated interest record.',
     schema: { example: SEND_INTEREST_RESPONSE_EXAMPLE },
   })
-  @ApiForbiddenResponse({ description: 'Blocked, suspended receiver, or sender profile incomplete.' })
-  @ApiNotFoundResponse({ description: 'Receiver/interest not found or unavailable.' })
+  @ApiForbiddenResponse({
+    description: 'Blocked, suspended receiver, or sender profile incomplete.',
+  })
+  @ApiNotFoundResponse({
+    description: 'Receiver/interest not found or unavailable.',
+  })
   @ApiConflictResponse({ description: 'Duplicate or reverse active interest.' })
   interest(
     @CurrentUser('id') userId: string,
@@ -92,7 +101,8 @@ export class MatchesController {
   @ApiTags('Shortlist')
   @ApiOperation({
     summary: 'List shortlisted profiles',
-    description: 'The caller’s shortlisted profiles as Discover cards, newest first.',
+    description:
+      'The caller’s shortlisted profiles as Discover cards, newest first.',
   })
   @ApiOkResponse({
     description: 'Array of shortlisted profiles (Discover card shape).',
@@ -126,7 +136,8 @@ export class MatchesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Remove from shortlist',
-    description: 'Idempotent. `profileId` is sent in the request body, matching the client.',
+    description:
+      'Idempotent. `profileId` is sent in the request body, matching the client.',
   })
   @ApiNoContentResponse({ description: 'Removed (or was not present).' })
   removeShortlist(

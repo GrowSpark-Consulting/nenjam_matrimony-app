@@ -11,14 +11,22 @@ describe('withSafetyExclusions', () => {
   });
 
   it('excludes suspended/deactivated/banned users but not PENDING_VERIFICATION', () => {
-    const and = withSafetyExclusions({ AND: [] }, 'me').AND as Record<string, unknown>[];
+    const and = withSafetyExclusions({ AND: [] }, 'me').AND as Record<
+      string,
+      unknown
+    >[];
     expect(and).toContainEqual({
-      user: { is: { status: { notIn: ['SUSPENDED', 'DEACTIVATED', 'BANNED'] } } },
+      user: {
+        is: { status: { notIn: ['SUSPENDED', 'DEACTIVATED', 'BANNED'] } },
+      },
     });
   });
 
   it('excludes both directions of a block', () => {
-    const and = withSafetyExclusions({ AND: [] }, 'me').AND as Record<string, unknown>[];
+    const and = withSafetyExclusions({ AND: [] }, 'me').AND as Record<
+      string,
+      unknown
+    >[];
     expect(and).toContainEqual({
       user: { is: { blocksMade: { none: { blockedUserId: 'me' } } } },
     });
@@ -28,15 +36,22 @@ describe('withSafetyExclusions', () => {
   });
 
   it('excludes both directions of a declined interest', () => {
-    const and = withSafetyExclusions({ AND: [] }, 'me').AND as Record<string, unknown>[];
+    const and = withSafetyExclusions({ AND: [] }, 'me').AND as Record<
+      string,
+      unknown
+    >[];
     expect(and).toContainEqual({
       user: {
-        is: { receivedInterests: { none: { senderId: 'me', status: 'DECLINED' } } },
+        is: {
+          receivedInterests: { none: { senderId: 'me', status: 'DECLINED' } },
+        },
       },
     });
     expect(and).toContainEqual({
       user: {
-        is: { sentInterests: { none: { receiverId: 'me', status: 'DECLINED' } } },
+        is: {
+          sentInterests: { none: { receiverId: 'me', status: 'DECLINED' } },
+        },
       },
     });
   });

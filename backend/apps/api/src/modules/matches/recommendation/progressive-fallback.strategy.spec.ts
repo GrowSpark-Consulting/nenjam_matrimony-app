@@ -1,5 +1,8 @@
 import { ProgressiveFallbackStrategy } from './progressive-fallback.strategy';
-import type { FeedRepository, FeedProfileRow } from '../repositories/feed.repository';
+import type {
+  FeedRepository,
+  FeedProfileRow,
+} from '../repositories/feed.repository';
 import type { PreferenceRepository } from '../repositories/preference.repository';
 import type { AppConfigService } from '@app/config';
 
@@ -36,7 +39,12 @@ function buildStrategy(opts: {
   pref?: unknown;
   countSequence: number[];
   rows?: FeedProfileRow[];
-  config?: Partial<{ enabled: boolean; ageRelaxStep1: number; ageRelaxStep2: number; maxTier: number }>;
+  config?: Partial<{
+    enabled: boolean;
+    ageRelaxStep1: number;
+    ageRelaxStep2: number;
+    maxTier: number;
+  }>;
 }) {
   const countMatching = jest.fn();
   opts.countSequence.forEach((c) => countMatching.mockResolvedValueOnce(c));
@@ -175,7 +183,9 @@ describe('ProgressiveFallbackStrategy', () => {
     // query — status is a denylist (not an ACTIVE allowlist): PENDING_VERIFICATION
     // must remain visible even at the loosest tier (see safety-exclusions.builder.ts).
     const tier10Where = countMatching.mock.calls[9][0];
-    expect(JSON.stringify(tier10Where)).toContain('"notIn":["SUSPENDED","DEACTIVATED","BANNED"]');
+    expect(JSON.stringify(tier10Where)).toContain(
+      '"notIn":["SUSPENDED","DEACTIVATED","BANNED"]',
+    );
   });
 
   it('no users in database (every tier empty, including Tier 10): returns an honest empty feed, not an error', async () => {
@@ -191,7 +201,7 @@ describe('ProgressiveFallbackStrategy', () => {
     expect(result.rows).toEqual([]);
   });
 
-  it('pagination: skip/take are forwarded unchanged to the winning tier\'s row fetch', async () => {
+  it("pagination: skip/take are forwarded unchanged to the winning tier's row fetch", async () => {
     const { strategy, findRows } = buildStrategy({
       countSequence: [5],
       rows: [makeRow('a')],
@@ -199,7 +209,10 @@ describe('ProgressiveFallbackStrategy', () => {
 
     await strategy.getFeedForUser('me', { skip: 40, take: 10 });
 
-    expect(findRows).toHaveBeenCalledWith(expect.anything(), { skip: 40, take: 10 });
+    expect(findRows).toHaveBeenCalledWith(expect.anything(), {
+      skip: 40,
+      take: 10,
+    });
   });
 
   it('duplicate prevention: findRows is called at most once per request, never once per tier', async () => {

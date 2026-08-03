@@ -39,9 +39,9 @@ describe('isReligionDetailsComplete', () => {
   });
 
   it('is false when religion is the literal "Other" placeholder (no custom value typed yet)', () => {
-    expect(
-      isReligionDetailsComplete({ ...complete, religion: 'Other' }),
-    ).toBe(false);
+    expect(isReligionDetailsComplete({ ...complete, religion: 'Other' })).toBe(
+      false,
+    );
   });
 
   it('is true when religion is a genuine custom value entered after selecting "Other"', () => {
@@ -68,9 +68,9 @@ describe('isEducationDetailsValid', () => {
   });
 
   it('is invalid with only Qualification filled', () => {
-    expect(
-      isEducationDetailsValid({ qualification: "Bachelor's" }),
-    ).toBe(false);
+    expect(isEducationDetailsValid({ qualification: "Bachelor's" })).toBe(
+      false,
+    );
   });
 
   it('is invalid when College is missing', () => {
@@ -104,8 +104,8 @@ describe('isEducationDetailsValid', () => {
   });
 
   it('is valid when Annual Income is a genuine custom value entered after selecting "Other"', () => {
-    expect(
-      isEducationDetailsValid({ ...complete, annualIncome: '37' }),
-    ).toBe(true);
+    expect(isEducationDetailsValid({ ...complete, annualIncome: '37' })).toBe(
+      true,
+    );
   });
 });

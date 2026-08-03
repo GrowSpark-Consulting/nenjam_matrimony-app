@@ -78,13 +78,17 @@ function buildService(draftData: Record<string, unknown>) {
     ),
   } as unknown as ProfileCompletionService;
 
+  const emailDispatch = {
+    sendWelcome: jest.fn().mockResolvedValue(undefined),
+  };
   const service = new ProfileService(
     profileRepository,
     photoRepository,
     draftService,
     completionService,
+    emailDispatch as never,
   );
-  return { service, upsertProfile };
+  return { service, upsertProfile, emailDispatch };
 }
 
 describe('ProfileService.syncMatchableFromDraft', () => {

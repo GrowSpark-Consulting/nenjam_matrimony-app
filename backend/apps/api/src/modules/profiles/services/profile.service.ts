@@ -9,6 +9,7 @@ import { ProfileRepository } from '../repositories/profile.repository';
 import { PhotoRepository } from '../repositories/photo.repository';
 import { ProfileDraftService } from './profile-draft.service';
 import { ProfileCompletionService } from './profile-completion.service';
+import { EmailDispatchService } from '../../notifications/services/email-dispatch.service';
 import { ProfileEntity } from '../entities/profile.entity';
 import { PhotoEntity } from '../entities/photo.entity';
 import {
@@ -144,6 +145,7 @@ export class ProfileService {
     private readonly photoRepository: PhotoRepository,
     private readonly draftService: ProfileDraftService,
     private readonly completionService: ProfileCompletionService,
+    private readonly emailDispatch: EmailDispatchService,
   ) {}
 
   // Assembles the full response: the finalized UserProfile plus everything
@@ -274,6 +276,14 @@ export class ProfileService {
     console.log(
       `[STORY-PERF-SRV] ${Date.now()} finalize: recalculateAndPersistCompletion complete`,
     );
+
+    // Welcome email — queued only after every write above has committed, and
+    // deliberately not awaited: finalize() is the last step of the
+    // registration wizard, and the user should land on their profile without
+    // waiting on Redis. EmailDispatchService swallows its own failures, so
+    // this can never reject unhandled.
+    void this.emailDispatch.sendWelcome(userId).catch(() => undefined);
+
     return result;
   }
 

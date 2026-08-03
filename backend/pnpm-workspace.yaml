@@ -1,5 +1,11 @@
 allowBuilds:
   '@firebase/util': false
+  # Optional native accelerator for msgpackr (BullMQ's job serializer).
+  # Left off deliberately: msgpackr falls back to a pure-JS packer, which
+  # keeps `pnpm install` deterministic and free of a native toolchain
+  # requirement. Job payloads here are small JSON objects, so the native
+  # speedup is irrelevant to this workload.
+  msgpackr-extract: false
   '@prisma/engines': true
   '@scarf/scarf': true
   prisma: true

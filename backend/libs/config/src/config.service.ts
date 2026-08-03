@@ -57,6 +57,10 @@ export class AppConfigService implements OnModuleInit {
     return this.configService.get('firebase', { infer: true });
   }
 
+  get mail(): AppConfig['mail'] {
+    return this.configService.get('mail', { infer: true });
+  }
+
   get storage(): AppConfig['storage'] {
     return this.configService.get('storage', { infer: true });
   }

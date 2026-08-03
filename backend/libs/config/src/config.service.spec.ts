@@ -20,7 +20,21 @@ describe('AppConfigService', () => {
     elasticsearch: { node: 'http://localhost:9200' },
     smtp: { host: 'localhost', port: 1025, user: '', password: '' },
     jwt: { secret: 'a-very-long-secret-value' },
+    mail: {
+      provider: 'noop',
+      from: 'Nenjam Matrimony <no-reply@example.com>',
+      appUrl: 'https://example.com',
+      supportEmail: 'support@example.com',
+    },
+    firebase: {},
+    storage: {},
     logLevel: 'debug',
+    fallback: {
+      enabled: true,
+      ageRelaxStep1: 2,
+      ageRelaxStep2: 5,
+      maxTier: 10,
+    },
   };
 
   async function buildService(

@@ -63,7 +63,12 @@ export function buildTierPlan(
   ): void => {
     current = mutate(current);
     if (!relaxed.includes(label)) relaxed.push(label);
-    tiers.push({ tier, pref: { ...current }, relaxedFilters: [...relaxed], reason });
+    tiers.push({
+      tier,
+      pref: { ...current },
+      relaxedFilters: [...relaxed],
+      reason,
+    });
   };
 
   addTier(
@@ -81,7 +86,10 @@ export function buildTierPlan(
     3,
     'City',
     'No exact matches found. City filter relaxed — still matching within your state.',
-    (pref) => ({ ...pref, preferredCities: keepOnlySameState(pref.preferredCities) }),
+    (pref) => ({
+      ...pref,
+      preferredCities: keepOnlySameState(pref.preferredCities),
+    }),
   );
 
   addTier(
@@ -141,7 +149,8 @@ export function buildTierPlan(
       'Marital Status',
       'Lifestyle',
     ],
-    reason: 'No matches found even with relaxed preferences. Showing compatible profiles by gender only.',
+    reason:
+      'No matches found even with relaxed preferences. Showing compatible profiles by gender only.',
   });
 
   return tiers.filter((t) => t.tier <= config.maxTier);

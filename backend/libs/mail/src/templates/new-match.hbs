@@ -1,0 +1,29 @@
+<h1 class="nm-h1" style="margin:0 0 16px;font-size:26px;line-height:34px;font-weight:600;color:#1B2B4B;">
+  You have a new match
+</h1>
+<p style="margin:0 0 20px;">
+  {{firstName}}, we found someone whose preferences line up with yours.
+</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+       style="border:1px solid #E8EDF5;border-radius:12px;margin:0 0 8px;">
+  <tr>
+    <td style="padding:20px 22px;">
+      <p style="margin:0 0 4px;font-size:19px;font-weight:600;color:#1B2B4B;">{{matchName}}</p>
+      <p style="margin:0 0 12px;font-size:14px;color:#6B7280;">
+        {{matchAge}} &middot; {{matchProfession}} &middot; {{matchCity}}
+      </p>
+      {{#if compatibilityScore}}
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td bgcolor="#FAF5E4" style="border-radius:20px;padding:6px 14px;font-size:13px;font-weight:600;color:#A8882E;">
+            {{compatibilityScore}}% compatibility
+          </td></tr>
+        </table>
+      {{/if}}
+    </td>
+  </tr>
+</table>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" class="nm-cta" style="margin:22px 0 8px;">
+  <tr><td align="center" bgcolor="#1B2B4B" style="border-radius:8px;">
+    <a href="{{matchProfileUrl}}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:8px;">View profile</a>
+  </td></tr>
+</table>
