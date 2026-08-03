@@ -8,7 +8,6 @@ import { PrismaService } from '@app/database';
 import { S3Service } from '@app/storage';
 import { MessageListQueryDto } from '../dto/message-list-query.dto';
 import type {
-  ChatMessage,
   ChatRoom,
   MessageType,
 } from '../../../../../../libs/database/generated/client';
@@ -18,12 +17,17 @@ import { RealtimeEvents } from '../../realtime/realtime.events';
 import { NotificationsService } from '../../notifications/services/notifications.service';
 import type { CreateNotificationData } from '../../notifications/repositories/notification.repository';
 import { ConversationRepository } from '../repositories/conversation.repository';
-import { MessageRepository } from '../repositories/message.repository';
+import {
+  MessageRepository,
+  ChatMessageWithReply,
+} from '../repositories/message.repository';
 import { ChatAuditService, ChatAuditAction } from './chat-audit.service';
 import { SendMessageDto } from '../dto/send-message.dto';
 import {
+  MediaUrlRefreshDto,
   MessageDto,
   MessagePageDto,
+  MessageReplyDto,
   deliveryStatusToWire,
 } from '../dto/message.response.dto';
 
@@ -136,6 +140,21 @@ export class MessagesService {
       throw new BadRequestException('Message is too long.');
     }
 
+    // A reply target must exist and belong to this same room — cross-room
+    // (or nonexistent) ids are rejected outright. Replying to an already
+    // edited or soft-deleted message is explicitly allowed; the reply just
+    // carries whatever that message's current state is.
+    if (dto.replyToMessageId) {
+      const replyTarget = await this.messageRepository.findById(
+        dto.replyToMessageId,
+      );
+      if (!replyTarget || replyTarget.roomId !== dto.roomId) {
+        throw new BadRequestException(
+          'The message being replied to could not be found in this conversation.',
+        );
+      }
+    }
+
     // Idempotency: a retried send with the same client key returns the message
     // the first request created — never a duplicate insert.
     if (dto.clientMessageId) {
@@ -153,7 +172,7 @@ export class MessagesService {
     const deliveredNow = await this.presence.isOnline(peerId);
     const now = new Date();
 
-    let message: ChatMessage;
+    let message: ChatMessageWithReply;
     let notificationData: CreateNotificationData | undefined;
     try {
       message = await this.prisma.$transaction(async (tx) => {
@@ -166,6 +185,7 @@ export class MessagesService {
           clientMessageId: dto.clientMessageId ?? null,
           status: deliveredNow ? 'DELIVERED' : 'SENT',
           deliveredAt: deliveredNow ? now : null,
+          replyToMessageId: dto.replyToMessageId ?? null,
         });
         await this.messageRepository.touchRoomActivity(
           tx,
@@ -346,6 +366,33 @@ export class MessagesService {
     });
   }
 
+  /**
+   * Explicit client-driven delivery acknowledgment (see
+   * `ChatGateway.handleDeliveredAck`'s doc comment for why this exists
+   * alongside the presence heuristic in {@link send}). `userId` must be a
+   * participant in the message's room and NOT its sender — re-derived from
+   * the DB, never trusted from the socket payload. Silently no-ops for any
+   * invalid/unauthorized/already-deleted case rather than throwing — this
+   * is a best-effort background signal, not a request with a caller
+   * waiting on a response.
+   */
+  async acknowledgeDelivered(userId: string, messageId: string): Promise<void> {
+    const message = await this.messageRepository.findById(messageId);
+    if (!message || message.deletedAt || message.senderId === userId) return;
+
+    const room = await this.conversationRepository.findById(message.roomId);
+    if (!room || (room.user1Id !== userId && room.user2Id !== userId)) return;
+
+    const changed = await this.messageRepository.markDelivered([messageId]);
+    if (changed.length === 0) return; // already DELIVERED/READ — nothing new to announce
+
+    this.realtime.emitToUser(message.senderId, RealtimeEvents.chatDelivered, {
+      id: message.id,
+      roomId: message.roomId,
+      at: new Date().toISOString(),
+    });
+  }
+
   // ── internals ──────────────────────────────────────────────────────────
 
   private async requireParticipantRoom(
@@ -396,7 +443,7 @@ export class MessagesService {
   }
 
   async toDto(
-    message: ChatMessage,
+    message: ChatMessageWithReply,
     viewerId: string,
     clientMessageId?: string,
   ): Promise<MessageDto> {
@@ -413,8 +460,55 @@ export class MessagesService {
       status: deliveryStatusToWire(message.status),
       createdAt: message.createdAt.toISOString(),
       editedAt: message.editedAt ? message.editedAt.toISOString() : null,
+      replyTo: await this.toReplyDto(message.replyTo, viewerId),
       ...(echoedClientId ? { clientMessageId: echoedClientId } : {}),
     };
+  }
+
+  /** Builds the slim reply-quote snapshot for [MessageDto.replyTo] — always
+   *  read live off the joined `replyTo` relation (see
+   *  `ChatMessageWithReply`'s doc comment), so an edit or delete to the
+   *  original is reflected the next time this message's DTO is built. Media
+   *  is skipped (not presigned) for an already-deleted original since the
+   *  client never renders it — no point spending an S3 call on it. */
+  private async toReplyDto(
+    replyTo: ChatMessageWithReply['replyTo'],
+    viewerId: string,
+  ): Promise<MessageReplyDto | null> {
+    if (!replyTo) return null;
+    const isDeleted = replyTo.deletedAt != null;
+    return {
+      id: replyTo.id,
+      isMine: replyTo.senderId === viewerId,
+      type: replyTo.type,
+      content: replyTo.content,
+      mediaUrl: isDeleted ? null : await this.presignMedia(replyTo.mediaUrl),
+      isDeleted,
+      editedAt: replyTo.editedAt ? replyTo.editedAt.toISOString() : null,
+    };
+  }
+
+  /**
+   * Re-presigns [messageId]'s media URL — called when the client detects its
+   * previously-issued presigned URL has expired (a 403 loading it). Requires
+   * the caller to still be a participant in the message's room (same
+   * re-derive-from-DB authorization as every other message operation); never
+   * increases the URL's lifetime beyond the normal short-lived expiry
+   * {@link presignMedia} already uses, and never returns a permanent public
+   * link. Returns `{ mediaUrl: null }` (not a thrown error) for a text
+   * message or if S3 presigning itself fails — this is a best-effort
+   * refresh, not a critical path.
+   */
+  async refreshMediaUrl(
+    userId: string,
+    messageId: string,
+  ): Promise<MediaUrlRefreshDto> {
+    const message = await this.messageRepository.findById(messageId);
+    if (!message) {
+      throw new NotFoundException('Message not found.');
+    }
+    await this.requireParticipantRoom(message.roomId, userId);
+    return { mediaUrl: await this.presignMedia(message.mediaUrl) };
   }
 
   /** Stored `mediaUrl` is an S3 object key; return a short-lived presigned URL.

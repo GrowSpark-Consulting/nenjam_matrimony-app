@@ -74,6 +74,7 @@ class ConversationRepositoryImpl implements ConversationRepository {
     String? clientMessageId,
     MessageType type = MessageType.text,
     String? attachmentUrl,
+    String? replyToMessageId,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 300));
     // Mock-only failure simulation, isolated to this in-memory
@@ -82,6 +83,16 @@ class ConversationRepositoryImpl implements ConversationRepository {
     // on random flakiness: send the literal text "fail" (case-insensitive).
     if (type == MessageType.text && text.trim().toLowerCase() == 'fail') {
       throw Exception('Mock send failure (message text was "fail")');
+    }
+    MessageReplyPreview? replyTo;
+    if (replyToMessageId != null) {
+      final thread = await _fullThread(conversationId);
+      for (final m in thread) {
+        if (m.id == replyToMessageId) {
+          replyTo = MessageReplyPreview.fromMessage(m);
+          break;
+        }
+      }
     }
     final message = MessageEntity(
       id: '$conversationId-${DateTime.now().microsecondsSinceEpoch}',
@@ -96,6 +107,7 @@ class ConversationRepositoryImpl implements ConversationRepository {
       // already "hosted", so the UI can be exercised end-to-end.
       attachmentUrl: attachmentUrl,
       clientMessageId: clientMessageId,
+      replyTo: replyTo,
     );
     final thread = await _fullThread(conversationId);
     _messageCache[conversationId] = [...thread, message];
@@ -111,6 +123,18 @@ class ConversationRepositoryImpl implements ConversationRepository {
   @override
   Future<void> setTyping(String conversationId, bool isTyping) async {
     // No-op — see ConversationRepository.setTyping's doc comment.
+  }
+
+  @override
+  Future<String?> refreshMediaUrl(String messageId) async {
+    // No real presigned-URL expiry concept in the in-memory mock — whatever
+    // URL/path was already stored just gets handed back unchanged.
+    for (final thread in _messageCache.values) {
+      for (final m in thread) {
+        if (m.id == messageId) return m.attachmentUrl;
+      }
+    }
+    return null;
   }
 
   @override

@@ -26,6 +26,7 @@ class RealtimeService {
   io.Socket? _socket;
   final _events = StreamController<RealtimeEvent>.broadcast();
   final _chatEvents = StreamController<ChatRealtimePayload>.broadcast();
+  final _ready = StreamController<void>.broadcast();
   Timer? _heartbeat;
 
   /// How often a connected device pings the server so it stays "online" even
@@ -40,6 +41,14 @@ class RealtimeService {
   /// applied inline (see [ChatRealtimeEvent]). Bridged to the inbox providers in
   /// `chat_realtime_sync.dart`.
   Stream<ChatRealtimePayload> get chatEvents => _chatEvents.stream;
+
+  /// Fires every time the socket becomes authenticated and ready — the
+  /// initial connect, and every successful reconnect after a drop. Chat's
+  /// typing indicator (`TypingController.resetForReconnect`) uses this to
+  /// discard any "I already told the peer I'm typing" assumption made
+  /// before a disconnect — a `true` sent while offline never reached them,
+  /// and they have no way to know it was supposedly still in effect.
+  Stream<void> get onReady => _ready.stream;
 
   bool get isConnected => _socket?.connected ?? false;
 
@@ -91,6 +100,7 @@ class RealtimeService {
       _log('ready — requesting sync + starting heartbeat');
       socket.emit(ChatClientEvent.sync);
       _startHeartbeat();
+      if (!_ready.isClosed) _ready.add(null);
     });
 
     // Refresh the token before every reconnect attempt so a token that expired
@@ -194,6 +204,7 @@ class RealtimeService {
     disconnect();
     _events.close();
     _chatEvents.close();
+    _ready.close();
   }
 
   void _log(String message) {

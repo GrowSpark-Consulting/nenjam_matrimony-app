@@ -29,6 +29,28 @@ MessageEntity messageEntityFromWire(
     editedAt: json['editedAt'] == null
         ? null
         : DateTime.parse(json['editedAt'] as String),
+    replyTo: messageReplyPreviewFromWire(json['replyTo']),
+  );
+}
+
+/// Decodes the backend's `MessageReplyDto` (or `null`) into a
+/// [MessageReplyPreview]. Defensively tolerant of a malformed/missing map —
+/// same "drop rather than throw" stance as `RealtimeService._asMap`.
+MessageReplyPreview? messageReplyPreviewFromWire(dynamic json) {
+  if (json is! Map) return null;
+  final map = json.cast<String, dynamic>();
+  final id = map['id'] as String?;
+  if (id == null) return null;
+  return MessageReplyPreview(
+    id: id,
+    isMine: map['isMine'] as bool? ?? false,
+    type: messageTypeFromWire(map['type'] as String?),
+    text: map['content'] as String? ?? '',
+    attachmentUrl: map['mediaUrl'] as String?,
+    isDeleted: map['isDeleted'] as bool? ?? false,
+    editedAt: map['editedAt'] == null
+        ? null
+        : DateTime.parse(map['editedAt'] as String),
   );
 }
 

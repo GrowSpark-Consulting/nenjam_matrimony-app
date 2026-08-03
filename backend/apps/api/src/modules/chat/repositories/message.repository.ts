@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/database';
 import type {
-  ChatMessage,
   MessageDeliveryStatus,
   MessageType,
   Prisma,
@@ -17,7 +16,17 @@ export interface CreateMessageData {
   clientMessageId?: string | null;
   status: MessageDeliveryStatus;
   deliveredAt?: Date | null;
+  replyToMessageId?: string | null;
 }
+
+/** A [ChatMessage] with its (possibly null) reply-to message joined in — every
+ *  method that feeds `MessagesService.toDto` returns this shape so the reply
+ *  quote can be built without a second query. */
+export type ChatMessageWithReply = Prisma.ChatMessageGetPayload<{
+  include: { replyTo: true };
+}>;
+
+const WITH_REPLY = { include: { replyTo: true } } as const;
 
 @Injectable()
 export class MessageRepository {
@@ -26,7 +35,7 @@ export class MessageRepository {
   create(
     client: PrismaClientLike,
     data: CreateMessageData,
-  ): Promise<ChatMessage> {
+  ): Promise<ChatMessageWithReply> {
     return client.chatMessage.create({
       data: {
         roomId: data.roomId,
@@ -37,12 +46,17 @@ export class MessageRepository {
         clientMessageId: data.clientMessageId ?? null,
         status: data.status,
         deliveredAt: data.deliveredAt ?? null,
+        replyToMessageId: data.replyToMessageId ?? null,
       },
+      ...WITH_REPLY,
     });
   }
 
-  findById(id: string): Promise<ChatMessage | null> {
-    return this.prisma.chatMessage.findUnique({ where: { id } });
+  findById(id: string): Promise<ChatMessageWithReply | null> {
+    return this.prisma.chatMessage.findUnique({
+      where: { id },
+      ...WITH_REPLY,
+    });
   }
 
   /** Replaces a message's text and stamps `editedAt`. */
@@ -50,20 +64,22 @@ export class MessageRepository {
     id: string,
     content: string,
     editedAt: Date,
-  ): Promise<ChatMessage> {
+  ): Promise<ChatMessageWithReply> {
     return this.prisma.chatMessage.update({
       where: { id },
       data: { content, editedAt },
+      ...WITH_REPLY,
     });
   }
 
   /** Soft-deletes a message (sets `deletedAt`); the row is kept for audit but
    *  excluded from every list/unread/replay query, all of which filter
    *  `deletedAt: null`. */
-  softDelete(id: string, deletedAt: Date): Promise<ChatMessage> {
+  softDelete(id: string, deletedAt: Date): Promise<ChatMessageWithReply> {
     return this.prisma.chatMessage.update({
       where: { id },
       data: { deletedAt },
+      ...WITH_REPLY,
     });
   }
 
@@ -72,9 +88,10 @@ export class MessageRepository {
   findByClientKey(
     senderId: string,
     clientMessageId: string,
-  ): Promise<ChatMessage | null> {
+  ): Promise<ChatMessageWithReply | null> {
     return this.prisma.chatMessage.findUnique({
       where: { senderId_clientMessageId: { senderId, clientMessageId } },
+      ...WITH_REPLY,
     });
   }
 
@@ -93,7 +110,7 @@ export class MessageRepository {
     roomId: string,
     skip: number,
     take: number,
-  ): Promise<[ChatMessage[], number]> {
+  ): Promise<[ChatMessageWithReply[], number]> {
     const where: Prisma.ChatMessageWhereInput = { roomId, deletedAt: null };
     return this.prisma.$transaction([
       this.prisma.chatMessage.findMany({
@@ -101,6 +118,7 @@ export class MessageRepository {
         orderBy: { createdAt: 'desc' },
         skip,
         take,
+        ...WITH_REPLY,
       }),
       this.prisma.chatMessage.count({ where }),
     ]);
@@ -120,7 +138,7 @@ export class MessageRepository {
     cursorId: string | null,
     take: number,
   ): Promise<{
-    items: ChatMessage[];
+    items: ChatMessageWithReply[];
     hasMore: boolean;
     nextCursor: string | null;
   }> {
@@ -129,6 +147,7 @@ export class MessageRepository {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: take + 1,
       ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+      ...WITH_REPLY,
     });
     const hasMore = rows.length > take;
     const items = hasMore ? rows.slice(0, take) : rows;
@@ -149,7 +168,7 @@ export class MessageRepository {
 
   /** Messages addressed to [userId] that were never delivered to them (sent
    *  while they were offline) — the reconnect-replay set. */
-  findUndeliveredForUser(userId: string): Promise<ChatMessage[]> {
+  findUndeliveredForUser(userId: string): Promise<ChatMessageWithReply[]> {
     return this.prisma.chatMessage.findMany({
       where: {
         status: 'SENT',
@@ -159,16 +178,35 @@ export class MessageRepository {
       },
       orderBy: { createdAt: 'asc' },
       take: 200,
+      ...WITH_REPLY,
     });
   }
 
-  /** Flips SENT→DELIVERED for a set of messages. Returns rows changed. */
-  async markDelivered(ids: string[]): Promise<number> {
-    if (ids.length === 0) return 0;
-    const result = await this.prisma.chatMessage.updateMany({
-      where: { id: { in: ids }, status: 'SENT' },
-      data: { status: 'DELIVERED', deliveredAt: new Date() },
-    });
-    return result.count;
+  /**
+   * Flips SENT→DELIVERED for a set of messages, one at a time — each a
+   * single atomic conditional UPDATE (`WHERE id = ? AND status = 'SENT'`) —
+   * and returns only the ids THIS call actually changed (a subset of
+   * `ids`). A racing concurrent call for the same message (e.g. this same
+   * recipient's other device replaying `chat.sync` at the same moment, or
+   * an explicit delivery ack landing right after a replay already handled
+   * it) will find `status` no longer `SENT` and match zero rows for it, so
+   * it's correctly excluded from that call's own return value too — this
+   * is what lets callers notify/re-push only for genuinely new
+   * transitions instead of every caller unconditionally broadcasting for
+   * the full requested set, which is what produced duplicate
+   * `chat.delivered` events under concurrent replay.
+   */
+  async markDelivered(ids: string[]): Promise<string[]> {
+    if (ids.length === 0) return [];
+    const now = new Date();
+    const changed: string[] = [];
+    for (const id of ids) {
+      const result = await this.prisma.chatMessage.updateMany({
+        where: { id, status: 'SENT' },
+        data: { status: 'DELIVERED', deliveredAt: now },
+      });
+      if (result.count > 0) changed.push(id);
+    }
+    return changed;
   }
 }

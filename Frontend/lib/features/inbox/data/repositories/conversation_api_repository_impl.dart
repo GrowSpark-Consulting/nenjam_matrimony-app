@@ -136,6 +136,7 @@ class ConversationApiRepositoryImpl implements ConversationRepository {
     String? clientMessageId,
     MessageType type = MessageType.text,
     String? attachmentUrl,
+    String? replyToMessageId,
   }) async {
     final response = await _apiClient.post<Map<String, dynamic>>(
       ApiEndpoints.messages,
@@ -145,6 +146,7 @@ class ConversationApiRepositoryImpl implements ConversationRepository {
         if (clientMessageId != null) 'clientMessageId': clientMessageId,
         'type': messageTypeToWire(type),
         if (attachmentUrl != null) 'mediaUrl': attachmentUrl,
+        if (replyToMessageId != null) 'replyToMessageId': replyToMessageId,
       },
     );
     final data = unwrapOrThrow(response.statusCode, response.data) ?? {};
@@ -165,6 +167,15 @@ class ConversationApiRepositoryImpl implements ConversationRepository {
       ChatClientEvent.typing,
       {'roomId': conversationId, 'isTyping': isTyping},
     );
+  }
+
+  @override
+  Future<String?> refreshMediaUrl(String messageId) async {
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      '${ApiEndpoints.messages}/$messageId/media-url',
+    );
+    final data = unwrapOrThrow(response.statusCode, response.data) ?? {};
+    return data['mediaUrl'] as String?;
   }
 
   @override

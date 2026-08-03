@@ -553,6 +553,14 @@ model ChatMessage {
   editedAt  DateTime?         @map("edited_at")
   deletedAt DateTime?         @map("deleted_at")
   createdAt DateTime          @default(now()) @map("created_at")
+  /// The message this one replies to, if any — nullable self-relation.
+  /// `SetNull` rather than `Cascade`: messages are only ever soft-deleted
+  /// (`deletedAt`), never hard-deleted, so this only matters for a future
+  /// hard-delete/cleanup job — a reply must never be blocked or removed
+  /// just because the message it quotes was hard-deleted.
+  replyToMessageId String?     @map("reply_to_message_id")
+  replyTo   ChatMessage?       @relation("MessageReplies", fields: [replyToMessageId], references: [id], onDelete: SetNull)
+  replies   ChatMessage[]      @relation("MessageReplies")
   room      ChatRoom          @relation(fields: [roomId], references: [id], onDelete: Cascade)
   sender    User              @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   reactions MessageReaction[]
@@ -563,6 +571,7 @@ model ChatMessage {
   @@index([createdAt])
   // Serve the reconnect-replay query (undelivered messages addressed to a user).
   @@index([roomId, status])
+  @@index([replyToMessageId])
   @@map("chat_messages")
 }
 

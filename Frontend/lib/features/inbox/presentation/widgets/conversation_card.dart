@@ -140,10 +140,10 @@ class ConversationCard extends ConsumerWidget {
           : SmartIndicatorChip(indicator: conversation.smartIndicator),
       heroTag: 'conversation-avatar-${conversation.id}',
       onAvatarTap: () => openProfileDetail(context, conversation.profile, isBlocked: conversation.isBlocked),
-      onTap: () {
-        if (conversation.unreadCount > 0) notifier.markRead(conversation.id);
-        openChatDetail(context, conversation);
-      },
+      // Marking read now happens in ChatDetailPage's own lifecycle (entry-
+      // point-agnostic — also covers Profile Detail's Message button and any
+      // future deep link/push route), not here, so it can't double-fire.
+      onTap: () => openChatDetail(context, conversation),
     );
 
     return Slidable(

@@ -8,6 +8,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/message_entity.dart';
+import 'chat_image_viewer_page.dart';
+import 'chat_media_image.dart';
 
 /// A single chat bubble — right-aligned/primary-filled for the current
 /// user's own messages, left-aligned/surface-filled for the other person's,
@@ -24,15 +26,34 @@ class MessageBubble extends StatefulWidget {
   /// supplies it via [MessagesNotifier.retry].
   final ValueChanged<String>? onRetry;
 
-  /// Called when the user long-presses their own (non-deleted) message —
-  /// Chat Detail opens the edit/delete actions sheet. Null hides the gesture.
+  /// Called when the user long-presses this message — Chat Detail opens the
+  /// reply/edit/delete actions sheet (which one of those three is offered
+  /// depends on the message, not on whether this callback exists at all —
+  /// Reply is available for any message). Null hides the gesture entirely.
   final VoidCallback? onLongPress;
+
+  /// The peer's display name — used to resolve "You" vs their name when
+  /// rendering [message.replyTo]'s sender label.
+  final String peerName;
+
+  /// True for a brief window right after the user tapped this message's own
+  /// reply-quote elsewhere (scrolled here via [onTapReplyPreview]) — flashes
+  /// a tint so the target is easy to spot, then fades back on its own.
+  final bool isHighlighted;
+
+  /// Called with the original message's id when the user taps this
+  /// message's own reply-quote block (only rendered when [message.replyTo]
+  /// is set) — Chat Detail scrolls to and highlights that original.
+  final ValueChanged<String>? onTapReplyPreview;
 
   const MessageBubble({
     super.key,
     required this.message,
     this.onRetry,
     this.onLongPress,
+    this.peerName = '',
+    this.isHighlighted = false,
+    this.onTapReplyPreview,
   });
 
   @override
@@ -67,6 +88,9 @@ class _MessageBubbleState extends State<MessageBubble> with SingleTickerProvider
             message: widget.message,
             onRetry: widget.onRetry,
             onLongPress: widget.onLongPress,
+            peerName: widget.peerName,
+            isHighlighted: widget.isHighlighted,
+            onTapReplyPreview: widget.onTapReplyPreview,
           ),
         ),
       ),
@@ -78,16 +102,31 @@ class _MessageBubbleContent extends StatelessWidget {
   final MessageEntity message;
   final ValueChanged<String>? onRetry;
   final VoidCallback? onLongPress;
+  final String peerName;
+  final bool isHighlighted;
+  final ValueChanged<String>? onTapReplyPreview;
 
   const _MessageBubbleContent({
     required this.message,
     this.onRetry,
     this.onLongPress,
+    this.peerName = '',
+    this.isHighlighted = false,
+    this.onTapReplyPreview,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (message.isDeleted) return _DeletedBubble(isMine: message.isMine);
+    if (message.isDeleted) {
+      // A deleted message keeps its own minimal tombstone rendering, but
+      // must still be reply-able (per the reply feature's own edge cases) —
+      // reuse the same long-press gesture the normal bubble uses below,
+      // without touching how the tombstone itself looks.
+      final deleted = _DeletedBubble(isMine: message.isMine);
+      return onLongPress == null
+          ? deleted
+          : GestureDetector(onLongPress: onLongPress, child: deleted);
+    }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context);
@@ -103,7 +142,8 @@ class _MessageBubbleContent extends StatelessWidget {
         ? Colors.white
         : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
 
-    final bubble = Container(
+    final bubble = AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
       constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
       margin: const EdgeInsets.symmetric(vertical: 3),
       padding: EdgeInsets.fromLTRB(
@@ -113,7 +153,13 @@ class _MessageBubbleContent extends StatelessWidget {
         10,
       ),
       decoration: BoxDecoration(
-        color: bubbleColor,
+        // A brief tint flash when this bubble is the target of a tapped
+        // reply-quote elsewhere — fades in/out via AnimatedContainer as
+        // ChatDetailPage flips isHighlighted, no separate AnimationController
+        // needed.
+        color: isHighlighted
+            ? Color.alphaBlend(AppColors.accentGoldLight.withValues(alpha: 0.4), bubbleColor)
+            : bubbleColor,
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(16),
           topRight: const Radius.circular(16),
@@ -125,8 +171,26 @@ class _MessageBubbleContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (message.replyTo != null)
+            _ReplyQuote(
+              replyTo: message.replyTo!,
+              peerName: peerName,
+              isMine: isMine,
+              onTap: onTapReplyPreview == null
+                  ? null
+                  : () => onTapReplyPreview!(message.replyTo!.id),
+            ),
           if (message.type == MessageType.image && message.attachmentUrl != null)
-            _MessageImage(url: message.attachmentUrl!, sending: message.status == MessageStatus.sending)
+            _MessageImage(
+              url: message.attachmentUrl!,
+              sending: message.status == MessageStatus.sending,
+              conversationId: message.conversationId,
+              messageId: message.id,
+              // A failed image's whole bubble already handles tap-to-retry
+              // (see `interactive` below) — the viewer's own tap must not
+              // compete with that gesture for the same tap.
+              viewerEnabled: !canRetry,
+            )
           else if (message.type == MessageType.voice && message.attachmentUrl != null)
             _VoiceBubblePlayer(
               url: message.attachmentUrl!,
@@ -217,6 +281,102 @@ class _MessageBubbleContent extends StatelessWidget {
       message.status == MessageStatus.read ? AppColors.accentGoldLight : textColor.withValues(alpha: 0.7);
 }
 
+/// The quoted-reply block shown inside a bubble that replies to another
+/// message — sender name, a one-line preview (text, or a type label for
+/// media/deleted/edited, matching [conversationPreview]'s inbox-list
+/// labels), and a thumbnail for an image reply. Tapping it (via [onTap])
+/// scrolls to and highlights the original — see `ChatDetailPage._scrollToMessage`.
+class _ReplyQuote extends StatelessWidget {
+  final MessageReplyPreview replyTo;
+  final String peerName;
+  final bool isMine;
+  final VoidCallback? onTap;
+
+  const _ReplyQuote({
+    required this.replyTo,
+    required this.peerName,
+    required this.isMine,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final senderLabel = replyTo.isMine ? 'You' : peerName;
+    // Own bubble is primary-filled, so a plain white-on-white tint would be
+    // invisible — use black-on-white there and the accent color on the
+    // (lighter) peer bubble, same contrast rule the rest of this bubble
+    // already follows via `isMine`.
+    final barColor = isMine ? Colors.white : AppColors.primary;
+    final quote = Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: (isMine ? Colors.white : AppColors.primary).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(left: BorderSide(color: barColor, width: 3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  senderLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: barColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _previewLabel(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isMine ? Colors.white.withValues(alpha: 0.85) : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!replyTo.isDeleted &&
+              replyTo.type == MessageType.image &&
+              replyTo.attachmentUrl != null) ...[
+            const SizedBox(width: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: SizedBox(
+                width: 36,
+                height: 36,
+                child: replyTo.attachmentUrl!.startsWith('http')
+                    ? Image.network(replyTo.attachmentUrl!, fit: BoxFit.cover)
+                    : Image.file(File(replyTo.attachmentUrl!), fit: BoxFit.cover),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+    return onTap == null ? quote : GestureDetector(onTap: onTap, child: quote);
+  }
+
+  String _previewLabel() {
+    if (replyTo.isDeleted) return 'This message was deleted';
+    final edited = replyTo.editedAt != null ? ' (edited)' : '';
+    return switch (replyTo.type) {
+      MessageType.image => '📷 Photo$edited',
+      MessageType.voice => '🎤 Voice message$edited',
+      MessageType.document => '📄 Document$edited',
+      MessageType.text => '${replyTo.text}$edited',
+    };
+  }
+}
+
 /// The tombstone shown in place of a message that was deleted for everyone —
 /// keeps the sender-side alignment but strips content, status, and any
 /// long-press actions.
@@ -266,26 +426,49 @@ class _DeletedBubble extends StatelessWidget {
 /// received message, or one this client sent that's since been confirmed
 /// with a hosted URL) or a local file path (an attachment still
 /// `sending`/uploading). Shows a dimming overlay + spinner while `sending`.
+///
+/// Tapping opens [ChatImageViewerPage] fullscreen (pinch/double-tap zoom,
+/// pan) via a plain `Navigator.push` — pushing a new route on top leaves
+/// this screen's own state (scroll position, pagination, composer/keyboard)
+/// completely untouched, it's just visually covered until popped. A [Hero]
+/// keyed by [messageId] flies the thumbnail into the fullscreen image.
+/// [viewerEnabled] is false for a failed send, whose whole bubble already
+/// handles tap-to-retry — the viewer must not compete for that same tap.
 class _MessageImage extends StatelessWidget {
   final String url;
   final bool sending;
+  final String conversationId;
+  final String messageId;
+  final bool viewerEnabled;
 
-  const _MessageImage({required this.url, required this.sending});
+  const _MessageImage({
+    required this.url,
+    required this.sending,
+    required this.conversationId,
+    required this.messageId,
+    this.viewerEnabled = true,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final image = url.startsWith('http')
-        ? Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const _MessageImageError())
-        : Image.file(File(url), fit: BoxFit.cover, errorBuilder: (_, __, ___) => const _MessageImageError());
+    final heroTag = 'chat-image-$messageId';
+    final image = ChatMediaImage(
+      conversationId: conversationId,
+      messageId: messageId,
+      url: url,
+      fit: BoxFit.cover,
+      buildRefreshing: (_) => const _MessageImageLoading(),
+      buildError: (_) => const _MessageImageError(),
+    );
 
-    return ClipRRect(
+    final thumbnail = ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minWidth: 160, minHeight: 160, maxHeight: 260),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            image,
+            Hero(tag: heroTag, child: image),
             if (sending)
               Container(
                 color: Colors.black.withValues(alpha: 0.35),
@@ -298,6 +481,44 @@ class _MessageImage extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+
+    if (!viewerEnabled) return thumbnail;
+
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ChatImageViewerPage(
+            conversationId: conversationId,
+            messageId: messageId,
+            heroTag: heroTag,
+          ),
+        ),
+      ),
+      child: thumbnail,
+    );
+  }
+}
+
+/// Shown in place of the bubble's image while a just-detected expired
+/// presigned URL is being refreshed — same container/background treatment
+/// as [_MessageImageError] (just a spinner instead of the broken-image
+/// icon) so there's no jarring visual swap, only a brief, familiar-looking
+/// loading state until the fix lands.
+class _MessageImageLoading extends StatelessWidget {
+  const _MessageImageLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: AppColors.surfaceVariantLight,
+      child: Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(strokeWidth: 2),
         ),
       ),
     );
