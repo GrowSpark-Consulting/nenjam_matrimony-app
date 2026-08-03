@@ -15,6 +15,8 @@ import type {
 import { RealtimeGateway } from '../../realtime/realtime.gateway';
 import { PresenceService } from '../../realtime/presence.service';
 import { RealtimeEvents } from '../../realtime/realtime.events';
+import { NotificationsService } from '../../notifications/services/notifications.service';
+import type { CreateNotificationData } from '../../notifications/repositories/notification.repository';
 import { ConversationRepository } from '../repositories/conversation.repository';
 import { MessageRepository } from '../repositories/message.repository';
 import { ChatAuditService, ChatAuditAction } from './chat-audit.service';
@@ -51,6 +53,7 @@ export class MessagesService {
     private readonly realtime: RealtimeGateway,
     private readonly presence: PresenceService,
     private readonly audit: ChatAuditService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async list(
@@ -151,6 +154,7 @@ export class MessagesService {
     const now = new Date();
 
     let message: ChatMessage;
+    let notificationData: CreateNotificationData | undefined;
     try {
       message = await this.prisma.$transaction(async (tx) => {
         const created = await this.messageRepository.create(tx, {
@@ -168,6 +172,18 @@ export class MessagesService {
           dto.roomId,
           created.createdAt,
         );
+
+        // Notify the recipient only — never the sender. Same
+        // create-inside-transaction pattern as Interests/Shortlist.
+        notificationData = {
+          userId: peerId,
+          type: 'NEW_MESSAGE',
+          title: 'New message',
+          body: 'You have a new message.',
+          data: { actorId: userId, referenceId: dto.roomId },
+        };
+        await this.notifications.create(tx, notificationData);
+
         return created;
       });
     } catch (error) {
@@ -192,6 +208,16 @@ export class MessagesService {
     });
     this.realtime.emitToUser(userId, RealtimeEvents.chatMessage, {
       ...senderView,
+    });
+
+    // Notification center + push (after commit) — same rule and fire-and-forget
+    // dispatch as Interests/Shortlist: a rolled-back transaction must never
+    // reach a device as a push, and a push failure must never fail this call.
+    await this.notifications.invalidateUnread(peerId);
+    void this.notifications.dispatchPush(notificationData!);
+    this.realtime.emitToUser(peerId, RealtimeEvents.notificationCreated, {
+      id: message.id,
+      at: recipientView.createdAt,
     });
 
     void this.audit.record({

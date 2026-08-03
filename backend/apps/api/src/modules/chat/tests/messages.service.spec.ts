@@ -76,6 +76,11 @@ function build() {
     record: jest.fn().mockResolvedValue(undefined),
     recordDenied: jest.fn(),
   };
+  const notifications = {
+    create: jest.fn().mockResolvedValue(undefined),
+    invalidateUnread: jest.fn().mockResolvedValue(undefined),
+    dispatchPush: jest.fn().mockResolvedValue(undefined),
+  };
   const prisma = {
     $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
   };
@@ -87,6 +92,7 @@ function build() {
     realtime as never,
     presence as never,
     audit as never,
+    notifications as never,
   );
   return {
     service,
@@ -96,6 +102,7 @@ function build() {
     realtime,
     presence,
     audit,
+    notifications,
   };
 }
 
@@ -185,6 +192,57 @@ describe('MessagesService.send', () => {
       content: 'hi',
       clientMessageId: 'c-123',
     });
+  });
+
+  it('creates a NEW_MESSAGE notification for the recipient and dispatches a push — never to the sender', async () => {
+    const { service, notifications, realtime } = build();
+    await service.send('me', { roomId: 'r1', content: 'hi' });
+
+    expect(notifications.create).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        userId: 'peer',
+        type: 'NEW_MESSAGE',
+        data: { actorId: 'me', referenceId: 'r1' },
+      }),
+    );
+    expect(notifications.invalidateUnread).toHaveBeenCalledWith('peer');
+    expect(notifications.dispatchPush).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'peer', type: 'NEW_MESSAGE' }),
+    );
+    expect(realtime.emitToUser).toHaveBeenCalledWith(
+      'peer',
+      'notification.created',
+      expect.objectContaining({ id: 'm1' }),
+    );
+
+    // Never the sender.
+    expect(notifications.create).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ userId: 'me' }),
+    );
+    expect(notifications.dispatchPush).not.toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'me' }),
+    );
+    expect(realtime.emitToUser).not.toHaveBeenCalledWith(
+      'me',
+      'notification.created',
+      expect.anything(),
+    );
+  });
+
+  it('does not create a duplicate-send notification on an idempotent retry', async () => {
+    const { service, messageRepository, notifications } = build();
+    messageRepository.findByClientKey.mockResolvedValue(
+      message({ id: 'existing' }),
+    );
+    await service.send('me', {
+      roomId: 'r1',
+      content: 'hi',
+      clientMessageId: 'c-1',
+    });
+    expect(notifications.create).not.toHaveBeenCalled();
+    expect(notifications.dispatchPush).not.toHaveBeenCalled();
   });
 
   it('is idempotent: a repeated clientMessageId returns the existing message, no second insert', async () => {
