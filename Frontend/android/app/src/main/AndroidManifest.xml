@@ -51,9 +51,13 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="nenjam_default_channel" />
+        <!-- Monochrome status-bar icon (res/drawable/ic_notification.xml) —
+             NOT @mipmap/ic_launcher. Android masks notification icons to a
+             flat silhouette using only their alpha channel, so a full-color
+             adaptive launcher icon renders as an indistinct white blob. -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@mipmap/ic_launcher" />
+            android:resource="@drawable/ic_notification" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
