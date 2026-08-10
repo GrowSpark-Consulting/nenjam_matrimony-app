@@ -2,7 +2,10 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { S3Service } from '@app/storage';
 import { RedisService } from '@app/cache';
 import { PaginationQueryDto } from '@app/common';
-import type { Notification } from '../../../../../../libs/database/generated/client';
+import type {
+  Notification,
+  Prisma,
+} from '../../../../../../libs/database/generated/client';
 import {
   ActorSnapshot,
   CreateNotificationData,
@@ -14,6 +17,7 @@ import {
   NotificationItemDto,
   NotificationsPageDto,
 } from '../dto/notification-response.dto';
+import type { PushDispatchOptions } from './push-dispatch.service';
 import { PushDispatchService } from './push-dispatch.service';
 
 // Unread-count cache: keyed per user, short TTL as a backstop so a missed
@@ -21,6 +25,20 @@ import { PushDispatchService } from './push-dispatch.service';
 // changes the count (new notification, mark-read, mark-all-read).
 const UNREAD_CACHE_TTL_SECONDS = 300;
 const unreadCacheKey = (userId: string): string => `notif:unread:${userId}`;
+
+export interface DispatchPushOptions {
+  /** Devices belonging to this user are excluded from the send — see
+   *  {@link PushDispatchOptions.excludeUserId}. */
+  excludeUserId?: PushDispatchOptions['excludeUserId'];
+  /** Push-only content, used when the push should say more (or less) than the
+   *  stored notification row: chat pushes the sender's name and the message
+   *  text, while the notification-center row stays generic. */
+  override?: {
+    title?: string;
+    body?: string;
+    data?: Prisma.InputJsonObject;
+  };
+}
 
 /**
  * Notification center backend. Other modules (Interests, Shortlist) create
@@ -59,22 +77,42 @@ export class NotificationsService {
 
   /**
    * Sends `data` as a push notification to every active device of
-   * `data.userId`. Call this AFTER the transaction that [create]d the
-   * matching in-app notification has committed — same rule as
-   * [invalidateUnread], and for the same reason: a transaction can still roll
-   * back, and a rolled-back write must never reach a device as a push. Never
-   * throws (best-effort — see PushDispatchService.dispatchToUser).
+   * `data.userId` — the single place the push recipient is decided. Call this
+   * AFTER the transaction that [create]d the matching in-app notification has
+   * committed — same rule as [invalidateUnread], and for the same reason: a
+   * transaction can still roll back, and a rolled-back write must never reach
+   * a device as a push. Never throws (best-effort — see
+   * PushDispatchService.dispatchToUser).
+   *
+   * `options.excludeUserId` hard-excludes one user's devices from the send
+   * (chat passes the sender); `options.override` supplies push-only
+   * title/body/data when the push should read differently from the stored
+   * notification row.
    */
-  async dispatchPush(data: CreateNotificationData): Promise<void> {
+  async dispatchPush(
+    data: CreateNotificationData,
+    options: DispatchPushOptions = {},
+  ): Promise<void> {
+    const { excludeUserId, override } = options;
     const payloadData = {
       type: data.type,
       ...((data.data as Record<string, unknown> | undefined) ?? {}),
     };
-    await this.pushDispatch.dispatchToUser(data.userId, {
-      title: data.title,
-      body: data.body,
-      data: payloadData,
-    });
+    await this.pushDispatch.dispatchToUser(
+      data.userId,
+      {
+        title: override?.title ?? data.title,
+        body: override?.body ?? data.body,
+        data: override?.data ?? payloadData,
+      },
+      { excludeUserId },
+    );
+  }
+
+  /** Display name for a push title (chat uses the sender's). `null` when the
+   *  user has no finalized profile — callers supply their own fallback. */
+  resolveDisplayName(userId: string): Promise<string | null> {
+    return this.notificationRepository.findDisplayName(userId);
   }
 
   async list(

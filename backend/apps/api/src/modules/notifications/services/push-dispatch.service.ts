@@ -14,6 +14,17 @@ export interface PushPayload {
   data?: Prisma.InputJsonValue;
 }
 
+export interface PushDispatchOptions {
+  /**
+   * Never deliver to a device registered to this user. Chat passes the
+   * message's sender here so a sender can never receive a push for their own
+   * message — including on a device that is, or once was, registered to both
+   * accounts (shared/handed-over phone, account switch), which targeting the
+   * recipient's token list alone does not rule out.
+   */
+  excludeUserId?: string;
+}
+
 /**
  * Owns FCM device-token lifecycle (register/unregister/cleanup) and fan-out.
  * Domain services never call FirebaseService directly for push — they go
@@ -47,15 +58,37 @@ export class PushDispatchService {
   }
 
   /**
-   * Sends `payload` to every active device of `userId`. Best-effort: a push
-   * failure is logged, never thrown back to the domain write that triggered
-   * it (a member's interest/shortlist action must not fail because FCM is
-   * down). Tokens FCM reports as permanently dead are deactivated
-   * automatically so they stop being retried.
+   * Sends `payload` to every active device of `userId`, minus any device
+   * belonging to `options.excludeUserId` (see {@link PushDispatchOptions}).
+   * Best-effort: a push failure is logged, never thrown back to the domain
+   * write that triggered it (a member's interest/shortlist action must not
+   * fail because FCM is down). Tokens FCM reports as permanently dead are
+   * deactivated automatically so they stop being retried.
    */
-  async dispatchToUser(userId: string, payload: PushPayload): Promise<void> {
+  async dispatchToUser(
+    userId: string,
+    payload: PushPayload,
+    options: PushDispatchOptions = {},
+  ): Promise<void> {
+    const { excludeUserId } = options;
     try {
-      const tokens = await this.notificationRepository.findActiveTokens(userId);
+      // Recipient and excluded actor are the same person — there is no one
+      // left to notify. Only reachable from a degenerate self-conversation;
+      // suppress rather than push someone their own action.
+      if (excludeUserId !== undefined && excludeUserId === userId) {
+        this.logger.warn(
+          `Suppressed push: recipient ${userId} is also the excluded actor.`,
+        );
+        return;
+      }
+
+      const tokens =
+        excludeUserId === undefined
+          ? await this.notificationRepository.findActiveTokens(userId)
+          : await this.notificationRepository.findActiveTokensExcludingUser(
+              userId,
+              excludeUserId,
+            );
       if (tokens.length === 0) return;
 
       const { invalidTokens } = await this.firebase.sendMulticastPush(

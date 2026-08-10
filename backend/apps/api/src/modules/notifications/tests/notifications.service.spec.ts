@@ -44,6 +44,7 @@ function build(redisStatus: 'ready' | 'end' = 'ready') {
     markAllRead: jest.fn().mockResolvedValue(3),
     existsForUser: jest.fn().mockResolvedValue(true),
     findActorSnapshots: jest.fn().mockResolvedValue([]),
+    findDisplayName: jest.fn().mockResolvedValue('Asha Patel'),
   };
   const { redis, client } = makeRedis(redisStatus);
   const s3 = {
@@ -61,6 +62,53 @@ function build(redisStatus: 'ready' | 'end' = 'ready') {
   );
   return { service, repo, client, s3, pushDispatch };
 }
+
+describe('NotificationsService.dispatchPush', () => {
+  const newMessage = {
+    userId: 'peer',
+    type: 'NEW_MESSAGE' as const,
+    title: 'New message',
+    body: 'You have a new message.',
+    data: { actorId: 'me', referenceId: 'r1' },
+  };
+
+  it('addresses the stored notification recipient and flattens its data', async () => {
+    const { service, pushDispatch } = build();
+    await service.dispatchPush(newMessage);
+
+    expect(pushDispatch.dispatchToUser).toHaveBeenCalledWith(
+      'peer',
+      {
+        title: 'New message',
+        body: 'You have a new message.',
+        data: { type: 'NEW_MESSAGE', actorId: 'me', referenceId: 'r1' },
+      },
+      { excludeUserId: undefined },
+    );
+  });
+
+  it('forwards excludeUserId and the push-only content override', async () => {
+    const { service, pushDispatch } = build();
+    await service.dispatchPush(newMessage, {
+      excludeUserId: 'me',
+      override: {
+        title: 'Asha Patel',
+        body: 'hi there',
+        data: { type: 'chat', conversationId: 'r1', senderId: 'me' },
+      },
+    });
+
+    expect(pushDispatch.dispatchToUser).toHaveBeenCalledWith(
+      'peer',
+      {
+        title: 'Asha Patel',
+        body: 'hi there',
+        data: { type: 'chat', conversationId: 'r1', senderId: 'me' },
+      },
+      { excludeUserId: 'me' },
+    );
+  });
+});
 
 describe('NotificationsService.getUnreadCount', () => {
   it('returns the cached value without hitting the DB', async () => {

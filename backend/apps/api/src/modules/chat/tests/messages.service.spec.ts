@@ -83,6 +83,7 @@ function build() {
     create: jest.fn().mockResolvedValue(undefined),
     invalidateUnread: jest.fn().mockResolvedValue(undefined),
     dispatchPush: jest.fn().mockResolvedValue(undefined),
+    resolveDisplayName: jest.fn().mockResolvedValue('Asha Patel'),
   };
   const prisma = {
     $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
@@ -112,6 +113,44 @@ function build() {
     notifications,
     emailDispatch,
   };
+}
+
+/** The chat push is dispatched fire-and-forget, after an awaited display-name
+ *  lookup — so it lands a few microtasks after `send()` resolves. Flush the
+ *  queue before asserting on it. */
+const flushPending = () =>
+  new Promise<void>((resolve) => setImmediate(resolve));
+
+interface PushOverride {
+  title: string;
+  body: string;
+  data: Record<string, string>;
+}
+
+/** The `override` block of the nth `dispatchPush` call, typed — the raw
+ *  `mock.calls` entry is `any`. */
+function pushOverride(dispatchPush: jest.Mock, index = 0): PushOverride {
+  const calls = dispatchPush.mock.calls as unknown as Array<
+    [unknown, { override: PushOverride }]
+  >;
+  return calls[index][1].override;
+}
+
+interface StoredNotification {
+  userId: string;
+  type: string;
+  title: string;
+  body: string;
+  data: Record<string, string>;
+}
+
+/** The notification row handed to `notifications.create` on the nth call,
+ *  typed — same `any` problem as {@link pushOverride}. */
+function storedNotification(create: jest.Mock, index = 0): StoredNotification {
+  const calls = create.mock.calls as unknown as Array<
+    [unknown, StoredNotification]
+  >;
+  return calls[index][1];
 }
 
 // Offset-mode query (no cursor → legacy page path).
@@ -205,6 +244,7 @@ describe('MessagesService.send', () => {
   it('creates a NEW_MESSAGE notification for the recipient and dispatches a push — never to the sender', async () => {
     const { service, notifications, realtime } = build();
     await service.send('me', { roomId: 'r1', content: 'hi' });
+    await flushPending();
 
     expect(notifications.create).toHaveBeenCalledWith(
       expect.anything(),
@@ -217,6 +257,7 @@ describe('MessagesService.send', () => {
     expect(notifications.invalidateUnread).toHaveBeenCalledWith('peer');
     expect(notifications.dispatchPush).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'peer', type: 'NEW_MESSAGE' }),
+      expect.objectContaining({ excludeUserId: 'me' }),
     );
     expect(realtime.emitToUser).toHaveBeenCalledWith(
       'peer',
@@ -231,12 +272,134 @@ describe('MessagesService.send', () => {
     );
     expect(notifications.dispatchPush).not.toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'me' }),
+      expect.anything(),
     );
     expect(realtime.emitToUser).not.toHaveBeenCalledWith(
       'me',
       'notification.created',
       expect.anything(),
     );
+  });
+
+  it('stores the notification row with the sender name and message text', async () => {
+    const { service, notifications } = build();
+    await service.send('me', { roomId: 'r1', content: 'hi there' });
+
+    expect(notifications.create).toHaveBeenCalledWith(expect.anything(), {
+      userId: 'peer',
+      type: 'NEW_MESSAGE',
+      title: 'Asha Patel',
+      body: 'hi there',
+      data: { actorId: 'me', referenceId: 'r1' },
+    });
+  });
+
+  it('stores the same title and body the push carries', async () => {
+    const { service, notifications } = build();
+    await service.send('me', { roomId: 'r1', content: 'hi there' });
+    await flushPending();
+
+    const stored = storedNotification(notifications.create);
+    const pushed = pushOverride(notifications.dispatchPush);
+    expect(stored.title).toBe(pushed.title);
+    expect(stored.body).toBe(pushed.body);
+  });
+
+  it('truncates the stored notification body to 120 characters', async () => {
+    const { service, notifications, messageRepository } = build();
+    const long = 'a'.repeat(300);
+    messageRepository.create.mockResolvedValue(message({ content: long }));
+
+    await service.send('me', { roomId: 'r1', content: long });
+
+    const { body } = storedNotification(notifications.create);
+    expect(body).toHaveLength(120);
+    expect(body.endsWith('…')).toBe(true);
+  });
+
+  it('stores a generic title, and still sends, when the name lookup fails', async () => {
+    const { service, notifications } = build();
+    notifications.resolveDisplayName.mockRejectedValue(new Error('db down'));
+
+    await expect(
+      service.send('me', { roomId: 'r1', content: 'hi' }),
+    ).resolves.toMatchObject({ id: 'm1' });
+
+    expect(storedNotification(notifications.create).title).toBe('Nenjam');
+  });
+
+  it('pushes the sender name as title and the message as body, excluding the sender devices', async () => {
+    const { service, notifications } = build();
+    await service.send('me', { roomId: 'r1', content: 'hi there' });
+    await flushPending();
+
+    expect(notifications.resolveDisplayName).toHaveBeenCalledWith('me');
+    expect(notifications.dispatchPush).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'peer' }),
+      {
+        excludeUserId: 'me',
+        override: {
+          title: 'Asha Patel',
+          body: 'hi there',
+          data: { type: 'chat', conversationId: 'r1', senderId: 'me' },
+        },
+      },
+    );
+  });
+
+  it('truncates the push body to 120 characters, ellipsis included', async () => {
+    const { service, notifications, messageRepository } = build();
+    const long = 'a'.repeat(300);
+    messageRepository.create.mockResolvedValue(message({ content: long }));
+
+    await service.send('me', { roomId: 'r1', content: long });
+    await flushPending();
+
+    const { body } = pushOverride(notifications.dispatchPush);
+    expect(body).toHaveLength(120);
+    expect(body.endsWith('…')).toBe(true);
+  });
+
+  it('falls back to a generic push title when the sender has no display name', async () => {
+    const { service, notifications } = build();
+    notifications.resolveDisplayName.mockResolvedValue(null);
+
+    await service.send('me', { roomId: 'r1', content: 'hi' });
+    await flushPending();
+
+    const { title } = pushOverride(notifications.dispatchPush);
+    expect(title).toBe('Nenjam');
+    // Must never collide with the stored notification row's generic title —
+    // that ambiguity is what made the fallback undiagnosable on a device.
+    expect(title).not.toBe('New message');
+  });
+
+  it('never previews media content in a push (the stored URL is a signed link)', async () => {
+    const { service, notifications, messageRepository } = build();
+    messageRepository.create.mockResolvedValue(
+      message({ type: 'IMAGE', content: '', mediaUrl: 'chat/x.jpg' }),
+    );
+
+    await service.send('me', {
+      roomId: 'r1',
+      type: 'IMAGE',
+      mediaUrl: 'chat/x.jpg',
+    });
+    await flushPending();
+
+    expect(pushOverride(notifications.dispatchPush).body).toBe(
+      'Sent you an attachment.',
+    );
+  });
+
+  it('does not fail the send when the push dispatch throws', async () => {
+    const { service, notifications } = build();
+    notifications.dispatchPush.mockRejectedValue(new Error('FCM down'));
+
+    await expect(
+      service.send('me', { roomId: 'r1', content: 'hi' }),
+    ).resolves.toMatchObject({ id: 'm1' });
+    await flushPending();
   });
 
   it('does not create a duplicate-send notification on an idempotent retry', async () => {

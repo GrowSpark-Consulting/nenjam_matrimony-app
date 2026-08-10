@@ -1,14 +1,19 @@
+import '../../../../core/utils/server_time.dart';
 import '../../domain/entities/message_entity.dart';
 
 /// Decodes a backend chat-message wire object (`ChatMessage` DTO) into a
 /// [MessageEntity]. Shared by [ConversationApiRepositoryImpl] (REST history +
 /// send response) and `chat_realtime_sync.dart` (socket `chat.message` /
 /// `chat.messageEdited` payloads) so the field mapping lives in exactly one
-/// place.
+/// place — and so both paths get identical timestamp handling.
 ///
 /// `isMine` and `status` are computed server-side per viewer and read straight
 /// off the payload. Wire names differ from [MessageEntity]'s properties:
 /// `content`→`text`, `mediaUrl`→`attachmentUrl`, `createdAt`→`sentAt`.
+///
+/// Every timestamp goes through [parseServerTime], so the returned
+/// [MessageEntity] carries **local** times — see that function on why a raw
+/// `DateTime.parse` here rendered messages ~5h30m early in IST.
 MessageEntity messageEntityFromWire(
   Map<String, dynamic> json, {
   String? clientMessageId,
@@ -17,7 +22,7 @@ MessageEntity messageEntityFromWire(
     id: json['id'] as String,
     conversationId: json['roomId'] as String,
     text: json['content'] as String? ?? '',
-    sentAt: DateTime.parse(json['createdAt'] as String),
+    sentAt: parseServerTime(json['createdAt'] as String),
     isMine: json['isMine'] as bool? ?? false,
     status: messageStatusFromWire(
       json['status'] as String?,
@@ -26,9 +31,7 @@ MessageEntity messageEntityFromWire(
     type: messageTypeFromWire(json['type'] as String?),
     attachmentUrl: json['mediaUrl'] as String?,
     clientMessageId: clientMessageId ?? json['clientMessageId'] as String?,
-    editedAt: json['editedAt'] == null
-        ? null
-        : DateTime.parse(json['editedAt'] as String),
+    editedAt: tryParseServerTime(json['editedAt']),
     replyTo: messageReplyPreviewFromWire(json['replyTo']),
   );
 }
@@ -48,9 +51,7 @@ MessageReplyPreview? messageReplyPreviewFromWire(dynamic json) {
     text: map['content'] as String? ?? '',
     attachmentUrl: map['mediaUrl'] as String?,
     isDeleted: map['isDeleted'] as bool? ?? false,
-    editedAt: map['editedAt'] == null
-        ? null
-        : DateTime.parse(map['editedAt'] as String),
+    editedAt: tryParseServerTime(map['editedAt']),
   );
 }
 

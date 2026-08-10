@@ -175,6 +175,51 @@ export class NotificationRepository {
     });
   }
 
+  /**
+   * Active tokens for `userId`, minus every device registered to
+   * `excludeUserId`. Used by push dispatch to guarantee an actor is never
+   * pushed their own action (chat: the sender).
+   *
+   * The exclusion set is deliberately NOT filtered by `isActive`: an inactive
+   * row still identifies a physical device belonging to `excludeUserId` (e.g.
+   * one they logged out of), and that device must stay excluded even if the
+   * same token later reappears under the recipient. `fcmToken` is globally
+   * unique, so the two sets can only overlap when a single device has been
+   * retargeted between the two accounts — exactly the case a plain
+   * `findActiveTokens(recipient)` cannot see.
+   */
+  async findActiveTokensExcludingUser(
+    userId: string,
+    excludeUserId: string,
+  ): Promise<DevicePushToken[]> {
+    const [tokens, excluded] = await Promise.all([
+      this.prisma.devicePushToken.findMany({
+        where: { userId, isActive: true },
+      }),
+      this.prisma.devicePushToken.findMany({
+        where: { userId: excludeUserId },
+        select: { fcmToken: true },
+      }),
+    ]);
+    if (excluded.length === 0) return tokens;
+
+    const excludedTokens = new Set(excluded.map((t) => t.fcmToken));
+    return tokens.filter((t) => !excludedTokens.has(t.fcmToken));
+  }
+
+  /** Display name for a notification/push title. `null` when the user has no
+   *  finalized profile — callers fall back to a generic title rather than
+   *  showing an empty one. */
+  async findDisplayName(userId: string): Promise<string | null> {
+    const profile = await this.prisma.userProfile.findFirst({
+      where: { userId },
+      select: { firstName: true, lastName: true },
+    });
+    if (!profile) return null;
+    const name = `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim();
+    return name.length > 0 ? name : null;
+  }
+
   /** Most-recently-registered active device — used by POST /notifications/test. */
   findLatestActiveToken(userId: string): Promise<DevicePushToken | null> {
     return this.prisma.devicePushToken.findFirst({

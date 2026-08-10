@@ -33,12 +33,37 @@ import {
 } from '../dto/message.response.dto';
 
 const MAX_TEXT_LENGTH = 4000;
+// A chat push shows the message itself; anything past this is cut — the
+// recipient reads the rest by opening the conversation. The ellipsis is
+// included in the budget, so a truncated body is never longer than this.
+const PUSH_BODY_MAX_LENGTH = 120;
+// Shown as the push title when the sender has no finalized profile to take a
+// display name from (see NotificationRepository.findDisplayName for the
+// resolution order). Deliberately NOT 'New message': that is the stored
+// notification row's generic title, so reusing it here makes a fallback push
+// indistinguishable from the pre-dynamic-title behavior — you cannot tell
+// "the fix isn't running" from "this sender has no profile". The brand name
+// is the last resort because the only other User-level identifiers in the
+// schema are `email` and `phone`, which must never reach a lock screen.
+const FALLBACK_PUSH_TITLE = 'Nenjam';
+// A media message's stored content is a signed, short-lived S3 URL — never
+// previewable — so the push describes it instead.
+const MEDIA_PUSH_PREVIEW = 'Sent you an attachment.';
 // A sender may edit their own text message only within this window after
 // sending it (matching the client's affordance); after that it's immutable.
 const EDIT_WINDOW_MS = 15 * 60 * 1000;
 
 function isUniqueViolation(error: unknown): boolean {
   return (error as { code?: string })?.code === 'P2002';
+}
+
+/** Message text as it appears in a push body: newlines/runs of whitespace
+ *  collapsed (a notification renders on one or two lines) and cut to
+ *  {@link PUSH_BODY_MAX_LENGTH}, ellipsis included in that budget. */
+function truncateForPush(text: string): string {
+  const collapsed = text.replace(/\s+/g, ' ').trim();
+  if (collapsed.length <= PUSH_BODY_MAX_LENGTH) return collapsed;
+  return `${collapsed.slice(0, PUSH_BODY_MAX_LENGTH - 1).trimEnd()}…`;
 }
 
 /**
@@ -121,13 +146,18 @@ export class MessagesService {
   }
 
   async send(userId: string, dto: SendMessageDto): Promise<MessageDto> {
-    const room = await this.requireParticipantRoom(dto.roomId, userId);
+    // The two identities every downstream side effect (notification, push,
+    // email, realtime) is routed by. Both are derived from the room row, never
+    // from the request body: the sender is the authenticated caller, the
+    // receiver is the room's other participant.
+    const senderUserId = userId;
+    const room = await this.requireParticipantRoom(dto.roomId, senderUserId);
     if (!room.isActive) {
       throw new ForbiddenException('This conversation is no longer available.');
     }
-    const peerId = this.peerOf(room, userId);
+    const receiverUserId = this.peerOf(room, senderUserId);
 
-    await this.assertChatEligible(userId, peerId);
+    await this.assertChatEligible(senderUserId, receiverUserId);
 
     const type: MessageType = dto.type ?? 'TEXT';
     const content = (dto.content ?? '').trim();
@@ -161,18 +191,35 @@ export class MessagesService {
     // the first request created — never a duplicate insert.
     if (dto.clientMessageId) {
       const existing = await this.messageRepository.findByClientKey(
-        userId,
+        senderUserId,
         dto.clientMessageId,
       );
-      if (existing) return this.toDto(existing, userId, dto.clientMessageId);
+      if (existing)
+        return this.toDto(existing, senderUserId, dto.clientMessageId);
     }
 
     // Delivery state: if the recipient has a live socket (per cross-instance
     // presence), the message goes out DELIVERED; otherwise SENT, and the
     // reconnect-replay path (chat.sync) promotes it to DELIVERED when they come
     // back online.
-    const deliveredNow = await this.presence.isOnline(peerId);
+    //
+    // The sender's display name is resolved here, before the transaction,
+    // because the notification row written inside it now carries that name as
+    // its title — it can no longer be looked up lazily after commit. Issued
+    // alongside the presence read (both are independent single-row lookups) so
+    // it adds no extra round trip to the send path.
+    const [deliveredNow, senderDisplayName] = await Promise.all([
+      this.presence.isOnline(receiverUserId),
+      this.resolveSenderTitle(senderUserId),
+    ]);
     const now = new Date();
+
+    // One title/body pair, used verbatim for both the stored notification row
+    // and the push payload — the notification center and the lock screen must
+    // never disagree about what a message said.
+    const notificationBody = truncateForPush(
+      isMedia ? MEDIA_PUSH_PREVIEW : content,
+    );
 
     let message: ChatMessageWithReply;
     let notificationData: CreateNotificationData | undefined;
@@ -180,7 +227,7 @@ export class MessagesService {
       message = await this.prisma.$transaction(async (tx) => {
         const created = await this.messageRepository.create(tx, {
           roomId: dto.roomId,
-          senderId: userId,
+          senderId: senderUserId,
           content,
           type,
           mediaUrl: dto.mediaUrl ?? null,
@@ -198,11 +245,11 @@ export class MessagesService {
         // Notify the recipient only — never the sender. Same
         // create-inside-transaction pattern as Interests/Shortlist.
         notificationData = {
-          userId: peerId,
+          userId: receiverUserId,
           type: 'NEW_MESSAGE',
-          title: 'New message',
-          body: 'You have a new message.',
-          data: { actorId: userId, referenceId: dto.roomId },
+          title: senderDisplayName,
+          body: notificationBody,
+          data: { actorId: senderUserId, referenceId: dto.roomId },
         };
         await this.notifications.create(tx, notificationData);
 
@@ -213,37 +260,53 @@ export class MessagesService {
       // the message the winner created.
       if (isUniqueViolation(error) && dto.clientMessageId) {
         const existing = await this.messageRepository.findByClientKey(
-          userId,
+          senderUserId,
           dto.clientMessageId,
         );
-        if (existing) return this.toDto(existing, userId, dto.clientMessageId);
+        if (existing)
+          return this.toDto(existing, senderUserId, dto.clientMessageId);
       }
       throw error;
     }
 
     // Real-time (after commit): push the full message inline to the recipient
     // (renders instantly, no round trip) and to the sender's OTHER devices.
-    const senderView = await this.toDto(message, userId, dto.clientMessageId);
-    const recipientView = await this.toDto(message, peerId);
-    this.realtime.emitToUser(peerId, RealtimeEvents.chatMessage, {
+    const senderView = await this.toDto(
+      message,
+      senderUserId,
+      dto.clientMessageId,
+    );
+    const recipientView = await this.toDto(message, receiverUserId);
+    this.realtime.emitToUser(receiverUserId, RealtimeEvents.chatMessage, {
       ...recipientView,
     });
-    this.realtime.emitToUser(userId, RealtimeEvents.chatMessage, {
+    this.realtime.emitToUser(senderUserId, RealtimeEvents.chatMessage, {
       ...senderView,
     });
 
     // Notification center + push (after commit) — same rule and fire-and-forget
     // dispatch as Interests/Shortlist: a rolled-back transaction must never
     // reach a device as a push, and a push failure must never fail this call.
-    await this.notifications.invalidateUnread(peerId);
-    void this.notifications.dispatchPush(notificationData!);
-    this.realtime.emitToUser(peerId, RealtimeEvents.notificationCreated, {
-      id: message.id,
-      at: recipientView.createdAt,
+    await this.notifications.invalidateUnread(receiverUserId);
+    void this.dispatchNewMessagePush({
+      notification: notificationData!,
+      senderUserId,
+      receiverUserId,
+      conversationId: message.roomId,
+      title: senderDisplayName,
+      body: notificationBody,
     });
+    this.realtime.emitToUser(
+      receiverUserId,
+      RealtimeEvents.notificationCreated,
+      {
+        id: message.id,
+        at: recipientView.createdAt,
+      },
+    );
 
     void this.audit.record({
-      actorId: userId,
+      actorId: senderUserId,
       action: ChatAuditAction.messageSend,
       entity: 'ChatMessage',
       entityId: message.id,
@@ -260,15 +323,83 @@ export class MessagesService {
     if (!deliveredNow) {
       void this.emailDispatch
         .sendNewMessage(
-          peerId,
-          userId,
-          isMedia ? 'Sent you an attachment.' : content,
+          receiverUserId,
+          senderUserId,
+          isMedia ? MEDIA_PUSH_PREVIEW : content,
           message.roomId,
         )
         .catch(() => undefined);
     }
 
     return senderView;
+  }
+
+  /**
+   * The sender's display name, used as the title of both the stored
+   * notification row and the push. Falls back to {@link FALLBACK_PUSH_TITLE}
+   * when they have no finalized profile.
+   *
+   * Swallows every failure: unlike the old post-commit lookup, this now runs
+   * before the send transaction, so a thrown error here would fail the message
+   * send itself. A name we could not read is worth a generic title, never a
+   * refused message.
+   */
+  private async resolveSenderTitle(senderUserId: string): Promise<string> {
+    try {
+      const name = await this.notifications.resolveDisplayName(senderUserId);
+      return name ?? FALLBACK_PUSH_TITLE;
+    } catch {
+      return FALLBACK_PUSH_TITLE;
+    }
+  }
+
+  /**
+   * Push for a new chat message.
+   *
+   * Recipient logic is explicit on both sides: the push is addressed to
+   * `receiverUserId` only, and `excludeUserId: senderUserId` drops every
+   * device token registered to the sender before the send. Addressing alone
+   * is not enough — a single physical device that has been registered to both
+   * accounts (shared phone, account switch, a logout whose token cleanup
+   * never landed) still sits in the recipient's token list, which is how a
+   * sender ends up notified of their own message. The exclusion closes that.
+   *
+   * `title`/`body` arrive already resolved and truncated from {@link send},
+   * which needs the same pair for the notification row it writes inside the
+   * transaction — one lookup feeds both channels, so the notification center
+   * and the lock screen can never disagree. Fire-and-forget by the caller;
+   * never throws (a push failure must not surface on a message send that
+   * already succeeded).
+   */
+  private async dispatchNewMessagePush(params: {
+    notification: CreateNotificationData;
+    senderUserId: string;
+    receiverUserId: string;
+    conversationId: string;
+    title: string;
+    body: string;
+  }): Promise<void> {
+    const { senderUserId, receiverUserId, conversationId, title, body } =
+      params;
+    try {
+      await this.notifications.dispatchPush(
+        { ...params.notification, userId: receiverUserId },
+        {
+          excludeUserId: senderUserId,
+          override: {
+            title,
+            body,
+            data: {
+              type: 'chat',
+              conversationId,
+              senderId: senderUserId,
+            },
+          },
+        },
+      );
+    } catch {
+      // Best-effort, same contract as PushDispatchService.dispatchToUser.
+    }
   }
 
   /**
