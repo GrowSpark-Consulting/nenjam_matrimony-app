@@ -91,6 +91,10 @@ function build() {
   const emailDispatch = {
     sendNewMessage: jest.fn().mockResolvedValue(undefined),
   };
+  // Default: recipient is NOT in the conversation, so pushes dispatch as before.
+  const activeConversation = {
+    isViewing: jest.fn().mockResolvedValue(false),
+  };
   const service = new MessagesService(
     prisma as never,
     conversationRepository as never,
@@ -101,6 +105,7 @@ function build() {
     audit as never,
     notifications as never,
     emailDispatch as never,
+    activeConversation as never,
   );
   return {
     service,
@@ -112,6 +117,7 @@ function build() {
     audit,
     notifications,
     emailDispatch,
+    activeConversation,
   };
 }
 
@@ -134,6 +140,18 @@ function pushOverride(dispatchPush: jest.Mock, index = 0): PushOverride {
     [unknown, { override: PushOverride }]
   >;
   return calls[index][1].override;
+}
+
+/** The options object handed to `dispatchPush` on the nth call, typed — the raw
+ *  `mock.calls` entry is `any`. Mirrors {@link pushOverride}. */
+function pushOptions(
+  dispatchPush: jest.Mock,
+  index = 0,
+): { excludeUserId: string } {
+  const calls = dispatchPush.mock.calls as unknown as Array<
+    [unknown, { excludeUserId: string }]
+  >;
+  return calls[index][1];
 }
 
 interface StoredNotification {
@@ -712,5 +730,116 @@ describe('MessagesService — email workflow', () => {
     await expect(
       service.send('me', { roomId: 'r1', content: 'hi' }),
     ).resolves.toBeDefined();
+  });
+});
+
+describe('MessagesService — chat push suppression while viewing', () => {
+  it('Test 1: recipient viewing the same conversation → no push', async () => {
+    const { service, notifications, activeConversation } = build();
+    activeConversation.isViewing.mockResolvedValue(true);
+
+    await service.send('me', { roomId: 'r1', content: 'hi' });
+    await flushPending();
+
+    expect(activeConversation.isViewing).toHaveBeenCalledWith('peer', 'r1');
+    expect(notifications.dispatchPush).not.toHaveBeenCalled();
+  });
+
+  it('Test 2: recipient not viewing → push IS sent, unchanged', async () => {
+    const { service, notifications, activeConversation } = build();
+    activeConversation.isViewing.mockResolvedValue(false);
+
+    await service.send('me', { roomId: 'r1', content: 'hi' });
+    await flushPending();
+
+    expect(notifications.dispatchPush).toHaveBeenCalledTimes(1);
+    // Sender-device exclusion must survive the new branch.
+    expect(pushOptions(notifications.dispatchPush).excludeUserId).toBe('me');
+  });
+
+  it('Test 3: recipient online but in ANOTHER conversation → push IS sent', async () => {
+    // Being online is deliberately NOT the condition — only this exact thread is.
+    const { service, notifications, presence, activeConversation } = build();
+    presence.isOnline.mockResolvedValue(true);
+    activeConversation.isViewing.mockImplementation(
+      (_userId: string, conversationId: string) =>
+        Promise.resolve(conversationId === 'some-other-room'),
+    );
+
+    await service.send('me', { roomId: 'r1', content: 'hi' });
+    await flushPending();
+
+    expect(notifications.dispatchPush).toHaveBeenCalledTimes(1);
+  });
+
+  it('Test 4: recipient offline → existing behaviour unchanged', async () => {
+    const { service, notifications, presence, activeConversation } = build();
+    presence.isOnline.mockResolvedValue(false);
+    activeConversation.isViewing.mockResolvedValue(false);
+
+    await service.send('me', { roomId: 'r1', content: 'hi' });
+    await flushPending();
+
+    expect(notifications.dispatchPush).toHaveBeenCalledTimes(1);
+  });
+
+  it('Test 9: the sender never receives their own push', async () => {
+    // Suppression must not weaken sender-device exclusion, whichever branch runs.
+    for (const viewing of [true, false]) {
+      const { service, notifications, activeConversation } = build();
+      activeConversation.isViewing.mockResolvedValue(viewing);
+
+      await service.send('me', { roomId: 'r1', content: 'hi' });
+      await flushPending();
+
+      if (notifications.dispatchPush.mock.calls.length > 0) {
+        expect(pushOptions(notifications.dispatchPush).excludeUserId).toBe(
+          'me',
+        );
+      }
+    }
+  });
+
+  it('suppresses only the push — the notification row is still written', async () => {
+    const { service, notifications, activeConversation } = build();
+    activeConversation.isViewing.mockResolvedValue(true);
+
+    await service.send('me', { roomId: 'r1', content: 'hi' });
+    await flushPending();
+
+    // Written inside the send transaction, before any push decision.
+    expect(notifications.create).toHaveBeenCalledTimes(1);
+    expect(storedNotification(notifications.create).userId).toBe('peer');
+    expect(notifications.invalidateUnread).toHaveBeenCalledWith('peer');
+  });
+
+  it('still delivers the message over the socket when the push is suppressed', async () => {
+    const { service, realtime, activeConversation } = build();
+    activeConversation.isViewing.mockResolvedValue(true);
+
+    const result = await service.send('me', { roomId: 'r1', content: 'hi' });
+    await flushPending();
+
+    expect(realtime.emitToUser).toHaveBeenCalledWith(
+      'peer',
+      'chat.message',
+      expect.objectContaining({ id: 'm1' }),
+    );
+    expect(result).toMatchObject({ id: 'm1' });
+  });
+
+  it('a lookup failure sends the push rather than swallowing it', async () => {
+    // Fail OPEN. Suppression is the dangerous direction: a dropped push is a
+    // message the member never hears about, while a redundant one is only
+    // mildly annoying. This caught a real bug — with the lookup inside the
+    // existing best-effort try/catch, a rejection skipped dispatchPush
+    // entirely.
+    const { service, notifications, activeConversation } = build();
+    activeConversation.isViewing.mockRejectedValue(new Error('redis down'));
+
+    await service.send('me', { roomId: 'r1', content: 'hi' });
+    await flushPending();
+
+    expect(notifications.dispatchPush).toHaveBeenCalledTimes(1);
   });
 });

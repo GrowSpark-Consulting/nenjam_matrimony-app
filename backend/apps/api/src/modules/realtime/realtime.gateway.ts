@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import {
   ConnectedSocket,
+  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
@@ -13,6 +14,7 @@ import { PrismaService } from '@app/database';
 import { RedisService } from '@app/cache';
 import { getCachedUserId, setCachedUserId } from '@app/common';
 import { PresenceService } from './presence.service';
+import { ActiveConversationService } from './active-conversation.service';
 import {
   RealtimeEvent,
   RealtimeEvents,
@@ -54,6 +56,7 @@ export class RealtimeGateway
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly presence: PresenceService,
+    private readonly activeConversation: ActiveConversationService,
   ) {}
 
   async handleConnection(client: Socket): Promise<void> {
@@ -85,6 +88,10 @@ export class RealtimeGateway
   async handleDisconnect(client: Socket): Promise<void> {
     const userId = (client.data as AuthedSocketData).userId;
     if (!userId) return;
+    // Clear what this device had open first. A disconnected device must never
+    // stay marked as viewing a conversation — that would silently suppress this
+    // member's chat pushes until the entry aged out of the stale window.
+    await this.activeConversation.leave(userId, client.id);
     // socket.io already removed the socket from its room; drop this device from
     // presence too. If it was the user's last device, tell their peers they're
     // now offline (with a fresh last-seen).
@@ -108,6 +115,10 @@ export class RealtimeGateway
     // and re-announce online to peers.
     const wasOnline = await this.presence.isOnline(userId);
     await this.presence.touch(userId, client.id);
+    // Keep any open-conversation entry fresh on the same heartbeat, so a member
+    // sitting in a chat never ages out of the stale window and starts receiving
+    // pushes for the thread they are looking at. Costs no extra client traffic.
+    await this.activeConversation.refresh(userId, client.id);
     client.emit('presence.pong', { at: Date.now() });
     if (!wasOnline) void this.broadcastPresence(userId, true, null);
   }
@@ -124,8 +135,47 @@ export class RealtimeGateway
   ): Promise<void> {
     const userId = (client.data as AuthedSocketData).userId;
     if (!userId) return;
+    // Backgrounding means nothing is on screen — drop every device entry so the
+    // member resumes getting chat pushes immediately rather than after the
+    // stale window.
+    await this.activeConversation.clearUser(userId);
     await this.presence.removeAll(userId);
     await this.broadcastPresence(userId, false, new Date());
+  }
+
+  /**
+   * The device reports the conversation it now has on screen. Suppression is
+   * scoped to exactly this thread — a member in a DIFFERENT conversation, or on
+   * any other screen, keeps receiving pushes.
+   *
+   * Idempotent, and switching threads is just another call: one entry per
+   * device, so the previous conversation stops suppressing the moment the
+   * member moves on.
+   */
+  @SubscribeMessage(RealtimeEvents.chatViewing)
+  async handleChatViewing(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { conversationId?: unknown },
+  ): Promise<void> {
+    const userId = (client.data as AuthedSocketData).userId;
+    if (!userId) return;
+    const conversationId = payload?.conversationId;
+    // Never trust the socket payload's shape. A malformed id is dropped rather
+    // than stored, since a bad entry could only ever suppress a real push.
+    if (typeof conversationId !== 'string' || conversationId.length === 0) {
+      return;
+    }
+    await this.activeConversation.enter(userId, client.id, conversationId);
+  }
+
+  /** The device left the chat screen. Clears only this device's entry. */
+  @SubscribeMessage(RealtimeEvents.chatStopViewing)
+  async handleChatStopViewing(
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
+    const userId = (client.data as AuthedSocketData).userId;
+    if (!userId) return;
+    await this.activeConversation.leave(userId, client.id);
   }
 
   /**

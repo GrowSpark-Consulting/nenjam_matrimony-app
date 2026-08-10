@@ -31,6 +31,16 @@ export const RealtimeEvents = {
   // went offline. Payload `{ userId, isOnline, lastSeenAt }` — pushed only to
   // that user's conversation peers, never broadcast globally.
   chatPresence: 'chat.presence',
+  // Client -> server only. The device reports which conversation it currently
+  // has on screen, so a push for that thread can be suppressed while the member
+  // is already reading it. `chat.viewing` carries `{ conversationId }`;
+  // `chat.stopViewing` takes no payload and clears whatever this device had.
+  //
+  // Being on screen is the condition — NOT being online, and not merely having
+  // the app open. Someone in another conversation, or on Discover, still gets
+  // the push.
+  chatViewing: 'chat.viewing',
+  chatStopViewing: 'chat.stopViewing',
 } as const;
 
 export type RealtimeEvent =

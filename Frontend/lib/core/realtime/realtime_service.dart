@@ -100,6 +100,9 @@ class RealtimeService {
       _log('ready — requesting sync + starting heartbeat');
       socket.emit(ChatClientEvent.sync);
       _startHeartbeat();
+      // The server keys the viewing registration on the socket id, so a
+      // reconnect silently loses it — re-send before a push can slip through.
+      _resendViewingConversation();
       if (!_ready.isClosed) _ready.add(null);
     });
 
@@ -144,9 +147,34 @@ class RealtimeService {
     socket.connect();
   }
 
+  /// The conversation this device currently has on screen, or null. Remembered
+  /// rather than fire-and-forget because the server holds it against the SOCKET:
+  /// a reconnect gets a new socket id and loses the registration, so it has to
+  /// be re-sent on every `ready` (see the handler in [connect]).
+  String? _viewingConversationId;
+
+  /// Tells the server which conversation is on screen, so it can suppress chat
+  /// pushes for that thread. Pass null when leaving the screen.
+  ///
+  /// Safe to call before the socket is ready: [emit] no-ops while disconnected,
+  /// and the remembered id is re-sent on `ready`.
+  void setViewingConversation(String? conversationId) {
+    _viewingConversationId = conversationId;
+    if (conversationId == null) {
+      emit(ChatClientEvent.chatStopViewing);
+    } else {
+      emit(ChatClientEvent.chatViewing, {'conversationId': conversationId});
+    }
+  }
+
   /// App went to the background: mark this device offline right away (the server
   /// broadcasts it to peers with a last-seen) and pause the heartbeat so we
   /// don't keep re-announcing online while backgrounded.
+  ///
+  /// The server drops this device's viewing registration as part of handling
+  /// `presence.offline`, so a backgrounded app starts receiving chat pushes
+  /// again immediately — which is the whole point. `_viewingConversationId` is
+  /// deliberately KEPT so returning to the foreground can restore it.
   void handleAppBackgrounded() {
     emit(ChatClientEvent.presenceOffline);
     _stopHeartbeat();
@@ -165,6 +193,17 @@ class RealtimeService {
       return;
     }
     _startHeartbeat(); // still connected — re-announce online now
+    // Backgrounding cleared this device's viewing registration server-side, so
+    // restore it if a chat screen is still on top.
+    _resendViewingConversation();
+  }
+
+  /// Re-sends the open conversation after anything that can lose the server's
+  /// copy: a reconnect (new socket id) or a background/foreground cycle.
+  void _resendViewingConversation() {
+    final conversationId = _viewingConversationId;
+    if (conversationId == null) return;
+    emit(ChatClientEvent.chatViewing, {'conversationId': conversationId});
   }
 
   void _startHeartbeat() {

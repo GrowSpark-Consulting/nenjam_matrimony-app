@@ -96,6 +96,17 @@ class ChatClientEvent {
   /// a last-seen) rather than waiting for the socket to drop or age out.
   static const String presenceOffline = 'presence.offline';
 
+  /// This device now has a conversation on screen — `{ conversationId }`. The
+  /// server suppresses chat pushes for exactly that thread while it is open,
+  /// since the member is already watching the message arrive.
+  ///
+  /// Being online is deliberately NOT enough: sitting in another conversation,
+  /// or anywhere else in the app, still gets the push.
+  static const String chatViewing = 'chat.viewing';
+
+  /// This device left the chat screen — pushes for that thread resume.
+  static const String chatStopViewing = 'chat.stopViewing';
+
   /// Explicit delivery acknowledgment — emitted the moment this client
   /// actually processes a live `chat.message` push addressed to it (see
   /// `chat_realtime_sync.dart`). `{ messageId }`. The authoritative
