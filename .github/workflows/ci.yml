@@ -1,0 +1,154 @@
+name: CI
+
+# Runs on every PR and every push to main. Before this existed the repo had no
+# CI at all — every check was run by hand, and three real defects reached main
+# as a result: two type errors in spec files and an API that would not boot.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  # A new push supersedes an in-flight run for the same ref.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      # Real Postgres and Redis rather than mocks: `migrate deploy` below
+      # replays all migrations from an empty database, which nothing else
+      # tests — the shared Neon database was built up incrementally and has
+      # never been rebuilt from scratch.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nenjam_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+
+    env:
+      # NODE_ENV must be development: ElasticsearchService only tolerates an
+      # unreachable cluster in development. Under production it aborts startup,
+      # which would fail the smoke boot for the wrong reason.
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/nenjam_ci
+      REDIS_URL: redis://localhost:6379
+      # Required by validation, deliberately unreachable — the app must degrade.
+      ELASTICSEARCH_NODE: http://localhost:9200
+      SMTP_HOST: localhost
+      SMTP_PORT: '1025'
+      JWT_SECRET: ci-only-not-a-real-secret-000000
+      LOG_LEVEL: warn
+      # Firebase, AWS and RESEND_API_KEY are intentionally absent. All are
+      # optional by design, so their absence is itself part of what CI proves:
+      # the app boots, and MailModule binds the no-op provider, without any
+      # third-party secret. No production credential is ever needed here.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prisma generate
+        run: pnpm prisma generate
+
+      - name: Replay all migrations onto an empty database
+        run: pnpm prisma migrate deploy
+
+      - name: Verify schema matches migrations
+        # Catches the failure mode that cost this project real time: a schema
+        # change applied to a shared database but never committed as a
+        # migration. `migrate status` cannot detect this — it only looks for
+        # unapplied local folders, and reports "up to date" when the database
+        # is ahead. `migrate diff` is the check that actually works.
+        run: |
+          DIFF=$(pnpm exec prisma migrate diff \
+            --from-config-datasource \
+            --to-schema libs/database/prisma/schema.prisma)
+          echo "$DIFF"
+          if ! echo "$DIFF" | grep -q "No difference detected"; then
+            echo "::error::schema.prisma and the migration history disagree."
+            exit 1
+          fi
+
+      - name: Type-check
+        # The gate that would have caught both spec-file type errors. `nest
+        # build` uses tsconfig.app.json, which excludes *.spec.ts entirely.
+        run: pnpm exec tsc -p tsconfig.json --noEmit
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build all apps
+        run: pnpm build:all
+
+      - name: Smoke boot
+        # The gate that would have caught the API failing to start. Builds and
+        # unit tests both pass on an unresolvable dependency graph.
+        run: node scripts/smoke-boot.mjs
+
+      - name: Lint
+        # Non-blocking for now: 38 pre-existing errors in code that predates
+        # this workflow, mostly @typescript-eslint rules that --fix cannot
+        # resolve. Surfaced so the count is visible and trending down. Flip to
+        # blocking (delete this line) once it reaches zero.
+        continue-on-error: true
+        run: pnpm exec eslint "{apps,libs}/**/*.ts"
+
+  frontend:
+    name: Flutter
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        # Not `--fatal-infos`: there are 5 pre-existing deprecation infos.
+        # Errors and warnings still fail the job.
+        run: flutter analyze
+
+      # No `flutter build` here on purpose. The build requires .env.dev /
+      # .env.qa / .env.staging / .env.production, which pubspec.yaml declares
+      # as assets and .gitignore correctly excludes. Building in CI would mean
+      # either committing those files or fabricating them, and neither is worth
+      # it for a check that analyze already largely covers.

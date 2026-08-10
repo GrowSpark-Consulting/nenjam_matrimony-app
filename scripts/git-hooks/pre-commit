@@ -40,7 +40,15 @@ report() {
 }
 
 # Values that mark a line as a template rather than a real credential.
-PLACEHOLDER_RE='CHANGEME|YOUR_|your_|xxxxx|XXXXX|placeholder|PLACEHOLDER|example\.com|EXAMPLE|dummy|DUMMY|MOCKKEY|REDACTED|username:password|user:pass|<[a-z-]*redacted[a-z-]*>'
+#
+# The loopback hosts are here for a reason: a connection string pointing at
+# localhost cannot be a remote secret. CI service containers and local dev
+# compose files legitimately carry credentials like
+# `postgres:postgres@localhost:5432`, and flagging those teaches people to
+# reach for --no-verify, which is how a real secret eventually slips past.
+# Real env files are still blocked outright by the file-level rules above,
+# so this exemption cannot be used to smuggle one in.
+PLACEHOLDER_RE='CHANGEME|YOUR_|your_|xxxxx|XXXXX|placeholder|PLACEHOLDER|example\.com|EXAMPLE|dummy|DUMMY|MOCKKEY|REDACTED|username:password|user:pass|<[a-z-]*redacted[a-z-]*>|@localhost|@127\.0\.0\.1|@0\.0\.0\.0|@postgres:|@redis:'
 
 # Firebase/Google client config is public by design — project id, web API
 # key and app ids are compiled into every shipped APK/IPA/web bundle.
