@@ -5,6 +5,7 @@ import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/realtime/realtime_event.dart';
 import '../../../../core/realtime/realtime_service.dart';
+import '../../../../core/utils/server_time.dart';
 import '../../../discover/data/models/discovery_profile_model.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../domain/entities/conversation_entity.dart';
@@ -88,16 +89,10 @@ class ConversationApiRepositoryImpl implements ConversationRepository {
       id: data['id'] as String,
       profile: profile,
       lastMessage: data['lastMessage'] as String? ?? '',
-      lastMessageAt: DateTime.parse(data['lastMessageAt'] as String),
+      lastMessageAt: parseServerTime(data['lastMessageAt'] as String),
       isOnline: data['isOnline'] as bool? ?? false,
-      lastSeen: _parseLastSeen(data['lastSeenAt']),
+      lastSeen: tryParseServerTime(data['lastSeenAt']),
     );
-  }
-
-  /// Parses the backend `lastSeenAt` (ISO-8601 string or null) into local time.
-  DateTime? _parseLastSeen(dynamic value) {
-    if (value is! String) return null;
-    return DateTime.tryParse(value)?.toLocal();
   }
 
   @override
@@ -315,7 +310,7 @@ class ConversationApiRepositoryImpl implements ConversationRepository {
         id: json['id'] as String,
         profile: DiscoveryProfileModel.fromJson(json['profile'] as Map<String, dynamic>),
         lastMessage: json['lastMessage'] as String? ?? '',
-        lastMessageAt: DateTime.parse(json['lastMessageAt'] as String),
+        lastMessageAt: parseServerTime(json['lastMessageAt'] as String),
         unreadCount: json['unreadCount'] as int? ?? 0,
         isTyping: json['isTyping'] as bool? ?? false,
         isPinned: json['isPinned'] as bool? ?? false,
@@ -335,7 +330,7 @@ class ConversationApiRepositoryImpl implements ConversationRepository {
           orElse: () => ConversationSmartIndicator.none,
         ),
         isOnline: json['isOnline'] as bool? ?? false,
-        lastSeen: _parseLastSeen(json['lastSeenAt']),
+        lastSeen: tryParseServerTime(json['lastSeenAt']),
       );
 
   MessageEntity _messageFromJson(Map<String, dynamic> json, {String? clientMessageId}) =>

@@ -4,15 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/realtime/realtime_event.dart';
 import '../../../../core/realtime/realtime_providers.dart';
+import '../../../../core/utils/server_time.dart';
 import '../../../authentication/presentation/providers/auth_providers.dart';
 import '../../data/mappers/message_wire_mapper.dart';
 import 'inbox_providers.dart';
 import 'presence_providers.dart';
-
-DateTime? _parseLastSeen(dynamic value) {
-  if (value is! String) return null;
-  return DateTime.tryParse(value)?.toLocal();
-}
 
 /// Bridges inbound chat socket events ([RealtimeService.chatEvents]) into the
 /// inbox Riverpod state — live messages, edits, deletes, read/delivered
@@ -170,7 +166,7 @@ final chatRealtimeSyncProvider = Provider<void>((ref) {
           ref.read(presenceProvider.notifier).applyPresence(
                 userId,
                 isOnline: data['isOnline'] as bool? ?? false,
-                lastSeen: _parseLastSeen(data['lastSeenAt']),
+                lastSeen: tryParseServerTime(data['lastSeenAt']),
               );
         }
     }
