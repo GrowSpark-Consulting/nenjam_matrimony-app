@@ -1,6 +1,12 @@
+// CupertinoPageTransitionsBuilder is re-exported by material.dart on some
+// Flutter versions but not others (it resolves via material on 3.35.x, and
+// only via cupertino on the 3.44.x CI toolchain). Import cupertino directly
+// so the theme compiles on both; the ignore silences the resulting
+// `unnecessary_import` info on the SDKs where material does re-export it.
+// ignore: unnecessary_import
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 
 import 'app_colors.dart';
 import 'app_typography.dart';
