@@ -5,6 +5,13 @@ version: 1.0.0+1
 
 environment:
   sdk: ^3.9.2
+  # Floor, not decoration: `flutter pub get` refuses to resolve on an older
+  # SDK, so the whole team and CI stay on one toolchain. Set after a real
+  # divergence — CupertinoPageTransitionsBuilder is re-exported by
+  # material.dart on 3.35.x but not on 3.44.x, so code that analyzed clean
+  # locally failed in CI (and vice versa) purely from a version gap.
+  # CI pins the exact version; this pins the minimum.
+  flutter: ">=3.44.6"
 
 dependencies:
   flutter:
