@@ -63,6 +63,23 @@ export class PrismaService
     });
     super({
       adapter: new PrismaPg(pool),
+      // Prisma's defaults (maxWait 2s, timeout 5s) are too tight for a managed
+      // Postgres reached over the public internet, and the failure is
+      // deterministic rather than flaky: opening a fresh connection to Neon
+      // from here measures 2.4-2.6s (5 samples: 2575/2415/2473/2471/2428 ms),
+      // every one of them over the 2s budget. `min: 1` above keeps exactly one
+      // connection warm, so the moment two requests overlap the second must
+      // open a new one — and any $transaction on that path fails with P2028
+      // "Unable to start a transaction in the given time" before the
+      // connection is even ready. It was reproduced on message send.
+      //
+      // maxWait sits deliberately ABOVE the pool's connectionTimeoutMillis
+      // (10s) so the pool's own, more specific error surfaces instead of
+      // Prisma giving up first on a connection that was still coming.
+      transactionOptions: {
+        maxWait: 12_000,
+        timeout: 15_000,
+      },
       log: [
         { emit: 'stdout', level: 'warn' },
         { emit: 'stdout', level: 'error' },

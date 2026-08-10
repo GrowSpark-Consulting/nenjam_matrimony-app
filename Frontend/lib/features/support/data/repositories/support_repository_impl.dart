@@ -1,6 +1,7 @@
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/utils/server_time.dart';
 import '../../domain/models/support_ticket.dart';
 import '../../domain/repositories/support_repository.dart';
 
@@ -54,7 +55,7 @@ class SupportRepositoryImpl implements SupportRepository {
         subject: json['subject'] as String? ?? '',
         message: json['message'] as String? ?? '',
         status: _statusFromWire(json['status'] as String?),
-        createdAt: DateTime.parse(json['createdAt'] as String),
+        createdAt: parseServerTime(json['createdAt'] as String),
       );
 
   String _typeToWire(SupportTicketType type) => switch (type) {
