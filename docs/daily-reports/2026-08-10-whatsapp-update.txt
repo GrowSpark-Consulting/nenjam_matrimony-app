@@ -1,0 +1,34 @@
+*Nenjam Matrimony — Daily Update*
+📅 10 Aug 2026
+
+*✅ Shipped today*
+
+1. Chat pushes now show the *sender's real name* + the *actual message text* (was "New message / You have a new message")
+
+2. Sender no longer gets a push for their own message — the sender's device tokens are excluded before sending, so it holds even on a shared or handed-over phone
+
+3. One title+body now feeds both the push and the in-app notification, so the lock screen and notification centre can't disagree
+
+4. Android status-bar icon fixed — monochrome vector instead of the launcher icon (was rendering as a white blob on the lock screen)
+
+5. Manifest FCM icon + channel verified against the channel the app actually creates
+
+6. *Chat timestamp bug fixed* — messages were showing 5:30 hrs early (UTC) after refresh. Now converted to local time exactly once, at parse. Covers both REST history and live socket messages. No backend change needed.
+
+*🧪 Quality checks*
+• ESLint ✅  TypeScript ✅
+• Backend tests: 432 total — 420 passed, 12 todo, 0 failed
+• New Flutter timestamp tests: 10/10 ✅
+• 13 Flutter failures are pre-existing (flutter_local_notifications compile issue in Profile Detail) — unrelated to today's work
+
+*⚠️ Open items*
+• Prisma P2028 transaction timeout on message send, seen during manual testing — not root-caused yet
+• On-device check pending: foreground / background / terminated / lock screen
+• Product call needed: message text now appears on lock screens — do we want a privacy toggle?
+
+*⏭ Next up*
+• Root cause the P2028 timeout
+• Run the on-device notification round
+• Notification privacy toggle + mute preferences
+
+*Status:* Release-candidate ready — production after device sign-off. 🚀
