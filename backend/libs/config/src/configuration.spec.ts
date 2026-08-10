@@ -5,6 +5,17 @@ describe('configuration', () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
+    // Start hermetic. These four are read by configuration() but are NOT set
+    // by most tests here, so whatever the surrounding environment happens to
+    // export leaks into the result — `toEqual` on config.database/config.redis
+    // then fails with an unexpected `url` key. It passed locally only because
+    // jest loads no .env and a plain shell exports neither; CI sets both for
+    // its service containers and caught it on the first run. Tests that want
+    // these set them explicitly.
+    delete process.env.DATABASE_URL;
+    delete process.env.REDIS_URL;
+    delete process.env.ELASTICSEARCH_USERNAME;
+    delete process.env.ELASTICSEARCH_PASSWORD;
   });
 
   afterAll(() => {
