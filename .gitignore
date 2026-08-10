@@ -13,6 +13,16 @@ Thumbs.db
 *.swp
 *.swo
 
+# ─── Backup / patch residue ────────────────────────────────────────
+# Dropped next to the real file by editors, `git merge`, and manual
+# "copy it before I change this" edits — e.g. a gradle-wrapper.properties
+# .bak left behind while working around a local Gradle download failure.
+# Always machine-specific, and dangerous to commit precisely because the
+# name looks so close to the real file.
+*.bak
+*.orig
+*.rej
+
 # ─── IDEs / AI tooling ───────────────────────────────────────────────
 # Only the personal/machine-specific VS Code files are ignored —
 # extensions.json / tasks.json / launch.json (team-shared recommendations
