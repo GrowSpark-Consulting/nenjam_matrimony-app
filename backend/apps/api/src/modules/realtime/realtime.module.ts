@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { RealtimeGateway } from './realtime.gateway';
 import { PresenceService } from './presence.service';
+import { ActiveConversationService } from './active-conversation.service';
 
 /**
  * Real-time WebSocket delivery. @Global so any domain module can inject
@@ -11,7 +12,7 @@ import { PresenceService } from './presence.service';
  */
 @Global()
 @Module({
-  providers: [RealtimeGateway, PresenceService],
-  exports: [RealtimeGateway, PresenceService],
+  providers: [RealtimeGateway, PresenceService, ActiveConversationService],
+  exports: [RealtimeGateway, PresenceService, ActiveConversationService],
 })
 export class RealtimeModule {}

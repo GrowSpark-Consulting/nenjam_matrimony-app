@@ -111,6 +111,13 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
         .read(realtimeServiceProvider)
         .onReady
         .listen((_) => _typing.resetForReconnect());
+    // Tell the server this thread is on screen so it suppresses chat pushes for
+    // it — the member is watching messages arrive live, so a lock-screen buzz
+    // for the same message is pure noise. RealtimeService remembers the id and
+    // re-sends it on reconnect, so this single call covers the socket dropping.
+    ref
+        .read(realtimeServiceProvider)
+        .setViewingConversation(widget.conversation.id);
     // Mark this thread read the moment it opens — a single, entry-point-
     // agnostic trigger (Inbox tap, Profile Detail's Message button, or any
     // future deep link/push-notification route all land here) instead of
@@ -123,6 +130,12 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_readySubscription.cancel());
+    // Leaving the screen must resume pushes for this thread. Cleared here — the
+    // one exit every route out of the chat goes through — rather than in a back
+    // handler, which a swipe-back or a deep link elsewhere would bypass. The
+    // server also clears on disconnect and on background, so a crash cannot
+    // leave this member silently un-notified.
+    ref.read(realtimeServiceProvider).setViewingConversation(null);
     _typing.dispose(); // emits a final typing_stop so the peer isn't left stuck
     _highlightTimer?.cancel();
     _scrollController.removeListener(_onScroll);
@@ -143,6 +156,17 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
         _typing.stop();
+        // No stopViewing emit needed: RealtimeService.handleAppBackgrounded
+        // already sends `presence.offline`, and the server drops this device's
+        // viewing registration as part of handling it. Backgrounded means the
+        // member is not looking, so pushes must resume — which they do.
+        break;
+      case AppLifecycleState.resumed:
+        // ...and re-register on the way back, since that same handler cleared
+        // it server-side while we were away.
+        ref
+            .read(realtimeServiceProvider)
+            .setViewingConversation(widget.conversation.id);
       default:
         break;
     }

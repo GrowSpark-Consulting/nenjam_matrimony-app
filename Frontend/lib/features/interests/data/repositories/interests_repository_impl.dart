@@ -1,6 +1,7 @@
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/utils/server_time.dart';
 import '../../../discover/data/models/discovery_profile_model.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../domain/repositories/interests_repository.dart';
@@ -39,7 +40,7 @@ class InterestsRepositoryImpl implements InterestsRepository {
               profile: DiscoveryProfileModel.fromJson(
                 json['profile'] as Map<String, dynamic>,
               ),
-              sentAt: DateTime.parse(json['sentAt'] as String),
+              sentAt: parseServerTime(json['sentAt'] as String),
               status: InterestStatus.values.firstWhere(
                 (s) => s.name == json['status'],
                 orElse: () => InterestStatus.pending,
@@ -67,9 +68,7 @@ class InterestsRepositoryImpl implements InterestsRepository {
     return InterestRecord(
       id: data['id'] as String,
       profile: profile,
-      sentAt: data['sentAt'] != null
-          ? DateTime.parse(data['sentAt'] as String)
-          : DateTime.now(),
+      sentAt: tryParseServerTime(data['sentAt']) ?? DateTime.now(),
       status: InterestStatus.values.firstWhere(
         (s) => s.name == data['status'],
         orElse: () => InterestStatus.pending,

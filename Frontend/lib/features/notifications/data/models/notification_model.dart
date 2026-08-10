@@ -1,3 +1,4 @@
+import '../../../../core/utils/server_time.dart';
 import '../../domain/entities/notification_entity.dart';
 
 /// Wire model for [NotificationEntity]. `fromJson`/`toJson` are the seam a
@@ -27,7 +28,7 @@ class NotificationModel extends NotificationEntity {
       // (Prisma's `Notification.body` column name) so this keeps working
       // whichever the eventual DTO ends up serializing as.
       message: (json['message'] ?? json['body']) as String? ?? '',
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: parseServerTime(json['createdAt'] as String),
       isRead: json['isRead'] as bool? ?? false,
       actor: actorJson == null
           ? null

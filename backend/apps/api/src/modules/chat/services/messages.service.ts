@@ -13,6 +13,7 @@ import type {
 } from '../../../../../../libs/database/generated/client';
 import { RealtimeGateway } from '../../realtime/realtime.gateway';
 import { PresenceService } from '../../realtime/presence.service';
+import { ActiveConversationService } from '../../realtime/active-conversation.service';
 import { RealtimeEvents } from '../../realtime/realtime.events';
 import { NotificationsService } from '../../notifications/services/notifications.service';
 import type { CreateNotificationData } from '../../notifications/repositories/notification.repository';
@@ -85,6 +86,7 @@ export class MessagesService {
     private readonly audit: ChatAuditService,
     private readonly notifications: NotificationsService,
     private readonly emailDispatch: EmailDispatchService,
+    private readonly activeConversation: ActiveConversationService,
   ) {}
 
   async list(
@@ -382,6 +384,26 @@ export class MessagesService {
     const { senderUserId, receiverUserId, conversationId, title, body } =
       params;
     try {
+      // Suppress the push when the recipient already has THIS conversation on
+      // screen — they are watching the message arrive over the socket, so a
+      // lock-screen buzz for it is pure noise.
+      //
+      // Scoped to the exact thread on purpose. Being online, or merely having
+      // the app open, is far too broad: someone on Discover or in a different
+      // conversation still needs telling. See ActiveConversationService.
+      //
+      // Only the PUSH is skipped. The notification row was already written
+      // inside the send transaction and is untouched, so the notification
+      // centre and unread count stay correct either way.
+      // `.catch(() => false)` is load-bearing, not defensive noise. The
+      // surrounding try/catch swallows everything to keep push best-effort, so
+      // without this a lookup error would fall straight past dispatchPush and
+      // silently drop a real notification — failing CLOSED, the one direction
+      // this feature must never fail in. A lookup we cannot answer means send.
+      const recipientIsViewing = await this.activeConversation
+        .isViewing(receiverUserId, conversationId)
+        .catch(() => false);
+      if (recipientIsViewing) return;
       await this.notifications.dispatchPush(
         { ...params.notification, userId: receiverUserId },
         {

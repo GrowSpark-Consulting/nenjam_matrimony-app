@@ -1,4 +1,5 @@
 import '../../../discover/data/models/discovery_profile_model.dart';
+import '../../../../core/utils/server_time.dart';
 import '../../domain/entities/blocked_user_entity.dart';
 
 /// Wire model for [BlockedUserEntity] — `profile` is parsed with the exact
@@ -12,8 +13,7 @@ class BlockedUserModel extends BlockedUserEntity {
       profile: DiscoveryProfileModel.fromJson(
         json['profile'] as Map<String, dynamic>,
       ),
-      blockedAt:
-          DateTime.tryParse(json['blockedAt'] as String? ?? '') ?? DateTime.now(),
+      blockedAt: tryParseServerTime(json['blockedAt']) ?? DateTime.now(),
     );
   }
 }
