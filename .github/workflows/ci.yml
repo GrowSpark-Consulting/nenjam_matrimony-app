@@ -135,6 +135,9 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
+          # Must match the floor in Frontend/pubspec.yaml. Validating against
+          # an SDK nobody develops on lets version-specific breakage through
+          # in both directions — see that pubspec comment.
           flutter-version: 3.44.6
           channel: stable
           cache: true

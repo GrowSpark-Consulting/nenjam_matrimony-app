@@ -20,6 +20,29 @@ Do not hallucinate the design.
 
 # nenjam_matrimony
 
+## Toolchain
+
+**Flutter 3.44.6** (Dart 3.12.2). Everyone — and CI — uses this version.
+
+```bash
+flutter --version          # expect 3.44.6
+flutter upgrade            # or: flutter downgrade 3.44.6
+```
+
+This is enforced, not a convention: `environment.flutter` in `pubspec.yaml`
+sets `>=3.44.6`, so `flutter pub get` refuses to resolve on an older SDK, and
+`.github/workflows/ci.yml` pins the exact version.
+
+It matters because Flutter re-exports differ between versions.
+`CupertinoPageTransitionsBuilder` resolves through `material.dart` on 3.35.x
+but only through `cupertino.dart` on 3.44.x — so `app_theme.dart` analyzed
+clean on one SDK and failed on the other. Splitting the team across versions
+turns that into a recurring, confusing class of CI failure.
+
+When upgrading, change all three together: this file, the `pubspec.yaml`
+floor, and the CI pin.
+
+
 A new Flutter project.
 
 ## Getting Started
