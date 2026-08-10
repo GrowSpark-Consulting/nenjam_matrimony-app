@@ -158,9 +158,16 @@ jobs:
         run: flutter pub get
 
       - name: Analyze
-        # Not `--fatal-infos`: there are 5 pre-existing deprecation infos.
-        # Errors and warnings still fail the job.
-        run: flutter analyze
+        # --no-fatal-infos is required, not cosmetic: `flutter analyze` exits 1
+        # on ANY issue, infos included, and this project has 5 pre-existing
+        # deprecation infos (cacheExtent, onReorder). Errors and warnings are
+        # still fatal — the asset_does_not_exist warnings the step above
+        # prevents would fail the job even with this flag.
+        #
+        # Worth knowing locally too: `flutter analyze` returning 1 does not
+        # imply a real problem. Read the issue severities, not just the exit
+        # code.
+        run: flutter analyze --no-fatal-infos
 
       # No `flutter build` here on purpose — an Android build pulls the whole
       # Gradle/AGP toolchain and adds several minutes for little extra signal
