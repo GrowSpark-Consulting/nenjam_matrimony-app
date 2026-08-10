@@ -139,6 +139,21 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Create flavour env files
+        # pubspec.yaml declares .env.dev/.qa/.staging/.production as assets and
+        # .gitignore correctly excludes them, so a fresh clone has none —
+        # `flutter analyze` then emits four `asset_does_not_exist` warnings and
+        # exits 1. Seeding them from the committed .env.example is what a
+        # developer does locally anyway, and keeps warnings fatal rather than
+        # weakening the gate with --no-fatal-warnings.
+        #
+        # These carry no secrets: .env.example holds placeholders only, and the
+        # values are never used because CI does not run the app.
+        run: |
+          for f in .env.dev .env.qa .env.staging .env.production; do
+            cp .env.example "$f"
+          done
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -147,8 +162,6 @@ jobs:
         # Errors and warnings still fail the job.
         run: flutter analyze
 
-      # No `flutter build` here on purpose. The build requires .env.dev /
-      # .env.qa / .env.staging / .env.production, which pubspec.yaml declares
-      # as assets and .gitignore correctly excludes. Building in CI would mean
-      # either committing those files or fabricating them, and neither is worth
-      # it for a check that analyze already largely covers.
+      # No `flutter build` here on purpose — an Android build pulls the whole
+      # Gradle/AGP toolchain and adds several minutes for little extra signal
+      # over analyze. Revisit if a build-only breakage ever ships.
