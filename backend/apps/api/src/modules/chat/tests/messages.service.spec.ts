@@ -800,17 +800,73 @@ describe('MessagesService — chat push suppression while viewing', () => {
     }
   });
 
-  it('suppresses only the push — the notification row is still written', async () => {
+  it('writes NO Notification-tab row when the recipient has the thread open', async () => {
+    // They are watching it arrive over the socket. A row would be an item to
+    // dismiss for something already read, and would inflate the unread badge
+    // for a thread they are actively in.
     const { service, notifications, activeConversation } = build();
     activeConversation.isViewing.mockResolvedValue(true);
 
     await service.send('me', { roomId: 'r1', content: 'hi' });
     await flushPending();
 
-    // Written inside the send transaction, before any push decision.
+    expect(notifications.create).not.toHaveBeenCalled();
+    // No row means nothing to invalidate and nothing to announce.
+    expect(notifications.invalidateUnread).not.toHaveBeenCalled();
+    expect(notifications.dispatchPush).not.toHaveBeenCalled();
+  });
+
+  it('writes the row normally when the recipient is NOT in the thread', async () => {
+    const { service, notifications, activeConversation } = build();
+    activeConversation.isViewing.mockResolvedValue(false);
+
+    await service.send('me', { roomId: 'r1', content: 'hi' });
+    await flushPending();
+
     expect(notifications.create).toHaveBeenCalledTimes(1);
     expect(storedNotification(notifications.create).userId).toBe('peer');
     expect(notifications.invalidateUnread).toHaveBeenCalledWith('peer');
+  });
+
+  it('writes the row when the recipient is in a DIFFERENT conversation', async () => {
+    const { service, notifications, activeConversation } = build();
+    activeConversation.isViewing.mockImplementation(
+      (_userId: string, conversationId: string) =>
+        Promise.resolve(conversationId === 'some-other-room'),
+    );
+
+    await service.send('me', { roomId: 'r1', content: 'hi' });
+    await flushPending();
+
+    expect(notifications.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not announce notification.created when no row was written', async () => {
+    // Otherwise the recipient's notification list refreshes for a row that
+    // does not exist.
+    const { service, realtime, activeConversation } = build();
+    activeConversation.isViewing.mockResolvedValue(true);
+
+    await service.send('me', { roomId: 'r1', content: 'hi' });
+    await flushPending();
+
+    const events = realtime.emitToUser.mock.calls.map(
+      (c) => (c as unknown as [string, string, unknown])[1],
+    );
+    expect(events).not.toContain('notification.created');
+    // ...but the message itself still goes out over the socket.
+    expect(events).toContain('chat.message');
+  });
+
+  it('still writes the row when the viewing lookup fails', async () => {
+    // Fail open in BOTH decisions: an unanswerable lookup must notify.
+    const { service, notifications, activeConversation } = build();
+    activeConversation.isViewing.mockRejectedValue(new Error('redis down'));
+
+    await service.send('me', { roomId: 'r1', content: 'hi' });
+    await flushPending();
+
+    expect(notifications.create).toHaveBeenCalledTimes(1);
   });
 
   it('still delivers the message over the socket when the push is suppressed', async () => {
