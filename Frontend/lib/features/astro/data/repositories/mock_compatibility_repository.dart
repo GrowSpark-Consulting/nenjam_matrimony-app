@@ -1,5 +1,6 @@
 import '../../domain/models/compatibility_result.dart';
 import '../../domain/repositories/compatibility_repository.dart';
+import '../../../../core/l10n/app_l10n.dart';
 
 /// In-memory mock — no network calls. Default implementation until the
 /// backend team ships real endpoints (see [ApiCompatibilityRepository]).
@@ -28,14 +29,15 @@ class MockCompatibilityRepository implements CompatibilityRepository {
   @override
   Future<CompatibilityResult> getCompatibility({String? targetUserId}) async {
     await Future<void>.delayed(const Duration(milliseconds: 250));
-    return const CompatibilityResult(
+    final l10n = AppL10n.current;
+    return CompatibilityResult(
       score: 85,
-      matchLabel: 'Excellent Match',
+      matchLabel: l10n.astroExcellentMatch,
       factors: [
-        CompatibilityFactor(label: 'Nakshatra Match', score: 36, maxScore: 40),
-        CompatibilityFactor(label: 'Rasi Match', score: 24, maxScore: 30),
-        CompatibilityFactor(label: 'Dosham Match', score: 17, maxScore: 20),
-        CompatibilityFactor(label: 'Personality Match', score: 8, maxScore: 10),
+        CompatibilityFactor(label: l10n.astroNakshatraMatch, score: 36, maxScore: 40),
+        CompatibilityFactor(label: l10n.astroRasiMatch, score: 24, maxScore: 30),
+        CompatibilityFactor(label: l10n.astroDoshamMatch, score: 17, maxScore: 20),
+        CompatibilityFactor(label: l10n.astroPersonalityMatch, score: 8, maxScore: 10),
       ],
     );
   }

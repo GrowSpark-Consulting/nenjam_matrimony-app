@@ -330,16 +330,16 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                     ]),
                     children: [
                       NmSearchableDropdown(
-                        label: 'Religion',
-                        hint: 'Select Religion',
+                        label: l10n.fieldReligion,
+                        hint: l10n.fieldReligionHint,
                         value: _draft.religion,
                         options: _kReligions,
                         onChanged: (v) => _update((f) => f.copyWith(religion: v, clearReligion: v == null)),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       NmSearchableDropdown(
-                        label: 'Caste / Division',
-                        hint: 'Select Caste',
+                        label: l10n.fieldCasteDivision,
+                        hint: l10n.fieldCasteHint,
                         value: _draft.caste,
                         options: _kCastes,
                         onChanged: (v) => _update((f) => f.copyWith(caste: v, clearCaste: v == null)),
@@ -365,8 +365,8 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                     ]),
                     children: [
                       NmSearchableDropdown(
-                        label: 'Country',
-                        hint: 'Select Country',
+                        label: l10n.fieldCountry,
+                        hint: l10n.fieldCountryHint,
                         value: _draft.country,
                         options: _kCountries,
                         onChanged: (v) => _update((f) => f.copyWith(country: v, clearCountry: v == null)),
@@ -381,8 +381,8 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                       ),
                       const SizedBox(height: AppSpacing.md),
                       NmSearchableDropdown(
-                        label: 'Current Location',
-                        hint: 'Select City / Country',
+                        label: l10n.fieldCurrentLocation,
+                        hint: l10n.fieldLocationHint,
                         value: _draft.city,
                         options: _kCities,
                         onChanged: (v) => _update((f) => f.copyWith(city: v, clearCity: v == null)),
@@ -396,8 +396,8 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                     activeCount: _count([_draft.education != null]),
                     children: [
                       NmSearchableDropdown(
-                        label: 'Highest Qualification',
-                        hint: 'Select Degree',
+                        label: l10n.fieldQualification,
+                        hint: l10n.fieldQualificationHint,
                         value: _draft.education,
                         options: _kEducations,
                         onChanged: (v) => _update((f) => f.copyWith(education: v, clearEducation: v == null)),
@@ -414,16 +414,16 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                     ]),
                     children: [
                       NmSearchableDropdown(
-                        label: 'Profession',
-                        hint: 'Select Profession',
+                        label: l10n.fieldProfession,
+                        hint: l10n.fieldProfessionHint,
                         value: _draft.occupation,
                         options: _kProfessions,
                         onChanged: (v) => _update((f) => f.copyWith(occupation: v, clearOccupation: v == null)),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       NmSearchableDropdown(
-                        label: 'Annual Income',
-                        hint: 'Select Range',
+                        label: l10n.fieldAnnualIncome,
+                        hint: l10n.fieldIncomeHint,
                         value: _draft.annualIncome,
                         options: _kIncomes,
                         onChanged: (v) =>

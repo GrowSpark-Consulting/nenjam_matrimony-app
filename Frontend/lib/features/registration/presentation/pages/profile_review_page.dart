@@ -58,16 +58,16 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
       if (!mounted) return;
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save your profile: ${e.message}')),
+        SnackBar(content: Text(AppLocalizations.of(context).registrationSaveProfileErrorDetail(e.message))),
       );
       return;
     } catch (_) {
       if (!mounted) return;
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content:
-              Text('Could not save your profile. Check your connection.'),
+              Text(AppLocalizations.of(context).registrationSaveProfileError),
         ),
       );
       return;
@@ -93,7 +93,7 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
     ref.read(registrationProvider.notifier).startCreateMode();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile updated successfully')),
+      SnackBar(content: Text(AppLocalizations.of(context).registrationProfileUpdated)),
     );
     context.go(RouteNames.discover);
   }
@@ -460,13 +460,13 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                     if (isEditMode) ...[
                       const SizedBox(height: 24),
                       Text(
-                        'Profile Intelligence',
+                        AppLocalizations.of(context).drawerProfileIntelligence,
                         style: AppTypography.headlineSmall
                             .copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Optional enrichment — add anytime to help us find better matches.',
+                        AppLocalizations.of(context).profileIntelReviewSubtitle,
                         style: AppTypography.bodyMedium.copyWith(
                           color: isDark
                               ? AppColors.textSecondaryDark

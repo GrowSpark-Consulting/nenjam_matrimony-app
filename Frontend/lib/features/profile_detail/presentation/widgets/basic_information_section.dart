@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/entities/profile_detail_entity.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Label/value row list: age, height, marital status, mother tongue,
 /// matrimony ID, and distance (when known).
@@ -37,7 +38,7 @@ class BasicInformationSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Basic Information', style: AppTypography.titleLarge),
+          Text(AppLocalizations.of(context).registrationBasicInfoTitle, style: AppTypography.titleLarge),
           const SizedBox(height: AppSpacing.base),
           ...rows.asMap().entries.map((entry) {
             final isLast = entry.key == rows.length - 1;

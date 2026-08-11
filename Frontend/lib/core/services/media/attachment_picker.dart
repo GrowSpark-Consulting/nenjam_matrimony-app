@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../permissions/app_permission_service.dart';
 import '../../permissions/nm_permission.dart';
 import '../../widgets/permissions/permission_dialogs.dart';
@@ -54,14 +55,14 @@ class AttachmentPicker {
         if (context.mounted) {
           await showOpenSettingsDialog(
             context,
-            title: 'Photo Access Disabled',
-            message: 'Photo access is disabled. Enable it from Settings.',
+            title: AppLocalizations.of(context).permissionPhotoDisabledTitle,
+            message: AppLocalizations.of(context).permissionPhotoDisabledMessage,
             onOpenSettings: _permissions.openSettings,
           );
         }
         return null;
       }
-      if (context.mounted) _snack(context, 'Could not open the image picker.');
+      if (context.mounted) _snack(context, AppLocalizations.of(context).permissionImagePickerError);
       return null;
     }
   }
@@ -78,9 +79,8 @@ class AttachmentPicker {
       if (!context.mounted) return false;
       await showOpenSettingsDialog(
         context,
-        title: 'Camera Access Disabled',
-        message:
-            'Camera access is disabled. Enable it from Settings to take a photo.',
+        title: AppLocalizations.of(context).permissionCameraDisabledTitle,
+        message: AppLocalizations.of(context).permissionCameraDisabledMessage,
         onOpenSettings: _permissions.openSettings,
       );
       return false;
@@ -90,10 +90,10 @@ class AttachmentPicker {
     final proceed = await showPermissionPrimerDialog(
       context,
       icon: Icons.camera_alt_rounded,
-      title: 'Camera Access',
-      message: 'Nenjam needs camera access to take your photo.',
-      proceedLabel: 'Continue',
-      cancelLabel: 'Cancel',
+      title: AppLocalizations.of(context).permissionCameraTitle,
+      message: AppLocalizations.of(context).permissionCameraMessage,
+      proceedLabel: AppLocalizations.of(context).commonContinue,
+      cancelLabel: AppLocalizations.of(context).commonCancel,
     );
     if (!proceed) return false;
 
@@ -104,13 +104,12 @@ class AttachmentPicker {
     if (result == NmPermissionStatus.permanentlyDenied) {
       await showOpenSettingsDialog(
         context,
-        title: 'Camera Access Disabled',
-        message:
-            'Camera access is disabled. Enable it from Settings to take a photo.',
+        title: AppLocalizations.of(context).permissionCameraDisabledTitle,
+        message: AppLocalizations.of(context).permissionCameraDisabledMessage,
         onOpenSettings: _permissions.openSettings,
       );
     } else {
-      _snack(context, 'Camera access is needed to take a photo.');
+      _snack(context, AppLocalizations.of(context).permissionCameraNeeded);
     }
     return false;
   }

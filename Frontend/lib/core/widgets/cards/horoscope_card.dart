@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Horoscope compatibility card.
 class NmHoroscopeCard extends StatelessWidget {
@@ -40,7 +41,7 @@ class NmHoroscopeCard extends StatelessWidget {
                 const Icon(Icons.auto_awesome_rounded,
                     color: AppColors.accentGold, size: 22),
                 const SizedBox(width: 8),
-                Text('Horoscope Match',
+                Text(AppLocalizations.of(context).cardHoroscopeMatch,
                     style: AppTypography.titleSmall.copyWith(
                       fontWeight: FontWeight.w600,
                     )),
@@ -78,7 +79,7 @@ class NmHoroscopeCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Guna Milan with $partnerName',
+                        AppLocalizations.of(context).cardGunaMilanWith(partnerName),
                         style: AppTypography.bodyMedium.copyWith(
                           fontWeight: FontWeight.w500,
                         ),

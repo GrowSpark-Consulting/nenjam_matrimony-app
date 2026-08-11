@@ -1,21 +1,30 @@
+import '../l10n/app_l10n.dart';
+
 /// Nenjam Matrimony — Form Validators
 ///
 /// Reusable validation functions for forms throughout the app.
 /// Returns null on valid input, error message string otherwise.
+///
+/// Messages are localized through [AppL10n.current] rather than a passed-in
+/// `AppLocalizations`: these are used as bare tear-offs
+/// (`validator: Validators.email`), and `TextFormField` hands its validator
+/// only the field value — there is no `BuildContext` at the call site. The
+/// validation *rules* below are unchanged; only the returned strings are.
 abstract final class Validators {
   // ─── Name ────────────────────────────────────────────────────────
   static String? name(String? value) {
+    final l10n = AppL10n.current;
     if (value == null || value.trim().isEmpty) {
-      return 'Please enter your name';
+      return l10n.validatorNameRequired;
     }
     if (value.trim().length < 2) {
-      return 'Name must be at least 2 characters';
+      return l10n.validatorNameTooShort;
     }
     if (value.trim().length > 50) {
-      return 'Name must be less than 50 characters';
+      return l10n.validatorNameTooLong;
     }
     if (!RegExp(r"^[a-zA-Z\s'-]+$").hasMatch(value.trim())) {
-      return 'Name can only contain letters, spaces, hyphens, and apostrophes';
+      return l10n.validatorNameInvalid;
     }
     return null;
   }
@@ -24,128 +33,140 @@ abstract final class Validators {
   /// Username rules: minimum 3 characters, letters/numbers/underscore only,
   /// no spaces or other special symbols. Must start with a letter.
   static String? username(String? value) {
+    final l10n = AppL10n.current;
     if (value == null || value.trim().isEmpty) {
-      return 'Please enter a username';
+      return l10n.validatorUsernameRequired;
     }
     final v = value.trim();
     if (v.length < 3) {
-      return 'Username must be at least 3 characters';
+      return l10n.validatorUsernameTooShort;
     }
     if (v.length > 20) {
-      return 'Username must be less than 20 characters';
+      return l10n.validatorUsernameTooLong;
     }
     if (!RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*$').hasMatch(v)) {
-      return 'Use letters, numbers, or underscore (start with a letter)';
+      return l10n.validatorUsernameInvalid;
     }
     return null;
   }
 
   // ─── Email ───────────────────────────────────────────────────────
   static String? email(String? value) {
+    final l10n = AppL10n.current;
     if (value == null || value.trim().isEmpty) {
-      return 'Please enter your email';
+      return l10n.validatorEmailRequired;
     }
     if (!RegExp(r'^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,4}$')
         .hasMatch(value.trim())) {
-      return 'Please enter a valid email address';
+      return l10n.validatorEmailInvalid;
     }
     return null;
   }
 
   // ─── Phone ───────────────────────────────────────────────────────
   static String? phone(String? value) {
+    final l10n = AppL10n.current;
     if (value == null || value.trim().isEmpty) {
-      return 'Please enter your phone number';
+      return l10n.validatorPhoneRequired;
     }
     final cleaned = value.replaceAll(RegExp(r'[\s\-\+]'), '');
     if (cleaned.length != 10 || !RegExp(r'^\d{10}$').hasMatch(cleaned)) {
-      return 'Please enter a valid 10-digit mobile number';
+      return l10n.validatorPhoneInvalid;
     }
     return null;
   }
 
   // ─── OTP ─────────────────────────────────────────────────────────
   static String? otp(String? value, {int length = 6}) {
+    final l10n = AppL10n.current;
     if (value == null || value.trim().isEmpty) {
-      return 'Please enter the OTP';
+      return l10n.validatorOtpRequired;
     }
     if (value.trim().length != length) {
-      return 'OTP must be $length digits';
+      return l10n.validatorOtpLength(length);
     }
     if (!RegExp(r'^\d+$').hasMatch(value.trim())) {
-      return 'OTP must contain only digits';
+      return l10n.validatorOtpDigitsOnly;
     }
     return null;
   }
 
   // ─── Password ────────────────────────────────────────────────────
   static String? password(String? value) {
+    final l10n = AppL10n.current;
     if (value == null || value.isEmpty) {
-      return 'Please enter a password';
+      return l10n.validatorPasswordRequired;
     }
     if (value.length < 8) {
-      return 'Password must be at least 8 characters';
+      return l10n.validatorPasswordTooShort;
     }
     if (!RegExp(r'[A-Z]').hasMatch(value)) {
-      return 'Password must contain at least one uppercase letter';
+      return l10n.validatorPasswordUppercase;
     }
     if (!RegExp(r'[a-z]').hasMatch(value)) {
-      return 'Password must contain at least one lowercase letter';
+      return l10n.validatorPasswordLowercase;
     }
     if (!RegExp(r'\d').hasMatch(value)) {
-      return 'Password must contain at least one number';
+      return l10n.validatorPasswordNumber;
     }
     return null;
   }
 
   // ─── Confirm Password ───────────────────────────────────────────
   static String? confirmPassword(String? value, String password) {
+    final l10n = AppL10n.current;
     if (value == null || value.isEmpty) {
-      return 'Please confirm your password';
+      return l10n.validatorConfirmPasswordRequired;
     }
     if (value != password) {
-      return 'Passwords do not match';
+      return l10n.validatorPasswordsMismatch;
     }
     return null;
   }
 
   // ─── Age ─────────────────────────────────────────────────────────
   static String? age(String? value) {
+    final l10n = AppL10n.current;
     if (value == null || value.trim().isEmpty) {
-      return 'Please enter your age';
+      return l10n.validatorAgeRequired;
     }
     final age = int.tryParse(value.trim());
     if (age == null) {
-      return 'Please enter a valid number';
+      return l10n.validatorNumberInvalid;
     }
     if (age < 18) {
-      return 'You must be at least 18 years old';
+      return l10n.validatorAgeMinimum;
     }
     if (age > 100) {
-      return 'Please enter a valid age';
+      return l10n.validatorAgeInvalid;
     }
     return null;
   }
 
   // ─── Height ──────────────────────────────────────────────────────
   static String? height(String? value) {
+    final l10n = AppL10n.current;
     if (value == null || value.trim().isEmpty) {
-      return 'Please enter your height';
+      return l10n.validatorHeightRequired;
     }
     final height = double.tryParse(value.trim());
     if (height == null) {
-      return 'Please enter a valid height';
+      return l10n.validatorHeightInvalid;
     }
     if (height < 100 || height > 250) {
-      return 'Please enter height between 100 and 250 cm';
+      return l10n.validatorHeightRange;
     }
     return null;
   }
 
   // ─── Required ────────────────────────────────────────────────────
-  static String? required(String? value, [String fieldName = 'This field']) {
+  /// [fieldName] is nullable rather than defaulting to a literal, since a
+  /// default value must be a compile-time constant and the localized
+  /// "This field" can only be resolved at call time.
+  static String? required(String? value, [String? fieldName]) {
+    final l10n = AppL10n.current;
     if (value == null || value.trim().isEmpty) {
-      return '$fieldName is required';
+      return l10n.validatorFieldRequired(fieldName ?? l10n.commonThisField);
     }
     return null;
   }
@@ -156,7 +177,7 @@ abstract final class Validators {
       return null; // Bio is optional
     }
     if (value.trim().length > maxLength) {
-      return 'Bio must be less than $maxLength characters';
+      return AppL10n.current.validatorBioTooLong(maxLength);
     }
     return null;
   }

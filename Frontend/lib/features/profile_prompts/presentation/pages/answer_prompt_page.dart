@@ -7,6 +7,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../domain/models/prompt_bank_item.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Answer Screen — shows the selected prompt, a text input with a
 /// character limit, and a Save button. Pops a [PromptAnswer] on save.
@@ -59,7 +60,7 @@ class _AnswerPromptPageState extends State<AnswerPromptPage> {
     final category = widget.prompt.category;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Your Answer')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).promptsYourAnswer)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: AppSpacing.pagePadding,
@@ -96,7 +97,7 @@ class _AnswerPromptPageState extends State<AnswerPromptPage> {
               const SizedBox(height: AppSpacing.xl),
               NmTextField(
                 controller: _controller,
-                hint: 'Write your answer…',
+                hint: AppLocalizations.of(context).promptsAnswerHint,
                 maxLines: 4,
                 maxLength: AnswerPromptPage.maxLength,
                 autovalidateMode: AutovalidateMode.disabled,
@@ -115,7 +116,7 @@ class _AnswerPromptPageState extends State<AnswerPromptPage> {
               ),
               const SizedBox(height: AppSpacing.xl),
               NmGradientButton(
-                label: 'Save',
+                label: AppLocalizations.of(context).actionSave,
                 useGoldGradient: true,
                 onPressed: _controller.text.trim().isEmpty ? null : _save,
               ),

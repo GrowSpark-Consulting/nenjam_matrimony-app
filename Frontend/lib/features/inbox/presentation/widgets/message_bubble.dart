@@ -210,7 +210,7 @@ class _MessageBubbleContent extends StatelessWidget {
               children: [
                 if (message.editedAt != null) ...[
                   Text(
-                    'edited',
+                    AppLocalizations.of(context).inboxMessageEdited,
                     style: AppTypography.labelSmall.copyWith(
                       color: textColor.withValues(alpha: 0.7),
                       fontStyle: FontStyle.italic,
@@ -334,7 +334,7 @@ class _ReplyQuote extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _previewLabel(),
+                  _previewLabel(AppLocalizations.of(context)),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.labelSmall.copyWith(
@@ -365,13 +365,13 @@ class _ReplyQuote extends StatelessWidget {
     return onTap == null ? quote : GestureDetector(onTap: onTap, child: quote);
   }
 
-  String _previewLabel() {
-    if (replyTo.isDeleted) return 'This message was deleted';
-    final edited = replyTo.editedAt != null ? ' (edited)' : '';
+  String _previewLabel(AppLocalizations l10n) {
+    if (replyTo.isDeleted) return l10n.inboxMessageDeleted;
+    final edited = replyTo.editedAt != null ? l10n.inboxEditedSuffix : '';
     return switch (replyTo.type) {
-      MessageType.image => '📷 Photo$edited',
-      MessageType.voice => '🎤 Voice message$edited',
-      MessageType.document => '📄 Document$edited',
+      MessageType.image => '📷 ${l10n.inboxPreviewPhoto}$edited',
+      MessageType.voice => '🎤 ${l10n.inboxComposerVoice}$edited',
+      MessageType.document => '📄 ${l10n.inboxPreviewDocument}$edited',
       MessageType.text => '${replyTo.text}$edited',
     };
   }
@@ -408,7 +408,7 @@ class _DeletedBubble extends StatelessWidget {
             const SizedBox(width: 6),
             Flexible(
               child: Text(
-                'This message was deleted',
+                AppLocalizations.of(context).inboxMessageDeleted,
                 style: AppTypography.chatMessages.copyWith(
                   color: color,
                   fontStyle: FontStyle.italic,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import 'app_text_field.dart';
 
 /// Reusable read-only text input triggering date picker modal.
@@ -21,7 +22,7 @@ class NmDatePickerField extends StatelessWidget {
     return NmTextField(
       controller: controller,
       label: label,
-      hint: 'DD / MM / YYYY',
+      hint: AppLocalizations.of(context).registrationDobHint,
       readOnly: true,
       onTap: onTap,
       suffix: const Icon(Icons.calendar_today_rounded, size: 20),

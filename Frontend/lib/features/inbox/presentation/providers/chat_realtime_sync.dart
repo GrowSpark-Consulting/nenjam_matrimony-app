@@ -45,7 +45,12 @@ final chatRealtimeSyncProvider = Provider<void>((ref) {
   // Socket.IO's own ping-timeout eventually notices) can't leave presence
   // stale until something else happens to touch it.
   final readySubscription = service.onReady.listen((_) {
-    unawaited(ref.read(conversationsNotifierProvider.notifier).refresh());
+    // Silent (see `ConversationsNotifier.refreshSilently`): a reconnect is
+    // not a user-initiated refresh, and flipping the list into
+    // `AsyncValue.loading()` for the duration would flash a spinner over an
+    // already-populated Inbox and blink the bottom nav's unread badge out of
+    // existence and back every time the socket resumes.
+    unawaited(ref.read(conversationsNotifierProvider.notifier).refreshSilently());
     // The conversations-list refresh above reconciles presence and each
     // room's OWN last-message status for every peer, but a thread that's
     // currently open reads its per-message delivery/read ticks from

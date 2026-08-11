@@ -69,6 +69,10 @@ class DiscoverPage extends ConsumerWidget {
         onInterestSentTap: () => context.push(RouteNames.interestsSent),
         onInterestReceivedTap: () => context.push(RouteNames.interestsReceived),
         onShortlistTap: () => context.push(RouteNames.shortlisted),
+        // push (not go) so Back returns here — the drawer entry deliberately
+        // omits `openedFromNotification`, which is what makes Back fall back
+        // to Discover rather than the Notification Center.
+        onProfileViewersTap: () => context.push(RouteNames.profileViewers),
         onLanguageTap: () => context.push(RouteNames.language),
         onSettingsTap: () => context.push(RouteNames.settings),
         onPrivacyTap: () => context.push(RouteNames.privacy),

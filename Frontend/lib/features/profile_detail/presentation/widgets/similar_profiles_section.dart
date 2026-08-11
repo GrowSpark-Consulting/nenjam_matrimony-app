@@ -8,6 +8,7 @@ import '../../../../core/widgets/cards/profile_card.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../providers/profile_detail_providers.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Horizontal shelf of profiles similar to the one being viewed.
 /// Tapping a card recurses into the same route — the back stack grows
@@ -32,7 +33,7 @@ class SimilarProfilesSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Similar Profiles', style: AppTypography.titleLarge),
+        Text(AppLocalizations.of(context).profileDetailSimilarProfiles, style: AppTypography.titleLarge),
         const SizedBox(height: AppSpacing.base),
         SizedBox(
           height: _cardHeight,

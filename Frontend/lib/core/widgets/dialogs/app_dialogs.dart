@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../buttons/danger_button.dart';
@@ -14,8 +15,12 @@ abstract final class AppDialogs {
     BuildContext context, {
     required String title,
     required String message,
-    String confirmLabel = 'Confirm',
-    String cancelLabel = 'Cancel',
+    // Nullable rather than a const default: a `const` initialiser can't call
+    // AppLocalizations, which needs a BuildContext. Callers that pass a label
+    // are unaffected; the rest fall back to the localized default resolved
+    // against the dialog's own context below.
+    String? confirmLabel,
+    String? cancelLabel,
   }) {
     return showDialog<bool>(
       context: context,
@@ -26,9 +31,9 @@ abstract final class AppDialogs {
         actions: [
           Row(
             children: [
-              Expanded(child: NmOutlinedButton(label: cancelLabel, onPressed: () => Navigator.pop(context, false))),
+              Expanded(child: NmOutlinedButton(label: cancelLabel ?? AppLocalizations.of(context).commonCancel, onPressed: () => Navigator.pop(context, false))),
               const SizedBox(width: 12),
-              Expanded(child: NmPrimaryButton(label: confirmLabel, onPressed: () => Navigator.pop(context, true))),
+              Expanded(child: NmPrimaryButton(label: confirmLabel ?? AppLocalizations.of(context).commonConfirm, onPressed: () => Navigator.pop(context, true))),
             ],
           ),
         ],
@@ -51,9 +56,9 @@ abstract final class AppDialogs {
         actions: [
           Row(
             children: [
-              Expanded(child: NmOutlinedButton(label: 'Cancel', onPressed: () => Navigator.pop(context, false))),
+              Expanded(child: NmOutlinedButton(label: AppLocalizations.of(context).commonCancel, onPressed: () => Navigator.pop(context, false))),
               const SizedBox(width: 12),
-              Expanded(child: NmDangerButton(label: 'Delete', onPressed: () => Navigator.pop(context, true))),
+              Expanded(child: NmDangerButton(label: AppLocalizations.of(context).inboxActionDelete, onPressed: () => Navigator.pop(context, true))),
             ],
           ),
         ],
@@ -73,11 +78,11 @@ abstract final class AppDialogs {
           children: [
             const Icon(Icons.workspace_premium_rounded, size: 64, color: AppColors.accentGold),
             const SizedBox(height: 16),
-            Text('Upgrade to Royal Premium', style: AppTypography.titleLarge, textAlign: TextAlign.center),
+            Text(AppLocalizations.of(context).dialogUpgradeTitle, style: AppTypography.titleLarge, textAlign: TextAlign.center),
             const SizedBox(height: 8),
-            Text('Get unlimited contact views, AI compatibility breakdowns, and horoscope matches.', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight), textAlign: TextAlign.center),
+            Text(AppLocalizations.of(context).dialogUpgradeMessage, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight), textAlign: TextAlign.center),
             const SizedBox(height: 24),
-            NmPremiumButton(label: 'Explore Plans', onPressed: () => Navigator.pop(context)),
+            NmPremiumButton(label: AppLocalizations.of(context).premiumBannerCta, onPressed: () => Navigator.pop(context)),
           ],
         ),
       ),
@@ -96,11 +101,11 @@ abstract final class AppDialogs {
           children: [
             const Icon(Icons.verified_user_rounded, size: 64, color: AppColors.verifiedBlue),
             const SizedBox(height: 16),
-            Text('ID Verification Required', style: AppTypography.titleLarge, textAlign: TextAlign.center),
+            Text(AppLocalizations.of(context).dialogVerificationTitle, style: AppTypography.titleLarge, textAlign: TextAlign.center),
             const SizedBox(height: 8),
-            Text('Please verify your Aadhaar or Passport to send direct chat invitations.', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight), textAlign: TextAlign.center),
+            Text(AppLocalizations.of(context).dialogVerificationMessage, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight), textAlign: TextAlign.center),
             const SizedBox(height: 24),
-            NmPrimaryButton(label: 'Verify Now', onPressed: () { Navigator.pop(context); onVerify(); }),
+            NmPrimaryButton(label: AppLocalizations.of(context).dialogVerifyNow, onPressed: () { Navigator.pop(context); onVerify(); }),
           ],
         ),
       ),
@@ -113,9 +118,9 @@ abstract final class AppDialogs {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Row(children: [const Icon(Icons.error_outline_rounded, color: AppColors.error), const SizedBox(width: 8), Text('Error', style: AppTypography.titleLarge)]),
+        title: Row(children: [const Icon(Icons.error_outline_rounded, color: AppColors.error), const SizedBox(width: 8), Text(AppLocalizations.of(context).commonError, style: AppTypography.titleLarge)]),
         content: Text(message, style: AppTypography.bodyMedium),
-        actions: [NmPrimaryButton(label: 'Dismiss', onPressed: () => Navigator.pop(context))],
+        actions: [NmPrimaryButton(label: AppLocalizations.of(context).commonDismiss, onPressed: () => Navigator.pop(context))],
       ),
     );
   }
@@ -128,13 +133,13 @@ abstract final class AppDialogs {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(children: [const Icon(Icons.check_circle_outline_rounded, color: AppColors.success), const SizedBox(width: 8), Text(title, style: AppTypography.titleLarge)]),
         content: Text(message, style: AppTypography.bodyMedium),
-        actions: [NmPrimaryButton(label: 'Great', onPressed: () => Navigator.pop(context))],
+        actions: [NmPrimaryButton(label: AppLocalizations.of(context).commonGreat, onPressed: () => Navigator.pop(context))],
       ),
     );
   }
 
   /// Non-dismissible Progress Dialog.
-  static Future<void> showProgress(BuildContext context, {String message = 'Please wait...'}) {
+  static Future<void> showProgress(BuildContext context, {String? message}) {
     return showDialog(
       context: context,
       barrierDismissible: false,
@@ -146,7 +151,7 @@ abstract final class AppDialogs {
             children: [
               const CircularProgressIndicator(color: AppColors.primary),
               const SizedBox(width: 24),
-              Expanded(child: Text(message, style: AppTypography.bodyLarge)),
+              Expanded(child: Text(message ?? AppLocalizations.of(context).commonPleaseWait, style: AppTypography.bodyLarge)),
             ],
           ),
         ),

@@ -23,47 +23,101 @@ import '../providers/profile_views_provider.dart';
 /// `NotificationNavigationService`) and reachable from the navigation drawer.
 /// Backed by `GET /matches/profile-views`, which returns distinct viewers
 /// newest-first, so repeat views by the same member appear once.
+///
+/// ## Back behaviour
+///
+/// Both entry points push this page onto a real stack, so Back is an ordinary
+/// [GoRouter] pop in the normal case:
+///
+///   * from the drawer — pushed over Discover, so Back returns to Discover
+///   * from a notification — the service navigates to the Notification Center
+///     *first* and pushes this page on top, so Back returns to Notifications
+///
+/// [openedFromNotification] only decides where Back goes when there is
+/// nothing beneath this page to pop to. That happens on a cold start whose
+/// very first frame is this route, where a dead Back button would otherwise
+/// strand the member.
 class ProfileViewersPage extends ConsumerWidget {
-  const ProfileViewersPage({super.key});
+  const ProfileViewersPage({super.key, this.openedFromNotification = false});
+
+  /// Whether a PROFILE_VIEW notification tap opened this page.
+  ///
+  /// Supplied by the router from the `openedFromNotification` query
+  /// parameter — a query parameter rather than `extra` so it survives the
+  /// process death / restoration path that a cold-start notification tap
+  /// goes through, which `extra` does not.
+  final bool openedFromNotification;
+
+  /// Where Back goes when this page is the only entry on the stack.
+  String get _fallbackRoute =>
+      openedFromNotification ? RouteNames.notifications : RouteNames.discover;
+
+  void _onBack(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(_fallbackRoute);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final viewersAsync = ref.watch(profileViewersNotifierProvider);
+    // Whether this page sits on top of something. Fixed for as long as the
+    // page is mounted — nothing is inserted beneath a route that is already
+    // on screen — so reading it once per build is safe.
+    final canPop = context.canPop();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          l10n.profileViewersTitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-      body: SafeArea(
-        child: viewersAsync.when(
-          loading: () => const _LoadingView(),
-          error: (_, __) => Center(
-            child: NmErrorWidget(
-              onRetry: () =>
-                  ref.read(profileViewersNotifierProvider.notifier).refresh(),
-            ),
+    return PopScope(
+      // When there is a page underneath, let the framework do the pop itself:
+      // that keeps the Android system back button and the iOS swipe-back
+      // gesture behaving natively. Only the no-stack case is intercepted.
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go(_fallbackRoute);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            onPressed: () => _onBack(context),
           ),
-          data: (viewers) => viewers.isEmpty
-              ? _EmptyView(l10n: l10n)
-              : RefreshIndicator(
-                  onRefresh: () =>
-                      ref.read(profileViewersNotifierProvider.notifier).refresh(),
-                  child: ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    itemCount: viewers.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) => _ViewerCard(
-                      key: ValueKey(viewers[index].profile.id),
-                      viewer: viewers[index],
+          title: Text(
+            l10n.profileViewersTitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        body: SafeArea(
+          child: viewersAsync.when(
+            loading: () => const _LoadingView(),
+            error: (_, __) => Center(
+              child: NmErrorWidget(
+                onRetry: () =>
+                    ref.read(profileViewersNotifierProvider.notifier).refresh(),
+              ),
+            ),
+            data: (viewers) => viewers.isEmpty
+                ? _EmptyView(l10n: l10n)
+                : RefreshIndicator(
+                    onRefresh: () => ref
+                        .read(profileViewersNotifierProvider.notifier)
+                        .refresh(),
+                    child: ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      itemCount: viewers.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) => _ViewerCard(
+                        key: ValueKey(viewers[index].profile.id),
+                        viewer: viewers[index],
+                      ),
                     ),
                   ),
-                ),
+          ),
         ),
       ),
     );

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Account section — Logout button and Deactivate Account link.
 ///
@@ -37,7 +38,7 @@ class NmAccountSection extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Log Out',
+                  AppLocalizations.of(context).commonLogOut,
                   style: AppTypography.labelLarge.copyWith(
                     color: AppColors.error,
                     fontWeight: FontWeight.w600,
@@ -59,7 +60,7 @@ class NmAccountSection extends StatelessWidget {
           child: TextButton(
             onPressed: onDeactivateTap,
             child: Text(
-              'Deactivate Account',
+              AppLocalizations.of(context).profileDeactivateAccount,
               style: AppTypography.labelSmall.copyWith(
                 color: isDark
                     ? AppColors.textTertiaryDark

@@ -200,7 +200,7 @@ class _ProfileDetailHeroAppBarState extends ConsumerState<ProfileDetailHeroAppBa
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
-                              'VERIFIED PROFILE',
+                              AppLocalizations.of(context).profileDetailVerifiedBanner,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: AppTypography.labelSmall.copyWith(

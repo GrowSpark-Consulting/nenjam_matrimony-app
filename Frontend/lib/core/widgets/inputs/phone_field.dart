@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import 'app_text_field.dart';
@@ -60,7 +61,7 @@ void showCountryPickerSheet(BuildContext context, {required ValueChanged<Country
             ),
             const SizedBox(height: 16),
             Text(
-              'Select Country Code',
+              AppLocalizations.of(context).fieldCountryCodeHint,
               style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../constants/app_constants.dart';
+import '../l10n/app_l10n.dart';
 import '../services/storage_service.dart';
 
 /// Manages the app's active [Locale] and persists the user's choice.
@@ -20,7 +21,11 @@ class LocaleNotifier extends Notifier<Locale> {
     final active = AppConstants.activeLanguages.contains(code)
         ? code
         : AppConstants.defaultLanguage;
-    return Locale(active);
+    final locale = Locale(active);
+    // Mirror into the context-free accessor used by Validators /
+    // AuthErrorMapper / ApiInterceptor — see [AppL10n].
+    AppL10n.locale = locale;
+    return locale;
   }
 
   /// Re-reads the persisted language and applies it. Useful to force a
@@ -35,8 +40,13 @@ class LocaleNotifier extends Notifier<Locale> {
   /// SharedPreferences is written afterwards for restart persistence.
   Future<void> changeLocale(String languageCode) async {
     if (!AppConstants.activeLanguages.contains(languageCode)) return;
-    // 1. Update state immediately -> rebuilds MaterialApp.router.
-    state = Locale(languageCode);
+    // 1. Update state immediately -> rebuilds MaterialApp.router. Mirrored
+    //    into AppL10n in the same synchronous step so context-free callers
+    //    (validators, error mappers) can't read a stale locale in the frame
+    //    the switch happens.
+    final locale = Locale(languageCode);
+    AppL10n.locale = locale;
+    state = locale;
     // 2. Persist for the next app launch.
     await storageService.setLanguage(languageCode);
   }

@@ -9,6 +9,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../domain/models/prompt_bank_item.dart';
 import '../providers/profile_prompt_provider.dart';
 import 'answer_prompt_page.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Choose Prompt Screen — horizontal category chips, rounded cards with a
 /// leading colorful icon, prompt text, and a trailing arrow. Tapping a
@@ -54,7 +55,7 @@ class _ChoosePromptPageState extends ConsumerState<ChoosePromptPage> {
     final atLimit = _selection.length >= 3;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Choose a Prompt')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).promptsChooseTitle)),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,7 +69,7 @@ class _ChoosePromptPageState extends ConsumerState<ChoosePromptPage> {
                     const EdgeInsets.symmetric(horizontal: AppSpacing.base),
                 children: [
                   _CategoryChip(
-                    label: 'All',
+                    label: AppLocalizations.of(context).commonAll,
                     selected: _selectedCategory == null,
                     color: AppColors.primary,
                     onTap: () => setState(() => _selectedCategory = null),
@@ -94,7 +95,7 @@ class _ChoosePromptPageState extends ConsumerState<ChoosePromptPage> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.base, vertical: AppSpacing.sm),
                 child: Text(
-                  "You've picked 3 prompts — the maximum. Remove one to add another.",
+                  AppLocalizations.of(context).promptsMaxReached,
                   style: AppTypography.bodySmall.copyWith(
                     color: isDark
                         ? AppColors.textTertiaryDark
@@ -106,13 +107,13 @@ class _ChoosePromptPageState extends ConsumerState<ChoosePromptPage> {
               child: bankAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (_, __) =>
-                    const Center(child: Text('Could not load prompts.')),
+                    Center(child: Text(AppLocalizations.of(context).promptsLoadError)),
                 data: (prompts) {
                   final available =
                       prompts.where((p) => !chosenIds.contains(p.id)).toList();
                   if (available.isEmpty) {
-                    return const Center(
-                      child: Text('No more prompts in this category.'),
+                    return Center(
+                      child: Text(AppLocalizations.of(context).promptsCategoryEmpty),
                     );
                   }
                   return ListView.separated(

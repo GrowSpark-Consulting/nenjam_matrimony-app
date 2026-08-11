@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
@@ -56,7 +57,7 @@ class NmCompatibilityCard extends StatelessWidget {
                   children: [
                     Text(title, style: AppTypography.titleMedium),
                     const SizedBox(height: 2),
-                    Text('Based on 40+ AI lifestyle parameters', style: AppTypography.labelSmall.copyWith(color: AppColors.textTertiaryLight)),
+                    Text(AppLocalizations.of(context).cardCompatibilityFootnote, style: AppTypography.labelSmall.copyWith(color: AppColors.textTertiaryLight)),
                   ],
                 ),
               ),

@@ -77,6 +77,22 @@ class ConversationsNotifier extends AsyncNotifier<List<ConversationEntity>> {
     });
   }
 
+  /// Re-fetches the list *without* dropping the current data into a loading
+  /// state, and keeps the existing data if the fetch fails. For background
+  /// re-syncs the user didn't ask for — a socket reconnect, or returning to
+  /// the foreground — where [refresh]'s `AsyncValue.loading()` would blink
+  /// every derived consumer through "no data": the Inbox list would flash a
+  /// spinner and, more visibly, the bottom-nav unread badge would pop out to
+  /// zero and back on every reconnect. Pull-to-refresh still uses [refresh],
+  /// where a visible loading state is exactly what the user asked for.
+  Future<void> refreshSilently() async {
+    final result = await AsyncValue.guard(() async {
+      final page = await ref.read(conversationRepositoryProvider).getConversations();
+      return page.items;
+    });
+    if (result.hasValue) state = result;
+  }
+
   Future<void> _apply(
     String id,
     ConversationEntity Function(ConversationEntity) optimisticUpdate,
@@ -379,6 +395,32 @@ final filteredConversationsProvider = Provider<AsyncValue<List<ConversationEntit
 final unreadConversationsCountProvider = Provider<int>((ref) {
   final all = ref.watch(conversationsNotifierProvider).valueOrNull ?? const [];
   return all.where((c) => !c.isArchived && !c.isBlocked && c.unreadCount > 0).length;
+});
+
+/// Total unread *messages* across the active inbox — the app-wide number the
+/// bottom nav's Inbox badge shows (Instagram/WhatsApp style).
+///
+/// Deliberately different from [unreadConversationsCountProvider], which
+/// counts *threads* with anything unread and drives the Inbox "Messages"
+/// tab: on the tab, next to a list of conversations, "3" meaning three
+/// conversations reads correctly; on the nav icon it has to mean three
+/// messages, which is what every other app trains people to expect.
+///
+/// Derived rather than fetched — there is no app-wide unread endpoint, and
+/// none is needed: `GET /conversations` already returns each room's
+/// `unreadCount` (the per-user `ChatParticipantState`), so summing here keeps
+/// one source of truth and gets every optimistic update for free. Archived
+/// and blocked conversations are excluded to match which rows the default
+/// Inbox list actually shows; muted ones still count — mute silences
+/// notifications, it doesn't mark anything read.
+final unreadMessagesCountProvider = Provider<int>((ref) {
+  final all = ref.watch(conversationsNotifierProvider).valueOrNull ?? const [];
+  var total = 0;
+  for (final c in all) {
+    if (c.isArchived || c.isBlocked) continue;
+    total += c.unreadCount;
+  }
+  return total;
 });
 
 /// Monotonic discriminator so two client-generated ids constructed in the

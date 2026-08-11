@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../buttons/primary_button.dart';
@@ -88,7 +89,7 @@ class NmRetryWidget extends StatelessWidget {
             const SizedBox(height: 16),
             Text(message, style: AppTypography.bodyMedium, textAlign: TextAlign.center),
             const SizedBox(height: 20),
-            NmPrimaryButton(label: 'Retry', onPressed: onRetry, width: 140, height: 44),
+            NmPrimaryButton(label: AppLocalizations.of(context).commonRetry, onPressed: onRetry, width: 140, height: 44),
           ],
         ),
       ),
@@ -111,11 +112,11 @@ class NmNoInternetWidget extends StatelessWidget {
           children: [
             const Icon(Icons.wifi_off_rounded, size: 64, color: AppColors.warning),
             const SizedBox(height: 20),
-            Text('No Internet Connection', style: AppTypography.titleLarge),
+            Text(AppLocalizations.of(context).networkNoInternetTitle, style: AppTypography.titleLarge),
             const SizedBox(height: 8),
-            Text('Please check your network settings and try reconnecting.', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight), textAlign: TextAlign.center),
+            Text(AppLocalizations.of(context).networkNoInternetMessage, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight), textAlign: TextAlign.center),
             const SizedBox(height: 24),
-            NmPrimaryButton(label: 'Reconnect', onPressed: onRetry, width: 160),
+            NmPrimaryButton(label: AppLocalizations.of(context).networkReconnect, onPressed: onRetry, width: 160),
           ],
         ),
       ),
@@ -138,11 +139,11 @@ class NmServerErrorWidget extends StatelessWidget {
           children: [
             const Icon(Icons.cloud_off_rounded, size: 64, color: AppColors.error),
             const SizedBox(height: 20),
-            Text('Server Error (500)', style: AppTypography.titleLarge),
+            Text(AppLocalizations.of(context).networkServerErrorTitle, style: AppTypography.titleLarge),
             const SizedBox(height: 8),
-            Text('Our matrimonial servers are currently undergoing maintenance or experiencing issues.', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight), textAlign: TextAlign.center),
+            Text(AppLocalizations.of(context).networkServerErrorMessage, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight), textAlign: TextAlign.center),
             const SizedBox(height: 24),
-            NmPrimaryButton(label: 'Try Again', onPressed: onRetry, width: 160),
+            NmPrimaryButton(label: AppLocalizations.of(context).commonTryAgain, onPressed: onRetry, width: 160),
           ],
         ),
       ),

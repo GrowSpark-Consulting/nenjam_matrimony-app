@@ -226,13 +226,13 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
             ListTile(
               leading: const Icon(Icons.photo_library_rounded,
                   color: AppColors.primary),
-              title: const Text('Choose from gallery'),
+              title: Text(AppLocalizations.of(context).inboxChooseFromGallery),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt_rounded,
                   color: AppColors.accentGold),
-              title: const Text('Take a photo'),
+              title: Text(AppLocalizations.of(context).inboxTakePhoto),
               onTap: () => Navigator.pop(ctx, ImageSource.camera),
             ),
             const SizedBox(height: 12),
@@ -256,7 +256,7 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Preview document', style: AppTypography.titleLarge),
+              Text(AppLocalizations.of(context).registrationPreviewDocument, style: AppTypography.titleLarge),
               const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
@@ -268,14 +268,14 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Choose again'),
+                      child: Text(AppLocalizations.of(context).registrationChooseAgain),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Confirm upload'),
+                      child: Text(AppLocalizations.of(context).registrationConfirmUpload),
                     ),
                   ),
                 ],

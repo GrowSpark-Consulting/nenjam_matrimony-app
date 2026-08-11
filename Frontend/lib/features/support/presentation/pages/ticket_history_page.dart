@@ -117,7 +117,7 @@ class TicketHistoryPage extends ConsumerWidget {
                 action: OutlinedButton.icon(
                   onPressed: () => ref.invalidate(myTicketsProvider),
                   icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Retry'),
+                  label: Text(AppLocalizations.of(context).commonRetry),
                 ),
               ),
             ),

@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/buttons/primary_button.dart';
@@ -245,8 +246,8 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
       if (!mounted) return;
       setState(() => _isProcessing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not process this photo. Please try again.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).photoCropProcessError),
         ),
       );
     }
@@ -274,10 +275,12 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
       leading: IconButton(
         icon: const Icon(Icons.close_rounded),
         onPressed: _isProcessing ? null : _onCancel,
-        tooltip: 'Cancel',
+        tooltip: AppLocalizations.of(context).commonCancel,
       ),
       title: Text(
-        widget.shape == CropShape.circle ? 'Adjust Profile Photo' : 'Adjust Photo',
+        widget.shape == CropShape.circle
+            ? AppLocalizations.of(context).photoCropAdjustProfileTitle
+            : AppLocalizations.of(context).photoCropAdjustTitle,
         style: AppTypography.titleSmall.copyWith(color: Colors.white),
       ),
       centerTitle: true,
@@ -287,7 +290,7 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
           onPressed: (_isLoadingSource || _loadError || _isProcessing)
               ? null
               : _onRotate,
-          tooltip: 'Rotate',
+          tooltip: AppLocalizations.of(context).commonRotate,
         ),
       ],
     );
@@ -305,7 +308,7 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
                   color: Colors.white54, size: 40),
               const SizedBox(height: 12),
               Text(
-                'Could not load this photo.',
+                AppLocalizations.of(context).photoCropLoadError,
                 style: AppTypography.bodyMedium.copyWith(color: Colors.white),
                 textAlign: TextAlign.center,
               ),
@@ -313,7 +316,7 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
               OutlinedButton(
                 onPressed: _loadImage,
                 style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
-                child: const Text('Retry'),
+                child: Text(AppLocalizations.of(context).commonRetry),
               ),
             ],
           ),
@@ -352,7 +355,7 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
                     const CircularProgressIndicator(color: AppColors.accentGold),
                     const SizedBox(height: 12),
                     Text(
-                      'Processing…',
+                      AppLocalizations.of(context).commonProcessing,
                       style:
                           AppTypography.bodyMedium.copyWith(color: Colors.white),
                     ),
@@ -411,13 +414,13 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
         children: [
           TextButton(
             onPressed: _isProcessing ? null : _onReset,
-            child: const Text('Reset', style: TextStyle(color: Colors.white70)),
+            child: Text(AppLocalizations.of(context).commonReset, style: const TextStyle(color: Colors.white70)),
           ),
           const Spacer(),
           SizedBox(
             width: 168,
             child: NmPrimaryButton(
-              label: 'Use Photo',
+              label: AppLocalizations.of(context).photoCropUsePhoto,
               isLoading: _isProcessing,
               onPressed: _isProcessing ? null : _confirmCrop,
             ),

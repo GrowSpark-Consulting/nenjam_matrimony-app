@@ -51,16 +51,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
   }
 
   Future<void> _onNotificationsToggle(bool wantsEnabled) async {
+    final l10n = AppLocalizations.of(context);
     final permissions = ref.read(appPermissionServiceProvider);
     if (!wantsEnabled) {
       // The OS is the only source of truth for this permission — Nenjam
       // can't revoke it in-app, only direct the user to where they can.
       await showOpenSettingsDialog(
         context,
-        title: 'Notifications',
-        message:
-            'To turn off notifications, disable them for Nenjam Matrimony '
-            'in Settings.',
+        title: l10n.notificationsTitle,
+        message: l10n.settingsNotificationsOffMessage,
         onOpenSettings: permissions.openSettings,
       );
       return;
@@ -71,8 +70,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     if (status == NmPermissionStatus.permanentlyDenied) {
       await showOpenSettingsDialog(
         context,
-        title: 'Notifications Disabled',
-        message: 'Enable notifications from Settings to stay updated.',
+        title: l10n.permissionNotificationsDisabledTitle,
+        message: l10n.permissionNotificationsDisabledMessage,
         onOpenSettings: permissions.openSettings,
       );
       return;
@@ -81,12 +80,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     final enable = await showPermissionPrimerDialog(
       context,
       icon: Icons.notifications_active_rounded,
-      title: 'Enable Notifications',
-      message:
-          'Get notified when someone sends you an interest, accepts your '
-          'request, or messages you.',
-      proceedLabel: 'Enable',
-      cancelLabel: 'Not now',
+      title: l10n.permissionNotificationsEnableTitle,
+      message: l10n.permissionNotificationsEnableMessage,
+      proceedLabel: l10n.commonEnable,
+      cancelLabel: l10n.commonNotNow,
     );
     if (!enable) return;
     await permissions.request(NmPermission.notification);

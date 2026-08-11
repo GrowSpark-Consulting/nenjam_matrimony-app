@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../avatars/app_avatars.dart';
@@ -83,23 +84,23 @@ class NmDrawer extends StatelessWidget {
                 children: [
                   _DrawerItem(
                     icon: Icons.person_outline_rounded,
-                    label: 'My Profile',
+                    label: AppLocalizations.of(context).drawerProfile,
                     onTap: onProfileTap,
                   ),
                   _DrawerItem(
                     icon: Icons.workspace_premium_rounded,
-                    label: 'Premium',
+                    label: AppLocalizations.of(context).navPremium,
                     onTap: onPremiumTap,
                     iconColor: AppColors.accentGold,
                   ),
                   _DrawerItem(
                     icon: Icons.settings_outlined,
-                    label: 'Settings',
+                    label: AppLocalizations.of(context).settingsTitle,
                     onTap: onSettingsTap,
                   ),
                   _DrawerItem(
                     icon: Icons.help_outline_rounded,
-                    label: 'Help & Support',
+                    label: AppLocalizations.of(context).drawerHelp,
                     onTap: onHelpTap,
                   ),
                 ],
@@ -110,7 +111,7 @@ class NmDrawer extends StatelessWidget {
             const Divider(height: 1),
             _DrawerItem(
               icon: Icons.logout_rounded,
-              label: 'Logout',
+              label: AppLocalizations.of(context).drawerLogout,
               onTap: onLogoutTap,
               iconColor: AppColors.error,
             ),

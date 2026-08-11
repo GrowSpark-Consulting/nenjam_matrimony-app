@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// A single priority action item shown inside Today's Priorities section.
 ///
@@ -123,19 +124,21 @@ class NmTodayPrioritiesSection extends StatelessWidget {
 
   const NmTodayPrioritiesSection({super.key, required this.priorities});
 
-  /// Default priorities used when no custom list is provided.
-  static List<NmPriorityItem> get defaultPriorities => const [
+  /// Default priorities used when no custom list is provided. Takes an
+  /// [AppLocalizations] because the copy is translated, so the list can no
+  /// longer be a compile-time constant.
+  static List<NmPriorityItem> defaultPrioritiesFor(AppLocalizations l10n) => [
     NmPriorityItem(
       icon: Icons.family_restroom_rounded,
       accentColor: AppColors.accentGold,
-      title: 'Add Family Details',
-      impactLabel: '+12% Trust Score',
+      title: l10n.profileAddFamilyDetails,
+      impactLabel: l10n.profilePriorityTrustImpact,
     ),
     NmPriorityItem(
       icon: Icons.add_a_photo_rounded,
       accentColor: AppColors.primary,
-      title: 'Add 2 More Photos',
-      impactLabel: 'Boost Visibility by 40%',
+      title: l10n.profileAddMorePhotos,
+      impactLabel: l10n.profilePriorityVisibilityImpact,
     ),
   ];
 
@@ -144,7 +147,7 @@ class NmTodayPrioritiesSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Today's Priorities", style: AppTypography.titleMedium),
+        Text(AppLocalizations.of(context).profileTodaysPriorities, style: AppTypography.titleMedium),
         const SizedBox(height: AppSpacing.md),
         ...priorities.map(
           (p) => Padding(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/tokens/app_animation_tokens.dart';
@@ -128,7 +129,7 @@ class _NmSearchBarState extends State<NmSearchBar> {
         key: const ValueKey('clear'),
         onPressed: _clear,
         icon: Icon(Icons.close_rounded, color: iconColor, size: 20),
-        tooltip: 'Clear',
+        tooltip: AppLocalizations.of(context).commonClear,
         splashRadius: 18,
       );
     }
@@ -137,7 +138,7 @@ class _NmSearchBarState extends State<NmSearchBar> {
         key: const ValueKey('filter'),
         onPressed: widget.onFilterTap,
         icon: Icon(Icons.tune_rounded, color: iconColor, size: 22),
-        tooltip: 'Filters',
+        tooltip: AppLocalizations.of(context).searchFilterSheetTitle,
       );
     }
     return const SizedBox.shrink(key: ValueKey('none'));

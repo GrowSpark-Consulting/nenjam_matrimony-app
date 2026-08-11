@@ -26,11 +26,17 @@ import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 /// (tablet landscape).
 const _widths = [320.0, 360.0, 390.0, 412.0, 480.0, 600.0, 800.0, 1024.0];
 
+/// Every shipped locale. Tamil renders materially longer than English for
+/// the same copy, so a card that fits in `en` can still overflow in `ta` —
+/// running the whole matrix in both is the regression net for that.
+const _locales = [Locale('en'), Locale('ta')];
+
 /// Wraps [child] the way it's actually used: inside a padded, scrollable
 /// column at a fixed width, with the app's real localization delegates so
 /// `AppLocalizations.of(context)` resolves.
-Widget _harness(Widget child, double width) {
+Widget _harness(Widget child, double width, Locale locale) {
   return MaterialApp(
+    locale: locale,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
@@ -47,28 +53,31 @@ Widget _harness(Widget child, double width) {
 
 Future<void> _expectNoOverflow(
   WidgetTester tester,
-  Widget Function() build,
+  Widget Function(AppLocalizations l10n) build,
   String label,
 ) async {
-  for (final width in _widths) {
-    for (final textScale in [1.0, 2.0]) {
-      await tester.pumpWidget(
-        MediaQuery(
-          data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
-          child: _harness(build(), width),
-        ),
-      );
-      // Some cards contain infinitely-repeating animations (e.g. the
-      // Match Journey pulsing dot), so advance a bounded number of frames
-      // instead of pumpAndSettle (which would never terminate).
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-      expect(
-        tester.takeException(),
-        isNull,
-        reason:
-            '$label overflowed/errored at width=$width textScale=$textScale',
-      );
+  for (final locale in _locales) {
+    final l10n = lookupAppLocalizations(locale);
+    for (final width in _widths) {
+      for (final textScale in [1.0, 2.0]) {
+        await tester.pumpWidget(
+          MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+            child: _harness(build(l10n), width, locale),
+          ),
+        );
+        // Some cards contain infinitely-repeating animations (e.g. the
+        // Match Journey pulsing dot), so advance a bounded number of frames
+        // instead of pumpAndSettle (which would never terminate).
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: '$label overflowed/errored at width=$width '
+              'textScale=$textScale locale=${locale.languageCode}',
+        );
+      }
     }
   }
 }
@@ -79,7 +88,7 @@ void main() {
   ) async {
     await _expectNoOverflow(
       tester,
-      () => const NmMatchJourneyCard(currentStep: 3),
+      (l10n) => const NmMatchJourneyCard(currentStep: 3),
       'NmMatchJourneyCard',
     );
   });
@@ -89,7 +98,7 @@ void main() {
   ) async {
     await _expectNoOverflow(
       tester,
-      () => const NmIdentityHeroCard(
+      (l10n) => const NmIdentityHeroCard(
         name: 'Arjun Sundar Krishnamoorthy Venkataraman',
         age: 28,
         nmId: 'NM984523',
@@ -112,8 +121,8 @@ void main() {
   ) async {
     await _expectNoOverflow(
       tester,
-      () => NmTodayPrioritiesSection(
-        priorities: NmTodayPrioritiesSection.defaultPriorities,
+      (l10n) => NmTodayPrioritiesSection(
+        priorities: NmTodayPrioritiesSection.defaultPrioritiesFor(l10n),
       ),
       'NmTodayPrioritiesSection',
     );
@@ -124,7 +133,7 @@ void main() {
   ) async {
     await _expectNoOverflow(
       tester,
-      () => const NmAiMatchCoachCard(),
+      (l10n) => const NmAiMatchCoachCard(),
       'NmAiMatchCoachCard',
     );
   });
@@ -134,7 +143,7 @@ void main() {
   ) async {
     await _expectNoOverflow(
       tester,
-      () => const Column(
+      (l10n) => const Column(
         children: [
           NmActivityStatsCard(),
           SizedBox(height: 16),
@@ -148,7 +157,7 @@ void main() {
   testWidgets('NmDiscoverOpportunitiesCard has no overflow', (tester) async {
     await _expectNoOverflow(
       tester,
-      () => const NmDiscoverOpportunitiesCard(
+      (l10n) => const NmDiscoverOpportunitiesCard(
         matches: [
           NmDiscoverMatch(
             name: 'Priya',
@@ -167,7 +176,7 @@ void main() {
   ) async {
     await _expectNoOverflow(
       tester,
-      () => NmVerificationCard(items: NmVerificationCard.defaults),
+      (l10n) => NmVerificationCard(items: NmVerificationCard.defaultsFor(l10n)),
       'NmVerificationCard',
     );
   });
@@ -177,8 +186,8 @@ void main() {
   ) async {
     await _expectNoOverflow(
       tester,
-      () => NmPartnerPreferenceCard(
-        preferences: NmPartnerPreferenceCard.defaults,
+      (l10n) => NmPartnerPreferenceCard(
+        preferences: NmPartnerPreferenceCard.defaultsFor(l10n),
       ),
       'NmPartnerPreferenceCard',
     );
@@ -189,7 +198,7 @@ void main() {
   ) async {
     await _expectNoOverflow(
       tester,
-      () => const NmPhotoGalleryCard(photoUrls: []),
+      (l10n) => const NmPhotoGalleryCard(photoUrls: []),
       'NmPhotoGalleryCard',
     );
   });
@@ -199,7 +208,7 @@ void main() {
   ) async {
     await _expectNoOverflow(
       tester,
-      () => const NmPremiumMembershipCard(),
+      (l10n) => const NmPremiumMembershipCard(),
       'NmPremiumMembershipCard',
     );
   });
@@ -209,7 +218,7 @@ void main() {
   ) async {
     await _expectNoOverflow(
       tester,
-      () => const NmQuickActionsCard(
+      (l10n) => const NmQuickActionsCard(
         actions: [
           NmQuickAction(icon: Icons.settings_outlined, label: 'Settings'),
           NmQuickAction(icon: Icons.lock_person_outlined, label: 'Privacy'),
@@ -232,7 +241,7 @@ void main() {
   ) async {
     await _expectNoOverflow(
       tester,
-      () => const NmAccountSection(),
+      (l10n) => const NmAccountSection(),
       'NmAccountSection',
     );
   });

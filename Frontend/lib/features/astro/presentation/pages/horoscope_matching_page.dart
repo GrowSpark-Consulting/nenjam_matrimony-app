@@ -8,6 +8,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/chips/info_chip.dart';
 import '../../../../core/widgets/relationship_intelligence/compatibility_result_widget.dart';
 import '../providers/compatibility_provider.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Horoscope Matching — self-summary (Rasi/Nakshatra/Dosham/Birth Details),
 /// a matching opt-in toggle, and a compatibility-result preview. Extends
@@ -22,18 +23,18 @@ class HoroscopeMatchingPage extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Horoscope Matching')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).astroMatchingTitle)),
       body: SafeArea(
         child: summaryAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (_, __) =>
-              const Center(child: Text('Could not load your horoscope.')),
+              Center(child: Text(AppLocalizations.of(context).astroLoadError)),
           data: (summary) => SingleChildScrollView(
             padding: AppSpacing.pagePadding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Your Horoscope Details',
+                Text(AppLocalizations.of(context).astroYourDetailsTitle,
                     style: AppTypography.titleMedium),
                 const SizedBox(height: AppSpacing.sm),
                 Container(
@@ -48,13 +49,13 @@ class HoroscopeMatchingPage extends ConsumerWidget {
                         runSpacing: AppSpacing.sm,
                         children: [
                           if ((summary.rasi ?? '').isNotEmpty)
-                            NmInfoChip(label: 'Rasi: ${summary.rasi}'),
+                            NmInfoChip(label: AppLocalizations.of(context).astroRasiLabel(summary.rasi!)),
                           if ((summary.nakshatra ?? '').isNotEmpty)
                             NmInfoChip(
-                                label: 'Nakshatra: ${summary.nakshatra}'),
+                                label: AppLocalizations.of(context).astroNakshatraLabel(summary.nakshatra!)),
                           if ((summary.dosham ?? '').isNotEmpty &&
                               summary.dosham != 'NONE')
-                            NmInfoChip(label: 'Dosham: ${summary.dosham}'),
+                            NmInfoChip(label: AppLocalizations.of(context).astroDoshamLabel(summary.dosham!)),
                         ],
                       ),
                       if ((summary.birthTime ?? '').isNotEmpty ||
@@ -62,10 +63,10 @@ class HoroscopeMatchingPage extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.md),
                         if ((summary.birthTime ?? '').isNotEmpty)
                           _DetailRow(
-                              label: 'Birth Time', value: summary.birthTime!),
+                              label: AppLocalizations.of(context).registrationBirthTimeLabel, value: summary.birthTime!),
                         if ((summary.birthPlace ?? '').isNotEmpty)
                           _DetailRow(
-                              label: 'Birth Place',
+                              label: AppLocalizations.of(context).registrationBirthPlaceLabel,
                               value: summary.birthPlace!),
                       ],
                     ],
@@ -81,12 +82,12 @@ class HoroscopeMatchingPage extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Allow matches to compare horoscope',
+                            Text(AppLocalizations.of(context).astroAllowCompareTitle,
                                 style: AppTypography.bodyLarge
                                     .copyWith(fontWeight: FontWeight.w600)),
                             const SizedBox(height: 2),
                             Text(
-                              'Show a compatibility score on your profile.',
+                              AppLocalizations.of(context).astroAllowCompareSubtitle,
                               style: AppTypography.labelSmall.copyWith(
                                 color: isDark
                                     ? AppColors.textTertiaryDark
@@ -110,10 +111,10 @@ class HoroscopeMatchingPage extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xl2),
-                Text('Compatibility Preview', style: AppTypography.titleMedium),
+                Text(AppLocalizations.of(context).astroPreviewTitle, style: AppTypography.titleMedium),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'A sample of how your compatibility score will appear to potential matches.',
+                  AppLocalizations.of(context).astroPreviewSubtitle,
                   style: AppTypography.bodySmall.copyWith(
                     color: isDark
                         ? AppColors.textTertiaryDark

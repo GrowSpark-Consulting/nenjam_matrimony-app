@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/route_names.dart';
 import '../../../registration/presentation/providers/registration_provider.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Hydrates the shared registration draft (`GET /profiles/draft`, via
 /// [RegistrationNotifier.startEditMode] — the same call every other
@@ -23,8 +24,8 @@ Future<void> openPartnerPreferences(BuildContext context, WidgetRef ref) async {
     if (!context.mounted) return;
     Navigator.of(context, rootNavigator: true).pop(); // dismiss loader
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Could not load your profile. Check your connection.'),
+      SnackBar(
+        content: Text(AppLocalizations.of(context).commonProfileLoadConnectionError),
       ),
     );
     return;

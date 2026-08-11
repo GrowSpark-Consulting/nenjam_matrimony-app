@@ -5,6 +5,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
 import '../../constants/app_spacing.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Displays a member's Hinge-style profile prompts (question + short
 /// answer). Used on the Profile Intelligence hub, `editStep` summaries, and
@@ -40,7 +41,7 @@ class ProfilePromptSection extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  'Add your first profile prompt',
+                  AppLocalizations.of(context).riAddFirstPrompt,
                   style: AppTypography.bodyMedium
                       .copyWith(fontWeight: FontWeight.w600),
                 ),
@@ -56,13 +57,13 @@ class ProfilePromptSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text('Profile Prompts', style: AppTypography.titleMedium),
+            Text(AppLocalizations.of(context).profileCompletionGrowthPrompts, style: AppTypography.titleMedium),
             const Spacer(),
             if (editable)
               TextButton.icon(
                 onPressed: onEditTap,
                 icon: const Icon(Icons.edit_outlined, size: 16),
-                label: const Text('Edit'),
+                label: Text(AppLocalizations.of(context).registrationEditButton),
               ),
           ],
         ),

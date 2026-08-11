@@ -6,6 +6,7 @@ import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/chips/info_chip.dart';
 import '../../domain/entities/profile_detail_entity.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Bio paragraph + a 4-tile stat grid (Profession / Education / Height /
 /// Religion) + an interests chip cloud + a short core-values list —
@@ -30,7 +31,7 @@ class AboutSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('About', style: AppTypography.titleLarge),
+          Text(AppLocalizations.of(context).profileDetailTabAbout, style: AppTypography.titleLarge),
           if (detail.bio != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
@@ -56,11 +57,11 @@ class AboutSection extends StatelessWidget {
             child: Wrap(
               runSpacing: AppSpacing.base,
               children: [
-                _StatTile(label: 'Profession', value: base.profession),
-                _StatTile(label: 'Education', value: base.education),
-                _StatTile(label: 'Height', value: base.height),
+                _StatTile(label: AppLocalizations.of(context).fieldProfession, value: base.profession),
+                _StatTile(label: AppLocalizations.of(context).fieldEducation, value: base.education),
+                _StatTile(label: AppLocalizations.of(context).fieldHeight, value: base.height),
                 _StatTile(
-                  label: 'Religion',
+                  label: AppLocalizations.of(context).fieldReligion,
                   value: [
                     base.religion,
                     base.caste,
@@ -71,7 +72,7 @@ class AboutSection extends StatelessWidget {
           ),
           if (detail.interests.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.base),
-            Text('Interests', style: AppTypography.titleSmall),
+            Text(AppLocalizations.of(context).fieldInterests, style: AppTypography.titleSmall),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
               spacing: AppSpacing.xs,
@@ -84,7 +85,7 @@ class AboutSection extends StatelessWidget {
           ],
           if (detail.coreValues.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.base),
-            Text('Core Values', style: AppTypography.titleSmall),
+            Text(AppLocalizations.of(context).fieldCoreValues, style: AppTypography.titleSmall),
             const SizedBox(height: AppSpacing.sm),
             ...detail.coreValues.map(
               (value) => Padding(

@@ -1,11 +1,9 @@
+import 'package:intl/intl.dart';
+
 import '../../../../l10n/app_localizations.dart';
 
 bool _isSameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
-
-const _shortMonths = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
 
 /// True relative time for a notification's trailing timestamp — `"Just
 /// now"` / `"2 min ago"` / `"3 hr ago"` for anything within the last 24
@@ -29,7 +27,7 @@ String formatNotificationTime(DateTime dateTime, AppLocalizations l10n) {
     return l10n.notificationsSectionYesterday;
   }
   if (diff.inDays < 7) return l10n.notificationsDaysAgo(diff.inDays);
-  return '${_shortMonths[dateTime.month - 1]} ${dateTime.day}';
+  return DateFormat.MMMd(l10n.localeName).format(dateTime);
 }
 
 /// Which section (Today / Yesterday / Earlier) a notification belongs in.

@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import '../l10n/app_l10n.dart';
 
 /// Nenjam Matrimony — Firebase Auth Error Mapper
 ///
@@ -13,60 +14,61 @@ abstract final class AuthErrorMapper {
   ///
   /// Accepts [Object] so callers can pass anything from a `catch`.
   static String message(Object error) {
+    final l10n = AppL10n.current;
     if (error is FirebaseAuthException) {
       return _fromCode(error.code, error.message);
     }
     if (error is UsernameTakenException) {
-      return 'That username is already taken. Please choose another.';
+      return l10n.authErrorUsernameTaken;
     }
-    return 'Something went wrong. Please try again.';
+    return l10n.authGenericError;
   }
 
   static String _fromCode(String code, String? fallback) {
+    final l10n = AppL10n.current;
     switch (code) {
       // ─── Sign up / credentials ─────────────────────────────────────
       case 'email-already-in-use':
-        return 'An account already exists for this email. Try logging in.';
+        return l10n.authErrorEmailInUse;
       case 'invalid-email':
-        return 'That email address looks invalid. Please check it.';
+        return l10n.authErrorEmailInvalid;
       case 'weak-password':
-        return 'Your password is too weak. Use at least 8 characters with '
-            'upper, lower, a number and a symbol.';
+        return l10n.authErrorWeakPassword;
       case 'operation-not-allowed':
-        return 'This sign-in method is not enabled. Please contact support.';
+        return l10n.authErrorMethodDisabled;
 
       // ─── Login ─────────────────────────────────────────────────────
       case 'user-disabled':
-        return 'This account has been disabled. Please contact support.';
+        return l10n.authErrorAccountDisabled;
       case 'user-not-found':
       case 'wrong-password':
       case 'invalid-credential':
-        return 'Incorrect email or password. Please try again.';
+        return l10n.authErrorWrongCredentials;
 
       // ─── Phone / OTP ───────────────────────────────────────────────
       case 'invalid-verification-code':
-        return 'The OTP you entered is incorrect. Please try again.';
+        return l10n.authErrorOtpIncorrect;
       case 'invalid-verification-id':
       case 'session-expired':
-        return 'This code has expired. Please request a new OTP.';
+        return l10n.authErrorOtpExpired;
       case 'invalid-phone-number':
-        return 'That phone number looks invalid. Please check it.';
+        return l10n.authErrorPhoneInvalid;
       case 'missing-phone-number':
-        return 'Please enter a phone number.';
+        return l10n.authErrorPhoneMissing;
       case 'credential-already-in-use':
       case 'account-exists-with-different-credential':
-        return 'This phone number is already linked to another account.';
+        return l10n.authErrorPhoneLinked;
 
       // ─── Throttling / network ──────────────────────────────────────
       case 'too-many-requests':
-        return 'Too many attempts. Please wait a while and try again.';
+        return l10n.authErrorTooManyAttempts;
       case 'network-request-failed':
-        return 'Network error. Please check your connection and try again.';
+        return l10n.authErrorNetwork;
       case 'requires-recent-login':
-        return 'Please log in again to complete this action.';
+        return l10n.authErrorReauthRequired;
 
       default:
-        return fallback ?? 'Something went wrong. Please try again.';
+        return fallback ?? l10n.authGenericError;
     }
   }
 }

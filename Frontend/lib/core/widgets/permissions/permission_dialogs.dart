@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../buttons/outlined_button.dart';
@@ -88,14 +89,14 @@ Future<void> showOpenSettingsDialog(
           children: [
             Expanded(
               child: NmOutlinedButton(
-                label: 'Cancel',
+                label: AppLocalizations.of(context).commonCancel,
                 onPressed: () => Navigator.pop(context),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: NmPrimaryButton(
-                label: 'Open Settings',
+                label: AppLocalizations.of(context).commonOpenSettings,
                 onPressed: () {
                   Navigator.pop(context);
                   onOpenSettings();

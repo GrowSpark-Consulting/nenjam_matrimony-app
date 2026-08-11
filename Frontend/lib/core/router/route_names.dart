@@ -99,6 +99,14 @@ abstract final class RouteNames {
   static const String choosePromptName = 'choosePrompt';
   static const String horoscopeMatchingName = 'horoscopeMatching';
 
+  // ─── Query Parameters ───────────────────────────────────────────────
+
+  /// Marks a route as having been opened by a notification tap, so the page
+  /// knows to send Back to the Notification Center when there is nothing on
+  /// the stack beneath it. A query parameter rather than `extra` because it
+  /// has to survive the restoration path a cold-start tap takes.
+  static const String openedFromNotificationParam = 'openedFromNotification';
+
   // ─── Auth Guard ─────────────────────────────────────────────────────
   //
   // Screens reachable without an active Firebase session — everything else

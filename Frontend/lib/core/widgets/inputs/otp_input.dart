@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 
@@ -174,7 +175,7 @@ class _NmOtpInputState extends State<NmOtpInput> {
         TextButton.icon(
           onPressed: _pasteFromClipboard,
           icon: const Icon(Icons.content_paste_rounded, size: 16),
-          label: const Text('Paste Code'),
+          label: Text(AppLocalizations.of(context).otpPasteCode),
           style: TextButton.styleFrom(
             foregroundColor: AppColors.primary,
             textStyle: AppTypography.labelMedium

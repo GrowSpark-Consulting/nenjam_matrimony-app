@@ -249,11 +249,27 @@ class NotificationNavigationService {
         // The viewers list is the destination outright — it already names
         // and shows every viewer, so there is nothing a single profile
         // detail would add, and no id to get wrong.
-        _goTo(
-          router,
+        //
+        // Notification Center first, then the viewers list on top, so Back
+        // lands on Notifications the way a tapped Instagram/WhatsApp
+        // notification does — rather than dropping the member out of the
+        // app from a stack of one. Same go-then-push shape as
+        // subscriptionExpired below.
+        if (_currentLocation == RouteNames.profileViewers) {
+          _log('skip: already at ${RouteNames.profileViewers}');
+          return;
+        }
+        router.goNamed(RouteNames.notificationsName);
+        await _branchSwitchApplied();
+        if (_isStale(sequence)) return;
+        router.pushNamed(
           RouteNames.profileViewersName,
-          RouteNames.profileViewers,
+          queryParameters: const {
+            RouteNames.openedFromNotificationParam: 'true',
+          },
         );
+        _log('go ${RouteNames.notifications} '
+            '+ push ${RouteNames.profileViewers}');
       case NotificationDeepLinkKind.verificationApproved:
         _goTo(router, RouteNames.verificationName, RouteNames.verification);
       case NotificationDeepLinkKind.subscriptionExpiring:

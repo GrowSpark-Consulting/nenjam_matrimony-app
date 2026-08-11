@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../utils/story_perf.dart';
+import '../l10n/app_l10n.dart';
 
 /// Marks a request as already having gone through one 401-recovery retry,
 /// so [AuthInterceptor] never retries the same request twice.
@@ -142,25 +143,26 @@ class ErrorInterceptor extends Interceptor {
   }
 
   String _mapStatusCode(int? statusCode) {
+    final l10n = AppL10n.current;
     switch (statusCode) {
       case 400:
-        return 'Invalid request. Please check your input.';
+        return l10n.apiError400;
       case 401:
-        return 'Session expired. Please login again.';
+        return l10n.apiError401;
       case 403:
-        return 'You do not have permission for this action.';
+        return l10n.apiError403;
       case 404:
-        return 'Resource not found.';
+        return l10n.apiError404;
       case 422:
-        return 'Validation failed. Please check your input.';
+        return l10n.apiError422;
       case 429:
-        return 'Too many requests. Please wait and try again.';
+        return l10n.apiError429;
       case 500:
-        return 'Server error. Please try again later.';
+        return l10n.apiError500;
       case 503:
-        return 'Service temporarily unavailable.';
+        return l10n.apiError503;
       default:
-        return 'Something went wrong. Please try again.';
+        return l10n.authGenericError;
     }
   }
 }

@@ -4,6 +4,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/entities/trust_score_entity.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Dark navy hero summary card shown directly under the section tabs —
 /// a large gold ring with the overall trust percentage plus a short
@@ -14,11 +15,11 @@ class TrustScoreCard extends StatelessWidget {
 
   const TrustScoreCard({super.key, required this.trust});
 
-  String get _credibilityLabel {
+  String _credibilityLabelOf(AppLocalizations l10n) {
     final percent = trust.overallPercent;
-    if (percent >= 80) return 'High credibility profile';
-    if (percent >= 50) return 'Good credibility profile';
-    return 'Building credibility';
+    if (percent >= 80) return l10n.trustScoreHighCredibility;
+    if (percent >= 50) return l10n.trustScoreGoodCredibility;
+    return l10n.trustScoreBuildingCredibility;
   }
 
   @override
@@ -37,12 +38,12 @@ class TrustScoreCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Trust Score',
+                  AppLocalizations.of(context).trustScoreTitle,
                   style: AppTypography.titleLarge.copyWith(color: Colors.white),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  _credibilityLabel,
+                  _credibilityLabelOf(AppLocalizations.of(context)),
                   style: AppTypography.bodyMedium.copyWith(
                     color: AppColors.accentGoldLight,
                     fontWeight: FontWeight.w500,

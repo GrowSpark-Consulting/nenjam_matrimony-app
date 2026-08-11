@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/entities/timeline_event_entity.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Vertical activity timeline — nothing else in the app models a
 /// timeline, so this is new bespoke UI.
@@ -27,7 +28,7 @@ class TimelineSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Timeline', style: AppTypography.titleLarge),
+          Text(AppLocalizations.of(context).profileDetailTabTimeline, style: AppTypography.titleLarge),
           const SizedBox(height: AppSpacing.base),
           ...events.asMap().entries.map((entry) {
             final isLast = entry.key == events.length - 1;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../permissions/app_permission_service.dart';
 import '../../permissions/nm_permission.dart';
 import '../../widgets/permissions/permission_dialogs.dart';
@@ -57,10 +58,8 @@ class VoiceRecorderService {
       if (!context.mounted) return false;
       await showOpenSettingsDialog(
         context,
-        title: 'Microphone Access Disabled',
-        message:
-            'Microphone access is disabled. Enable it from Settings to '
-            'record a voice message.',
+        title: AppLocalizations.of(context).permissionMicDisabledTitle,
+        message: AppLocalizations.of(context).permissionMicDisabledMessage,
         onOpenSettings: _permissions.openSettings,
       );
       return false;
@@ -70,10 +69,10 @@ class VoiceRecorderService {
     final proceed = await showPermissionPrimerDialog(
       context,
       icon: Icons.mic_rounded,
-      title: 'Microphone Access',
-      message: 'Nenjam needs microphone access to record a voice message.',
-      proceedLabel: 'Continue',
-      cancelLabel: 'Cancel',
+      title: AppLocalizations.of(context).permissionMicTitle,
+      message: AppLocalizations.of(context).permissionMicMessage,
+      proceedLabel: AppLocalizations.of(context).commonContinue,
+      cancelLabel: AppLocalizations.of(context).commonCancel,
     );
     if (!proceed) return false;
 
@@ -84,10 +83,8 @@ class VoiceRecorderService {
     if (result == NmPermissionStatus.permanentlyDenied) {
       await showOpenSettingsDialog(
         context,
-        title: 'Microphone Access Disabled',
-        message:
-            'Microphone access is disabled. Enable it from Settings to '
-            'record a voice message.',
+        title: AppLocalizations.of(context).permissionMicDisabledTitle,
+        message: AppLocalizations.of(context).permissionMicDisabledMessage,
         onOpenSettings: _permissions.openSettings,
       );
     }

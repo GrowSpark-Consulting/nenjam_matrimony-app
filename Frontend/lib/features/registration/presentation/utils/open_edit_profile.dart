@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/route_names.dart';
 import '../providers/registration_provider.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Switches the registration provider into EDIT MODE, fetches the logged-in
 /// user's saved profile (`GET /profiles/draft`), then opens either the
@@ -28,8 +29,8 @@ Future<void> openEditProfile(
     if (!context.mounted) return;
     Navigator.of(context, rootNavigator: true).pop(); // dismiss loader
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Could not load your profile. Check your connection.'),
+      SnackBar(
+        content: Text(AppLocalizations.of(context).commonProfileLoadConnectionError),
       ),
     );
     return;

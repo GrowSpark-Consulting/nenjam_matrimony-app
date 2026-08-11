@@ -4,6 +4,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/indicators/nm_score_ring.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Profile Performance card — 3 circular progress gauges:
 /// Strength, Visibility, and Response time.
@@ -48,13 +49,13 @@ class NmProfilePerformanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Profile Performance', style: AppTypography.titleMedium),
+          Text(AppLocalizations.of(context).profilePerformanceTitle, style: AppTypography.titleMedium),
           const SizedBox(height: AppSpacing.lg),
           Row(
             children: [
               Expanded(
                 child: _GaugeWidget(
-                  label: 'Strength',
+                  label: AppLocalizations.of(context).profilePerformanceStrength,
                   value: strengthPct / 100,
                   displayText: '$strengthPct%',
                   color: AppColors.faceVerificationGreen,
@@ -63,7 +64,7 @@ class NmProfilePerformanceCard extends StatelessWidget {
               ),
               Expanded(
                 child: _GaugeWidget(
-                  label: 'Visibility',
+                  label: AppLocalizations.of(context).profilePerformanceVisibility,
                   value: visibilityPct / 100,
                   displayText: '$visibilityPct%',
                   color: AppColors.accentGold,
@@ -72,7 +73,7 @@ class NmProfilePerformanceCard extends StatelessWidget {
               ),
               Expanded(
                 child: _GaugeWidget(
-                  label: 'Response',
+                  label: AppLocalizations.of(context).profilePerformanceResponse,
                   value: 0.5,
                   displayText: responseTime,
                   color: AppColors.primary,

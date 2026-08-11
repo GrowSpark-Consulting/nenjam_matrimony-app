@@ -20,6 +20,7 @@ import 'core/providers/locale_provider.dart';
 import 'core/providers/theme_mode_provider.dart';
 import 'core/realtime/realtime_providers.dart';
 import 'features/inbox/presentation/providers/chat_realtime_sync.dart';
+import 'features/inbox/presentation/providers/inbox_providers.dart';
 import 'features/notifications/data/services/push_notification_service.dart';
 import 'features/notifications/presentation/providers/notification_providers.dart';
 import 'core/router/app_router.dart';
@@ -185,6 +186,7 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
         _checkSessionOnResume();
         // Reconnect if needed and re-announce online instantly.
         ref.read(realtimeServiceProvider).handleAppForegrounded();
+        _resyncUnreadOnResume();
         // Detects a permission grant made from Android Settings while the
         // app was backgrounded (the user denied the prompt initially, then
         // came back and enabled it manually) — completes FCM registration
@@ -195,6 +197,24 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
         // acting here would flap presence; let paused/resumed drive it.
         break;
     }
+  }
+
+  /// Re-syncs the conversations list on every foreground so the bottom nav's
+  /// unread badge reflects whatever happened while the app was away —
+  /// messages that arrived as pushes with no live socket to deliver them, or
+  /// a thread read on another device.
+  ///
+  /// [ChatRealtimeSync]'s `onReady` listener already covers the case where
+  /// the socket actually dropped, but a short background (glance at a
+  /// notification, answer a call) often comes back with the connection
+  /// intact, so `onReady` never fires and nothing else would refetch.
+  ///
+  /// Gated on being signed in: `.notifier` *creates* the provider if it
+  /// doesn't exist yet, and resuming on the splash or an auth screen must not
+  /// be what kicks off a `GET /conversations`.
+  void _resyncUnreadOnResume() {
+    if (ref.read(currentAuthUserProvider) == null) return;
+    unawaited(ref.read(conversationsNotifierProvider.notifier).refreshSilently());
   }
 
   String get _currentLocation =>

@@ -9,6 +9,7 @@ import '../../domain/entities/partner_preferences_entity.dart';
 import '../../domain/entities/profile_detail_entity.dart';
 import '../../domain/entities/timeline_event_entity.dart';
 import '../../domain/entities/trust_score_entity.dart';
+import '../../../../core/l10n/app_l10n.dart';
 
 /// In-memory stand-in for a future `GET /api/profiles/:id` call.
 ///
@@ -19,6 +20,9 @@ import '../../domain/entities/trust_score_entity.dart';
 /// the same detail data across visits within a session, rather than
 /// reshuffling on every rebuild the way `Random()` would.
 class ProfileDetailMockDataSource {
+  // Label strings below come from AppL10n rather than a passed-in
+  // AppLocalizations: this is a data-layer source with no BuildContext,
+  // and threading one through the repository would change its contract.
   Future<ProfileDetailEntity> fetchProfileDetail(
     DiscoveryProfileEntity base,
   ) async {
@@ -105,26 +109,26 @@ class ProfileDetailMockDataSource {
         items: [
           TrustItemEntity(
             icon: Icons.phone_iphone_rounded,
-            label: 'Phone',
+            label: AppL10n.current.fieldPhone,
             status: base.phoneVerified
                 ? TrustItemStatus.verified
                 : TrustItemStatus.incomplete,
           ),
-          const TrustItemEntity(
+          TrustItemEntity(
             icon: Icons.mail_rounded,
-            label: 'Email',
+            label: AppL10n.current.fieldEmail,
             status: TrustItemStatus.verified,
           ),
           TrustItemEntity(
             icon: Icons.badge_rounded,
-            label: 'Government ID',
+            label: AppL10n.current.fieldGovernmentId,
             status: base.isVerified
                 ? TrustItemStatus.verified
                 : TrustItemStatus.pending,
           ),
           TrustItemEntity(
             icon: Icons.face_rounded,
-            label: 'Face Match',
+            label: AppL10n.current.fieldFaceMatch,
             status: base.isVerified
                 ? TrustItemStatus.verified
                 : TrustItemStatus.incomplete,
@@ -142,27 +146,27 @@ class ProfileDetailMockDataSource {
             )
           : null,
       timeline: [
-        const TimelineEventEntity(
+        TimelineEventEntity(
           icon: Icons.celebration_rounded,
-          label: 'Joined Nenjam',
-          timeAgo: '8 months ago',
+          label: AppL10n.current.profileDetailJoinedNenjam,
+          timeAgo: AppL10n.current.profileDetailTimeAgoMonths8,
         ),
-        const TimelineEventEntity(
+        TimelineEventEntity(
           icon: Icons.edit_rounded,
-          label: 'Profile updated',
-          timeAgo: '2 weeks ago',
+          label: AppL10n.current.profileDetailProfileUpdated,
+          timeAgo: AppL10n.current.profileDetailTimeAgoWeeks2,
         ),
         if (base.isVerified)
-          const TimelineEventEntity(
+          TimelineEventEntity(
             icon: Icons.verified_rounded,
-            label: 'Identity verified',
-            timeAgo: '1 month ago',
+            label: AppL10n.current.profileDetailIdentityVerified,
+            timeAgo: AppL10n.current.profileDetailTimeAgoMonth1,
           ),
         if (base.isOnline)
-          const TimelineEventEntity(
+          TimelineEventEntity(
             icon: Icons.circle,
-            label: 'Active now',
-            timeAgo: 'Just now',
+            label: AppL10n.current.profileDetailActiveNow,
+            timeAgo: AppL10n.current.profileDetailTimeAgoJustNow,
           ),
       ],
     );

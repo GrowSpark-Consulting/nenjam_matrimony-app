@@ -347,6 +347,59 @@ void main() {
       expect(h.location, RouteNames.profileViewers);
     });
 
+    testWidgets('profile_view leaves Notifications underneath, so Back '
+        'returns there', (tester) async {
+      final h = await _pump(tester, initialLocation: RouteNames.discover);
+
+      h.service.handle({'type': 'PROFILE_VIEW'});
+      await tester.pumpAndSettle();
+      expect(h.location, RouteNames.profileViewers);
+
+      h.router.pop();
+      await tester.pumpAndSettle();
+
+      expect(h.location, RouteNames.notifications);
+    });
+
+    testWidgets('profile_view flags the viewers list as notification-opened',
+        (tester) async {
+      final h = await _pump(tester);
+
+      h.service.handle({'type': 'PROFILE_VIEW'});
+      await tester.pumpAndSettle();
+
+      // The page is pushed, so its query string lives on the imperative
+      // match rather than on the RouteMatchList's own uri (which still
+      // reads /notifications — see the service's _currentLocation doc).
+      final top = h.router.routerDelegate.currentConfiguration.last;
+      expect(top, isA<ImperativeRouteMatch>());
+      expect(
+        (top as ImperativeRouteMatch)
+            .matches
+            .uri
+            .queryParameters[RouteNames.openedFromNotificationParam],
+        'true',
+      );
+    });
+
+    testWidgets('tapping the same profile_view twice does not stack a second '
+        'viewers page', (tester) async {
+      final h = await _pump(tester);
+
+      h.service.handle({'type': 'PROFILE_VIEW'});
+      await tester.pumpAndSettle();
+      final depth = h.router.routerDelegate.currentConfiguration.matches.length;
+
+      h.service.handle({'type': 'PROFILE_VIEW'});
+      await tester.pumpAndSettle();
+
+      expect(h.location, RouteNames.profileViewers);
+      expect(
+        h.router.routerDelegate.currentConfiguration.matches.length,
+        depth,
+      );
+    });
+
     testWidgets('kyc_approved opens Verification', (tester) async {
       final h = await _pump(tester);
 

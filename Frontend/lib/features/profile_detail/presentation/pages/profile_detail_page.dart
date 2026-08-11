@@ -315,7 +315,7 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
               KeyedSubtree(
                 key: _sectionKeys[5],
                 child: NmPartnerPreferenceCard(
-                  preferences: _preferenceRows(detail),
+                  preferences: _preferenceRows(detail, l10n),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -337,29 +337,32 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
     );
   }
 
-  List<NmPreferenceRow> _preferenceRows(ProfileDetailEntity detail) {
+  List<NmPreferenceRow> _preferenceRows(
+    ProfileDetailEntity detail,
+    AppLocalizations l10n,
+  ) {
     final prefs = detail.partnerPreferences;
     return [
       if (prefs.preferredAgeRange.isNotEmpty)
-        NmPreferenceRow(label: 'Age Range', value: prefs.preferredAgeRange),
+        NmPreferenceRow(label: l10n.fieldAgeRange, value: prefs.preferredAgeRange),
       if (prefs.preferredHeightRange.isNotEmpty)
-        NmPreferenceRow(label: 'Height', value: prefs.preferredHeightRange),
+        NmPreferenceRow(label: l10n.fieldHeight, value: prefs.preferredHeightRange),
       if (prefs.educationPref.isNotEmpty)
-        NmPreferenceRow(label: 'Education', value: prefs.educationPref),
+        NmPreferenceRow(label: l10n.fieldEducation, value: prefs.educationPref),
       if (prefs.occupationPref.isNotEmpty)
-        NmPreferenceRow(label: 'Occupation', value: prefs.occupationPref),
+        NmPreferenceRow(label: l10n.fieldOccupation, value: prefs.occupationPref),
       if (prefs.incomePref.isNotEmpty)
-        NmPreferenceRow(label: 'Income', value: prefs.incomePref),
+        NmPreferenceRow(label: l10n.fieldIncome, value: prefs.incomePref),
       if (prefs.religionPref.isNotEmpty)
-        NmPreferenceRow(label: 'Religion', value: prefs.religionPref),
+        NmPreferenceRow(label: l10n.fieldReligion, value: prefs.religionPref),
       if (prefs.castePref.isNotEmpty)
-        NmPreferenceRow(label: 'Caste', value: prefs.castePref),
+        NmPreferenceRow(label: l10n.fieldCaste, value: prefs.castePref),
       if (prefs.motherTonguePref.isNotEmpty)
-        NmPreferenceRow(label: 'Mother Tongue', value: prefs.motherTonguePref),
+        NmPreferenceRow(label: l10n.fieldMotherTongue, value: prefs.motherTonguePref),
       if (prefs.locationPref.isNotEmpty)
-        NmPreferenceRow(label: 'Location', value: prefs.locationPref),
+        NmPreferenceRow(label: l10n.fieldLocation, value: prefs.locationPref),
       if (prefs.maritalStatusPref.isNotEmpty)
-        NmPreferenceRow(label: 'Marital Status', value: prefs.maritalStatusPref),
+        NmPreferenceRow(label: l10n.fieldMaritalStatus, value: prefs.maritalStatusPref),
     ];
   }
 }

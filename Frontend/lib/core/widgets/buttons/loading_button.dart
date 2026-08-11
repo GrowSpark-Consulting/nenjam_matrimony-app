@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import 'primary_button.dart';
 
 /// Convenience wrapper around NmPrimaryButton specifically in loading state.
@@ -16,7 +17,7 @@ class NmLoadingButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return NmPrimaryButton(
-      label: 'Loading...',
+      label: AppLocalizations.of(context).commonLoading,
       isLoading: true,
       width: width,
       height: height,

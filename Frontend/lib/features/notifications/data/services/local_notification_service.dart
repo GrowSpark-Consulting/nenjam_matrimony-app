@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../../../../core/l10n/app_l10n.dart';
 
 /// Shows a heads-up notification for FCM messages that arrive while the app
 /// is in the foreground. Android/iOS only auto-display a system-tray
@@ -11,12 +12,21 @@ class LocalNotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
-    'nenjam_default_channel',
-    'Notifications',
-    description: 'Interests, matches, messages, and account updates.',
-    importance: Importance.high,
-  );
+  /// Built per call rather than held as a `static const`: the channel's name
+  /// and description are shown in Android's own notification settings, so
+  /// they're translated. Re-creating a channel with an existing id updates
+  /// its name/description in place (importance and the id are immutable), so
+  /// re-registering on each [initialize] is how a language switch reaches
+  /// the system settings screen.
+  static AndroidNotificationChannel _buildChannel() {
+    final l10n = AppL10n.current;
+    return AndroidNotificationChannel(
+      'nenjam_default_channel',
+      l10n.notificationsTitle,
+      description: l10n.notificationChannelDescription,
+      importance: Importance.high,
+    );
+  }
 
   /// Registers the Android notification channel and the tap callback for
   /// locally-shown notifications (foreground FCM messages only — taps on the
@@ -36,7 +46,7 @@ class LocalNotificationService {
     await _plugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(_channel);
+        ?.createNotificationChannel(_buildChannel());
 
     // A notification this app rendered itself (i.e. one shown while the app
     // was in the foreground) stays in the tray after the process is killed.
@@ -69,15 +79,18 @@ class LocalNotificationService {
   Future<void> show(RemoteMessage message) async {
     final notification = message.notification;
     if (notification == null) return;
+    // title/body come straight off the FCM payload — the backend composes
+    // and localizes those, so they are deliberately passed through untouched.
+    final channel = _buildChannel();
     await _plugin.show(
       id: _notificationId(message),
       title: notification.title,
       body: notification.body,
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
-          _channel.id,
-          _channel.name,
-          channelDescription: _channel.description,
+          channel.id,
+          channel.name,
+          channelDescription: channel.description,
           importance: Importance.high,
           priority: Priority.high,
         ),
