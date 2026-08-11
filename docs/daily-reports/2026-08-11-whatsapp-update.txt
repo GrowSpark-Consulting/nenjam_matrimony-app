@@ -1,0 +1,38 @@
+*Nenjam Matrimony — Daily Update*
+📅 11 Aug 2026
+
+*✅ Shipped today*
+
+1. *Android build toolchain upgraded* — Gradle 8.14.3, AGP 8.11.1, Kotlin 2.2.20, Java 17. All three build deprecation warnings are gone.
+
+2. Migrated off the deprecated `kotlinOptions` DSL to `kotlin.compilerOptions` — Kotlin 2.2 would have warned on every build otherwise.
+
+3. *Tamil/English localization* pushed — Tamil ARB catalogue, regenerated delegates, and localized core widgets, profile, profile detail, inbox and registration surfaces. Plus an unread nav badge widget.
+
+4. Multilingual architecture documented: structured fields (religion, caste, education…) stored as IDs and rendered per-language; free-text kept in the original language with optional on-demand translation. English as pivot for MVP.
+
+*🧪 Quality checks*
+• flutter analyze ✅ No issues found
+• Debug APK builds ✅ all 3 ABIs (arm64-v8a, armeabi-v7a, x86_64)
+• Deprecation warnings: 0 (verified with --warning-mode all)
+• ⚠️ Flutter tests NOT run yet — 5 new test files are unexecuted
+
+*🐛 Build issue (resolved, environmental)*
+• Builds were failing at random tasks — missing AAR metadata, locked zip cache, CMake config failure
+• Root cause: the IDE's Gradle extension (vscjava.vscode-gradle) syncing at the same time as terminal builds, both writing to Frontend/build
+• Giveaway was duplicated CMake output — two configure processes in one directory
+• No application code defect involved
+
+*⚠️ Heads-up for everyone*
+• *Build from the terminal only.* Don't let the IDE Gradle sync run during a build
+• If a build dies on a missing/locked file: `gradlew --stop`, check no stray java.exe (the IDE Gradle server survives --stop), delete `Frontend/build/.cxx`, rebuild
+• Permanent fix: disable the "Gradle for Java" extension
+
+*⏭ Next up*
+• Run flutter test before this goes to PR
+• Language-aware profile text API
+• "View original / View translation" toggle in the UI
+
+*Pushed:* 2 commits on `feat/profile-views-and-notification-deep-links` → `2d53c2e`
+
+*Status:* 🟢 Build verified, codebase stable.
