@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../permissions/nm_permission.dart';
 import '../../permissions/permission_providers.dart';
 import '../../services/storage_service.dart';
@@ -48,12 +49,10 @@ class _NotificationPermissionGateState
     final enable = await showPermissionPrimerDialog(
       context,
       icon: Icons.notifications_active_rounded,
-      title: 'Enable Notifications',
-      message:
-          'Get notified when someone sends you an interest, accepts your '
-          'request, or messages you.',
-      proceedLabel: 'Enable',
-      cancelLabel: 'Not now',
+      title: AppLocalizations.of(context).permissionNotificationsEnableTitle,
+      message: AppLocalizations.of(context).permissionNotificationsEnableMessage,
+      proceedLabel: AppLocalizations.of(context).commonEnable,
+      cancelLabel: AppLocalizations.of(context).commonNotNow,
     );
     await storageService.setNotificationPermissionPrompted();
     if (!enable || !mounted) return;
@@ -63,8 +62,8 @@ class _NotificationPermissionGateState
     if (result == NmPermissionStatus.permanentlyDenied && mounted) {
       await showOpenSettingsDialog(
         context,
-        title: 'Notifications Disabled',
-        message: 'Enable notifications from Settings to stay updated.',
+        title: AppLocalizations.of(context).permissionNotificationsDisabledTitle,
+        message: AppLocalizations.of(context).permissionNotificationsDisabledMessage,
         onOpenSettings: permissions.openSettings,
       );
     }

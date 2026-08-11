@@ -11,6 +11,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../data/repositories/photo_repository.dart';
 import '../../domain/models/user_photo.dart';
 import '../providers/photo_providers.dart';
+import '../../../../l10n/app_localizations.dart';
 
 const int kMaxPhotos = 6;
 
@@ -44,7 +45,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
         Row(
           children: [
             Expanded(
-              child: Text('Your Photos', style: AppTypography.labelLarge),
+              child: Text(AppLocalizations.of(context).photosYourPhotos, style: AppTypography.labelLarge),
             ),
             Text(
               '${photos.length}/$kMaxPhotos',
@@ -66,7 +67,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
           error: (error, _) => _ErrorState(
             message: error is PhotoApiException
                 ? error.message
-                : 'Could not load your photos. Check your connection.',
+                : AppLocalizations.of(context).photosLoadError,
             onRetry: () => ref.read(myPhotosProvider.notifier).refresh(),
           ),
           data: (list) => list.isEmpty
@@ -128,12 +129,11 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
           OutlinedButton.icon(
             onPressed: busy ? null : _onAddTap,
             icon: const Icon(Icons.add_a_photo_outlined, size: 18),
-            label: const Text('Add photo'),
+            label: Text(AppLocalizations.of(context).registrationAddPhoto),
           ),
         const SizedBox(height: 6),
         Text(
-          'Long-press and drag to reorder. Tap a photo to set as display, '
-          'replace, or delete.',
+          AppLocalizations.of(context).photosReorderHint,
           style: AppTypography.bodySmall.copyWith(
             color: isDark
                 ? AppColors.textTertiaryDark
@@ -224,13 +224,13 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
             ListTile(
               leading: const Icon(Icons.photo_library_rounded,
                   color: AppColors.primary),
-              title: const Text('Choose from gallery'),
+              title: Text(AppLocalizations.of(context).inboxChooseFromGallery),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt_rounded,
                   color: AppColors.accentGold),
-              title: const Text('Take a photo'),
+              title: Text(AppLocalizations.of(context).inboxTakePhoto),
               onTap: () => Navigator.pop(ctx, ImageSource.camera),
             ),
             const SizedBox(height: 12),
@@ -254,7 +254,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
             if (!photo.isPrimary)
               ListTile(
                 leading: const Icon(Icons.star_rounded, color: AppColors.accentGold),
-                title: const Text('Set as display photo'),
+                title: Text(AppLocalizations.of(context).photosSetAsDisplay),
                 onTap: () {
                   Navigator.pop(ctx);
                   _run(() =>
@@ -263,7 +263,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
               ),
             ListTile(
               leading: const Icon(Icons.sync_rounded, color: AppColors.primary),
-              title: const Text('Replace photo'),
+              title: Text(AppLocalizations.of(context).photosReplace),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickAndUpload(replaceId: photo.id, replacingPrimary: photo.isPrimary);
@@ -272,7 +272,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
             ListTile(
               leading: const Icon(Icons.delete_outline_rounded,
                   color: AppColors.error),
-              title: const Text('Delete photo'),
+              title: Text(AppLocalizations.of(context).photosDelete),
               onTap: () {
                 Navigator.pop(ctx);
                 _run(() =>
@@ -297,7 +297,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
       error: (error, _) => _snack(
         error is PhotoApiException
             ? error.message
-            : 'Something went wrong. Please try again.',
+            : AppLocalizations.of(context).authGenericError,
       ),
     );
   }
@@ -418,7 +418,7 @@ class _EmptyState extends StatelessWidget {
             Icon(Icons.add_a_photo_rounded,
                 size: 44, color: AppColors.primary.withValues(alpha: 0.6)),
             const SizedBox(height: 12),
-            Text('Add your first photo',
+            Text(AppLocalizations.of(context).photosAddFirst,
                 style: AppTypography.labelMedium
                     .copyWith(color: AppColors.primary)),
           ],
@@ -449,7 +449,7 @@ class _ErrorState extends StatelessWidget {
           Text(message,
               textAlign: TextAlign.center, style: AppTypography.bodySmall),
           const SizedBox(height: 12),
-          OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+          OutlinedButton(onPressed: onRetry, child: Text(AppLocalizations.of(context).commonRetry)),
         ],
       ),
     );

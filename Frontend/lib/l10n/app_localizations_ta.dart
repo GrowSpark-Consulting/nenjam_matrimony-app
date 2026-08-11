@@ -364,6 +364,17 @@ class AppLocalizationsTa extends AppLocalizations {
   String get navPremium => 'பிரீமியம்';
 
   @override
+  String navUnreadMessagesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count படிக்காத செய்திகள்',
+      one: '1 படிக்காத செய்தி',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get discoverForYouTab => 'உங்களுக்காக';
 
   @override
@@ -3199,4 +3210,1064 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get safetyErrorGeneric => 'ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get commonRetry => 'மீண்டும் முயற்சிக்க';
+
+  @override
+  String get commonTryAgain => 'மீண்டும் முயற்சிக்க';
+
+  @override
+  String get commonDone => 'முடிந்தது';
+
+  @override
+  String get commonAll => 'அனைத்தும்';
+
+  @override
+  String get commonClear => 'அழிக்க';
+
+  @override
+  String get commonDismiss => 'மூடு';
+
+  @override
+  String get commonGreat => 'நன்று';
+
+  @override
+  String get commonError => 'பிழை';
+
+  @override
+  String get commonLoading => 'ஏற்றுகிறது...';
+
+  @override
+  String get commonProcessing => 'செயலாக்கப்படுகிறது…';
+
+  @override
+  String get commonOpenSettings => 'அமைப்புகளைத் திறக்க';
+
+  @override
+  String get commonReset => 'மீட்டமைக்க';
+
+  @override
+  String get commonRotate => 'சுழற்று';
+
+  @override
+  String get commonSearchHint => 'தேடு…';
+
+  @override
+  String get commonNoMatches => 'பொருத்தம் எதுவும் இல்லை';
+
+  @override
+  String get commonReply => 'பதிலளி';
+
+  @override
+  String get commonEnable => 'இயக்கு';
+
+  @override
+  String get commonNotNow => 'இப்போது வேண்டாம்';
+
+  @override
+  String get commonPopular => 'பிரபலம்';
+
+  @override
+  String get commonHelp => 'உதவி';
+
+  @override
+  String get commonPrivacy => 'தனியுரிமை';
+
+  @override
+  String get commonSubscription => 'சந்தா';
+
+  @override
+  String get commonLogOut => 'வெளியேறு';
+
+  @override
+  String get commonCouldNotLoadProfile => 'சுயவிவரத்தை ஏற்ற முடியவில்லை';
+
+  @override
+  String get commonProfileLoadConnectionError =>
+      'உங்கள் சுயவிவரத்தை ஏற்ற முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்க்கவும்.';
+
+  @override
+  String get fieldAge => 'வயது';
+
+  @override
+  String get fieldAgeRange => 'வயது வரம்பு';
+
+  @override
+  String get fieldReligion => 'மதம்';
+
+  @override
+  String get fieldReligionHint => 'மதத்தைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get fieldCaste => 'சாதி';
+
+  @override
+  String get fieldCasteDivision => 'சாதி / பிரிவு';
+
+  @override
+  String get fieldCasteHint => 'சாதியைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get fieldMotherTongue => 'தாய்மொழி';
+
+  @override
+  String get fieldMotherTongueHint => 'மொழியைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get fieldProfession => 'தொழில்';
+
+  @override
+  String get fieldProfessionHint => 'தொழிலைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get fieldAnnualIncome => 'ஆண்டு வருமானம்';
+
+  @override
+  String get fieldIncome => 'வருமானம்';
+
+  @override
+  String get fieldIncomeHint => 'வரம்பைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get fieldHeight => 'உயரம்';
+
+  @override
+  String get fieldHeightHint => 'உயரத்தைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get fieldWeight => 'எடை';
+
+  @override
+  String get fieldWeightHint => 'எடையைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get fieldQualification => 'உயர்ந்த கல்வித் தகுதி';
+
+  @override
+  String get fieldQualificationHint => 'பட்டத்தைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get fieldCurrentLocation => 'தற்போதைய இடம்';
+
+  @override
+  String get fieldLocation => 'இடம்';
+
+  @override
+  String get fieldLocationHint => 'நகரம் / நாட்டைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get fieldCountry => 'நாடு';
+
+  @override
+  String get fieldCountryHint => 'நாட்டைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get fieldCountryCodeHint => 'நாட்டுக் குறியீட்டைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get fieldGenderHint => 'பாலினத்தைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get fieldEducation => 'கல்வி';
+
+  @override
+  String get fieldOccupation => 'பணி';
+
+  @override
+  String get fieldMaritalStatus => 'திருமண நிலை';
+
+  @override
+  String get fieldPhone => 'தொலைபேசி';
+
+  @override
+  String get fieldEmail => 'மின்னஞ்சல்';
+
+  @override
+  String get fieldGovId => 'அரசு அடையாளம்';
+
+  @override
+  String get fieldGovernmentId => 'அரசு அடையாள அட்டை';
+
+  @override
+  String get fieldFaceMatch => 'முகப் பொருத்தம்';
+
+  @override
+  String get fieldInterests => 'ஆர்வங்கள்';
+
+  @override
+  String get fieldCoreValues => 'அடிப்படை விழுமியங்கள்';
+
+  @override
+  String get permissionPhotoDisabledTitle =>
+      'புகைப்பட அணுகல் முடக்கப்பட்டுள்ளது';
+
+  @override
+  String get permissionPhotoDisabledMessage =>
+      'புகைப்பட அணுகல் முடக்கப்பட்டுள்ளது. அமைப்புகளில் இருந்து இயக்கவும்.';
+
+  @override
+  String get permissionCameraTitle => 'கேமரா அணுகல்';
+
+  @override
+  String get permissionCameraMessage =>
+      'உங்கள் புகைப்படத்தை எடுக்க நெஞ்சம் செயலிக்கு கேமரா அணுகல் தேவை.';
+
+  @override
+  String get permissionCameraDisabledTitle => 'கேமரா அணுகல் முடக்கப்பட்டுள்ளது';
+
+  @override
+  String get permissionCameraDisabledMessage =>
+      'கேமரா அணுகல் முடக்கப்பட்டுள்ளது. புகைப்படம் எடுக்க அமைப்புகளில் இருந்து இயக்கவும்.';
+
+  @override
+  String get permissionMicTitle => 'ஒலிவாங்கி அணுகல்';
+
+  @override
+  String get permissionMicMessage =>
+      'குரல் செய்தியைப் பதிவு செய்ய நெஞ்சம் செயலிக்கு ஒலிவாங்கி அணுகல் தேவை.';
+
+  @override
+  String get permissionMicDisabledTitle =>
+      'ஒலிவாங்கி அணுகல் முடக்கப்பட்டுள்ளது';
+
+  @override
+  String get permissionMicDisabledMessage =>
+      'ஒலிவாங்கி அணுகல் முடக்கப்பட்டுள்ளது. குரல் செய்தியைப் பதிவு செய்ய அமைப்புகளில் இருந்து இயக்கவும்.';
+
+  @override
+  String get permissionNotificationsEnableTitle => 'அறிவிப்புகளை இயக்கு';
+
+  @override
+  String get permissionNotificationsEnableMessage =>
+      'யாராவது உங்களுக்கு ஆர்வம் அனுப்பினால், உங்கள் கோரிக்கையை ஏற்றால் அல்லது உங்களுக்குச் செய்தி அனுப்பினால் அறிவிப்பு பெறுங்கள்.';
+
+  @override
+  String get permissionNotificationsDisabledTitle =>
+      'அறிவிப்புகள் முடக்கப்பட்டுள்ளன';
+
+  @override
+  String get permissionNotificationsDisabledMessage =>
+      'புதுப்பிப்புகளைப் பெற அமைப்புகளில் இருந்து அறிவிப்புகளை இயக்கவும்.';
+
+  @override
+  String get settingsNotificationsOffMessage =>
+      'அறிவிப்புகளை நிறுத்த, அமைப்புகளில் நெஞ்சம் மேட்ரிமோனிக்கான அறிவிப்புகளை முடக்கவும்.';
+
+  @override
+  String get photoCropProcessError =>
+      'இந்தப் புகைப்படத்தைச் செயலாக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get photoCropLoadError => 'இந்தப் புகைப்படத்தை ஏற்ற முடியவில்லை.';
+
+  @override
+  String get photoCropUsePhoto => 'இந்தப் புகைப்படத்தைப் பயன்படுத்து';
+
+  @override
+  String get photosYourPhotos => 'உங்கள் புகைப்படங்கள்';
+
+  @override
+  String get photosAddFirst => 'உங்கள் முதல் புகைப்படத்தைச் சேர்க்கவும்';
+
+  @override
+  String get photosReorderHint =>
+      'வரிசையை மாற்ற நீண்ட நேரம் அழுத்தி இழுக்கவும். காட்சிப் படமாக அமைக்க, மாற்ற அல்லது நீக்க ஒரு புகைப்படத்தைத் தட்டவும்.';
+
+  @override
+  String get photosSetAsDisplay => 'காட்சிப் படமாக அமைக்கவும்';
+
+  @override
+  String get photosReplace => 'புகைப்படத்தை மாற்று';
+
+  @override
+  String get photosDelete => 'புகைப்படத்தை நீக்கு';
+
+  @override
+  String get photosLoadError =>
+      'உங்கள் புகைப்படங்களை ஏற்ற முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்க்கவும்.';
+
+  @override
+  String get photosGalleryTitle => 'புகைப்பட தொகுப்பு';
+
+  @override
+  String get dialogUpgradeTitle => 'ராயல் பிரீமியத்திற்கு மேம்படுத்தவும்';
+
+  @override
+  String get dialogUpgradeMessage =>
+      'வரம்பற்ற தொடர்பு விவரங்கள், AI பொருத்த பகுப்பாய்வு மற்றும் ஜாதகப் பொருத்தம் ஆகியவற்றைப் பெறுங்கள்.';
+
+  @override
+  String get dialogVerificationTitle => 'அடையாள சரிபார்ப்பு தேவை';
+
+  @override
+  String get dialogVerificationMessage =>
+      'நேரடி அரட்டை அழைப்புகளை அனுப்ப உங்கள் ஆதார் அல்லது கடவுச்சீட்டைச் சரிபார்க்கவும்.';
+
+  @override
+  String get dialogVerifyNow => 'இப்போது சரிபார்க்கவும்';
+
+  @override
+  String get networkNoInternetTitle => 'இணைய இணைப்பு இல்லை';
+
+  @override
+  String get networkNoInternetMessage =>
+      'உங்கள் நெட்வொர்க் அமைப்புகளைச் சரிபார்த்து மீண்டும் இணைக்க முயற்சிக்கவும்.';
+
+  @override
+  String get networkReconnect => 'மீண்டும் இணைக்க';
+
+  @override
+  String get networkServerErrorTitle => 'சேவையகப் பிழை (500)';
+
+  @override
+  String get networkServerErrorMessage =>
+      'எங்கள் சேவையகங்கள் தற்போது பராமரிப்பில் உள்ளன அல்லது சிக்கலை எதிர்கொள்கின்றன.';
+
+  @override
+  String get cardCompatibilityFootnote =>
+      '40+ AI வாழ்க்கைமுறை அளவுருக்களின் அடிப்படையில்';
+
+  @override
+  String get cardGetVerifiedTitle => 'சரிபார்ப்பு பேட்ஜைப் பெறுங்கள்';
+
+  @override
+  String get cardGetVerifiedMessage =>
+      'சரிபார்க்கப்பட்ட அடையாளம் உள்ள சுயவிவரங்கள் 3 மடங்கு அதிக பதில்களைப் பெறுகின்றன.';
+
+  @override
+  String get cardHoroscopeMatch => 'ஜாதகப் பொருத்தம்';
+
+  @override
+  String cardGunaMilanWith(String partnerName) {
+    return '$partnerName உடன் குண மிலன்';
+  }
+
+  @override
+  String get otpPasteCode => 'குறியீட்டை ஒட்டவும்';
+
+  @override
+  String get riYourHoroscope => 'உங்கள் ஜாதகம்';
+
+  @override
+  String get riHoroscopeEmpty =>
+      'பொருத்தப் பரிசோதனையை இயக்க உங்கள் ஜாதக விவரங்களைச் சேர்க்கவும்.';
+
+  @override
+  String get riAddFirstPrompt =>
+      'உங்கள் முதல் சுயவிவரக் கேள்வியைச் சேர்க்கவும்';
+
+  @override
+  String get riDiscoverPersonality => 'உங்கள் ஆளுமையைக் கண்டறியுங்கள்';
+
+  @override
+  String get riQuizTeaser =>
+      '3 நிமிடத் தேர்வு · பொருத்தத் தரத்தை மேம்படுத்தும்';
+
+  @override
+  String get riPersonalityProfile => 'ஆளுமைச் சுயவிவரம்';
+
+  @override
+  String get riRetake => 'மீண்டும் எடுக்க';
+
+  @override
+  String get astroMatchingTitle => 'ஜாதகப் பொருத்தம் பார்த்தல்';
+
+  @override
+  String get astroLoadError => 'உங்கள் ஜாதகத்தை ஏற்ற முடியவில்லை.';
+
+  @override
+  String get astroYourDetailsTitle => 'உங்கள் ஜாதக விவரங்கள்';
+
+  @override
+  String astroRasiLabel(String value) {
+    return 'ராசி: $value';
+  }
+
+  @override
+  String astroNakshatraLabel(String value) {
+    return 'நட்சத்திரம்: $value';
+  }
+
+  @override
+  String astroDoshamLabel(String value) {
+    return 'தோஷம்: $value';
+  }
+
+  @override
+  String get astroAllowCompareTitle =>
+      'ஜாதகத்தை ஒப்பிட பொருத்தங்களை அனுமதிக்கவும்';
+
+  @override
+  String get astroAllowCompareSubtitle =>
+      'உங்கள் சுயவிவரத்தில் பொருத்த மதிப்பெண்ணைக் காட்டு.';
+
+  @override
+  String get astroPreviewTitle => 'பொருத்த முன்னோட்டம்';
+
+  @override
+  String get astroPreviewSubtitle =>
+      'உங்கள் பொருத்த மதிப்பெண் சாத்தியமான பொருத்தங்களுக்கு எப்படித் தோன்றும் என்பதற்கான மாதிரி.';
+
+  @override
+  String get astroNakshatraMatch => 'நட்சத்திரப் பொருத்தம்';
+
+  @override
+  String get astroRasiMatch => 'ராசிப் பொருத்தம்';
+
+  @override
+  String get astroDoshamMatch => 'தோஷப் பொருத்தம்';
+
+  @override
+  String get astroPersonalityMatch => 'ஆளுமைப் பொருத்தம்';
+
+  @override
+  String get helpNoEmailApp =>
+      'இந்தச் சாதனத்தில் மின்னஞ்சல் செயலி எதுவும் இல்லை.';
+
+  @override
+  String get helpFaqTitle => 'அடிக்கடி கேட்கப்படும் கேள்விகள்';
+
+  @override
+  String get helpStillNeedHelp => 'இன்னும் உதவி தேவையா?';
+
+  @override
+  String get inboxDeleteMessageTitle => 'செய்தியை நீக்கவா?';
+
+  @override
+  String get inboxDeleteMessageBody =>
+      'இந்தச் செய்தி அனைவருக்கும் நீக்கப்படும்.';
+
+  @override
+  String get inboxEditMessageTitle => 'செய்தியைத் திருத்து';
+
+  @override
+  String get inboxEditMessageError =>
+      'செய்தியைத் திருத்த முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get inboxMessageDeleted => 'இந்தச் செய்தி நீக்கப்பட்டது';
+
+  @override
+  String get inboxMessageEdited => 'திருத்தப்பட்டது';
+
+  @override
+  String get inboxTyping => 'தட்டச்சு செய்கிறார்';
+
+  @override
+  String get inboxCancelReply => 'பதிலை ரத்துசெய்';
+
+  @override
+  String get inboxCancelRecording => 'பதிவை ரத்துசெய்';
+
+  @override
+  String get inboxStopAndPreview => 'நிறுத்தி முன்னோட்டம் காண்க';
+
+  @override
+  String get inboxDiscardRecording => 'பதிவை நிராகரி';
+
+  @override
+  String get inboxSendVoiceMessage => 'குரல் செய்தியை அனுப்பு';
+
+  @override
+  String get notificationChannelDescription =>
+      'ஆர்வங்கள், பொருத்தங்கள், செய்திகள் மற்றும் கணக்குப் புதுப்பிப்புகள்.';
+
+  @override
+  String get partnerPrefAgeSheetTitle => 'வயது';
+
+  @override
+  String get profileTodaysActivity => 'இன்றைய செயல்பாடு';
+
+  @override
+  String get profileTodaysPriorities => 'இன்றைய முன்னுரிமைகள்';
+
+  @override
+  String get profileAddFamilyDetails => 'குடும்ப விவரங்களைச் சேர்க்கவும்';
+
+  @override
+  String get profileAddMorePhotos => 'மேலும் 2 புகைப்படங்களைச் சேர்க்கவும்';
+
+  @override
+  String get profileQuickActions => 'விரைவுச் செயல்கள்';
+
+  @override
+  String get profileAiMatchCoach => 'AI பொருத்த பயிற்சியாளர்';
+
+  @override
+  String get profileDiscoverOpportunities => 'வாய்ப்புகளைக் கண்டறியுங்கள்';
+
+  @override
+  String get profileNoRecommendations =>
+      'இதுவரை பொருத்தங்கள் இல்லை. பரிந்துரைகளைக் காண உங்கள் சுயவிவரத்தை முழுமையாக்குங்கள்.';
+
+  @override
+  String profileCompatiblePercent(int percent) {
+    return '$percent% பொருத்தம்';
+  }
+
+  @override
+  String get profileCompletionLabel => 'சுயவிவர நிறைவு';
+
+  @override
+  String get profileMatchJourney => 'பொருத்தப் பயணம்';
+
+  @override
+  String get profileJourneyAccountCreated => 'கணக்கு\nஉருவாக்கப்பட்டது';
+
+  @override
+  String get profileJourneyProfileCompleted => 'சுயவிவரம்\nநிறைவு';
+
+  @override
+  String get profileJourneyVerified => 'சரிபார்க்கப்பட்டது';
+
+  @override
+  String get profileJourneyInterests => 'ஆர்வங்கள்';
+
+  @override
+  String get profileJourneyConversations => 'உரையாடல்கள்';
+
+  @override
+  String get profileJourneyPerfectMatch => 'சரியான\nபொருத்தம்';
+
+  @override
+  String get profilePerformanceTitle => 'சுயவிவர செயல்திறன்';
+
+  @override
+  String get profilePerformanceStrength => 'வலிமை';
+
+  @override
+  String get profilePerformanceVisibility => 'தெரிவுநிலை';
+
+  @override
+  String get profilePerformanceResponse => 'பதில்';
+
+  @override
+  String get profileDeactivateAccount => 'கணக்கை முடக்கு';
+
+  @override
+  String get profileMatchesLabel => 'பொருத்தங்கள்';
+
+  @override
+  String get profileDetailFamilyInfo => 'குடும்பத் தகவல்';
+
+  @override
+  String get profileDetailAiCompatibility => 'AI பொருத்தத் தகுதி';
+
+  @override
+  String get profileDetailSimilarProfiles => 'ஒத்த சுயவிவரங்கள்';
+
+  @override
+  String get profileDetailVerifiedBanner => 'சரிபார்க்கப்பட்ட சுயவிவரம்';
+
+  @override
+  String get profileDetailJoinedNenjam => 'நெஞ்சத்தில் இணைந்தார்';
+
+  @override
+  String get profileDetailProfileUpdated => 'சுயவிவரம் புதுப்பிக்கப்பட்டது';
+
+  @override
+  String get profileDetailIdentityVerified => 'அடையாளம் சரிபார்க்கப்பட்டது';
+
+  @override
+  String get profileDetailActiveNow => 'இப்போது செயலில்';
+
+  @override
+  String get profileIntelEnrichTitle => 'உங்கள் சுயவிவரத்தை வளப்படுத்துங்கள்';
+
+  @override
+  String get profileIntelEnrichSubtitle =>
+      'இவை விருப்பத்தேர்வு — சிறந்த பொருத்தங்களைக் கண்டறிய எப்போது வேண்டுமானாலும் சேர்க்கலாம்.';
+
+  @override
+  String get profileIntelReviewSubtitle =>
+      'விருப்ப வளப்படுத்தல் — சிறந்த பொருத்தங்களைக் கண்டறிய எப்போது வேண்டுமானாலும் சேர்க்கலாம்.';
+
+  @override
+  String get profileIntelPersonalityInsights => 'ஆளுமை நுண்ணறிவுகள்';
+
+  @override
+  String get promptsChooseTitle => 'ஒரு கேள்வியைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get promptsMaxReached =>
+      'நீங்கள் அதிகபட்சமாக 3 கேள்விகளைத் தேர்ந்தெடுத்துவிட்டீர்கள். மற்றொன்றைச் சேர்க்க ஒன்றை நீக்கவும்.';
+
+  @override
+  String get promptsLoadError => 'கேள்விகளை ஏற்ற முடியவில்லை.';
+
+  @override
+  String get promptsCategoryEmpty => 'இந்தப் பிரிவில் மேலும் கேள்விகள் இல்லை.';
+
+  @override
+  String get promptsYourAnswer => 'உங்கள் பதில்';
+
+  @override
+  String get promptsAnswerHint => 'உங்கள் பதிலை எழுதுங்கள்…';
+
+  @override
+  String get psychologyQuizTitle => 'உளவியல் தேர்வு';
+
+  @override
+  String get psychologyIntroBody =>
+      'ஒரு சுருக்கமான OCEAN பிக்-ஃபைவ் மதிப்பீடு. உங்கள் முடிவுகள் மேலும் பொருத்தமான ஜோடிகளைப் பரிந்துரைக்க உதவும்.';
+
+  @override
+  String get psychologyTakesMinutes => 'சுமார் 3 நிமிடங்கள் ஆகும்';
+
+  @override
+  String get psychologyStartQuiz => 'தேர்வைத் தொடங்கு';
+
+  @override
+  String get psychologyNoQuiz => 'இப்போது தேர்வு எதுவும் இல்லை.';
+
+  @override
+  String psychologyQuestionProgress(int current, int total) {
+    return 'கேள்வி $current / $total';
+  }
+
+  @override
+  String get psychologyYourProfile => 'உங்கள் ஆளுமைச் சுயவிவரம்';
+
+  @override
+  String get psychologyOceanTitle => 'OCEAN ஆளுமைச் சுயவிவரம்';
+
+  @override
+  String get psychologyOceanDescription =>
+      'பிக் ஃபைவ் ஆளுமை மாதிரியை அடிப்படையாகக் கொண்ட சுருக்கமான மதிப்பீடு. முடிவுகள் உங்களுக்கு மேலும் பொருத்தமான ஜோடிகளைக் கண்டறிய உதவும்.';
+
+  @override
+  String get registrationSaveStepError =>
+      'இந்தப் படியைச் சேமிக்க முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்க்கவும்.';
+
+  @override
+  String registrationSaveStepErrorDetail(String message) {
+    return 'இந்தப் படியைச் சேமிக்க முடியவில்லை: $message';
+  }
+
+  @override
+  String get registrationSaveChangesError =>
+      'உங்கள் மாற்றங்களைச் சேமிக்க முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்க்கவும்.';
+
+  @override
+  String registrationSaveChangesErrorDetail(String message) {
+    return 'உங்கள் மாற்றங்களைச் சேமிக்க முடியவில்லை: $message';
+  }
+
+  @override
+  String get registrationSaveProfileError =>
+      'உங்கள் சுயவிவரத்தைச் சேமிக்க முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்க்கவும்.';
+
+  @override
+  String registrationSaveProfileErrorDetail(String message) {
+    return 'உங்கள் சுயவிவரத்தைச் சேமிக்க முடியவில்லை: $message';
+  }
+
+  @override
+  String get registrationProfileUpdated =>
+      'சுயவிவரம் வெற்றிகரமாகப் புதுப்பிக்கப்பட்டது';
+
+  @override
+  String get registrationPreviewDocument => 'ஆவணத்தை முன்னோட்டம் காண்க';
+
+  @override
+  String get registrationChooseAgain => 'மீண்டும் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get registrationConfirmUpload => 'பதிவேற்றத்தை உறுதிப்படுத்து';
+
+  @override
+  String registrationWeightKg(String weight) {
+    return '$weight கிலோ';
+  }
+
+  @override
+  String get trustScoreTitle => 'நம்பகத்தன்மை மதிப்பெண்';
+
+  @override
+  String get trustScoreUnavailableTitle =>
+      'நம்பகத்தன்மை மதிப்பெண் கிடைக்கவில்லை';
+
+  @override
+  String get trustScoreUnavailableMessage =>
+      'உங்கள் நம்பகத்தன்மை மதிப்பெண்ணை இன்னும் காட்ட முடியவில்லை — இந்த வசதி உங்கள் கணக்கில் கிடைக்கவில்லை.';
+
+  @override
+  String get trustScoreEmptyTitle => 'இதுவரை நம்பகத்தன்மை சமிக்ஞைகள் இல்லை';
+
+  @override
+  String get trustScoreEmptyMessage =>
+      'உங்கள் நம்பகத்தன்மை மதிப்பெண்ணை உருவாக்க சரிபார்ப்புப் படிகளை நிறைவு செய்யுங்கள்.';
+
+  @override
+  String get drawerRateUs => 'எங்களை மதிப்பிடுங்கள் ⭐';
+
+  @override
+  String drawerProfileIdLabel(String id) {
+    return 'அடையாள எண்: $id';
+  }
+
+  @override
+  String get authNoSignedInUserToLink =>
+      'தொலைபேசி எண்ணை இணைக்க உள்நுழைந்த பயனர் யாரும் இல்லை.';
+
+  @override
+  String get commonConfirm => 'உறுதிப்படுத்து';
+
+  @override
+  String get commonPleaseWait => 'தயவுசெய்து காத்திருக்கவும்...';
+
+  @override
+  String get permissionImagePickerError =>
+      'படத் தேர்வியைத் திறக்க முடியவில்லை.';
+
+  @override
+  String get permissionCameraNeeded => 'புகைப்படம் எடுக்க கேமரா அணுகல் தேவை.';
+
+  @override
+  String get photoCropAdjustProfileTitle => 'சுயவிவரப் புகைப்படத்தைச் சரிசெய்';
+
+  @override
+  String get photoCropAdjustTitle => 'புகைப்படத்தைச் சரிசெய்';
+
+  @override
+  String inboxLastSeenTodayAt(String time) {
+    return 'இன்று $time மணிக்குக் கடைசியாகப் பார்த்தது';
+  }
+
+  @override
+  String inboxLastSeenYesterdayAt(String time) {
+    return 'நேற்று $time மணிக்குக் கடைசியாகப் பார்த்தது';
+  }
+
+  @override
+  String inboxLastSeenDaysAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count நாட்களுக்கு முன்',
+      one: '1 நாளுக்கு முன்',
+    );
+    return '$_temp0 கடைசியாகப் பார்த்தது';
+  }
+
+  @override
+  String inboxLastSeenOn(String date) {
+    return '$date அன்று கடைசியாகப் பார்த்தது';
+  }
+
+  @override
+  String get inboxLastSeenJustNow => 'இப்போதுதான் கடைசியாகப் பார்த்தது';
+
+  @override
+  String inboxLastSeenMinutesAgo(int count) {
+    return '$count நிமிடத்திற்கு முன் கடைசியாகப் பார்த்தது';
+  }
+
+  @override
+  String inboxLastSeenHoursAgo(int count) {
+    return '$count மணிநேரத்திற்கு முன் கடைசியாகப் பார்த்தது';
+  }
+
+  @override
+  String inboxDaysAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count நாட்களுக்கு முன்',
+      one: '1 நாளுக்கு முன்',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get validatorNameRequired => 'உங்கள் பெயரை உள்ளிடவும்';
+
+  @override
+  String get validatorNameTooShort =>
+      'பெயர் குறைந்தது 2 எழுத்துகள் இருக்க வேண்டும்';
+
+  @override
+  String get validatorNameTooLong =>
+      'பெயர் 50 எழுத்துகளுக்கும் குறைவாக இருக்க வேண்டும்';
+
+  @override
+  String get validatorNameInvalid =>
+      'பெயரில் எழுத்துகள், இடைவெளிகள், இணைப்புக்கோடுகள் மற்றும் மேற்கோள் குறிகள் மட்டுமே இருக்கலாம்';
+
+  @override
+  String get validatorUsernameRequired => 'பயனர்பெயரை உள்ளிடவும்';
+
+  @override
+  String get validatorUsernameTooShort =>
+      'பயனர்பெயர் குறைந்தது 3 எழுத்துகள் இருக்க வேண்டும்';
+
+  @override
+  String get validatorUsernameTooLong =>
+      'பயனர்பெயர் 20 எழுத்துகளுக்கும் குறைவாக இருக்க வேண்டும்';
+
+  @override
+  String get validatorUsernameInvalid =>
+      'எழுத்துகள், எண்கள் அல்லது அடிக்கோடு பயன்படுத்தவும் (எழுத்தில் தொடங்கவும்)';
+
+  @override
+  String get validatorEmailRequired => 'உங்கள் மின்னஞ்சலை உள்ளிடவும்';
+
+  @override
+  String get validatorEmailInvalid => 'சரியான மின்னஞ்சல் முகவரியை உள்ளிடவும்';
+
+  @override
+  String get validatorPhoneRequired => 'உங்கள் தொலைபேசி எண்ணை உள்ளிடவும்';
+
+  @override
+  String get validatorPhoneInvalid => 'சரியான 10 இலக்க கைபேசி எண்ணை உள்ளிடவும்';
+
+  @override
+  String get validatorOtpRequired => 'OTP ஐ உள்ளிடவும்';
+
+  @override
+  String validatorOtpLength(int length) {
+    return 'OTP $length இலக்கங்கள் இருக்க வேண்டும்';
+  }
+
+  @override
+  String get validatorOtpDigitsOnly => 'OTP இல் எண்கள் மட்டுமே இருக்க வேண்டும்';
+
+  @override
+  String get validatorPasswordRequired => 'கடவுச்சொல்லை உள்ளிடவும்';
+
+  @override
+  String get validatorPasswordTooShort =>
+      'கடவுச்சொல் குறைந்தது 8 எழுத்துகள் இருக்க வேண்டும்';
+
+  @override
+  String get validatorPasswordUppercase =>
+      'கடவுச்சொல்லில் குறைந்தது ஒரு பெரிய எழுத்து இருக்க வேண்டும்';
+
+  @override
+  String get validatorPasswordLowercase =>
+      'கடவுச்சொல்லில் குறைந்தது ஒரு சிறிய எழுத்து இருக்க வேண்டும்';
+
+  @override
+  String get validatorPasswordNumber =>
+      'கடவுச்சொல்லில் குறைந்தது ஒரு எண் இருக்க வேண்டும்';
+
+  @override
+  String get validatorConfirmPasswordRequired =>
+      'உங்கள் கடவுச்சொல்லை உறுதிப்படுத்தவும்';
+
+  @override
+  String get validatorPasswordsMismatch => 'கடவுச்சொற்கள் பொருந்தவில்லை';
+
+  @override
+  String get validatorAgeRequired => 'உங்கள் வயதை உள்ளிடவும்';
+
+  @override
+  String get validatorNumberInvalid => 'சரியான எண்ணை உள்ளிடவும்';
+
+  @override
+  String get validatorAgeMinimum =>
+      'உங்களுக்கு குறைந்தது 18 வயது இருக்க வேண்டும்';
+
+  @override
+  String get validatorAgeInvalid => 'சரியான வயதை உள்ளிடவும்';
+
+  @override
+  String get validatorHeightRequired => 'உங்கள் உயரத்தை உள்ளிடவும்';
+
+  @override
+  String get validatorHeightInvalid => 'சரியான உயரத்தை உள்ளிடவும்';
+
+  @override
+  String get validatorHeightRange =>
+      '100 முதல் 250 செ.மீ. இடையே உயரத்தை உள்ளிடவும்';
+
+  @override
+  String validatorFieldRequired(String fieldName) {
+    return '$fieldName தேவை';
+  }
+
+  @override
+  String validatorBioTooLong(int maxLength) {
+    return 'சுயவிவரக் குறிப்பு $maxLength எழுத்துகளுக்கும் குறைவாக இருக்க வேண்டும்';
+  }
+
+  @override
+  String get authErrorUsernameTaken =>
+      'அந்தப் பயனர்பெயர் ஏற்கனவே பயன்பாட்டில் உள்ளது. வேறொன்றைத் தேர்ந்தெடுக்கவும்.';
+
+  @override
+  String get authErrorEmailInUse =>
+      'இந்த மின்னஞ்சலுக்கு ஏற்கனவே கணக்கு உள்ளது. உள்நுழைய முயற்சிக்கவும்.';
+
+  @override
+  String get authErrorEmailInvalid =>
+      'அந்த மின்னஞ்சல் முகவரி தவறாகத் தெரிகிறது. சரிபார்க்கவும்.';
+
+  @override
+  String get authErrorMethodDisabled =>
+      'இந்த உள்நுழைவு முறை இயக்கப்படவில்லை. ஆதரவைத் தொடர்பு கொள்ளவும்.';
+
+  @override
+  String get authErrorAccountDisabled =>
+      'இந்தக் கணக்கு முடக்கப்பட்டுள்ளது. ஆதரவைத் தொடர்பு கொள்ளவும்.';
+
+  @override
+  String get authErrorWrongCredentials =>
+      'மின்னஞ்சல் அல்லது கடவுச்சொல் தவறு. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get authErrorOtpIncorrect =>
+      'நீங்கள் உள்ளிட்ட OTP தவறானது. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get authErrorOtpExpired =>
+      'இந்தக் குறியீடு காலாவதியானது. புதிய OTP கோரவும்.';
+
+  @override
+  String get authErrorPhoneInvalid =>
+      'அந்தத் தொலைபேசி எண் தவறாகத் தெரிகிறது. சரிபார்க்கவும்.';
+
+  @override
+  String get authErrorPhoneMissing => 'தொலைபேசி எண்ணை உள்ளிடவும்.';
+
+  @override
+  String get authErrorPhoneLinked =>
+      'இந்தத் தொலைபேசி எண் ஏற்கனவே மற்றொரு கணக்குடன் இணைக்கப்பட்டுள்ளது.';
+
+  @override
+  String get authErrorTooManyAttempts =>
+      'அதிக முயற்சிகள். சிறிது நேரம் காத்திருந்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get authErrorNetwork =>
+      'நெட்வொர்க் பிழை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get authErrorReauthRequired =>
+      'இந்தச் செயலை முடிக்க மீண்டும் உள்நுழையவும்.';
+
+  @override
+  String get apiError400 =>
+      'தவறான கோரிக்கை. உங்கள் உள்ளீட்டைச் சரிபார்க்கவும்.';
+
+  @override
+  String get apiError401 => 'அமர்வு காலாவதியானது. மீண்டும் உள்நுழையவும்.';
+
+  @override
+  String get apiError403 => 'இந்தச் செயலுக்கு உங்களுக்கு அனுமதி இல்லை.';
+
+  @override
+  String get apiError404 => 'வளம் கிடைக்கவில்லை.';
+
+  @override
+  String get apiError422 =>
+      'சரிபார்ப்பு தோல்வியடைந்தது. உங்கள் உள்ளீட்டைச் சரிபார்க்கவும்.';
+
+  @override
+  String get apiError429 =>
+      'அதிக கோரிக்கைகள். காத்திருந்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get apiError500 => 'சேவையகப் பிழை. பின்னர் மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get apiError503 => 'சேவை தற்காலிகமாகக் கிடைக்கவில்லை.';
+
+  @override
+  String get verificationStatusPending => 'நிலுவையில்';
+
+  @override
+  String get verificationStatusIncomplete => 'முழுமையடையவில்லை';
+
+  @override
+  String get trustScoreHighCredibility => 'உயர் நம்பகத்தன்மை சுயவிவரம்';
+
+  @override
+  String get trustScoreGoodCredibility => 'நல்ல நம்பகத்தன்மை சுயவிவரம்';
+
+  @override
+  String get trustScoreBuildingCredibility => 'நம்பகத்தன்மையை உருவாக்குகிறது';
+
+  @override
+  String get profileNewMember => 'புதிய உறுப்பினர்';
+
+  @override
+  String get profileLocationNotSet => 'இடம் அமைக்கப்படவில்லை';
+
+  @override
+  String get profilePreferencesNotSet => 'இன்னும் அமைக்கப்படவில்லை';
+
+  @override
+  String get profilePreferencesLabel => 'விருப்பங்கள்';
+
+  @override
+  String get commonThisField => 'இந்தப் புலம்';
+
+  @override
+  String get authErrorWeakPassword =>
+      'உங்கள் கடவுச்சொல் மிகவும் பலவீனமானது. பெரிய எழுத்து, சிறிய எழுத்து, எண் மற்றும் குறியீடு உள்ளிட்ட குறைந்தது 8 எழுத்துகளைப் பயன்படுத்தவும்.';
+
+  @override
+  String get profilePriorityTrustImpact => '+12% நம்பகத்தன்மை மதிப்பெண்';
+
+  @override
+  String get profilePriorityVisibilityImpact =>
+      'தெரிவுநிலையை 40% அதிகரிக்கவும்';
+
+  @override
+  String profileDetailSiblingsBrothers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count சகோதரர்கள்',
+      one: '1 சகோதரர்',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String profileDetailSiblingsSisters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count சகோதரிகள்',
+      one: '1 சகோதரி',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String profileDetailSiblingsLine(String brothers, String sisters) {
+    return 'உடன்பிறந்தோர்: $brothers, $sisters';
+  }
+
+  @override
+  String get profileDetailTimeAgoMonths8 => '8 மாதங்களுக்கு முன்';
+
+  @override
+  String get profileDetailTimeAgoWeeks2 => '2 வாரங்களுக்கு முன்';
+
+  @override
+  String get profileDetailTimeAgoMonth1 => '1 மாதத்திற்கு முன்';
+
+  @override
+  String get profileDetailTimeAgoJustNow => 'இப்போதுதான்';
+
+  @override
+  String get inboxPreviewPhoto => 'புகைப்படம்';
+
+  @override
+  String get inboxPreviewDocument => 'ஆவணம்';
+
+  @override
+  String get inboxEditedSuffix => ' (திருத்தப்பட்டது)';
+
+  @override
+  String get astroExcellentMatch => 'சிறந்த பொருத்தம்';
+
+  @override
+  String profileIdLabel(String id) {
+    return 'அடையாள எண்: $id';
+  }
 }

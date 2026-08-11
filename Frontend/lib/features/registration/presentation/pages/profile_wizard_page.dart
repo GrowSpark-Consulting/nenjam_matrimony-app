@@ -115,7 +115,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     } on RegistrationApiException catch (e) {
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save this step: ${e.message}')),
+        SnackBar(content: Text(AppLocalizations.of(context).registrationSaveStepErrorDetail(e.message))),
       );
       return false;
     } on DioException catch (e) {
@@ -126,8 +126,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       }
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not save this step. Check your connection.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).registrationSaveStepError),
         ),
       );
       return false;
@@ -137,8 +137,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       }
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not save this step. Check your connection.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).registrationSaveStepError),
         ),
       );
       return false;
@@ -265,14 +265,14 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     } on RegistrationApiException catch (e) {
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save your changes: ${e.message}')),
+        SnackBar(content: Text(AppLocalizations.of(context).registrationSaveChangesErrorDetail(e.message))),
       );
       return false;
     } catch (_) {
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not save your changes. Check your connection.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).registrationSaveChangesError),
         ),
       );
       return false;
@@ -299,7 +299,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     ref.invalidate(discoverFeedProvider);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile updated successfully')),
+      SnackBar(content: Text(AppLocalizations.of(context).registrationProfileUpdated)),
     );
     StoryPerf.mark('Navigation started (to discover)');
     context.go(RouteNames.discover);

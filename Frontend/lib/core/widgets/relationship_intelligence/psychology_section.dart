@@ -5,6 +5,7 @@ import '../../constants/app_spacing.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Displays OCEAN Big-Five personality quiz status. When [result.completed]
 /// is false and [onTakeQuizTap] is provided, shows a "take the quiz" CTA.
@@ -53,14 +54,14 @@ class PsychologySection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Discover your personality',
+                      AppLocalizations.of(context).riDiscoverPersonality,
                       style: AppTypography.bodyMedium.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '3-minute quiz · improves match quality',
+                      AppLocalizations.of(context).riQuizTeaser,
                       style: AppTypography.labelSmall.copyWith(
                         color: isDark
                             ? AppColors.textTertiaryDark
@@ -105,7 +106,7 @@ class PsychologySection extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  'Personality Profile',
+                  AppLocalizations.of(context).riPersonalityProfile,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.titleSmall,
@@ -114,7 +115,7 @@ class PsychologySection extends StatelessWidget {
               if (onTakeQuizTap != null)
                 TextButton(
                   onPressed: onTakeQuizTap,
-                  child: const Text('Retake'),
+                  child: Text(AppLocalizations.of(context).riRetake),
                 ),
             ],
           ),

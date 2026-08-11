@@ -362,6 +362,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navPremium => 'Premium';
 
   @override
+  String navUnreadMessagesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count unread messages',
+      one: '1 unread message',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get discoverForYouTab => 'For You';
 
   @override
@@ -3149,4 +3160,1048 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safetyErrorGeneric => 'Something went wrong. Please try again.';
+
+  @override
+  String get commonRetry => 'Retry';
+
+  @override
+  String get commonTryAgain => 'Try Again';
+
+  @override
+  String get commonDone => 'Done';
+
+  @override
+  String get commonAll => 'All';
+
+  @override
+  String get commonClear => 'Clear';
+
+  @override
+  String get commonDismiss => 'Dismiss';
+
+  @override
+  String get commonGreat => 'Great';
+
+  @override
+  String get commonError => 'Error';
+
+  @override
+  String get commonLoading => 'Loading...';
+
+  @override
+  String get commonProcessing => 'Processing…';
+
+  @override
+  String get commonOpenSettings => 'Open Settings';
+
+  @override
+  String get commonReset => 'Reset';
+
+  @override
+  String get commonRotate => 'Rotate';
+
+  @override
+  String get commonSearchHint => 'Search…';
+
+  @override
+  String get commonNoMatches => 'No matches';
+
+  @override
+  String get commonReply => 'Reply';
+
+  @override
+  String get commonEnable => 'Enable';
+
+  @override
+  String get commonNotNow => 'Not now';
+
+  @override
+  String get commonPopular => 'Popular';
+
+  @override
+  String get commonHelp => 'Help';
+
+  @override
+  String get commonPrivacy => 'Privacy';
+
+  @override
+  String get commonSubscription => 'Subscription';
+
+  @override
+  String get commonLogOut => 'Log Out';
+
+  @override
+  String get commonCouldNotLoadProfile => 'Could not load profile';
+
+  @override
+  String get commonProfileLoadConnectionError =>
+      'Could not load your profile. Check your connection.';
+
+  @override
+  String get fieldAge => 'Age';
+
+  @override
+  String get fieldAgeRange => 'Age Range';
+
+  @override
+  String get fieldReligion => 'Religion';
+
+  @override
+  String get fieldReligionHint => 'Select Religion';
+
+  @override
+  String get fieldCaste => 'Caste';
+
+  @override
+  String get fieldCasteDivision => 'Caste / Division';
+
+  @override
+  String get fieldCasteHint => 'Select Caste';
+
+  @override
+  String get fieldMotherTongue => 'Mother Tongue';
+
+  @override
+  String get fieldMotherTongueHint => 'Select Tongue';
+
+  @override
+  String get fieldProfession => 'Profession';
+
+  @override
+  String get fieldProfessionHint => 'Select Profession';
+
+  @override
+  String get fieldAnnualIncome => 'Annual Income';
+
+  @override
+  String get fieldIncome => 'Income';
+
+  @override
+  String get fieldIncomeHint => 'Select Range';
+
+  @override
+  String get fieldHeight => 'Height';
+
+  @override
+  String get fieldHeightHint => 'Select Height';
+
+  @override
+  String get fieldWeight => 'Weight';
+
+  @override
+  String get fieldWeightHint => 'Select Weight';
+
+  @override
+  String get fieldQualification => 'Highest Qualification';
+
+  @override
+  String get fieldQualificationHint => 'Select Degree';
+
+  @override
+  String get fieldCurrentLocation => 'Current Location';
+
+  @override
+  String get fieldLocation => 'Location';
+
+  @override
+  String get fieldLocationHint => 'Select City / Country';
+
+  @override
+  String get fieldCountry => 'Country';
+
+  @override
+  String get fieldCountryHint => 'Select Country';
+
+  @override
+  String get fieldCountryCodeHint => 'Select Country Code';
+
+  @override
+  String get fieldGenderHint => 'Select Gender';
+
+  @override
+  String get fieldEducation => 'Education';
+
+  @override
+  String get fieldOccupation => 'Occupation';
+
+  @override
+  String get fieldMaritalStatus => 'Marital Status';
+
+  @override
+  String get fieldPhone => 'Phone';
+
+  @override
+  String get fieldEmail => 'Email';
+
+  @override
+  String get fieldGovId => 'Gov ID';
+
+  @override
+  String get fieldGovernmentId => 'Government ID';
+
+  @override
+  String get fieldFaceMatch => 'Face Match';
+
+  @override
+  String get fieldInterests => 'Interests';
+
+  @override
+  String get fieldCoreValues => 'Core Values';
+
+  @override
+  String get permissionPhotoDisabledTitle => 'Photo Access Disabled';
+
+  @override
+  String get permissionPhotoDisabledMessage =>
+      'Photo access is disabled. Enable it from Settings.';
+
+  @override
+  String get permissionCameraTitle => 'Camera Access';
+
+  @override
+  String get permissionCameraMessage =>
+      'Nenjam needs camera access to take your photo.';
+
+  @override
+  String get permissionCameraDisabledTitle => 'Camera Access Disabled';
+
+  @override
+  String get permissionCameraDisabledMessage =>
+      'Camera access is disabled. Enable it from Settings to take a photo.';
+
+  @override
+  String get permissionMicTitle => 'Microphone Access';
+
+  @override
+  String get permissionMicMessage =>
+      'Nenjam needs microphone access to record a voice message.';
+
+  @override
+  String get permissionMicDisabledTitle => 'Microphone Access Disabled';
+
+  @override
+  String get permissionMicDisabledMessage =>
+      'Microphone access is disabled. Enable it from Settings to record a voice message.';
+
+  @override
+  String get permissionNotificationsEnableTitle => 'Enable Notifications';
+
+  @override
+  String get permissionNotificationsEnableMessage =>
+      'Get notified when someone sends you an interest, accepts your request, or messages you.';
+
+  @override
+  String get permissionNotificationsDisabledTitle => 'Notifications Disabled';
+
+  @override
+  String get permissionNotificationsDisabledMessage =>
+      'Enable notifications from Settings to stay updated.';
+
+  @override
+  String get settingsNotificationsOffMessage =>
+      'To turn off notifications, disable them for Nenjam Matrimony in Settings.';
+
+  @override
+  String get photoCropProcessError =>
+      'Could not process this photo. Please try again.';
+
+  @override
+  String get photoCropLoadError => 'Could not load this photo.';
+
+  @override
+  String get photoCropUsePhoto => 'Use Photo';
+
+  @override
+  String get photosYourPhotos => 'Your Photos';
+
+  @override
+  String get photosAddFirst => 'Add your first photo';
+
+  @override
+  String get photosReorderHint =>
+      'Long-press and drag to reorder. Tap a photo to set as display, replace, or delete it.';
+
+  @override
+  String get photosSetAsDisplay => 'Set as display photo';
+
+  @override
+  String get photosReplace => 'Replace photo';
+
+  @override
+  String get photosDelete => 'Delete photo';
+
+  @override
+  String get photosLoadError =>
+      'Could not load your photos. Check your connection.';
+
+  @override
+  String get photosGalleryTitle => 'Photo Gallery';
+
+  @override
+  String get dialogUpgradeTitle => 'Upgrade to Royal Premium';
+
+  @override
+  String get dialogUpgradeMessage =>
+      'Get unlimited contact views, AI compatibility breakdowns, and horoscope matches.';
+
+  @override
+  String get dialogVerificationTitle => 'ID Verification Required';
+
+  @override
+  String get dialogVerificationMessage =>
+      'Please verify your Aadhaar or Passport to send direct chat invitations.';
+
+  @override
+  String get dialogVerifyNow => 'Verify Now';
+
+  @override
+  String get networkNoInternetTitle => 'No Internet Connection';
+
+  @override
+  String get networkNoInternetMessage =>
+      'Please check your network settings and try reconnecting.';
+
+  @override
+  String get networkReconnect => 'Reconnect';
+
+  @override
+  String get networkServerErrorTitle => 'Server Error (500)';
+
+  @override
+  String get networkServerErrorMessage =>
+      'Our matrimonial servers are currently undergoing maintenance or experiencing issues.';
+
+  @override
+  String get cardCompatibilityFootnote =>
+      'Based on 40+ AI lifestyle parameters';
+
+  @override
+  String get cardGetVerifiedTitle => 'Get Verified Badge';
+
+  @override
+  String get cardGetVerifiedMessage =>
+      'Profiles with verified ID get 3x more match responses.';
+
+  @override
+  String get cardHoroscopeMatch => 'Horoscope Match';
+
+  @override
+  String cardGunaMilanWith(String partnerName) {
+    return 'Guna Milan with $partnerName';
+  }
+
+  @override
+  String get otpPasteCode => 'Paste Code';
+
+  @override
+  String get riYourHoroscope => 'Your Horoscope';
+
+  @override
+  String get riHoroscopeEmpty =>
+      'Add your horoscope details to enable compatibility matching.';
+
+  @override
+  String get riAddFirstPrompt => 'Add your first profile prompt';
+
+  @override
+  String get riDiscoverPersonality => 'Discover your personality';
+
+  @override
+  String get riQuizTeaser => '3-minute quiz · improves match quality';
+
+  @override
+  String get riPersonalityProfile => 'Personality Profile';
+
+  @override
+  String get riRetake => 'Retake';
+
+  @override
+  String get astroMatchingTitle => 'Horoscope Matching';
+
+  @override
+  String get astroLoadError => 'Could not load your horoscope.';
+
+  @override
+  String get astroYourDetailsTitle => 'Your Horoscope Details';
+
+  @override
+  String astroRasiLabel(String value) {
+    return 'Rasi: $value';
+  }
+
+  @override
+  String astroNakshatraLabel(String value) {
+    return 'Nakshatra: $value';
+  }
+
+  @override
+  String astroDoshamLabel(String value) {
+    return 'Dosham: $value';
+  }
+
+  @override
+  String get astroAllowCompareTitle => 'Allow matches to compare horoscope';
+
+  @override
+  String get astroAllowCompareSubtitle =>
+      'Show a compatibility score on your profile.';
+
+  @override
+  String get astroPreviewTitle => 'Compatibility Preview';
+
+  @override
+  String get astroPreviewSubtitle =>
+      'A sample of how your compatibility score will appear to potential matches.';
+
+  @override
+  String get astroNakshatraMatch => 'Nakshatra Match';
+
+  @override
+  String get astroRasiMatch => 'Rasi Match';
+
+  @override
+  String get astroDoshamMatch => 'Dosham Match';
+
+  @override
+  String get astroPersonalityMatch => 'Personality Match';
+
+  @override
+  String get helpNoEmailApp => 'No email app found on this device.';
+
+  @override
+  String get helpFaqTitle => 'Frequently Asked Questions';
+
+  @override
+  String get helpStillNeedHelp => 'Still Need Help?';
+
+  @override
+  String get inboxDeleteMessageTitle => 'Delete message?';
+
+  @override
+  String get inboxDeleteMessageBody =>
+      'This message will be deleted for everyone.';
+
+  @override
+  String get inboxEditMessageTitle => 'Edit message';
+
+  @override
+  String get inboxEditMessageError =>
+      'Could not edit message. Please try again.';
+
+  @override
+  String get inboxMessageDeleted => 'This message was deleted';
+
+  @override
+  String get inboxMessageEdited => 'edited';
+
+  @override
+  String get inboxTyping => 'Typing';
+
+  @override
+  String get inboxCancelReply => 'Cancel reply';
+
+  @override
+  String get inboxCancelRecording => 'Cancel recording';
+
+  @override
+  String get inboxStopAndPreview => 'Stop and preview';
+
+  @override
+  String get inboxDiscardRecording => 'Discard recording';
+
+  @override
+  String get inboxSendVoiceMessage => 'Send voice message';
+
+  @override
+  String get notificationChannelDescription =>
+      'Interests, matches, messages, and account updates.';
+
+  @override
+  String get partnerPrefAgeSheetTitle => 'Age';
+
+  @override
+  String get profileTodaysActivity => 'Today\'s Activity';
+
+  @override
+  String get profileTodaysPriorities => 'Today\'s Priorities';
+
+  @override
+  String get profileAddFamilyDetails => 'Add Family Details';
+
+  @override
+  String get profileAddMorePhotos => 'Add 2 More Photos';
+
+  @override
+  String get profileQuickActions => 'Quick Actions';
+
+  @override
+  String get profileAiMatchCoach => 'AI MATCH COACH';
+
+  @override
+  String get profileDiscoverOpportunities => 'Discover Opportunities';
+
+  @override
+  String get profileNoRecommendations =>
+      'No matches yet. Complete your profile to see recommendations.';
+
+  @override
+  String profileCompatiblePercent(int percent) {
+    return '$percent% Compatible';
+  }
+
+  @override
+  String get profileCompletionLabel => 'Profile Completion';
+
+  @override
+  String get profileMatchJourney => 'Match Journey';
+
+  @override
+  String get profileJourneyAccountCreated => 'Account\nCreated';
+
+  @override
+  String get profileJourneyProfileCompleted => 'Profile\nCompleted';
+
+  @override
+  String get profileJourneyVerified => 'Verified';
+
+  @override
+  String get profileJourneyInterests => 'Interests';
+
+  @override
+  String get profileJourneyConversations => 'Conversations';
+
+  @override
+  String get profileJourneyPerfectMatch => 'Perfect\nMatch';
+
+  @override
+  String get profilePerformanceTitle => 'Profile Performance';
+
+  @override
+  String get profilePerformanceStrength => 'Strength';
+
+  @override
+  String get profilePerformanceVisibility => 'Visibility';
+
+  @override
+  String get profilePerformanceResponse => 'Response';
+
+  @override
+  String get profileDeactivateAccount => 'Deactivate Account';
+
+  @override
+  String get profileMatchesLabel => 'Matches';
+
+  @override
+  String get profileDetailFamilyInfo => 'Family Information';
+
+  @override
+  String get profileDetailAiCompatibility => 'AI Match Compatibility';
+
+  @override
+  String get profileDetailSimilarProfiles => 'Similar Profiles';
+
+  @override
+  String get profileDetailVerifiedBanner => 'VERIFIED PROFILE';
+
+  @override
+  String get profileDetailJoinedNenjam => 'Joined Nenjam';
+
+  @override
+  String get profileDetailProfileUpdated => 'Profile updated';
+
+  @override
+  String get profileDetailIdentityVerified => 'Identity verified';
+
+  @override
+  String get profileDetailActiveNow => 'Active now';
+
+  @override
+  String get profileIntelEnrichTitle => 'Enrich your profile';
+
+  @override
+  String get profileIntelEnrichSubtitle =>
+      'These are optional — add them anytime to help us find better matches for you.';
+
+  @override
+  String get profileIntelReviewSubtitle =>
+      'Optional enrichment — add anytime to help us find better matches.';
+
+  @override
+  String get profileIntelPersonalityInsights => 'Personality Insights';
+
+  @override
+  String get promptsChooseTitle => 'Choose a Prompt';
+
+  @override
+  String get promptsMaxReached =>
+      'You\'ve picked 3 prompts — the maximum. Remove one to add another.';
+
+  @override
+  String get promptsLoadError => 'Could not load prompts.';
+
+  @override
+  String get promptsCategoryEmpty => 'No more prompts in this category.';
+
+  @override
+  String get promptsYourAnswer => 'Your Answer';
+
+  @override
+  String get promptsAnswerHint => 'Write your answer…';
+
+  @override
+  String get psychologyQuizTitle => 'Psychological Quiz';
+
+  @override
+  String get psychologyIntroBody =>
+      'A short OCEAN Big-Five assessment. Your results help us suggest more compatible matches.';
+
+  @override
+  String get psychologyTakesMinutes => 'Takes about 3 minutes';
+
+  @override
+  String get psychologyStartQuiz => 'Start Quiz';
+
+  @override
+  String get psychologyNoQuiz => 'No quiz is available right now.';
+
+  @override
+  String psychologyQuestionProgress(int current, int total) {
+    return 'Question $current of $total';
+  }
+
+  @override
+  String get psychologyYourProfile => 'Your Personality Profile';
+
+  @override
+  String get psychologyOceanTitle => 'OCEAN Personality Profile';
+
+  @override
+  String get psychologyOceanDescription =>
+      'A short assessment based on the Big Five personality model. Results help us find more compatible matches for you.';
+
+  @override
+  String get registrationSaveStepError =>
+      'Could not save this step. Check your connection.';
+
+  @override
+  String registrationSaveStepErrorDetail(String message) {
+    return 'Could not save this step: $message';
+  }
+
+  @override
+  String get registrationSaveChangesError =>
+      'Could not save your changes. Check your connection.';
+
+  @override
+  String registrationSaveChangesErrorDetail(String message) {
+    return 'Could not save your changes: $message';
+  }
+
+  @override
+  String get registrationSaveProfileError =>
+      'Could not save your profile. Check your connection.';
+
+  @override
+  String registrationSaveProfileErrorDetail(String message) {
+    return 'Could not save your profile: $message';
+  }
+
+  @override
+  String get registrationProfileUpdated => 'Profile updated successfully';
+
+  @override
+  String get registrationPreviewDocument => 'Preview document';
+
+  @override
+  String get registrationChooseAgain => 'Choose again';
+
+  @override
+  String get registrationConfirmUpload => 'Confirm upload';
+
+  @override
+  String registrationWeightKg(String weight) {
+    return '$weight kg';
+  }
+
+  @override
+  String get trustScoreTitle => 'Trust Score';
+
+  @override
+  String get trustScoreUnavailableTitle => 'Trust Score Unavailable';
+
+  @override
+  String get trustScoreUnavailableMessage =>
+      'We can\'t show your trust score yet — this feature isn\'t available on your account.';
+
+  @override
+  String get trustScoreEmptyTitle => 'No Trust Signals Yet';
+
+  @override
+  String get trustScoreEmptyMessage =>
+      'Complete verification steps to build your trust score.';
+
+  @override
+  String get drawerRateUs => 'Rate Us ⭐';
+
+  @override
+  String drawerProfileIdLabel(String id) {
+    return 'ID: $id';
+  }
+
+  @override
+  String get authNoSignedInUserToLink =>
+      'No signed-in user to link the phone number to.';
+
+  @override
+  String get commonConfirm => 'Confirm';
+
+  @override
+  String get commonPleaseWait => 'Please wait...';
+
+  @override
+  String get permissionImagePickerError => 'Could not open the image picker.';
+
+  @override
+  String get permissionCameraNeeded =>
+      'Camera access is needed to take a photo.';
+
+  @override
+  String get photoCropAdjustProfileTitle => 'Adjust Profile Photo';
+
+  @override
+  String get photoCropAdjustTitle => 'Adjust Photo';
+
+  @override
+  String inboxLastSeenTodayAt(String time) {
+    return 'Last seen today at $time';
+  }
+
+  @override
+  String inboxLastSeenYesterdayAt(String time) {
+    return 'Last seen yesterday at $time';
+  }
+
+  @override
+  String inboxLastSeenDaysAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days ago',
+      one: '1 day ago',
+    );
+    return 'Last seen $_temp0';
+  }
+
+  @override
+  String inboxLastSeenOn(String date) {
+    return 'Last seen $date';
+  }
+
+  @override
+  String get inboxLastSeenJustNow => 'Last seen just now';
+
+  @override
+  String inboxLastSeenMinutesAgo(int count) {
+    return 'Last seen ${count}m ago';
+  }
+
+  @override
+  String inboxLastSeenHoursAgo(int count) {
+    return 'Last seen ${count}h ago';
+  }
+
+  @override
+  String inboxDaysAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days ago',
+      one: '1 day ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get validatorNameRequired => 'Please enter your name';
+
+  @override
+  String get validatorNameTooShort => 'Name must be at least 2 characters';
+
+  @override
+  String get validatorNameTooLong => 'Name must be less than 50 characters';
+
+  @override
+  String get validatorNameInvalid =>
+      'Name can only contain letters, spaces, hyphens, and apostrophes';
+
+  @override
+  String get validatorUsernameRequired => 'Please enter a username';
+
+  @override
+  String get validatorUsernameTooShort =>
+      'Username must be at least 3 characters';
+
+  @override
+  String get validatorUsernameTooLong =>
+      'Username must be less than 20 characters';
+
+  @override
+  String get validatorUsernameInvalid =>
+      'Use letters, numbers, or underscore (start with a letter)';
+
+  @override
+  String get validatorEmailRequired => 'Please enter your email';
+
+  @override
+  String get validatorEmailInvalid => 'Please enter a valid email address';
+
+  @override
+  String get validatorPhoneRequired => 'Please enter your phone number';
+
+  @override
+  String get validatorPhoneInvalid =>
+      'Please enter a valid 10-digit mobile number';
+
+  @override
+  String get validatorOtpRequired => 'Please enter the OTP';
+
+  @override
+  String validatorOtpLength(int length) {
+    return 'OTP must be $length digits';
+  }
+
+  @override
+  String get validatorOtpDigitsOnly => 'OTP must contain only digits';
+
+  @override
+  String get validatorPasswordRequired => 'Please enter a password';
+
+  @override
+  String get validatorPasswordTooShort =>
+      'Password must be at least 8 characters';
+
+  @override
+  String get validatorPasswordUppercase =>
+      'Password must contain at least one uppercase letter';
+
+  @override
+  String get validatorPasswordLowercase =>
+      'Password must contain at least one lowercase letter';
+
+  @override
+  String get validatorPasswordNumber =>
+      'Password must contain at least one number';
+
+  @override
+  String get validatorConfirmPasswordRequired => 'Please confirm your password';
+
+  @override
+  String get validatorPasswordsMismatch => 'Passwords do not match';
+
+  @override
+  String get validatorAgeRequired => 'Please enter your age';
+
+  @override
+  String get validatorNumberInvalid => 'Please enter a valid number';
+
+  @override
+  String get validatorAgeMinimum => 'You must be at least 18 years old';
+
+  @override
+  String get validatorAgeInvalid => 'Please enter a valid age';
+
+  @override
+  String get validatorHeightRequired => 'Please enter your height';
+
+  @override
+  String get validatorHeightInvalid => 'Please enter a valid height';
+
+  @override
+  String get validatorHeightRange =>
+      'Please enter height between 100 and 250 cm';
+
+  @override
+  String validatorFieldRequired(String fieldName) {
+    return '$fieldName is required';
+  }
+
+  @override
+  String validatorBioTooLong(int maxLength) {
+    return 'Bio must be less than $maxLength characters';
+  }
+
+  @override
+  String get authErrorUsernameTaken =>
+      'That username is already taken. Please choose another.';
+
+  @override
+  String get authErrorEmailInUse =>
+      'An account already exists for this email. Try logging in.';
+
+  @override
+  String get authErrorEmailInvalid =>
+      'That email address looks invalid. Please check it.';
+
+  @override
+  String get authErrorMethodDisabled =>
+      'This sign-in method is not enabled. Please contact support.';
+
+  @override
+  String get authErrorAccountDisabled =>
+      'This account has been disabled. Please contact support.';
+
+  @override
+  String get authErrorWrongCredentials =>
+      'Incorrect email or password. Please try again.';
+
+  @override
+  String get authErrorOtpIncorrect =>
+      'The OTP you entered is incorrect. Please try again.';
+
+  @override
+  String get authErrorOtpExpired =>
+      'This code has expired. Please request a new OTP.';
+
+  @override
+  String get authErrorPhoneInvalid =>
+      'That phone number looks invalid. Please check it.';
+
+  @override
+  String get authErrorPhoneMissing => 'Please enter a phone number.';
+
+  @override
+  String get authErrorPhoneLinked =>
+      'This phone number is already linked to another account.';
+
+  @override
+  String get authErrorTooManyAttempts =>
+      'Too many attempts. Please wait a while and try again.';
+
+  @override
+  String get authErrorNetwork =>
+      'Network error. Please check your connection and try again.';
+
+  @override
+  String get authErrorReauthRequired =>
+      'Please log in again to complete this action.';
+
+  @override
+  String get apiError400 => 'Invalid request. Please check your input.';
+
+  @override
+  String get apiError401 => 'Session expired. Please login again.';
+
+  @override
+  String get apiError403 => 'You do not have permission for this action.';
+
+  @override
+  String get apiError404 => 'Resource not found.';
+
+  @override
+  String get apiError422 => 'Validation failed. Please check your input.';
+
+  @override
+  String get apiError429 => 'Too many requests. Please wait and try again.';
+
+  @override
+  String get apiError500 => 'Server error. Please try again later.';
+
+  @override
+  String get apiError503 => 'Service temporarily unavailable.';
+
+  @override
+  String get verificationStatusPending => 'Pending';
+
+  @override
+  String get verificationStatusIncomplete => 'Incomplete';
+
+  @override
+  String get trustScoreHighCredibility => 'High credibility profile';
+
+  @override
+  String get trustScoreGoodCredibility => 'Good credibility profile';
+
+  @override
+  String get trustScoreBuildingCredibility => 'Building credibility';
+
+  @override
+  String get profileNewMember => 'New Member';
+
+  @override
+  String get profileLocationNotSet => 'Location not set';
+
+  @override
+  String get profilePreferencesNotSet => 'Not set yet';
+
+  @override
+  String get profilePreferencesLabel => 'Preferences';
+
+  @override
+  String get commonThisField => 'This field';
+
+  @override
+  String get authErrorWeakPassword =>
+      'Your password is too weak. Use at least 8 characters with upper, lower, a number and a symbol.';
+
+  @override
+  String get profilePriorityTrustImpact => '+12% Trust Score';
+
+  @override
+  String get profilePriorityVisibilityImpact => 'Boost Visibility by 40%';
+
+  @override
+  String profileDetailSiblingsBrothers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Brothers',
+      one: '1 Brother',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String profileDetailSiblingsSisters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Sisters',
+      one: '1 Sister',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String profileDetailSiblingsLine(String brothers, String sisters) {
+    return 'Siblings: $brothers, $sisters';
+  }
+
+  @override
+  String get profileDetailTimeAgoMonths8 => '8 months ago';
+
+  @override
+  String get profileDetailTimeAgoWeeks2 => '2 weeks ago';
+
+  @override
+  String get profileDetailTimeAgoMonth1 => '1 month ago';
+
+  @override
+  String get profileDetailTimeAgoJustNow => 'Just now';
+
+  @override
+  String get inboxPreviewPhoto => 'Photo';
+
+  @override
+  String get inboxPreviewDocument => 'Document';
+
+  @override
+  String get inboxEditedSuffix => ' (edited)';
+
+  @override
+  String get astroExcellentMatch => 'Excellent Match';
+
+  @override
+  String profileIdLabel(String id) {
+    return 'ID: $id';
+  }
 }

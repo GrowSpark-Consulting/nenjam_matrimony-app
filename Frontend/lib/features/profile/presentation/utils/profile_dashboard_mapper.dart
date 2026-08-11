@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show VoidCallback;
 
+import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/data/models/auth_user.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../../profile_completion/domain/profile_completion_aggregator.dart';
@@ -13,24 +14,28 @@ import '../widgets/partner_preference_card.dart';
 /// values. No business logic lives here — every value is read straight off
 /// an existing model; nothing is invented.
 
-String profileDisplayName(ProfileDraft? draft, AuthUser? authUser) {
+String profileDisplayName(
+  ProfileDraft? draft,
+  AuthUser? authUser,
+  AppLocalizations l10n,
+) {
   final first = draft?.basicDetails.firstName.trim() ?? '';
   final last = draft?.basicDetails.lastName.trim() ?? '';
   final full = '$first $last'.trim();
   if (full.isNotEmpty) return full;
   final username = authUser?.username?.trim() ?? '';
   if (username.isNotEmpty) return username;
-  return 'New Member';
+  return l10n.profileNewMember;
 }
 
 int? profileDisplayAge(ProfileDraft? draft) => draft?.basicDetails.age;
 
-String profileDisplayLocation(ProfileDraft? draft) {
+String profileDisplayLocation(ProfileDraft? draft, AppLocalizations l10n) {
   final city = draft?.locationDetails.city.trim() ?? '';
   final state = draft?.locationDetails.state.trim() ?? '';
   final country = draft?.locationDetails.country.trim() ?? '';
   final parts = [city, state, country].where((p) => p.isNotEmpty);
-  if (parts.isEmpty) return 'Location not set';
+  if (parts.isEmpty) return l10n.profileLocationNotSet;
   return parts.join(', ');
 }
 
@@ -74,21 +79,27 @@ String profileDisplayId(AuthUser? authUser) {
 /// than inventing specific preference values when none exist.
 List<NmPreferenceRow> profileDisplayPartnerPreferences(
   PartnerPreference pref,
+  AppLocalizations l10n,
 ) {
   final rows = <NmPreferenceRow>[
     if (pref.preferredAgeRange.isNotEmpty)
-      NmPreferenceRow(label: 'Age Range', value: pref.preferredAgeRange),
+      NmPreferenceRow(label: l10n.fieldAgeRange, value: pref.preferredAgeRange),
     if (pref.preferredHeightRange.isNotEmpty)
-      NmPreferenceRow(label: 'Height', value: pref.preferredHeightRange),
+      NmPreferenceRow(label: l10n.fieldHeight, value: pref.preferredHeightRange),
     if (pref.religionPref.isNotEmpty)
-      NmPreferenceRow(label: 'Religion', value: pref.religionPref),
+      NmPreferenceRow(label: l10n.fieldReligion, value: pref.religionPref),
     if (pref.educationPref.isNotEmpty)
-      NmPreferenceRow(label: 'Education', value: pref.educationPref),
+      NmPreferenceRow(label: l10n.fieldEducation, value: pref.educationPref),
     if (pref.locationPref.isNotEmpty)
-      NmPreferenceRow(label: 'Location', value: pref.locationPref),
+      NmPreferenceRow(label: l10n.fieldLocation, value: pref.locationPref),
   ];
   if (rows.isEmpty) {
-    return const [NmPreferenceRow(label: 'Preferences', value: 'Not set yet')];
+    return [
+      NmPreferenceRow(
+        label: l10n.profilePreferencesLabel,
+        value: l10n.profilePreferencesNotSet,
+      ),
+    ];
   }
   return rows;
 }

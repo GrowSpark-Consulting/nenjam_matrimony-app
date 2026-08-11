@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/avatars/app_avatars.dart';
 import '../../../../core/widgets/feedback/pulse_dot.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/presence_state.dart';
 import '../providers/presence_providers.dart';
 import '../utils/last_seen_formatter.dart';
@@ -88,7 +89,7 @@ class ChatPresenceSubtitle extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final presence = ref.watch(peerPresenceProvider(userId));
-    final (key, child) = _content(presence);
+    final (key, child) = _content(presence, AppLocalizations.of(context));
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 220),
@@ -98,7 +99,7 @@ class ChatPresenceSubtitle extends ConsumerWidget {
     );
   }
 
-  (String, Widget) _content(PresenceState? presence) {
+  (String, Widget) _content(PresenceState? presence, AppLocalizations l10n) {
     if (presence == null) return ('none', const SizedBox(height: 14));
     if (presence.isTyping) {
       return (
@@ -106,7 +107,7 @@ class ChatPresenceSubtitle extends ConsumerWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Typing', style: _typingStyle),
+            Text(l10n.inboxTyping, style: _typingStyle),
             const SizedBox(width: 4),
             const PresenceDots(color: AppColors.online),
           ],
@@ -127,7 +128,7 @@ class ChatPresenceSubtitle extends ConsumerWidget {
       );
     }
     if (presence.lastSeen != null) {
-      final text = LastSeenFormatter.detailed(presence.lastSeen!, locale: locale);
+      final text = LastSeenFormatter.detailed(presence.lastSeen!, l10n);
       return ('lastseen:$text', Text(text, style: _lastSeenStyle));
     }
     return ('none', const SizedBox(height: 14));

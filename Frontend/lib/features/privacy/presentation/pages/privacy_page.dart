@@ -113,7 +113,7 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
                     Expanded(child: Text(l10n.privacyLoadErrorMessage)),
                     TextButton(
                       onPressed: () => ref.invalidate(mySettingsProvider),
-                      child: const Text('Retry'),
+                      child: Text(AppLocalizations.of(context).commonRetry),
                     ),
                   ],
                 ),
@@ -175,7 +175,7 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
                 message: l10n.privacyLoadErrorMessage,
                 action: TextButton(
                   onPressed: () => ref.invalidate(blockedUsersNotifierProvider),
-                  child: const Text('Retry'),
+                  child: Text(AppLocalizations.of(context).commonRetry),
                 ),
               ),
             ),

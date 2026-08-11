@@ -1,6 +1,7 @@
 import '../../domain/models/quiz_question.dart';
 import '../../domain/models/personality_result.dart';
 import '../../domain/repositories/personality_repository.dart';
+import '../../../../core/l10n/app_l10n.dart';
 
 class _MockQuestion {
   final String id;
@@ -40,10 +41,8 @@ class MockPersonalityRepository implements PersonalityRepository {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     return Quiz(
       id: _quizId,
-      title: 'OCEAN Personality Profile',
-      description:
-          'A short assessment based on the Big Five personality model. '
-          'Results help us find more compatible matches for you.',
+      title: AppL10n.current.psychologyOceanTitle,
+      description: AppL10n.current.psychologyOceanDescription,
       questions: _questions
           .asMap()
           .entries

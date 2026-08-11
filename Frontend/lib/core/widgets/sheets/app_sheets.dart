@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 
@@ -85,17 +86,17 @@ abstract final class AppSheets {
 
   /// Gender Selection Sheet.
   static Future<String?> showGender(BuildContext context, {String? selected}) {
-    return showSelection(context, title: 'Select Gender', options: ['Male', 'Female'], selectedValue: selected);
+    return showSelection(context, title: AppLocalizations.of(context).fieldGenderHint, options: ['Male', 'Female'], selectedValue: selected);
   }
 
   /// Religion Selection Sheet.
   static Future<String?> showReligion(BuildContext context, {String? selected}) {
-    return showSelection(context, title: 'Select Religion', options: ['Hindu', 'Christian', 'Muslim', 'Jain', 'Sikh'], selectedValue: selected);
+    return showSelection(context, title: AppLocalizations.of(context).fieldReligionHint, options: ['Hindu', 'Christian', 'Muslim', 'Jain', 'Sikh'], selectedValue: selected);
   }
 
   /// Language Selection Sheet.
   static Future<String?> showLanguage(BuildContext context, {String? selected}) {
-    return showSelection(context, title: 'Mother Tongue', options: ['Tamil', 'Telugu', 'Malayalam', 'Kannada', 'Hindi', 'English'], selectedValue: selected);
+    return showSelection(context, title: AppLocalizations.of(context).fieldMotherTongue, options: ['Tamil', 'Telugu', 'Malayalam', 'Kannada', 'Hindi', 'English'], selectedValue: selected);
   }
 
   /// Searchable Selection Sheet — like [showSelection], but with a filter
@@ -238,7 +239,7 @@ class _SearchableSelectionBodyState extends State<_SearchableSelectionBody> {
             controller: _controller,
             onChanged: _onQueryChanged,
             decoration: InputDecoration(
-              hintText: 'Search…',
+              hintText: AppLocalizations.of(context).commonSearchHint,
               prefixIcon: const Icon(Icons.search_rounded, size: 20),
               isDense: true,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
@@ -248,9 +249,9 @@ class _SearchableSelectionBodyState extends State<_SearchableSelectionBody> {
         ),
         Flexible(
           child: _filtered.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 32),
-                  child: Center(child: Text('No matches')),
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32),
+                  child: Center(child: Text(AppLocalizations.of(context).commonNoMatches)),
                 )
               : ListView.builder(
                   shrinkWrap: true,
@@ -332,7 +333,7 @@ class _MultiSelectionBodyState extends State<_MultiSelectionBody> {
             width: double.infinity,
             child: FilledButton(
               onPressed: () => Navigator.pop(context, _selected.toList()),
-              child: const Text('Done'),
+              child: Text(AppLocalizations.of(context).commonDone),
             ),
           ),
         ),
@@ -384,7 +385,7 @@ class _TextInputBodyState extends State<_TextInputBody> {
             width: double.infinity,
             child: FilledButton(
               onPressed: () => Navigator.pop(context, _controller.text.trim()),
-              child: const Text('Done'),
+              child: Text(AppLocalizations.of(context).commonDone),
             ),
           ),
         ],

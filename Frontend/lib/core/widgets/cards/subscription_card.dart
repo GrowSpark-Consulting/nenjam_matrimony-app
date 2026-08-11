@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_gradients.dart';
@@ -64,7 +65,7 @@ class NmSubscriptionCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'Popular',
+                      AppLocalizations.of(context).commonPopular,
                       style: AppTypography.labelSmall.copyWith(
                         color: AppColors.textOnGold,
                         fontWeight: FontWeight.w600,

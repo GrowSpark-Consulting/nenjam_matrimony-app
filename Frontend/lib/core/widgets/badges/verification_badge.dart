@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import 'premium_badge.dart';
@@ -43,7 +44,7 @@ class NmVerificationBadge extends StatelessWidget {
           if (showLabel) ...[
             const SizedBox(width: 4),
             Text(
-              'Verified',
+              AppLocalizations.of(context).discoverVerifiedLabel,
               style: AppTypography.labelSmall.copyWith(
                 color: AppColors.verified,
                 fontWeight: FontWeight.w600,

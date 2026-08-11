@@ -52,6 +52,7 @@ class NenjamNavigationDrawer extends ConsumerStatefulWidget {
   final VoidCallback? onInterestSentTap;
   final VoidCallback? onInterestReceivedTap;
   final VoidCallback? onShortlistTap;
+  final VoidCallback? onProfileViewersTap;
   final VoidCallback? onLanguageTap;
   final VoidCallback? onSettingsTap;
   final VoidCallback? onPrivacyTap;
@@ -77,6 +78,7 @@ class NenjamNavigationDrawer extends ConsumerStatefulWidget {
     this.onInterestSentTap,
     this.onInterestReceivedTap,
     this.onShortlistTap,
+    this.onProfileViewersTap,
     this.onLanguageTap,
     this.onSettingsTap,
     this.onPrivacyTap,
@@ -159,9 +161,9 @@ class _NenjamNavigationDrawerState extends ConsumerState<NenjamNavigationDrawer>
               _ProfileHeader(
                 imageUrl: null,
                 gender: draft?.basicDetails.gender ?? '',
-                name: profileDisplayName(draft, authUser),
+                name: profileDisplayName(draft, authUser, l10n),
                 age: profileDisplayAge(draft) ?? 0,
-                location: profileDisplayLocation(draft),
+                location: profileDisplayLocation(draft, l10n),
                 community: draft?.religionDetails.community ?? '',
                 profileId: profileDisplayId(authUser),
                 isVerified: authUser?.isFullyVerified ?? false,
@@ -298,6 +300,16 @@ class _NenjamNavigationDrawerState extends ConsumerState<NenjamNavigationDrawer>
                         },
                       ),
                     ),
+                    _DrawerItem(
+                      // Same eye used by the Profile Viewers empty state and
+                      // by the PROFILE_VIEW notification icon.
+                      icon: Icons.visibility_outlined,
+                      label: l10n.profileViewersTitle,
+                      onTap: () {
+                        Navigator.pop(context);
+                        widget.onProfileViewersTap?.call();
+                      },
+                    ),
 
                     _MenuDivider(),
 
@@ -430,7 +442,7 @@ class _IdentityError extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              "Couldn't load profile",
+              AppLocalizations.of(context).commonCouldNotLoadProfile,
               style: AppTypography.bodySmall.copyWith(
                 color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
               ),
@@ -441,7 +453,7 @@ class _IdentityError extends StatelessWidget {
           TextButton(
             onPressed: onRetry,
             child: Text(
-              'Retry',
+              AppLocalizations.of(context).commonRetry,
               style: AppTypography.labelMedium.copyWith(
                 color: AppColors.accentGoldDark,
                 fontWeight: FontWeight.w700,
@@ -679,7 +691,7 @@ class _ProfileHeader extends StatelessWidget {
                 ),
               ),
               child: Text(
-                'ID: $profileId',
+                AppLocalizations.of(context).profileIdLabel(profileId),
                 style: AppTypography.labelSmall.copyWith(
                   color: AppColors.accentGoldDark,
                   fontWeight: FontWeight.w600,
@@ -1109,7 +1121,7 @@ class _DrawerFooter extends StatelessWidget {
           GestureDetector(
             onTap: onRateUsTap,
             child: Text(
-              'Rate Us ⭐',
+              AppLocalizations.of(context).drawerRateUs,
               style: AppTypography.labelSmall.copyWith(
                 color: AppColors.accentGoldDark,
                 fontWeight: FontWeight.w700,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
@@ -28,8 +29,8 @@ class NmVerificationCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Get Verified Badge', style: AppTypography.titleMedium.copyWith(color: AppColors.verifiedBlue)),
-                Text('Profiles with verified ID get 3x more match responses.', style: AppTypography.bodySmall),
+                Text(AppLocalizations.of(context).cardGetVerifiedTitle, style: AppTypography.titleMedium.copyWith(color: AppColors.verifiedBlue)),
+                Text(AppLocalizations.of(context).cardGetVerifiedMessage, style: AppTypography.bodySmall),
               ],
             ),
           ),
@@ -41,7 +42,7 @@ class NmVerificationCard extends StatelessWidget {
             // NmPrimaryButton's label now falls back to ellipsis (see
             // core/widgets/buttons/primary_button.dart) if a locale still
             // needs more.
-            NmPrimaryButton(label: 'Verify', onPressed: onVerify, width: 120, height: 36),
+            NmPrimaryButton(label: AppLocalizations.of(context).registrationVerifyButton, onPressed: onVerify, width: 120, height: 36),
           ],
         ],
       ),

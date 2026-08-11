@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Verification status for a single item.
 enum NmVerificationStatus { verified, pending, incomplete }
@@ -31,25 +32,27 @@ class NmVerificationCard extends StatelessWidget {
   const NmVerificationCard({super.key, required this.items});
 
   /// Default verification items used when none are supplied.
-  static List<NmVerificationItem> get defaults => const [
+  /// Takes an [AppLocalizations] because the labels are translated, so this
+  /// can no longer be a compile-time constant.
+  static List<NmVerificationItem> defaultsFor(AppLocalizations l10n) => [
     NmVerificationItem(
       icon: Icons.phone_iphone_rounded,
-      label: 'Phone',
+      label: l10n.fieldPhone,
       status: NmVerificationStatus.verified,
     ),
     NmVerificationItem(
       icon: Icons.mail_rounded,
-      label: 'Email',
+      label: l10n.fieldEmail,
       status: NmVerificationStatus.verified,
     ),
     NmVerificationItem(
       icon: Icons.badge_rounded,
-      label: 'Gov ID',
+      label: l10n.fieldGovId,
       status: NmVerificationStatus.pending,
     ),
     NmVerificationItem(
       icon: Icons.face_rounded,
-      label: 'Face Match',
+      label: l10n.fieldFaceMatch,
       status: NmVerificationStatus.incomplete,
     ),
   ];
@@ -85,7 +88,7 @@ class NmVerificationCard extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  'Verification Center',
+                  AppLocalizations.of(context).drawerVerificationCenter,
                   style: AppTypography.titleMedium,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -149,14 +152,14 @@ class _VerifTile extends StatelessWidget {
     }
   }
 
-  String get _statusLabel {
+  String _statusLabelOf(AppLocalizations l10n) {
     switch (item.status) {
       case NmVerificationStatus.verified:
-        return 'Verified';
+        return l10n.discoverVerifiedLabel;
       case NmVerificationStatus.pending:
-        return 'Pending';
+        return l10n.verificationStatusPending;
       case NmVerificationStatus.incomplete:
-        return 'Incomplete';
+        return l10n.verificationStatusIncomplete;
     }
   }
 
@@ -195,7 +198,7 @@ class _VerifTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    _statusLabel.toUpperCase(),
+                    _statusLabelOf(AppLocalizations.of(context)).toUpperCase(),
                     style: AppTypography.labelSmall.copyWith(
                       color: _iconColor,
                       fontSize: 9,

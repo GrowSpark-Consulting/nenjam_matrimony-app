@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Match Journey section — a horizontally scrollable milestone timeline.
 ///
@@ -17,13 +18,35 @@ class NmMatchJourneyCard extends StatelessWidget {
 
   const NmMatchJourneyCard({super.key, this.currentStep = 3});
 
-  static const List<_JourneyStep> _steps = [
-    _JourneyStep(label: 'Account\nCreated', icon: Icons.how_to_reg_rounded),
-    _JourneyStep(label: 'Profile\nCompleted', icon: Icons.person_rounded),
-    _JourneyStep(label: 'Verified', icon: Icons.verified_rounded),
-    _JourneyStep(label: 'Interests', icon: Icons.favorite_rounded),
-    _JourneyStep(label: 'Conversations', icon: Icons.chat_bubble_rounded),
-    _JourneyStep(label: 'Perfect\nMatch', icon: Icons.celebration_rounded),
+  /// Built per-locale rather than held as a `static const` — the labels are
+  /// translated, so they can't be baked in at compile time. The two-line
+  /// labels keep their embedded newline in both languages so the step
+  /// captions stay the same height.
+  static List<_JourneyStep> _stepsFor(AppLocalizations l10n) => [
+    _JourneyStep(
+      label: l10n.profileJourneyAccountCreated,
+      icon: Icons.how_to_reg_rounded,
+    ),
+    _JourneyStep(
+      label: l10n.profileJourneyProfileCompleted,
+      icon: Icons.person_rounded,
+    ),
+    _JourneyStep(
+      label: l10n.profileJourneyVerified,
+      icon: Icons.verified_rounded,
+    ),
+    _JourneyStep(
+      label: l10n.profileJourneyInterests,
+      icon: Icons.favorite_rounded,
+    ),
+    _JourneyStep(
+      label: l10n.profileJourneyConversations,
+      icon: Icons.chat_bubble_rounded,
+    ),
+    _JourneyStep(
+      label: l10n.profileJourneyPerfectMatch,
+      icon: Icons.celebration_rounded,
+    ),
   ];
 
   @override
@@ -55,7 +78,7 @@ class NmMatchJourneyCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Match Journey', style: AppTypography.titleMedium),
+          Text(AppLocalizations.of(context).profileMatchJourney, style: AppTypography.titleMedium),
           const SizedBox(height: AppSpacing.lg),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -65,7 +88,7 @@ class NmMatchJourneyCard extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                   child: _JourneyTimeline(
-                    steps: _steps,
+                    steps: _stepsFor(AppLocalizations.of(context)),
                     currentStep: currentStep,
                     isDark: isDark,
                     minWidth: constraints.maxWidth,

@@ -11,6 +11,7 @@ import '../../../../core/widgets/buttons/outlined_button.dart';
 import '../../../../core/widgets/relationship_intelligence/psychology_section.dart';
 import '../../domain/models/personality_result.dart';
 import '../providers/personality_provider.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// "Discover your personality" — OCEAN Big-Five quiz sub-flow. Three
 /// phases in one page: an intro card, one Likert question per screen, and
@@ -24,7 +25,7 @@ class PsychologyQuizPage extends ConsumerWidget {
     final state = ref.watch(personalityQuizProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Psychological Quiz')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).psychologyQuizTitle)),
       body: SafeArea(
         child: switch (state.phase) {
           QuizPhase.intro => const _IntroView(),
@@ -67,7 +68,7 @@ class _IntroView extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
-                  'Discover your personality',
+                  AppLocalizations.of(context).riDiscoverPersonality,
                   style: AppTypography.headlineSmall.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
@@ -75,8 +76,7 @@ class _IntroView extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'A short OCEAN Big-Five assessment. Your results help us '
-                  'suggest more compatible matches.',
+                  AppLocalizations.of(context).psychologyIntroBody,
                   style: AppTypography.bodyMedium.copyWith(
                     color: Colors.white.withValues(alpha: 0.85),
                     height: 1.4,
@@ -89,7 +89,7 @@ class _IntroView extends ConsumerWidget {
                         size: 16, color: Colors.white70),
                     const SizedBox(width: 6),
                     Text(
-                      'Takes about 3 minutes',
+                      AppLocalizations.of(context).psychologyTakesMinutes,
                       style: AppTypography.labelMedium
                           .copyWith(color: Colors.white70),
                     ),
@@ -100,7 +100,7 @@ class _IntroView extends ConsumerWidget {
           ),
           const Spacer(),
           NmGradientButton(
-            label: 'Start Quiz',
+            label: AppLocalizations.of(context).psychologyStartQuiz,
             useGoldGradient: true,
             icon: Icons.play_arrow_rounded,
             onPressed: () => ref.read(personalityQuizProvider.notifier).startQuiz(),
@@ -144,7 +144,7 @@ class _QuestionView extends ConsumerWidget {
     }
     final quiz = state.quiz;
     if (quiz == null || quiz.questions.isEmpty) {
-      return const Center(child: Text('No quiz is available right now.'));
+      return Center(child: Text(AppLocalizations.of(context).psychologyNoQuiz));
     }
 
     final question = quiz.questions[state.currentIndex];
@@ -168,7 +168,7 @@ class _QuestionView extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Question ${state.currentIndex + 1} of ${quiz.questions.length}',
+            AppLocalizations.of(context).psychologyQuestionProgress(state.currentIndex + 1, quiz.questions.length),
             style: AppTypography.labelMedium.copyWith(
               color: isDark
                   ? AppColors.textSecondaryDark
@@ -233,7 +233,7 @@ class _QuestionView extends ConsumerWidget {
               if (state.currentIndex > 0)
                 Expanded(
                   child: NmOutlinedButton(
-                    label: 'Back',
+                    label: AppLocalizations.of(context).registrationBack,
                     onPressed: notifier.previousQuestion,
                   ),
                 ),
@@ -278,7 +278,7 @@ class _ResultView extends ConsumerWidget {
               color: AppColors.success, size: 48),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Your Personality Profile',
+            AppLocalizations.of(context).psychologyYourProfile,
             textAlign: TextAlign.center,
             style: AppTypography.headlineSmall
                 .copyWith(fontWeight: FontWeight.w700),
@@ -290,7 +290,7 @@ class _ResultView extends ConsumerWidget {
             ),
           ),
           NmGradientButton(
-            label: 'Done',
+            label: AppLocalizations.of(context).commonDone,
             useGoldGradient: true,
             onPressed: () => context.pop(result),
           ),

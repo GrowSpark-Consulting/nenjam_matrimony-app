@@ -7,6 +7,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/badges/premium_badge.dart' show NmBadgeSize;
 import '../../../../core/widgets/badges/verification_badge.dart';
 import '../../../../core/widgets/indicators/nm_score_ring.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Identity Hero Card — the profile header for the Personal Matchmaking HQ.
 ///
@@ -217,7 +218,7 @@ class _HeroDetailsBlock extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xs2),
                   Text(
-                    'ID: $nmId',
+                    AppLocalizations.of(context).profileIdLabel(nmId),
                     style: AppTypography.labelSmall.copyWith(
                       color: isDark
                           ? AppColors.textTertiaryDark
@@ -365,7 +366,7 @@ class _StatGrid extends StatelessWidget {
             children: [
               Expanded(
                 child: _StatTile(
-                  label: 'Age',
+                  label: AppLocalizations.of(context).fieldAge,
                   value: age != null ? '$age Years' : '—',
                   isDark: isDark,
                 ),
@@ -373,7 +374,7 @@ class _StatGrid extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _StatTile(
-                  label: 'Height',
+                  label: AppLocalizations.of(context).fieldHeight,
                   value: (height != null && height!.isNotEmpty)
                       ? height!
                       : '—',
@@ -390,7 +391,7 @@ class _StatGrid extends StatelessWidget {
             children: [
               Expanded(
                 child: _StatTile(
-                  label: 'Religion',
+                  label: AppLocalizations.of(context).fieldReligion,
                   value: (faith != null && faith!.isNotEmpty) ? faith! : '—',
                   valueColor: identityValueColor,
                   isDark: isDark,
@@ -399,7 +400,7 @@ class _StatGrid extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _StatTile(
-                  label: 'Occupation',
+                  label: AppLocalizations.of(context).fieldOccupation,
                   value: (profession != null && profession!.isNotEmpty)
                       ? profession!
                       : '—',
@@ -494,7 +495,7 @@ class _ProfileCompletionBar extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Profile Completion',
+                AppLocalizations.of(context).profileCompletionLabel,
                 style: AppTypography.labelMedium.copyWith(
                   color: isDark
                       ? AppColors.textSecondaryDark

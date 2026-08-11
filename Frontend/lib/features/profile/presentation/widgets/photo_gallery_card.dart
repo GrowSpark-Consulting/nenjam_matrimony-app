@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Photo Gallery card — horizontal scroll of photo thumbnails with an
 /// add-photo dashed placeholder at the end.
@@ -55,7 +56,7 @@ class NmPhotoGalleryCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Photo Gallery',
+                  AppLocalizations.of(context).photosGalleryTitle,
                   style: AppTypography.titleMedium,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -63,7 +64,7 @@ class NmPhotoGalleryCard extends StatelessWidget {
               ),
               if (canAddMore)
                 Semantics(
-                  label: 'Add photo',
+                  label: AppLocalizations.of(context).registrationAddPhoto,
                   button: true,
                   child: GestureDetector(
                     onTap: onAddTap,

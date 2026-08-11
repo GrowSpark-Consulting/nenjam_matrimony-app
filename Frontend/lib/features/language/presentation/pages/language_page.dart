@@ -29,6 +29,10 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final selected = ref.watch(localeProvider).languageCode;
+    // True when this screen was pushed from inside the app (drawer /
+    // Settings) rather than reached as the onboarding root. Drives both the
+    // back affordance and what Continue does — see [_onContinue].
+    final openedFromInsideApp = context.canPop();
 
     final options = <_LanguageOption>[
       _LanguageOption(
@@ -60,7 +64,7 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
                   // `go`, nothing to pop to) and pushed from Settings (via
                   // `push`, where the user needs a way back) — only show a
                   // back affordance when there's actually something to pop.
-                  if (context.canPop())
+                  if (openedFromInsideApp)
                     Align(
                       alignment: Alignment.centerLeft,
                       child: NmIconButton(
@@ -109,8 +113,15 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
 
                   // ─── Continue ────────────────────────────────────
                   NmGradientButton(
-                    label: l10n.commonContinue,
-                    icon: Icons.arrow_forward_rounded,
+                    // "Continue" belongs to the onboarding flow; from the
+                    // drawer this button only dismisses the screen, and the
+                    // language is already applied and saved by then.
+                    label: openedFromInsideApp
+                        ? l10n.commonDone
+                        : l10n.commonContinue,
+                    icon: openedFromInsideApp
+                        ? Icons.check_rounded
+                        : Icons.arrow_forward_rounded,
                     onPressed: _onContinue,
                   ),
                   const SizedBox(height: 16),
@@ -134,6 +145,16 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
     ref
         .read(localeProvider.notifier)
         .changeLocale(ref.read(localeProvider).languageCode);
+
+    // Same test the back affordance above uses. Pushed from the drawer or
+    // Settings means the member is already signed in and inside the app, so
+    // this button just closes the screen — sending them to onboarding there
+    // would eject them from the app mid-session. Only the onboarding-root
+    // entry (reached with `go`, nothing to pop) advances the flow.
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
     context.go(RouteNames.onboarding);
   }
 }

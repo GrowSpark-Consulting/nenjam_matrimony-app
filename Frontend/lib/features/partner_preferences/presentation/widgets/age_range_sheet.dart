@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/inputs/range_slider.dart';
 import '../../../../core/widgets/sheets/app_sheets.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Parses the free-text age-range strings this app already stores (e.g.
 /// `"18-22"`, `"30-35"`) into a [RangeValues] — mirrors the backend's
@@ -45,7 +46,7 @@ class _AgeRangeSheetBodyState extends State<_AgeRangeSheetBody> {
         mainAxisSize: MainAxisSize.min,
         children: [
           NmRangeSlider(
-            label: 'Age',
+            label: AppLocalizations.of(context).partnerPrefAgeSheetTitle,
             range: _range,
             min: 18,
             max: 65,
@@ -57,7 +58,7 @@ class _AgeRangeSheetBodyState extends State<_AgeRangeSheetBody> {
             width: double.infinity,
             child: FilledButton(
               onPressed: () => Navigator.pop(context, '${_range.start.round()}-${_range.end.round()}'),
-              child: const Text('Done'),
+              child: Text(AppLocalizations.of(context).commonDone),
             ),
           ),
         ],

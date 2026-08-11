@@ -16,7 +16,7 @@ class HelpPage extends StatelessWidget {
     final launched = await launchUrl(uri);
     if (!launched && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No email app found on this device.')),
+        SnackBar(content: Text(AppLocalizations.of(context).helpNoEmailApp)),
       );
     }
   }
@@ -26,12 +26,12 @@ class HelpPage extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Help & Support')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).drawerHelp)),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Text('Frequently Asked Questions', style: AppTypography.titleLarge),
+            Text(AppLocalizations.of(context).helpFaqTitle, style: AppTypography.titleLarge),
             const SizedBox(height: 16),
             const _FaqItem(
               question: 'How does AI matching work?',
@@ -49,7 +49,7 @@ class HelpPage extends StatelessWidget {
                   'Go to the Premium tab from the bottom menu or navigation drawer to explore luxury membership plans.',
             ),
             const SizedBox(height: 32),
-            Text('Still Need Help?', style: AppTypography.titleLarge),
+            Text(AppLocalizations.of(context).helpStillNeedHelp, style: AppTypography.titleLarge),
             const SizedBox(height: 16),
             ListTile(
               leading: const Icon(Icons.support_agent_rounded),

@@ -44,14 +44,12 @@ class TrustScorePage extends ConsumerWidget {
               height: 480,
               child: NmEmptyState(
                 icon: Icons.star_outline_rounded,
-                title: 'Trust Score Unavailable',
-                message:
-                    "We can't show your trust score yet — this feature isn't "
-                    'live on the backend yet. Check back soon.',
+                title: AppLocalizations.of(context).trustScoreUnavailableTitle,
+                message: AppLocalizations.of(context).trustScoreUnavailableMessage,
                 action: OutlinedButton.icon(
                   onPressed: () => ref.invalidate(myTrustScoreProvider),
                   icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Retry'),
+                  label: Text(AppLocalizations.of(context).commonRetry),
                 ),
               ),
             ),
@@ -95,7 +93,7 @@ class _TrustScoreContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Trust Score',
+                  AppLocalizations.of(context).trustScoreTitle,
                   style: AppTypography.titleMedium.copyWith(
                     color: isDark
                         ? AppColors.textSecondaryDark
@@ -118,10 +116,10 @@ class _TrustScoreContent extends StatelessWidget {
               ],
             )
           else
-            const NmEmptyState(
+            NmEmptyState(
               icon: Icons.checklist_rtl_rounded,
-              title: 'No Trust Signals Yet',
-              message: 'Complete verification steps to build your trust score.',
+              title: AppLocalizations.of(context).trustScoreEmptyTitle,
+              message: AppLocalizations.of(context).trustScoreEmptyMessage,
             ),
         ],
       ),

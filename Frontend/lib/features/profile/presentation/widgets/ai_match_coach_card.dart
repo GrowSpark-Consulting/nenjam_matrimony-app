@@ -4,6 +4,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// AI Match Coach card — deep navy full-bleed card with coaching insights
 /// and a call-to-action to improve the user's profile.
@@ -68,7 +69,7 @@ class NmAiMatchCoachCard extends StatelessWidget {
                     const SizedBox(width: AppSpacing.sm),
                     Flexible(
                       child: Text(
-                        'AI MATCH COACH',
+                        AppLocalizations.of(context).profileAiMatchCoach,
                         style: AppTypography.labelSmall.copyWith(
                           color: AppColors.accentGoldLight,
                           letterSpacing: 1.8,

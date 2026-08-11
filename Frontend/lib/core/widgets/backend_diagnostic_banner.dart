@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../network/backend_connectivity_checker.dart';
 
 /// Dev-only banner shown when [BackendConnectivityChecker] reports the
@@ -73,7 +74,7 @@ class BackendDiagnosticBanner extends StatelessWidget {
                     child: TextButton(
                       onPressed: onRetry,
                       style: TextButton.styleFrom(foregroundColor: Colors.white),
-                      child: const Text('Retry'),
+                      child: Text(AppLocalizations.of(context).commonRetry),
                     ),
                   ),
                 ],

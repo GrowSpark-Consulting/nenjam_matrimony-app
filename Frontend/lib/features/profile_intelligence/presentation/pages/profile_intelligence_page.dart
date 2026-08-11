@@ -10,6 +10,7 @@ import '../../../astro/presentation/providers/compatibility_provider.dart';
 import '../../../profile_prompts/domain/models/prompt_bank_item.dart';
 import '../../../profile_prompts/presentation/providers/profile_prompt_provider.dart';
 import '../../../psychology/presentation/providers/personality_provider.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Profile Intelligence hub — 3 cards (Profile Prompts / Personality
 /// Insights / Horoscope Compatibility). Reached from the drawer's "Profile
@@ -26,7 +27,7 @@ class ProfileIntelligencePage extends ConsumerWidget {
     final horoscopeAsync = ref.watch(myHoroscopeSummaryProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile Intelligence')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).drawerProfileIntelligence)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: AppSpacing.pagePadding,
@@ -34,19 +35,19 @@ class ProfileIntelligencePage extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Enrich your profile',
+                AppLocalizations.of(context).profileIntelEnrichTitle,
                 style: AppTypography.headlineSmall
                     .copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
               Text(
-                'These are optional — add them anytime to help us find better matches for you.',
+                AppLocalizations.of(context).profileIntelEnrichSubtitle,
                 style: AppTypography.bodyMedium,
               ),
               const SizedBox(height: AppSpacing.xl),
               NmIntelligenceCard(
                 icon: Icons.chat_bubble_outline_rounded,
-                title: 'Profile Prompts',
+                title: AppLocalizations.of(context).profileCompletionGrowthPrompts,
                 subtitle: promptsAsync.when(
                   data: (prompts) => prompts.isEmpty
                       ? 'Add up to 3 prompts'
@@ -71,7 +72,7 @@ class ProfileIntelligencePage extends ConsumerWidget {
               const SizedBox(height: AppSpacing.md),
               NmIntelligenceCard(
                 icon: Icons.psychology_alt_rounded,
-                title: 'Personality Insights',
+                title: AppLocalizations.of(context).profileIntelPersonalityInsights,
                 subtitle: personalityAsync.when(
                   data: (result) => (result?.completed ?? false)
                       ? 'Completed'
@@ -87,7 +88,7 @@ class ProfileIntelligencePage extends ConsumerWidget {
               const SizedBox(height: AppSpacing.md),
               NmIntelligenceCard(
                 icon: Icons.auto_awesome_rounded,
-                title: 'Horoscope Compatibility',
+                title: AppLocalizations.of(context).profileCompletionGrowthHoroscope,
                 subtitle: horoscopeAsync.when(
                   data: (summary) => summary.matchingEnabled
                       ? 'Matching enabled'

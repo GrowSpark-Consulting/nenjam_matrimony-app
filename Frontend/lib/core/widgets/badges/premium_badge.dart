@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 
@@ -45,7 +46,7 @@ class NmPremiumBadge extends StatelessWidget {
           if (showLabel) ...[
             const SizedBox(width: 4),
             Text(
-              'Premium',
+              AppLocalizations.of(context).navPremium,
               style: AppTypography.labelSmall.copyWith(
                 color: AppColors.accentGoldDark,
                 fontWeight: FontWeight.w600,

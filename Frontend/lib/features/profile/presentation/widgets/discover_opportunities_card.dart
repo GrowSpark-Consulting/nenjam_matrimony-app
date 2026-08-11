@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/avatars/gender_placeholder.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Discover Opportunities section — horizontally scrollable list of match
 /// recommendation cards with name, profession, and compatibility %.
@@ -33,20 +34,28 @@ class NmDiscoverOpportunitiesCard extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Discover Opportunities',
+                AppLocalizations.of(context).profileDiscoverOpportunities,
                 style: AppTypography.titleMedium,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
-            GestureDetector(
-              onTap: onViewAllTap,
-              child: Text(
-                'View All',
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.accentGoldDark,
-                  fontWeight: FontWeight.w600,
+            // Flexible, not a bare Text: "View All" is one short word in
+            // English but "அனைத்தையும் காண்க" in Tamil, which at large text
+            // scales on a 320dp screen is wider than the space the Expanded
+            // title leaves — unconstrained it overflowed the Row by ~145px.
+            Flexible(
+              child: GestureDetector(
+                onTap: onViewAllTap,
+                child: Text(
+                  AppLocalizations.of(context).discoverViewAllButton,
+                  style: AppTypography.labelMedium.copyWith(
+                    color: AppColors.accentGoldDark,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
@@ -197,11 +206,17 @@ class _MatchCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${match.compatibilityPct}% Compatible',
+                    AppLocalizations.of(
+                      context,
+                    ).profileCompatiblePercent(match.compatibilityPct),
                     style: AppTypography.labelMedium.copyWith(
                       color: AppColors.accentGoldDark,
                       fontWeight: FontWeight.w700,
                     ),
+                    // "85% Compatible" is one line in English but wraps in
+                    // Tamil inside this fixed-width (168dp) card.
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -220,7 +235,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Text(
-      'No matches yet. Complete your profile to see recommendations.',
+      AppLocalizations.of(context).profileNoRecommendations,
       textAlign: TextAlign.center,
       style: AppTypography.bodySmall.copyWith(
         color: isDark

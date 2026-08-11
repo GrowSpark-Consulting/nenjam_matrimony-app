@@ -6,6 +6,7 @@ import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/chips/info_chip.dart';
 import '../../domain/entities/lifestyle_info_entity.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Diet/smoking/drinking/fitness chips + hobbies + a short "about me" note.
 class LifestyleSection extends StatelessWidget {
@@ -39,7 +40,7 @@ class LifestyleSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Lifestyle', style: AppTypography.titleLarge),
+          Text(AppLocalizations.of(context).profileDetailTabLifestyle, style: AppTypography.titleLarge),
           const SizedBox(height: AppSpacing.base),
           Wrap(
             spacing: AppSpacing.sm,
@@ -51,7 +52,7 @@ class LifestyleSection extends StatelessWidget {
           ),
           if (lifestyle.hobbies.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.base),
-            Text('Hobbies', style: AppTypography.titleSmall),
+            Text(AppLocalizations.of(context).registrationHobbiesLabel, style: AppTypography.titleSmall),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
               spacing: AppSpacing.xs,

@@ -468,7 +468,15 @@ GoRouter createRouter(WidgetRef ref) {
         GoRoute(
           path: RouteNames.profileViewers,
           name: RouteNames.profileViewersName,
-          builder: (context, state) => const ProfileViewersPage(),
+          // `?openedFromNotification=true` is set only by
+          // NotificationNavigationService; the drawer pushes the bare path.
+          // It decides where Back goes if this page ends up with nothing
+          // beneath it — see ProfileViewersPage's doc comment.
+          builder: (context, state) => ProfileViewersPage(
+            openedFromNotification: state
+                    .uri.queryParameters[RouteNames.openedFromNotificationParam] ==
+                'true',
+          ),
         ),
         GoRoute(
           path: RouteNames.profileDetail,

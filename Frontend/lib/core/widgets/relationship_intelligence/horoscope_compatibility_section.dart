@@ -6,6 +6,7 @@ import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
 import '../cards/horoscope_card.dart';
 import '../chips/info_chip.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Horoscope Compatibility — dual-mode display:
 ///  * **Self-summary** (default, [compatibilityScore] == null): shows the
@@ -76,7 +77,7 @@ class HoroscopeCompatibilitySection extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Flexible(
                 child: Text(
-                  'Your Horoscope',
+                  AppLocalizations.of(context).riYourHoroscope,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.titleSmall,
@@ -99,7 +100,7 @@ class HoroscopeCompatibilitySection extends StatelessWidget {
             )
           else
             Text(
-              'Add your horoscope details to enable compatibility matching.',
+              AppLocalizations.of(context).riHoroscopeEmpty,
               style: AppTypography.bodySmall.copyWith(
                 color: isDark
                     ? AppColors.textTertiaryDark

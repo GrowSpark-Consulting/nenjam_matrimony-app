@@ -162,11 +162,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 _FadeInSection(
                   delay: 0,
                   child: NmIdentityHeroCard(
-                    name: profileDisplayName(draft, authUser),
+                    name: profileDisplayName(draft, authUser, l10n),
                     age: profileDisplayAge(draft),
                     nmId: profileDisplayId(authUser),
                     imageUrl: primaryPhotoUrl,
-                    location: profileDisplayLocation(draft),
+                    location: profileDisplayLocation(draft, l10n),
                     // TODO(backend): no trust-score concept exists yet
                     // anywhere in the app (no entity, no endpoint) —
                     // placeholder until the backend defines one.
@@ -369,7 +369,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     items: [
                       NmVerificationItem(
                         icon: Icons.phone_iphone_rounded,
-                        label: 'Phone',
+                        label: l10n.fieldPhone,
                         status: (authUser?.phoneVerified ?? false)
                             ? NmVerificationStatus.verified
                             : NmVerificationStatus.incomplete,
@@ -377,7 +377,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       ),
                       NmVerificationItem(
                         icon: Icons.mail_rounded,
-                        label: 'Email',
+                        label: l10n.fieldEmail,
                         status: (authUser?.emailVerified ?? false)
                             ? NmVerificationStatus.verified
                             : NmVerificationStatus.incomplete,
@@ -385,7 +385,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       ),
                       NmVerificationItem(
                         icon: Icons.badge_rounded,
-                        label: 'Gov ID',
+                        label: l10n.fieldGovId,
                         // TODO(backend): the /verification/status endpoint
                         // is still a stub (see ProfileDraft.
                         // VerificationStatus.fromJson) — this reflects
@@ -398,7 +398,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       ),
                       NmVerificationItem(
                         icon: Icons.face_rounded,
-                        label: 'Face Match',
+                        label: l10n.fieldFaceMatch,
                         status: (draft?.verificationStatus.faceVerified ?? false)
                             ? NmVerificationStatus.verified
                             : NmVerificationStatus.incomplete,
@@ -415,6 +415,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   child: NmPartnerPreferenceCard(
                     preferences: profileDisplayPartnerPreferences(
                       draft?.partnerPreference ?? const PartnerPreference(),
+                      l10n,
                     ),
                     onEditTap: () => openPartnerPreferences(context, ref),
                   ),
@@ -459,22 +460,22 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     actions: [
                       NmQuickAction(
                         icon: Icons.settings_outlined,
-                        label: 'Settings',
+                        label: l10n.settingsTitle,
                         onTap: () => context.push(RouteNames.settings),
                       ),
                       NmQuickAction(
                         icon: Icons.lock_person_outlined,
-                        label: 'Privacy',
+                        label: l10n.commonPrivacy,
                         onTap: () => context.push(RouteNames.privacy),
                       ),
                       NmQuickAction(
                         icon: Icons.contact_support_outlined,
-                        label: 'Help',
+                        label: l10n.commonHelp,
                         onTap: () => context.push(RouteNames.help),
                       ),
                       NmQuickAction(
                         icon: Icons.card_membership_outlined,
-                        label: 'Subscription',
+                        label: l10n.commonSubscription,
                         onTap: () => context.push(RouteNames.subscription),
                       ),
                     ],
@@ -522,7 +523,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       actions: [
         // Existing settings navigation — UNCHANGED
         IconButton(
-          tooltip: 'Settings',
+          tooltip: l10n.settingsTitle,
           onPressed: () => context.push(RouteNames.settings),
           icon: Icon(
             Icons.settings_outlined,

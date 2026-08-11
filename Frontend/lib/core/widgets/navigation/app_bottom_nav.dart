@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../features/inbox/presentation/providers/inbox_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../constants/app_spacing.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_shadows.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/tokens/app_radius.dart';
+import 'nav_badge.dart';
 
 /// Floating pill-style bottom navigation shell that wraps tabbed routes —
 /// Discover / Matches / Inbox / Premium.
@@ -15,7 +18,7 @@ import '../../theme/tokens/app_radius.dart';
 /// [navigationShell] itself renders whichever branch is active inside an
 /// `IndexedStack`, so switching tabs preserves each branch's own Navigator
 /// stack and scroll position instead of rebuilding it from scratch.
-class AppBottomNavShell extends StatelessWidget {
+class AppBottomNavShell extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
   const AppBottomNavShell({super.key, required this.navigationShell});
@@ -27,6 +30,10 @@ class AppBottomNavShell extends StatelessWidget {
     _NavTab(Icons.workspace_premium_rounded, Icons.workspace_premium_outlined),
   ];
 
+  /// Index of the Inbox branch in [_tabs] — and in `app_router.dart`'s branch
+  /// order, which the two lists share.
+  static const _inboxTabIndex = 2;
+
   /// Localized labels, index-aligned with [_tabs] and with the branch order
   /// declared in `app_router.dart`.
   List<String> _labels(AppLocalizations l10n) => [
@@ -37,10 +44,18 @@ class AppBottomNavShell extends StatelessWidget {
       ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentIndex = navigationShell.currentIndex;
-    final labels = _labels(AppLocalizations.of(context));
+    final l10n = AppLocalizations.of(context);
+    final labels = _labels(l10n);
+    // App-wide unread message total, summed from the conversations list (see
+    // `unreadMessagesCountProvider`). Watching it here means the badge tracks
+    // every path that touches unread state — a live socket message, opening a
+    // thread, mark read/unread, a reconnect or foreground re-sync — without
+    // any of them knowing this widget exists.
+    final unreadMessages = ref.watch(unreadMessagesCountProvider);
+    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
     // Android/iOS back button: only the Discover branch is a true "root" —
     // every other branch was reached by switching tabs, not by pushing on
@@ -78,7 +93,7 @@ class AppBottomNavShell extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+              color: surfaceColor,
               borderRadius: AppRadius.pill,
               boxShadow: AppShadows.floatingLight,
             ),
@@ -94,6 +109,15 @@ class AppBottomNavShell extends StatelessWidget {
                     activeIcon: tab.activeIcon,
                     label: labels[index],
                     isActive: index == currentIndex,
+                    badgeCount: index == _inboxTabIndex ? unreadMessages : 0,
+                    // Announced instead of the bare count, so the badge reads
+                    // as "Inbox, 3 unread messages" rather than "Inbox" and a
+                    // loose "3" (see [NavBadge]'s own ExcludeSemantics).
+                    badgeSemanticLabel: l10n.navUnreadMessagesSemanticLabel(unreadMessages),
+                    // The badge's ring should read as a cut-out in the bar,
+                    // so it takes the bar's own colour rather than a hardcoded
+                    // white that would look like a sticker in dark mode.
+                    badgeBorderColor: surfaceColor,
                     // initialLocation resets the branch to its starting
                     // route when re-tapping the tab you're already on —
                     // the standard go_router pattern — while switching
@@ -120,12 +144,22 @@ class _NavItem extends StatelessWidget {
   final bool isActive;
   final VoidCallback onTap;
 
+  /// Unread count overlaid on this item's icon — 0 on every tab that doesn't
+  /// have one, which [NavBadge] renders as scaled-to-nothing rather than
+  /// absent, so the pop-in animation has something to animate from.
+  final int badgeCount;
+  final String badgeSemanticLabel;
+  final Color badgeBorderColor;
+
   const _NavItem({
     required this.icon,
     required this.activeIcon,
     required this.label,
     required this.isActive,
     required this.onTap,
+    this.badgeCount = 0,
+    this.badgeSemanticLabel = '',
+    this.badgeBorderColor = Colors.white,
   });
 
   @override
@@ -136,7 +170,7 @@ class _NavItem extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: label,
+      label: badgeCount > 0 ? '$label, $badgeSemanticLabel' : label,
       selected: isActive,
       child: InkWell(
         borderRadius: AppRadius.br16,
@@ -147,27 +181,45 @@ class _NavItem extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOut,
-                width: AppSpacing.xl3,
-                height: AppSpacing.xl3,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isActive ? AppColors.accentGold : Colors.transparent,
-                  boxShadow: isActive ? AppShadows.goldGlow : null,
-                ),
-                child: Center(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(
-                      isActive ? activeIcon : icon,
-                      key: ValueKey(isActive),
-                      size: 20,
-                      color: isActive ? Colors.white : inactiveColor,
+              // The badge floats over the icon's top-right corner. The Stack
+              // takes its size from the (unpositioned) icon circle, so adding
+              // the badge changes nothing about the bar's layout — the badge
+              // overhangs the circle's corner without ever widening the item
+              // or shifting the label below it.
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOut,
+                    width: AppSpacing.xl3,
+                    height: AppSpacing.xl3,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isActive ? AppColors.accentGold : Colors.transparent,
+                      boxShadow: isActive ? AppShadows.goldGlow : null,
+                    ),
+                    child: Center(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: Icon(
+                          isActive ? activeIcon : icon,
+                          key: ValueKey(isActive),
+                          size: 20,
+                          color: isActive ? Colors.white : inactiveColor,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: NavBadge(
+                      count: badgeCount,
+                      borderColor: badgeBorderColor,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.xs2),
               Padding(

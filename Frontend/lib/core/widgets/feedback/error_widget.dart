@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../buttons/primary_button.dart';
@@ -77,7 +78,7 @@ class NmErrorWidget extends StatelessWidget {
               SizedBox(
                 width: 160,
                 child: NmPrimaryButton(
-                  label: 'Retry',
+                  label: AppLocalizations.of(context).commonRetry,
                   onPressed: onRetry,
                   height: 48,
                   icon: Icons.refresh_rounded,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// A single quick-action tile.
 class NmQuickAction {
@@ -33,7 +34,7 @@ class NmQuickActionsCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Quick Actions', style: AppTypography.titleMedium),
+        Text(AppLocalizations.of(context).profileQuickActions, style: AppTypography.titleMedium),
         const SizedBox(height: AppSpacing.md),
         // A Wrap of quarter-width tiles sizes to its content height, so
         // tiles never clip when the label wraps under large font scaling

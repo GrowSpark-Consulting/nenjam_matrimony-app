@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// A single preference row (label + value).
 class NmPreferenceRow {
@@ -26,11 +27,13 @@ class NmPartnerPreferenceCard extends StatelessWidget {
   });
 
   /// Default placeholder preferences.
-  static List<NmPreferenceRow> get defaults => const [
-    NmPreferenceRow(label: 'Age Range', value: '26 - 32'),
-    NmPreferenceRow(label: 'Height', value: '5\'4" +'),
-    NmPreferenceRow(label: 'Education', value: 'Masters / PhD'),
-    NmPreferenceRow(label: 'Location', value: 'Same city'),
+  /// Placeholder rows. Labels are localized (so no longer `const`); the
+  /// sample values stay as-is — illustrative data, not UI copy.
+  static List<NmPreferenceRow> defaultsFor(AppLocalizations l10n) => [
+    NmPreferenceRow(label: l10n.fieldAgeRange, value: '26 - 32'),
+    NmPreferenceRow(label: l10n.fieldHeight, value: '5\'4" +'),
+    NmPreferenceRow(label: l10n.fieldEducation, value: 'Masters / PhD'),
+    NmPreferenceRow(label: l10n.fieldLocation, value: 'Same city'),
   ];
 
   @override
@@ -67,7 +70,7 @@ class NmPartnerPreferenceCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Partner Preferences',
+                  AppLocalizations.of(context).partnerPrefPageTitle,
                   style: AppTypography.titleMedium,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -75,7 +78,7 @@ class NmPartnerPreferenceCard extends StatelessWidget {
               ),
               if (onEditTap != null)
                 Semantics(
-                  label: 'Edit partner preferences',
+                  label: AppLocalizations.of(context).registrationEditPartnerPrefButton,
                   button: true,
                   child: InkWell(
                     onTap: onEditTap,

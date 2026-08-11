@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/entities/family_info_entity.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Father/mother, family type/values/status, and siblings — nothing in
 /// the existing widget library models family background, so this is new.
@@ -27,18 +28,18 @@ class FamilyInfoSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Family Information', style: AppTypography.titleLarge),
+          Text(AppLocalizations.of(context).profileDetailFamilyInfo, style: AppTypography.titleLarge),
           const SizedBox(height: AppSpacing.base),
           Wrap(
             spacing: AppSpacing.base,
             runSpacing: AppSpacing.base,
             children: [
               if (family.familyType.isNotEmpty)
-                _Tile(label: 'Family Type', value: family.familyType),
+                _Tile(label: AppLocalizations.of(context).registrationFamilyTypeLabel, value: family.familyType),
               if (family.familyValues.isNotEmpty)
-                _Tile(label: 'Family Values', value: family.familyValues),
+                _Tile(label: AppLocalizations.of(context).registrationFamilyValuesLabel, value: family.familyValues),
               if (family.familyStatus.isNotEmpty)
-                _Tile(label: 'Family Status', value: family.familyStatus),
+                _Tile(label: AppLocalizations.of(context).registrationFamilyStatusLabel, value: family.familyStatus),
             ],
           ),
           const SizedBox(height: AppSpacing.base),
@@ -77,8 +78,10 @@ class FamilyInfoSection extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    'Siblings: ${family.brothers} Brother${family.brothers == 1 ? '' : 's'}, '
-                    '${family.sisters} Sister${family.sisters == 1 ? '' : 's'}',
+                    AppLocalizations.of(context).profileDetailSiblingsLine(
+                      AppLocalizations.of(context).profileDetailSiblingsBrothers(family.brothers),
+                      AppLocalizations.of(context).profileDetailSiblingsSisters(family.sisters),
+                    ),
                     style: AppTypography.bodyMedium.copyWith(
                       color: textSecondary,
                     ),

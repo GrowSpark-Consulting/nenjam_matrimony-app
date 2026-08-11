@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/cards/compatibility_card.dart';
 import '../../domain/entities/profile_detail_entity.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// AI Match Compatibility — [NmCompatibilityCard] reused unmodified, fed
 /// from `base.compatibility` (already computed upstream by whichever feed
@@ -24,7 +25,7 @@ class CompatibilityCardSection extends StatelessWidget {
 
     return NmCompatibilityCard(
       score: compatibility.overallCompatibility,
-      title: 'AI Match Compatibility',
+      title: AppLocalizations.of(context).profileDetailAiCompatibility,
       matchingPoints: matchingPoints,
     );
   }

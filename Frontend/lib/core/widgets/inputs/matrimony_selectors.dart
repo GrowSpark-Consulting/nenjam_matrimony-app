@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import 'app_dropdown.dart';
 
 /// Reusable Religion Selector.
@@ -11,10 +12,11 @@ class NmReligionSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     const religions = ['Hindu', 'Christian', 'Muslim', 'Jain', 'Sikh', 'Buddhist', 'Inter-Religion'];
     return NmDropdown<String>(
-      label: 'Religion',
-      hint: 'Select Religion',
+      label: l10n.fieldReligion,
+      hint: l10n.fieldReligionHint,
       value: value,
       items: religions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: onChanged,
@@ -31,10 +33,11 @@ class NmCasteSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     const castes = ['Iyer', 'Iyengar', 'Mudaliar', 'Pillai', 'Chettiar', 'Gounder', 'Nadar', 'Vanniyar', 'Don\'t Wish to Specify'];
     return NmDropdown<String>(
-      label: 'Caste / Division',
-      hint: 'Select Caste',
+      label: l10n.fieldCasteDivision,
+      hint: l10n.fieldCasteHint,
       value: value,
       items: castes.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: onChanged,
@@ -51,10 +54,11 @@ class NmMotherTongueSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     const tongues = ['Tamil', 'Telugu', 'Malayalam', 'Kannada', 'Hindi', 'English'];
     return NmDropdown<String>(
-      label: 'Mother Tongue',
-      hint: 'Select Tongue',
+      label: l10n.fieldMotherTongue,
+      hint: l10n.fieldMotherTongueHint,
       value: value,
       items: tongues.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: onChanged,
@@ -71,10 +75,11 @@ class NmProfessionSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     const professions = ['Software Engineer', 'Doctor', 'IAS / IPS / Govt', 'Business / Entrepreneur', 'Finance / Banking', 'Architect / Design', 'Civil / Mechanical Engg'];
     return NmDropdown<String>(
-      label: 'Profession',
-      hint: 'Select Profession',
+      label: l10n.fieldProfession,
+      hint: l10n.fieldProfessionHint,
       value: value,
       items: professions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: onChanged,
@@ -91,10 +96,11 @@ class NmIncomeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     const incomes = ['5 - 10 Lakhs PA', '10 - 20 Lakhs PA', '20 - 50 Lakhs PA', '50 Lakhs - 1 Crore PA', '1 Crore+ PA', 'Prefer not to say'];
     return NmDropdown<String>(
-      label: 'Annual Income',
-      hint: 'Select Range',
+      label: l10n.fieldAnnualIncome,
+      hint: l10n.fieldIncomeHint,
       value: value,
       items: incomes.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: onChanged,
@@ -111,10 +117,11 @@ class NmHeightSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     const heights = ['5 ft 0 in (152 cm)', '5 ft 2 in (157 cm)', '5 ft 4 in (162 cm)', '5 ft 6 in (167 cm)', '5 ft 8 in (172 cm)', '5 ft 10 in (177 cm)', '6 ft 0 in (183 cm)', '6 ft 2 in+'];
     return NmDropdown<String>(
-      label: 'Height',
-      hint: 'Select Height',
+      label: l10n.fieldHeight,
+      hint: l10n.fieldHeightHint,
       value: value,
       items: heights.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: onChanged,
@@ -131,10 +138,11 @@ class NmWeightSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     const weights = ['45 kg', '50 kg', '55 kg', '60 kg', '65 kg', '70 kg', '75 kg', '80 kg', '85 kg+'];
     return NmDropdown<String>(
-      label: 'Weight',
-      hint: 'Select Weight',
+      label: l10n.fieldWeight,
+      hint: l10n.fieldWeightHint,
       value: value,
       items: weights.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: onChanged,
@@ -151,10 +159,11 @@ class NmEducationSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     const edu = ['B.E / B.Tech / M.Tech', 'MBBS / MD / MS', 'MBA / PGDM', 'CA / CFA', 'B.Sc / M.Sc', 'Ph.D', 'Other Bachelors / Masters'];
     return NmDropdown<String>(
-      label: 'Highest Qualification',
-      hint: 'Select Degree',
+      label: l10n.fieldQualification,
+      hint: l10n.fieldQualificationHint,
       value: value,
       items: edu.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: onChanged,
@@ -171,10 +180,11 @@ class NmLocationSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     const cities = ['Chennai', 'Coimbatore', 'Madurai', 'Trichy', 'Bangalore', 'Hyderabad', 'Mumbai', 'Singapore', 'USA / UK / Abroad'];
     return NmDropdown<String>(
-      label: 'Current Location',
-      hint: 'Select City / Country',
+      label: l10n.fieldCurrentLocation,
+      hint: l10n.fieldLocationHint,
       value: value,
       items: cities.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: onChanged,
@@ -191,10 +201,11 @@ class NmCountryPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     const countries = ['India (+91)', 'United States (+1)', 'United Kingdom (+44)', 'Singapore (+65)', 'UAE (+971)', 'Malaysia (+60)', 'Australia (+61)', 'Canada (+1)'];
     return NmDropdown<String>(
-      label: 'Country',
-      hint: 'Select Country',
+      label: l10n.fieldCountry,
+      hint: l10n.fieldCountryHint,
       value: value,
       items: countries.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: onChanged,

@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../../core/l10n/app_l10n.dart';
 
 /// Nenjam Matrimony — Firebase Authentication Service
 ///
@@ -113,7 +114,7 @@ class FirebaseAuthService {
     if (user == null) {
       throw FirebaseAuthException(
         code: 'requires-recent-login',
-        message: 'No signed-in user to link the phone number to.',
+        message: AppL10n.current.authNoSignedInUserToLink,
       );
     }
     await user.linkWithCredential(credential);

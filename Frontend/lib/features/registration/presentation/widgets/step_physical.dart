@@ -159,7 +159,7 @@ class _StepPhysicalState extends State<StepPhysical> {
             max: _maxWeightKg.toDouble(),
             divisions: _maxWeightKg - _minWeightKg,
             activeColor: AppColors.primary,
-            label: '$_weightKg kg',
+            label: AppLocalizations.of(context).registrationWeightKg('$_weightKg'),
             onChanged: (v) {
               setState(() { _weightKg = v.round(); _weightTouched = true; });
               _emit();

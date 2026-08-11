@@ -827,19 +827,19 @@ class _MessagesList extends ConsumerWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.reply_outlined),
-              title: const Text('Reply'),
+              title: Text(AppLocalizations.of(context).commonReply),
               onTap: () => Navigator.of(sheetContext).pop(_MessageAction.reply),
             ),
             if (canEdit)
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
-                title: const Text('Edit'),
+                title: Text(AppLocalizations.of(context).registrationEditButton),
                 onTap: () => Navigator.of(sheetContext).pop(_MessageAction.edit),
               ),
             if (canDelete)
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: AppColors.error),
-                title: const Text('Delete', style: TextStyle(color: AppColors.error)),
+                title: Text(AppLocalizations.of(context).inboxActionDelete, style: const TextStyle(color: AppColors.error)),
                 onTap: () => Navigator.of(sheetContext).pop(_MessageAction.delete),
               ),
           ],
@@ -861,7 +861,7 @@ class _MessagesList extends ConsumerWidget {
               ? error.message
               : error is MessageEditWindowExpiredException
                   ? error.message
-                  : 'Could not edit message. Please try again.';
+                  : AppLocalizations.of(context).inboxEditMessageError;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(errorMessage)),
           );
@@ -883,16 +883,16 @@ class _MessagesList extends ConsumerWidget {
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete message?'),
-        content: const Text('This message will be deleted for everyone.'),
+        title: Text(AppLocalizations.of(dialogContext).inboxDeleteMessageTitle),
+        content: Text(AppLocalizations.of(dialogContext).inboxDeleteMessageBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context).commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+            child: Text(AppLocalizations.of(dialogContext).inboxActionDelete, style: const TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -935,7 +935,7 @@ class _EditMessageDialogState extends State<_EditMessageDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Edit message'),
+      title: Text(AppLocalizations.of(context).inboxEditMessageTitle),
       content: TextField(
         controller: _controller,
         autofocus: true,
@@ -945,11 +945,11 @@ class _EditMessageDialogState extends State<_EditMessageDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(AppLocalizations.of(context).commonCancel),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
-          child: const Text('Save'),
+          child: Text(AppLocalizations.of(context).actionSave),
         ),
       ],
     );

@@ -514,7 +514,7 @@ class _ReplyPreviewBanner extends StatelessWidget {
             ),
           ],
           IconButton(
-            tooltip: 'Cancel reply',
+            tooltip: AppLocalizations.of(context).inboxCancelReply,
             onPressed: onClose,
             icon: const Icon(Icons.close_rounded, size: 18),
             padding: EdgeInsets.zero,
@@ -620,7 +620,7 @@ class _RecordingBarState extends State<_RecordingBar> {
       child: Row(
         children: [
           IconButton(
-            tooltip: 'Cancel recording',
+            tooltip: AppLocalizations.of(context).inboxCancelRecording,
             onPressed: widget.onCancel,
             icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
           ),
@@ -629,7 +629,7 @@ class _RecordingBarState extends State<_RecordingBar> {
           Text(_formatDuration(_elapsed), style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
           const Spacer(),
           IconButton(
-            tooltip: 'Stop and preview',
+            tooltip: AppLocalizations.of(context).inboxStopAndPreview,
             onPressed: widget.onStop,
             icon: const Icon(Icons.stop_circle_rounded, color: AppColors.primary, size: 32),
           ),
@@ -756,7 +756,7 @@ class _VoicePreviewBarState extends State<_VoicePreviewBar> {
       child: Row(
         children: [
           IconButton(
-            tooltip: 'Discard recording',
+            tooltip: AppLocalizations.of(context).inboxDiscardRecording,
             onPressed: widget.onRemove,
             icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
           ),
@@ -786,7 +786,7 @@ class _VoicePreviewBarState extends State<_VoicePreviewBar> {
             style: AppTypography.labelSmall,
           ),
           IconButton(
-            tooltip: 'Send voice message',
+            tooltip: AppLocalizations.of(context).inboxSendVoiceMessage,
             onPressed: widget.onSend,
             icon: const Icon(Icons.send_rounded, color: AppColors.primary),
           ),

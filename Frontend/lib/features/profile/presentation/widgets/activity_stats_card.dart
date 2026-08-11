@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Recent Activity stats card — 2-column grid showing Interests Received
 /// and Matches with count-up animation.
@@ -49,14 +50,14 @@ class NmActivityStatsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Today's Activity", style: AppTypography.titleMedium),
+          Text(AppLocalizations.of(context).profileTodaysActivity, style: AppTypography.titleMedium),
           const SizedBox(height: AppSpacing.base),
           Row(
             children: [
               Expanded(
                 child: _StatTile(
                   value: interestsReceived,
-                  label: 'Interests',
+                  label: AppLocalizations.of(context).fieldInterests,
                   color: AppColors.liked,
                   isDark: isDark,
                   onTap: onInterestsTap,
@@ -66,7 +67,7 @@ class NmActivityStatsCard extends StatelessWidget {
               Expanded(
                 child: _StatTile(
                   value: matches,
-                  label: 'Matches',
+                  label: AppLocalizations.of(context).profileMatchesLabel,
                   color: AppColors.accentGold,
                   isDark: isDark,
                   onTap: onMatchesTap,
