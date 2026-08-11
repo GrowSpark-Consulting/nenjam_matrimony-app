@@ -42,15 +42,24 @@ export class ShortlistService {
     if (userId === targetUserId) {
       throw new BadRequestException('You cannot shortlist yourself.');
     }
-    if (!(await this.shortlistRepository.isTargetAvailable(targetUserId))) {
+    // Three independent probes, issued together rather than as three sequential
+    // round trips. They are still evaluated in the same order below, so the
+    // outcome (and which error wins) is unchanged.
+    const [isAvailable, isBlocked, alreadyShortlisted] = await Promise.all([
+      this.shortlistRepository.isTargetAvailable(targetUserId),
+      this.shortlistRepository.isBlockedBetween(userId, targetUserId),
+      this.shortlistRepository.exists(userId, targetUserId),
+    ]);
+
+    if (!isAvailable) {
       throw new NotFoundException('This member is no longer available.');
     }
     // Soft block validation: never persist/notify across a block, but don't
     // hard-fail the caller's optimistic action either.
-    if (await this.shortlistRepository.isBlockedBetween(userId, targetUserId)) {
+    if (isBlocked) {
       return;
     }
-    if (await this.shortlistRepository.exists(userId, targetUserId)) {
+    if (alreadyShortlisted) {
       return; // already shortlisted — idempotent no-op
     }
 

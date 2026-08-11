@@ -210,10 +210,23 @@ export class MessagesService {
     // its title — it can no longer be looked up lazily after commit. Issued
     // alongside the presence read (both are independent single-row lookups) so
     // it adds no extra round trip to the send path.
-    const [deliveredNow, senderDisplayName] = await Promise.all([
-      this.presence.isOnline(receiverUserId),
-      this.resolveSenderTitle(senderUserId),
-    ]);
+    // `recipientIsViewing` joins this batch rather than being read later: it now
+    // decides whether the notification row is written INSIDE the transaction
+    // below, so it has to be known before the transaction opens. Riding along in
+    // the existing Promise.all keeps the send path at the same number of round
+    // trips, which matters — a round trip to this database measures ~342ms.
+    //
+    // `.catch(() => false)` is load-bearing here exactly as at the push call
+    // site: a lookup we cannot answer must fall back to NOTIFYING, never to
+    // silence.
+    const [deliveredNow, senderDisplayName, recipientIsViewing] =
+      await Promise.all([
+        this.presence.isOnline(receiverUserId),
+        this.resolveSenderTitle(senderUserId),
+        this.activeConversation
+          .isViewing(receiverUserId, dto.roomId)
+          .catch(() => false),
+      ]);
     const now = new Date();
 
     // One title/body pair, used verbatim for both the stored notification row
@@ -246,14 +259,29 @@ export class MessagesService {
 
         // Notify the recipient only — never the sender. Same
         // create-inside-transaction pattern as Interests/Shortlist.
-        notificationData = {
-          userId: receiverUserId,
-          type: 'NEW_MESSAGE',
-          title: senderDisplayName,
-          body: notificationBody,
-          data: { actorId: senderUserId, referenceId: dto.roomId },
-        };
-        await this.notifications.create(tx, notificationData);
+        //
+        // Skipped entirely when the recipient has THIS conversation open. They
+        // are watching the message land over the socket, so a Notification-tab
+        // entry for it is an item they must then dismiss for something they
+        // already read — and it would inflate the unread badge for a thread
+        // they are actively in.
+        //
+        // Being online is deliberately NOT the condition: someone in a
+        // different conversation, or anywhere else in the app, still gets the
+        // row. See ActiveConversationService.
+        //
+        // Also removes one write from the transaction on this path, which is
+        // worth having when a round trip costs ~342ms.
+        if (!recipientIsViewing) {
+          notificationData = {
+            userId: receiverUserId,
+            type: 'NEW_MESSAGE',
+            title: senderDisplayName,
+            body: notificationBody,
+            data: { actorId: senderUserId, referenceId: dto.roomId },
+          };
+          await this.notifications.create(tx, notificationData);
+        }
 
         return created;
       });
@@ -289,23 +317,34 @@ export class MessagesService {
     // Notification center + push (after commit) — same rule and fire-and-forget
     // dispatch as Interests/Shortlist: a rolled-back transaction must never
     // reach a device as a push, and a push failure must never fail this call.
-    await this.notifications.invalidateUnread(receiverUserId);
-    void this.dispatchNewMessagePush({
-      notification: notificationData!,
-      senderUserId,
-      receiverUserId,
-      conversationId: message.roomId,
-      title: senderDisplayName,
-      body: notificationBody,
-    });
-    this.realtime.emitToUser(
-      receiverUserId,
-      RealtimeEvents.notificationCreated,
-      {
-        id: message.id,
-        at: recipientView.createdAt,
-      },
-    );
+    //
+    // Both are skipped when no notification row was written (recipient has this
+    // conversation open). Guarding on `notificationData` rather than re-reading
+    // `recipientIsViewing` keeps the two decisions from ever drifting apart:
+    // there is exactly one condition under which the row is absent, and this is
+    // it. It also drops a Redis round trip and a push on that path.
+    if (notificationData) {
+      await this.notifications.invalidateUnread(receiverUserId);
+      void this.dispatchNewMessagePush({
+        notification: notificationData,
+        senderUserId,
+        receiverUserId,
+        conversationId: message.roomId,
+        title: senderDisplayName,
+        body: notificationBody,
+      });
+      // Only signal "a notification appeared" when one actually did — otherwise
+      // the recipient's notification list refreshes for a row that does not
+      // exist.
+      this.realtime.emitToUser(
+        receiverUserId,
+        RealtimeEvents.notificationCreated,
+        {
+          id: message.id,
+          at: recipientView.createdAt,
+        },
+      );
+    }
 
     void this.audit.record({
       actorId: senderUserId,
@@ -384,6 +423,14 @@ export class MessagesService {
     const { senderUserId, receiverUserId, conversationId, title, body } =
       params;
     try {
+      // Deliberately a SECOND check, not a duplicate of the pre-transaction
+      // one. That decided whether to write the notification row; this decides
+      // whether to buzz a device, and the two are separated by the whole
+      // transaction — which on this deployment is hundreds of milliseconds
+      // (~342ms per round trip). A recipient who opened the thread inside that
+      // window should not get a push, and only re-reading catches it. One extra
+      // Redis read (~40ms) to avoid buzzing someone mid-read is a good trade.
+      //
       // Suppress the push when the recipient already has THIS conversation on
       // screen — they are watching the message arrive over the socket, so a
       // lock-screen buzz for it is pure noise.

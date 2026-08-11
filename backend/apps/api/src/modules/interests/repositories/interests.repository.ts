@@ -149,7 +149,11 @@ export class InterestsRepository {
       receiverId: userId,
       sender: { is: notBlockedWith(userId) },
     };
-    return this.prisma.$transaction([
+    // Concurrent, not `$transaction([...])`: at READ COMMITTED (this database's
+    // default) a transaction gives page/count no shared snapshot anyway, and it
+    // costs a sequential BEGIN/COMMIT round trip either side — measured at
+    // 307ms vs 74ms for the same two queries.
+    return Promise.all([
       this.prisma.expressInterest.findMany({
         where,
         orderBy: { createdAt: 'desc' },
@@ -171,7 +175,8 @@ export class InterestsRepository {
       senderId: userId,
       receiver: { is: notBlockedWith(userId) },
     };
-    return this.prisma.$transaction([
+    // Concurrent — see [listReceived].
+    return Promise.all([
       this.prisma.expressInterest.findMany({
         where,
         orderBy: { createdAt: 'desc' },

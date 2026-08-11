@@ -56,21 +56,30 @@ export class ProfileViewService {
     if (viewerId === viewedUserId) {
       throw new BadRequestException('You cannot view your own profile.');
     }
-    if (!(await this.profileViewRepository.isTargetAvailable(viewedUserId))) {
+    // These three probes don't depend on each other, and this runs on every
+    // profile open — the most frequent action in the app — so they go out
+    // together rather than as three sequential round trips to a database in
+    // another region. The checks are still applied in the same order below, so
+    // the outcome is identical; the only difference is that the two cheap
+    // follow-up probes are also issued in the rare case the target turns out to
+    // be unavailable.
+    const throttleSince = new Date(Date.now() - VIEW_NOTIFICATION_THROTTLE_MS);
+    const [isAvailable, isBlocked, alreadyNotified] = await Promise.all([
+      this.profileViewRepository.isTargetAvailable(viewedUserId),
+      this.profileViewRepository.isBlockedBetween(viewerId, viewedUserId),
+      this.profileViewRepository.hasViewedSince(
+        viewerId,
+        viewedUserId,
+        throttleSince,
+      ),
+    ]);
+
+    if (!isAvailable) {
       throw new NotFoundException('This member is no longer available.');
     }
-    if (
-      await this.profileViewRepository.isBlockedBetween(viewerId, viewedUserId)
-    ) {
+    if (isBlocked) {
       return;
     }
-
-    const throttleSince = new Date(Date.now() - VIEW_NOTIFICATION_THROTTLE_MS);
-    const alreadyNotified = await this.profileViewRepository.hasViewedSince(
-      viewerId,
-      viewedUserId,
-      throttleSince,
-    );
 
     let notificationData: CreateNotificationData | undefined;
 

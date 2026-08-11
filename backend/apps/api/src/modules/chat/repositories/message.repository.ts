@@ -112,7 +112,11 @@ export class MessageRepository {
     take: number,
   ): Promise<[ChatMessageWithReply[], number]> {
     const where: Prisma.ChatMessageWhereInput = { roomId, deletedAt: null };
-    return this.prisma.$transaction([
+    // Concurrent, not `$transaction([...])`: at READ COMMITTED (this database's
+    // default) a transaction gives page/count no shared snapshot anyway, and it
+    // costs a sequential BEGIN/COMMIT round trip either side — measured at
+    // 307ms vs 74ms for the same two queries.
+    return Promise.all([
       this.prisma.chatMessage.findMany({
         where,
         orderBy: { createdAt: 'desc' },
@@ -183,30 +187,33 @@ export class MessageRepository {
   }
 
   /**
-   * Flips SENT→DELIVERED for a set of messages, one at a time — each a
-   * single atomic conditional UPDATE (`WHERE id = ? AND status = 'SENT'`) —
-   * and returns only the ids THIS call actually changed (a subset of
-   * `ids`). A racing concurrent call for the same message (e.g. this same
-   * recipient's other device replaying `chat.sync` at the same moment, or
-   * an explicit delivery ack landing right after a replay already handled
-   * it) will find `status` no longer `SENT` and match zero rows for it, so
-   * it's correctly excluded from that call's own return value too — this
-   * is what lets callers notify/re-push only for genuinely new
-   * transitions instead of every caller unconditionally broadcasting for
+   * Flips SENT→DELIVERED for a set of messages in ONE conditional UPDATE
+   * (`WHERE id IN (...) AND status = 'SENT' RETURNING id`), and returns only
+   * the ids THIS call actually changed (a subset of `ids`). A racing
+   * concurrent call for the same message (e.g. this same recipient's other
+   * device replaying `chat.sync` at the same moment, or an explicit delivery
+   * ack landing right after a replay already handled it) blocks on the row
+   * lock, then re-evaluates `status` after it is released and matches zero
+   * rows for it — so it's correctly excluded from that call's own return
+   * value too. This is what lets callers notify/re-push only for genuinely
+   * new transitions instead of every caller unconditionally broadcasting for
    * the full requested set, which is what produced duplicate
    * `chat.delivered` events under concurrent replay.
+   *
+   * This was previously a loop issuing one UPDATE per id. `chat.sync` replays
+   * up to 200 messages (see `findUndelivered`), so on a reconnect that was up
+   * to 200 sequential round trips — several seconds of pure network on a
+   * managed Postgres reached over the internet — for work the database can do
+   * in a single statement. The conditional-update semantics above are
+   * unchanged: they come from `AND status = 'SENT'`, not from the batching.
    */
   async markDelivered(ids: string[]): Promise<string[]> {
     if (ids.length === 0) return [];
-    const now = new Date();
-    const changed: string[] = [];
-    for (const id of ids) {
-      const result = await this.prisma.chatMessage.updateMany({
-        where: { id, status: 'SENT' },
-        data: { status: 'DELIVERED', deliveredAt: now },
-      });
-      if (result.count > 0) changed.push(id);
-    }
-    return changed;
+    const changed = await this.prisma.chatMessage.updateManyAndReturn({
+      where: { id: { in: ids }, status: 'SENT' },
+      data: { status: 'DELIVERED', deliveredAt: new Date() },
+      select: { id: true },
+    });
+    return changed.map((row) => row.id);
   }
 }

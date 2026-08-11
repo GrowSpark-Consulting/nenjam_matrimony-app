@@ -52,14 +52,23 @@ export class NotificationRepository {
     });
   }
 
-  /** One page of a user's notifications, newest first, plus the total — count
-   *  and page share one WHERE in a single round trip so they never disagree. */
-  listPaginated(
+  /**
+   * One page of a user's notifications, newest first, plus the total.
+   *
+   * Run concurrently rather than in a `$transaction([...])`. The transaction
+   * was there to keep page and count consistent, but it never did: this
+   * database runs at the PostgreSQL default READ COMMITTED, where every
+   * statement takes its own snapshot, so the two queries could already observe
+   * different data inside one transaction. What it did cost was a sequential
+   * BEGIN → SELECT → SELECT → COMMIT, four round trips instead of two
+   * concurrent ones — measured at 307ms vs 74ms against this database.
+   */
+  async listPaginated(
     userId: string,
     skip: number,
     take: number,
   ): Promise<[Notification[], number]> {
-    return this.prisma.$transaction([
+    return Promise.all([
       this.prisma.notification.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
