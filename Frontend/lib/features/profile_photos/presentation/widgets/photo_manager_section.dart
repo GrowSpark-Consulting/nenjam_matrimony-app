@@ -95,7 +95,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
                 scrollDirection: Axis.horizontal,
                 buildDefaultDragHandles: false,
                 itemCount: photos.length,
-                onReorder: (oldIndex, newIndex) =>
+                onReorderItem: (oldIndex, newIndex) =>
                     _onReorder(photos, oldIndex, newIndex),
                 itemBuilder: (context, index) {
                   final photo = photos[index];
@@ -150,10 +150,8 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
     int newIndex,
   ) async {
     if (oldIndex == newIndex) return;
-    // `onReorder` reports newIndex relative to the list *before* the
-    // dragged item is removed — shift left by one when moving something
-    // later in the list so removeAt/insert below lands on the right slot.
-    if (newIndex > oldIndex) newIndex -= 1;
+    // `onReorderItem` already accounts for the dragged item being removed at
+    // oldIndex, so newIndex is the final slot — no manual shift needed.
     final reordered = [...photos];
     final moved = reordered.removeAt(oldIndex);
     reordered.insert(newIndex, moved);
