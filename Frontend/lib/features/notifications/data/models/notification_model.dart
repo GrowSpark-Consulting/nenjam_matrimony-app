@@ -16,6 +16,7 @@ class NotificationModel extends NotificationEntity {
     super.actor,
     super.referenceId,
     super.metadata,
+    super.rawType,
   });
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
@@ -39,12 +40,15 @@ class NotificationModel extends NotificationEntity {
             ),
       referenceId: json['referenceId'] as String?,
       metadata: (json['metadata'] as Map?)?.cast<String, dynamic>() ?? const {},
+      // Kept verbatim alongside the collapsed [type] — tap routing needs the
+      // exact backend value (see NotificationEntity.rawType).
+      rawType: json['type'] as String? ?? '',
     );
   }
 
   Map<String, dynamic> toJson() => {
         'id': id,
-        'type': type.name,
+        'type': rawType.isNotEmpty ? rawType : type.name,
         'title': title,
         'message': message,
         'createdAt': createdAt.toIso8601String(),

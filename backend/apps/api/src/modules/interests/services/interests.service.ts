@@ -153,7 +153,14 @@ export class InterestsService {
           type: 'INTEREST_RECEIVED',
           title: 'New interest received',
           body: 'Someone has expressed interest in your profile.',
-          data: { actorId: senderId, referenceId: record.id },
+          // `interestId` duplicates `referenceId` under the name the
+          // client's deep-link parser looks for first.
+          data: {
+            actorId: senderId,
+            userId: senderId,
+            referenceId: record.id,
+            interestId: record.id,
+          },
         };
         await this.notifications.create(tx, notificationData);
 
@@ -236,7 +243,12 @@ export class InterestsService {
         body: accept
           ? 'Your interest was accepted.'
           : 'Your interest was declined.',
-        data: { actorId: currentUserId, referenceId: interestId },
+        data: {
+          actorId: currentUserId,
+          userId: currentUserId,
+          referenceId: interestId,
+          interestId,
+        },
       };
       await this.notifications.create(tx, notificationData);
     });

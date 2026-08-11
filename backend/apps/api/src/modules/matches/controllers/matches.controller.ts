@@ -36,6 +36,12 @@ import {
 } from '../../interests/dto/interest-response.dto';
 import { ShortlistService } from '../services/shortlist.service';
 import { ShortlistProfileDto } from '../dto/shortlist.dto';
+import { ProfileViewService } from '../services/profile-view.service';
+import {
+  PROFILE_VIEWER_EXAMPLE,
+  ProfileViewerDto,
+  RecordProfileViewDto,
+} from '../dto/profile-view.dto';
 import { DiscoverProfileDto } from '../dto/discover-profile.response.dto';
 
 /**
@@ -55,6 +61,7 @@ export class MatchesController {
   constructor(
     private readonly interestsService: InterestsService,
     private readonly shortlistService: ShortlistService,
+    private readonly profileViewService: ProfileViewService,
   ) {}
 
   @Post('interest')
@@ -145,5 +152,44 @@ export class MatchesController {
     @Body() dto: ShortlistProfileDto,
   ): Promise<void> {
     return this.shortlistService.remove(userId, dto.profileId);
+  }
+
+  @Get('profile-views')
+  @ApiTags('Profile Views')
+  @ApiOperation({
+    summary: 'List members who viewed my profile',
+    description:
+      'Distinct viewers, most recently seen first. Repeat views by the same ' +
+      'member collapse to one entry carrying their latest `viewedAt`.',
+  })
+  @ApiOkResponse({
+    description: 'Array of viewers (Discover card + view timestamp).',
+    schema: { type: 'array', items: { example: PROFILE_VIEWER_EXAMPLE } },
+  })
+  listProfileViewers(
+    @CurrentUser('id') userId: string,
+    @Query() pagination: PaginationQueryDto,
+  ): Promise<ProfileViewerDto[]> {
+    return this.profileViewService.listViewers(userId, pagination);
+  }
+
+  @Post('profile-view')
+  @ApiTags('Profile Views')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Record a profile view',
+    description:
+      'Called when the caller opens someone else’s profile. Always logs the ' +
+      'view; raises a PROFILE_VIEW notification only on the first view by ' +
+      'that member within the throttle window. Views across a block are ' +
+      'silently ignored.',
+  })
+  @ApiNoContentResponse({ description: 'Recorded (or softly ignored).' })
+  @ApiNotFoundResponse({ description: 'Target member is unavailable.' })
+  recordProfileView(
+    @CurrentUser('id') userId: string,
+    @Body() dto: RecordProfileViewDto,
+  ): Promise<void> {
+    return this.profileViewService.record(userId, dto.profileId);
   }
 }

@@ -34,6 +34,7 @@ import '../../features/privacy/presentation/pages/privacy_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile_detail/presentation/pages/profile_detail_page.dart';
 import '../../features/profile_intelligence/presentation/pages/profile_intelligence_page.dart';
+import '../../features/profile_views/presentation/pages/profile_viewers_page.dart';
 import '../../features/profile_prompts/domain/models/prompt_bank_item.dart';
 import '../../features/profile_prompts/presentation/pages/choose_prompt_page.dart';
 import '../../features/profile_completion/presentation/pages/profile_completion_page.dart';
@@ -73,6 +74,23 @@ import 'route_names.dart';
 /// "the app forgot where I was" even though the process never died.
 final GlobalKey<NavigatorState> rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'root');
+
+GoRouter? _appRouter;
+
+/// The one [GoRouter] [createRouter] built, reachable without a
+/// [BuildContext].
+///
+/// Services must never touch [Navigator] directly, but a push-notification
+/// tap has no context of its own — on a cold start from a terminated app the
+/// widget tree may not exist yet when `getInitialMessage()` resolves, and
+/// `rootNavigatorKey.currentContext` is still null at that point. Routing
+/// through the router instance keeps every navigation going through
+/// GoRouter's named routes while remaining callable from a plain service
+/// (see `NotificationNavigationService`).
+///
+/// Null only before [createRouter] has run — i.e. before `main.dart` builds
+/// the app. Callers must handle that (queue the intent) rather than assume.
+GoRouter? get appRouterOrNull => _appRouter;
 
 // TEMP DEBUG — remove before shipping.
 //
@@ -219,7 +237,7 @@ GoRouter createRouter(WidgetRef ref) {
     }
     previousOnError?.call(details);
   };
-  return GoRouter(
+  return _appRouter = GoRouter(
       navigatorKey: rootNavigatorKey,
       initialLocation: RouteNames.splash,
       debugLogDiagnostics: true,
@@ -446,6 +464,11 @@ GoRouter createRouter(WidgetRef ref) {
           path: RouteNames.shortlisted,
           name: RouteNames.shortlistedName,
           builder: (context, state) => const ShortlistedPage(),
+        ),
+        GoRoute(
+          path: RouteNames.profileViewers,
+          name: RouteNames.profileViewersName,
+          builder: (context, state) => const ProfileViewersPage(),
         ),
         GoRoute(
           path: RouteNames.profileDetail,

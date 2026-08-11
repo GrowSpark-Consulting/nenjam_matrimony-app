@@ -68,7 +68,11 @@ export class ShortlistService {
           type: 'SHORTLIST_ADDED',
           title: 'You were shortlisted',
           body: 'Someone added you to their shortlist.',
-          data: { actorId: userId, referenceId: created.id },
+          // `userId` duplicates `actorId` under the name the client's
+          // deep-link parser looks for first — it is the member who did the
+          // shortlisting, i.e. whose profile the tap opens. `referenceId`
+          // stays the Shortlist row id.
+          data: { actorId: userId, userId, referenceId: created.id },
         };
         await this.notifications.create(tx, notificationData);
       });

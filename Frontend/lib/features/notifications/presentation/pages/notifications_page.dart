@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/cards/feedback_cards.dart';
@@ -12,6 +10,7 @@ import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../providers/notification_providers.dart';
+import '../services/notification_navigation_service.dart';
 import '../utils/notification_time_format.dart';
 
 /// Notifications center screen — reached from the Discover bell (and the
@@ -205,30 +204,23 @@ class _NotificationTile extends ConsumerWidget {
     }
     if (!context.mounted) return;
 
-    // Only destinations that are safely reachable with no extra data are
-    // wired now — Interests/Shortlist/Matches/Chat screens are out of scope
-    // for this task (see notifications feature README-equivalent doc
-    // comment on NotificationType), so those show a lightweight "coming
-    // soon" notice instead of a fake/broken route. This switch is the one
-    // place a future route gets added, one line at a time.
-    switch (notification.type) {
-      case NotificationType.profileCompletionReminder:
-        context.push(RouteNames.profileCompletion);
-      case NotificationType.verificationUpdate:
-        context.push(RouteNames.verification);
-      case NotificationType.system:
-        break;
-      case NotificationType.interestReceived:
-      case NotificationType.interestAccepted:
-      case NotificationType.interestDeclined:
-      case NotificationType.profileLiked:
-      case NotificationType.profileViewed:
-      case NotificationType.shortlisted:
-      case NotificationType.newMatch:
-      case NotificationType.messageReceived:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.notificationsComingSoon)),
-        );
+    // Routes through the exact same service — and therefore the exact same
+    // destination table — a system-tray tap goes through, by handing it the
+    // payload shape a push `data` map arrives in (see
+    // NotificationEntity.toDeepLinkData). There is deliberately no
+    // per-screen navigation here: adding a type means adding one entry to
+    // NotificationDeepLinkKind, and both entry points pick it up.
+    final routed = ref
+        .read(notificationNavigationServiceProvider)
+        .handle(notification.toDeepLinkData());
+
+    // Types this build has no destination for (a backend event newer than
+    // the app) keep the honest "coming soon" notice rather than a silent
+    // no-op.
+    if (!routed && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.notificationsComingSoon)),
+      );
     }
   }
 

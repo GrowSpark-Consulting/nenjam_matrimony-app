@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -744,7 +745,7 @@ class _MessagesList extends ConsumerWidget {
           // A bubble is small, but a long-running thread can still get deep
           // — a wider cache extent keeps fast flings from ever showing an
           // unbuilt gap.
-          cacheExtent: 800,
+          scrollCacheExtent: const ScrollCacheExtent.pixels(800),
           itemCount: leadingCount + messages.length + trailingCount,
           itemBuilder: (context, index) {
             if (isLoadingOlder && index == 0) {

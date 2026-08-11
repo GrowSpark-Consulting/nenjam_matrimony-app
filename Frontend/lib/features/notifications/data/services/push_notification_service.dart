@@ -168,16 +168,29 @@ class PushNotificationService {
 
     _foregroundSub = FirebaseMessaging.onMessage.listen(_showForegroundMessage);
     _openedAppSub = FirebaseMessaging.onMessageOpenedApp.listen(
-      (message) => _onNotificationTap(message.data),
+      (message) => _onNotificationTap(_tapData(message)),
     );
 
     // The app was launched by tapping a notification while fully
     // terminated — onMessageOpenedApp never fires for that case.
+    //
+    // On some Android/FlutterFire combinations a launch tap arrives through
+    // BOTH paths. Both carry the same `RemoteMessage.messageId`, which
+    // [_tapData] forwards as `deliveryId` so the navigation service can
+    // recognise them as one tap and navigate once.
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
-      _onNotificationTap(initialMessage.data);
+      _onNotificationTap(_tapData(initialMessage));
     }
   }
+
+  /// [message]'s data map plus the delivery identity the tap handler needs
+  /// to deduplicate redeliveries of the same push. Never mutates
+  /// `message.data` itself.
+  static Map<String, dynamic> _tapData(RemoteMessage message) => {
+        ...message.data,
+        if (message.messageId != null) 'deliveryId': message.messageId!,
+      };
 
   Future<void> _registerCurrentToken() async {
     try {

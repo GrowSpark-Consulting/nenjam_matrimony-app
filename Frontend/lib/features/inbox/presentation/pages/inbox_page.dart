@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -92,7 +93,7 @@ class _MessagesTabView extends ConsumerWidget {
             // A conversation row is comfortably taller than the default
             // 250px lookahead — widen it so swiping/scrolling never briefly
             // shows an unbuilt gap on a fast fling.
-            cacheExtent: 600,
+            scrollCacheExtent: const ScrollCacheExtent.pixels(600),
             itemCount: conversations.length,
             separatorBuilder: (_, __) => const Divider(height: 1, indent: 90),
             itemBuilder: (context, index) {

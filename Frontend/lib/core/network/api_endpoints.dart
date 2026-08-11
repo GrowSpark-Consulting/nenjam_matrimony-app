@@ -76,6 +76,12 @@ abstract final class ApiEndpoints {
   static const String matchDecline = '/matches/decline';
   static const String matchViewed = '/matches/viewed';
 
+  // Real, implemented routes (backend/apps/api/src/modules/matches/
+  // controllers/matches.controller.ts). `matchProfileViews` lists who viewed
+  // me; `matchProfileView` records that I opened someone's profile.
+  static const String matchProfileViews = '/matches/profile-views';
+  static const String matchProfileView = '/matches/profile-view';
+
   // ─── Interests (proposed — no backend route defined yet; the
   // `interests` backend module exists but is an empty stub) ──────────
   static const String interestsReceived = '/interests/received';

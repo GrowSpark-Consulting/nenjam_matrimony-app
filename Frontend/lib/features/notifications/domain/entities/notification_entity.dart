@@ -94,6 +94,18 @@ class NotificationEntity {
   /// the UI doesn't know how to use yet.
   final Map<String, dynamic> metadata;
 
+  /// The backend's `type` string exactly as received (e.g.
+  /// `"SUBSCRIPTION_EXPIRING"`), before [type] collapsed it into a display
+  /// category.
+  ///
+  /// Tap routing needs the raw value: several distinct backend types map to
+  /// the same [NotificationType] for rendering purposes but open different
+  /// screens — SUBSCRIPTION_EXPIRING and SUBSCRIPTION_EXPIRED both render as
+  /// [NotificationType.system], yet one opens Premium plans and the other
+  /// the renewal checkout. Empty only for entities built without a wire
+  /// payload.
+  final String rawType;
+
   const NotificationEntity({
     required this.id,
     required this.type,
@@ -104,7 +116,19 @@ class NotificationEntity {
     this.actor,
     this.referenceId,
     this.metadata = const {},
+    this.rawType = '',
   });
+
+  /// The payload an in-app list tap hands to
+  /// `NotificationNavigationService`, in the same shape a push `data` map
+  /// arrives in — so both entry points go through one parser and one
+  /// routing switch.
+  Map<String, dynamic> toDeepLinkData() => {
+        ...metadata,
+        'type': rawType.isNotEmpty ? rawType : type.name,
+        if (referenceId != null) 'referenceId': referenceId,
+        if (actor != null) 'actorId': actor!.id,
+      };
 
   NotificationEntity copyWith({bool? isRead}) {
     return NotificationEntity(
@@ -117,6 +141,7 @@ class NotificationEntity {
       actor: actor,
       referenceId: referenceId,
       metadata: metadata,
+      rawType: rawType,
     );
   }
 }

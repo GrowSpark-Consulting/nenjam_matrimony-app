@@ -5330,6 +5330,48 @@ abstract class AppLocalizations {
   /// **'Failed to update shortlist. Please try again.'**
   String get shortlistActionFailed;
 
+  /// No description provided for @profileViewersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Viewers'**
+  String get profileViewersTitle;
+
+  /// No description provided for @profileViewersEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No one has viewed your profile yet'**
+  String get profileViewersEmptyTitle;
+
+  /// No description provided for @profileViewersEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete your profile and send interests to get noticed.'**
+  String get profileViewersEmptyMessage;
+
+  /// No description provided for @profileViewersViewedJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewed just now'**
+  String get profileViewersViewedJustNow;
+
+  /// No description provided for @profileViewersViewedMinutesAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewed {count,plural, =1{1 minute ago} other{{count} minutes ago}}'**
+  String profileViewersViewedMinutesAgo(int count);
+
+  /// No description provided for @profileViewersViewedHoursAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewed {count,plural, =1{1 hour ago} other{{count} hours ago}}'**
+  String profileViewersViewedHoursAgo(int count);
+
+  /// No description provided for @profileViewersViewedDaysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewed {count,plural, =1{1 day ago} other{{count} days ago}}'**
+  String profileViewersViewedDaysAgo(int count);
+
   /// No description provided for @privacyVisibilitySection.
   ///
   /// In en, this message translates to:

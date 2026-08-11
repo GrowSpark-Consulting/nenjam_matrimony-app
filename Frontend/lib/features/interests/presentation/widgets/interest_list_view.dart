@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/router/profile_navigation.dart';
@@ -104,7 +105,7 @@ class _InterestListViewState extends ConsumerState<InterestListView> {
           return ListView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
-            cacheExtent: 600,
+            scrollCacheExtent: const ScrollCacheExtent.pixels(600),
             itemCount: records.length,
             itemBuilder: (context, index) {
               final record = records[index];

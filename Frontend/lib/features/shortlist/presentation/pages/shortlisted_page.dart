@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -89,7 +90,7 @@ class _ShortlistedList extends StatelessWidget {
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
-      cacheExtent: 600,
+      scrollCacheExtent: const ScrollCacheExtent.pixels(600),
       itemCount: profiles.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {

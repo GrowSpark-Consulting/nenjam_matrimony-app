@@ -2814,6 +2814,53 @@ class AppLocalizationsTa extends AppLocalizations {
       'பட்டியலைப் புதுப்பிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
 
   @override
+  String get profileViewersTitle => 'சுயவிவரத்தைப் பார்த்தவர்கள்';
+
+  @override
+  String get profileViewersEmptyTitle =>
+      'இதுவரை யாரும் உங்கள் சுயவிவரத்தைப் பார்க்கவில்லை';
+
+  @override
+  String get profileViewersEmptyMessage =>
+      'உங்கள் சுயவிவரத்தை நிறைவு செய்து விருப்பங்களை அனுப்பினால் கவனிக்கப்படுவீர்கள்.';
+
+  @override
+  String get profileViewersViewedJustNow => 'இப்போது பார்த்தார்';
+
+  @override
+  String profileViewersViewedMinutesAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count நிமிடங்களுக்கு முன்',
+      one: '1 நிமிடத்திற்கு முன்',
+    );
+    return '$_temp0 பார்த்தார்';
+  }
+
+  @override
+  String profileViewersViewedHoursAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count மணி நேரத்திற்கு முன்',
+      one: '1 மணி நேரத்திற்கு முன்',
+    );
+    return '$_temp0 பார்த்தார்';
+  }
+
+  @override
+  String profileViewersViewedDaysAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count நாட்களுக்கு முன்',
+      one: '1 நாளுக்கு முன்',
+    );
+    return '$_temp0 பார்த்தார்';
+  }
+
+  @override
   String get privacyVisibilitySection => 'சுயவிவரக் காட்சி';
 
   @override

@@ -530,29 +530,44 @@ class _StoryBubble extends StatelessWidget {
                   ? null
                   : AppColors.dividerLight.withValues(alpha: 0.5),
             ),
+            // The white separator ring is a filled circle + padding rather
+            // than a stroked border: a `Border` insets the child while the
+            // clip path stays the full circle, which left un-covered gaps
+            // between the square image and the circular edge.
             child: Container(
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.backgroundLight, width: 2),
+                color: AppColors.backgroundLight,
               ),
-              clipBehavior: Clip.antiAlias,
-              child: Hero(
-                tag: profile == null
-                    ? 'story-photo-${story.id}'
-                    : 'profile-photo-discover-${profile.id}',
-                child: story.imageUrl.isEmpty
-                    ? _fallback()
-                    : (story.imageUrl.startsWith('http')
-                          ? Image.network(
-                              story.imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _fallback(),
-                            )
-                          : Image.asset(
-                              story.imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _fallback(),
-                            )),
+              child: ClipOval(
+                clipBehavior: Clip.antiAlias,
+                // Forces the image to tightly fill the clipped circle so
+                // BoxFit.cover always centre-crops with no empty areas.
+                child: SizedBox.expand(
+                  child: Hero(
+                    tag: profile == null
+                        ? 'story-photo-${story.id}'
+                        : 'profile-photo-discover-${profile.id}',
+                    child: story.imageUrl.isEmpty
+                        ? _fallback()
+                        : (story.imageUrl.startsWith('http')
+                              ? Image.network(
+                                  story.imageUrl,
+                                  fit: BoxFit.cover,
+                                  alignment: Alignment.center,
+                                  filterQuality: FilterQuality.medium,
+                                  errorBuilder: (_, __, ___) => _fallback(),
+                                )
+                              : Image.asset(
+                                  story.imageUrl,
+                                  fit: BoxFit.cover,
+                                  alignment: Alignment.center,
+                                  filterQuality: FilterQuality.medium,
+                                  errorBuilder: (_, __, ___) => _fallback(),
+                                )),
+                  ),
+                ),
               ),
             ),
           ),
