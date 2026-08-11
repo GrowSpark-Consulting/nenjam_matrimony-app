@@ -30,17 +30,38 @@ class LocalNotificationService {
     const iosInit = DarwinInitializationSettings();
     await _plugin.initialize(
       settings: const InitializationSettings(android: androidInit, iOS: iosInit),
-      onDidReceiveNotificationResponse: (response) {
-        final payload = response.payload;
-        if (payload == null || payload.isEmpty) return;
-        final decoded = jsonDecode(payload);
-        if (decoded is Map<String, dynamic>) onTap(decoded);
-      },
+      onDidReceiveNotificationResponse: (response) =>
+          _dispatchPayload(response.payload, onTap),
     );
     await _plugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(_channel);
+
+    // A notification this app rendered itself (i.e. one shown while the app
+    // was in the foreground) stays in the tray after the process is killed.
+    // Tapping it then cold-starts the app, and neither
+    // `onDidReceiveNotificationResponse` nor FCM's `getInitialMessage()`
+    // fires for it — `getNotificationAppLaunchDetails` is the only way that
+    // tap is ever observed, so without this the deep link is silently lost.
+    final launch = await _plugin.getNotificationAppLaunchDetails();
+    if (launch?.didNotificationLaunchApp ?? false) {
+      _dispatchPayload(launch!.notificationResponse?.payload, onTap);
+    }
+  }
+
+  void _dispatchPayload(
+    String? payload,
+    void Function(Map<String, dynamic> data) onTap,
+  ) {
+    if (payload == null || payload.isEmpty) return;
+    try {
+      final decoded = jsonDecode(payload);
+      if (decoded is Map<String, dynamic>) onTap(decoded);
+    } on FormatException {
+      // A malformed payload must never take down the tap handler (or, via
+      // initialize(), the whole push setup).
+    }
   }
 
   /// Displays [message] as a local heads-up notification. A no-op if the
@@ -62,7 +83,13 @@ class LocalNotificationService {
         ),
         iOS: const DarwinNotificationDetails(),
       ),
-      payload: jsonEncode(message.data),
+      // The delivery id rides along so a tap on this notification
+      // deduplicates against the same message arriving through FCM's own tap
+      // callbacks (see PushNotificationService._tapData).
+      payload: jsonEncode({
+        ...message.data,
+        if (message.messageId != null) 'deliveryId': message.messageId!,
+      }),
     );
   }
 

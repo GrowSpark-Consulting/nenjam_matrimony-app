@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +10,7 @@ import '../../../../core/widgets/relationship_intelligence/psychology_section.da
 import '../../../../l10n/app_localizations.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../../profile/presentation/widgets/partner_preference_card.dart';
+import '../../../profile_views/presentation/providers/profile_views_provider.dart';
 import '../../../profile/presentation/widgets/photo_gallery_card.dart';
 import '../../domain/entities/profile_detail_entity.dart';
 import '../providers/profile_detail_providers.dart';
@@ -28,7 +31,7 @@ import '../widgets/verification_trust_section.dart';
 
 /// Read-only detail view of another member's profile — opened by tapping
 /// a profile card from Discover, Matches, Search, or Similar Profiles.
-class ProfileDetailPage extends ConsumerWidget {
+class ProfileDetailPage extends ConsumerStatefulWidget {
   final DiscoveryProfileEntity profile;
   /// The exact Hero tag the tapped card used, when it used a scoped one
   /// (Discover/Matches) — see `ProfileDetailArgs`'s doc comment for why.
@@ -47,7 +50,27 @@ class ProfileDetailPage extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileDetailPage> createState() => _ProfileDetailPageState();
+}
+
+class _ProfileDetailPageState extends ConsumerState<ProfileDetailPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Opening someone's profile is what "viewed" means — this is the single
+    // place the app records it, so every entry point (Discover, Matches,
+    // Search, Similar Profiles, a notification tap) is counted exactly once
+    // per open. Best-effort and fire-and-forget: `recordProfileView` never
+    // throws, and the server itself throttles how often a view turns into a
+    // notification for the viewed member.
+    unawaited(recordProfileView(ref, widget.profile.id));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = widget.profile;
+    final heroTag = widget.heroTag;
+    final isBlocked = widget.isBlocked;
     final detailAsync = ref.watch(profileDetailProvider(profile));
 
     return Scaffold(

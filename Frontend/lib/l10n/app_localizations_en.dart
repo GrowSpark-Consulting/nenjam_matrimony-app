@@ -2774,6 +2774,52 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to update shortlist. Please try again.';
 
   @override
+  String get profileViewersTitle => 'Profile Viewers';
+
+  @override
+  String get profileViewersEmptyTitle => 'No one has viewed your profile yet';
+
+  @override
+  String get profileViewersEmptyMessage =>
+      'Complete your profile and send interests to get noticed.';
+
+  @override
+  String get profileViewersViewedJustNow => 'Viewed just now';
+
+  @override
+  String profileViewersViewedMinutesAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count minutes ago',
+      one: '1 minute ago',
+    );
+    return 'Viewed $_temp0';
+  }
+
+  @override
+  String profileViewersViewedHoursAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hours ago',
+      one: '1 hour ago',
+    );
+    return 'Viewed $_temp0';
+  }
+
+  @override
+  String profileViewersViewedDaysAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days ago',
+      one: '1 day ago',
+    );
+    return 'Viewed $_temp0';
+  }
+
+  @override
   String get privacyVisibilitySection => 'Profile Visibility';
 
   @override

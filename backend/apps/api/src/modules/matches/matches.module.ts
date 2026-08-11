@@ -9,10 +9,12 @@ import { FeedService } from './services/feed.service';
 import { SearchService } from './services/search.service';
 import { PreferencesService } from './services/preferences.service';
 import { ShortlistService } from './services/shortlist.service';
+import { ProfileViewService } from './services/profile-view.service';
 import { ProfileFeedMapper } from './mappers/profile-feed.mapper';
 import { FeedRepository } from './repositories/feed.repository';
 import { PreferenceRepository } from './repositories/preference.repository';
 import { ShortlistRepository } from './repositories/shortlist.repository';
+import { ProfileViewRepository } from './repositories/profile-view.repository';
 import { RECOMMENDATION_SERVICE } from './recommendation/recommendation.service';
 import { FilteredFeedStrategy } from './recommendation/filtered-feed.strategy';
 import { ProgressiveFallbackStrategy } from './recommendation/progressive-fallback.strategy';
@@ -41,10 +43,12 @@ import { PostgresSearchStrategy } from './search/postgres-search.strategy';
     SearchService,
     PreferencesService,
     ShortlistService,
+    ProfileViewService,
     ProfileFeedMapper,
     FeedRepository,
     PreferenceRepository,
     ShortlistRepository,
+    ProfileViewRepository,
     // Strategy bindings — the only lines that change when the algorithm
     // behind the feed/search evolves. ProgressiveFallbackStrategy is Tier 1
     // (FilteredFeedStrategy's exact `buildFeedWhere` query) plus progressive

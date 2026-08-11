@@ -92,7 +92,27 @@ void openProfileDetail(
   String? heroTag,
   bool isBlocked = false,
 }) {
-  context.push(
+  openProfileDetailOnRouter(
+    GoRouter.of(context),
+    profile,
+    heroTag: heroTag,
+    isBlocked: isBlocked,
+  );
+}
+
+/// Context-free variant of [openProfileDetail], for callers that have a
+/// [GoRouter] but no [BuildContext] — specifically
+/// `NotificationNavigationService`, which resolves a push tap into a profile
+/// while the widget tree may not exist yet (cold start from a terminated
+/// app). Kept in this file, and used by [openProfileDetail] itself, so the
+/// route name and `extra` shape still live in exactly one place.
+void openProfileDetailOnRouter(
+  GoRouter router,
+  DiscoveryProfileEntity profile, {
+  String? heroTag,
+  bool isBlocked = false,
+}) {
+  router.push(
     RouteNames.profileDetail,
     extra: ProfileDetailArgs(profile, heroTag: heroTag, isBlocked: isBlocked),
   );

@@ -151,7 +151,15 @@ describe('InterestsService.send', () => {
       expect.objectContaining({
         userId: 'receiver-1',
         type: 'INTEREST_RECEIVED',
-        data: { actorId: 'sender-1', referenceId: 'int-1' },
+        // `userId`/`interestId` are the aliases the mobile client's
+        // deep-link parser reads first; `actorId`/`referenceId` are the
+        // generic pipeline fields. Both spellings must ship.
+        data: {
+          actorId: 'sender-1',
+          userId: 'sender-1',
+          referenceId: 'int-1',
+          interestId: 'int-1',
+        },
       }),
     );
     expect(notifications.invalidateUnread).toHaveBeenCalledWith('receiver-1');

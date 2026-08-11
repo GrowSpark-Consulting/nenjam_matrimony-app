@@ -10,7 +10,7 @@ import '../../data/services/local_notification_service.dart';
 import '../../data/services/push_notification_service.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../../domain/repositories/notification_repository.dart';
-import '../utils/notification_navigation.dart';
+import '../services/notification_navigation_service.dart';
 
 /// Real backend, live against the `notifications` module (GET /notifications,
 /// GET /notifications/unread-count, PATCH /:id/read, PATCH /read-all). Swapped
@@ -25,11 +25,16 @@ final localNotificationServiceProvider = Provider<LocalNotificationService>(
 );
 
 final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
+  // Every tap — system tray (background/terminated) and locally-shown
+  // foreground notifications alike — funnels into the same service the
+  // in-app Notification Center list uses, so a given notification type can
+  // only ever have one destination.
+  final navigation = ref.watch(notificationNavigationServiceProvider);
   return PushNotificationService(
     notificationRepository: ref.watch(notificationRepositoryProvider),
     localNotificationService: ref.watch(localNotificationServiceProvider),
     permissionService: ref.watch(appPermissionServiceProvider),
-    onNotificationTap: navigateForNotificationData,
+    onNotificationTap: navigation.handle,
   );
 });
 

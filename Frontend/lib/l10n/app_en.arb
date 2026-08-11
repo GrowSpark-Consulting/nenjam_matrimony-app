@@ -990,6 +990,22 @@
   "shortlistEmptyMessage": "Save profiles you're interested in and find them here.",
   "shortlistExploreProfiles": "Explore Profiles",
   "shortlistActionFailed": "Failed to update shortlist. Please try again.",
+  "profileViewersTitle": "Profile Viewers",
+  "profileViewersEmptyTitle": "No one has viewed your profile yet",
+  "profileViewersEmptyMessage": "Complete your profile and send interests to get noticed.",
+  "profileViewersViewedJustNow": "Viewed just now",
+  "profileViewersViewedMinutesAgo": "Viewed {count,plural, =1{1 minute ago} other{{count} minutes ago}}",
+  "@profileViewersViewedMinutesAgo": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "profileViewersViewedHoursAgo": "Viewed {count,plural, =1{1 hour ago} other{{count} hours ago}}",
+  "@profileViewersViewedHoursAgo": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "profileViewersViewedDaysAgo": "Viewed {count,plural, =1{1 day ago} other{{count} days ago}}",
+  "@profileViewersViewedDaysAgo": {
+    "placeholders": { "count": { "type": "int" } }
+  },
   "privacyVisibilitySection": "Profile Visibility",
   "privacyPremiumOnlyTitle": "Show Profile to Premium Members Only",
   "privacyPremiumOnlySubtitle": "Only premium members can view your full profile",
