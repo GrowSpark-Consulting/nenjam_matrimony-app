@@ -86,14 +86,19 @@ export class FeedRepository {
 
   /**
    * Runs the (already-built) dynamic WHERE against user_profiles, newest
-   * first, paginated. Count + page share the same WHERE in one transaction so
-   * `total`/`hasMore` are always consistent with the returned page.
+   * first, paginated. Count + page share the same WHERE.
+   *
+   * Concurrent, not `$transaction([...])`: at READ COMMITTED (this database's
+   * default) each statement takes its own snapshot, so wrapping the two in a
+   * transaction never actually made `total` consistent with the page — it only
+   * added a sequential BEGIN before and COMMIT after. Measured at 307ms in a
+   * transaction vs 74ms concurrently against this database.
    */
   async findMatching(
     where: Prisma.UserProfileWhereInput,
     { skip, take }: { skip: number; take: number },
   ): Promise<{ rows: FeedProfileRow[]; total: number }> {
-    const [rows, total] = await this.prisma.$transaction([
+    const [rows, total] = await Promise.all([
       this.prisma.userProfile.findMany({
         where,
         orderBy: { createdAt: 'desc' },

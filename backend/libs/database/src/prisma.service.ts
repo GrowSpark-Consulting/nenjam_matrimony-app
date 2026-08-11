@@ -5,12 +5,91 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
+import { Pool, type PoolClient } from 'pg';
 import { AppConfigService } from '@app/config';
 import { PrismaClient } from '../generated/client';
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Socket-level failures where the connection never became usable, so nothing
+ *  was sent to the server. Deliberately excludes "timeout exceeded when trying
+ *  to connect", which means the pool is saturated — retrying that just delays a
+ *  real capacity problem past Prisma's transaction maxWait. */
+const TRANSIENT_CONNECT_ERRORS = new Set([
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'ETIMEDOUT',
+  'EPIPE',
+]);
+
+function isTransientConnectError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const code = (error as NodeJS.ErrnoException).code;
+  if (typeof code === 'string' && TRANSIENT_CONNECT_ERRORS.has(code)) {
+    return true;
+  }
+  return error.message.startsWith('Connection terminated');
+}
+
+/**
+ * Wraps a Pool so that *acquiring* a connection is retried, while the SQL that
+ * follows is not.
+ *
+ * That boundary is the point. Neon suspends an idle compute, and the first
+ * connection attempt after a wake can be reset mid-handshake (observed:
+ * `read ECONNRESET` on a cold pool). Retrying there is free of side effects
+ * because no statement has reached the server yet. Retrying a query that was
+ * already dispatched is a different matter — the server may have applied a
+ * write and lost only the reply, so a retry could duplicate it. This never
+ * does that.
+ *
+ * `pool.query()` internally calls `this.connect(...)`, and because the adapter
+ * holds this proxy, that internal call resolves through the trap too — so
+ * plain queries and transactions both get the retry, and neither gets its
+ * statements re-sent.
+ */
+export function withConnectRetry(pool: Pool, logger: Logger): Pool {
+  const MAX_ATTEMPTS = 3;
+  const RETRY_DELAY_MS = 250;
+
+  const acquire = async (): Promise<PoolClient> => {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await pool.connect();
+      } catch (error) {
+        if (attempt >= MAX_ATTEMPTS || !isTransientConnectError(error)) throw error;
+        logger.warn(
+          `Database connection attempt ${attempt}/${MAX_ATTEMPTS} was dropped (${
+            error instanceof Error ? error.message : String(error)
+          }); retrying.`,
+        );
+        await sleep(RETRY_DELAY_MS * attempt);
+      }
+    }
+  };
+
+  return new Proxy(pool, {
+    get(target, prop) {
+      if (prop !== 'connect') {
+        // Read against `target` so getters (idleCount, totalCount, ...) run on
+        // the real pool. Methods come back unbound either way, so when they are
+        // invoked on this proxy their internal `this.connect(...)` is trapped.
+        return Reflect.get(target, prop, target);
+      }
+      return function connect(
+        cb?: (err?: Error, client?: PoolClient, release?: (err?: Error) => void) => void,
+      ) {
+        if (typeof cb !== 'function') return acquire();
+        acquire().then(
+          (client) => cb(undefined, client, client.release.bind(client)),
+          (error: Error) => cb(error, undefined, () => {}),
+        );
+        return undefined;
+      };
+    },
+  });
 }
 
 @Injectable()
@@ -46,23 +125,45 @@ export class PrismaService
       // error instead of hanging past Dio's client-side timeout.
       connectionTimeoutMillis: 10_000,
       statement_timeout: 10_000,
-      // node-postgres defaults to idleTimeoutMillis: 10_000 with no
-      // minimum pool size, so it destroys every idle client 10s after the
-      // last query and reopens a fresh TCP+TLS connection to Neon (~2-3s
-      // from this host) on the next one. Real usage never fires requests
-      // faster than 10s apart — a user takes tens of seconds to fill in a
-      // registration step — so in practice almost every request was
-      // paying that reconnect cost, which is where the reported 5+s
-      // "Continue" delay came from (measured: cold connect ~1.9-2.8s vs
-      // ~300ms on an already-open connection). `min: 1` keeps one
-      // connection permanently warm so only a genuinely long idle period
-      // (server just started, or no traffic for `idleTimeoutMillis`) pays
-      // the reconnect cost.
-      min: 1,
-      idleTimeoutMillis: 300_000,
+      // node-postgres defaults to idleTimeoutMillis: 10_000 with no minimum
+      // pool size, so it destroys every idle client 10s after the last query
+      // and reopens a fresh TCP+TLS connection on the next one. Real usage
+      // never fires requests faster than 10s apart — a user takes tens of
+      // seconds to fill in a registration step — so in practice almost every
+      // request paid that reconnect cost, which is where the reported 5+s
+      // "Continue" delay came from. We therefore hold idle connections open
+      // for a while, but strictly less time than the server will tolerate.
+      //
+      // `min` MUST stay 0. pg-pool only arms the idle timer when the pool is
+      // above `min` (`if (idleTimeoutMillis && this._isAboveMin())`), so
+      // `min: 1` meant the last connection got no idle timer at all and was
+      // held open FOREVER. Whenever that socket then died — a laptop
+      // suspending, a network change, a server-side restart — the pool never
+      // learned, and handed the dead socket to the next request, which failed
+      // with "Connection terminated unexpectedly". Bounding the idle time is
+      // what fixes that; the exact bound is a latency trade.
+      //
+      // 4 minutes, chosen from measurement rather than taste. A pooled
+      // connection here survives at least 30 minutes idle (tested: 135ms after
+      // 900s, 240ms after 1800s), while reconnecting after a long quiet spell
+      // costs ~850ms, so closing too eagerly makes the first request after
+      // every lull noticeably slower. Four minutes keeps the connection warm
+      // across an ordinary pause in activity, still lets go well inside the
+      // conventional five-minute serverless suspend window, and never lets a
+      // connection sit unbounded again.
+      min: 0,
+      idleTimeoutMillis: 240_000,
+      // Backstop for a connection that stays busy enough to dodge the idle
+      // timer but goes stale behind Neon's pooler: recycle it every 30min.
+      maxLifetimeSeconds: 1_800,
+      // TCP keepalives so an idle-but-not-yet-expired connection is not
+      // silently dropped by NAT//firewall on the long path to the region.
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10_000,
     });
+    const resilientPool = withConnectRetry(pool, new Logger(PrismaService.name));
     super({
-      adapter: new PrismaPg(pool),
+      adapter: new PrismaPg(resilientPool),
       // Prisma's defaults (maxWait 2s, timeout 5s) are too tight for a managed
       // Postgres reached over the public internet, and the failure is
       // deterministic rather than flaky: opening a fresh connection to Neon
@@ -84,6 +185,18 @@ export class PrismaService
         { emit: 'stdout', level: 'warn' },
         { emit: 'stdout', level: 'error' },
       ],
+    });
+
+    // pg-pool reports a *background* failure (an idle client whose socket the
+    // server closed) by `pool.emit('error', ...)`. EventEmitter throws when
+    // 'error' has no listener, so without this a routine Neon suspend would
+    // surface as an uncaught exception and take the process down rather than
+    // discarding one connection. The client is already removed from the pool
+    // by the time this fires, so logging is the correct response.
+    pool.on('error', (error: Error) => {
+      this.logger.warn(
+        `Idle database connection dropped (${error.message}); it has been discarded from the pool.`,
+      );
     });
   }
 

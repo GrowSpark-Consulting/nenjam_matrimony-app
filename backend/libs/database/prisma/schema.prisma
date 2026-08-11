@@ -172,6 +172,13 @@ model UserProfile {
   @@index([currentCity])
   @@index([currentState])
   @@index([gender, religion, caste, annualIncomeLakhs])
+  // Serves the Discover/Search feed, which is always "opposite gender, newest
+  // first, paginated". Without the createdAt column here the planner filters on
+  // gender and then SORTS every matching profile on every page request
+  // (confirmed with EXPLAIN: `Sort Key: created_at DESC` above an index scan on
+  // the composite above). With it the scan comes back already ordered, so a
+  // page reads only the rows it returns however large the table grows.
+  @@index([gender, createdAt])
   @@map("user_profiles")
 }
 
@@ -335,6 +342,11 @@ model ProfileView {
   @@index([viewedUserId])
   @@index([viewerId])
   @@index([viewedAt])
+  // "Who viewed me" groups this table by viewer for one viewed user. This table
+  // grows fastest of any (a row per profile open), so let that grouping run off
+  // an ordered index scan instead of gathering and hashing the viewed user's
+  // whole view history.
+  @@index([viewedUserId, viewerId])
   @@map("profile_views")
 }
 
@@ -573,6 +585,14 @@ model ChatMessage {
   @@index([createdAt])
   // Serve the reconnect-replay query (undelivered messages addressed to a user).
   @@index([roomId, status])
+  // Serves chat history paging. EXPLAIN showed the planner scanning the GLOBAL
+  // `created_at` index backward with `room_id` as a mere Filter — i.e. walking
+  // the newest messages of the whole table and discarding other rooms' until it
+  // collected a page. That is fine with a handful of rooms and quadratic-ish in
+  // practice as rooms multiply. Leading with roomId makes it an Index Cond and
+  // the createdAt column keeps the page ordered, so a 30-message page reads 30
+  // rows.
+  @@index([roomId, createdAt])
   @@index([replyToMessageId])
   @@map("chat_messages")
 }
