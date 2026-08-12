@@ -48,22 +48,20 @@ export class ElasticsearchService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  // In development, Elasticsearch (search/discovery indexing) is a
-  // nice-to-have, not a hard dependency — a developer without it running
-  // locally shouldn't be blocked from starting the API. Production keeps
-  // the original fail-fast behavior.
+  // Elasticsearch is optional infrastructure in every environment, not just
+  // development: no live feature depends on it today (search runs on
+  // PostgresSearchStrategy — see apps/api's MatchesModule; no
+  // ElasticsearchSearchStrategy exists yet). An absent or unreachable
+  // cluster must never crash-loop the API, worker, or scheduler, so this no
+  // longer branches on NODE_ENV. Revisit this once a real feature is built
+  // on ElasticsearchService.getClient() and a genuine boot dependency
+  // exists.
   private handleStartupFailure(error: unknown): void {
     const description = this.describeConnectionError(error);
 
-    if (this.configService.isDevelopment) {
-      this.logger.warn(
-        `Elasticsearch unavailable — continuing without it (development only): ${description}`,
-      );
-      return;
-    }
-
-    this.logger.error(`Elasticsearch connection failed: ${description}`);
-    throw error;
+    this.logger.warn(
+      `Elasticsearch unavailable — continuing without it: ${description}`,
+    );
   }
 
   async onModuleDestroy(): Promise<void> {

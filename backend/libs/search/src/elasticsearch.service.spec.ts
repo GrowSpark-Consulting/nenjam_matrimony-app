@@ -66,58 +66,58 @@ describe('ElasticsearchService', () => {
     logSpy.mockRestore();
   });
 
-  it('classifies a stopped/unreachable server as a connection failure', async () => {
+  it('classifies a stopped/unreachable server as a connection failure, without aborting startup', async () => {
     const client = buildMockClient();
     const error = Object.assign(new Error('Connection Error'), {
       name: 'ConnectionError',
     });
     client.ping.mockRejectedValue(error);
     const service = await buildService(client);
-    const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
 
-    await expect(service.onModuleInit()).rejects.toBe(error);
+    await expect(service.onModuleInit()).resolves.toBeUndefined();
     expect(
-      errorSpy.mock.calls.map((call) => String(call[0])).join('\n'),
+      warnSpy.mock.calls.map((call) => String(call[0])).join('\n'),
     ).toContain('unreachable');
 
-    errorSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 
-  it('classifies an invalid host from the ConnectionError message', async () => {
+  it('classifies an invalid host from the ConnectionError message, without aborting startup', async () => {
     const client = buildMockClient();
     const error = Object.assign(new Error('getaddrinfo ENOTFOUND bogus-host'), {
       name: 'ConnectionError',
     });
     client.ping.mockRejectedValue(error);
     const service = await buildService(client, 'http://bogus-host:9200');
-    const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
 
-    await expect(service.onModuleInit()).rejects.toBe(error);
+    await expect(service.onModuleInit()).resolves.toBeUndefined();
     expect(
-      errorSpy.mock.calls.map((call) => String(call[0])).join('\n'),
+      warnSpy.mock.calls.map((call) => String(call[0])).join('\n'),
     ).toContain('Invalid Elasticsearch host');
 
-    errorSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 
-  it('classifies a TimeoutError distinctly from a connection failure', async () => {
+  it('classifies a TimeoutError distinctly from a connection failure, without aborting startup', async () => {
     const client = buildMockClient();
     const error = Object.assign(new Error('Request timed out'), {
       name: 'TimeoutError',
     });
     client.ping.mockRejectedValue(error);
     const service = await buildService(client);
-    const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
 
-    await expect(service.onModuleInit()).rejects.toBe(error);
+    await expect(service.onModuleInit()).resolves.toBeUndefined();
     expect(
-      errorSpy.mock.calls.map((call) => String(call[0])).join('\n'),
+      warnSpy.mock.calls.map((call) => String(call[0])).join('\n'),
     ).toContain('timed out');
 
-    errorSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 
-  it('classifies a 401/403 ResponseError as an authentication failure', async () => {
+  it('classifies a 401/403 ResponseError as an authentication failure, without aborting startup', async () => {
     const client = buildMockClient();
     const error = Object.assign(new Error('Response Error'), {
       name: 'ResponseError',
@@ -125,14 +125,42 @@ describe('ElasticsearchService', () => {
     });
     client.ping.mockRejectedValue(error);
     const service = await buildService(client);
-    const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
 
-    await expect(service.onModuleInit()).rejects.toBe(error);
+    await expect(service.onModuleInit()).resolves.toBeUndefined();
     expect(
-      errorSpy.mock.calls.map((call) => String(call[0])).join('\n'),
+      warnSpy.mock.calls.map((call) => String(call[0])).join('\n'),
     ).toContain('Authentication failed');
 
-    errorSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it('does not abort startup even when NODE_ENV is production', async () => {
+    const client = buildMockClient();
+    const error = Object.assign(new Error('Connection Error'), {
+      name: 'ConnectionError',
+    });
+    client.ping.mockRejectedValue(error);
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ElasticsearchService,
+        { provide: ELASTICSEARCH_CLIENT, useValue: client },
+        {
+          provide: AppConfigService,
+          useValue: {
+            isDevelopment: false,
+            isProduction: true,
+            elasticsearch: { node: 'http://localhost:9200' },
+          },
+        },
+      ],
+    }).compile();
+    const service = module.get(ElasticsearchService);
+    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    await expect(service.onModuleInit()).resolves.toBeUndefined();
+
+    warnSpy.mockRestore();
   });
 
   it('closes the client on module destroy', async () => {
