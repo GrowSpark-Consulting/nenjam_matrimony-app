@@ -39,6 +39,9 @@
     "prisma:db:push": "prisma db push",
     "prisma:studio": "prisma studio",
     "db:seed": "ts-node libs/database/src/seed.ts",
+    "seed:fake": "ts-node libs/database/src/seed-fake.ts",
+    "verify:fake-seed": "ts-node libs/database/src/verify-fake-seed.ts",
+    "unseed:fake": "ts-node libs/database/src/unseed-fake.ts",
     "verify:email": "ts-node -r tsconfig-paths/register scripts/verify-email.ts"
   },
   "dependencies": {
