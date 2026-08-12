@@ -1,4 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Network access for Firebase Auth, Google Sign-In, the NestJS API and
+         image loading. Flutter's template declares this only in the debug and
+         profile manifests (they need it for the VM service), which leaves a
+         RELEASE build with no INTERNET permission at all — every network call,
+         Google Sign-In included, fails silently on a release APK. Declared
+         here so it is present in every build type. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Camera capture for profile/chat photos (Profile > Camera, Chat > Camera). -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <!-- Runtime notification permission on Android 13+ (API 33); requested only

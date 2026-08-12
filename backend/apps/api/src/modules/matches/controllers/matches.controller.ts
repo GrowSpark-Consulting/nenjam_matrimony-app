@@ -9,6 +9,8 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { READ_LIMIT, WRITE_LIMIT } from '../../../throttling';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -64,6 +66,9 @@ export class MatchesController {
     private readonly profileViewService: ProfileViewService,
   ) {}
 
+  // Interest spam is the abuse this guards against: without a limit a script
+  // can send one to every member on the platform in a few seconds.
+  @Throttle(WRITE_LIMIT)
   @Post('interest')
   @ApiTags('Interests')
   @ApiOperation({
@@ -122,6 +127,7 @@ export class MatchesController {
     return this.shortlistService.list(userId, pagination);
   }
 
+  @Throttle(WRITE_LIMIT)
   @Post('shortlist')
   @ApiTags('Shortlist')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -173,6 +179,9 @@ export class MatchesController {
     return this.profileViewService.listViewers(userId, pagination);
   }
 
+  // Fires on every profile open, so this gets the read tier rather than the
+  // write one — it is frequent by design, not abusive by nature.
+  @Throttle(READ_LIMIT)
   @Post('profile-view')
   @ApiTags('Profile Views')
   @HttpCode(HttpStatus.NO_CONTENT)

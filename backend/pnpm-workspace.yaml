@@ -11,3 +11,24 @@ allowBuilds:
   prisma: true
   protobufjs: false
   unrs-resolver: true
+overrides:
+  # @nestjs/platform-express pulls its own multer 2.1.1, which is the copy that
+  # actually handles photo uploads — our direct dependency on 2.2.0 does not
+  # dedupe with it. 2.1.1 is affected by GHSA "Denial of Service via incomplete
+  # cleanup of aborted uploads": a client that opens an upload and disconnects
+  # mid-stream leaves temporary state behind, and repeating that exhausts the
+  # process. That is the one advisory in this tree on the live request path, so
+  # it is forced to the patched line everywhere.
+  #
+  # The remaining audit findings are deliberately NOT overridden. All of them
+  # sit in tooling rather than in a served request:
+  #   fast-uri, valibot, @hono/node-server  -> prisma's dev CLI (@prisma/dev)
+  #   js-yaml                               -> @nestjs/swagger, and the OpenAPI
+  #                                            document is built in development
+  #                                            only (see apps/api/src/main.ts)
+  #   uuid                                  -> firebase-admin > gaxios, and the
+  #                                            advisory needs a caller-supplied
+  #                                            buffer, which gaxios does not do
+  # Forcing versions on Prisma's own toolchain risks breaking generate/migrate
+  # for no runtime gain, so they are left to upstream.
+  multer: '>=2.2.0'

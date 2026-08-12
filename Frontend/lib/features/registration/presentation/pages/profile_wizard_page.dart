@@ -42,6 +42,13 @@ class ProfileWizardPage extends ConsumerStatefulWidget {
   ConsumerState<ProfileWizardPage> createState() => _ProfileWizardPageState();
 }
 
+/// Usable body height below which the wizard drops its progress chrome —
+/// see the comment in [_ProfileWizardPageState.build]. Sits above the
+/// tightest viewport that still fits everything (a 320x568 phone leaves
+/// 490dp) and below a landscape phone (~242dp) or a portrait one with the
+/// keyboard raised (~235dp).
+const double _compactChromeThreshold = 420;
+
 class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   bool _isSaving = false;
 
@@ -344,18 +351,32 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       },
       child: Scaffold(
         body: SafeArea(
-          child: Column(
-            children: [
-              RegistrationJourneyHeader(
-                stepIndex: stepIndex,
-                totalSteps: ProfileDraft.totalSteps,
-              ),
-              RegistrationMotivationCaption(
-                stepIndex: stepIndex,
-                caption: motivationCaption(l10n, stepIndex),
-              ),
-              const SizedBox(height: 12),
-              Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // The journey header and motivation caption are progress
+              // chrome, not input. Together with the sticky action bar they
+              // occupy ~270dp of unshrinkable height, which does not fit a
+              // landscape phone (~242dp usable) or a portrait one with the
+              // keyboard open (~235dp): Expanded collapsed to zero and the
+              // Column still overflowed, by up to 168dp. Below the
+              // threshold they step aside so the field being edited and the
+              // Continue button keep their space.
+              final compact =
+                  constraints.maxHeight < _compactChromeThreshold;
+              return Column(
+                children: [
+                  if (!compact) ...[
+                    RegistrationJourneyHeader(
+                      stepIndex: stepIndex,
+                      totalSteps: ProfileDraft.totalSteps,
+                    ),
+                    RegistrationMotivationCaption(
+                      stepIndex: stepIndex,
+                      caption: motivationCaption(l10n, stepIndex),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  Expanded(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 400),
                   transitionBuilder: (child, animation) => FadeTransition(
@@ -375,6 +396,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 ),
               ),
               RegistrationStickyBottomBar(
+                compact: compact,
                 milestoneLabel: milestoneLabel,
                 estimatedTimeLabel: estimatedTimeRemainingLabel(
                   l10n,
@@ -416,8 +438,10 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                         ? l10n.registrationVerifyMobileRequiredHint
                         : l10n.registrationRequiredFieldsHint)
                     : null,
-              ),
-            ],
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),

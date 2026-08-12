@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Put, Query, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser, FirebaseAuthGuard } from '@app/common';
+import { READ_LIMIT, SEARCH_LIMIT } from '../../../throttling';
 import { FeedService } from '../services/feed.service';
 import { SearchService } from '../services/search.service';
 import { PreferencesService } from '../services/preferences.service';
@@ -24,6 +26,11 @@ export class DiscoverController {
 
   // Preference-filtered feed. Same contract as Phase 1 — Flutter is unchanged;
   // the backend alone now decides which profiles match.
+  //
+  // Rate limited harder than the global default: this endpoint returns other
+  // members' profile data a page at a time, so it is the cheapest way to
+  // enumerate the entire userbase.
+  @Throttle(READ_LIMIT)
   @Get()
   getFeed(
     @CurrentUser('id') userId: string,
@@ -53,6 +60,10 @@ export class DiscoverController {
     return this.preferencesService.update(userId, dto);
   }
 
+  // Tightest read limit in the app: arbitrary query text against every
+  // member's profile is both the most expensive call here and the most
+  // directly useful one to someone harvesting data.
+  @Throttle(SEARCH_LIMIT)
   @Get('search')
   search(
     @CurrentUser('id') userId: string,
