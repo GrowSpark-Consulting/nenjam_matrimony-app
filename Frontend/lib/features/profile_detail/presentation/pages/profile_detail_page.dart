@@ -160,17 +160,76 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
   Future<void> _scrollToSection(int index) async {
     setState(() => _selectedTab = index);
     _isProgrammaticScroll = true;
-    final sectionContext = _sectionKeys[index].currentContext;
-    if (sectionContext != null) {
-      await Scrollable.ensureVisible(
-        sectionContext,
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeOutCubic,
-        alignment: 0.05,
-      );
+    try {
+      await _revealSection(index);
+      _revealActiveTab(index);
+    } finally {
+      if (mounted) _isProgrammaticScroll = false;
     }
-    _revealActiveTab(index);
-    if (mounted) _isProgrammaticScroll = false;
+  }
+
+  /// Scrolls the page to section [index], building that section first when
+  /// it is not currently mounted.
+  ///
+  /// The sections live in a [SliverList], so only the handful near the
+  /// viewport exist as elements at any moment — every other section's
+  /// [GlobalKey] has a null `currentContext`, and [Scrollable.ensureVisible]
+  /// has nothing to aim at. This used to be a bare `if (context != null)`
+  /// around the ensureVisible call, which meant tapping *any* tab whose
+  /// section was off screen silently did nothing at all: only "About"
+  /// (mounted at rest) ever worked. Walk the viewport towards the target in
+  /// bounded steps until the sliver builds it, then hand off to
+  /// ensureVisible for the final, correctly-aligned landing.
+  ///
+  /// The walk is deliberately driven through [_scrollController] — the page's
+  /// own vertical position — so it can never be confused with the tab bar's
+  /// separate horizontal controller.
+  Future<void> _revealSection(int index) async {
+    const maxSteps = 40;
+    for (var step = 0; step <= maxSteps; step++) {
+      final sectionContext = _sectionKeys[index].currentContext;
+      // `mounted` guards the context itself, not just this State: a step
+      // below may have scrolled the section that was found on the previous
+      // iteration back out of the tree.
+      if (sectionContext != null && sectionContext.mounted) {
+        await Scrollable.ensureVisible(
+          sectionContext,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOutCubic,
+          alignment: 0.05,
+        );
+        return;
+      }
+      if (!mounted || !_scrollController.hasClients) return;
+
+      final position = _scrollController.position;
+      final delta =
+          position.viewportDimension * 0.8 * _directionToSection(index);
+      final target = (position.pixels + delta)
+          .clamp(position.minScrollExtent, position.maxScrollExtent);
+      // Already pinned against that end of the list — stepping again would
+      // spin without ever building anything new.
+      if ((target - position.pixels).abs() < 1.0) return;
+      position.jumpTo(target);
+      await WidgetsBinding.instance.endOfFrame;
+    }
+  }
+
+  /// +1 when section [index] sits below everything currently mounted, -1 when
+  /// it sits above. A [SliverList] only ever mounts a contiguous run of
+  /// children, so comparing against that run's bounds is enough to know which
+  /// way the target lies.
+  int _directionToSection(int index) {
+    int? lowest;
+    int? highest;
+    for (var i = 0; i < _sectionKeys.length; i++) {
+      if (_sectionKeys[i].currentContext == null) continue;
+      lowest ??= i;
+      highest = i;
+    }
+    if (highest == null) return 1;
+    if (index < lowest!) return -1;
+    return 1;
   }
 
   // Centers the active tab within the tab bar's own horizontal scroll.
