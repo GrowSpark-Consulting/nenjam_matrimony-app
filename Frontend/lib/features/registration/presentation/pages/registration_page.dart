@@ -71,15 +71,19 @@ class _RegistrationPageState extends State<RegistrationPage> {
                   style: AppTypography.labelLarge,
                 ),
                 const SizedBox(height: 12),
-                Row(
+                // Wrap, not Row: the five relation chips measure ~673dp
+                // together, so a Row overflowed on every phone width we
+                // ship to (353dp over at 320dp, still 33dp over at 640dp).
+                // Wrapping keeps every option reachable instead of running
+                // them off the right edge.
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: ['Self', 'Son', 'Daughter', 'Brother', 'Sister']
-                      .map((relation) => Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              label: Text(_relationLabel(l10n, relation)),
-                              selected: relation == 'Self',
-                              onSelected: (_) {},
-                            ),
+                      .map((relation) => ChoiceChip(
+                            label: Text(_relationLabel(l10n, relation)),
+                            selected: relation == 'Self',
+                            onSelected: (_) {},
                           ))
                       .toList(),
                 ),

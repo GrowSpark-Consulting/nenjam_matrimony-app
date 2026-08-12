@@ -48,13 +48,20 @@ class NmSubscriptionCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  planName,
-                  style: AppTypography.titleMedium.copyWith(
-                    fontWeight: FontWeight.w700,
+                // Expanded so a long plan name yields to the badge instead
+                // of pushing it off the card — this Row had no flexible
+                // child and overflowed at 320-375dp, worse in ta where
+                // "Popular" is a longer word.
+                Expanded(
+                  child: Text(
+                    planName,
+                    style: AppTypography.titleMedium.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-                if (isPopular)
+                if (isPopular) ...[
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -72,6 +79,7 @@ class NmSubscriptionCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                ],
               ],
             ),
             const SizedBox(height: 12),
@@ -80,22 +88,28 @@ class NmSubscriptionCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  price,
-                  style: AppTypography.headlineMedium.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
+                Flexible(
+                  child: Text(
+                    price,
+                    style: AppTypography.headlineMedium.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 4),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    '/ $duration',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight,
+                // Flexible so the billing period wraps rather than forcing
+                // the row past the card edge on narrow phones.
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      '/ $duration',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight,
+                      ),
                     ),
                   ),
                 ),

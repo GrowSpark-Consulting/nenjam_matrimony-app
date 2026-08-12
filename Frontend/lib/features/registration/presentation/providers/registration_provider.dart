@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_providers.dart';
+import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../../psychology/domain/models/personality_result.dart';
 import '../../../psychology/presentation/providers/personality_provider.dart';
 import '../../data/repositories/registration_repository.dart';
@@ -105,8 +106,16 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   /// from the Profile Review screen's "Enter App" button. Idempotent on the
   /// backend, so this also doubles as the EDIT MODE "publish my changes"
   /// step — see [startEditMode].
-  Future<void> finalizeToBackend() =>
-      ref.read(registrationRepositoryProvider).finalizeProfile();
+  Future<void> finalizeToBackend() async {
+    await ref.read(registrationRepositoryProvider).finalizeProfile();
+    // finalize() recomputes completion and materializes photos/astrology
+    // server-side, so any Profile read before this call is stale. Both the
+    // registration success screen and ProfilePage read myProfileProvider —
+    // without this, an EDIT session that had already opened ProfilePage
+    // would serve the pre-edit cached profile. (myProfileProvider's own doc
+    // comment has always claimed this invalidation happened; it did not.)
+    ref.invalidate(myProfileProvider);
+  }
 
   // ─── Flow Mode ───────────────────────────────────────────────────────
   //
