@@ -6,6 +6,9 @@
   "private": true,
   "license": "UNLICENSED",
   "packageManager": "pnpm@11.10.0",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "prepare": "git rev-parse --git-dir > /dev/null 2>&1 && git config core.hooksPath scripts/git-hooks || exit 0",
     "postinstall": "prisma generate",
