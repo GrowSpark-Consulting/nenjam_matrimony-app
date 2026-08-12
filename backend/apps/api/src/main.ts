@@ -75,11 +75,16 @@ async function bootstrap() {
   }
 
   // Browsers block cross-origin XHR/fetch by default (native/mobile builds
-  // never hit this — only the Flutter web build does). No production origin
-  // allowlist exists yet since there's no deployed environment — reflect
-  // the request origin in dev, tighten this once one exists.
+  // never hit this — only the Flutter web build does). CORS_ORIGINS (comma-
+  // separated) is the explicit allowlist for whatever domain(s) the frontend
+  // is actually deployed to; nothing here is a hardcoded domain. Left unset,
+  // this falls back to reflecting the request origin in development (today's
+  // behavior) and rejecting all cross-origin requests in production/staging —
+  // fail-closed until an allowlist is configured, never fail-open.
+  const { origins: allowedOrigins } = configForCors.cors;
   app.enableCors({
-    origin: configForCors.isDevelopment ? true : false,
+    origin:
+      allowedOrigins.length > 0 ? allowedOrigins : configForCors.isDevelopment,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: [
       'Content-Type',

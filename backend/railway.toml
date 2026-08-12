@@ -1,0 +1,52 @@
+# Railway deployment config for the Nest.js backend.
+#
+# This repo is a monorepo (Frontend/ + backend/); every Railway service that
+# uses this file must have its Root Directory set to "backend" in the Railway
+# dashboard so this file (and the build below) is found.
+#
+# Of the four Nest apps under apps/, only two run real, wired-up production
+# functionality today:
+#
+#   api       - HTTP API + WebSocket (Socket.IO, mounted on the same HTTP
+#               server via RedisIoAdapter in apps/api/src/main.ts). This is
+#               also where real-time chat/presence actually lives
+#               (RealtimeModule/ChatModule) — apps/websocket is NOT it.
+#   worker    - BullMQ consumer. Sole processor registered is EmailProcessor
+#               (libs/mail): without this running, queued emails (welcome,
+#               match-found, new-message, weekly digest) are enqueued but
+#               never delivered.
+#
+# scheduler is included for completeness (WeeklyDigestCron is real and
+# registered — see apps/scheduler/src/scheduler.module.ts), but every other
+# cron file under apps/scheduler/src/cron is an unregistered TODO stub, so
+# deploying this service only buys the weekly-digest feature.
+#
+# apps/websocket is NOT deployed here: WebsocketModule wires in only bare
+# infra modules, and every gateway/guard/service file under it
+# (chat.gateway.ts, ws-jwt.guard.ts, presence.service.ts) is a one-line TODO
+# stub. Confirmed unused — do not create a Railway service for it.
+#
+# This file supplies the BUILD step (identical for every service, so shared
+# here) and a DEFAULT start command for the api service. Railway does not
+# support multiple start commands from one config file for services that
+# share a Root Directory, so:
+#
+#   - api:       uses the startCommand below as-is.
+#   - worker:    create a second Railway service (Root Directory: backend),
+#                and override its Start Command to `pnpm run start:worker:prod`.
+#   - scheduler: create a third Railway service (Root Directory: backend),
+#                and override its Start Command to `pnpm run start:scheduler:prod`.
+#
+# postinstall already runs `prisma generate` automatically (see
+# backend/package.json), so it is not repeated in buildCommand below.
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "pnpm build:api && pnpm build:worker && pnpm build:scheduler"
+
+[deploy]
+startCommand = "pnpm run start:prod"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+healthcheckPath = "/health"
+healthcheckTimeout = 120

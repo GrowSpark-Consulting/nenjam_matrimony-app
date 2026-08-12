@@ -20,6 +20,7 @@ describe('AppConfigService', () => {
     elasticsearch: { node: 'http://localhost:9200' },
     smtp: { host: 'localhost', port: 1025, user: '', password: '' },
     jwt: { secret: 'a-very-long-secret-value' },
+    cors: { origins: [] },
     mail: {
       provider: 'noop',
       from: 'Nenjam Matrimony <no-reply@example.com>',

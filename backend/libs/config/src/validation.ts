@@ -46,6 +46,13 @@ export const validationSchema = Joi.object({
 
   JWT_SECRET: Joi.string().min(16).required(),
 
+  // Explicit CORS allowlist for the API's HTTP layer (apps/api/src/main.ts).
+  // Comma-separated origins, e.g. "https://app.example.com,https://example.com".
+  // Optional: left unset, main.ts falls back to reflecting the request origin in
+  // development and rejecting cross-origin requests in production — never a
+  // hardcoded domain either way.
+  CORS_ORIGINS: Joi.string().allow('').optional(),
+
   // Email. Optional by design, matching Firebase/AWS below: without
   // RESEND_API_KEY the app still boots and MailModule binds a no-op provider
   // that renders + logs instead of sending. Making it required would block

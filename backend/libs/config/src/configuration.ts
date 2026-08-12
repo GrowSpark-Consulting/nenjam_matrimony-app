@@ -42,6 +42,13 @@ export interface AppConfig {
   jwt: {
     secret: string;
   };
+  cors: {
+    /** Explicit allowlist of origins permitted to call the API cross-origin,
+     *  parsed from the comma-separated CORS_ORIGINS. Empty means "no override" —
+     *  main.ts then falls back to environment-based defaults (permissive in
+     *  development, closed in production) rather than a hardcoded domain. */
+    origins: string[];
+  };
   mail: {
     /** Selects the EmailProvider binding at module init. Adding a provider
      *  means adding a case here — no business-logic change. */
@@ -114,6 +121,12 @@ export default (): AppConfig => ({
   },
   jwt: {
     secret: process.env.JWT_SECRET ?? '',
+  },
+  cors: {
+    origins: (process.env.CORS_ORIGINS ?? '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
   },
   // Email. Mirrors the Firebase/AWS treatment above: absent credentials must
   // not stop the app booting. With no RESEND_API_KEY the MailModule binds a
