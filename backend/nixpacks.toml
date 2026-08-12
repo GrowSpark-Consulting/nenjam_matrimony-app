@@ -1,0 +1,27 @@
+# Works around ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING during `pnpm i
+# --frozen-lockfile` on Railway's Nix-provided Node 22 build.
+#
+# Root cause: Corepack (which Railway's Nixpacks Node/pnpm provider uses to
+# fetch and run the exact pnpm version pinned in package.json's
+# "packageManager" field) executes the downloaded pnpm.cjs bundle through a
+# compile-cache-instrumented module loader (Module2._compile in the crash
+# stack — the signature of v8-compile-cache-lib, which Corepack vendors to
+# speed up repeat invocations; Node's own built-in module compile cache uses
+# the same instrumentation pattern). That wrapper's vm.Script/compileFunction
+# call does not forward `importModuleDynamically`, so when pnpm.cjs's
+# CommonJS entrypoint performs a dynamic import() near its top (bridging to
+# pnpm's real ESM implementation), Node rejects it outright with
+# ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING before pnpm ever starts installing.
+# This reproduces with Corepack 0.31.0 (bundled with Node 22.14.0, the exact
+# build Railway's log showed) and is documented for the same
+# Corepack+compile-cache+dynamic-import combination against yarn.config.cjs:
+# https://github.com/nodejs/corepack/issues/342
+#
+# Fix: disable both compile-cache layers Corepack execution can go through.
+# This makes Corepack fall back to Node's normal, uncached CommonJS loader —
+# which handles dynamic import() correctly — for the pnpm invocation only.
+# It does not change the pinned Node/pnpm versions, the lockfile, the install
+# command (still `pnpm i --frozen-lockfile`), or anything at runtime.
+[variables]
+DISABLE_V8_COMPILE_CACHE = "1"
+NODE_DISABLE_COMPILE_CACHE = "1"
