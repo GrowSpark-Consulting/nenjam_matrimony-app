@@ -120,6 +120,25 @@ class _LoginPageState extends ConsumerState<LoginPage>
     context.push(RouteNames.loginOtp, extra: {'phone': phone});
   }
 
+  // ─── Login: Google ─────────────────────────────────────────────────
+  Future<void> _onLoginGoogle() async {
+    final result =
+        await ref.read(googleSignInControllerProvider.notifier).signIn();
+    if (!mounted) return;
+    // Dismissing the account picker is a decision, not a fault — return to
+    // idle silently rather than accusing the user of an error.
+    if (result.cancelled) return;
+    if (!result.success) {
+      _snack(
+        result.errorMessage ?? AppLocalizations.of(context).authGenericError,
+      );
+      return;
+    }
+    // Same routing as every other provider — including the best-effort
+    // backend sync that materializes the Postgres row for a brand-new user.
+    _routeAfterLogin(result.needsVerification);
+  }
+
   void _routeAfterLogin(bool needsVerification) {
     // Best-effort: mirrors this Firebase session into the NestJS + Postgres
     // backend. Never awaited — must not block or fail the navigation below.
@@ -177,6 +196,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
     final isSignUp = _currentTab == 1;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final loginLoading = ref.watch(loginControllerProvider);
+    final googleLoading = ref.watch(googleSignInControllerProvider);
     final signupLoading = ref.watch(signupControllerProvider).isSubmitting;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -228,8 +248,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
                       emailCtrl: _loginEmailCtrl,
                       passwordCtrl: _loginPasswordCtrl,
                       isLoading: loginLoading,
+                      isGoogleLoading: googleLoading,
                       onLoginEmail: _onLoginEmail,
                       onLoginMobile: _onLoginMobile,
+                      onLoginGoogle: _onLoginGoogle,
                       onSignUpTap: () => _tabController.animateTo(1),
                     ),
                   ),
@@ -454,8 +476,12 @@ class _LoginForm extends StatefulWidget {
   final TextEditingController emailCtrl;
   final TextEditingController passwordCtrl;
   final bool isLoading;
+  /// Separate from [isLoading] so tapping Google does not also put the email
+  /// Login button into a spinner.
+  final bool isGoogleLoading;
   final VoidCallback onLoginEmail;
   final VoidCallback onLoginMobile;
+  final VoidCallback onLoginGoogle;
   final VoidCallback onSignUpTap;
 
   const _LoginForm({
@@ -464,8 +490,10 @@ class _LoginForm extends StatefulWidget {
     required this.emailCtrl,
     required this.passwordCtrl,
     required this.isLoading,
+    required this.isGoogleLoading,
     required this.onLoginEmail,
     required this.onLoginMobile,
+    required this.onLoginGoogle,
     required this.onSignUpTap,
   });
 
@@ -571,9 +599,8 @@ class _LoginFormState extends State<_LoginForm> {
 
             NmSocialButton(
               label: l10n.authSignInWithGoogle,
-              onPressed: () => ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(l10n.authComingSoon))),
+              isLoading: widget.isGoogleLoading,
+              onPressed: widget.onLoginGoogle,
             ),
             const SizedBox(height: 24),
 

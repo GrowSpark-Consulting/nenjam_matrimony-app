@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/auth_user.dart';
 import '../services/firebase_auth_service.dart';
+import '../services/google_auth_service.dart';
 
 /// Nenjam Matrimony — Firebase Auth Repository (auth-only, no database)
 ///
@@ -10,9 +11,14 @@ import '../services/firebase_auth_service.dart';
 /// Node.js + PostgreSQL backend will own the real profile, authenticated with
 /// the Firebase ID token (JWT).
 class FirebaseAuthRepository {
-  FirebaseAuthRepository({required FirebaseAuthService auth}) : _auth = auth;
+  FirebaseAuthRepository({
+    required FirebaseAuthService auth,
+    required GoogleAuthService google,
+  })  : _auth = auth,
+        _google = google;
 
   final FirebaseAuthService _auth;
+  final GoogleAuthService _google;
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> authStateChanges() => _auth.authStateChanges();
@@ -132,9 +138,32 @@ class FirebaseAuthRepository {
     return AuthUser.fromFirebase(cred.user!);
   }
 
+  /// Runs the Google account picker and signs the resulting credential into
+  /// Firebase. Google vouches for the address, so the returned [AuthUser]
+  /// already has `emailVerified == true` and the caller can route straight
+  /// into the app.
+  ///
+  /// Throws [GoogleSignInCancelled] when the user dismisses the picker.
+  Future<AuthUser> loginWithGoogle() async {
+    final cred = await _google.signIn();
+    return AuthUser.fromFirebase(cred.user!);
+  }
+
   // ─── Shared ────────────────────────────────────────────────────────
 
   Future<void> resetPassword(String email) => _auth.sendPasswordResetEmail(email);
 
-  Future<void> logout() => _auth.signOut();
+  Future<void> logout() async {
+    // Clear the cached Google account first, otherwise the next "Continue
+    // with Google" silently reuses the previous account instead of showing
+    // the picker — indistinguishable from a broken logout to the user.
+    // Best-effort: a Google-side failure must never block Firebase sign-out,
+    // which is what the rest of the app treats as the session boundary.
+    try {
+      await _google.signOut();
+    } catch (_) {
+      // Intentionally swallowed — see above.
+    }
+    await _auth.signOut();
+  }
 }

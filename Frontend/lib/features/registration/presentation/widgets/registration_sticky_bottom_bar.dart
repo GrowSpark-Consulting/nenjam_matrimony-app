@@ -43,6 +43,14 @@ class RegistrationStickyBottomBar extends StatelessWidget {
   /// greying it out with no explanation.
   final String? validationHint;
 
+  /// Collapses the bar to a single action row. Set by the wizard when the
+  /// usable body height cannot fit the full bar — a landscape phone with the
+  /// keyboard raised leaves ~98dp, against ~164dp for the full layout. The
+  /// milestone/estimate and validation lines are dropped and the controls
+  /// shrink from 56dp to 48dp; every action (Back, Continue, Skip) survives,
+  /// so nothing becomes unreachable.
+  final bool compact;
+
   const RegistrationStickyBottomBar({
     super.key,
     required this.milestoneLabel,
@@ -57,11 +65,14 @@ class RegistrationStickyBottomBar extends StatelessWidget {
     this.skipLabel,
     this.onSkip,
     this.validationHint,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (compact) return _buildCompact(context, isDark);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -167,6 +178,77 @@ class RegistrationStickyBottomBar extends StatelessWidget {
                 onPressed: isLoading ? null : onSkip,
                 child: Text(
                   skipLabel ?? '',
+                  style: AppTypography.labelLarge.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Single-row variant used when vertical space is scarce. Keeps 48dp
+  /// touch targets (above the 44dp minimum) while fitting in ~64dp total.
+  Widget _buildCompact(BuildContext context, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          if (showBack) ...[
+            Tooltip(
+              message: backLabel,
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: isLoading ? null : onBack,
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Icon(Icons.arrow_back_rounded),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            child: SizedBox(
+              height: 48,
+              child: NmGradientButton(
+                label: continueLabel,
+                icon: continueIcon,
+                isLoading: isLoading,
+                onPressed: isLoading ? null : onNext,
+              ),
+            ),
+          ),
+          if (onSkip != null) ...[
+            const SizedBox(width: 8),
+            Flexible(
+              child: TextButton(
+                onPressed: isLoading ? null : onSkip,
+                child: Text(
+                  skipLabel ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: AppTypography.labelLarge.copyWith(
                     color: isDark
                         ? AppColors.textSecondaryDark
