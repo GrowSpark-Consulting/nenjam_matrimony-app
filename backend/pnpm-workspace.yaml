@@ -1,3 +1,13 @@
+packages:
+  # This is a single npm package (backend/package.json) that just happens to
+  # use pnpm-workspace.yaml for the allowBuilds/overrides settings below —
+  # apps/* and libs/* are NestJS-internal projects (see nest-cli.json), not
+  # separate packages; none of them has its own package.json. Without this
+  # field, pnpm treats the presence of this file as an underspecified
+  # workspace and refuses to install with "packages field missing or empty" —
+  # harmless with the pnpm version used locally, but enforced strictly by
+  # whatever pnpm version Railway/Nixpacks resolves at build time.
+  - '.'
 allowBuilds:
   '@firebase/util': false
   # Optional native accelerator for msgpackr (BullMQ's job serializer).
