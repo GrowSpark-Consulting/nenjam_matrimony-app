@@ -1,7 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import compression from 'compression';
+import helmet from 'helmet';
 import { AppConfigService } from '@app/config';
 import { RedisService } from '@app/cache';
 import { AppModule } from './app.module';
@@ -43,9 +45,38 @@ function setupSwagger(app: INestApplication): void {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Typed as the Express application so `set('trust proxy', ...)` below is
+  // reachable — the platform is already Express, this only names it.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.enableShutdownHooks();
+
+  // Standard security response headers: HSTS, X-Content-Type-Options,
+  // Referrer-Policy, frame denial and friends. There were none before.
+  //
+  // The Content-Security-Policy default is disabled deliberately. This process
+  // serves a JSON API plus the Swagger UI, and helmet's default CSP breaks the
+  // latter's inline scripts and styles. A CSP protects a browser rendering
+  // *our* HTML; the only HTML here is dev-only docs. Turn it back on if this
+  // process ever serves an application UI.
+  //
+  // `crossOriginResourcePolicy` is relaxed to same-site because profile photos
+  // are fetched by the Flutter client directly from S3 presigned URLs, not
+  // proxied through here — the stricter same-origin default buys nothing and
+  // risks blocking legitimate cross-origin reads.
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginResourcePolicy: { policy: 'same-site' },
+    }),
+  );
+
+  // Rate limiting counts per client IP. Behind Railway (or any load balancer)
+  // every request otherwise appears to originate from the proxy's single
+  // address, which would put the entire userbase in one shared bucket and make
+  // the limits fire for everyone at once. Trusting one proxy hop makes
+  // `req.ip` the real client again.
+  app.set('trust proxy', 1);
 
   // Every response this API sends is JSON, which compresses extremely well:
   // measured on real rows from this database, a 20-profile feed page is 11,163

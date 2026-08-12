@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppConfigModule } from '@app/config';
 import { PrismaModule } from '@app/database';
 import { RedisModule } from '@app/cache';
@@ -17,10 +19,16 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { SupportModule } from './modules/support/support.module';
 import { BlocksModule } from './modules/blocks/blocks.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { throttlerConfig } from './throttling';
 
 @Module({
   imports: [
     AppConfigModule,
+    // Rate limiting for the whole REST surface — see ./throttling.ts for why
+    // the tiers are what they are. Registered as an APP_GUARD below so it
+    // covers every route by default rather than only the ones someone
+    // remembered to annotate.
+    ThrottlerModule.forRoot(throttlerConfig),
     PrismaModule,
     RedisModule,
     ElasticsearchModule,
@@ -47,6 +55,13 @@ import { ReportsModule } from './modules/reports/reports.module';
     ReportsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Global: every route is rate limited unless it opts into a different
+    // tier with @Throttle. Applying this per-controller instead would mean a
+    // new endpoint ships unprotected by default, which is the failure mode
+    // worth designing out.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

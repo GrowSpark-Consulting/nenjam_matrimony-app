@@ -12,6 +12,8 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { UPLOAD_LIMIT } from '../../../throttling';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { CurrentUser, FirebaseAuthGuard } from '@app/common';
@@ -45,6 +47,9 @@ export class PhotoController {
     return this.photoService.list(userId);
   }
 
+  // Each upload costs bandwidth and an S3 object, so this is the tightest
+  // limit in the app.
+  @Throttle(UPLOAD_LIMIT)
   @Post()
   @UseInterceptors(fileInterceptor)
   upload(
@@ -55,6 +60,7 @@ export class PhotoController {
     return this.photoService.upload(userId, file, dto.isPrimary);
   }
 
+  @Throttle(UPLOAD_LIMIT)
   @Put(':id')
   @UseInterceptors(fileInterceptor)
   replace(
