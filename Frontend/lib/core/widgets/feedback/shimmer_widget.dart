@@ -19,21 +19,18 @@ class NmShimmer extends StatelessWidget {
   });
 
   /// Circular shimmer for avatars.
-  const NmShimmer.circle({
-    super.key,
-    required double size,
-  })  : width = size,
-        height = size,
-        borderRadius = 999,
-        child = null;
+  const NmShimmer.circle({super.key, required double size})
+    : width = size,
+      height = size,
+      borderRadius = 999,
+      child = null;
 
   /// Card shimmer placeholder.
-  const NmShimmer.card({
-    super.key,
-  })  : width = double.infinity,
-        height = 200,
-        borderRadius = 20,
-        child = null;
+  const NmShimmer.card({super.key})
+    : width = double.infinity,
+      height = 200,
+      borderRadius = 20,
+      child = null;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +43,8 @@ class NmShimmer extends StatelessWidget {
       highlightColor: isDark
           ? AppColors.shimmerHighlightDark
           : AppColors.shimmerHighlightLight,
-      child: child ??
+      child:
+          child ??
           Container(
             width: width,
             height: height,

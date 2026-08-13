@@ -79,8 +79,9 @@ class NavBadge extends StatelessWidget {
                 // size (its min constraints are a floor, not a fixed size) so
                 // the count stays legible, but an extreme accessibility scale
                 // can't blow an 18px bubble out over the whole nav bar.
-                textScaler:
-                    MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.3),
+                textScaler: MediaQuery.textScalerOf(
+                  context,
+                ).clamp(maxScaleFactor: 1.3),
                 style: AppTypography.labelSmall.copyWith(
                   color: Colors.white,
                   fontSize: 10,

@@ -33,21 +33,15 @@ extension ContextExtensions on BuildContext {
 
   // ─── App Colors Quick Access ─────────────────────────────────────
   Color get primaryColor => colorScheme.primary;
-  Color get backgroundColor => isDark
-      ? AppColors.backgroundDark
-      : AppColors.backgroundLight;
-  Color get cardColor => isDark
-      ? AppColors.cardDark
-      : AppColors.cardLight;
-  Color get textPrimary => isDark
-      ? AppColors.textPrimaryDark
-      : AppColors.textPrimaryLight;
-  Color get textSecondary => isDark
-      ? AppColors.textSecondaryDark
-      : AppColors.textSecondaryLight;
-  Color get dividerColor => isDark
-      ? AppColors.dividerDark
-      : AppColors.dividerLight;
+  Color get backgroundColor =>
+      isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+  Color get cardColor => isDark ? AppColors.cardDark : AppColors.cardLight;
+  Color get textPrimary =>
+      isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+  Color get textSecondary =>
+      isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+  Color get dividerColor =>
+      isDark ? AppColors.dividerDark : AppColors.dividerLight;
 
   // ─── Navigation ──────────────────────────────────────────────────
   NavigatorState get navigator => Navigator.of(this);

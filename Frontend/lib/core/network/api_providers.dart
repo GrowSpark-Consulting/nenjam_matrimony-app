@@ -1,8 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/authentication/presentation/providers/auth_providers.dart';
+import '../constants/app_constants.dart';
 import 'api_client.dart';
 import 'api_interceptor.dart';
+import 'backend_connectivity_checker.dart';
 
 /// The shared [ApiClient] singleton, with the auth interceptor wired to
 /// Firebase's ID token (see [AuthTokenService]) — every request automatically
@@ -25,10 +28,31 @@ final apiClientProvider = Provider<ApiClient>((ref) {
     AuthInterceptor(
       dio: client.dio,
       getAccessToken: () => tokenService.getFirebaseToken(),
-      refreshAccessToken: () => tokenService.getFirebaseToken(forceRefresh: true),
+      refreshAccessToken: () =>
+          tokenService.getFirebaseToken(forceRefresh: true),
       onSessionExpired: () => ref.read(authRepositoryProvider).logout(),
     ),
   );
 
   return client;
+});
+
+/// Startup `/health` probe. Runs on its own bare [Dio] rather than the shared
+/// [ApiClient] on purpose: `/health` is public, so routing it through the auth
+/// interceptor would make the splash wait on a Firebase token it doesn't need
+/// (and put a signed-out user's 401 recovery in the startup path).
+final serverHealthCheckerProvider = Provider<BackendConnectivityChecker>((ref) {
+  final dio = Dio(
+    BaseOptions(
+      baseUrl: AppConstants.apiBaseUrl,
+      connectTimeout: AppConstants.healthCheckTimeout,
+      receiveTimeout: AppConstants.healthCheckTimeout,
+      sendTimeout: AppConstants.healthCheckTimeout,
+      responseType: ResponseType.json,
+      headers: {'Accept': 'application/json'},
+      validateStatus: (_) => true,
+    ),
+  );
+  ref.onDispose(dio.close);
+  return BackendConnectivityChecker(dio);
 });

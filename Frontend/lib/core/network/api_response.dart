@@ -22,24 +22,16 @@ class ApiResponse<T> {
     T? data,
     String? message,
     PaginationMeta? pagination,
-  }) =>
-      ApiResponse(
-        success: true,
-        data: data,
-        message: message,
-        pagination: pagination,
-      );
+  }) => ApiResponse(
+    success: true,
+    data: data,
+    message: message,
+    pagination: pagination,
+  );
 
   /// Factory for error responses.
-  factory ApiResponse.failure({
-    String? message,
-    ApiError? error,
-  }) =>
-      ApiResponse(
-        success: false,
-        message: message,
-        error: error,
-      );
+  factory ApiResponse.failure({String? message, ApiError? error}) =>
+      ApiResponse(success: false, message: message, error: error);
 
   /// Parse from JSON with a data parser function.
   factory ApiResponse.fromJson(
@@ -56,9 +48,7 @@ class ApiResponse<T> {
           ? ApiError.fromJson(json['error'] as Map<String, dynamic>)
           : null,
       pagination: json['pagination'] != null
-          ? PaginationMeta.fromJson(
-              json['pagination'] as Map<String, dynamic>,
-            )
+          ? PaginationMeta.fromJson(json['pagination'] as Map<String, dynamic>)
           : null,
     );
   }
@@ -73,24 +63,18 @@ class ApiError {
   final String message;
   final Map<String, List<String>>? validationErrors;
 
-  const ApiError({
-    this.code,
-    required this.message,
-    this.validationErrors,
-  });
+  const ApiError({this.code, required this.message, this.validationErrors});
 
   factory ApiError.fromJson(Map<String, dynamic> json) => ApiError(
-        code: json['code'] as int?,
-        message: json['message'] as String? ?? 'Unknown error',
-        validationErrors: json['errors'] != null
-            ? (json['errors'] as Map<String, dynamic>).map(
-                (key, value) => MapEntry(
-                  key,
-                  (value as List<dynamic>).cast<String>(),
-                ),
-              )
-            : null,
-      );
+    code: json['code'] as int?,
+    message: json['message'] as String? ?? 'Unknown error',
+    validationErrors: json['errors'] != null
+        ? (json['errors'] as Map<String, dynamic>).map(
+            (key, value) =>
+                MapEntry(key, (value as List<dynamic>).cast<String>()),
+          )
+        : null,
+  );
 }
 
 /// Pagination metadata for list endpoints.
@@ -107,13 +91,12 @@ class PaginationMeta {
     required this.total,
   });
 
-  factory PaginationMeta.fromJson(Map<String, dynamic> json) =>
-      PaginationMeta(
-        currentPage: json['current_page'] as int? ?? 1,
-        lastPage: json['last_page'] as int? ?? 1,
-        perPage: json['per_page'] as int? ?? 20,
-        total: json['total'] as int? ?? 0,
-      );
+  factory PaginationMeta.fromJson(Map<String, dynamic> json) => PaginationMeta(
+    currentPage: json['current_page'] as int? ?? 1,
+    lastPage: json['last_page'] as int? ?? 1,
+    perPage: json['per_page'] as int? ?? 20,
+    total: json['total'] as int? ?? 0,
+  );
 
   bool get hasNextPage => currentPage < lastPage;
   bool get hasPreviousPage => currentPage > 1;

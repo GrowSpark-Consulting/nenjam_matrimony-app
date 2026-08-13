@@ -29,7 +29,10 @@ class NmPremiumBadge extends StatelessWidget {
     final padding = switch (size) {
       NmBadgeSize.small => const EdgeInsets.all(4.0),
       NmBadgeSize.medium => const EdgeInsets.all(6.0),
-      NmBadgeSize.large => const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      NmBadgeSize.large => const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 6,
+      ),
     };
 
     return Container(
@@ -41,8 +44,11 @@ class NmPremiumBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.workspace_premium_rounded,
-              size: iconSize, color: AppColors.accentGold),
+          Icon(
+            Icons.workspace_premium_rounded,
+            size: iconSize,
+            color: AppColors.accentGold,
+          ),
           if (showLabel) ...[
             const SizedBox(width: 4),
             Text(

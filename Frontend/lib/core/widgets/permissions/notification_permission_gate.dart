@@ -50,7 +50,9 @@ class _NotificationPermissionGateState
       context,
       icon: Icons.notifications_active_rounded,
       title: AppLocalizations.of(context).permissionNotificationsEnableTitle,
-      message: AppLocalizations.of(context).permissionNotificationsEnableMessage,
+      message: AppLocalizations.of(
+        context,
+      ).permissionNotificationsEnableMessage,
       proceedLabel: AppLocalizations.of(context).commonEnable,
       cancelLabel: AppLocalizations.of(context).commonNotNow,
     );
@@ -62,8 +64,12 @@ class _NotificationPermissionGateState
     if (result == NmPermissionStatus.permanentlyDenied && mounted) {
       await showOpenSettingsDialog(
         context,
-        title: AppLocalizations.of(context).permissionNotificationsDisabledTitle,
-        message: AppLocalizations.of(context).permissionNotificationsDisabledMessage,
+        title: AppLocalizations.of(
+          context,
+        ).permissionNotificationsDisabledTitle,
+        message: AppLocalizations.of(
+          context,
+        ).permissionNotificationsDisabledMessage,
         onOpenSettings: permissions.openSettings,
       );
     }

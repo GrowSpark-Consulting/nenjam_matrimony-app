@@ -39,8 +39,7 @@ class NmCompatibilityReportCard extends StatefulWidget {
       _NmCompatibilityReportCardState();
 }
 
-class _NmCompatibilityReportCardState
-    extends State<NmCompatibilityReportCard> {
+class _NmCompatibilityReportCardState extends State<NmCompatibilityReportCard> {
   bool _expanded = false;
 
   @override
@@ -74,8 +73,9 @@ class _NmCompatibilityReportCardState
                     Center(
                       child: Text(
                         '${widget.overallScore}%',
-                        style: AppTypography.titleSmall
-                            .copyWith(fontWeight: FontWeight.w700),
+                        style: AppTypography.titleSmall.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
@@ -129,12 +129,12 @@ class _AxisRow extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(
-              child: Text(axis.label, style: AppTypography.bodyMedium),
-            ),
+            Expanded(child: Text(axis.label, style: AppTypography.bodyMedium)),
             Text(
               '${axis.score}%',
-              style: AppTypography.labelMedium.copyWith(fontWeight: FontWeight.w700),
+              style: AppTypography.labelMedium.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),
@@ -144,8 +144,9 @@ class _AxisRow extends StatelessWidget {
           child: LinearProgressIndicator(
             value: axis.score / 100,
             minHeight: 6,
-            backgroundColor:
-                isDark ? AppColors.surfaceVariantDark : AppColors.divider,
+            backgroundColor: isDark
+                ? AppColors.surfaceVariantDark
+                : AppColors.divider,
             color: AppColors.accentGold,
           ),
         ),

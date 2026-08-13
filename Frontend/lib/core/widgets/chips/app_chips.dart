@@ -30,7 +30,9 @@ class NmFilterChip extends StatelessWidget {
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(999),
-        side: BorderSide(color: isSelected ? AppColors.primary : AppColors.borderLight),
+        side: BorderSide(
+          color: isSelected ? AppColors.primary : AppColors.borderLight,
+        ),
       ),
     );
   }
@@ -41,7 +43,11 @@ class NmRemovableChip extends StatelessWidget {
   final String label;
   final VoidCallback onDeleted;
 
-  const NmRemovableChip({super.key, required this.label, required this.onDeleted});
+  const NmRemovableChip({
+    super.key,
+    required this.label,
+    required this.onDeleted,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +68,11 @@ class NmOccupationChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _BaseChip(label: label, icon: Icons.work_outline_rounded, color: AppColors.info);
+    return _BaseChip(
+      label: label,
+      icon: Icons.work_outline_rounded,
+      color: AppColors.info,
+    );
   }
 }
 
@@ -73,7 +83,11 @@ class NmInterestChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _BaseChip(label: label, icon: Icons.favorite_border_rounded, color: AppColors.liked);
+    return _BaseChip(
+      label: label,
+      icon: Icons.favorite_border_rounded,
+      color: AppColors.liked,
+    );
   }
 }
 
@@ -84,7 +98,12 @@ class NmVerifiedChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _BaseChip(label: label, icon: Icons.verified_rounded, color: AppColors.verifiedBlue, isFilled: true);
+    return _BaseChip(
+      label: label,
+      icon: Icons.verified_rounded,
+      color: AppColors.verifiedBlue,
+      isFilled: true,
+    );
   }
 }
 
@@ -95,7 +114,12 @@ class NmPremiumChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _BaseChip(label: label, icon: Icons.workspace_premium_rounded, color: AppColors.accentGold, isFilled: true);
+    return _BaseChip(
+      label: label,
+      icon: Icons.workspace_premium_rounded,
+      color: AppColors.accentGold,
+      isFilled: true,
+    );
   }
 }
 
@@ -106,7 +130,11 @@ class NmReligionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _BaseChip(label: label, icon: Icons.temple_hindu_outlined, color: AppColors.warning);
+    return _BaseChip(
+      label: label,
+      icon: Icons.temple_hindu_outlined,
+      color: AppColors.warning,
+    );
   }
 }
 
@@ -117,7 +145,11 @@ class NmLanguageChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _BaseChip(label: label, icon: Icons.translate_rounded, color: AppColors.success);
+    return _BaseChip(
+      label: label,
+      icon: Icons.translate_rounded,
+      color: AppColors.success,
+    );
   }
 }
 
@@ -127,7 +159,12 @@ class _BaseChip extends StatelessWidget {
   final Color color;
   final bool isFilled;
 
-  const _BaseChip({required this.label, required this.icon, required this.color, this.isFilled = false});
+  const _BaseChip({
+    required this.label,
+    required this.icon,
+    required this.color,
+    this.isFilled = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -136,7 +173,9 @@ class _BaseChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: isFilled ? color : color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(999),
-        border: isFilled ? null : Border.all(color: color.withValues(alpha: 0.3)),
+        border: isFilled
+            ? null
+            : Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

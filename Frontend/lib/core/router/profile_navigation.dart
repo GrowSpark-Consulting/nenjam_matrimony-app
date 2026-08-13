@@ -34,6 +34,7 @@ int _pageKeySeq = 0;
 class ProfileDetailArgs {
   final DiscoveryProfileEntity profile;
   final String? heroTag;
+
   /// Whether the caller already knows this member is currently blocked (only
   /// ever true from Chat, which carries its own `ConversationEntity.
   /// isBlocked` — there's no `GET` endpoint for block status, and every
@@ -71,7 +72,9 @@ class ProfileDetailArgs {
   final ValueKey<String> pageKey;
 
   ProfileDetailArgs(this.profile, {this.heroTag, this.isBlocked = false})
-      : pageKey = ValueKey<String>('profile-detail-${profile.id}-${_pageKeySeq++}');
+    : pageKey = ValueKey<String>(
+        'profile-detail-${profile.id}-${_pageKeySeq++}',
+      );
 }
 
 /// Single entry point for navigating to Profile Detail.

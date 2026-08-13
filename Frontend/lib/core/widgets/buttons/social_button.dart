@@ -65,13 +65,19 @@ class NmSocialButton extends StatelessWidget {
                   Image.asset(assetPath!, width: 24, height: 24),
                   const SizedBox(width: 12),
                 ] else ...[
-                  const Icon(Icons.g_mobiledata, size: 28, color: AppColors.primary),
+                  const Icon(
+                    Icons.g_mobiledata,
+                    size: 28,
+                    color: AppColors.primary,
+                  ),
                   const SizedBox(width: 8),
                 ],
                 Text(
                   label,
                   style: AppTypography.labelLarge.copyWith(
-                    color: isDark ? AppColors.textPrimaryDark : const Color(0xFF1B1C19),
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : const Color(0xFF1B1C19),
                     fontWeight: FontWeight.w600,
                     fontSize: 15,
                   ),

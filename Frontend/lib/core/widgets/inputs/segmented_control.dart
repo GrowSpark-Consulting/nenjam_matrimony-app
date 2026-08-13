@@ -32,7 +32,9 @@ class NmSegmentedControl<T> extends StatelessWidget {
       height: AppTouchTarget.minSize,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
+        color: isDark
+            ? AppColors.surfaceVariantDark
+            : AppColors.surfaceVariantLight,
         borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
       ),
       child: Row(
@@ -59,7 +61,11 @@ class _Segment extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _Segment({required this.label, required this.isSelected, required this.onTap});
+  const _Segment({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -36,17 +36,23 @@ class NmDailyInsightCard extends StatelessWidget {
               color: AppColors.accentGold.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.auto_awesome_rounded,
-                color: AppColors.accentGold, size: 22),
+            child: const Icon(
+              Icons.auto_awesome_rounded,
+              color: AppColors.accentGold,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: AppTypography.titleSmall
-                        .copyWith(fontWeight: FontWeight.w700)),
+                Text(
+                  title,
+                  style: AppTypography.titleSmall.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Text(message, style: AppTypography.bodyMedium),
               ],

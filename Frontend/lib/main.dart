@@ -12,9 +12,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'core/config/app_config.dart';
 import 'core/config/app_environment.dart';
 import 'core/constants/app_constants.dart';
-import 'core/network/api_providers.dart';
-import 'core/network/backend_connectivity_checker.dart';
-import 'core/widgets/backend_diagnostic_banner.dart';
 import 'firebase_options.dart';
 import 'core/providers/locale_provider.dart';
 import 'core/providers/theme_mode_provider.dart';
@@ -40,7 +37,9 @@ export 'core/services/storage_service.dart' show storageService;
 class _LoggingBackButtonDispatcher extends RootBackButtonDispatcher {
   @override
   Future<bool> didPopRoute() {
-    debugPrint('[BACK] OS back event reached BackButtonDispatcher.didPopRoute()');
+    debugPrint(
+      '[BACK] OS back event reached BackButtonDispatcher.didPopRoute()',
+    );
     return super.didPopRoute();
   }
 }
@@ -55,28 +54,28 @@ void main() async {
   ]);
 
   // Initialize Firebase (Auth, Firestore, etc.)
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Must be registered before runApp — a top-level function so the OS can
   // invoke it in a separate background isolate while the app is backgrounded
   // or terminated. See firebaseMessagingBackgroundHandler's doc comment.
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-  // Load environment variables (.env.dev) and set config. Without this,
+  // Load environment variables and set config. Without this,
   // AppConfig().envConfig is never assigned and any code that touches it
-  // (e.g. ApiClient's base URL) throws a LateInitializationError.
-  await AppConfig().init(AppEnvironment.dev);
+  // (e.g. logging/S3 settings) throws a LateInitializationError.
+  //
+  // A release build is production by definition — the flavor is never
+  // hardcoded to dev. Note the API origin does NOT come from here; it is
+  // AppConstants.apiBaseUrl (override with --dart-define=API_BASE_URL=...).
+  await AppConfig().init(
+    kReleaseMode ? AppEnvironment.production : AppEnvironment.dev,
+  );
 
   // Initialize local storage wrapper
   await storageService.init();
 
-  runApp(
-    const ProviderScope(
-      child: NenjamMatrimonyApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: NenjamMatrimonyApp()));
 }
 
 /// Root application widget configuring ScreenUtil, Themes, GoRouter,
@@ -85,8 +84,7 @@ class NenjamMatrimonyApp extends ConsumerStatefulWidget {
   const NenjamMatrimonyApp({super.key});
 
   @override
-  ConsumerState<NenjamMatrimonyApp> createState() =>
-      _NenjamMatrimonyAppState();
+  ConsumerState<NenjamMatrimonyApp> createState() => _NenjamMatrimonyAppState();
 }
 
 class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
@@ -117,14 +115,6 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
   /// see [_saveNavStateSnapshot].
   Timer? _saveDebounce;
 
-  /// Debug-only backend reachability check — see [_checkBackendConnectivity].
-  /// Never set (and [BackendDiagnosticBanner] never built) in production.
-  BackendConnectivityResult? _connectivityResult;
-  bool _connectivityBannerDismissed = false;
-
-  bool get _connectivityCheckEnabled =>
-      kDebugMode && !AppConfig().environment.isProduction;
-
   @override
   void initState() {
     super.initState();
@@ -141,25 +131,6 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
     // continuously, well before the user ever backgrounds the app, removes
     // that race entirely.
     router.routerDelegate.addListener(_scheduleSave);
-    if (_connectivityCheckEnabled) {
-      unawaited(_checkBackendConnectivity());
-    }
-  }
-
-  /// Hits the backend's /health endpoint so a dev on a physical device gets
-  /// an honest "backend unreachable" banner instead of Dio's generic "No
-  /// internet connection" message, which is misleading over adb reverse
-  /// (see docs/development/android-usb-debugging.md). Best-effort — never
-  /// blocks splash/navigation.
-  Future<void> _checkBackendConnectivity() async {
-    final checker = BackendConnectivityChecker(ref.read(apiClientProvider).dio);
-    final result = await checker.check();
-    if (mounted) {
-      setState(() {
-        _connectivityResult = result;
-        _connectivityBannerDismissed = false;
-      });
-    }
   }
 
   @override
@@ -191,7 +162,9 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
         // app was backgrounded (the user denied the prompt initially, then
         // came back and enabled it manually) — completes FCM registration
         // immediately, no logout/login required.
-        unawaited(ref.read(pushNotificationServiceProvider).checkPermissionOnResume());
+        unawaited(
+          ref.read(pushNotificationServiceProvider).checkPermissionOnResume(),
+        );
       default:
         // inactive / hidden are transient (app switcher, incoming call) —
         // acting here would flap presence; let paused/resumed drive it.
@@ -214,7 +187,9 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
   /// be what kicks off a `GET /conversations`.
   void _resyncUnreadOnResume() {
     if (ref.read(currentAuthUserProvider) == null) return;
-    unawaited(ref.read(conversationsNotifierProvider.notifier).refreshSilently());
+    unawaited(
+      ref.read(conversationsNotifierProvider.notifier).refreshSilently(),
+    );
   }
 
   String get _currentLocation =>
@@ -222,7 +197,10 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
 
   void _scheduleSave() {
     _saveDebounce?.cancel();
-    _saveDebounce = Timer(const Duration(milliseconds: 400), _saveNavStateSnapshot);
+    _saveDebounce = Timer(
+      const Duration(milliseconds: 400),
+      _saveNavStateSnapshot,
+    );
   }
 
   /// Snapshots the current screen (and, if it's a registration/edit
@@ -236,12 +214,14 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
     if (_registrationRoutes.contains(location)) {
       final draft = ref.read(registrationProvider);
       final mode = ref.read(profileFlowModeProvider);
-      unawaited(storageService.saveNavState(
-        route: location,
-        registrationStep: draft.currentStep,
-        profileFlowMode: mode.name,
-        profileDraftJson: jsonEncode(draft.toJson()),
-      ));
+      unawaited(
+        storageService.saveNavState(
+          route: location,
+          registrationStep: draft.currentStep,
+          profileFlowMode: mode.name,
+          profileDraftJson: jsonEncode(draft.toJson()),
+        ),
+      );
     } else if (_tabRoutes.contains(location)) {
       unawaited(storageService.saveNavState(route: location));
     }
@@ -259,7 +239,8 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
   void _checkSessionOnResume() {
     final signedIn = ref.read(authRepositoryProvider).currentUser != null;
     final location = _currentLocation;
-    final willRedirect = !signedIn && !RouteNames.publicRoutes.contains(location);
+    final willRedirect =
+        !signedIn && !RouteNames.publicRoutes.contains(location);
     if (willRedirect) {
       router.go(RouteNames.login);
     }
@@ -340,38 +321,8 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
           routeInformationParser: router.routeInformationParser,
           routerDelegate: router.routerDelegate,
           backButtonDispatcher: _LoggingBackButtonDispatcher(),
-
-          builder: _connectivityCheckEnabled
-              ? (context, child) => _wrapWithConnectivityBanner(child)
-              : null,
         );
       },
-    );
-  }
-
-  Widget _wrapWithConnectivityBanner(Widget? child) {
-    final result = _connectivityResult;
-    final content = child ?? const SizedBox.shrink();
-    if (result == null || result is BackendHealthy || _connectivityBannerDismissed) {
-      return content;
-    }
-    return Stack(
-      children: [
-        content,
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: SafeArea(
-            bottom: false,
-            child: BackendDiagnosticBanner(
-              result: result,
-              onRetry: _checkBackendConnectivity,
-              onDismiss: () => setState(() => _connectivityBannerDismissed = true),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

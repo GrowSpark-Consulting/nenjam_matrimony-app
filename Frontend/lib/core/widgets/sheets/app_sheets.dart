@@ -30,18 +30,27 @@ abstract final class AppSheets {
   /// stacked handles. Same reasoning for `shape` — the theme's
   /// `bottomSheetTheme.shape` already matches what was hardcoded here, so
   /// `showModalBottomSheet` falls back to it without needing to repeat it.
-  static Future<T?> show<T>(BuildContext context, {required Widget child, String? title}) {
+  static Future<T?> show<T>(
+    BuildContext context, {
+    required Widget child,
+    String? title,
+  }) {
     return showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
       builder: (context) => SafeArea(
         child: Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (title != null) ...[
-                Padding(padding: const EdgeInsets.all(20), child: Text(title, style: AppTypography.titleLarge)),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text(title, style: AppTypography.titleLarge),
+                ),
                 const Divider(height: 1),
               ],
               // Flexible (not Expanded) so RenderFlex computes this
@@ -64,7 +73,12 @@ abstract final class AppSheets {
   }
 
   /// Reusable Selection Sheet.
-  static Future<String?> showSelection(BuildContext context, {required String title, required List<String> options, String? selectedValue}) {
+  static Future<String?> showSelection(
+    BuildContext context, {
+    required String title,
+    required List<String> options,
+    String? selectedValue,
+  }) {
     return show<String>(
       context,
       title: title,
@@ -75,8 +89,19 @@ abstract final class AppSheets {
           final opt = options[index];
           final isSelected = opt == selectedValue;
           return ListTile(
-            title: Text(opt, style: AppTypography.bodyMedium.copyWith(fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400, color: isSelected ? AppColors.primary : null)),
-            trailing: isSelected ? const Icon(Icons.check_circle_rounded, color: AppColors.primary) : null,
+            title: Text(
+              opt,
+              style: AppTypography.bodyMedium.copyWith(
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                color: isSelected ? AppColors.primary : null,
+              ),
+            ),
+            trailing: isSelected
+                ? const Icon(
+                    Icons.check_circle_rounded,
+                    color: AppColors.primary,
+                  )
+                : null,
             onTap: () => Navigator.pop(context, opt),
           );
         },
@@ -86,17 +111,38 @@ abstract final class AppSheets {
 
   /// Gender Selection Sheet.
   static Future<String?> showGender(BuildContext context, {String? selected}) {
-    return showSelection(context, title: AppLocalizations.of(context).fieldGenderHint, options: ['Male', 'Female'], selectedValue: selected);
+    return showSelection(
+      context,
+      title: AppLocalizations.of(context).fieldGenderHint,
+      options: ['Male', 'Female'],
+      selectedValue: selected,
+    );
   }
 
   /// Religion Selection Sheet.
-  static Future<String?> showReligion(BuildContext context, {String? selected}) {
-    return showSelection(context, title: AppLocalizations.of(context).fieldReligionHint, options: ['Hindu', 'Christian', 'Muslim', 'Jain', 'Sikh'], selectedValue: selected);
+  static Future<String?> showReligion(
+    BuildContext context, {
+    String? selected,
+  }) {
+    return showSelection(
+      context,
+      title: AppLocalizations.of(context).fieldReligionHint,
+      options: ['Hindu', 'Christian', 'Muslim', 'Jain', 'Sikh'],
+      selectedValue: selected,
+    );
   }
 
   /// Language Selection Sheet.
-  static Future<String?> showLanguage(BuildContext context, {String? selected}) {
-    return showSelection(context, title: AppLocalizations.of(context).fieldMotherTongue, options: ['Tamil', 'Telugu', 'Malayalam', 'Kannada', 'Hindi', 'English'], selectedValue: selected);
+  static Future<String?> showLanguage(
+    BuildContext context, {
+    String? selected,
+  }) {
+    return showSelection(
+      context,
+      title: AppLocalizations.of(context).fieldMotherTongue,
+      options: ['Tamil', 'Telugu', 'Malayalam', 'Kannada', 'Hindi', 'English'],
+      selectedValue: selected,
+    );
   }
 
   /// Searchable Selection Sheet — like [showSelection], but with a filter
@@ -111,7 +157,10 @@ abstract final class AppSheets {
     return show<String>(
       context,
       title: title,
-      child: _SearchableSelectionBody(options: options, selectedValue: selectedValue),
+      child: _SearchableSelectionBody(
+        options: options,
+        selectedValue: selectedValue,
+      ),
     );
   }
 
@@ -127,7 +176,10 @@ abstract final class AppSheets {
     return show<List<String>>(
       context,
       title: title,
-      child: _MultiSelectionBody(options: options, selectedValues: selectedValues),
+      child: _MultiSelectionBody(
+        options: options,
+        selectedValues: selectedValues,
+      ),
     );
   }
 
@@ -163,12 +215,17 @@ abstract final class AppSheets {
         itemCount: actions.length,
         itemBuilder: (context, index) {
           final action = actions[index];
-          final color = action.isDestructive ? AppColors.error : AppColors.primary;
+          final color = action.isDestructive
+              ? AppColors.error
+              : AppColors.primary;
           return ListTile(
             leading: Icon(action.icon, color: color),
             title: Text(
               action.label,
-              style: AppTypography.bodyMedium.copyWith(color: color, fontWeight: FontWeight.w600),
+              style: AppTypography.bodyMedium.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             onTap: () {
               Navigator.pop(context);
@@ -181,7 +238,10 @@ abstract final class AppSheets {
   }
 
   /// Date Sheet picker modal.
-  static Future<DateTime?> showDate(BuildContext context, {DateTime? initialDate}) async {
+  static Future<DateTime?> showDate(
+    BuildContext context, {
+    DateTime? initialDate,
+  }) async {
     final now = DateTime.now();
     return showDatePicker(
       context: context,
@@ -189,7 +249,12 @@ abstract final class AppSheets {
       firstDate: DateTime(1950),
       lastDate: DateTime(now.year - 18),
       builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(colorScheme: Theme.of(context).colorScheme.copyWith(primary: AppColors.primary, onPrimary: Colors.white)),
+        data: Theme.of(context).copyWith(
+          colorScheme: Theme.of(context).colorScheme.copyWith(
+            primary: AppColors.primary,
+            onPrimary: Colors.white,
+          ),
+        ),
         child: child!,
       ),
     );
@@ -206,7 +271,8 @@ class _SearchableSelectionBody extends StatefulWidget {
   const _SearchableSelectionBody({required this.options, this.selectedValue});
 
   @override
-  State<_SearchableSelectionBody> createState() => _SearchableSelectionBodyState();
+  State<_SearchableSelectionBody> createState() =>
+      _SearchableSelectionBodyState();
 }
 
 class _SearchableSelectionBodyState extends State<_SearchableSelectionBody> {
@@ -224,7 +290,9 @@ class _SearchableSelectionBodyState extends State<_SearchableSelectionBody> {
     setState(() {
       _filtered = normalized.isEmpty
           ? widget.options
-          : widget.options.where((o) => o.toLowerCase().contains(normalized)).toList();
+          : widget.options
+                .where((o) => o.toLowerCase().contains(normalized))
+                .toList();
     });
   }
 
@@ -242,7 +310,9 @@ class _SearchableSelectionBodyState extends State<_SearchableSelectionBody> {
               hintText: AppLocalizations.of(context).commonSearchHint,
               prefixIcon: const Icon(Icons.search_rounded, size: 20),
               isDense: true,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
             style: AppTypography.bodyMedium,
           ),
@@ -251,7 +321,9 @@ class _SearchableSelectionBodyState extends State<_SearchableSelectionBody> {
           child: _filtered.isEmpty
               ? Padding(
                   padding: const EdgeInsets.symmetric(vertical: 32),
-                  child: Center(child: Text(AppLocalizations.of(context).commonNoMatches)),
+                  child: Center(
+                    child: Text(AppLocalizations.of(context).commonNoMatches),
+                  ),
                 )
               : ListView.builder(
                   shrinkWrap: true,
@@ -263,12 +335,17 @@ class _SearchableSelectionBodyState extends State<_SearchableSelectionBody> {
                       title: Text(
                         opt,
                         style: AppTypography.bodyMedium.copyWith(
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w400,
                           color: isSelected ? AppColors.primary : null,
                         ),
                       ),
                       trailing: isSelected
-                          ? const Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                          ? const Icon(
+                              Icons.check_circle_rounded,
+                              color: AppColors.primary,
+                            )
                           : null,
                       onTap: () => Navigator.pop(context, opt),
                     );
@@ -285,7 +362,10 @@ class _MultiSelectionBody extends StatefulWidget {
   final List<String> options;
   final List<String> selectedValues;
 
-  const _MultiSelectionBody({required this.options, required this.selectedValues});
+  const _MultiSelectionBody({
+    required this.options,
+    required this.selectedValues,
+  });
 
   @override
   State<_MultiSelectionBody> createState() => _MultiSelectionBodyState();
@@ -375,7 +455,9 @@ class _TextInputBodyState extends State<_TextInputBody> {
             decoration: InputDecoration(
               hintText: widget.hint,
               isDense: true,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
             style: AppTypography.bodyMedium,
             onSubmitted: (value) => Navigator.pop(context, value.trim()),

@@ -11,9 +11,11 @@ class NmCircleAvatar extends StatelessWidget {
   final String? imageUrl;
   final double size;
   final VoidCallback? onTap;
+
   /// 'Male' / 'Female' / '' — picks the fallback icon when [imageUrl] is
   /// null/empty.
   final String gender;
+
   /// Where [BoxFit.cover] anchors the crop — defaults to dead-center.
   /// Callers displaying a face-focused avatar (e.g. the nav drawer) can
   /// bias this slightly upward so the crop keeps the whole head in frame
@@ -36,22 +38,25 @@ class NmCircleAvatar extends StatelessWidget {
       child: Container(
         width: size,
         height: size,
-        decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.primarySurface),
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.primarySurface,
+        ),
         clipBehavior: Clip.antiAlias,
         child: imageUrl != null && imageUrl!.isNotEmpty
             ? (imageUrl!.startsWith('assets/')
-                ? Image.asset(
-                    imageUrl!,
-                    fit: BoxFit.cover,
-                    alignment: alignment,
-                    errorBuilder: (_, __, ___) => _fallback(),
-                  )
-                : CachedNetworkImage(
-                    imageUrl: imageUrl!,
-                    fit: BoxFit.cover,
-                    alignment: alignment,
-                    errorWidget: (_, __, ___) => _fallback(),
-                  ))
+                  ? Image.asset(
+                      imageUrl!,
+                      fit: BoxFit.cover,
+                      alignment: alignment,
+                      errorBuilder: (_, __, ___) => _fallback(),
+                    )
+                  : CachedNetworkImage(
+                      imageUrl: imageUrl!,
+                      fit: BoxFit.cover,
+                      alignment: alignment,
+                      errorWidget: (_, __, ___) => _fallback(),
+                    ))
             : _fallback(),
       ),
     );
@@ -61,11 +66,11 @@ class NmCircleAvatar extends StatelessWidget {
   // [NmGenderPlaceholder] rather than duplicating the switch here — the
   // circular clip/background above is this widget's only real job.
   Widget _fallback() => NmGenderPlaceholder(
-        gender: gender,
-        iconSize: size * 0.6,
-        backgroundColor: AppColors.primarySurface,
-        iconColor: AppColors.primary,
-      );
+    gender: gender,
+    iconSize: size * 0.6,
+    backgroundColor: AppColors.primarySurface,
+    iconColor: AppColors.primary,
+  );
 }
 
 /// Profile Avatar.
@@ -73,7 +78,12 @@ class NmProfileAvatar extends StatelessWidget {
   final String? imageUrl;
   final double size;
   final String gender;
-  const NmProfileAvatar({super.key, this.imageUrl, this.size = 100.0, this.gender = ''});
+  const NmProfileAvatar({
+    super.key,
+    this.imageUrl,
+    this.size = 100.0,
+    this.gender = '',
+  });
 
   @override
   Widget build(BuildContext context) =>
@@ -121,7 +131,12 @@ class NmVerifiedAvatar extends StatelessWidget {
   final double size;
   final String gender;
 
-  const NmVerifiedAvatar({super.key, this.imageUrl, this.size = 54.0, this.gender = ''});
+  const NmVerifiedAvatar({
+    super.key,
+    this.imageUrl,
+    this.size = 54.0,
+    this.gender = '',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -133,8 +148,15 @@ class NmVerifiedAvatar extends StatelessWidget {
           bottom: 0,
           child: Container(
             padding: const EdgeInsets.all(2),
-            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-            child: const Icon(Icons.verified_rounded, size: 16, color: AppColors.verifiedBlue),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.verified_rounded,
+              size: 16,
+              color: AppColors.verifiedBlue,
+            ),
           ),
         ),
       ],
@@ -148,7 +170,12 @@ class NmPremiumAvatar extends StatelessWidget {
   final double size;
   final String gender;
 
-  const NmPremiumAvatar({super.key, this.imageUrl, this.size = 54.0, this.gender = ''});
+  const NmPremiumAvatar({
+    super.key,
+    this.imageUrl,
+    this.size = 54.0,
+    this.gender = '',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -193,8 +220,15 @@ class NmStoryAvatar extends StatelessWidget {
         ),
         child: Container(
           padding: const EdgeInsets.all(2),
-          decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
-          child: NmCircleAvatar(imageUrl: imageUrl, size: size - 10, gender: gender),
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+          ),
+          child: NmCircleAvatar(
+            imageUrl: imageUrl,
+            size: size - 10,
+            gender: gender,
+          ),
         ),
       ),
     );

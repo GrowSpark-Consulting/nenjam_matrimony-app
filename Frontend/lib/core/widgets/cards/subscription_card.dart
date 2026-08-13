@@ -123,14 +123,14 @@ class NmSubscriptionCard extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.check_circle_rounded,
-                        size: 18, color: AppColors.success),
+                    const Icon(
+                      Icons.check_circle_rounded,
+                      size: 18,
+                      color: AppColors.success,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(
-                        feature,
-                        style: AppTypography.bodySmall,
-                      ),
+                      child: Text(feature, style: AppTypography.bodySmall),
                     ),
                   ],
                 ),

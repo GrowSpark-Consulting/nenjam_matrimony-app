@@ -56,13 +56,20 @@ class AttachmentPicker {
           await showOpenSettingsDialog(
             context,
             title: AppLocalizations.of(context).permissionPhotoDisabledTitle,
-            message: AppLocalizations.of(context).permissionPhotoDisabledMessage,
+            message: AppLocalizations.of(
+              context,
+            ).permissionPhotoDisabledMessage,
             onOpenSettings: _permissions.openSettings,
           );
         }
         return null;
       }
-      if (context.mounted) _snack(context, AppLocalizations.of(context).permissionImagePickerError);
+      if (context.mounted) {
+        _snack(
+          context,
+          AppLocalizations.of(context).permissionImagePickerError,
+        );
+      }
       return null;
     }
   }

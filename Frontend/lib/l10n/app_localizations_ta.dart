@@ -3518,6 +3518,31 @@ class AppLocalizationsTa extends AppLocalizations {
   String get networkReconnect => 'மீண்டும் இணைக்க';
 
   @override
+  String get networkConnectionTimeout =>
+      'இணைப்பு காலாவதியானது. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get networkReceiveTimeout =>
+      'சேவையகம் பதிலளிக்க அதிக நேரம் எடுத்தது. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get networkRequestCancelled => 'கோரிக்கை ரத்து செய்யப்பட்டது.';
+
+  @override
+  String get startupUnreachableTitle => 'நெஞ்சத்தை அணுக முடியவில்லை';
+
+  @override
+  String get startupUnreachableMessage =>
+      'உங்கள் இணைய இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get startupUnhealthyTitle => 'நெஞ்சம் தற்காலிகமாக கிடைக்கவில்லை';
+
+  @override
+  String get startupUnhealthyMessage =>
+      'எங்கள் சேவையகங்களில் தற்போது சிக்கல் உள்ளது. சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
   String get networkServerErrorTitle => 'சேவையகப் பிழை (500)';
 
   @override

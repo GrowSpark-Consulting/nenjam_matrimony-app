@@ -65,10 +65,15 @@ class _NmExpandableSectionState extends State<NmExpandableSection> {
                   ),
                   if (widget.activeCount > 0) ...[
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.primarySurface,
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusFull,
+                        ),
                       ),
                       child: Text(
                         '${widget.activeCount}',
@@ -109,8 +114,9 @@ class _NmExpandableSectionState extends State<NmExpandableSection> {
                 children: widget.children,
               ),
             ),
-            crossFadeState:
-                _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            crossFadeState: _expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
             duration: AppAnimationTokens.normal,
             sizeCurve: AppAnimationTokens.cardHoverCurve,
           ),

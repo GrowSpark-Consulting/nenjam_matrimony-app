@@ -72,8 +72,11 @@ class NmChecklistItemCard extends StatelessWidget {
                       ),
                     ),
                     if (isDone)
-                      const Icon(Icons.check_circle_rounded,
-                          color: AppColors.success, size: 18),
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.success,
+                        size: 18,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -94,10 +97,15 @@ class NmChecklistItemCard extends StatelessWidget {
               onPressed: onAction,
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
-              child: Text(actionLabel,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              child: Text(
+                actionLabel,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
         ],
       ),

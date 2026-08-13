@@ -75,8 +75,9 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final size = MediaQuery.sizeOf(context);
-    _viewportSize =
-        math.min(size.width - 48, size.height * 0.55).clamp(200.0, 480.0);
+    _viewportSize = math
+        .min(size.width - 48, size.height * 0.55)
+        .clamp(200.0, 480.0);
   }
 
   @override
@@ -196,7 +197,10 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
     final effH = rotated ? w : h;
     final maxDx = math.max(0.0, (effW - _viewportSize) / 2);
     final maxDy = math.max(0.0, (effH - _viewportSize) / 2);
-    return Offset(offset.dx.clamp(-maxDx, maxDx), offset.dy.clamp(-maxDy, maxDy));
+    return Offset(
+      offset.dx.clamp(-maxDx, maxDx),
+      offset.dy.clamp(-maxDy, maxDy),
+    );
   }
 
   void _onRotate() {
@@ -228,8 +232,9 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
       final boundary = renderObject as RenderRepaintBoundary;
       final pixelRatio = widget.outputSize / _viewportSize;
       final captured = await boundary.toImage(pixelRatio: pixelRatio);
-      final byteData =
-          await captured.toByteData(format: ui.ImageByteFormat.png);
+      final byteData = await captured.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
       captured.dispose();
       if (byteData == null) {
         throw StateError('Failed to capture cropped image');
@@ -261,8 +266,9 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
         backgroundColor: Colors.black,
         appBar: _buildAppBar(),
         body: _buildBody(),
-        bottomNavigationBar:
-            _isLoadingSource || _loadError ? null : _buildBottomBar(),
+        bottomNavigationBar: _isLoadingSource || _loadError
+            ? null
+            : _buildBottomBar(),
       ),
     );
   }
@@ -304,8 +310,11 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.broken_image_outlined,
-                  color: Colors.white54, size: 40),
+              const Icon(
+                Icons.broken_image_outlined,
+                color: Colors.white54,
+                size: 40,
+              ),
               const SizedBox(height: 12),
               Text(
                 AppLocalizations.of(context).photoCropLoadError,
@@ -352,12 +361,15 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircularProgressIndicator(color: AppColors.accentGold),
+                    const CircularProgressIndicator(
+                      color: AppColors.accentGold,
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       AppLocalizations.of(context).commonProcessing,
-                      style:
-                          AppTypography.bodyMedium.copyWith(color: Colors.white),
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
@@ -414,7 +426,10 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
         children: [
           TextButton(
             onPressed: _isProcessing ? null : _onReset,
-            child: Text(AppLocalizations.of(context).commonReset, style: const TextStyle(color: Colors.white70)),
+            child: Text(
+              AppLocalizations.of(context).commonReset,
+              style: const TextStyle(color: Colors.white70),
+            ),
           ),
           const Spacer(),
           SizedBox(
@@ -455,8 +470,11 @@ class _CropOverlayPainter extends CustomPainter {
     final holePath = shape == CropShape.circle
         ? (Path()..addOval(holeRect))
         : (Path()..addRect(holeRect));
-    final scrimPath =
-        Path.combine(PathOperation.difference, outerPath, holePath);
+    final scrimPath = Path.combine(
+      PathOperation.difference,
+      outerPath,
+      holePath,
+    );
     canvas.drawPath(scrimPath, Paint()..color = const Color(0xCC000000));
 
     final borderPaint = Paint()

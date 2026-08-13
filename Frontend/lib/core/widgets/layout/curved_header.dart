@@ -59,12 +59,9 @@ class NmCurvedHeader extends StatelessWidget {
                   ],
                 ),
                 child: Center(
-                  child: badgeChild ??
-                      Icon(
-                        badgeIcon,
-                        size: 28,
-                        color: Colors.white,
-                      ),
+                  child:
+                      badgeChild ??
+                      Icon(badgeIcon, size: 28, color: Colors.white),
                 ),
               ),
               const SizedBox(height: 16),

@@ -32,12 +32,13 @@ class NmConversationStarterCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.chat_bubble_outline_rounded,
-                  size: 18, color: AppColors.accentGold),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(message, style: AppTypography.bodyMedium),
+              const Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 18,
+                color: AppColors.accentGold,
               ),
+              const SizedBox(width: 8),
+              Expanded(child: Text(message, style: AppTypography.bodyMedium)),
             ],
           ),
           const SizedBox(height: 8),

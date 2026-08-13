@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/realtime/realtime_providers.dart';
+import '../../../../core/realtime/realtime_service.dart';
 import '../../../../core/router/profile_navigation.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -17,6 +18,7 @@ import '../../../../core/widgets/sheets/app_sheets.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/conversation_entity.dart';
 import '../../domain/entities/message_entity.dart';
+import '../../domain/repositories/conversation_repository.dart';
 import '../controllers/typing_controller.dart';
 import '../providers/inbox_providers.dart';
 import '../providers/presence_providers.dart';
@@ -98,33 +100,52 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
   /// while disconnected never reached them.
   late final StreamSubscription<void> _readySubscription;
 
+  /// Dependencies resolved once at mount and held directly, because
+  /// [dispose] needs them.
+  ///
+  /// `ref` is only valid while this widget is alive: reading a provider from
+  /// `dispose()` throws (`Cannot use "ref" after the widget was disposed`),
+  /// and during app teardown or a ProviderScope rebuild the container may
+  /// already be gone. Both teardown signals this screen owes the server —
+  /// "stop suppressing pushes for this thread" and a final `typing_stop` —
+  /// would be lost to that exception, leaving the peer stuck on a typing
+  /// indicator and this member silently un-notified for the thread.
+  ///
+  /// Both providers are app-scoped singletons that outlive this page, so
+  /// holding the instances is safe; it is the *lookup* that is not.
+  late final RealtimeService _realtime;
+  late final ConversationRepository _conversationRepository;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_onScroll);
+    _realtime = ref.read(realtimeServiceProvider);
+    _conversationRepository = ref.read(conversationRepositoryProvider);
     _typing = TypingController(
-      onTyping: (isTyping) => ref
-          .read(conversationRepositoryProvider)
-          .setTyping(widget.conversation.id, isTyping),
+      // Deliberately the cached repository, not a ref.read: TypingController
+      // .dispose() fires this callback one last time from inside our own
+      // dispose().
+      onTyping: (isTyping) =>
+          _conversationRepository.setTyping(widget.conversation.id, isTyping),
     );
-    _readySubscription = ref
-        .read(realtimeServiceProvider)
-        .onReady
-        .listen((_) => _typing.resetForReconnect());
+    _readySubscription = _realtime.onReady.listen(
+      (_) => _typing.resetForReconnect(),
+    );
     // Tell the server this thread is on screen so it suppresses chat pushes for
     // it — the member is watching messages arrive live, so a lock-screen buzz
     // for the same message is pure noise. RealtimeService remembers the id and
     // re-sends it on reconnect, so this single call covers the socket dropping.
-    ref
-        .read(realtimeServiceProvider)
-        .setViewingConversation(widget.conversation.id);
+    _realtime.setViewingConversation(widget.conversation.id);
     // Mark this thread read the moment it opens — a single, entry-point-
     // agnostic trigger (Inbox tap, Profile Detail's Message button, or any
     // future deep link/push-notification route all land here) instead of
     // the old approach of the Inbox row's tap handler doing it. Deferred a
     // frame so it never runs during this widget's own mount/build.
-    WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_markThreadRead()));
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => unawaited(_markThreadRead()),
+    );
   }
 
   @override
@@ -136,7 +157,10 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     // handler, which a swipe-back or a deep link elsewhere would bypass. The
     // server also clears on disconnect and on background, so a crash cannot
     // leave this member silently un-notified.
-    ref.read(realtimeServiceProvider).setViewingConversation(null);
+    //
+    // Cached instances only — see [_realtime]/[_conversationRepository]. No
+    // ref.read/watch/invalidate may appear below this line.
+    _realtime.setViewingConversation(null);
     _typing.dispose(); // emits a final typing_stop so the peer isn't left stuck
     _highlightTimer?.cancel();
     _scrollController.removeListener(_onScroll);
@@ -165,9 +189,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
       case AppLifecycleState.resumed:
         // ...and re-register on the way back, since that same handler cleared
         // it server-side while we were away.
-        ref
-            .read(realtimeServiceProvider)
-            .setViewingConversation(widget.conversation.id);
+        _realtime.setViewingConversation(widget.conversation.id);
       default:
         break;
     }
@@ -209,7 +231,9 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
         // Normal case: the Inbox list is already loaded — go through the
         // notifier so its optimistic unreadCount update keeps the list and
         // its badge in sync, exactly like the old ConversationCard tap did.
-        await ref.read(conversationsNotifierProvider.notifier).markRead(conversationId);
+        await ref
+            .read(conversationsNotifierProvider.notifier)
+            .markRead(conversationId);
       } else {
         // Cold-start / deep-link / push-notification case: this screen can
         // open before the conversations list has ever been fetched, and
@@ -276,8 +300,12 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
       if (!mounted || !_scrollController.hasClients) return;
       final settled = _scrollController.position.maxScrollExtent;
       // ignore: avoid_print
-      print('After final layout: ${_scrollController.position.maxScrollExtent}');
-      if (settled == extent) return; // stable: that jump caused no further growth
+      print(
+        'After final layout: ${_scrollController.position.maxScrollExtent}',
+      );
+      if (settled == extent) {
+        return; // stable: that jump caused no further growth
+      }
     }
   }
 
@@ -285,7 +313,8 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     if (!_scrollController.hasClients) return;
     final position = _scrollController.position;
 
-    final nearBottom = position.pixels >= position.maxScrollExtent - _bottomThreshold;
+    final nearBottom =
+        position.pixels >= position.maxScrollExtent - _bottomThreshold;
     if (nearBottom != _isNearBottom || (nearBottom && _unseenNewMessages > 0)) {
       setState(() {
         _isNearBottom = nearBottom;
@@ -298,14 +327,18 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
 
   Future<void> _loadOlder() async {
     if (_isLoadingOlder) return;
-    final notifier = ref.read(messagesProvider(widget.conversation.id).notifier);
+    final notifier = ref.read(
+      messagesProvider(widget.conversation.id).notifier,
+    );
     if (!notifier.hasMoreHistory) return;
 
     setState(() => _isLoadingOlder = true);
     // Prepending older messages grows maxScrollExtent — without correcting
     // `pixels` by exactly that growth, the currently-visible messages would
     // visually jump down the screen once the new (taller) content lays out.
-    final oldExtent = _scrollController.hasClients ? _scrollController.position.maxScrollExtent : 0.0;
+    final oldExtent = _scrollController.hasClients
+        ? _scrollController.position.maxScrollExtent
+        : 0.0;
     await notifier.loadOlder();
     if (!mounted) return;
     setState(() => _isLoadingOlder = false);
@@ -329,11 +362,14 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
   MessageEntity? _resolveReplyTarget() {
     final target = _replyTarget;
     if (target == null) return null;
-    final messages = ref.read(messagesProvider(widget.conversation.id)).valueOrNull;
+    final messages = ref
+        .read(messagesProvider(widget.conversation.id))
+        .valueOrNull;
     if (messages == null) return target;
     for (final m in messages) {
       if (m.id == target.id ||
-          (target.clientMessageId != null && m.clientMessageId == target.clientMessageId)) {
+          (target.clientMessageId != null &&
+              m.clientMessageId == target.clientMessageId)) {
         return m;
       }
     }
@@ -392,7 +428,10 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
       final index = messages.indexWhere((m) => m.id == messageId);
       if (index == -1) return;
       final maxExtent = _scrollController.position.maxScrollExtent;
-      final estimatedOffset = (index * (maxExtent / messages.length)).clamp(0.0, maxExtent);
+      final estimatedOffset = (index * (maxExtent / messages.length)).clamp(
+        0.0,
+        maxExtent,
+      );
       _scrollController.jumpTo(estimatedOffset);
       await Future<void>.delayed(const Duration(milliseconds: 60));
       if (!mounted) return;
@@ -410,7 +449,9 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
   @override
   Widget build(BuildContext context) {
     final conversation = widget.conversation;
-    final messagesNotifier = ref.read(messagesProvider(conversation.id).notifier);
+    final messagesNotifier = ref.read(
+      messagesProvider(conversation.id).notifier,
+    );
 
     // `messagesProvider` is a plain (non-autoDispose) family provider — once
     // any conversation has been opened, its message list stays resolved for
@@ -421,8 +462,12 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     // a reopen of an already-loaded conversation sees data immediately, on
     // this very build, with no transition ever occurring for `ref.listen` to
     // observe.
-    final currentMessages = ref.watch(messagesProvider(conversation.id)).valueOrNull;
-    if (!_hasScrolledToInitialMessage && currentMessages != null && currentMessages.isNotEmpty) {
+    final currentMessages = ref
+        .watch(messagesProvider(conversation.id))
+        .valueOrNull;
+    if (!_hasScrolledToInitialMessage &&
+        currentMessages != null &&
+        currentMessages.isNotEmpty) {
       _hasScrolledToInitialMessage = true;
       // No animation: settles to the newest message once layout is actually
       // stable (see `_settleInitialScrollToBottom`) — the earliest point the
@@ -452,7 +497,8 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
       // genuinely new message by checking whether the *tail* changed. Only
       // a changed tail should ever trigger auto-scroll or the unseen-count.
       final tailUnchanged =
-          prevMessages.isNotEmpty && nextMessages.last.id == prevMessages.last.id;
+          prevMessages.isNotEmpty &&
+          nextMessages.last.id == prevMessages.last.id;
       if (tailUnchanged) return;
 
       final newest = nextMessages.last;
@@ -484,9 +530,12 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
                         peerName: conversation.profile.name,
                         scrollController: _scrollController,
                         isLoadingOlder: _isLoadingOlder,
-                        onRetry: (clientMessageId) => messagesNotifier.retry(clientMessageId),
-                        onReply: (message) => setState(() => _replyTarget = message),
-                        onTapReplyPreview: (messageId) => unawaited(_scrollToMessage(messageId)),
+                        onRetry: (clientMessageId) =>
+                            messagesNotifier.retry(clientMessageId),
+                        onReply: (message) =>
+                            setState(() => _replyTarget = message),
+                        onTapReplyPreview: (messageId) =>
+                            unawaited(_scrollToMessage(messageId)),
                         messageKeys: _messageKeys,
                         highlightedMessageId: _highlightedMessageId,
                       ),
@@ -519,17 +568,30 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
                       // calling this, which stops typing via the same single
                       // path as clearing the field manually would.
                       messagesNotifier.send(text, replyTo: replyTo);
-                      if (_replyTarget != null) setState(() => _replyTarget = null);
+                      if (_replyTarget != null) {
+                        setState(() => _replyTarget = null);
+                      }
                     },
                     onSendAttachment: (File file) {
                       final replyTo = _resolveReplyTarget();
-                      if (_replyTarget != null) setState(() => _replyTarget = null);
-                      return messagesNotifier.sendImage(file.path, replyTo: replyTo);
+                      if (_replyTarget != null) {
+                        setState(() => _replyTarget = null);
+                      }
+                      return messagesNotifier.sendImage(
+                        file.path,
+                        replyTo: replyTo,
+                      );
                     },
                     onSendVoice: (path, duration) {
                       final replyTo = _resolveReplyTarget();
-                      if (_replyTarget != null) setState(() => _replyTarget = null);
-                      return messagesNotifier.sendVoice(path, duration, replyTo: replyTo);
+                      if (_replyTarget != null) {
+                        setState(() => _replyTarget = null);
+                      }
+                      return messagesNotifier.sendVoice(
+                        path,
+                        duration,
+                        replyTo: replyTo,
+                      );
                     },
                     // ChatComposer forwards raw text on every change (and on
                     // focus loss); _typing.onChanged is the ONE place that
@@ -566,11 +628,18 @@ class _NewMessagesPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.arrow_downward_rounded, size: 16, color: Colors.white),
+              const Icon(
+                Icons.arrow_downward_rounded,
+                size: 16,
+                color: Colors.white,
+              ),
               const SizedBox(width: 6),
               Text(
                 '${l10n.inboxNewMessages} ($count)',
-                style: AppTypography.labelMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                style: AppTypography.labelMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),
@@ -593,14 +662,20 @@ class _ChatDetailAppBar extends ConsumerWidget implements PreferredSizeWidget {
     return AppBar(
       titleSpacing: 0,
       title: InkWell(
-        onTap: () => openProfileDetail(context, profile, isBlocked: conversation.isBlocked),
+        onTap: () => openProfileDetail(
+          context,
+          profile,
+          isBlocked: conversation.isBlocked,
+        ),
         child: Row(
           children: [
             Hero(
               tag: 'conversation-avatar-${conversation.id}',
               child: PresenceAvatar(
                 userId: profile.id,
-                imageUrl: profile.photoUrls.isNotEmpty ? profile.photoUrls.first : null,
+                imageUrl: profile.photoUrls.isNotEmpty
+                    ? profile.photoUrls.first
+                    : null,
                 size: 40,
                 gender: profile.gender,
               ),
@@ -639,18 +714,30 @@ class _ChatDetailAppBar extends ConsumerWidget implements PreferredSizeWidget {
               AppSheetAction(
                 icon: Icons.person_outline_rounded,
                 label: l10n.inboxActionViewProfile,
-                onTap: () => openProfileDetail(context, profile, isBlocked: conversation.isBlocked),
+                onTap: () => openProfileDetail(
+                  context,
+                  profile,
+                  isBlocked: conversation.isBlocked,
+                ),
               ),
               AppSheetAction(
-                icon: conversation.isMuted ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
-                label: conversation.isMuted ? l10n.inboxActionUnmute : l10n.inboxActionMute,
+                icon: conversation.isMuted
+                    ? Icons.notifications_active_outlined
+                    : Icons.notifications_off_outlined,
+                label: conversation.isMuted
+                    ? l10n.inboxActionUnmute
+                    : l10n.inboxActionMute,
                 onTap: () => ref
                     .read(conversationsNotifierProvider.notifier)
                     .mute(conversation.id, !conversation.isMuted),
               ),
               AppSheetAction(
-                icon: conversation.isBlocked ? Icons.lock_open_rounded : Icons.block_rounded,
-                label: conversation.isBlocked ? l10n.inboxActionUnblock : l10n.inboxActionBlock,
+                icon: conversation.isBlocked
+                    ? Icons.lock_open_rounded
+                    : Icons.block_rounded,
+                label: conversation.isBlocked
+                    ? l10n.inboxActionUnblock
+                    : l10n.inboxActionBlock,
                 isDestructive: !conversation.isBlocked,
                 onTap: () => _confirmBlock(context, ref, conversation, l10n),
               ),
@@ -678,7 +765,9 @@ class _ChatDetailAppBar extends ConsumerWidget implements PreferredSizeWidget {
       confirmLabel: l10n.inboxActionBlock,
     );
     if (confirmed ?? false) {
-      ref.read(conversationsNotifierProvider.notifier).block(conversation.id, true);
+      ref
+          .read(conversationsNotifierProvider.notifier)
+          .block(conversation.id, true);
     }
   }
 
@@ -732,7 +821,8 @@ class _MessagesList extends ConsumerWidget {
 
     return messagesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text(AppLocalizations.of(context).inboxLoadError)),
+      error: (error, _) =>
+          Center(child: Text(AppLocalizations.of(context).inboxLoadError)),
       data: (messages) {
         // itemCount layout: [0] older-history spinner (optional) ... [n]
         // messages ... [last] typing indicator (optional).
@@ -753,7 +843,11 @@ class _MessagesList extends ConsumerWidget {
                 key: ValueKey('loading-older'),
                 padding: EdgeInsets.symmetric(vertical: 12),
                 child: Center(
-                  child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 ),
               );
             }
@@ -766,7 +860,8 @@ class _MessagesList extends ConsumerWidget {
               );
             }
             final message = messages[messageIndex];
-            final showDateSeparator = messageIndex == 0 ||
+            final showDateSeparator =
+                messageIndex == 0 ||
                 !_isSameDay(messages[messageIndex - 1].sentAt, message.sentAt);
             // Long-press opens Reply/Edit/Delete for any message — EXCEPT a
             // failed send, whose whole bubble already handles tap-to-retry
@@ -780,9 +875,12 @@ class _MessagesList extends ConsumerWidget {
                 if (showDateSeparator) DateSeparator(date: message.sentAt),
                 MessageBubble(
                   message: message,
-                  onRetry: message.status == MessageStatus.failed ? onRetry : null,
-                  onLongPress:
-                      canLongPress ? () => _showMessageActions(context, ref, message) : null,
+                  onRetry: message.status == MessageStatus.failed
+                      ? onRetry
+                      : null,
+                  onLongPress: canLongPress
+                      ? () => _showMessageActions(context, ref, message)
+                      : null,
                   peerName: peerName,
                   isHighlighted: highlightedMessageId == message.id,
                   onTapReplyPreview: onTapReplyPreview,
@@ -813,7 +911,8 @@ class _MessagesList extends ConsumerWidget {
     // Hide Edit outright once the backend's edit window has passed, or while
     // an edit for this message is already saving — Delete stays available
     // either way (it has no time window and isn't subject to the same race).
-    final canEdit = message.isMine &&
+    final canEdit =
+        message.isMine &&
         !message.isDeleted &&
         message.type == MessageType.text &&
         !isMessageEditWindowExpired(message.sentAt) &&
@@ -833,14 +932,24 @@ class _MessagesList extends ConsumerWidget {
             if (canEdit)
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
-                title: Text(AppLocalizations.of(context).registrationEditButton),
-                onTap: () => Navigator.of(sheetContext).pop(_MessageAction.edit),
+                title: Text(
+                  AppLocalizations.of(context).registrationEditButton,
+                ),
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(_MessageAction.edit),
               ),
             if (canDelete)
               ListTile(
-                leading: const Icon(Icons.delete_outline, color: AppColors.error),
-                title: Text(AppLocalizations.of(context).inboxActionDelete, style: const TextStyle(color: AppColors.error)),
-                onTap: () => Navigator.of(sheetContext).pop(_MessageAction.delete),
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: AppColors.error,
+                ),
+                title: Text(
+                  AppLocalizations.of(context).inboxActionDelete,
+                  style: const TextStyle(color: AppColors.error),
+                ),
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(_MessageAction.delete),
               ),
           ],
         ),
@@ -860,11 +969,11 @@ class _MessagesList extends ConsumerWidget {
           final errorMessage = error is ApiException
               ? error.message
               : error is MessageEditWindowExpiredException
-                  ? error.message
-                  : AppLocalizations.of(context).inboxEditMessageError;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMessage)),
-          );
+              ? error.message
+              : AppLocalizations.of(context).inboxEditMessageError;
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(errorMessage)));
         }
       case _MessageAction.delete:
         final confirmed = await _confirmDelete(context);
@@ -884,7 +993,9 @@ class _MessagesList extends ConsumerWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(AppLocalizations.of(dialogContext).inboxDeleteMessageTitle),
-        content: Text(AppLocalizations.of(dialogContext).inboxDeleteMessageBody),
+        content: Text(
+          AppLocalizations.of(dialogContext).inboxDeleteMessageBody,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -892,7 +1003,10 @@ class _MessagesList extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(AppLocalizations.of(dialogContext).inboxActionDelete, style: const TextStyle(color: AppColors.error)),
+            child: Text(
+              AppLocalizations.of(dialogContext).inboxActionDelete,
+              style: const TextStyle(color: AppColors.error),
+            ),
           ),
         ],
       ),
@@ -923,8 +1037,9 @@ class _EditMessageDialog extends StatefulWidget {
 }
 
 class _EditMessageDialogState extends State<_EditMessageDialog> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.initialText);
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialText,
+  );
 
   @override
   void dispose() {
@@ -973,15 +1088,28 @@ class _LockedThread extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(color: AppColors.accentGoldSurface, shape: BoxShape.circle),
-              child: const Icon(Icons.lock_rounded, size: 48, color: AppColors.accentGoldDark),
+              decoration: const BoxDecoration(
+                color: AppColors.accentGoldSurface,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.lock_rounded,
+                size: 48,
+                color: AppColors.accentGoldDark,
+              ),
             ),
             const SizedBox(height: 24),
-            Text(l10n.inboxPremiumLockedName, style: AppTypography.titleLarge, textAlign: TextAlign.center),
+            Text(
+              l10n.inboxPremiumLockedName,
+              style: AppTypography.titleLarge,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
             Text(
               l10n.inboxPremiumLockedMessage,
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight),
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondaryLight,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -1015,11 +1143,14 @@ class _BlockedBanner extends ConsumerWidget {
           Expanded(
             child: Text(
               l10n.inboxBlockedBanner,
-              style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondaryLight),
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textSecondaryLight,
+              ),
             ),
           ),
           TextButton(
-            onPressed: () => handleUnblockConversation(context, ref, conversation),
+            onPressed: () =>
+                handleUnblockConversation(context, ref, conversation),
             child: Text(l10n.inboxActionUnblock),
           ),
         ],

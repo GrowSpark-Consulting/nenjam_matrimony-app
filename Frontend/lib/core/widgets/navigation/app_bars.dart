@@ -43,6 +43,7 @@ class NmSearchAppBar extends StatelessWidget implements PreferredSizeWidget {
   final void Function(String)? onChanged;
   final void Function(String)? onSubmitted;
   final VoidCallback? onFilterTap;
+
   /// Count shown as a small pill on the filter icon when > 0 (e.g. active
   /// filter count). No pill is drawn at 0 — existing callers that don't
   /// pass this see no visual change.
@@ -76,14 +77,20 @@ class NmSearchAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.search_rounded, color: AppColors.textSecondaryLight),
+                    const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.textSecondaryLight,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextField(
                         controller: controller,
                         onChanged: onChanged,
                         onSubmitted: onSubmitted,
-                        decoration: InputDecoration(hintText: hint, border: InputBorder.none),
+                        decoration: InputDecoration(
+                          hintText: hint,
+                          border: InputBorder.none,
+                        ),
                         style: AppTypography.bodyMedium,
                       ),
                     ),
@@ -96,13 +103,19 @@ class NmSearchAppBar extends StatelessWidget implements PreferredSizeWidget {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  IconButton(icon: const Icon(Icons.tune_rounded), onPressed: onFilterTap),
+                  IconButton(
+                    icon: const Icon(Icons.tune_rounded),
+                    onPressed: onFilterTap,
+                  ),
                   if (filterBadgeCount > 0)
                     Positioned(
                       top: 4,
                       right: 4,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
                         constraints: const BoxConstraints(minWidth: 16),
                         decoration: const BoxDecoration(
                           color: AppColors.primary,
@@ -155,7 +168,10 @@ class NmSliverAppBar extends StatelessWidget {
       foregroundColor: Colors.white,
       actions: actions,
       flexibleSpace: FlexibleSpaceBar(
-        title: Text(title, style: AppTypography.titleMedium.copyWith(color: Colors.white)),
+        title: Text(
+          title,
+          style: AppTypography.titleMedium.copyWith(color: Colors.white),
+        ),
         background: backgroundImageUrl != null
             ? Image.network(backgroundImageUrl!, fit: BoxFit.cover)
             : Container(color: AppColors.primary),
@@ -193,7 +209,10 @@ class NmFloatingNavigation extends StatelessWidget {
         children: icons.asMap().entries.map((entry) {
           final isSelected = selectedIndex == entry.key;
           return IconButton(
-            icon: Icon(entry.value, color: isSelected ? AppColors.accentGold : Colors.white70),
+            icon: Icon(
+              entry.value,
+              color: isSelected ? AppColors.accentGold : Colors.white70,
+            ),
             onPressed: () => onItemSelected(entry.key),
           );
         }).toList(),

@@ -36,14 +36,17 @@ class ProfilePromptSection extends StatelessWidget {
           decoration: AppDecorations.goldBorder,
           child: Row(
             children: [
-              const Icon(Icons.add_circle_outline_rounded,
-                  color: AppColors.accentGold),
+              const Icon(
+                Icons.add_circle_outline_rounded,
+                color: AppColors.accentGold,
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
                   AppLocalizations.of(context).riAddFirstPrompt,
-                  style: AppTypography.bodyMedium
-                      .copyWith(fontWeight: FontWeight.w600),
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -57,13 +60,18 @@ class ProfilePromptSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(AppLocalizations.of(context).profileCompletionGrowthPrompts, style: AppTypography.titleMedium),
+            Text(
+              AppLocalizations.of(context).profileCompletionGrowthPrompts,
+              style: AppTypography.titleMedium,
+            ),
             const Spacer(),
             if (editable)
               TextButton.icon(
                 onPressed: onEditTap,
                 icon: const Icon(Icons.edit_outlined, size: 16),
-                label: Text(AppLocalizations.of(context).registrationEditButton),
+                label: Text(
+                  AppLocalizations.of(context).registrationEditButton,
+                ),
               ),
           ],
         ),
@@ -80,14 +88,18 @@ class ProfilePromptSection extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.format_quote_rounded,
-                        color: AppColors.accentGold, size: 20),
+                    const Icon(
+                      Icons.format_quote_rounded,
+                      color: AppColors.accentGold,
+                      size: 20,
+                    ),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
                         p.promptText,
-                        style: AppTypography.labelLarge
-                            .copyWith(fontWeight: FontWeight.w600),
+                        style: AppTypography.labelLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],

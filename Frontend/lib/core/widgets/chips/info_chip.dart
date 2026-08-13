@@ -26,8 +26,8 @@ class NmInfoChip extends StatelessWidget {
     required this.label,
     this.isSelected = false,
     this.onTap,
-  })  : icon = null,
-        selectedColor = AppColors.primary;
+  }) : icon = null,
+       selectedColor = AppColors.primary;
 
   /// Religion chip factory.
   const NmInfoChip.religion({
@@ -35,8 +35,8 @@ class NmInfoChip extends StatelessWidget {
     required this.label,
     this.isSelected = false,
     this.onTap,
-  })  : icon = Icons.temple_hindu_rounded,
-        selectedColor = AppColors.accentGold;
+  }) : icon = Icons.temple_hindu_rounded,
+       selectedColor = AppColors.accentGold;
 
   /// Language chip factory.
   const NmInfoChip.language({
@@ -44,8 +44,8 @@ class NmInfoChip extends StatelessWidget {
     required this.label,
     this.isSelected = false,
     this.onTap,
-  })  : icon = Icons.translate_rounded,
-        selectedColor = AppColors.info;
+  }) : icon = Icons.translate_rounded,
+       selectedColor = AppColors.info;
 
   @override
   Widget build(BuildContext context) {
@@ -61,8 +61,8 @@ class NmInfoChip extends StatelessWidget {
           color: isSelected
               ? chipColor.withValues(alpha: 0.12)
               : (isDark
-                  ? AppColors.surfaceVariantDark
-                  : AppColors.surfaceVariantLight),
+                    ? AppColors.surfaceVariantDark
+                    : AppColors.surfaceVariantLight),
           borderRadius: BorderRadius.circular(12),
           border: isSelected
               ? Border.all(color: chipColor.withValues(alpha: 0.4))
@@ -78,8 +78,8 @@ class NmInfoChip extends StatelessWidget {
                 color: isSelected
                     ? chipColor
                     : (isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight),
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight),
               ),
               const SizedBox(width: 6),
             ],
@@ -92,8 +92,8 @@ class NmInfoChip extends StatelessWidget {
                   color: isSelected
                       ? chipColor
                       : (isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight),
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight),
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),

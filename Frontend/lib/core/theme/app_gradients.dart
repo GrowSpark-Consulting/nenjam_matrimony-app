@@ -69,39 +69,26 @@ abstract final class AppGradients {
   static const LinearGradient cardGlass = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [
-      Color(0x1AFFFFFF),
-      Color(0x0DFFFFFF),
-    ],
+    colors: [Color(0x1AFFFFFF), Color(0x0DFFFFFF)],
   );
 
   static const LinearGradient cardGlassDark = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [
-      Color(0x1A1E2230),
-      Color(0x0D1E2230),
-    ],
+    colors: [Color(0x1A1E2230), Color(0x0D1E2230)],
   );
 
   // ─── Overlay Gradients ───────────────────────────────────────────
   static const LinearGradient imageOverlay = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [
-      Colors.transparent,
-      Color(0x80000000),
-    ],
+    colors: [Colors.transparent, Color(0x80000000)],
   );
 
   static const LinearGradient imageOverlayStrong = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [
-      Colors.transparent,
-      Color(0x33000000),
-      Color(0xCC000000),
-    ],
+    colors: [Colors.transparent, Color(0x33000000), Color(0xCC000000)],
     stops: [0.0, 0.4, 1.0],
   );
 
@@ -118,20 +105,13 @@ abstract final class AppGradients {
   static const LinearGradient splash = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [
-      Color(0xFF1B2B4B),
-      Color(0xFF2D4A7A),
-      Color(0xFF1B2B4B),
-    ],
+    colors: [Color(0xFF1B2B4B), Color(0xFF2D4A7A), Color(0xFF1B2B4B)],
     stops: [0.0, 0.5, 1.0],
   );
 
   static const RadialGradient splashRadial = RadialGradient(
     center: Alignment.center,
     radius: 1.2,
-    colors: [
-      Color(0xFF2D4A7A),
-      Color(0xFF1B2B4B),
-    ],
+    colors: [Color(0xFF2D4A7A), Color(0xFF1B2B4B)],
   );
 }

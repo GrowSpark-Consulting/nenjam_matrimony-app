@@ -17,9 +17,11 @@ import '../../widgets/permissions/permission_dialogs.dart';
 /// docs/development/chat-backend-handoff.md), so nothing here pretends a
 /// recording has been sent anywhere.
 class VoiceRecorderService {
-  VoiceRecorderService({AudioRecorder? recorder, AppPermissionService? permissions})
-    : _recorder = recorder ?? AudioRecorder(),
-      _permissions = permissions ?? const AppPermissionServiceImpl();
+  VoiceRecorderService({
+    AudioRecorder? recorder,
+    AppPermissionService? permissions,
+  }) : _recorder = recorder ?? AudioRecorder(),
+       _permissions = permissions ?? const AppPermissionServiceImpl();
 
   final AudioRecorder _recorder;
   final AppPermissionService _permissions;
@@ -36,7 +38,10 @@ class VoiceRecorderService {
         '${dir.path}/nm_voice_${DateTime.now().microsecondsSinceEpoch}.m4a';
     // AAC-LC in an MPEG-4 container (.m4a) — the `record` package's default
     // encoder, supported on every platform this app ships to.
-    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
+    await _recorder.start(
+      const RecordConfig(encoder: AudioEncoder.aacLc),
+      path: path,
+    );
     return path;
   }
 

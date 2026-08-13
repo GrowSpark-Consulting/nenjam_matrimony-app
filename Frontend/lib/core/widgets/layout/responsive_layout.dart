@@ -40,11 +40,7 @@ class NmContentConstraint extends StatelessWidget {
   final Widget child;
   final double? maxWidth;
 
-  const NmContentConstraint({
-    super.key,
-    required this.child,
-    this.maxWidth,
-  });
+  const NmContentConstraint({super.key, required this.child, this.maxWidth});
 
   @override
   Widget build(BuildContext context) {

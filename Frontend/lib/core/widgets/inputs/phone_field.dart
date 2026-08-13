@@ -37,7 +37,10 @@ const kCountryCodes = [
 ];
 
 /// Shows a searchable country picker bottom sheet.
-void showCountryPickerSheet(BuildContext context, {required ValueChanged<CountryInfo> onSelect}) {
+void showCountryPickerSheet(
+  BuildContext context, {
+  required ValueChanged<CountryInfo> onSelect,
+}) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
   showModalBottomSheet<void>(
     context: context,
@@ -62,7 +65,9 @@ void showCountryPickerSheet(BuildContext context, {required ValueChanged<Country
             const SizedBox(height: 16),
             Text(
               AppLocalizations.of(context).fieldCountryCodeHint,
-              style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 12),
             Expanded(
@@ -134,10 +139,13 @@ class _NmPhoneNumberFieldState extends State<NmPhoneNumberField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         InkWell(
-          onTap: () => showCountryPickerSheet(context, onSelect: (c) {
-            setState(() => _selectedCountry = c);
-            widget.onCountryChanged?.call(c);
-          }),
+          onTap: () => showCountryPickerSheet(
+            context,
+            onSelect: (c) {
+              setState(() => _selectedCountry = c);
+              widget.onCountryChanged?.call(c);
+            },
+          ),
           borderRadius: BorderRadius.circular(14),
           child: Container(
             height: 56,
@@ -149,10 +157,21 @@ class _NmPhoneNumberFieldState extends State<NmPhoneNumberField> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(_selectedCountry.flag, style: const TextStyle(fontSize: 20)),
+                Text(
+                  _selectedCountry.flag,
+                  style: const TextStyle(fontSize: 20),
+                ),
                 const SizedBox(width: 6),
-                Text(_selectedCountry.code, style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-                const Icon(Icons.arrow_drop_down_rounded, color: AppColors.textSecondaryLight),
+                Text(
+                  _selectedCountry.code,
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_drop_down_rounded,
+                  color: AppColors.textSecondaryLight,
+                ),
               ],
             ),
           ),

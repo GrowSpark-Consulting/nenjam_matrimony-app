@@ -10,6 +10,7 @@ class NmDrawer extends StatelessWidget {
   final String? userName;
   final String? userEmail;
   final String? profileImageUrl;
+
   /// 'Male' / 'Female' / '' — picks the gender-aware placeholder icon
   /// when [profileImageUrl] is null.
   final String gender;
@@ -46,7 +47,11 @@ class NmDrawer extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
-                  NmCircleAvatar(imageUrl: profileImageUrl, size: 56, gender: gender),
+                  NmCircleAvatar(
+                    imageUrl: profileImageUrl,
+                    size: 56,
+                    gender: gender,
+                  ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -143,9 +148,7 @@ class _DrawerItem extends StatelessWidget {
       title: Text(label, style: AppTypography.bodyMedium),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 }

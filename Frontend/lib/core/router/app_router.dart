@@ -72,8 +72,9 @@ import 'route_names.dart';
 /// share one GlobalKey — and would silently drop the entire in-memory
 /// navigation stack (back to `initialLocation`), which looks exactly like
 /// "the app forgot where I was" even though the process never died.
-final GlobalKey<NavigatorState> rootNavigatorKey =
-    GlobalKey<NavigatorState>(debugLabel: 'root');
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>(
+  debugLabel: 'root',
+);
 
 GoRouter? _appRouter;
 
@@ -125,22 +126,30 @@ class _DebugNavObserver extends NavigatorObserver {
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    debugPrint('[NAV:$label] didPush  ${_name(previousRoute)} -> ${_name(route)}');
+    debugPrint(
+      '[NAV:$label] didPush  ${_name(previousRoute)} -> ${_name(route)}',
+    );
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    debugPrint('[NAV:$label] didPop   ${_name(route)} -> ${_name(previousRoute)}');
+    debugPrint(
+      '[NAV:$label] didPop   ${_name(route)} -> ${_name(previousRoute)}',
+    );
   }
 
   @override
   void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    debugPrint('[NAV:$label] didRemove ${_name(route)} -> ${_name(previousRoute)}');
+    debugPrint(
+      '[NAV:$label] didRemove ${_name(route)} -> ${_name(previousRoute)}',
+    );
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
-    debugPrint('[NAV:$label] didReplace ${_name(oldRoute)} -> ${_name(newRoute)}');
+    debugPrint(
+      '[NAV:$label] didReplace ${_name(oldRoute)} -> ${_name(newRoute)}',
+    );
   }
 }
 
@@ -186,7 +195,9 @@ class GoRouterRefreshStream extends ChangeNotifier {
     // investigation, remove once root-caused. Answers whether a refresh
     // (which triggers go_router's internal reparse/restore machinery) is
     // firing around the moment Profile Detail gets pushed.
-    debugPrint('[REFRESH] notifyListeners (constructor) ts=${DateTime.now().toIso8601String()}');
+    debugPrint(
+      '[REFRESH] notifyListeners (constructor) ts=${DateTime.now().toIso8601String()}',
+    );
     notifyListeners();
     _subscription = stream.asBroadcastStream().listen((event) {
       debugPrint(
@@ -238,409 +249,417 @@ GoRouter createRouter(WidgetRef ref) {
     previousOnError?.call(details);
   };
   return _appRouter = GoRouter(
-      navigatorKey: rootNavigatorKey,
-      initialLocation: RouteNames.splash,
-      debugLogDiagnostics: true,
-      // TEMP DEBUG — remove before shipping.
-      observers: [_DebugNavObserver('root')],
-      refreshListenable: GoRouterRefreshStream(
-        ref.read(authRepositoryProvider).authStateChanges(),
-      ),
-      redirect: (context, state) async {
-        // NB: never call GoRouter.of(context) / read routerDelegate here — the
-        // redirect's `context` is NOT under the GoRouter InheritedWidget during
-        // initial resolution or a refreshListenable firing (e.g. sign-out),
-        // which throws "No GoRouter found in context". Everything routing
-        // decisions need is already on `state`.
-        final location = state.matchedLocation;
-        // TEMP DEBUG — instrumentation for the keyReservation crash
-        // investigation, remove once root-caused.
-        final entryTs = DateTime.now().toIso8601String();
-        debugPrint('[REDIRECT] enter location=$location ts=$entryTs');
-        if (RouteNames.publicRoutes.contains(location)) {
-          debugPrint('[REDIRECT] exit location=$location result=null (public) ts=${DateTime.now().toIso8601String()}');
-          return null;
-        }
-
-        final user = await ref.read(authStateChangesProvider.future);
-        if (user == null) {
-          debugPrint('[REDIRECT] exit location=$location result=${RouteNames.login} (unauthenticated) ts=${DateTime.now().toIso8601String()}');
-          return RouteNames.login;
-        }
-        debugPrint('[REDIRECT] exit location=$location result=null ts=${DateTime.now().toIso8601String()}');
+    navigatorKey: rootNavigatorKey,
+    initialLocation: RouteNames.splash,
+    debugLogDiagnostics: true,
+    // TEMP DEBUG — remove before shipping.
+    observers: [_DebugNavObserver('root')],
+    refreshListenable: GoRouterRefreshStream(
+      ref.read(authRepositoryProvider).authStateChanges(),
+    ),
+    redirect: (context, state) async {
+      // NB: never call GoRouter.of(context) / read routerDelegate here — the
+      // redirect's `context` is NOT under the GoRouter InheritedWidget during
+      // initial resolution or a refreshListenable firing (e.g. sign-out),
+      // which throws "No GoRouter found in context". Everything routing
+      // decisions need is already on `state`.
+      final location = state.matchedLocation;
+      // TEMP DEBUG — instrumentation for the keyReservation crash
+      // investigation, remove once root-caused.
+      final entryTs = DateTime.now().toIso8601String();
+      debugPrint('[REDIRECT] enter location=$location ts=$entryTs');
+      if (RouteNames.publicRoutes.contains(location)) {
+        debugPrint(
+          '[REDIRECT] exit location=$location result=null (public) ts=${DateTime.now().toIso8601String()}',
+        );
         return null;
-      },
-      routes: [
-        // ─── Standalone Routes (no bottom nav) ────────────────────
-        GoRoute(
-          path: RouteNames.splash,
-          name: RouteNames.splashName,
-          builder: (context, state) => const SplashPage(),
-        ),
-        GoRoute(
-          path: RouteNames.language,
-          name: RouteNames.languageName,
-          builder: (context, state) => const LanguagePage(),
-        ),
-        GoRoute(
-          path: RouteNames.authSelection,
-          name: RouteNames.authSelectionName,
-          builder: (context, state) => const AuthSelectionPage(),
-        ),
-        GoRoute(
-          path: RouteNames.onboarding,
-          name: RouteNames.onboardingName,
-          builder: (context, state) => const OnboardingPage(),
-        ),
-        GoRoute(
-          path: RouteNames.login,
-          name: RouteNames.loginName,
-          builder: (context, state) {
-            final extra = state.extra;
-            int initialTab = 0;
-            if (extra is Map) {
-              if (extra['tab'] is int) {
-                initialTab = extra['tab'] as int;
-              } else if (extra['initialTab'] is int) {
-                initialTab = extra['initialTab'] as int;
-              }
+      }
+
+      final user = await ref.read(authStateChangesProvider.future);
+      if (user == null) {
+        debugPrint(
+          '[REDIRECT] exit location=$location result=${RouteNames.login} (unauthenticated) ts=${DateTime.now().toIso8601String()}',
+        );
+        return RouteNames.login;
+      }
+      debugPrint(
+        '[REDIRECT] exit location=$location result=null ts=${DateTime.now().toIso8601String()}',
+      );
+      return null;
+    },
+    routes: [
+      // ─── Standalone Routes (no bottom nav) ────────────────────
+      GoRoute(
+        path: RouteNames.splash,
+        name: RouteNames.splashName,
+        builder: (context, state) => const SplashPage(),
+      ),
+      GoRoute(
+        path: RouteNames.language,
+        name: RouteNames.languageName,
+        builder: (context, state) => const LanguagePage(),
+      ),
+      GoRoute(
+        path: RouteNames.authSelection,
+        name: RouteNames.authSelectionName,
+        builder: (context, state) => const AuthSelectionPage(),
+      ),
+      GoRoute(
+        path: RouteNames.onboarding,
+        name: RouteNames.onboardingName,
+        builder: (context, state) => const OnboardingPage(),
+      ),
+      GoRoute(
+        path: RouteNames.login,
+        name: RouteNames.loginName,
+        builder: (context, state) {
+          final extra = state.extra;
+          int initialTab = 0;
+          if (extra is Map) {
+            if (extra['tab'] is int) {
+              initialTab = extra['tab'] as int;
+            } else if (extra['initialTab'] is int) {
+              initialTab = extra['initialTab'] as int;
             }
-            return LoginPage(initialTab: initialTab);
-          },
+          }
+          return LoginPage(initialTab: initialTab);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.otp,
+        name: RouteNames.otpName,
+        builder: (context, state) => const OtpPage(),
+      ),
+      GoRoute(
+        path: RouteNames.loginOtp,
+        name: RouteNames.loginOtpName,
+        builder: (context, state) => const LoginOtpScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.verifyEmail,
+        name: RouteNames.verifyEmailName,
+        builder: (context, state) => const EmailVerifyScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.verifyPhone,
+        name: RouteNames.verifyPhoneName,
+        builder: (context, state) => const PhoneVerifyScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.forgotPassword,
+        name: RouteNames.forgotPasswordName,
+        builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: RouteNames.registration,
+        name: RouteNames.registrationName,
+        builder: (context, state) => const RegistrationPage(),
+      ),
+      GoRoute(
+        path: RouteNames.createProfileFor,
+        name: RouteNames.createProfileForName,
+        builder: (context, state) => const CreateProfileForPage(),
+      ),
+      GoRoute(
+        path: RouteNames.registrationWelcome,
+        name: RouteNames.registrationWelcomeName,
+        builder: (context, state) => const RegistrationWelcomePage(),
+      ),
+      GoRoute(
+        path: RouteNames.registrationWizard,
+        name: RouteNames.registrationWizardName,
+        builder: (context, state) => const ProfileWizardPage(),
+      ),
+      GoRoute(
+        path: RouteNames.registrationCompleting,
+        name: RouteNames.registrationCompletingName,
+        builder: (context, state) => const RegistrationCompletingPage(),
+      ),
+      GoRoute(
+        path: RouteNames.registrationSuccess,
+        name: RouteNames.registrationSuccessName,
+        builder: (context, state) => const RegistrationSuccessPage(),
+      ),
+      GoRoute(
+        path: RouteNames.psychologyQuiz,
+        name: RouteNames.psychologyQuizName,
+        builder: (context, state) => const PsychologyQuizPage(),
+      ),
+      // ─── Relationship Intelligence (independent of registration) ──
+      GoRoute(
+        path: RouteNames.profileIntelligence,
+        name: RouteNames.profileIntelligenceName,
+        builder: (context, state) => const ProfileIntelligencePage(),
+      ),
+      GoRoute(
+        path: RouteNames.choosePrompt,
+        name: RouteNames.choosePromptName,
+        builder: (context, state) {
+          final extra = state.extra;
+          final selection = extra is List<PromptAnswer>
+              ? extra
+              : const <PromptAnswer>[];
+          return ChoosePromptPage(currentSelection: selection);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.horoscopeMatching,
+        name: RouteNames.horoscopeMatchingName,
+        builder: (context, state) => const HoroscopeMatchingPage(),
+      ),
+      GoRoute(
+        path: RouteNames.profileReview,
+        name: RouteNames.profileReviewName,
+        builder: (context, state) => const ProfileReviewPage(),
+      ),
+      GoRoute(
+        path: RouteNames.profileCompletion,
+        name: RouteNames.profileCompletionName,
+        builder: (context, state) => const ProfileCompletionPage(),
+      ),
+      GoRoute(
+        path: RouteNames.settings,
+        name: RouteNames.settingsName,
+        builder: (context, state) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: RouteNames.verification,
+        name: RouteNames.verificationName,
+        builder: (context, state) => const VerificationPage(),
+      ),
+      GoRoute(
+        path: RouteNames.subscription,
+        name: RouteNames.subscriptionName,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const SubscriptionPage(),
+          transitionsBuilder: _slideUpTransition,
         ),
-        GoRoute(
-          path: RouteNames.otp,
-          name: RouteNames.otpName,
-          builder: (context, state) => const OtpPage(),
+      ),
+      GoRoute(
+        path: RouteNames.help,
+        name: RouteNames.helpName,
+        builder: (context, state) => const HelpPage(),
+      ),
+      GoRoute(
+        path: RouteNames.supportTicketForm,
+        name: RouteNames.supportTicketFormName,
+        builder: (context, state) => SupportTicketFormPage(
+          type:
+              state.extra as SupportTicketType? ??
+              SupportTicketType.contactSupport,
         ),
-        GoRoute(
-          path: RouteNames.loginOtp,
-          name: RouteNames.loginOtpName,
-          builder: (context, state) => const LoginOtpScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.ticketHistory,
+        name: RouteNames.ticketHistoryName,
+        builder: (context, state) => const TicketHistoryPage(),
+      ),
+      GoRoute(
+        path: RouteNames.privacy,
+        name: RouteNames.privacyName,
+        builder: (context, state) => const PrivacyPage(),
+      ),
+      GoRoute(
+        path: RouteNames.trustScore,
+        name: RouteNames.trustScoreName,
+        builder: (context, state) => const TrustScorePage(),
+      ),
+      GoRoute(
+        path: RouteNames.partnerPreferences,
+        name: RouteNames.partnerPreferencesName,
+        builder: (context, state) => const PartnerPreferencesPage(),
+      ),
+      GoRoute(
+        path: RouteNames.interestsSent,
+        name: RouteNames.interestsSentName,
+        builder: (context, state) => const InterestsSentPage(),
+      ),
+      GoRoute(
+        path: RouteNames.interestsReceived,
+        name: RouteNames.interestsReceivedName,
+        builder: (context, state) => const InterestsReceivedPage(),
+      ),
+      GoRoute(
+        path: RouteNames.shortlisted,
+        name: RouteNames.shortlistedName,
+        builder: (context, state) => const ShortlistedPage(),
+      ),
+      GoRoute(
+        path: RouteNames.profileViewers,
+        name: RouteNames.profileViewersName,
+        // `?openedFromNotification=true` is set only by
+        // NotificationNavigationService; the drawer pushes the bare path.
+        // It decides where Back goes if this page ends up with nothing
+        // beneath it — see ProfileViewersPage's doc comment.
+        builder: (context, state) => ProfileViewersPage(
+          openedFromNotification:
+              state.uri.queryParameters[RouteNames
+                  .openedFromNotificationParam] ==
+              'true',
         ),
-        GoRoute(
-          path: RouteNames.verifyEmail,
-          name: RouteNames.verifyEmailName,
-          builder: (context, state) => const EmailVerifyScreen(),
-        ),
-        GoRoute(
-          path: RouteNames.verifyPhone,
-          name: RouteNames.verifyPhoneName,
-          builder: (context, state) => const PhoneVerifyScreen(),
-        ),
-        GoRoute(
-          path: RouteNames.forgotPassword,
-          name: RouteNames.forgotPasswordName,
-          builder: (context, state) => const ForgotPasswordPage(),
-        ),
-        GoRoute(
-          path: RouteNames.registration,
-          name: RouteNames.registrationName,
-          builder: (context, state) => const RegistrationPage(),
-        ),
-        GoRoute(
-          path: RouteNames.createProfileFor,
-          name: RouteNames.createProfileForName,
-          builder: (context, state) => const CreateProfileForPage(),
-        ),
-        GoRoute(
-          path: RouteNames.registrationWelcome,
-          name: RouteNames.registrationWelcomeName,
-          builder: (context, state) => const RegistrationWelcomePage(),
-        ),
-        GoRoute(
-          path: RouteNames.registrationWizard,
-          name: RouteNames.registrationWizardName,
-          builder: (context, state) => const ProfileWizardPage(),
-        ),
-        GoRoute(
-          path: RouteNames.registrationCompleting,
-          name: RouteNames.registrationCompletingName,
-          builder: (context, state) => const RegistrationCompletingPage(),
-        ),
-        GoRoute(
-          path: RouteNames.registrationSuccess,
-          name: RouteNames.registrationSuccessName,
-          builder: (context, state) => const RegistrationSuccessPage(),
-        ),
-        GoRoute(
-          path: RouteNames.psychologyQuiz,
-          name: RouteNames.psychologyQuizName,
-          builder: (context, state) => const PsychologyQuizPage(),
-        ),
-        // ─── Relationship Intelligence (independent of registration) ──
-        GoRoute(
-          path: RouteNames.profileIntelligence,
-          name: RouteNames.profileIntelligenceName,
-          builder: (context, state) => const ProfileIntelligencePage(),
-        ),
-        GoRoute(
-          path: RouteNames.choosePrompt,
-          name: RouteNames.choosePromptName,
-          builder: (context, state) {
-            final extra = state.extra;
-            final selection =
-                extra is List<PromptAnswer> ? extra : const <PromptAnswer>[];
-            return ChoosePromptPage(currentSelection: selection);
-          },
-        ),
-        GoRoute(
-          path: RouteNames.horoscopeMatching,
-          name: RouteNames.horoscopeMatchingName,
-          builder: (context, state) => const HoroscopeMatchingPage(),
-        ),
-        GoRoute(
-          path: RouteNames.profileReview,
-          name: RouteNames.profileReviewName,
-          builder: (context, state) => const ProfileReviewPage(),
-        ),
-        GoRoute(
-          path: RouteNames.profileCompletion,
-          name: RouteNames.profileCompletionName,
-          builder: (context, state) => const ProfileCompletionPage(),
-        ),
-        GoRoute(
-          path: RouteNames.settings,
-          name: RouteNames.settingsName,
-          builder: (context, state) => const SettingsPage(),
-        ),
-        GoRoute(
-          path: RouteNames.verification,
-          name: RouteNames.verificationName,
-          builder: (context, state) => const VerificationPage(),
-        ),
-        GoRoute(
-          path: RouteNames.subscription,
-          name: RouteNames.subscriptionName,
-          pageBuilder: (context, state) => CustomTransitionPage(
-            key: state.pageKey,
-            child: const SubscriptionPage(),
-            transitionsBuilder: _slideUpTransition,
-          ),
-        ),
-        GoRoute(
-          path: RouteNames.help,
-          name: RouteNames.helpName,
-          builder: (context, state) => const HelpPage(),
-        ),
-        GoRoute(
-          path: RouteNames.supportTicketForm,
-          name: RouteNames.supportTicketFormName,
-          builder: (context, state) => SupportTicketFormPage(
-            type: state.extra as SupportTicketType? ?? SupportTicketType.contactSupport,
-          ),
-        ),
-        GoRoute(
-          path: RouteNames.ticketHistory,
-          name: RouteNames.ticketHistoryName,
-          builder: (context, state) => const TicketHistoryPage(),
-        ),
-        GoRoute(
-          path: RouteNames.privacy,
-          name: RouteNames.privacyName,
-          builder: (context, state) => const PrivacyPage(),
-        ),
-        GoRoute(
-          path: RouteNames.trustScore,
-          name: RouteNames.trustScoreName,
-          builder: (context, state) => const TrustScorePage(),
-        ),
-        GoRoute(
-          path: RouteNames.partnerPreferences,
-          name: RouteNames.partnerPreferencesName,
-          builder: (context, state) => const PartnerPreferencesPage(),
-        ),
-        GoRoute(
-          path: RouteNames.interestsSent,
-          name: RouteNames.interestsSentName,
-          builder: (context, state) => const InterestsSentPage(),
-        ),
-        GoRoute(
-          path: RouteNames.interestsReceived,
-          name: RouteNames.interestsReceivedName,
-          builder: (context, state) => const InterestsReceivedPage(),
-        ),
-        GoRoute(
-          path: RouteNames.shortlisted,
-          name: RouteNames.shortlistedName,
-          builder: (context, state) => const ShortlistedPage(),
-        ),
-        GoRoute(
-          path: RouteNames.profileViewers,
-          name: RouteNames.profileViewersName,
-          // `?openedFromNotification=true` is set only by
-          // NotificationNavigationService; the drawer pushes the bare path.
-          // It decides where Back goes if this page ends up with nothing
-          // beneath it — see ProfileViewersPage's doc comment.
-          builder: (context, state) => ProfileViewersPage(
-            openedFromNotification: state
-                    .uri.queryParameters[RouteNames.openedFromNotificationParam] ==
-                'true',
-          ),
-        ),
-        GoRoute(
-          path: RouteNames.profileDetail,
-          name: RouteNames.profileDetailName,
-          // pageBuilder (not builder) so this route's Page can carry its
-          // own unique `key:` — see ProfileDetailArgs.pageKey's doc comment
-          // for why go_router's default `state.pageKey` isn't safe here:
-          // this static, extra-carrying path is reachable recursively
-          // (Profile Detail's own Similar Profiles shelf pushes it again),
-          // so two simultaneously-mounted instances need distinct keys or
-          // Flutter's Navigator throws '!keyReservation.contains(key)'.
-          pageBuilder: (context, state) {
-            final extra = state.extra;
-            // Accepts a bare DiscoveryProfileEntity too (not just
-            // ProfileDetailArgs) — defensive backward compatibility for
-            // any call site that pushes this route directly rather than
-            // through `openProfileDetail`.
-            final args = switch (extra) {
-              final ProfileDetailArgs a => a,
-              final DiscoveryProfileEntity p => ProfileDetailArgs(p),
-              _ => null,
-            };
-            if (args == null) {
-              // Defensive fallback — nothing in-app pushes this route
-              // without `extra`, but a raw/deep link could theoretically
-              // hit it directly.
-              return MaterialPage<void>(
-                key: state.pageKey,
-                child: Scaffold(
-                  body: Center(
-                    child: Text(
-                      AppLocalizations.of(context).profileDetailProfileNotAvailable,
-                    ),
-                  ),
-                ),
-              );
-            }
+      ),
+      GoRoute(
+        path: RouteNames.profileDetail,
+        name: RouteNames.profileDetailName,
+        // pageBuilder (not builder) so this route's Page can carry its
+        // own unique `key:` — see ProfileDetailArgs.pageKey's doc comment
+        // for why go_router's default `state.pageKey` isn't safe here:
+        // this static, extra-carrying path is reachable recursively
+        // (Profile Detail's own Similar Profiles shelf pushes it again),
+        // so two simultaneously-mounted instances need distinct keys or
+        // Flutter's Navigator throws '!keyReservation.contains(key)'.
+        pageBuilder: (context, state) {
+          final extra = state.extra;
+          // Accepts a bare DiscoveryProfileEntity too (not just
+          // ProfileDetailArgs) — defensive backward compatibility for
+          // any call site that pushes this route directly rather than
+          // through `openProfileDetail`.
+          final args = switch (extra) {
+            final ProfileDetailArgs a => a,
+            final DiscoveryProfileEntity p => ProfileDetailArgs(p),
+            _ => null,
+          };
+          if (args == null) {
+            // Defensive fallback — nothing in-app pushes this route
+            // without `extra`, but a raw/deep link could theoretically
+            // hit it directly.
             return MaterialPage<void>(
-              key: args.pageKey,
-              name: state.name ?? state.path,
-              restorationId: args.pageKey.value,
-              child: ProfileDetailPage(
-                profile: args.profile,
-                heroTag: args.heroTag,
-                isBlocked: args.isBlocked,
-              ),
-            );
-          },
-        ),
-        GoRoute(
-          path: RouteNames.chatDetail,
-          name: RouteNames.chatDetailName,
-          builder: (context, state) {
-            final extra = state.extra;
-            if (extra is! ConversationEntity) {
-              // Defensive fallback — nothing in-app pushes this route
-              // without `extra`, but a raw/deep link could theoretically
-              // hit it directly.
-              return Scaffold(
+              key: state.pageKey,
+              child: Scaffold(
                 body: Center(
                   child: Text(
-                    AppLocalizations.of(context).profileDetailProfileNotAvailable,
+                    AppLocalizations.of(
+                      context,
+                    ).profileDetailProfileNotAvailable,
                   ),
                 ),
-              );
-            }
-            return ChatDetailPage(conversation: extra);
-          },
-        ),
-        // Search, Notifications and Profile are *reached from* the bottom-nav
-        // branches (and, for Search, from more than one branch — Discover's
-        // AppBar and Matches' category bar both push it) but aren't branch
-        // roots themselves. Standalone routes push onto the root navigator,
-        // covering the whole shell — the same "temporary page" pattern as
-        // Settings/Verification/etc. below — rather than belonging to any
-        // one branch's own stack, which is what a route pushed from
-        // multiple different branches needs.
-        GoRoute(
-          path: RouteNames.search,
-          name: RouteNames.searchName,
-          builder: (context, state) => const SearchPage(),
-        ),
-        GoRoute(
-          path: RouteNames.notifications,
-          name: RouteNames.notificationsName,
-          builder: (context, state) => const NotificationsPage(),
-        ),
-        GoRoute(
-          path: RouteNames.profile,
-          name: RouteNames.profileName,
-          builder: (context, state) => const ProfilePage(),
-        ),
+              ),
+            );
+          }
+          return MaterialPage<void>(
+            key: args.pageKey,
+            name: state.name ?? state.path,
+            restorationId: args.pageKey.value,
+            child: ProfileDetailPage(
+              profile: args.profile,
+              heroTag: args.heroTag,
+              isBlocked: args.isBlocked,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: RouteNames.chatDetail,
+        name: RouteNames.chatDetailName,
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is! ConversationEntity) {
+            // Defensive fallback — nothing in-app pushes this route
+            // without `extra`, but a raw/deep link could theoretically
+            // hit it directly.
+            return Scaffold(
+              body: Center(
+                child: Text(
+                  AppLocalizations.of(context).profileDetailProfileNotAvailable,
+                ),
+              ),
+            );
+          }
+          return ChatDetailPage(conversation: extra);
+        },
+      ),
+      // Search, Notifications and Profile are *reached from* the bottom-nav
+      // branches (and, for Search, from more than one branch — Discover's
+      // AppBar and Matches' category bar both push it) but aren't branch
+      // roots themselves. Standalone routes push onto the root navigator,
+      // covering the whole shell — the same "temporary page" pattern as
+      // Settings/Verification/etc. below — rather than belonging to any
+      // one branch's own stack, which is what a route pushed from
+      // multiple different branches needs.
+      GoRoute(
+        path: RouteNames.search,
+        name: RouteNames.searchName,
+        builder: (context, state) => const SearchPage(),
+      ),
+      GoRoute(
+        path: RouteNames.notifications,
+        name: RouteNames.notificationsName,
+        builder: (context, state) => const NotificationsPage(),
+      ),
+      GoRoute(
+        path: RouteNames.profile,
+        name: RouteNames.profileName,
+        builder: (context, state) => const ProfilePage(),
+      ),
 
-        // ─── Bottom Navigation — StatefulShellRoute ────────────────
-        //
-        // Each branch owns its own Navigator and route stack, preserved by
-        // an IndexedStack under the hood: switching Discover → Matches →
-        // Discover restores Discover's scroll position and any state
-        // exactly as left, which a plain ShellRoute (a single Navigator
-        // shared across all tabs, rebuilt on every switch) cannot do.
-        // AppBottomNavShell's PopScope still owns "Back on any non-Discover
-        // branch returns to Discover" — StatefulShellRoute doesn't impose
-        // that policy itself, it just gives each branch a real stack to
-        // reason about.
-        StatefulShellRoute.indexedStack(
-          builder: (context, state, navigationShell) =>
-              AppBottomNavShell(navigationShell: navigationShell),
-          branches: [
-            StatefulShellBranch(
-              // TEMP DEBUG — remove before shipping.
-              observers: [_DebugNavObserver('branch:discover')],
-              routes: [
-                GoRoute(
-                  path: RouteNames.discover,
-                  name: RouteNames.discoverName,
-                  pageBuilder: (context, state) => const NoTransitionPage(
-                    child: DiscoverPage(),
-                  ),
-                ),
-              ],
-            ),
-            StatefulShellBranch(
-              // TEMP DEBUG — remove before shipping.
-              observers: [_DebugNavObserver('branch:matches')],
-              routes: [
-                GoRoute(
-                  path: RouteNames.matches,
-                  name: RouteNames.matchesName,
-                  pageBuilder: (context, state) => const NoTransitionPage(
-                    child: MatchesPage(),
-                  ),
-                ),
-              ],
-            ),
-            StatefulShellBranch(
-              // TEMP DEBUG — remove before shipping.
-              observers: [_DebugNavObserver('branch:messages')],
-              routes: [
-                GoRoute(
-                  path: RouteNames.messages,
-                  name: RouteNames.messagesName,
-                  pageBuilder: (context, state) => const NoTransitionPage(
-                    child: InboxPage(),
-                  ),
-                ),
-              ],
-            ),
-            StatefulShellBranch(
-              // TEMP DEBUG — remove before shipping.
-              observers: [_DebugNavObserver('branch:premium')],
-              routes: [
-                GoRoute(
-                  path: RouteNames.premium,
-                  name: RouteNames.premiumName,
-                  pageBuilder: (context, state) => const NoTransitionPage(
-                    child: PremiumPage(),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ],
-    );
+      // ─── Bottom Navigation — StatefulShellRoute ────────────────
+      //
+      // Each branch owns its own Navigator and route stack, preserved by
+      // an IndexedStack under the hood: switching Discover → Matches →
+      // Discover restores Discover's scroll position and any state
+      // exactly as left, which a plain ShellRoute (a single Navigator
+      // shared across all tabs, rebuilt on every switch) cannot do.
+      // AppBottomNavShell's PopScope still owns "Back on any non-Discover
+      // branch returns to Discover" — StatefulShellRoute doesn't impose
+      // that policy itself, it just gives each branch a real stack to
+      // reason about.
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            AppBottomNavShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            // TEMP DEBUG — remove before shipping.
+            observers: [_DebugNavObserver('branch:discover')],
+            routes: [
+              GoRoute(
+                path: RouteNames.discover,
+                name: RouteNames.discoverName,
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage(child: DiscoverPage()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            // TEMP DEBUG — remove before shipping.
+            observers: [_DebugNavObserver('branch:matches')],
+            routes: [
+              GoRoute(
+                path: RouteNames.matches,
+                name: RouteNames.matchesName,
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage(child: MatchesPage()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            // TEMP DEBUG — remove before shipping.
+            observers: [_DebugNavObserver('branch:messages')],
+            routes: [
+              GoRoute(
+                path: RouteNames.messages,
+                name: RouteNames.messagesName,
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage(child: InboxPage()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            // TEMP DEBUG — remove before shipping.
+            observers: [_DebugNavObserver('branch:premium')],
+            routes: [
+              GoRoute(
+                path: RouteNames.premium,
+                name: RouteNames.premiumName,
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage(child: PremiumPage()),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  );
 }
 
 // ─── Custom Transitions ────────────────────────────────────────────
@@ -655,10 +674,7 @@ Widget _slideUpTransition(
     position: Tween<Offset>(
       begin: const Offset(0, 1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: animation,
-      curve: Curves.easeOutCubic,
-    )),
+    ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
     child: child,
   );
 }

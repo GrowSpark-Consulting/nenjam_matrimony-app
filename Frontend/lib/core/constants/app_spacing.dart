@@ -27,13 +27,9 @@ abstract final class AppSpacing {
     vertical: base,
   );
 
-  static const EdgeInsets pageHorizontal = EdgeInsets.symmetric(
-    horizontal: lg,
-  );
+  static const EdgeInsets pageHorizontal = EdgeInsets.symmetric(horizontal: lg);
 
-  static const EdgeInsets pageVertical = EdgeInsets.symmetric(
-    vertical: base,
-  );
+  static const EdgeInsets pageVertical = EdgeInsets.symmetric(vertical: base);
 
   // ─── Card Padding ────────────────────────────────────────────────
   static const EdgeInsets cardPadding = EdgeInsets.all(base);
@@ -63,7 +59,9 @@ abstract final class AppSpacing {
   static final BorderRadius borderRadiusLg = BorderRadius.circular(radiusLg);
   static final BorderRadius borderRadiusXl = BorderRadius.circular(radiusXl);
   static final BorderRadius borderRadiusXl2 = BorderRadius.circular(radiusXl2);
-  static final BorderRadius borderRadiusFull = BorderRadius.circular(radiusFull);
+  static final BorderRadius borderRadiusFull = BorderRadius.circular(
+    radiusFull,
+  );
 
   // ─── Bottom Sheet ────────────────────────────────────────────────
   static const BorderRadius bottomSheetRadius = BorderRadius.vertical(

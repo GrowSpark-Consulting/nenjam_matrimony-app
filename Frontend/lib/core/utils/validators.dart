@@ -56,8 +56,9 @@ abstract final class Validators {
     if (value == null || value.trim().isEmpty) {
       return l10n.validatorEmailRequired;
     }
-    if (!RegExp(r'^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,4}$')
-        .hasMatch(value.trim())) {
+    if (!RegExp(
+      r'^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,4}$',
+    ).hasMatch(value.trim())) {
       return l10n.validatorEmailInvalid;
     }
     return null;

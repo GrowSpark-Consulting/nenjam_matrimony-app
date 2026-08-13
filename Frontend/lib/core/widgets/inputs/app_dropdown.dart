@@ -43,7 +43,10 @@ class NmDropdown<T> extends StatelessWidget {
             hintText: hint,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
           ),
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondaryLight),
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: AppColors.textSecondaryLight,
+          ),
           style: AppTypography.bodyMedium,
           // Truncates the closed-state selected value with an ellipsis
           // instead of wrapping/overflowing — wraps whatever widget each

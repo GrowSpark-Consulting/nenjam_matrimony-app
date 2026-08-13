@@ -34,7 +34,8 @@ class NmSearchBar extends StatefulWidget {
 }
 
 class _NmSearchBarState extends State<NmSearchBar> {
-  late final TextEditingController _controller = widget.controller ?? TextEditingController();
+  late final TextEditingController _controller =
+      widget.controller ?? TextEditingController();
   final _focusNode = FocusNode();
   bool _hasText = false;
   bool _isFocused = false;
@@ -73,14 +74,18 @@ class _NmSearchBarState extends State<NmSearchBar> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final iconColor = isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
+    final iconColor = isDark
+        ? AppColors.textTertiaryDark
+        : AppColors.textTertiaryLight;
 
     return AnimatedContainer(
       duration: AppAnimationTokens.fast,
       curve: Curves.easeOut,
       height: 52,
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
+        color: isDark
+            ? AppColors.surfaceVariantDark
+            : AppColors.surfaceVariantLight,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _isFocused ? AppColors.primary : Colors.transparent,
@@ -105,7 +110,8 @@ class _NmSearchBarState extends State<NmSearchBar> {
           ),
           suffixIcon: AnimatedSwitcher(
             duration: AppAnimationTokens.fast,
-            transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+            transitionBuilder: (child, animation) =>
+                ScaleTransition(scale: animation, child: child),
             child: _buildSuffix(iconColor),
           ),
           border: InputBorder.none,
