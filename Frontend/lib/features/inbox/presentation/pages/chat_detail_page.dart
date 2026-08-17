@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io';
+import 'package:cross_file/cross_file.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -572,13 +572,13 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
                         setState(() => _replyTarget = null);
                       }
                     },
-                    onSendAttachment: (File file) {
+                    onSendAttachment: (XFile file) {
                       final replyTo = _resolveReplyTarget();
                       if (_replyTarget != null) {
                         setState(() => _replyTarget = null);
                       }
                       return messagesNotifier.sendImage(
-                        file.path,
+                        file,
                         replyTo: replyTo,
                       );
                     },

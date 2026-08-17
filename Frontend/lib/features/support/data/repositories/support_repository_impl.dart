@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show CancelToken;
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_exception.dart';
@@ -38,9 +39,10 @@ class SupportRepositoryImpl implements SupportRepository {
   }
 
   @override
-  Future<List<SupportTicket>> getMyTickets() async {
+  Future<List<SupportTicket>> getMyTickets({CancelToken? cancelToken}) async {
     final response = await _apiClient.get<Map<String, dynamic>>(
       ApiEndpoints.supportTickets,
+      cancelToken: cancelToken,
     );
     final data = unwrapOrThrow(response.statusCode, response.data) ?? {};
     return (data['items'] as List<dynamic>? ?? [])

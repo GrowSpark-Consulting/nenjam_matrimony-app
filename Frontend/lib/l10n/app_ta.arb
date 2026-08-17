@@ -1328,6 +1328,7 @@
   "commonConfirm": "உறுதிப்படுத்து",
   "commonPleaseWait": "தயவுசெய்து காத்திருக்கவும்...",
   "permissionImagePickerError": "படத் தேர்வியைத் திறக்க முடியவில்லை.",
+  "voiceRecordingUnsupportedOnWeb": "உலாவியில் குரல் செய்திகள் இன்னும் ஆதரிக்கப்படவில்லை. Nenjam மொபைல் செயலியைப் பயன்படுத்தவும்.",
   "permissionCameraNeeded": "புகைப்படம் எடுக்க கேமரா அணுகல் தேவை.",
   "photoCropAdjustProfileTitle": "சுயவிவரப் புகைப்படத்தைச் சரிசெய்",
   "photoCropAdjustTitle": "புகைப்படத்தைச் சரிசெய்",

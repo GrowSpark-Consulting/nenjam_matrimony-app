@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:cross_file/cross_file.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_providers.dart';
@@ -53,7 +52,7 @@ class PhotosController extends AsyncNotifier<List<UserPhoto>> {
     state = await AsyncValue.guard(_repo.fetchPhotos);
   }
 
-  Future<void> upload(File file, {bool? isPrimary}) async {
+  Future<void> upload(XFile file, {bool? isPrimary}) async {
     state = const AsyncValue<List<UserPhoto>>.loading().copyWithPrevious(state);
     state = await AsyncValue.guard(() async {
       await _repo.upload(file, isPrimary: isPrimary);
@@ -61,7 +60,7 @@ class PhotosController extends AsyncNotifier<List<UserPhoto>> {
     });
   }
 
-  Future<void> replace(String id, File file) async {
+  Future<void> replace(String id, XFile file) async {
     state = const AsyncValue<List<UserPhoto>>.loading().copyWithPrevious(state);
     state = await AsyncValue.guard(() async {
       await _repo.replace(id, file);

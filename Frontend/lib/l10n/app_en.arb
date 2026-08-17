@@ -1361,6 +1361,7 @@
   "commonConfirm": "Confirm",
   "commonPleaseWait": "Please wait...",
   "permissionImagePickerError": "Could not open the image picker.",
+  "voiceRecordingUnsupportedOnWeb": "Voice messages aren't supported in the browser yet. Please use the Nenjam mobile app.",
   "permissionCameraNeeded": "Camera access is needed to take a photo.",
   "photoCropAdjustProfileTitle": "Adjust Profile Photo",
   "photoCropAdjustTitle": "Adjust Photo",

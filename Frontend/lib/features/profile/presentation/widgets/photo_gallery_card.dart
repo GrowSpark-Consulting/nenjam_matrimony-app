@@ -4,6 +4,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../core/widgets/images/sized_network_photo.dart';
 
 /// Photo Gallery card — horizontal scroll of photo thumbnails with an
 /// add-photo dashed placeholder at the end.
@@ -136,9 +137,8 @@ class _PhotoThumbnail extends StatelessWidget {
         height: 148,
         child: url.startsWith('assets/')
             ? Image.asset(url, fit: BoxFit.cover)
-            : Image.network(
-                url,
-                fit: BoxFit.cover,
+            : NmSizedNetworkPhoto(
+                url: url,
                 errorBuilder: (_, __, ___) => Container(
                   color: isDark
                       ? AppColors.surfaceVariantDark

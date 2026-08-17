@@ -8,6 +8,7 @@ import '../../router/profile_navigation.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../avatars/gender_placeholder.dart';
+import '../images/sized_network_photo.dart';
 
 /// "Today's Best Match" hero card for the Nenjam Relationship Intelligence
 /// hub. Composes existing Discover pieces (score badges, action rail)
@@ -194,9 +195,8 @@ class _HeroImage extends StatelessWidget {
     if (photoUrls.isEmpty) return _placeholder();
     final url = photoUrls.first;
     if (url.startsWith('http')) {
-      return Image.network(
-        url,
-        fit: BoxFit.cover,
+      return NmSizedNetworkPhoto(
+        url: url,
         errorBuilder: (_, __, ___) => _placeholder(),
       );
     }

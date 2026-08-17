@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show CancelToken;
 import '../models/support_ticket.dart';
 
 /// Pure abstract contract for the Support Center (Contact Support / Report a
@@ -16,5 +17,5 @@ abstract interface class SupportRepository {
     required String message,
   });
 
-  Future<List<SupportTicket>> getMyTickets();
+  Future<List<SupportTicket>> getMyTickets({CancelToken? cancelToken});
 }

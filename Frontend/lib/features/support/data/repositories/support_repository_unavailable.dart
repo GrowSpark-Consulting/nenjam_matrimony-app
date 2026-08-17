@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show CancelToken;
 import '../../domain/models/support_ticket.dart';
 import '../../domain/repositories/support_repository.dart';
 
@@ -20,7 +21,7 @@ class SupportRepositoryUnavailable implements SupportRepository {
   }
 
   @override
-  Future<List<SupportTicket>> getMyTickets() {
+  Future<List<SupportTicket>> getMyTickets({CancelToken? cancelToken}) {
     throw StateError('Support ticket history is not available yet.');
   }
 }

@@ -1,9 +1,9 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/inbox_providers.dart';
+import '../../../../core/widgets/images/local_media_image.dart';
 
 /// Renders a chat image that's either a hosted `http(s)` URL (a short-lived
 /// presigned S3 link — see `MessagesService.presignMedia`) or a local file
@@ -113,8 +113,8 @@ class _ChatMediaImageState extends ConsumerState<ChatMediaImage> {
   Widget build(BuildContext context) {
     final url = widget.url;
     if (!url.startsWith('http')) {
-      return Image.file(
-        File(url),
+      return NmLocalMediaImage(
+        source: url,
         fit: widget.fit,
         errorBuilder: (_, __, ___) => widget.buildError(context),
       );

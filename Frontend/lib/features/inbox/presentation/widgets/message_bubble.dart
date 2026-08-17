@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +9,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/message_entity.dart';
 import 'chat_image_viewer_page.dart';
 import 'chat_media_image.dart';
+import '../../../../core/widgets/images/local_media_image.dart';
 
 /// A single chat bubble — right-aligned/primary-filled for the current
 /// user's own messages, left-aligned/surface-filled for the other person's,
@@ -355,7 +355,13 @@ class _ReplyQuote extends StatelessWidget {
                 height: 36,
                 child: replyTo.attachmentUrl!.startsWith('http')
                     ? Image.network(replyTo.attachmentUrl!, fit: BoxFit.cover)
-                    : Image.file(File(replyTo.attachmentUrl!), fit: BoxFit.cover),
+                    : NmLocalMediaImage(
+                        source: replyTo.attachmentUrl!,
+                        // 36x36 thumbnail — decode to size, not full photo.
+                        cacheWidth:
+                            (36 * MediaQuery.devicePixelRatioOf(context))
+                                .round(),
+                      ),
               ),
             ),
           ],

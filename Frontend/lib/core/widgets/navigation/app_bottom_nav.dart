@@ -68,21 +68,10 @@ class AppBottomNavShell extends ConsumerWidget {
     // top of any branch (Search, Edit Profile, wizard steps, ...) are
     // unaffected — they live above this as root-navigator pages, so the OS
     // back button already pops them first as normal.
-    // TEMP DEBUG — remove before shipping.
-    debugPrint(
-      '[BACK] AppBottomNavShell.build: currentIndex=$currentIndex '
-      'canPop(computed)=${currentIndex == 0}',
-    );
     return PopScope(
       canPop: currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
-        // TEMP DEBUG — remove before shipping.
-        debugPrint(
-          '[BACK] PopScope.onPopInvokedWithResult FIRED: '
-          'didPop=$didPop currentIndex=$currentIndex',
-        );
         if (didPop) return;
-        debugPrint('[BACK] -> navigationShell.goBranch(0)');
         navigationShell.goBranch(0);
       },
       child: Scaffold(

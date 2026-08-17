@@ -3947,6 +3947,10 @@ class AppLocalizationsTa extends AppLocalizations {
       'படத் தேர்வியைத் திறக்க முடியவில்லை.';
 
   @override
+  String get voiceRecordingUnsupportedOnWeb =>
+      'உலாவியில் குரல் செய்திகள் இன்னும் ஆதரிக்கப்படவில்லை. Nenjam மொபைல் செயலியைப் பயன்படுத்தவும்.';
+
+  @override
   String get permissionCameraNeeded => 'புகைப்படம் எடுக்க கேமரா அணுகல் தேவை.';
 
   @override

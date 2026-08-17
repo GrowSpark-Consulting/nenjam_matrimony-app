@@ -3,6 +3,7 @@ import '../../domain/entities/conversation_entity.dart';
 import '../../domain/entities/message_entity.dart';
 import '../../domain/repositories/conversation_repository.dart';
 import '../datasources/conversation_mock_datasource.dart';
+import 'package:cross_file/cross_file.dart';
 
 /// Mock-backed implementation — what `conversationRepositoryProvider`
 /// actually wires up today. Holds the seeded list in memory as the single
@@ -149,13 +150,13 @@ class ConversationRepositoryImpl implements ConversationRepository {
   }
 
   @override
-  Future<String> uploadImageAttachment(String localFilePath) async {
+  Future<String> uploadImageAttachment(XFile file) async {
     // No real upload endpoint to fake against in-memory — same "accept the
     // local path as already hosted" shortcut [sendMessage] has always used
     // for images, just reached through the same upload-first call shape the
     // real repository now uses. See ApiRepositoryImpl for the real upload.
     await Future<void>.delayed(const Duration(milliseconds: 300));
-    return localFilePath;
+    return file.path;
   }
 
   @override

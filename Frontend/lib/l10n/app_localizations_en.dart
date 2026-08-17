@@ -3887,6 +3887,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionImagePickerError => 'Could not open the image picker.';
 
   @override
+  String get voiceRecordingUnsupportedOnWeb =>
+      'Voice messages aren\'t supported in the browser yet. Please use the Nenjam mobile app.';
+
+  @override
   String get permissionCameraNeeded =>
       'Camera access is needed to take a photo.';
 

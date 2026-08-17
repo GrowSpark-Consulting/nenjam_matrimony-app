@@ -15,6 +15,7 @@ import '../../../safety/presentation/utils/show_safety_action_sheet.dart';
 import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
 import '../../domain/entities/profile_detail_entity.dart';
+import '../../../../core/widgets/images/sized_network_photo.dart';
 
 /// Collapsing parallax hero for the Profile Detail page — cover photo,
 /// gradient scrim, a "Verified Profile" pill, and name/age/location
@@ -158,8 +159,8 @@ class _ProfileDetailHeroAppBarState extends ConsumerState<ProfileDetailHeroAppBa
                   // preserving its original aspect ratio.
                   : (photoUrl.startsWith('assets/')
                         ? Image.asset(photoUrl, fit: BoxFit.contain)
-                        : Image.network(
-                            photoUrl,
+                        : NmSizedNetworkPhoto(
+                            url: photoUrl,
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => NmGenderPlaceholder(
                               gender: base.gender,

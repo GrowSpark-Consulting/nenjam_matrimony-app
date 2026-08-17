@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -27,9 +28,31 @@ class VoiceRecorderService {
   final AppPermissionService _permissions;
 
   /// Starts recording to a fresh temp file. Returns the destination path on
-  /// success, or `null` if the user cancelled or denied the permission —
-  /// any necessary explanation/Open-Settings dialog has already been shown.
+  /// success, or `null` if the user cancelled, denied the permission, or is
+  /// on a platform without a recording destination — any necessary
+  /// explanation/Open-Settings dialog has already been shown.
+  ///
+  /// Web returns `null` up front. Unlike photo attachments — which are now
+  /// fully platform-neutral — voice notes are still built on a temp file
+  /// path: `getTemporaryDirectory()` has no web implementation, and the
+  /// upload leg is the one remaining `MultipartFile.fromFile` call. Bailing
+  /// out here means the mic button degrades to a message instead of throwing
+  /// deep inside the recorder. Making this work in a browser needs a
+  /// bytes-based record-and-upload path, which is a separate change.
   Future<String?> start(BuildContext context) async {
+    if (kIsWeb) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).voiceRecordingUnsupportedOnWeb,
+            ),
+          ),
+        );
+      }
+      return null;
+    }
+
     final granted = await _ensureMicrophonePermission(context);
     if (!granted || !context.mounted) return null;
 

@@ -12,6 +12,7 @@ import '../../../../core/widgets/avatars/app_avatars.dart';
 import '../../../../core/widgets/avatars/gender_placeholder.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
+import '../../../../core/widgets/images/sized_network_photo.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/presentation/utils/logout_flow.dart';
 import '../../../interests/presentation/providers/interests_provider.dart';
@@ -556,9 +557,8 @@ class _StoryBubble extends StatelessWidget {
                     child: story.imageUrl.isEmpty
                         ? _fallback()
                         : (story.imageUrl.startsWith('http')
-                              ? Image.network(
-                                  story.imageUrl,
-                                  fit: BoxFit.cover,
+                              ? NmSizedNetworkPhoto(
+                                  url: story.imageUrl,
                                   alignment: Alignment.center,
                                   filterQuality: FilterQuality.medium,
                                   errorBuilder: (_, __, ___) => _fallback(),
@@ -1937,9 +1937,12 @@ class _CardImage extends StatelessWidget {
     if (photoUrls.isEmpty) return _placeholder();
     final url = photoUrls.first;
     if (url.startsWith('http')) {
-      return Image.network(
-        url,
-        fit: BoxFit.cover,
+      // Decodes at the card's real size instead of the source 1080² — this
+      // one widget backs the AI Recommended card, the Recently Joined
+      // shelf, the Near You grid and the Premium shelf, whose rendered
+      // widths range from 163 to full-bleed.
+      return NmSizedNetworkPhoto(
+        url: url,
         errorBuilder: (_, __, ___) => _placeholder(),
         loadingBuilder: (_, child, progress) =>
             progress == null ? child : _placeholder(),

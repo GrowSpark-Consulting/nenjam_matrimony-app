@@ -6,6 +6,7 @@ import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/avatars/gender_placeholder.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../core/widgets/images/sized_network_photo.dart';
 
 /// Discover Opportunities section — horizontally scrollable list of match
 /// recommendation cards with name, profession, and compatibility %.
@@ -135,9 +136,8 @@ class _MatchCard extends StatelessWidget {
                         ? AppColors.surfaceVariantDark
                         : AppColors.surfaceVariantLight,
                     child: match.imageUrl != null
-                        ? Image.network(
-                            match.imageUrl!,
-                            fit: BoxFit.cover,
+                        ? NmSizedNetworkPhoto(
+                            url: match.imageUrl!,
                             errorBuilder: (_, __, ___) =>
                                 NmGenderPlaceholder(gender: match.gender, iconSize: 40),
                           )

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
@@ -14,6 +13,7 @@ import '../../../../core/theme/tokens/app_touch_target.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/message_entity.dart';
 import '../providers/inbox_providers.dart' show conversationPreview;
+import '../../../../core/widgets/images/local_media_image.dart';
 
 /// Message composer — the text field + send button are fully wired to
 /// [MessagesNotifier.send]/`.sendImage`/`.sendVoice`; the attach button
@@ -27,7 +27,7 @@ import '../providers/inbox_providers.dart' show conversationPreview;
 /// docs/development/chat-backend-handoff.md).
 class ChatComposer extends StatefulWidget {
   final ValueChanged<String> onSend;
-  final Future<void> Function(File file) onSendAttachment;
+  final Future<void> Function(XFile file) onSendAttachment;
   final Future<void> Function(String path, Duration duration) onSendVoice;
 
   /// Fires on every text-field change with the CURRENT raw content (empty
@@ -85,7 +85,7 @@ class _ChatComposerState extends State<ChatComposer> {
   bool _isFocused = false;
   bool _isSending = false;
   bool _showEmojiPicker = false;
-  File? _pendingAttachment;
+  XFile? _pendingAttachment;
 
   bool _isRecording = false;
   DateTime? _recordingStartedAt;
@@ -509,7 +509,13 @@ class _ReplyPreviewBanner extends StatelessWidget {
                 height: 40,
                 child: replyTarget.attachmentUrl!.startsWith('http')
                     ? Image.network(replyTarget.attachmentUrl!, fit: BoxFit.cover)
-                    : Image.file(File(replyTarget.attachmentUrl!), fit: BoxFit.cover),
+                    : NmLocalMediaImage(
+                        source: replyTarget.attachmentUrl!,
+                        // 40x40 thumbnail — decode to size, not full photo.
+                        cacheWidth:
+                            (40 * MediaQuery.devicePixelRatioOf(context))
+                                .round(),
+                      ),
               ),
             ),
           ],
@@ -528,7 +534,7 @@ class _ReplyPreviewBanner extends StatelessWidget {
 }
 
 class _AttachmentPreview extends StatelessWidget {
-  final File file;
+  final XFile file;
   final VoidCallback? onRemove;
 
   const _AttachmentPreview({required this.file, required this.onRemove});
@@ -545,7 +551,14 @@ class _AttachmentPreview extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.file(file, width: 64, height: 64, fit: BoxFit.cover),
+              child: NmLocalMediaImage(
+                source: file.path,
+                width: 64,
+                height: 64,
+                fit: BoxFit.cover,
+                cacheWidth:
+                    (64 * MediaQuery.devicePixelRatioOf(context)).round(),
+              ),
             ),
             Positioned(
               top: -8,

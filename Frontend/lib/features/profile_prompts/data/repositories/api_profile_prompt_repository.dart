@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show CancelToken;
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_exception.dart';
@@ -30,9 +31,13 @@ class ApiProfilePromptRepository implements ProfilePromptRepository {
   final ApiClient _apiClient;
 
   @override
-  Future<List<PromptBankItem>> getPrompts({PromptCategory? category}) async {
+  Future<List<PromptBankItem>> getPrompts({
+    PromptCategory? category,
+    CancelToken? cancelToken,
+  }) async {
     final response = await _apiClient.get<dynamic>(
       ApiEndpoints.profilePromptsBank,
+      cancelToken: cancelToken,
     );
     final data = unwrapOrThrow(response.statusCode, response.data);
     final items = ((data as List<dynamic>?) ?? [])
@@ -48,9 +53,11 @@ class ApiProfilePromptRepository implements ProfilePromptRepository {
   }
 
   @override
-  Future<List<PromptAnswer>> getUserPrompts() async {
-    final response =
-        await _apiClient.get<dynamic>(ApiEndpoints.profilePromptsMe);
+  Future<List<PromptAnswer>> getUserPrompts({CancelToken? cancelToken}) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.profilePromptsMe,
+      cancelToken: cancelToken,
+    );
     final data = unwrapOrThrow(response.statusCode, response.data);
     return ((data as List<dynamic>?) ?? [])
         .cast<Map<String, dynamic>>()

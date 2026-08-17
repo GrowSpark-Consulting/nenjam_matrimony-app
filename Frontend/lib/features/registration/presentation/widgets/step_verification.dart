@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +19,7 @@ import '../../../verification/domain/models/verification_document.dart';
 import '../../../verification/presentation/providers/verification_providers.dart';
 import '../../domain/models/profile_draft.dart';
 import 'registration_helper_tip.dart';
+import '../../../../core/widgets/images/local_media_image.dart';
 
 /// Max document/photo evidence size accepted for income/asset/Aadhaar/NRI
 /// uploads. Generous relative to profile photos (which downscale to
@@ -242,7 +242,7 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
     );
   }
 
-  Future<bool?> _showPreviewSheet(File file) {
+  Future<bool?> _showPreviewSheet(XFile file) {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -260,7 +260,13 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
               const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.file(file, height: 240, fit: BoxFit.cover),
+                child: NmLocalMediaImage(
+                  source: file.path,
+                  height: 240,
+                  fit: BoxFit.cover,
+                  cacheWidth:
+                      (240 * MediaQuery.devicePixelRatioOf(context)).round(),
+                ),
               ),
               const SizedBox(height: 16),
               Row(

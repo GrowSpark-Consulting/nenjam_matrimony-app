@@ -23,59 +23,60 @@ import 'features/notifications/presentation/providers/notification_providers.dar
 import 'core/router/app_router.dart';
 import 'core/router/route_names.dart';
 import 'core/services/storage_service.dart';
+import 'core/utils/story_perf.dart';
 import 'core/theme/app_theme.dart';
 import 'features/authentication/presentation/providers/auth_providers.dart';
 import 'features/registration/presentation/providers/registration_provider.dart';
 import 'l10n/app_localizations.dart';
 export 'core/services/storage_service.dart' show storageService;
 
-// TEMP DEBUG — remove before shipping.
-//
-// Logs the moment Android's back event reaches Flutter's Router layer,
-// before GoRouter/PopScope get any say — confirms whether the event is
-// arriving here at all.
-class _LoggingBackButtonDispatcher extends RootBackButtonDispatcher {
-  @override
-  Future<bool> didPopRoute() {
-    debugPrint(
-      '[BACK] OS back event reached BackButtonDispatcher.didPopRoute()',
-    );
-    return super.didPopRoute();
-  }
-}
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  StoryPerf.start('main() entered');
 
-  // Lock orientation to portrait mode
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
+  // These four are mutually independent — each needs only the binding above,
+  // none reads anything another produces — so they run concurrently instead
+  // of one after another. Startup waits for the slowest rather than the sum.
+  //
+  //  · orientation lock — a platform-channel call nothing else consults. Kept
+  //    inside the barrier rather than deferred past runApp so the very first
+  //    frame can never paint in landscape and then snap upright.
+  //  · Firebase — must finish before onBackgroundMessage (below) and before
+  //    any auth provider is read, which is why that call stays after the wait.
+  //  · AppConfig — loads a bundled .env asset via rootBundle. Swallows its own
+  //    errors internally, so it can never be the one that fails this group.
+  //  · storage — SharedPreferences, read synchronously by SplashController
+  //    (hasSelectedLanguage), so it must still be ready before runApp.
+  //
+  // Failure behaviour is unchanged: previously any of these throwing aborted
+  // main() and took the launch down; Future.wait propagates the first error
+  // the same way. Nothing here is newly allowed to fail silently.
+  await Future.wait<Object?>([
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]),
+    Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
+    // A release build is production by definition — the flavor is never
+    // hardcoded to dev. Note the API origin does NOT come from here; it is
+    // AppConstants.apiBaseUrl (override with --dart-define=API_BASE_URL=...).
+    AppConfig().init(
+      kReleaseMode ? AppEnvironment.production : AppEnvironment.dev,
+    ),
+    storageService.init(),
   ]);
-
-  // Initialize Firebase (Auth, Firestore, etc.)
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  StoryPerf.mark('init complete (orientation+firebase+config+storage)');
 
   // Must be registered before runApp — a top-level function so the OS can
   // invoke it in a separate background isolate while the app is backgrounded
   // or terminated. See firebaseMessagingBackgroundHandler's doc comment.
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-  // Load environment variables and set config. Without this,
-  // AppConfig().envConfig is never assigned and any code that touches it
-  // (e.g. logging/S3 settings) throws a LateInitializationError.
-  //
-  // A release build is production by definition — the flavor is never
-  // hardcoded to dev. Note the API origin does NOT come from here; it is
-  // AppConstants.apiBaseUrl (override with --dart-define=API_BASE_URL=...).
-  await AppConfig().init(
-    kReleaseMode ? AppEnvironment.production : AppEnvironment.dev,
-  );
-
-  // Initialize local storage wrapper
-  await storageService.init();
-
   runApp(const ProviderScope(child: NenjamMatrimonyApp()));
+  StoryPerf.mark('runApp() called');
+  WidgetsBinding.instance.addPostFrameCallback(
+    (_) => StoryPerf.mark('first frame rendered'),
+  );
 }
 
 /// Root application widget configuring ScreenUtil, Themes, GoRouter,
@@ -314,13 +315,7 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
           supportedLocales: AppLocalizations.supportedLocales,
 
           // Routing
-          // TEMP DEBUG — normally just `routerConfig: router`; expanded to
-          // individual params so a logging BackButtonDispatcher can be
-          // swapped in. Revert to `routerConfig: router` when done.
-          routeInformationProvider: router.routeInformationProvider,
-          routeInformationParser: router.routeInformationParser,
-          routerDelegate: router.routerDelegate,
-          backButtonDispatcher: _LoggingBackButtonDispatcher(),
+          routerConfig: router,
         );
       },
     );

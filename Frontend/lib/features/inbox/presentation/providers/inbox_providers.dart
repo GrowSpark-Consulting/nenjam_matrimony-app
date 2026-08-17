@@ -10,6 +10,7 @@ import '../../data/repositories/conversation_api_repository_impl.dart';
 import '../../domain/entities/conversation_entity.dart';
 import '../../domain/entities/message_entity.dart';
 import '../../domain/repositories/conversation_repository.dart';
+import 'package:cross_file/cross_file.dart';
 
 final conversationMockDataSourceProvider = Provider<ConversationMockDataSource>(
   (ref) => ConversationMockDataSource(),
@@ -676,13 +677,17 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
       case MessageType.voice:
         await _resolveMediaUpload(
           retrying,
-          (repo, path) => repo.uploadVoiceAttachment(path),
+          (repo) => repo.uploadVoiceAttachment(retrying.attachmentUrl!),
           '🎤 Voice message',
         );
       case MessageType.image:
         await _resolveMediaUpload(
           retrying,
-          (repo, path) => repo.uploadImageAttachment(path),
+          // Re-wraps the pending message's own local reference. `XFile`
+          // reads a device path on mobile and re-fetches the `blob:` URL on
+          // web, so a retry works on both without having kept the original
+          // pick alive.
+          (repo) => repo.uploadImageAttachment(XFile(retrying.attachmentUrl!)),
           '📷 Photo',
         );
       case MessageType.text:
@@ -694,7 +699,7 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
   /// Sends [file] as an image attachment — uploads it first (see
   /// [_resolveMediaUpload]), then the same optimistic/reconcile lifecycle
   /// as [send]. See [send]'s doc comment on [replyTo].
-  Future<void> sendImage(String localFilePath, {MessageEntity? replyTo}) async {
+  Future<void> sendImage(XFile file, {MessageEntity? replyTo}) async {
     final clientMessageId = _newClientMessageId(arg);
     final optimistic = MessageEntity(
       id: clientMessageId,
@@ -704,7 +709,10 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
       isMine: true,
       status: MessageStatus.sending,
       type: MessageType.image,
-      attachmentUrl: localFilePath,
+      // `XFile.path` is a device path on mobile and a `blob:` object URL on
+      // web; either way it is what the optimistic bubble renders from until
+      // the hosted URL replaces it (see NmLocalMediaImage).
+      attachmentUrl: file.path,
       clientMessageId: clientMessageId,
       replyTo: replyTo == null ? null : MessageReplyPreview.fromMessage(replyTo),
     );
@@ -712,7 +720,7 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
     state = AsyncValue.data(_mergeMessage(current, optimistic));
     await _resolveMediaUpload(
       optimistic,
-      (repo, path) => repo.uploadImageAttachment(path),
+      (repo) => repo.uploadImageAttachment(file),
       '📷 Photo',
     );
   }
@@ -739,7 +747,7 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
     state = AsyncValue.data(_mergeMessage(current, optimistic));
     await _resolveMediaUpload(
       optimistic,
-      (repo, path) => repo.uploadVoiceAttachment(path),
+      (repo) => repo.uploadVoiceAttachment(localFilePath),
       '🎤 Voice message',
     );
   }
@@ -753,14 +761,14 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
   /// from (see [MessageEntity.voiceDuration]'s doc comment).
   Future<void> _resolveMediaUpload(
     MessageEntity optimistic,
-    Future<String> Function(ConversationRepository repo, String localPath) upload,
+    Future<String> Function(ConversationRepository repo) upload,
     String preview,
   ) async {
     final conversationId = arg;
     final clientMessageId = optimistic.clientMessageId!;
     final repo = ref.read(conversationRepositoryProvider);
     try {
-      final hostedUrl = await upload(repo, optimistic.attachmentUrl!);
+      final hostedUrl = await upload(repo);
       final sent = await repo.sendMessage(
         conversationId,
         '',

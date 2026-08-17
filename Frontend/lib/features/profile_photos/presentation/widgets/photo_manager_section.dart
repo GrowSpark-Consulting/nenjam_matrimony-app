@@ -193,11 +193,12 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
     );
     if (cropped == null || !mounted) return; // cancelled crop
 
-    try {
-      await file.delete();
-    } catch (_) {
-      // Best-effort cleanup of the uncropped source; not worth surfacing.
-    }
+    // The uncropped source is no longer explicitly deleted. It is an XFile
+    // now, which has no cross-platform delete: on web there is no file to
+    // remove (the bytes are released when the reference goes out of scope),
+    // and on mobile `image_picker` writes into the OS cache directory, which
+    // Android and iOS reclaim on their own. Only `cropped` is retained past
+    // this point, so the larger source buffer becomes collectable here.
 
     final notifier = ref.read(myPhotosProvider.notifier);
 
@@ -333,6 +334,10 @@ class _PhotoTile extends StatelessWidget {
               width: 116,
               height: 160,
               fit: BoxFit.cover,
+              // Grid thumbnails, not full photos — decode to the tile's
+              // longest edge rather than the source 1080².
+              memCacheWidth:
+                  (160 * MediaQuery.devicePixelRatioOf(context)).round(),
               placeholder: (_, __) => Container(
                 width: 116,
                 height: 160,

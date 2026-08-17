@@ -7310,6 +7310,12 @@ abstract class AppLocalizations {
   /// **'Could not open the image picker.'**
   String get permissionImagePickerError;
 
+  /// No description provided for @voiceRecordingUnsupportedOnWeb.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice messages aren\'t supported in the browser yet. Please use the Nenjam mobile app.'**
+  String get voiceRecordingUnsupportedOnWeb;
+
   /// No description provided for @permissionCameraNeeded.
   ///
   /// In en, this message translates to:

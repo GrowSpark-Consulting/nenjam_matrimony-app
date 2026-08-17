@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/network/backend_connectivity_checker.dart';
 import '../../../../core/router/route_names.dart';
+import '../../../../core/utils/story_perf.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -53,22 +54,24 @@ class _SplashPageState extends ConsumerState<SplashPage>
     _startUp();
   }
 
-  /// Waits out the splash animation while confirming the backend is up, then
-  /// routes based on session state.
+  /// Confirms the backend is up, then routes based on session state.
   ///
-  /// The health probe runs *concurrently* with the animation, so a healthy
-  /// backend costs nothing: startup is still gated only on
-  /// [AppConstants.splashDuration]. An unhealthy one parks here with a
-  /// message and a Retry button rather than dropping the user into a shell
-  /// of an app whose every request will fail.
+  /// The splash is visible for exactly as long as startup genuinely takes —
+  /// the health probe plus session restoration in [_resolveAndNavigate] —
+  /// and no longer. There is deliberately no minimum duration: an artificial
+  /// floor here used to hold every cold start for a fixed 3s regardless of
+  /// how quickly the app was actually ready.
+  ///
+  /// An unhealthy backend parks here with a message and a Retry button
+  /// rather than dropping the user into a shell of an app whose every
+  /// request will fail.
   Future<void> _startUp() async {
-    final results = await Future.wait<Object?>([
-      Future<void>.delayed(AppConstants.splashDuration),
-      ref.read(splashControllerProvider.notifier).checkServerHealth(),
-    ]);
+    final health = await ref
+        .read(splashControllerProvider.notifier)
+        .checkServerHealth();
+    StoryPerf.mark('health probe resolved');
     if (!mounted) return;
 
-    final health = results[1] as BackendConnectivityResult;
     if (!health.isHealthy) {
       setState(() {
         _startupFailure = health;
@@ -94,6 +97,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
     } catch (_) {
       route = RouteNames.authSelection;
     }
+    StoryPerf.mark('initial route resolved ($route)');
     if (!mounted) return;
     context.go(route);
   }

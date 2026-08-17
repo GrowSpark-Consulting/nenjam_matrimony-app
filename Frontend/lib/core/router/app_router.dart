@@ -93,97 +93,6 @@ GoRouter? _appRouter;
 /// the app. Callers must handle that (queue the intent) rather than assume.
 GoRouter? get appRouterOrNull => _appRouter;
 
-// TEMP DEBUG — remove before shipping.
-//
-// Logs every didPush/didPop/didRemove/didReplace on whichever Navigator
-// it's attached to, tagged with [label] so root-vs-branch is unambiguous
-// in the console.
-class _DebugNavObserver extends NavigatorObserver {
-  _DebugNavObserver(this.label) {
-    _all.add(this);
-  }
-  final String label;
-
-  // Every instance registers itself here so [dumpAllNavigatorPages] can
-  // reach every Navigator's *current* `widget.pages` — the literal
-  // `List<Page>` the Page API just handed to (or is about to hand to) the
-  // Navigator — from one place, keyed by which Navigator (root vs. which
-  // shell branch) each observer is attached to.
-  static final List<_DebugNavObserver> _all = <_DebugNavObserver>[];
-
-  // `route.settings` for a go_router (Page-API) route IS the Page itself
-  // (`Page<T> extends RouteSettings`), so this recovers the exact
-  // `Page.key` that `Navigator._debugCheckDuplicatedPageKeys` checks for
-  // duplicates — printing it here surfaces the actual colliding key the
-  // next time `!keyReservation.contains(key)` fires, since that assertion's
-  // own message never includes it.
-  String _name(Route<dynamic>? r) {
-    final settings = r?.settings;
-    final name = settings?.name ?? settings?.toString() ?? 'null';
-    final key = settings is Page ? settings.key : null;
-    return key == null ? name : '$name [key=$key]';
-  }
-
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    debugPrint(
-      '[NAV:$label] didPush  ${_name(previousRoute)} -> ${_name(route)}',
-    );
-  }
-
-  @override
-  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    debugPrint(
-      '[NAV:$label] didPop   ${_name(route)} -> ${_name(previousRoute)}',
-    );
-  }
-
-  @override
-  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    debugPrint(
-      '[NAV:$label] didRemove ${_name(route)} -> ${_name(previousRoute)}',
-    );
-  }
-
-  @override
-  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
-    debugPrint(
-      '[NAV:$label] didReplace ${_name(oldRoute)} -> ${_name(newRoute)}',
-    );
-  }
-}
-
-// TEMP DEBUG — instrumentation for the keyReservation crash investigation,
-// remove once root-caused.
-//
-// `NavigatorObserver.navigator` (a stdlib getter) returns the NavigatorState
-// currently bound to that observer; `State.widget` returns the exact
-// `Navigator(pages: ...)` widget the framework most recently attached —
-// i.e. the literal list `NavigatorState._debugCheckDuplicatedPageKeys` walks.
-// `Element.update()` binds the new widget to the State *before* `build()`
-// (and therefore before that assertion) runs, so even when the assertion
-// throws mid-build, by the time this is called from the `FlutterError.onError`
-// hook below, `navigator.widget.pages` is already the exact — possibly
-// duplicate-containing — list that triggered it, for every Navigator in the
-// app (root + every shell branch) at once.
-void _dumpAllNavigatorPages() {
-  for (final observer in _DebugNavObserver._all) {
-    final pages = observer.navigator?.widget.pages;
-    if (pages == null) {
-      debugPrint('[PAGES:${observer.label}] navigator not attached');
-      continue;
-    }
-    debugPrint('[PAGES:${observer.label}] ${pages.length} page(s):');
-    for (var i = 0; i < pages.length; i++) {
-      final p = pages[i];
-      debugPrint(
-        '[PAGES:${observer.label}]   index=$i type=${p.runtimeType} '
-        'name=${p.name} key=${p.key} arguments=${p.arguments}',
-      );
-    }
-  }
-}
-
 /// Adapts a [Stream] into a [Listenable] so GoRouter's [GoRouter.refresh]
 /// fires — and `redirect` re-runs — on every event, not just on explicit
 /// navigation. go_router shipped this itself pre-6.0; since then it's the
@@ -191,19 +100,8 @@ void _dumpAllNavigatorPages() {
 /// Navigators" guide).
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<dynamic> stream) {
-    // TEMP DEBUG — instrumentation for the keyReservation crash
-    // investigation, remove once root-caused. Answers whether a refresh
-    // (which triggers go_router's internal reparse/restore machinery) is
-    // firing around the moment Profile Detail gets pushed.
-    debugPrint(
-      '[REFRESH] notifyListeners (constructor) ts=${DateTime.now().toIso8601String()}',
-    );
     notifyListeners();
     _subscription = stream.asBroadcastStream().listen((event) {
-      debugPrint(
-        '[REFRESH] notifyListeners (stream event, user=${event?.toString()}) '
-        'ts=${DateTime.now().toIso8601String()}',
-      );
       notifyListeners();
     });
   }
@@ -234,26 +132,9 @@ class GoRouterRefreshStream extends ChangeNotifier {
 /// to Login automatically without every call site needing its own
 /// navigation logic.
 GoRouter createRouter(WidgetRef ref) {
-  // TEMP DEBUG — instrumentation for the keyReservation crash investigation,
-  // remove once root-caused. Wraps (not replaces) the existing handler so
-  // the red screen still shows normally; on the specific assertion we're
-  // chasing, also dumps every Navigator's actual page list right as it
-  // fires — see _dumpAllNavigatorPages's doc comment for why that's safe
-  // to read even from inside the error handler.
-  final previousOnError = FlutterError.onError;
-  FlutterError.onError = (FlutterErrorDetails details) {
-    if (details.exception.toString().contains('keyReservation')) {
-      debugPrint('[KEY_RESERVATION_CRASH] dumping all Navigator page lists:');
-      _dumpAllNavigatorPages();
-    }
-    previousOnError?.call(details);
-  };
   return _appRouter = GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: RouteNames.splash,
-    debugLogDiagnostics: true,
-    // TEMP DEBUG — remove before shipping.
-    observers: [_DebugNavObserver('root')],
     refreshListenable: GoRouterRefreshStream(
       ref.read(authRepositoryProvider).authStateChanges(),
     ),
@@ -264,27 +145,14 @@ GoRouter createRouter(WidgetRef ref) {
       // which throws "No GoRouter found in context". Everything routing
       // decisions need is already on `state`.
       final location = state.matchedLocation;
-      // TEMP DEBUG — instrumentation for the keyReservation crash
-      // investigation, remove once root-caused.
-      final entryTs = DateTime.now().toIso8601String();
-      debugPrint('[REDIRECT] enter location=$location ts=$entryTs');
       if (RouteNames.publicRoutes.contains(location)) {
-        debugPrint(
-          '[REDIRECT] exit location=$location result=null (public) ts=${DateTime.now().toIso8601String()}',
-        );
         return null;
       }
 
       final user = await ref.read(authStateChangesProvider.future);
       if (user == null) {
-        debugPrint(
-          '[REDIRECT] exit location=$location result=${RouteNames.login} (unauthenticated) ts=${DateTime.now().toIso8601String()}',
-        );
         return RouteNames.login;
       }
-      debugPrint(
-        '[REDIRECT] exit location=$location result=null ts=${DateTime.now().toIso8601String()}',
-      );
       return null;
     },
     routes: [
@@ -609,8 +477,6 @@ GoRouter createRouter(WidgetRef ref) {
             AppBottomNavShell(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(
-            // TEMP DEBUG — remove before shipping.
-            observers: [_DebugNavObserver('branch:discover')],
             routes: [
               GoRoute(
                 path: RouteNames.discover,
@@ -621,8 +487,6 @@ GoRouter createRouter(WidgetRef ref) {
             ],
           ),
           StatefulShellBranch(
-            // TEMP DEBUG — remove before shipping.
-            observers: [_DebugNavObserver('branch:matches')],
             routes: [
               GoRoute(
                 path: RouteNames.matches,
@@ -633,8 +497,6 @@ GoRouter createRouter(WidgetRef ref) {
             ],
           ),
           StatefulShellBranch(
-            // TEMP DEBUG — remove before shipping.
-            observers: [_DebugNavObserver('branch:messages')],
             routes: [
               GoRoute(
                 path: RouteNames.messages,
@@ -645,8 +507,6 @@ GoRouter createRouter(WidgetRef ref) {
             ],
           ),
           StatefulShellBranch(
-            // TEMP DEBUG — remove before shipping.
-            observers: [_DebugNavObserver('branch:premium')],
             routes: [
               GoRoute(
                 path: RouteNames.premium,

@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:cross_file/cross_file.dart';
 import 'package:dio/dio.dart';
 
 import '../../../../core/network/api_client.dart';
@@ -39,7 +38,7 @@ class VerificationRepositoryImpl implements VerificationRepository {
   @override
   Future<VerificationDocumentRecord> submitDocument({
     required VerificationDocumentType type,
-    required File file,
+    required XFile file,
     void Function(int sent, int total)? onProgress,
   }) async {
     final form = FormData.fromMap({
@@ -55,8 +54,9 @@ class VerificationRepositoryImpl implements VerificationRepository {
     return VerificationDocumentRecord.fromJson(data ?? {'type': type.wireValue});
   }
 
-  Future<MultipartFile> _multipart(File file) async {
-    final filename = file.path.split(RegExp(r'[/\\]')).last;
+  /// Bytes, not a path — see `PhotoRepository._multipart` for why.
+  Future<MultipartFile> _multipart(XFile file) async {
+    final filename = file.name.isNotEmpty ? file.name : 'document.jpg';
     final dot = filename.lastIndexOf('.');
     final ext = dot >= 0 ? filename.substring(dot).toLowerCase() : '';
     final subtype = switch (ext) {
@@ -66,8 +66,8 @@ class VerificationRepositoryImpl implements VerificationRepository {
       _ => 'jpeg',
     };
     final type = subtype == 'pdf' ? 'application' : 'image';
-    return MultipartFile.fromFile(
-      file.path,
+    return MultipartFile.fromBytes(
+      await file.readAsBytes(),
       filename: filename,
       contentType: DioMediaType(type, subtype),
     );

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show CancelToken;
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_exception.dart';
@@ -14,9 +15,11 @@ class SettingsRepositoryImpl implements SettingsRepository {
   final ApiClient _apiClient;
 
   @override
-  Future<Map<String, dynamic>> getSettings() async {
-    final response =
-        await _apiClient.get<Map<String, dynamic>>(ApiEndpoints.settings);
+  Future<Map<String, dynamic>> getSettings({CancelToken? cancelToken}) async {
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      ApiEndpoints.settings,
+      cancelToken: cancelToken,
+    );
     return unwrapOrThrow(response.statusCode, response.data) ?? {};
   }
 

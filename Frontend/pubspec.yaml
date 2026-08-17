@@ -44,6 +44,11 @@ dependencies:
   # final downscale/compression post-crop, so picking itself just needs a
   # generous resolution ceiling — see PhotoCropScreen/ImageCompressor.
   image_picker: ^1.1.2
+  # The platform-neutral file handle image_picker already returns. Declared
+  # directly because the media chain (crop, compress, multipart upload) and
+  # the repositories now take XFile rather than dart:io's File, so those
+  # layers compile and run in the browser as well as on Android/iOS.
+  cross_file: ^0.3.4+2
   # Pure-Dart JPEG encode/decode for the crop & adjust screen's compression
   # step — no native platform channel, so it works identically on every
   # platform this app targets (including desktop, unlike native compressors).

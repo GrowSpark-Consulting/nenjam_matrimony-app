@@ -7,6 +7,7 @@ import '../../theme/app_typography.dart';
 import '../avatars/gender_placeholder.dart';
 import '../badges/premium_badge.dart';
 import '../badges/verification_badge.dart';
+import '../images/sized_network_photo.dart';
 
 /// Premium profile card — used in search, matches, and discovery.
 class NmProfileCard extends StatelessWidget {
@@ -94,9 +95,8 @@ class NmProfileCard extends StatelessWidget {
                                     errorBuilder: (_, __, ___) =>
                                         _buildPlaceholder(isDark),
                                   )
-                                : Image.network(
-                                    imageUrl!,
-                                    fit: BoxFit.cover,
+                                : NmSizedNetworkPhoto(
+                                    url: imageUrl!,
                                     errorBuilder: (_, __, ___) =>
                                         _buildPlaceholder(isDark),
                                   ))

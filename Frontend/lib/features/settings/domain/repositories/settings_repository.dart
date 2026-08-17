@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show CancelToken;
 /// Pure abstract Dart interface. Concrete implementation lives in `data/`.
 /// Not wired to any provider today — `settings_page.dart`'s Dark Mode
 /// switch is hardcoded/non-functional (though it needs no backend call —
@@ -9,7 +10,7 @@ abstract interface class SettingsRepository {
   /// `GET /settings`. Shape is undefined — the `settings` controller is
   /// currently an empty stub — so this returns the raw JSON rather than a
   /// typed entity until a contract exists.
-  Future<Map<String, dynamic>> getSettings();
+  Future<Map<String, dynamic>> getSettings({CancelToken? cancelToken});
 
   /// `PATCH /settings/privacy` (proposed method — backend is a stub, exact
   /// verb/shape not confirmed).

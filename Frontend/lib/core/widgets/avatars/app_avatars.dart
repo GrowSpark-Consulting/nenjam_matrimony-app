@@ -55,6 +55,13 @@ class NmCircleAvatar extends StatelessWidget {
                       imageUrl: imageUrl!,
                       fit: BoxFit.cover,
                       alignment: alignment,
+                      // Avatars are 32–96 px; the source is a 1080² photo
+                      // that would otherwise decode to ~4.6 MB apiece. The
+                      // app bar avatar alone is on screen for the whole
+                      // session.
+                      memCacheWidth:
+                          (size * MediaQuery.devicePixelRatioOf(context))
+                              .round(),
                       errorWidget: (_, __, ___) => _fallback(),
                     ))
             : _fallback(),

@@ -23,6 +23,7 @@ import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
 import '../providers/matches_providers.dart';
 import '../providers/reel_feed_provider.dart';
+import '../../../../core/widgets/images/sized_network_photo.dart';
 
 /// Nenjam Matches — Instagram Reels-style vertical swipeable feed.
 ///
@@ -864,9 +865,8 @@ class _ProfilePhoto extends StatelessWidget {
     final url = photoUrls.first;
 
     if (url.startsWith('http')) {
-      return Image.network(
-        url,
-        fit: BoxFit.cover,
+      return NmSizedNetworkPhoto(
+        url: url,
         errorBuilder: (_, __, ___) => _placeholder(),
         loadingBuilder: (_, child, progress) =>
             progress == null ? child : _placeholder(),

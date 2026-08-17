@@ -47,7 +47,6 @@ abstract final class AppConstants {
   static const Duration animNormal = Duration(milliseconds: 300);
   static const Duration animSlow = Duration(milliseconds: 500);
   static const Duration animPageTransition = Duration(milliseconds: 350);
-  static const Duration splashDuration = Duration(seconds: 3);
 
   // ─── UI Constraints ──────────────────────────────────────────────
   static const double maxContentWidth = 600;

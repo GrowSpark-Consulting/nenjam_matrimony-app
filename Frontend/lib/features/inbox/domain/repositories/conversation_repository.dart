@@ -1,6 +1,7 @@
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../entities/conversation_entity.dart';
 import '../entities/message_entity.dart';
+import 'package:cross_file/cross_file.dart';
 
 /// Thrown by [ConversationRepository.uploadVoiceAttachment] when there is no
 /// working chat attachment-upload endpoint to send a recording to — see
@@ -126,7 +127,7 @@ abstract interface class ConversationRepository {
   /// same upload-first pattern as [uploadVoiceAttachment]. Callers must
   /// never hand [localFilePath] itself to [sendMessage] as if it were
   /// already a hosted URL.
-  Future<String> uploadImageAttachment(String localFilePath);
+  Future<String> uploadImageAttachment(XFile file);
 
   Future<void> pin(String conversationId, bool pinned);
 

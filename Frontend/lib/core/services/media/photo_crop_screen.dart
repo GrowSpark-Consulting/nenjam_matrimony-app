@@ -1,8 +1,8 @@
-import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -23,10 +23,14 @@ enum CropShape { circle, square }
 /// upload — drag to pan, pinch to zoom, an optional 90°-step rotate, all
 /// framed against a fixed 1:1 viewport.
 ///
-/// Returns the finished, compressed [File] via [Navigator.pop] on confirm,
-/// or `null` if the user cancels. Reusable for any 1:1 photo (profile
-/// avatar or gallery slot) — pass [CropShape.circle] only when this photo is
-/// about to become the primary/display photo.
+/// Returns the finished, compressed image as an [XFile] via [Navigator.pop]
+/// on confirm, or `null` if the user cancels. Reusable for any 1:1 photo
+/// (profile avatar or gallery slot) — pass [CropShape.circle] only when this
+/// photo is about to become the primary/display photo.
+///
+/// [XFile] rather than `dart:io`'s `File` so the whole crop-and-upload chain
+/// works in the browser as well as on Android and iOS: it carries bytes on
+/// web and a path on mobile, and `readAsBytes()` works on both.
 class PhotoCropScreen extends StatefulWidget {
   const PhotoCropScreen({
     super.key,
@@ -36,7 +40,7 @@ class PhotoCropScreen extends StatefulWidget {
     this.jpegQuality = 88,
   });
 
-  final File imageFile;
+  final XFile imageFile;
   final CropShape shape;
   final int outputSize;
   final int jpegQuality;
@@ -241,12 +245,21 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
       }
 
       final Uint8List pngBytes = byteData.buffer.asUint8List();
-      final file = await ImageCompressor.compressAndSave(
+      final jpegBytes = await ImageCompressor.compressToJpeg(
         pngBytes,
         quality: widget.jpegQuality,
       );
       if (!mounted) return;
-      Navigator.of(context).pop(file);
+      Navigator.of(context).pop(
+        XFile.fromData(
+          jpegBytes,
+          name: 'crop.jpg',
+          mimeType: 'image/jpeg',
+          // Dio reads the bytes it was handed; length is set so multipart
+          // can report Content-Length without re-reading.
+          length: jpegBytes.lengthInBytes,
+        ),
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() => _isProcessing = false);

@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:cross_file/cross_file.dart';
 import '../models/verification_document.dart';
 
 /// Pure abstract Dart interface for document-backed verification (income,
@@ -18,7 +17,7 @@ abstract interface class VerificationRepository {
   /// client-declared `VERIFIED`.
   Future<VerificationDocumentRecord> submitDocument({
     required VerificationDocumentType type,
-    required File file,
+    required XFile file,
     void Function(int sent, int total)? onProgress,
   });
 }
