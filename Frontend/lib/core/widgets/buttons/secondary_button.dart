@@ -32,8 +32,9 @@ class NmSecondaryButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor:
-              isDark ? AppColors.surfaceVariantDark : AppColors.primarySurface,
+          backgroundColor: isDark
+              ? AppColors.surfaceVariantDark
+              : AppColors.primarySurface,
           foregroundColor: AppColors.primary,
           elevation: 0,
           shape: RoundedRectangleBorder(

@@ -44,7 +44,10 @@ class NmPremiumButton extends StatelessWidget {
                 ? const SizedBox(
                     height: 22,
                     width: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.textOnGold),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AppColors.textOnGold,
+                    ),
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,
@@ -55,7 +58,9 @@ class NmPremiumButton extends StatelessWidget {
                       ],
                       Text(
                         label,
-                        style: AppTypography.button.copyWith(color: AppColors.textOnGold),
+                        style: AppTypography.button.copyWith(
+                          color: AppColors.textOnGold,
+                        ),
                       ),
                     ],
                   ),

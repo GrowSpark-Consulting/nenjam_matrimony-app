@@ -5,9 +5,7 @@ extension StringExtensions on String {
       isEmpty ? this : '${this[0].toUpperCase()}${substring(1)}';
 
   /// Converts to Title Case.
-  String get titleCase => split(' ')
-      .map((word) => word.capitalize)
-      .join(' ');
+  String get titleCase => split(' ').map((word) => word.capitalize).join(' ');
 
   /// Returns initials (max 2 characters).
   String get initials {

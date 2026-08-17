@@ -8,6 +8,7 @@ import '../../../../core/widgets/badges/premium_badge.dart' show NmBadgeSize;
 import '../../../../core/widgets/badges/verification_badge.dart';
 import '../../../../core/widgets/indicators/nm_score_ring.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../core/widgets/images/sized_network_photo.dart';
 
 /// Identity Hero Card — the profile header for the Personal Matchmaking HQ.
 ///
@@ -135,7 +136,7 @@ class _CoverImage extends StatelessWidget {
           child: imageUrl != null && imageUrl!.isNotEmpty
               ? (imageUrl!.startsWith('assets/')
                     ? Image.asset(imageUrl!, fit: BoxFit.cover)
-                    : Image.network(imageUrl!, fit: BoxFit.cover))
+                    : NmSizedNetworkPhoto(url: imageUrl!))
               : Center(
                   child: Icon(
                     Icons.image_rounded,

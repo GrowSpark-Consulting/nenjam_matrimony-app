@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show CancelToken;
 import '../models/prompt_bank_item.dart';
 
 /// Relationship Intelligence — Profile Prompts (Hinge/Jeevansathi-style).
@@ -10,10 +11,13 @@ import '../models/prompt_bank_item.dart';
 /// [ApiProfilePromptRepository] once the backend team's endpoints are ready.
 abstract class ProfilePromptRepository {
   /// The pickable bank of prompts, optionally filtered by [category].
-  Future<List<PromptBankItem>> getPrompts({PromptCategory? category});
+  Future<List<PromptBankItem>> getPrompts({
+    PromptCategory? category,
+    CancelToken? cancelToken,
+  });
 
   /// The signed-in user's currently saved prompt answers (0-3).
-  Future<List<PromptAnswer>> getUserPrompts();
+  Future<List<PromptAnswer>> getUserPrompts({CancelToken? cancelToken});
 
   /// Replace-all save. Prompts are optional — an empty list is valid and
   /// clears any saved answers.

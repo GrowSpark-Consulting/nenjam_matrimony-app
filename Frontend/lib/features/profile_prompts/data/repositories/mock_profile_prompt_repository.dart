@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show CancelToken;
 import '../../domain/models/prompt_bank_item.dart';
 import '../../domain/repositories/profile_prompt_repository.dart';
 
@@ -85,14 +86,17 @@ class MockProfilePromptRepository implements ProfilePromptRepository {
   ];
 
   @override
-  Future<List<PromptBankItem>> getPrompts({PromptCategory? category}) async {
+  Future<List<PromptBankItem>> getPrompts({
+    PromptCategory? category,
+    CancelToken? cancelToken,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     if (category == null) return List.unmodifiable(_bank);
     return _bank.where((p) => p.category == category).toList();
   }
 
   @override
-  Future<List<PromptAnswer>> getUserPrompts() async {
+  Future<List<PromptAnswer>> getUserPrompts({CancelToken? cancelToken}) async {
     await Future<void>.delayed(const Duration(milliseconds: 150));
     return List.unmodifiable(_saved);
   }

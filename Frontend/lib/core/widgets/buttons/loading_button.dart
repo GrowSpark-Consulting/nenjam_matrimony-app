@@ -8,11 +8,7 @@ class NmLoadingButton extends StatelessWidget {
   final double? width;
   final double height;
 
-  const NmLoadingButton({
-    super.key,
-    this.width,
-    this.height = 56,
-  });
+  const NmLoadingButton({super.key, this.width, this.height = 56});
 
   @override
   Widget build(BuildContext context) {

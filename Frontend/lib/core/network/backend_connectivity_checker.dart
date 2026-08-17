@@ -1,57 +1,63 @@
 import 'dart:developer';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+
+import '../constants/app_constants.dart';
 
 /// Result of a [BackendConnectivityChecker.check] call.
 sealed class BackendConnectivityResult {
   const BackendConnectivityResult();
+
+  /// Whether the app may proceed past startup. Only a healthy backend
+  /// qualifies — see [BackendConnectivityChecker.check].
+  bool get isHealthy => this is BackendHealthy;
 }
 
-/// `/health` responded 2xx — backend is fully reachable.
+/// `GET /health` responded 2xx — backend is reachable and serving.
 class BackendHealthy extends BackendConnectivityResult {
   const BackendHealthy();
 }
 
-/// The backend never responded at all.
-///
-/// On a USB-tunneled `127.0.0.1` connection this single failure mode covers
-/// three distinct root causes that look identical from the phone's side —
-/// the backend process isn't running, `adb reverse tcp:3000 tcp:3000`
-/// hasn't been (re-)run since the last USB reconnect, or the phone has been
-/// unplugged. All three fail the TCP handshake the same way, so this result
-/// carries a checklist rather than false precision about which one it is.
+/// The request never got an answer: the device is offline, DNS failed, or
+/// the server is down. Indistinguishable from the client's side, and the
+/// user's next step is the same for all three — check the connection and
+/// retry — so they share one result.
 class BackendUnreachable extends BackendConnectivityResult {
   const BackendUnreachable();
 }
 
-/// The backend responded, but `/health` didn't return 2xx. The process is
-/// up — so this is not a USB/adb-reverse problem — something else is wrong
-/// server-side.
+/// The server answered, but `/health` was not 2xx — the process is up and
+/// something is wrong server-side (bad deploy, dependency down).
 class BackendUnhealthy extends BackendConnectivityResult {
   final int? statusCode;
   const BackendUnhealthy(this.statusCode);
 }
 
-/// Debug-only check that the configured backend (`EnvConfig.apiBaseUrl`) is
-/// actually reachable, used to give developers an honest diagnostic instead
-/// of Dio's generic "No internet connection" (which is misleading on a
-/// USB-tunneled `127.0.0.1` connection — the phone's Wi-Fi may well be off).
+/// Lightweight `GET /health` probe against [AppConstants.apiBaseUrl], used by
+/// the startup flow to decide between entering the app and showing a
+/// retryable error state (see `SplashController.checkServerHealth`).
 ///
-/// See docs/development/android-usb-debugging.md.
+/// Deliberately cheap and total: it sends no auth, accepts any status without
+/// throwing, and is bounded by [AppConstants.healthCheckTimeout] so a dead
+/// backend costs seconds rather than the full request timeout. It never
+/// throws — every failure is one of the results above.
 class BackendConnectivityChecker {
   BackendConnectivityChecker(this._dio);
 
   final Dio _dio;
 
-  static const checkTimeout = Duration(seconds: 3);
+  static const String healthPath = '/health';
 
   Future<BackendConnectivityResult> check() async {
     try {
       final response = await _dio.get<dynamic>(
-        '/health',
+        healthPath,
         options: Options(
-          sendTimeout: checkTimeout,
-          receiveTimeout: checkTimeout,
+          sendTimeout: AppConstants.healthCheckTimeout,
+          receiveTimeout: AppConstants.healthCheckTimeout,
+          // The probe reports the status itself; Dio must not turn a 503
+          // into an exception here.
           validateStatus: (_) => true,
         ),
       );
@@ -60,11 +66,14 @@ class BackendConnectivityChecker {
         return const BackendHealthy();
       }
       return BackendUnhealthy(status);
-    } on DioException catch (e) {
-      log(
-        '[BackendConnectivityChecker] ${_dio.options.baseUrl}/health unreachable: ${e.message}',
-        name: 'API',
-      );
+    } catch (error) {
+      if (kDebugMode) {
+        log(
+          '${_dio.options.baseUrl}$healthPath unreachable: $error',
+          name: 'API',
+          level: 900,
+        );
+      }
       return const BackendUnreachable();
     }
   }

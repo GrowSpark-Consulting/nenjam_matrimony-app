@@ -12,6 +12,7 @@ import '../../domain/entities/conversation_entity.dart';
 import '../../domain/entities/message_entity.dart';
 import '../../domain/repositories/conversation_repository.dart';
 import '../mappers/message_wire_mapper.dart';
+import 'package:cross_file/cross_file.dart';
 
 /// Live backend implementation — wired via `conversationRepositoryProvider`
 /// (inbox_providers.dart). Talks to the real `chat` controllers under
@@ -218,13 +219,16 @@ class ConversationApiRepositoryImpl implements ConversationRepository {
   }
 
   @override
-  Future<String> uploadImageAttachment(String localFilePath) async {
+  Future<String> uploadImageAttachment(XFile file) async {
+    // Bytes rather than a path: `MultipartFile.fromFile` needs `dart:io` and
+    // throws in a browser, while `XFile.readAsBytes()` works everywhere.
     final response = await _apiClient.upload<Map<String, dynamic>>(
       ApiEndpoints.chatAttachmentUpload,
       data: FormData.fromMap({
-        'file': await MultipartFile.fromFile(
-          localFilePath,
-          contentType: DioMediaType('image', _imageSubtype(localFilePath)),
+        'file': MultipartFile.fromBytes(
+          await file.readAsBytes(),
+          filename: file.name.isNotEmpty ? file.name : 'attachment.jpg',
+          contentType: DioMediaType('image', _imageSubtype(file.name)),
         ),
         'type': 'IMAGE',
       }),

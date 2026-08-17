@@ -6560,6 +6560,48 @@ abstract class AppLocalizations {
   /// **'Reconnect'**
   String get networkReconnect;
 
+  /// No description provided for @networkConnectionTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The connection timed out. Please try again.'**
+  String get networkConnectionTimeout;
+
+  /// No description provided for @networkReceiveTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The server took too long to respond. Please try again.'**
+  String get networkReceiveTimeout;
+
+  /// No description provided for @networkRequestCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'The request was cancelled.'**
+  String get networkRequestCancelled;
+
+  /// No description provided for @startupUnreachableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We can\'t reach Nenjam'**
+  String get startupUnreachableTitle;
+
+  /// No description provided for @startupUnreachableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your internet connection and try again.'**
+  String get startupUnreachableMessage;
+
+  /// No description provided for @startupUnhealthyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nenjam is temporarily unavailable'**
+  String get startupUnhealthyTitle;
+
+  /// No description provided for @startupUnhealthyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Our servers are having trouble right now. Please try again in a moment.'**
+  String get startupUnhealthyMessage;
+
   /// No description provided for @networkServerErrorTitle.
   ///
   /// In en, this message translates to:
@@ -7267,6 +7309,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not open the image picker.'**
   String get permissionImagePickerError;
+
+  /// No description provided for @voiceRecordingUnsupportedOnWeb.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice messages aren\'t supported in the browser yet. Please use the Nenjam mobile app.'**
+  String get voiceRecordingUnsupportedOnWeb;
 
   /// No description provided for @permissionCameraNeeded.
   ///

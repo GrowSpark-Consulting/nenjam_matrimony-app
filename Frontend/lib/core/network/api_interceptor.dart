@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../utils/story_perf.dart';
-import '../l10n/app_l10n.dart';
+import 'network_error_mapper.dart';
 
 /// Marks a request as already having gone through one 401-recovery retry,
 /// so [AuthInterceptor] never retries the same request twice.
@@ -19,6 +19,18 @@ const _authRetriedKey = 'nm_auth_retried';
 /// + redirect are handled centrally — see NenjamMatrimonyApp's
 /// authStateChanges listener and app_router.dart's redirect). Callers
 /// (repositories, pages) never see or handle 401s directly.
+///
+/// Both delivery paths are covered. The client's `validateStatus` accepts
+/// anything below 500, so a 401 normally arrives as a *successful* response
+/// and never reaches [onError] — [onResponse] is therefore the primary hook.
+/// [onError] stays as the safety net for callers that pass their own
+/// `validateStatus` (or a plain Dio built elsewhere).
+///
+/// Nothing in here may throw: an exception escaping an interceptor surfaces
+/// to the caller as an opaque `DioException` at best, and on the token path
+/// it would turn a recoverable signed-out state into a crash. Every await is
+/// individually guarded and degrades to "send the request unauthenticated"
+/// or "give the caller the original 401".
 class AuthInterceptor extends Interceptor {
   final Dio dio;
   final Future<String?> Function() getAccessToken;
@@ -37,7 +49,7 @@ class AuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    final token = await getAccessToken();
+    final token = await _safeToken(getAccessToken);
     StoryPerf.mark('Firebase token obtained (${options.path})');
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
@@ -46,33 +58,92 @@ class AuthInterceptor extends Interceptor {
   }
 
   @override
+  Future<void> onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) async {
+    if (!_shouldAttemptRecovery(response.statusCode, response.requestOptions)) {
+      return handler.next(response);
+    }
+
+    final recovered = await _recover(response.requestOptions);
+    // Recovery failed — hand the caller the original 401 response rather
+    // than an exception; repositories already treat a 401 body as "no data".
+    return handler.next(recovered ?? response);
+  }
+
+  @override
   Future<void> onError(
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    final isUnauthorized = err.response?.statusCode == 401;
-    final alreadyRetried = err.requestOptions.extra[_authRetriedKey] == true;
-    if (!isUnauthorized || alreadyRetried) {
+    if (!_shouldAttemptRecovery(err.response?.statusCode, err.requestOptions)) {
       return handler.next(err);
     }
 
-    final refreshedToken = await refreshAccessToken();
+    final recovered = await _recover(err.requestOptions);
+    if (recovered != null) return handler.resolve(recovered);
+    return handler.next(err);
+  }
+
+  bool _shouldAttemptRecovery(int? statusCode, RequestOptions options) =>
+      statusCode == 401 && options.extra[_authRetriedKey] != true;
+
+  /// Force-refreshes the token and replays [options] exactly once.
+  ///
+  /// Returns the replayed response, or null when the session could not be
+  /// recovered — in which case [onSessionExpired] has already run.
+  Future<Response<dynamic>?> _recover(RequestOptions options) async {
+    final refreshedToken = await _safeToken(refreshAccessToken);
     if (refreshedToken == null || refreshedToken.isEmpty) {
-      await onSessionExpired();
-      return handler.next(err);
+      await _safeSessionExpired();
+      return null;
     }
 
     try {
-      final retryOptions = err.requestOptions
+      final retryOptions = options
         ..headers['Authorization'] = 'Bearer $refreshedToken'
         ..extra[_authRetriedKey] = true;
       final response = await dio.fetch<dynamic>(retryOptions);
-      return handler.resolve(response);
-    } on DioException catch (retryError) {
-      if (retryError.response?.statusCode == 401) {
-        await onSessionExpired();
+      // `validateStatus` lets a second 401 through as a response, so the
+      // status has to be re-checked here rather than caught below.
+      if (response.statusCode == 401) {
+        await _safeSessionExpired();
+        return null;
       }
-      return handler.next(retryError);
+      return response;
+    } catch (error) {
+      if (error is DioException && error.response?.statusCode == 401) {
+        await _safeSessionExpired();
+      }
+      return null;
+    }
+  }
+
+  /// Token lookup can fail for reasons that are not the caller's problem —
+  /// no signed-in user, a platform-channel error, an offline refresh. Treat
+  /// every one as "no token" and let the request go out unauthenticated; the
+  /// backend answers 401 and the normal expiry path takes over.
+  Future<String?> _safeToken(Future<String?> Function() read) async {
+    try {
+      return await read();
+    } catch (error) {
+      if (kDebugMode) {
+        log('token unavailable: $error', name: 'API', level: 900);
+      }
+      return null;
+    }
+  }
+
+  /// Silent logout. Swallows failures deliberately: the user is already
+  /// being signed out, and a throw here would escape the interceptor.
+  Future<void> _safeSessionExpired() async {
+    try {
+      await onSessionExpired();
+    } catch (error) {
+      if (kDebugMode) {
+        log('session teardown failed: $error', name: 'API', level: 1000);
+      }
     }
   }
 }
@@ -90,9 +161,15 @@ class LoggingInterceptor extends Interceptor {
   }
 
   @override
-  void onResponse(Response<dynamic> response, ResponseInterceptorHandler handler) {
+  void onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) {
     if (kDebugMode) {
-      log('← ${response.statusCode} ${response.requestOptions.uri}', name: 'API');
+      log(
+        '← ${response.statusCode} ${response.requestOptions.uri}',
+        name: 'API',
+      );
     }
     handler.next(response);
   }
@@ -110,59 +187,24 @@ class LoggingInterceptor extends Interceptor {
   }
 }
 
-/// Error Handling Interceptor — Maps Dio errors to app-level errors.
+/// Error Handling Interceptor — replaces Dio's own diagnostic text with the
+/// localized, user-facing sentence from [NetworkErrorMapper], so anything
+/// that renders `DioException.message` is already safe to show.
+///
+/// The exception is otherwise passed through untouched (same type, response
+/// and cause), so callers that branch on `err.type` still work.
 class ErrorInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    final String message;
-
-    switch (err.type) {
-      case DioExceptionType.connectionTimeout:
-      case DioExceptionType.sendTimeout:
-      case DioExceptionType.receiveTimeout:
-        message = 'Connection timed out. Please try again.';
-      case DioExceptionType.connectionError:
-        message = 'No internet connection. Please check your network.';
-      case DioExceptionType.cancel:
-        message = 'Request was cancelled.';
-      case DioExceptionType.badResponse:
-        message = _mapStatusCode(err.response?.statusCode);
-      default:
-        message = 'Something went wrong. Please try again.';
-    }
-
     handler.next(
       DioException(
         requestOptions: err.requestOptions,
         response: err.response,
         type: err.type,
         error: err.error,
-        message: message,
+        stackTrace: err.stackTrace,
+        message: NetworkErrorMapper.message(err),
       ),
     );
-  }
-
-  String _mapStatusCode(int? statusCode) {
-    final l10n = AppL10n.current;
-    switch (statusCode) {
-      case 400:
-        return l10n.apiError400;
-      case 401:
-        return l10n.apiError401;
-      case 403:
-        return l10n.apiError403;
-      case 404:
-        return l10n.apiError404;
-      case 422:
-        return l10n.apiError422;
-      case 429:
-        return l10n.apiError429;
-      case 500:
-        return l10n.apiError500;
-      case 503:
-        return l10n.apiError503;
-      default:
-        return l10n.authGenericError;
-    }
   }
 }

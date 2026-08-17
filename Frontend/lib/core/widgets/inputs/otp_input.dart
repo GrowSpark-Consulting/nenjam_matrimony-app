@@ -29,10 +29,7 @@ class _NmOtpInputState extends State<NmOtpInput> {
   @override
   void initState() {
     super.initState();
-    _controllers = List.generate(
-      widget.length,
-      (_) => TextEditingController(),
-    );
+    _controllers = List.generate(widget.length, (_) => TextEditingController());
     _focusNodes = List.generate(widget.length, (_) => FocusNode());
   }
 
@@ -146,15 +143,17 @@ class _NmOtpInputState extends State<NmOtpInput> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
-                        color:
-                            isDark ? AppColors.borderDark : AppColors.borderLight,
+                        color: isDark
+                            ? AppColors.borderDark
+                            : AppColors.borderLight,
                       ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
-                        color:
-                            isDark ? AppColors.borderDark : AppColors.borderLight,
+                        color: isDark
+                            ? AppColors.borderDark
+                            : AppColors.borderLight,
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
@@ -178,8 +177,9 @@ class _NmOtpInputState extends State<NmOtpInput> {
           label: Text(AppLocalizations.of(context).otpPasteCode),
           style: TextButton.styleFrom(
             foregroundColor: AppColors.primary,
-            textStyle: AppTypography.labelMedium
-                .copyWith(fontWeight: FontWeight.w600),
+            textStyle: AppTypography.labelMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
             visualDensity: VisualDensity.compact,
           ),
         ),

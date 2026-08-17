@@ -30,8 +30,8 @@ T? unwrapOrThrow<T>(int? statusCode, T? data) {
       message is String
           ? message
           : message is List && message.isNotEmpty
-              ? message.join(', ')
-              : 'Request failed ($statusCode).',
+          ? message.join(', ')
+          : 'Request failed ($statusCode).',
     );
   }
   return data;

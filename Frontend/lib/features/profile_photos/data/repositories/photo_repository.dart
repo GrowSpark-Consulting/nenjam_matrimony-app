@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:cross_file/cross_file.dart';
 import 'package:dio/dio.dart';
 
 import '../../../../core/network/api_client.dart';
@@ -37,7 +36,7 @@ class PhotoRepository {
 
   /// Uploads [file] as multipart/form-data (field name `file`, matching the
   /// backend's FileInterceptor('file')). Returns the newly created photo.
-  Future<UserPhoto> upload(File file, {bool? isPrimary}) async {
+  Future<UserPhoto> upload(XFile file, {bool? isPrimary}) async {
     final form = FormData.fromMap({
       'file': await _multipart(file),
       if (isPrimary != null) 'isPrimary': isPrimary.toString(),
@@ -50,7 +49,7 @@ class PhotoRepository {
   }
 
   /// Replaces the binary of an existing photo (PUT). Returns the updated photo.
-  Future<UserPhoto> replace(String id, File file) async {
+  Future<UserPhoto> replace(String id, XFile file) async {
     final form = FormData.fromMap({'file': await _multipart(file)});
     // ApiClient.upload posts; replace needs PUT, so go through put() with the
     // FormData body directly (Dio serializes FormData for any method).
@@ -86,8 +85,14 @@ class PhotoRepository {
     return _unwrapList(response);
   }
 
-  Future<MultipartFile> _multipart(File file) async {
-    final filename = file.path.split(RegExp(r'[/\\]')).last;
+  /// Builds the multipart part from **bytes** rather than a filesystem path.
+  ///
+  /// `MultipartFile.fromFile` needs `dart:io` and throws in a browser;
+  /// `fromBytes` works on every platform, and `XFile.readAsBytes()` supplies
+  /// them whether they came from a browser file input or a device path. The
+  /// `file` field name still matches the backend's `FileInterceptor('file')`.
+  Future<MultipartFile> _multipart(XFile file) async {
+    final filename = file.name.isNotEmpty ? file.name : 'photo.jpg';
     final dot = filename.lastIndexOf('.');
     final ext = dot >= 0 ? filename.substring(dot).toLowerCase() : '';
     final subtype = switch (ext) {
@@ -95,8 +100,8 @@ class PhotoRepository {
       '.webp' => 'webp',
       _ => 'jpeg',
     };
-    return MultipartFile.fromFile(
-      file.path,
+    return MultipartFile.fromBytes(
+      await file.readAsBytes(),
       filename: filename,
       contentType: DioMediaType('image', subtype),
     );

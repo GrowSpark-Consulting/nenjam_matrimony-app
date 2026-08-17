@@ -21,20 +21,16 @@ class NmErrorWidget extends StatelessWidget {
   });
 
   /// Network error variant.
-  const NmErrorWidget.network({
-    super.key,
-    this.onRetry,
-  })  : title = 'No Internet Connection',
-        message = 'Please check your network settings and try again.',
-        icon = Icons.wifi_off_rounded;
+  const NmErrorWidget.network({super.key, this.onRetry})
+    : title = 'No Internet Connection',
+      message = 'Please check your network settings and try again.',
+      icon = Icons.wifi_off_rounded;
 
   /// Server error variant.
-  const NmErrorWidget.server({
-    super.key,
-    this.onRetry,
-  })  : title = 'Server Error',
-        message = 'We\'re experiencing issues. Please try again later.',
-        icon = Icons.cloud_off_rounded;
+  const NmErrorWidget.server({super.key, this.onRetry})
+    : title = 'Server Error',
+      message = 'We\'re experiencing issues. Please try again later.',
+      icon = Icons.cloud_off_rounded;
 
   @override
   Widget build(BuildContext context) {

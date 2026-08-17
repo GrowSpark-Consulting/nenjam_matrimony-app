@@ -17,8 +17,8 @@ class RealtimeService {
   RealtimeService({
     required String baseUrl,
     required Future<String?> Function() tokenProvider,
-  })  : _baseUrl = baseUrl,
-        _tokenProvider = tokenProvider;
+  }) : _baseUrl = baseUrl,
+       _tokenProvider = tokenProvider;
 
   final String _baseUrl;
   final Future<String?> Function() _tokenProvider;

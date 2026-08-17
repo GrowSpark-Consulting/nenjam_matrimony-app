@@ -57,9 +57,12 @@ class NmIntelligenceCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title,
-                          style: AppTypography.bodyLarge
-                              .copyWith(fontWeight: FontWeight.w700)),
+                      Text(
+                        title,
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
@@ -73,7 +76,9 @@ class NmIntelligenceCard extends StatelessWidget {
                   ),
                 ),
                 Icon(
-                  locked ? Icons.lock_outline_rounded : Icons.chevron_right_rounded,
+                  locked
+                      ? Icons.lock_outline_rounded
+                      : Icons.chevron_right_rounded,
                   color: isDark
                       ? AppColors.textTertiaryDark
                       : AppColors.textTertiaryLight,

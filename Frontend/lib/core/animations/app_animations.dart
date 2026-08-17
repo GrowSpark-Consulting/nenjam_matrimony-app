@@ -7,17 +7,34 @@ import '../theme/tokens/app_animation_tokens.dart';
 abstract final class AppAnimations {
   /// Subtle luxury Fade in effect.
   static Widget fade(Widget child, {Duration? duration, Duration? delay}) {
-    return child.animate(delay: delay).fadeIn(duration: duration ?? AppAnimationTokens.normal, curve: AppAnimationTokens.luxuryCurve);
+    return child
+        .animate(delay: delay)
+        .fadeIn(
+          duration: duration ?? AppAnimationTokens.normal,
+          curve: AppAnimationTokens.luxuryCurve,
+        );
   }
 
   /// Subtle Scale pop effect.
   static Widget scale(Widget child, {Duration? duration}) {
-    return child.animate().scale(begin: const Offset(0.95, 0.95), duration: duration ?? AppAnimationTokens.fast, curve: AppAnimationTokens.luxuryCurve);
+    return child.animate().scale(
+      begin: const Offset(0.95, 0.95),
+      duration: duration ?? AppAnimationTokens.fast,
+      curve: AppAnimationTokens.luxuryCurve,
+    );
   }
 
   /// Subtle Slide up entry effect.
   static Widget slide(Widget child, {Duration? duration, double beginY = 0.1}) {
-    return child.animate().slideY(begin: beginY, end: 0, duration: duration ?? AppAnimationTokens.normal, curve: AppAnimationTokens.luxuryCurve).fadeIn();
+    return child
+        .animate()
+        .slideY(
+          begin: beginY,
+          end: 0,
+          duration: duration ?? AppAnimationTokens.normal,
+          curve: AppAnimationTokens.luxuryCurve,
+        )
+        .fadeIn();
   }
 
   /// Button press micro-animation wrapper.
@@ -82,7 +99,9 @@ class _AnimatedHoverState extends State<_AnimatedHover> {
       child: AnimatedContainer(
         duration: AppAnimationTokens.normal,
         curve: AppAnimationTokens.cardHoverCurve,
-        transform: _hovered ? (Matrix4.identity()..translateByDouble(0.0, -4.0, 0.0, 1.0)) : Matrix4.identity(),
+        transform: _hovered
+            ? (Matrix4.identity()..translateByDouble(0.0, -4.0, 0.0, 1.0))
+            : Matrix4.identity(),
         child: widget.child,
       ),
     );

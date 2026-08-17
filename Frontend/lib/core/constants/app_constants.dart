@@ -10,10 +10,27 @@ abstract final class AppConstants {
   static const String appBuildNumber = '1';
 
   // ─── API Configuration ───────────────────────────────────────────
-  static const String apiBaseUrl = 'https://api.nenjammatrimony.com/v1';
-  static const Duration apiTimeout = Duration(seconds: 30);
-  static const Duration apiConnectTimeout = Duration(seconds: 15);
-  static const int apiMaxRetries = 3;
+  //
+  // THE single source of truth for the backend origin. Every Dio client,
+  // socket connection and health probe reads it from here — nothing else in
+  // the app may hardcode a host. The backend has NO global `/v1` prefix, so
+  // this URL is an origin only: paths like `/discover` or `/profiles/me` are
+  // appended verbatim.
+  //
+  // Overridable at build time without touching source, e.g.
+  //   flutter build apk --release --dart-define=API_BASE_URL=https://staging.example.com
+  static const String apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://api-production-83c6.up.railway.app',
+  );
+  static const Duration apiConnectTimeout = Duration(seconds: 20);
+  static const Duration apiReceiveTimeout = Duration(seconds: 20);
+  static const Duration apiSendTimeout = Duration(seconds: 20);
+
+  /// Startup `/health` probe budget — deliberately shorter than the regular
+  /// request timeouts so a dead backend surfaces a graceful error state
+  /// quickly instead of holding the splash for the full 20s.
+  static const Duration healthCheckTimeout = Duration(seconds: 8);
 
   // ─── Pagination ──────────────────────────────────────────────────
   static const int defaultPageSize = 20;
@@ -30,7 +47,6 @@ abstract final class AppConstants {
   static const Duration animNormal = Duration(milliseconds: 300);
   static const Duration animSlow = Duration(milliseconds: 500);
   static const Duration animPageTransition = Duration(milliseconds: 350);
-  static const Duration splashDuration = Duration(seconds: 3);
 
   // ─── UI Constraints ──────────────────────────────────────────────
   static const double maxContentWidth = 600;

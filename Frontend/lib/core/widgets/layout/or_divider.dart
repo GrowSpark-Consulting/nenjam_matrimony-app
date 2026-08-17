@@ -7,10 +7,7 @@ import '../../theme/app_typography.dart';
 class NmOrDivider extends StatelessWidget {
   final String label;
 
-  const NmOrDivider({
-    super.key,
-    this.label = 'or continue with',
-  });
+  const NmOrDivider({super.key, this.label = 'or continue with'});
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +26,9 @@ class NmOrDivider extends StatelessWidget {
             child: Text(
               label,
               style: AppTypography.labelSmall.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
                 fontWeight: FontWeight.w500,
                 letterSpacing: 0.5,
               ),

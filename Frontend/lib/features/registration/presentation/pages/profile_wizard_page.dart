@@ -318,11 +318,31 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final draft = ref.watch(registrationProvider);
     final notifier = ref.read(registrationProvider.notifier);
+    // Watches two *derived scalars* rather than the whole ProfileDraft.
+    //
+    // Every character typed into any wizard field emits a brand-new
+    // ProfileDraft, so watching the draft here rebuilt this entire page —
+    // PopScope, LayoutBuilder, journey header, motivation caption,
+    // AnimatedSwitcher and the sticky bottom bar — on every keystroke.
+    // Nothing above the step content actually depends on the field being
+    // typed into: the header and bar need the step number, and the bar needs
+    // to know whether Continue is enabled.
+    //
+    // `select` compares the *selected value*, not the model, so an int and a
+    // bool are enough here — this needs no `operator ==` on ProfileDraft, and
+    // adding one would not have helped, since the draft genuinely does change
+    // on every keystroke. The full draft is now watched only by the step
+    // content itself (see the Consumer below), which is the one part that
+    // legitimately depends on it.
+    final stepIndex = ref.watch(
+      registrationProvider.select((d) => d.currentStep),
+    );
+    final isStepValid = ref.watch(
+      registrationProvider.select(_isCurrentStepValid),
+    );
     final mode = ref.watch(profileFlowModeProvider);
     final isEditMode = mode == ProfileFlowMode.edit;
-    final stepIndex = draft.currentStep;
     final isLastStep = stepIndex == ProfileDraft.totalSteps - 1;
     final (_, milestoneLabel) = milestoneEmojiAndLabel(
       l10n,
@@ -391,7 +411,17 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                   ),
                   child: KeyedSubtree(
                     key: ValueKey<int>(stepIndex),
-                    child: _buildStepContent(stepIndex, draft, notifier),
+                    // The one subtree that genuinely needs the full draft:
+                    // each step is seeded from its own section. Confining the
+                    // watch here keeps a keystroke from rebuilding the
+                    // chrome above and below it.
+                    child: Consumer(
+                      builder: (context, ref, _) => _buildStepContent(
+                        stepIndex,
+                        ref.watch(registrationProvider),
+                        notifier,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -425,15 +455,14 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 // present (see [_isCurrentStepValid]) so a user can't click
                 // through with empty required fields and hit an untraceable
                 // 400 at finalize.
-                onNext:
-                    (_isSaving || !_isCurrentStepValid(draft)) ? null : _onNext,
+                onNext: (_isSaving || !isStepValid) ? null : _onNext,
                 skipLabel: _isStepSkippable(stepIndex)
                     ? l10n.registrationSkipStep
                     : null,
                 onSkip: (_isSaving || !_isStepSkippable(stepIndex))
                     ? null
                     : _onSkip,
-                validationHint: (!_isSaving && !_isCurrentStepValid(draft))
+                validationHint: (!_isSaving && !isStepValid)
                     ? (stepIndex == 12
                         ? l10n.registrationVerifyMobileRequiredHint
                         : l10n.registrationRequiredFieldsHint)

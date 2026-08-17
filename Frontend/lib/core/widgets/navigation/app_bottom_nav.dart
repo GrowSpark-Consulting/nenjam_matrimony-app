@@ -37,11 +37,11 @@ class AppBottomNavShell extends ConsumerWidget {
   /// Localized labels, index-aligned with [_tabs] and with the branch order
   /// declared in `app_router.dart`.
   List<String> _labels(AppLocalizations l10n) => [
-        l10n.navDiscover,
-        l10n.navMatches,
-        l10n.navMessages,
-        l10n.navPremium,
-      ];
+    l10n.navDiscover,
+    l10n.navMatches,
+    l10n.navMessages,
+    l10n.navPremium,
+  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -55,7 +55,9 @@ class AppBottomNavShell extends ConsumerWidget {
     // thread, mark read/unread, a reconnect or foreground re-sync — without
     // any of them knowing this widget exists.
     final unreadMessages = ref.watch(unreadMessagesCountProvider);
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
 
     // Android/iOS back button: only the Discover branch is a true "root" —
     // every other branch was reached by switching tabs, not by pushing on
@@ -66,21 +68,10 @@ class AppBottomNavShell extends ConsumerWidget {
     // top of any branch (Search, Edit Profile, wizard steps, ...) are
     // unaffected — they live above this as root-navigator pages, so the OS
     // back button already pops them first as normal.
-    // TEMP DEBUG — remove before shipping.
-    debugPrint(
-      '[BACK] AppBottomNavShell.build: currentIndex=$currentIndex '
-      'canPop(computed)=${currentIndex == 0}',
-    );
     return PopScope(
       canPop: currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
-        // TEMP DEBUG — remove before shipping.
-        debugPrint(
-          '[BACK] PopScope.onPopInvokedWithResult FIRED: '
-          'didPop=$didPop currentIndex=$currentIndex',
-        );
         if (didPop) return;
-        debugPrint('[BACK] -> navigationShell.goBranch(0)');
         navigationShell.goBranch(0);
       },
       child: Scaffold(
@@ -88,7 +79,10 @@ class AppBottomNavShell extends ConsumerWidget {
         bottomNavigationBar: SafeArea(
           top: false,
           minimum: const EdgeInsets.fromLTRB(
-            AppSpacing.base, 0, AppSpacing.base, AppSpacing.sm,
+            AppSpacing.base,
+            0,
+            AppSpacing.base,
+            AppSpacing.sm,
           ),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
@@ -113,7 +107,9 @@ class AppBottomNavShell extends ConsumerWidget {
                     // Announced instead of the bare count, so the badge reads
                     // as "Inbox, 3 unread messages" rather than "Inbox" and a
                     // loose "3" (see [NavBadge]'s own ExcludeSemantics).
-                    badgeSemanticLabel: l10n.navUnreadMessagesSemanticLabel(unreadMessages),
+                    badgeSemanticLabel: l10n.navUnreadMessagesSemanticLabel(
+                      unreadMessages,
+                    ),
                     // The badge's ring should read as a cut-out in the bar,
                     // so it takes the bar's own colour rather than a hardcoded
                     // white that would look like a sticker in dark mode.
@@ -165,8 +161,12 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final inactiveColor = isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
-    final activeLabelColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final inactiveColor = isDark
+        ? AppColors.textTertiaryDark
+        : AppColors.textTertiaryLight;
+    final activeLabelColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
 
     return Semantics(
       button: true,
@@ -196,7 +196,9 @@ class _NavItem extends StatelessWidget {
                     height: AppSpacing.xl3,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: isActive ? AppColors.accentGold : Colors.transparent,
+                      color: isActive
+                          ? AppColors.accentGold
+                          : Colors.transparent,
                       boxShadow: isActive ? AppShadows.goldGlow : null,
                     ),
                     child: Center(

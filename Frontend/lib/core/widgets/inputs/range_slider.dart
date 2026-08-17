@@ -52,7 +52,9 @@ class NmRangeSlider extends StatelessWidget {
             inactiveTrackColor: AppColors.primarySurface,
             thumbColor: AppColors.primary,
             overlayColor: AppColors.primary.withValues(alpha: 0.12),
-            rangeThumbShape: const RoundRangeSliderThumbShape(enabledThumbRadius: 10),
+            rangeThumbShape: const RoundRangeSliderThumbShape(
+              enabledThumbRadius: 10,
+            ),
           ),
           child: RangeSlider(
             values: range,

@@ -31,13 +31,19 @@ class NmFloatingActionButton extends StatelessWidget {
           backgroundColor: bg,
           foregroundColor: fg,
           icon: Icon(icon),
-          label: Text(label!, style: const TextStyle(fontWeight: FontWeight.w600)),
+          label: Text(
+            label!,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
         ),
       );
     }
 
     return Container(
-      decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: AppShadows.floatingLight),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: AppShadows.floatingLight,
+      ),
       child: FloatingActionButton(
         onPressed: onPressed,
         backgroundColor: bg,

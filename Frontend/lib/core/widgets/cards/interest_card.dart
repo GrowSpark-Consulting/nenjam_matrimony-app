@@ -13,12 +13,14 @@ class NmInterestCard extends StatelessWidget {
   final String details;
   final String message;
   final String? imageUrl;
+
   /// 'Male' / 'Female' / '' — picks the gender-aware placeholder icon
   /// when [imageUrl] is null.
   final String gender;
   final bool isReceived;
   final VoidCallback? onAccept;
   final VoidCallback? onDecline;
+
   /// Already-localized copy for the status badge and action buttons —
   /// defaults keep every existing call site's (currently English-only)
   /// behavior unchanged.
@@ -26,6 +28,7 @@ class NmInterestCard extends StatelessWidget {
   final String sentLabel;
   final String acceptLabel;
   final String declineLabel;
+
   /// When set, shown in the badge instead of [receivedLabel]/[sentLabel] —
   /// the actual interest status (Pending/Accepted/Declined) is more useful
   /// than direction once a screen already implies direction by which tab/
@@ -34,10 +37,12 @@ class NmInterestCard extends StatelessWidget {
   final Color? statusBackgroundColor;
   final Color? statusTextColor;
   final VoidCallback? onTap;
+
   /// Shown as a single outlined button (only when non-null, and only for a
   /// !isReceived/sent card) — withdrawing a still-pending sent interest.
   final VoidCallback? onWithdraw;
   final String withdrawLabel;
+
   /// True while an accept/decline/withdraw request for this exact record is
   /// in flight — disables and spins whichever action button is visible so a
   /// rapid second tap can't fire the same request twice.
@@ -69,7 +74,8 @@ class NmInterestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final badgeBackground = statusBackgroundColor ??
+    final badgeBackground =
+        statusBackgroundColor ??
         (isReceived ? AppColors.successLight : AppColors.infoLight);
     final badgeText =
         statusTextColor ?? (isReceived ? AppColors.success : AppColors.info);
@@ -95,7 +101,9 @@ class NmInterestCard extends StatelessWidget {
                     ),
                     Text(
                       details,
-                      style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondaryLight),
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondaryLight,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -108,7 +116,10 @@ class NmInterestCard extends StatelessWidget {
               // overflow next to the name column above.
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: badgeBackground,
                     borderRadius: BorderRadius.circular(999),
@@ -131,12 +142,16 @@ class NmInterestCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
+                color: isDark
+                    ? AppColors.surfaceVariantDark
+                    : AppColors.surfaceVariantLight,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 '"$message"',
-                style: AppTypography.bodyMedium.copyWith(fontStyle: FontStyle.italic),
+                style: AppTypography.bodyMedium.copyWith(
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ),
           ],

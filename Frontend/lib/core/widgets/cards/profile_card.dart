@@ -7,6 +7,7 @@ import '../../theme/app_typography.dart';
 import '../avatars/gender_placeholder.dart';
 import '../badges/premium_badge.dart';
 import '../badges/verification_badge.dart';
+import '../images/sized_network_photo.dart';
 
 /// Premium profile card — used in search, matches, and discovery.
 class NmProfileCard extends StatelessWidget {
@@ -15,6 +16,7 @@ class NmProfileCard extends StatelessWidget {
   final String location;
   final String? imageUrl;
   final String? profession;
+
   /// 'Male' / 'Female' / '' — picks the icon [NmGenderPlaceholder] shows
   /// when [imageUrl] is null/empty.
   final String gender;
@@ -24,12 +26,14 @@ class NmProfileCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onLikeTap;
   final VoidCallback? onShortlistTap;
+
   /// True when [onShortlistTap] represents "remove" rather than "save" —
   /// swaps the footer icon to the filled bookmark so a card already known
   /// to be shortlisted (e.g. on the Shortlisted Profiles screen, where
   /// every card is by definition already saved) doesn't show the same
   /// "not yet saved" outline icon a fresh Discover/Search card would.
   final bool isShortlisted;
+
   /// When set, wraps the card photo in a [Hero] with this tag so tapping
   /// through to Profile Detail animates the same photo into its hero.
   /// Defaults to null (no [Hero]) so existing call sites are unaffected.
@@ -85,18 +89,17 @@ class NmProfileCard extends StatelessWidget {
                           : AppColors.surfaceVariantLight,
                       child: imageUrl != null
                           ? (imageUrl!.startsWith('assets/')
-                              ? Image.asset(
-                                  imageUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) =>
-                                      _buildPlaceholder(isDark),
-                                )
-                              : Image.network(
-                                  imageUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) =>
-                                      _buildPlaceholder(isDark),
-                                ))
+                                ? Image.asset(
+                                    imageUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        _buildPlaceholder(isDark),
+                                  )
+                                : NmSizedNetworkPhoto(
+                                    url: imageUrl!,
+                                    errorBuilder: (_, __, ___) =>
+                                        _buildPlaceholder(isDark),
+                                  ))
                           : _buildPlaceholder(isDark),
                     ),
                   ),
@@ -138,9 +141,7 @@ class NmProfileCard extends StatelessWidget {
                         if (isPremium)
                           const NmPremiumBadge(size: NmBadgeSize.small),
                         if (isVerified)
-                          const NmVerificationBadge(
-                            size: NmBadgeSize.small,
-                          ),
+                          const NmVerificationBadge(size: NmBadgeSize.small),
                       ],
                     ),
                   ),

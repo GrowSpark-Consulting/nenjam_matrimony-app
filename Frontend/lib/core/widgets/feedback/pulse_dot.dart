@@ -15,13 +15,19 @@ class NmPulseDot extends StatefulWidget {
   final Color color;
   final Border? border;
 
-  const NmPulseDot({super.key, this.size = 10, required this.color, this.border});
+  const NmPulseDot({
+    super.key,
+    this.size = 10,
+    required this.color,
+    this.border,
+  });
 
   @override
   State<NmPulseDot> createState() => _NmPulseDotState();
 }
 
-class _NmPulseDotState extends State<NmPulseDot> with SingleTickerProviderStateMixin {
+class _NmPulseDotState extends State<NmPulseDot>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1800),
@@ -51,7 +57,10 @@ class _NmPulseDotState extends State<NmPulseDot> with SingleTickerProviderStateM
                 child: Container(
                   width: widget.size * (1 + t),
                   height: widget.size * (1 + t),
-                  decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: widget.color,
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
               Container(

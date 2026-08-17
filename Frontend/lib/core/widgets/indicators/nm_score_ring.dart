@@ -12,6 +12,7 @@ class NmScoreRing extends StatelessWidget {
   final double value;
   final String displayText;
   final Color color;
+
   /// Defaults to a faint tint of [color] when unset.
   final Color? backgroundColor;
   final Color? textColor;
@@ -54,7 +55,8 @@ class NmScoreRing extends StatelessWidget {
               strokeWidth: strokeWidth,
               strokeCap: StrokeCap.round,
               backgroundColor:
-                  backgroundColor ?? color.withValues(alpha: isDark ? 0.2 : 0.15),
+                  backgroundColor ??
+                  color.withValues(alpha: isDark ? 0.2 : 0.15),
               valueColor: AlwaysStoppedAnimation(color),
             ),
           ),

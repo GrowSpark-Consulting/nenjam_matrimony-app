@@ -19,18 +19,32 @@ class NmVerificationCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.infoLight,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.verifiedBlue.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: AppColors.verifiedBlue.withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.verified_user_rounded, size: 36, color: AppColors.verifiedBlue),
+          const Icon(
+            Icons.verified_user_rounded,
+            size: 36,
+            color: AppColors.verifiedBlue,
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(AppLocalizations.of(context).cardGetVerifiedTitle, style: AppTypography.titleMedium.copyWith(color: AppColors.verifiedBlue)),
-                Text(AppLocalizations.of(context).cardGetVerifiedMessage, style: AppTypography.bodySmall),
+                Text(
+                  AppLocalizations.of(context).cardGetVerifiedTitle,
+                  style: AppTypography.titleMedium.copyWith(
+                    color: AppColors.verifiedBlue,
+                  ),
+                ),
+                Text(
+                  AppLocalizations.of(context).cardGetVerifiedMessage,
+                  style: AppTypography.bodySmall,
+                ),
               ],
             ),
           ),
@@ -42,7 +56,12 @@ class NmVerificationCard extends StatelessWidget {
             // NmPrimaryButton's label now falls back to ellipsis (see
             // core/widgets/buttons/primary_button.dart) if a locale still
             // needs more.
-            NmPrimaryButton(label: AppLocalizations.of(context).registrationVerifyButton, onPressed: onVerify, width: 120, height: 36),
+            NmPrimaryButton(
+              label: AppLocalizations.of(context).registrationVerifyButton,
+              onPressed: onVerify,
+              width: 120,
+              height: 36,
+            ),
           ],
         ],
       ),
@@ -58,6 +77,7 @@ class NmNotificationCard extends StatelessWidget {
   final IconData icon;
   final bool isUnread;
   final VoidCallback? onTap;
+
   /// When set, shows a photo avatar (with gender-aware fallback) instead of
   /// the icon-in-circle — used for actor-driven notifications (interest,
   /// message, etc). Leave null for actor-less notifications (system,
@@ -88,14 +108,26 @@ class NmNotificationCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: AppDecorations.card(isDark: isDark).copyWith(
-            color: isUnread ? (isDark ? AppColors.surfaceVariantDark : AppColors.infoLight.withValues(alpha: 0.5)) : null,
+            color: isUnread
+                ? (isDark
+                      ? AppColors.surfaceVariantDark
+                      : AppColors.infoLight.withValues(alpha: 0.5))
+                : null,
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               avatarUrl != null
-                  ? NmCircleAvatar(imageUrl: avatarUrl, size: 40, gender: avatarGender)
-                  : CircleAvatar(radius: 20, backgroundColor: AppColors.primarySurface, child: Icon(icon, size: 20, color: AppColors.primary)),
+                  ? NmCircleAvatar(
+                      imageUrl: avatarUrl,
+                      size: 40,
+                      gender: avatarGender,
+                    )
+                  : CircleAvatar(
+                      radius: 20,
+                      backgroundColor: AppColors.primarySurface,
+                      child: Icon(icon, size: 20, color: AppColors.primary),
+                    ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -103,7 +135,11 @@ class NmNotificationCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: AppTypography.titleSmall.copyWith(fontWeight: isUnread ? FontWeight.w700 : FontWeight.w600),
+                      style: AppTypography.titleSmall.copyWith(
+                        fontWeight: isUnread
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -115,7 +151,12 @@ class NmNotificationCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 6),
-                    Text(time, style: AppTypography.labelSmall.copyWith(color: AppColors.textTertiaryLight)),
+                    Text(
+                      time,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textTertiaryLight,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -125,7 +166,10 @@ class NmNotificationCard extends StatelessWidget {
                   width: 8,
                   height: 8,
                   margin: const EdgeInsets.only(top: 4),
-                  decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ],
             ],
@@ -145,12 +189,23 @@ class NmSuccessCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AppColors.successLight, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: AppColors.successLight,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Row(
         children: [
           const Icon(Icons.check_circle_rounded, color: AppColors.success),
           const SizedBox(width: 12),
-          Expanded(child: Text(message, style: AppTypography.bodyMedium.copyWith(color: AppColors.success, fontWeight: FontWeight.w600))),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.success,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -166,12 +221,23 @@ class NmInformationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AppColors.infoLight, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: AppColors.infoLight,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Row(
         children: [
           const Icon(Icons.info_rounded, color: AppColors.info),
           const SizedBox(width: 12),
-          Expanded(child: Text(message, style: AppTypography.bodyMedium.copyWith(color: AppColors.info, fontWeight: FontWeight.w600))),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.info,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -187,12 +253,23 @@ class NmWarningCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AppColors.warningLight, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: AppColors.warningLight,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Row(
         children: [
           const Icon(Icons.warning_rounded, color: AppColors.warning),
           const SizedBox(width: 12),
-          Expanded(child: Text(message, style: AppTypography.bodyMedium.copyWith(color: AppColors.warning, fontWeight: FontWeight.w600))),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.warning,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );

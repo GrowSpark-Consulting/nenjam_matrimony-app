@@ -9,6 +9,7 @@ import '../../domain/entities/discovery_profile_entity.dart';
 import 'compatibility_badge.dart';
 import 'discover_action_rail.dart';
 import 'profile_info_overlay.dart';
+import '../../../../core/widgets/images/sized_network_photo.dart';
 
 /// Full-screen Reels-style profile card for the Discover tab.
 ///
@@ -171,9 +172,8 @@ class _ProfileImage extends StatelessWidget {
     }
 
     // Network image — use FadeInImage for a smooth load experience
-    return Image.network(
-      url,
-      fit: BoxFit.cover,
+    return NmSizedNetworkPhoto(
+      url: url,
       errorBuilder: (_, __, ___) => _Placeholder(gender: gender),
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;

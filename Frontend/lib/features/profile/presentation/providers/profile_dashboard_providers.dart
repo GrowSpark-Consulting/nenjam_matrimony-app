@@ -12,8 +12,21 @@ import '../../../registration/presentation/providers/registration_provider.dart'
 /// `RegistrationNotifier.startEditMode()`, so simply viewing the dashboard
 /// never flips `profileFlowModeProvider` or overwrites an in-progress edit
 /// session sitting in `registrationProvider`.
+///
+/// NOT `autoDispose`, deliberately. Its consumers are inherently transient —
+/// the navigation drawer's body is only built while the drawer is open (see
+/// Flutter's DrawerController), and ProfilePage unmounts on back — so under
+/// `autoDispose` the last listener disappeared on every close and the next
+/// open re-issued an identical `GET /profiles/draft`. Open drawer → close →
+/// open Profile → back → open drawer was four requests for one unchanged
+/// resource.
+///
+/// Freshness does not depend on that teardown: every path that actually
+/// changes the draft invalidates this provider explicitly — ProfilePage's
+/// initState, ProfileReviewPage, ProfileWizardPage's edit-mode save, and the
+/// drawer's own pull-to-refresh/retry.
 final profileDraftResponseProvider =
-    FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+    FutureProvider<Map<String, dynamic>>((ref) async {
   return ref.watch(registrationRepositoryProvider).getDraft();
 });
 

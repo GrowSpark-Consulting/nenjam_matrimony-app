@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_providers.dart';
@@ -12,9 +13,13 @@ final profilePromptRepositoryProvider = Provider<ProfilePromptRepository>(
 /// The pickable prompt bank, optionally filtered by category.
 final promptBankProvider = FutureProvider.autoDispose
     .family<List<PromptBankItem>, PromptCategory?>((ref, category) {
+  final cancelToken = CancelToken();
+  // Cancelled when the Choose Prompt screen is popped — see
+  // mySettingsProvider for the rationale.
+  ref.onDispose(cancelToken.cancel);
   return ref
       .watch(profilePromptRepositoryProvider)
-      .getPrompts(category: category);
+      .getPrompts(category: category, cancelToken: cancelToken);
 });
 
 /// The signed-in user's currently saved prompt answers (0-3). Used by
@@ -22,5 +27,11 @@ final promptBankProvider = FutureProvider.autoDispose
 /// edit-mode summary — all read-only consumers of this single provider.
 final myPromptsProvider =
     FutureProvider.autoDispose<List<PromptAnswer>>((ref) {
-  return ref.watch(profilePromptRepositoryProvider).getUserPrompts();
+  final cancelToken = CancelToken();
+  // Cancelled when the Choose Prompt screen is popped — see
+  // mySettingsProvider for the rationale.
+  ref.onDispose(cancelToken.cancel);
+  return ref
+      .watch(profilePromptRepositoryProvider)
+      .getUserPrompts(cancelToken: cancelToken);
 });

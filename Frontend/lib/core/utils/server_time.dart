@@ -43,12 +43,12 @@ DateTime? tryParseServerTime(dynamic value) {
 
 /// Reinterprets a timezone-less parse result's wall-clock fields as UTC.
 DateTime _asUtc(DateTime naive) => DateTime.utc(
-      naive.year,
-      naive.month,
-      naive.day,
-      naive.hour,
-      naive.minute,
-      naive.second,
-      naive.millisecond,
-      naive.microsecond,
-    );
+  naive.year,
+  naive.month,
+  naive.day,
+  naive.hour,
+  naive.minute,
+  naive.second,
+  naive.millisecond,
+  naive.microsecond,
+);

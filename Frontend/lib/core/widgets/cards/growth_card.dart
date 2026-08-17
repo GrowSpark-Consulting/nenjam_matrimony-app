@@ -46,9 +46,12 @@ class NmGrowthCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: AppTypography.titleSmall
-                          .copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                    title,
+                    style: AppTypography.titleSmall.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
@@ -61,10 +64,12 @@ class NmGrowthCard extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded,
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: isDark
+                  ? AppColors.textTertiaryDark
+                  : AppColors.textTertiaryLight,
+            ),
           ],
         ),
       ),

@@ -31,9 +31,22 @@ abstract final class AppDialogs {
         actions: [
           Row(
             children: [
-              Expanded(child: NmOutlinedButton(label: cancelLabel ?? AppLocalizations.of(context).commonCancel, onPressed: () => Navigator.pop(context, false))),
+              Expanded(
+                child: NmOutlinedButton(
+                  label:
+                      cancelLabel ?? AppLocalizations.of(context).commonCancel,
+                  onPressed: () => Navigator.pop(context, false),
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: NmPrimaryButton(label: confirmLabel ?? AppLocalizations.of(context).commonConfirm, onPressed: () => Navigator.pop(context, true))),
+              Expanded(
+                child: NmPrimaryButton(
+                  label:
+                      confirmLabel ??
+                      AppLocalizations.of(context).commonConfirm,
+                  onPressed: () => Navigator.pop(context, true),
+                ),
+              ),
             ],
           ),
         ],
@@ -51,14 +64,33 @@ abstract final class AppDialogs {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Row(children: [const Icon(Icons.delete_forever_rounded, color: AppColors.error), const SizedBox(width: 8), Text(title, style: AppTypography.titleLarge.copyWith(color: AppColors.error))]),
+        title: Row(
+          children: [
+            const Icon(Icons.delete_forever_rounded, color: AppColors.error),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: AppTypography.titleLarge.copyWith(color: AppColors.error),
+            ),
+          ],
+        ),
         content: Text(message, style: AppTypography.bodyMedium),
         actions: [
           Row(
             children: [
-              Expanded(child: NmOutlinedButton(label: AppLocalizations.of(context).commonCancel, onPressed: () => Navigator.pop(context, false))),
+              Expanded(
+                child: NmOutlinedButton(
+                  label: AppLocalizations.of(context).commonCancel,
+                  onPressed: () => Navigator.pop(context, false),
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: NmDangerButton(label: AppLocalizations.of(context).inboxActionDelete, onPressed: () => Navigator.pop(context, true))),
+              Expanded(
+                child: NmDangerButton(
+                  label: AppLocalizations.of(context).inboxActionDelete,
+                  onPressed: () => Navigator.pop(context, true),
+                ),
+              ),
             ],
           ),
         ],
@@ -76,13 +108,30 @@ abstract final class AppDialogs {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.workspace_premium_rounded, size: 64, color: AppColors.accentGold),
+            const Icon(
+              Icons.workspace_premium_rounded,
+              size: 64,
+              color: AppColors.accentGold,
+            ),
             const SizedBox(height: 16),
-            Text(AppLocalizations.of(context).dialogUpgradeTitle, style: AppTypography.titleLarge, textAlign: TextAlign.center),
+            Text(
+              AppLocalizations.of(context).dialogUpgradeTitle,
+              style: AppTypography.titleLarge,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
-            Text(AppLocalizations.of(context).dialogUpgradeMessage, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight), textAlign: TextAlign.center),
+            Text(
+              AppLocalizations.of(context).dialogUpgradeMessage,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondaryLight,
+              ),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 24),
-            NmPremiumButton(label: AppLocalizations.of(context).premiumBannerCta, onPressed: () => Navigator.pop(context)),
+            NmPremiumButton(
+              label: AppLocalizations.of(context).premiumBannerCta,
+              onPressed: () => Navigator.pop(context),
+            ),
           ],
         ),
       ),
@@ -90,7 +139,10 @@ abstract final class AppDialogs {
   }
 
   /// Verification Dialog.
-  static Future<void> showVerification(BuildContext context, {required VoidCallback onVerify}) {
+  static Future<void> showVerification(
+    BuildContext context, {
+    required VoidCallback onVerify,
+  }) {
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -99,13 +151,33 @@ abstract final class AppDialogs {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.verified_user_rounded, size: 64, color: AppColors.verifiedBlue),
+            const Icon(
+              Icons.verified_user_rounded,
+              size: 64,
+              color: AppColors.verifiedBlue,
+            ),
             const SizedBox(height: 16),
-            Text(AppLocalizations.of(context).dialogVerificationTitle, style: AppTypography.titleLarge, textAlign: TextAlign.center),
+            Text(
+              AppLocalizations.of(context).dialogVerificationTitle,
+              style: AppTypography.titleLarge,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
-            Text(AppLocalizations.of(context).dialogVerificationMessage, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight), textAlign: TextAlign.center),
+            Text(
+              AppLocalizations.of(context).dialogVerificationMessage,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondaryLight,
+              ),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 24),
-            NmPrimaryButton(label: AppLocalizations.of(context).dialogVerifyNow, onPressed: () { Navigator.pop(context); onVerify(); }),
+            NmPrimaryButton(
+              label: AppLocalizations.of(context).dialogVerifyNow,
+              onPressed: () {
+                Navigator.pop(context);
+                onVerify();
+              },
+            ),
           ],
         ),
       ),
@@ -113,27 +185,62 @@ abstract final class AppDialogs {
   }
 
   /// Error Alert Dialog.
-  static Future<void> showError(BuildContext context, {required String message}) {
+  static Future<void> showError(
+    BuildContext context, {
+    required String message,
+  }) {
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Row(children: [const Icon(Icons.error_outline_rounded, color: AppColors.error), const SizedBox(width: 8), Text(AppLocalizations.of(context).commonError, style: AppTypography.titleLarge)]),
+        title: Row(
+          children: [
+            const Icon(Icons.error_outline_rounded, color: AppColors.error),
+            const SizedBox(width: 8),
+            Text(
+              AppLocalizations.of(context).commonError,
+              style: AppTypography.titleLarge,
+            ),
+          ],
+        ),
         content: Text(message, style: AppTypography.bodyMedium),
-        actions: [NmPrimaryButton(label: AppLocalizations.of(context).commonDismiss, onPressed: () => Navigator.pop(context))],
+        actions: [
+          NmPrimaryButton(
+            label: AppLocalizations.of(context).commonDismiss,
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
       ),
     );
   }
 
   /// Success Alert Dialog.
-  static Future<void> showSuccess(BuildContext context, {required String title, required String message}) {
+  static Future<void> showSuccess(
+    BuildContext context, {
+    required String title,
+    required String message,
+  }) {
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Row(children: [const Icon(Icons.check_circle_outline_rounded, color: AppColors.success), const SizedBox(width: 8), Text(title, style: AppTypography.titleLarge)]),
+        title: Row(
+          children: [
+            const Icon(
+              Icons.check_circle_outline_rounded,
+              color: AppColors.success,
+            ),
+            const SizedBox(width: 8),
+            Text(title, style: AppTypography.titleLarge),
+          ],
+        ),
         content: Text(message, style: AppTypography.bodyMedium),
-        actions: [NmPrimaryButton(label: AppLocalizations.of(context).commonGreat, onPressed: () => Navigator.pop(context))],
+        actions: [
+          NmPrimaryButton(
+            label: AppLocalizations.of(context).commonGreat,
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
       ),
     );
   }
@@ -151,7 +258,12 @@ abstract final class AppDialogs {
             children: [
               const CircularProgressIndicator(color: AppColors.primary),
               const SizedBox(width: 24),
-              Expanded(child: Text(message ?? AppLocalizations.of(context).commonPleaseWait, style: AppTypography.bodyLarge)),
+              Expanded(
+                child: Text(
+                  message ?? AppLocalizations.of(context).commonPleaseWait,
+                  style: AppTypography.bodyLarge,
+                ),
+              ),
             ],
           ),
         ),

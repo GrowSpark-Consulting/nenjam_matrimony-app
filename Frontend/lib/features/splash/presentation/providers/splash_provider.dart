@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_providers.dart';
+import '../../../../core/network/backend_connectivity_checker.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/services/storage_service.dart';
 import '../../../authentication/data/services/backend_sync_service.dart';
@@ -40,6 +41,16 @@ const _restorableTabRoutes = {
 class SplashController extends Notifier<void> {
   @override
   void build() {}
+
+  /// Confirms the backend is actually serving before the app commits to a
+  /// route. Every screen behind the splash assumes it can fetch — sending a
+  /// user into Discover against a dead backend produces a cascade of failed
+  /// requests and empty states instead of one honest, retryable message.
+  ///
+  /// Never throws: [BackendConnectivityChecker] returns a result for every
+  /// failure mode, including offline.
+  Future<BackendConnectivityResult> checkServerHealth() =>
+      ref.read(serverHealthCheckerProvider).check();
 
   Future<String> resolveInitialRoute() async {
     if (!storageService.hasSelectedLanguage) {
@@ -110,5 +121,6 @@ class SplashController extends Notifier<void> {
   }
 }
 
-final splashControllerProvider =
-    NotifierProvider<SplashController, void>(SplashController.new);
+final splashControllerProvider = NotifierProvider<SplashController, void>(
+  SplashController.new,
+);

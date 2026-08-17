@@ -14,7 +14,8 @@ class NmBioTextArea extends StatelessWidget {
     super.key,
     this.controller,
     this.label = 'About Me',
-    this.hint = 'Describe your values, hobbies, family background, and partner preferences...',
+    this.hint =
+        'Describe your values, hobbies, family background, and partner preferences...',
     this.maxLength = 500,
     this.onChanged,
   });

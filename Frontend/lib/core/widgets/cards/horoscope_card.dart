@@ -38,13 +38,18 @@ class NmHoroscopeCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.auto_awesome_rounded,
-                    color: AppColors.accentGold, size: 22),
+                const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: AppColors.accentGold,
+                  size: 22,
+                ),
                 const SizedBox(width: 8),
-                Text(AppLocalizations.of(context).cardHoroscopeMatch,
-                    style: AppTypography.titleSmall.copyWith(
-                      fontWeight: FontWeight.w600,
-                    )),
+                Text(
+                  AppLocalizations.of(context).cardHoroscopeMatch,
+                  style: AppTypography.titleSmall.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -79,7 +84,9 @@ class NmHoroscopeCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        AppLocalizations.of(context).cardGunaMilanWith(partnerName),
+                        AppLocalizations.of(
+                          context,
+                        ).cardGunaMilanWith(partnerName),
                         style: AppTypography.bodyMedium.copyWith(
                           fontWeight: FontWeight.w500,
                         ),

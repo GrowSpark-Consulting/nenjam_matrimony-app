@@ -17,13 +17,25 @@ import '../../../../core/network/api_endpoints.dart';
 /// error. Any other failure is logged only, never surfaced to the user or
 /// allowed to block navigation, since Firebase remains the source of truth
 /// for "is this user logged in."
+///
+/// Note the status is inspected on the *response*, not caught: [ApiClient]
+/// sets `validateStatus: status < 500`, so no 4xx ever raises a
+/// [DioException] here. The catch below is for 5xx and transport failures.
 Future<void> syncUserWithBackend(ApiClient apiClient) async {
   try {
-    await apiClient.get<dynamic>(ApiEndpoints.profileMe);
+    final response = await apiClient.get<dynamic>(ApiEndpoints.profileMe);
+    final status = response.statusCode;
+    // 404 = profile not finalized yet. Anything else in the 4xx range is a
+    // genuine problem (403 from a disabled account, 422, …) that would
+    // otherwise vanish silently, since it neither throws nor blocks startup.
+    if (status != null && status >= 400 && status != 404 && kDebugMode) {
+      debugPrint('[Auth] Backend profile sync rejected: status $status');
+    }
   } on DioException catch (e) {
-    if (e.response?.statusCode == 404) return;
     if (kDebugMode) {
-      debugPrint('[Auth] Backend profile sync failed: ${e.type}, status ${e.response?.statusCode}');
+      debugPrint(
+        '[Auth] Backend profile sync failed: ${e.type}, status ${e.response?.statusCode}',
+      );
     }
   } catch (e) {
     if (kDebugMode) {

@@ -37,8 +37,9 @@ class CompatibilityResultWidget extends StatelessWidget {
                       value: result.score / 100,
                       strokeWidth: 8,
                       backgroundColor: Colors.white.withValues(alpha: 0.2),
-                      valueColor:
-                          const AlwaysStoppedAnimation(AppColors.accentGold),
+                      valueColor: const AlwaysStoppedAnimation(
+                        AppColors.accentGold,
+                      ),
                     ),
                     Text(
                       '${result.score}%',

@@ -19,36 +19,28 @@ class NmEmptyState extends StatelessWidget {
   });
 
   /// No matches found.
-  const NmEmptyState.noMatches({
-    super.key,
-    this.action,
-  })  : title = 'No Matches Found',
-        message = 'Try adjusting your preferences to discover more profiles.',
-        icon = Icons.favorite_border_rounded;
+  const NmEmptyState.noMatches({super.key, this.action})
+    : title = 'No Matches Found',
+      message = 'Try adjusting your preferences to discover more profiles.',
+      icon = Icons.favorite_border_rounded;
 
   /// No messages.
-  const NmEmptyState.noMessages({
-    super.key,
-    this.action,
-  })  : title = 'No Messages Yet',
-        message = 'Start a conversation with someone you like!',
-        icon = Icons.chat_bubble_outline_rounded;
+  const NmEmptyState.noMessages({super.key, this.action})
+    : title = 'No Messages Yet',
+      message = 'Start a conversation with someone you like!',
+      icon = Icons.chat_bubble_outline_rounded;
 
   /// No notifications.
-  const NmEmptyState.noNotifications({
-    super.key,
-    this.action,
-  })  : title = 'All Caught Up!',
-        message = 'You have no new notifications.',
-        icon = Icons.notifications_none_rounded;
+  const NmEmptyState.noNotifications({super.key, this.action})
+    : title = 'All Caught Up!',
+      message = 'You have no new notifications.',
+      icon = Icons.notifications_none_rounded;
 
   /// No search results.
-  const NmEmptyState.noResults({
-    super.key,
-    this.action,
-  })  : title = 'No Results',
-        message = 'Try different search terms or filters.',
-        icon = Icons.search_off_rounded;
+  const NmEmptyState.noResults({super.key, this.action})
+    : title = 'No Results',
+      message = 'Try different search terms or filters.',
+      icon = Icons.search_off_rounded;
 
   @override
   Widget build(BuildContext context) {
@@ -96,10 +88,7 @@ class NmEmptyState extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
             ],
-            if (action != null) ...[
-              const SizedBox(height: 24),
-              action!,
-            ],
+            if (action != null) ...[const SizedBox(height: 24), action!],
           ],
         ),
       ),

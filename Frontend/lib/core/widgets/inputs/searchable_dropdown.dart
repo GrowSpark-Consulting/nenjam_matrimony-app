@@ -53,9 +53,14 @@ class NmSearchableDropdown extends StatelessWidget {
           child: InputDecorator(
             decoration: InputDecoration(
               hintText: hint,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
               isDense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
               // Default suffixIcon reserves a ~48dp box regardless of the
               // icon's own size, which is what was crowding out the
               // selected-value text (especially in a half-width field like
@@ -69,7 +74,10 @@ class NmSearchableDropdown extends StatelessWidget {
                   size: 22,
                 ),
               ),
-              suffixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              suffixIconConstraints: const BoxConstraints(
+                minWidth: 32,
+                minHeight: 32,
+              ),
             ),
             child: Text(
               value ?? hint ?? '',

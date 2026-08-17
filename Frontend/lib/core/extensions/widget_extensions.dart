@@ -8,10 +8,7 @@ extension WidgetExtensions on Widget {
   Widget paddingAll(double value) =>
       Padding(padding: EdgeInsets.all(value), child: this);
 
-  Widget paddingSymmetric({
-    double horizontal = 0,
-    double vertical = 0,
-  }) =>
+  Widget paddingSymmetric({double horizontal = 0, double vertical = 0}) =>
       Padding(
         padding: EdgeInsets.symmetric(
           horizontal: horizontal,
@@ -25,16 +22,15 @@ extension WidgetExtensions on Widget {
     double top = 0,
     double right = 0,
     double bottom = 0,
-  }) =>
-      Padding(
-        padding: EdgeInsets.only(
-          left: left,
-          top: top,
-          right: right,
-          bottom: bottom,
-        ),
-        child: this,
-      );
+  }) => Padding(
+    padding: EdgeInsets.only(
+      left: left,
+      top: top,
+      right: right,
+      bottom: bottom,
+    ),
+    child: this,
+  );
 
   Widget get paddingPage =>
       Padding(padding: AppSpacing.pagePadding, child: this);
@@ -66,8 +62,7 @@ extension WidgetExtensions on Widget {
       DecoratedBox(decoration: decoration, child: this);
 
   // ─── Visibility ──────────────────────────────────────────────────
-  Widget visible(bool isVisible) =>
-      Visibility(visible: isVisible, child: this);
+  Widget visible(bool isVisible) => Visibility(visible: isVisible, child: this);
 
   Widget opacity(double value) => Opacity(opacity: value, child: this);
 
@@ -75,19 +70,14 @@ extension WidgetExtensions on Widget {
   Widget onTap(VoidCallback? onTap) =>
       GestureDetector(onTap: onTap, child: this);
 
-  Widget inkWell({
-    VoidCallback? onTap,
-    BorderRadius? borderRadius,
-  }) =>
-      InkWell(
-        onTap: onTap,
-        borderRadius: borderRadius ?? BorderRadius.circular(12),
-        child: this,
-      );
+  Widget inkWell({VoidCallback? onTap, BorderRadius? borderRadius}) => InkWell(
+    onTap: onTap,
+    borderRadius: borderRadius ?? BorderRadius.circular(12),
+    child: this,
+  );
 
   // ─── Semantic ────────────────────────────────────────────────────
-  Widget semanticLabel(String label) =>
-      Semantics(label: label, child: this);
+  Widget semanticLabel(String label) => Semantics(label: label, child: this);
 
   // ─── Safe Area ───────────────────────────────────────────────────
   Widget get safeArea => SafeArea(child: this);
@@ -98,13 +88,7 @@ extension WidgetExtensions on Widget {
     bool left = true,
     bool right = true,
   }) =>
-      SafeArea(
-        top: top,
-        bottom: bottom,
-        left: left,
-        right: right,
-        child: this,
-      );
+      SafeArea(top: top, bottom: bottom, left: left, right: right, child: this);
 }
 
 /// SizedBox gap helpers for consistent spacing.

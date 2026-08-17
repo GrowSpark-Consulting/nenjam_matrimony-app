@@ -1,0 +1,26 @@
+# Nenjam Matrimony — Android release signing (TEMPLATE)
+#
+# COPY this file to android/key.properties (copy, don't rename — otherwise the
+# template disappears for the next person). key.properties is gitignored, as
+# are *.jks / *.keystore. This .example file is NOT ignored, so it must never
+# contain real passwords.
+#
+# Generate an upload keystore:
+#   keytool -genkey -v -keystore upload-keystore.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+# storeFile accepts an absolute path, or a path relative to android/app/.
+# Keep a backup of the keystore: losing it means you can no longer publish
+# updates to the same Play listing without a Play App Signing key reset.
+#
+# Do NOT quote values, and do NOT leave a trailing space after them.
+# java.util.Properties strips leading whitespace but KEEPS trailing whitespace,
+# so `storePassword=hunter2 ` is a different password than `storePassword=hunter2`
+# and fails minutes into a release build with the misleading message
+# "keystore password was incorrect". build.gradle.kts trims these defensively,
+# but other tooling that reads this file will not.
+
+storePassword=changeme
+keyPassword=changeme
+keyAlias=upload
+storeFile=upload-keystore.jks

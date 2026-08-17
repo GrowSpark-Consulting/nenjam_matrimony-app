@@ -74,8 +74,11 @@ class NmProfileCompletionCard extends StatelessWidget {
             // Next step
             Row(
               children: [
-                const Icon(Icons.arrow_forward_rounded,
-                    size: 16, color: AppColors.primary),
+                const Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(

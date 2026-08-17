@@ -11,7 +11,12 @@ abstract final class AppAnimationTokens {
   static const Duration pageTransition = Duration(milliseconds: 400);
 
   // Curves
-  static const Curve luxuryCurve = Cubic(0.2, 0.0, 0.0, 1.0); // Emphasized Decelerate
+  static const Curve luxuryCurve = Cubic(
+    0.2,
+    0.0,
+    0.0,
+    1.0,
+  ); // Emphasized Decelerate
   static const Curve buttonPressCurve = Curves.easeOutCubic;
   static const Curve cardHoverCurve = Curves.easeInOutQuart;
 }

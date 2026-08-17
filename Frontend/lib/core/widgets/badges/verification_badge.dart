@@ -27,7 +27,10 @@ class NmVerificationBadge extends StatelessWidget {
     final padding = switch (size) {
       NmBadgeSize.small => const EdgeInsets.all(4.0),
       NmBadgeSize.medium => const EdgeInsets.all(6.0),
-      NmBadgeSize.large => const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      NmBadgeSize.large => const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 6,
+      ),
     };
 
     return Container(
@@ -39,8 +42,11 @@ class NmVerificationBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.verified_rounded,
-              size: iconSize, color: AppColors.verified),
+          Icon(
+            Icons.verified_rounded,
+            size: iconSize,
+            color: AppColors.verified,
+          ),
           if (showLabel) ...[
             const SizedBox(width: 4),
             Text(

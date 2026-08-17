@@ -4,12 +4,14 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
 import '../avatars/gender_placeholder.dart';
+import '../images/sized_network_photo.dart';
 
 /// Match card with compatibility percentage.
 class NmMatchCard extends StatelessWidget {
   final String name;
   final String age;
   final String? imageUrl;
+
   /// 'Male' / 'Female' / '' — picks the gender-aware placeholder icon
   /// when [imageUrl] is null/fails to load.
   final String gender;
@@ -44,8 +46,10 @@ class NmMatchCard extends StatelessWidget {
               width: 100,
               height: 120,
               child: imageUrl != null
-                  ? Image.network(imageUrl!, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholder(isDark))
+                  ? NmSizedNetworkPhoto(
+                      url: imageUrl!,
+                      errorBuilder: (_, __, ___) => _placeholder(isDark),
+                    )
                   : _placeholder(isDark),
             ),
 
@@ -102,7 +106,8 @@ class NmMatchCard extends StatelessWidget {
     );
   }
 
-  Widget _placeholder(bool isDark) => NmGenderPlaceholder(gender: gender, iconSize: 32);
+  Widget _placeholder(bool isDark) =>
+      NmGenderPlaceholder(gender: gender, iconSize: 32);
 }
 
 class _CompatibilityBadge extends StatelessWidget {

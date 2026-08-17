@@ -44,7 +44,9 @@ class NmCompatibilityCard extends StatelessWidget {
                     Center(
                       child: Text(
                         '$score%',
-                        style: AppTypography.titleSmall.copyWith(fontWeight: FontWeight.w700),
+                        style: AppTypography.titleSmall.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
@@ -57,7 +59,12 @@ class NmCompatibilityCard extends StatelessWidget {
                   children: [
                     Text(title, style: AppTypography.titleMedium),
                     const SizedBox(height: 2),
-                    Text(AppLocalizations.of(context).cardCompatibilityFootnote, style: AppTypography.labelSmall.copyWith(color: AppColors.textTertiaryLight)),
+                    Text(
+                      AppLocalizations.of(context).cardCompatibilityFootnote,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textTertiaryLight,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -67,16 +74,24 @@ class NmCompatibilityCard extends StatelessWidget {
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 12),
-            ...matchingPoints.map((point) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.check_circle_rounded, size: 18, color: AppColors.success),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(point, style: AppTypography.bodyMedium)),
-                    ],
-                  ),
-                )),
+            ...matchingPoints.map(
+              (point) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle_rounded,
+                      size: 18,
+                      color: AppColors.success,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(point, style: AppTypography.bodyMedium),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ],
       ),

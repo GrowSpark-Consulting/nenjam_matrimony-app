@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../bootstrap.dart';
 import '../../features/authentication/presentation/providers/auth_providers.dart';
+import '../constants/app_constants.dart';
 import '../../features/interests/presentation/providers/interests_provider.dart';
 import '../../features/notifications/presentation/providers/notification_providers.dart';
 import '../../features/shortlist/presentation/providers/shortlist_provider.dart';
@@ -13,7 +13,8 @@ import 'realtime_service.dart';
 final realtimeServiceProvider = Provider<RealtimeService>((ref) {
   final tokenService = ref.watch(authTokenServiceProvider);
   final service = RealtimeService(
-    baseUrl: appConfig.envConfig.apiBaseUrl,
+    // Same origin as the REST client — see AppConstants.apiBaseUrl.
+    baseUrl: AppConstants.apiBaseUrl,
     tokenProvider: () => tokenService.getFirebaseToken(),
   );
   ref.onDispose(service.dispose);
@@ -33,17 +34,13 @@ final realtimeSyncProvider = Provider<void>((ref) {
 
   // Connect while signed in; disconnect on sign-out. `fireImmediately` handles
   // the already-signed-in cold start.
-  ref.listen<Object?>(
-    currentAuthUserProvider,
-    (previous, next) {
-      if (next != null) {
-        service.connect();
-      } else {
-        service.disconnect();
-      }
-    },
-    fireImmediately: true,
-  );
+  ref.listen<Object?>(currentAuthUserProvider, (previous, next) {
+    if (next != null) {
+      service.connect();
+    } else {
+      service.disconnect();
+    }
+  }, fireImmediately: true);
 
   final subscription = service.events.listen((event) {
     switch (event) {

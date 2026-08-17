@@ -22,22 +22,26 @@ class NmGenderPlaceholder extends StatelessWidget {
   });
 
   IconData get _icon => switch (gender) {
-        'Male' => Icons.man_rounded,
-        'Female' => Icons.woman_rounded,
-        _ => Icons.person_rounded,
-      };
+    'Male' => Icons.man_rounded,
+    'Female' => Icons.woman_rounded,
+    _ => Icons.person_rounded,
+  };
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      color: backgroundColor ??
-          (isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight),
+      color:
+          backgroundColor ??
+          (isDark
+              ? AppColors.surfaceVariantDark
+              : AppColors.surfaceVariantLight),
       alignment: Alignment.center,
       child: Icon(
         _icon,
         size: iconSize,
-        color: iconColor ??
+        color:
+            iconColor ??
             (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
       ),
     );

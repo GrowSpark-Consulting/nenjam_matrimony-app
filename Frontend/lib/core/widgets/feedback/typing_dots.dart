@@ -16,7 +16,8 @@ class NmTypingDots extends StatefulWidget {
   State<NmTypingDots> createState() => _NmTypingDotsState();
 }
 
-class _NmTypingDotsState extends State<NmTypingDots> with SingleTickerProviderStateMixin {
+class _NmTypingDotsState extends State<NmTypingDots>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 900),
@@ -31,7 +32,9 @@ class _NmTypingDotsState extends State<NmTypingDots> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = widget.color ?? (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight);
+    final color =
+        widget.color ??
+        (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight);
 
     return AnimatedBuilder(
       animation: _controller,
@@ -42,13 +45,18 @@ class _NmTypingDotsState extends State<NmTypingDots> with SingleTickerProviderSt
             final t = (_controller.value - (i * 0.2)) % 1.0;
             final bounce = t < 0.5 ? t * 2 : (1 - t) * 2;
             return Padding(
-              padding: EdgeInsets.only(right: i == 2 ? 0 : widget.dotSize * 0.5),
+              padding: EdgeInsets.only(
+                right: i == 2 ? 0 : widget.dotSize * 0.5,
+              ),
               child: Transform.translate(
                 offset: Offset(0, -bounce * widget.dotSize * 0.6),
                 child: Container(
                   width: widget.dotSize,
                   height: widget.dotSize,
-                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
             );

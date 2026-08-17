@@ -28,10 +28,10 @@ class NmGradientButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gradient =
-        useGoldGradient ? AppGradients.gold : AppGradients.primary;
-    final textColor =
-        useGoldGradient ? AppColors.textOnGold : AppColors.textOnPrimary;
+    final gradient = useGoldGradient ? AppGradients.gold : AppGradients.primary;
+    final textColor = useGoldGradient
+        ? AppColors.textOnGold
+        : AppColors.textOnPrimary;
 
     return SizedBox(
       width: width ?? double.infinity,

@@ -39,12 +39,19 @@ class NmSkeletonLoader extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Shimmer.fromColors(
-      baseColor: isDark ? AppColors.shimmerBaseDark : AppColors.shimmerBaseLight,
-      highlightColor: isDark ? AppColors.shimmerHighlightDark : AppColors.shimmerHighlightLight,
+      baseColor: isDark
+          ? AppColors.shimmerBaseDark
+          : AppColors.shimmerBaseLight,
+      highlightColor: isDark
+          ? AppColors.shimmerHighlightDark
+          : AppColors.shimmerHighlightLight,
       child: Container(
         width: width,
         height: height,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(radius)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(radius),
+        ),
       ),
     );
   }
@@ -60,8 +67,13 @@ class NmImagePlaceholder extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(color: AppColors.surfaceVariantLight, borderRadius: BorderRadius.circular(12)),
-      child: const Center(child: Icon(Icons.image_outlined, color: AppColors.textTertiaryLight)),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariantLight,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Center(
+        child: Icon(Icons.image_outlined, color: AppColors.textTertiaryLight),
+      ),
     );
   }
 }
@@ -85,11 +97,24 @@ class NmRetryWidget extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.refresh_rounded, size: 48, color: AppColors.textSecondaryLight),
+            const Icon(
+              Icons.refresh_rounded,
+              size: 48,
+              color: AppColors.textSecondaryLight,
+            ),
             const SizedBox(height: 16),
-            Text(message, style: AppTypography.bodyMedium, textAlign: TextAlign.center),
+            Text(
+              message,
+              style: AppTypography.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 20),
-            NmPrimaryButton(label: AppLocalizations.of(context).commonRetry, onPressed: onRetry, width: 140, height: 44),
+            NmPrimaryButton(
+              label: AppLocalizations.of(context).commonRetry,
+              onPressed: onRetry,
+              width: 140,
+              height: 44,
+            ),
           ],
         ),
       ),
@@ -110,13 +135,30 @@ class NmNoInternetWidget extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.wifi_off_rounded, size: 64, color: AppColors.warning),
+            const Icon(
+              Icons.wifi_off_rounded,
+              size: 64,
+              color: AppColors.warning,
+            ),
             const SizedBox(height: 20),
-            Text(AppLocalizations.of(context).networkNoInternetTitle, style: AppTypography.titleLarge),
+            Text(
+              AppLocalizations.of(context).networkNoInternetTitle,
+              style: AppTypography.titleLarge,
+            ),
             const SizedBox(height: 8),
-            Text(AppLocalizations.of(context).networkNoInternetMessage, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight), textAlign: TextAlign.center),
+            Text(
+              AppLocalizations.of(context).networkNoInternetMessage,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondaryLight,
+              ),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 24),
-            NmPrimaryButton(label: AppLocalizations.of(context).networkReconnect, onPressed: onRetry, width: 160),
+            NmPrimaryButton(
+              label: AppLocalizations.of(context).networkReconnect,
+              onPressed: onRetry,
+              width: 160,
+            ),
           ],
         ),
       ),
@@ -137,13 +179,30 @@ class NmServerErrorWidget extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_rounded, size: 64, color: AppColors.error),
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 64,
+              color: AppColors.error,
+            ),
             const SizedBox(height: 20),
-            Text(AppLocalizations.of(context).networkServerErrorTitle, style: AppTypography.titleLarge),
+            Text(
+              AppLocalizations.of(context).networkServerErrorTitle,
+              style: AppTypography.titleLarge,
+            ),
             const SizedBox(height: 8),
-            Text(AppLocalizations.of(context).networkServerErrorMessage, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight), textAlign: TextAlign.center),
+            Text(
+              AppLocalizations.of(context).networkServerErrorMessage,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondaryLight,
+              ),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 24),
-            NmPrimaryButton(label: AppLocalizations.of(context).commonTryAgain, onPressed: onRetry, width: 160),
+            NmPrimaryButton(
+              label: AppLocalizations.of(context).commonTryAgain,
+              onPressed: onRetry,
+              width: 160,
+            ),
           ],
         ),
       ),

@@ -3465,6 +3465,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get networkReconnect => 'Reconnect';
 
   @override
+  String get networkConnectionTimeout =>
+      'The connection timed out. Please try again.';
+
+  @override
+  String get networkReceiveTimeout =>
+      'The server took too long to respond. Please try again.';
+
+  @override
+  String get networkRequestCancelled => 'The request was cancelled.';
+
+  @override
+  String get startupUnreachableTitle => 'We can\'t reach Nenjam';
+
+  @override
+  String get startupUnreachableMessage =>
+      'Check your internet connection and try again.';
+
+  @override
+  String get startupUnhealthyTitle => 'Nenjam is temporarily unavailable';
+
+  @override
+  String get startupUnhealthyMessage =>
+      'Our servers are having trouble right now. Please try again in a moment.';
+
+  @override
   String get networkServerErrorTitle => 'Server Error (500)';
 
   @override
@@ -3860,6 +3885,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get permissionImagePickerError => 'Could not open the image picker.';
+
+  @override
+  String get voiceRecordingUnsupportedOnWeb =>
+      'Voice messages aren\'t supported in the browser yet. Please use the Nenjam mobile app.';
 
   @override
   String get permissionCameraNeeded =>

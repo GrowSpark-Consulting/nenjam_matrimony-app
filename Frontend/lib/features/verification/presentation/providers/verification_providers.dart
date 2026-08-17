@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:cross_file/cross_file.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_providers.dart';
@@ -57,7 +56,7 @@ class VerificationStatusesController extends AsyncNotifier<
   /// Submits [file] as evidence for [type]. No-ops if a submission for the
   /// same type is already in flight, so a double-tap (or a slow first tap
   /// followed by an impatient second one) can't fire two uploads.
-  Future<void> submit(VerificationDocumentType type, File file) async {
+  Future<void> submit(VerificationDocumentType type, XFile file) async {
     final current = Map<VerificationDocumentType, VerificationDocumentRecord>.from(
       state.valueOrNull ?? const {},
     );

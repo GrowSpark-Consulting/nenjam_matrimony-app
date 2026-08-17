@@ -8,12 +8,7 @@ class NmLoadingWidget extends StatelessWidget {
   final double size;
   final Color? color;
 
-  const NmLoadingWidget({
-    super.key,
-    this.message,
-    this.size = 40,
-    this.color,
-  });
+  const NmLoadingWidget({super.key, this.message, this.size = 40, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -28,10 +23,9 @@ class NmLoadingWidget extends StatelessWidget {
             height: size,
             child: CircularProgressIndicator(
               strokeWidth: 3,
-              color: color ??
-                  (isDark
-                      ? const Color(0xFF7B9AD6)
-                      : AppColors.primary),
+              color:
+                  color ??
+                  (isDark ? const Color(0xFF7B9AD6) : AppColors.primary),
             ),
           ),
           if (message != null) ...[
@@ -39,10 +33,10 @@ class NmLoadingWidget extends StatelessWidget {
             Text(
               message!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
               textAlign: TextAlign.center,
             ),
           ],

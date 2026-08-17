@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -28,10 +27,18 @@ class AttachmentPicker {
   final ImagePicker _picker;
   final AppPermissionService _permissions;
 
-  /// Returns the picked file, or `null` if the user cancelled, denied a
+  /// Returns the picked image, or `null` if the user cancelled, denied a
   /// required permission, or the picker failed — in every `null` case any
   /// necessary explanation has already been shown to the user.
-  Future<File?> pick(
+  ///
+  /// Returns [XFile], the platform-neutral handle `image_picker` natively
+  /// produces, rather than converting to `dart:io`'s `File`. That conversion
+  /// was what made the entire downstream chain — crop, compress, multipart
+  /// upload — mobile-only, because `dart:io` compiles on web but throws
+  /// `UnsupportedError` as soon as it is used. `XFile.readAsBytes()` works on
+  /// every platform, so the same code path now serves Android, iOS and the
+  /// browser.
+  Future<XFile?> pick(
     BuildContext context,
     ImageSource source, {
     double? maxWidth,
@@ -49,20 +56,27 @@ class AttachmentPicker {
         maxWidth: maxWidth,
         imageQuality: imageQuality,
       );
-      return xfile == null ? null : File(xfile.path);
+      return xfile;
     } on PlatformException catch (e) {
       if (source == ImageSource.gallery && _isPhotoAccessDenied(e)) {
         if (context.mounted) {
           await showOpenSettingsDialog(
             context,
             title: AppLocalizations.of(context).permissionPhotoDisabledTitle,
-            message: AppLocalizations.of(context).permissionPhotoDisabledMessage,
+            message: AppLocalizations.of(
+              context,
+            ).permissionPhotoDisabledMessage,
             onOpenSettings: _permissions.openSettings,
           );
         }
         return null;
       }
-      if (context.mounted) _snack(context, AppLocalizations.of(context).permissionImagePickerError);
+      if (context.mounted) {
+        _snack(
+          context,
+          AppLocalizations.of(context).permissionImagePickerError,
+        );
+      }
       return null;
     }
   }
@@ -71,6 +85,14 @@ class AttachmentPicker {
       e.code == 'photo_access_denied' || e.code == 'PERMISSION_DENIED';
 
   Future<bool> _ensureCameraPermission(BuildContext context) async {
+    // The browser owns this prompt: `image_picker` on web renders an
+    // `<input type="file" capture>` and the user agent asks for camera access
+    // itself, with its own UI, at the moment the input is opened. Running our
+    // pre-flight there would either duplicate that prompt or — on browsers
+    // that cannot report camera permission via the Permissions API — report
+    // "denied" and block a pick the browser would happily have allowed.
+    if (kIsWeb) return true;
+
     final status = await _permissions.statusOf(NmPermission.camera);
     if (status == NmPermissionStatus.granted) return true;
 
