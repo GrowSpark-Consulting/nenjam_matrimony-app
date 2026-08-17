@@ -38,9 +38,37 @@ export const FEED_PROFILE_SELECT = {
   drinkingHabits: true,
   hobbies: true,
   profileCompletePct: true,
+  // Scoring inputs. `updatedAt` stands in for activity (there is no
+  // lastActiveAt column — see ACTIVITY_NOTE in matching-weights.config.ts).
+  updatedAt: true,
   user: {
     select: {
       phone: true,
+      // Trust signal for the verification component.
+      trustScore: true,
+      // The candidate's OWN preference, for the mutual direction of the score.
+      // Selected here rather than fetched per row on purpose: this is a nested
+      // select on a query that already runs, so mutual scoring costs zero extra
+      // round trips. Fetching it per candidate would be a textbook N+1 — 20
+      // profiles becoming 21 queries.
+      partnerPreference: {
+        select: {
+          minAge: true,
+          maxAge: true,
+          minHeightCm: true,
+          maxHeightCm: true,
+          preferredReligions: true,
+          preferredCastes: true,
+          preferredMotherTongues: true,
+          preferredEducation: true,
+          preferredOccupations: true,
+          preferredCities: true,
+          preferredStates: true,
+          maritalStatusPref: true,
+          minIncomeLakhs: true,
+          extendedPreferences: true,
+        },
+      },
       photos: {
         orderBy: [{ isPrimary: 'desc' }, { order: 'asc' }],
         select: { s3Key: true },
@@ -60,6 +88,28 @@ export interface SelfProfile {
   currentCity: string;
   currentState: string;
   motherTongue: string;
+  // ── scoring inputs ───────────────────────────────────────────────────────
+  // The mutual half of the compatibility score runs the CANDIDATE's saved
+  // preference against the SEEKER, so the seeker's own attributes are needed
+  // too — not just the four "Same X" fields the WHERE builder resolves.
+  //
+  // These are added to a query that already runs once per feed request, so
+  // mutual scoring costs no extra round trip. That matters here: a round trip
+  // to this database measures ~250ms inside the feed's WHERE, and the feed
+  // already spends ~1s in its query stage.
+  userId: string;
+  dob: Date | null;
+  heightCm: number | null;
+  religion: string | null;
+  community: string | null;
+  highestEducation: string | null;
+  profession: string | null;
+  maritalStatus: string | null;
+  dietaryHabits: string | null;
+  smokingHabits: string | null;
+  drinkingHabits: string | null;
+  profileCompletePct: number | null;
+  updatedAt: Date | null;
 }
 
 @Injectable()
@@ -79,6 +129,19 @@ export class FeedRepository {
         currentCity: true,
         currentState: true,
         motherTongue: true,
+        userId: true,
+        dob: true,
+        heightCm: true,
+        religion: true,
+        community: true,
+        highestEducation: true,
+        profession: true,
+        maritalStatus: true,
+        dietaryHabits: true,
+        smokingHabits: true,
+        drinkingHabits: true,
+        profileCompletePct: true,
+        updatedAt: true,
       },
     });
     return row ?? null;

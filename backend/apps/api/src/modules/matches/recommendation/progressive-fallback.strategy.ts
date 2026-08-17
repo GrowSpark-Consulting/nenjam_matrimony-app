@@ -3,7 +3,11 @@ import { AppConfigService } from '@app/config';
 import type { Prisma } from '../../../../../../libs/database/generated/client';
 import { FeedRepository } from '../repositories/feed.repository';
 import { PreferenceRepository } from '../repositories/preference.repository';
-import { buildFeedWhere } from '../filters/partner-preference-where.builder';
+import type { SelfProfile } from '../repositories/feed.repository';
+import {
+  buildFeedWhere,
+  type PreferenceFilters,
+} from '../filters/partner-preference-where.builder';
 import { withSafetyExclusions } from '../filters/safety-exclusions.builder';
 import { buildTierPlan, TierDefinition } from './tier-plan';
 import {
@@ -98,7 +102,7 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
     const tier1Where = whereFor(tier1);
     const tier1Count = await this.feedRepository.countMatching(tier1Where);
     if (tier1Count > 0) {
-      return this.page(tier1, tier1Where, tier1Count, { skip, take });
+      return this.page(tier1, tier1Where, tier1Count, { skip, take }, self, pref);
     }
 
     // Tier 1 was empty. The tier plan is *monotonically relaxing* — every
@@ -133,6 +137,8 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
       widerWheres[winnerIndex],
       counts[winnerIndex],
       { skip, take },
+      self,
+      pref,
     );
   }
 
@@ -142,11 +148,15 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
     where: Prisma.UserProfileWhereInput,
     total: number,
     { skip, take }: FeedPageQuery,
+    seeker: SelfProfile,
+    seekerPreference: PreferenceFilters | null,
   ): Promise<RecommendationResult> {
     const rows = await this.feedRepository.findRows(where, { skip, take });
     return {
       rows,
       total,
+      seeker,
+      seekerPreference,
       tier: tierDef.tier,
       fallbackUsed: tierDef.tier > 1,
       reason: tierDef.reason,

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { S3Service } from '@app/storage';
 import { DiscoverProfileDto } from '../dto/discover-profile.response.dto';
+import type { CompatibilityBreakdown } from '../scoring/compatibility.service';
 import type { FeedProfileRow } from '../repositories/feed.repository';
 
 /**
@@ -15,11 +16,19 @@ export class ProfileFeedMapper {
 
   constructor(private readonly s3: S3Service) {}
 
-  toDtoList(rows: FeedProfileRow[]): Promise<DiscoverProfileDto[]> {
-    return Promise.all(rows.map((row) => this.toDto(row)));
+  toDtoList(
+    rows: FeedProfileRow[],
+    scores?: Map<string, CompatibilityBreakdown>,
+  ): Promise<DiscoverProfileDto[]> {
+    return Promise.all(
+      rows.map((row) => this.toDto(row, scores?.get(String(row.userId ?? '')))),
+    );
   }
 
-  async toDto(row: FeedProfileRow): Promise<DiscoverProfileDto> {
+  async toDto(
+    row: FeedProfileRow,
+    score?: CompatibilityBreakdown,
+  ): Promise<DiscoverProfileDto> {
     const user = (row.user ?? {}) as {
       phone?: string | null;
       photos?: Array<{ s3Key: string }>;
@@ -45,10 +54,17 @@ export class ProfileFeedMapper {
       photoProtected: false,
       phoneVerified: Boolean(user.phone),
       compatibility: {
-        aiMatchPercent: 0,
+        // Preference-and-quality compatibility, 0-100. `overallCompatibility`
+        // blends both directions (60/40) when the candidate has saved a
+        // preference; otherwise it is the one-way score.
+        aiMatchPercent: score?.seekerFit ?? 0,
+        // Astrology and psychology engines do not exist yet. Left at 0
+        // deliberately rather than folded into the number above — a score that
+        // silently means something different from its name is worse than a
+        // zero that plainly says "not computed".
         astroMatchPercent: 0,
         psychologyMatchPercent: 0,
-        overallCompatibility: 0,
+        overallCompatibility: score?.overall ?? 0,
       },
       tags: [],
       religion: (row.religion as string) ?? '',
