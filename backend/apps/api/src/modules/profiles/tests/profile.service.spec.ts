@@ -1,3 +1,4 @@
+import type { FeedInvalidationService } from '../../matches/cache/feed-invalidation.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '@app/database';
 import { ProfileRepository } from '../repositories/profile.repository';
@@ -182,6 +183,9 @@ describe('ProfileService', () => {
         sendWelcome:
           overrides?.sendWelcome ?? jest.fn().mockResolvedValue(undefined),
       } as never,
+      // Feed invalidation is fire-and-forget bookkeeping after a successful
+      // write; these tests assert the write, not the cache signalling.
+      { invalidate: jest.fn(), invalidatePair: jest.fn() } as unknown as FeedInvalidationService,
     );
   }
 
@@ -857,7 +861,10 @@ describe('ProfileService', () => {
           draftService,
           completionService,
           { sendWelcome: jest.fn().mockResolvedValue(undefined) } as never,
-        );
+      // Feed invalidation is fire-and-forget bookkeeping after a successful
+      // write; these tests assert the write, not the cache signalling.
+      { invalidate: jest.fn(), invalidatePair: jest.fn() } as unknown as FeedInvalidationService,
+    );
         return { service, updateProfileCompletePct };
       }
 

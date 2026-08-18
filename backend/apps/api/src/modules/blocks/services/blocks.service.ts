@@ -7,6 +7,7 @@ import { PaginationQueryDto } from '@app/common';
 import { BlocksRepository } from '../repositories/blocks.repository';
 import { ProfileFeedMapper } from '../../matches/mappers/profile-feed.mapper';
 import { BlockedUsersPageDto } from '../dto/blocked-user.response.dto';
+import { FeedInvalidationService } from '../../matches/cache/feed-invalidation.service';
 
 /**
  * User-level blocking. A block is directional in storage (`blockerId` ->
@@ -23,6 +24,7 @@ import { BlockedUsersPageDto } from '../dto/blocked-user.response.dto';
 @Injectable()
 export class BlocksService {
   constructor(
+    private readonly feedInvalidation: FeedInvalidationService,
     private readonly blocksRepository: BlocksRepository,
     private readonly profileMapper: ProfileFeedMapper,
   ) {}
@@ -35,10 +37,25 @@ export class BlocksService {
       throw new NotFoundException('This member is no longer available.');
     }
     await this.blocksRepository.block(userId, targetUserId);
+
+    // A block changes BOTH feeds — the blocker stops seeing the blocked, and
+    // the blocked stops seeing the blocker. Invalidating only the actor would
+    // leave the other side's version untouched, so their client would keep
+    // believing its feed was current.
+    await this.feedInvalidation.invalidatePair(
+      userId,
+      targetUserId,
+      'block_created',
+    );
   }
 
   async unblock(userId: string, targetUserId: string): Promise<void> {
     await this.blocksRepository.unblock(userId, targetUserId);
+    await this.feedInvalidation.invalidatePair(
+      userId,
+      targetUserId,
+      'block_removed',
+    );
   }
 
   /** The caller's blocked members as Discover cards, newest-blocked first,

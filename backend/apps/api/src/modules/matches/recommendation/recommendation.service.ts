@@ -1,3 +1,5 @@
+import type { PreferenceFilters } from '../filters/partner-preference-where.builder';
+import type { SelfProfile } from '../repositories/feed.repository';
 import type { FeedProfileRow } from '../repositories/feed.repository';
 
 // DI token for the active recommendation strategy. FeedService depends only on
@@ -21,6 +23,12 @@ export interface RecommendationResult {
   fallbackUsed?: boolean;
   reason?: string;
   relaxedFilters?: string[];
+  /** The seeker's own profile and saved preference, as already loaded by the
+   *  strategy while building the WHERE clause. Passed back so FeedService can
+   *  score the page without re-fetching them — a second lookup here would add a
+   *  full round trip to a request that already spends ~1s in its query stage. */
+  seeker?: SelfProfile | null;
+  seekerPreference?: PreferenceFilters | null;
 }
 
 export interface RecommendationService {

@@ -5,6 +5,7 @@ import type {
 } from '../repositories/feed.repository';
 import type { PreferenceRepository } from '../repositories/preference.repository';
 import type { AppConfigService } from '@app/config';
+import type { FeedContextService } from '../cache/feed-context.cache';
 
 const SELF = {
   gender: 'MALE' as const,
@@ -75,10 +76,23 @@ function buildStrategy(opts: {
     },
   } as unknown as AppConfigService;
 
+  // Delegates to the same repository mocks the strategy used to call directly,
+  // so every existing expectation in this file still describes the same
+  // behaviour — the cache is an optimisation in front of these reads, not a
+  // change to what they return.
+  const feedContext = {
+    load: jest.fn(async (userId: string) => ({
+      self: await feedRepository.findSelf(userId),
+      pref: await preferenceRepository.findByUserId(userId),
+    })),
+    invalidate: jest.fn(),
+  } as unknown as FeedContextService;
+
   const strategy = new ProgressiveFallbackStrategy(
     feedRepository,
     preferenceRepository,
     configService,
+    feedContext,
   );
 
   return { strategy, countMatching, findRows };

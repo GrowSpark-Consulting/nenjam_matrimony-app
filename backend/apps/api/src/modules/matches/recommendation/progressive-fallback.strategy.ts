@@ -3,7 +3,12 @@ import { AppConfigService } from '@app/config';
 import type { Prisma } from '../../../../../../libs/database/generated/client';
 import { FeedRepository } from '../repositories/feed.repository';
 import { PreferenceRepository } from '../repositories/preference.repository';
-import { buildFeedWhere } from '../filters/partner-preference-where.builder';
+import { FeedContextService } from '../cache/feed-context.cache';
+import type { SelfProfile } from '../repositories/feed.repository';
+import {
+  buildFeedWhere,
+  type PreferenceFilters,
+} from '../filters/partner-preference-where.builder';
 import { withSafetyExclusions } from '../filters/safety-exclusions.builder';
 import { buildTierPlan, TierDefinition } from './tier-plan';
 import {
@@ -36,16 +41,20 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
     private readonly feedRepository: FeedRepository,
     private readonly preferenceRepository: PreferenceRepository,
     private readonly configService: AppConfigService,
+    private readonly feedContext: FeedContextService,
   ) {}
 
   async getFeedForUser(
     userId: string,
     { skip, take }: FeedPageQuery,
   ): Promise<RecommendationResult> {
-    const [self, pref] = await Promise.all([
-      this.feedRepository.findSelf(userId),
-      this.preferenceRepository.findByUserId(userId),
-    ]);
+    // The seeker's own profile and preference, served from Redis when warm.
+    // On a hit this removes a whole sequential round trip from the request; on
+    // a miss (or with Redis down) FeedContextService performs exactly the same
+    // parallel pair of queries this line used to, so behaviour is unchanged
+    // either way. Nothing safety-critical is cached — blocks, account status
+    // and deletedAt are still evaluated live inside buildFeedWhere below.
+    const { self, pref } = await this.feedContext.load(userId);
 
     // No finalized profile → the caller's own gender is unknown, so the
     // mandatory opposite-gender rule can't be satisfied (buildFeedWhere fails
@@ -96,9 +105,17 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
     // count + one row fetch and never touches the wider tiers.
     const tier1 = plan[0];
     const tier1Where = whereFor(tier1);
+
+    // Counting before fetching is deliberate and stays that way. Issuing the
+    // count and the row fetch together would remove one sequential round trip
+    // on the common path, but it also fetches rows for a tier that may turn out
+    // to be empty — breaking the "findRows runs at most once per request"
+    // invariant this strategy is tested on. The round-trip saving could not be
+    // measured against this database's own noise (a bare `SELECT 1` ranges
+    // 177ms to 2013ms), so the invariant wins.
     const tier1Count = await this.feedRepository.countMatching(tier1Where);
     if (tier1Count > 0) {
-      return this.page(tier1, tier1Where, tier1Count, { skip, take });
+      return this.page(tier1, tier1Where, tier1Count, { skip, take }, self, pref);
     }
 
     // Tier 1 was empty. The tier plan is *monotonically relaxing* — every
@@ -133,6 +150,8 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
       widerWheres[winnerIndex],
       counts[winnerIndex],
       { skip, take },
+      self,
+      pref,
     );
   }
 
@@ -142,11 +161,15 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
     where: Prisma.UserProfileWhereInput,
     total: number,
     { skip, take }: FeedPageQuery,
+    seeker: SelfProfile,
+    seekerPreference: PreferenceFilters | null,
   ): Promise<RecommendationResult> {
     const rows = await this.feedRepository.findRows(where, { skip, take });
     return {
       rows,
       total,
+      seeker,
+      seekerPreference,
       tier: tierDef.tier,
       fallbackUsed: tierDef.tier > 1,
       reason: tierDef.reason,

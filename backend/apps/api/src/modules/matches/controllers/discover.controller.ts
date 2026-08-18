@@ -37,11 +37,13 @@ export class DiscoverController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('category') category?: string,
+    @Query('cursor') cursor?: string,
   ): Promise<DiscoverFeedResponseDto> {
     return this.feedService.getFeed(userId, {
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
       category,
+      cursor,
     });
   }
 

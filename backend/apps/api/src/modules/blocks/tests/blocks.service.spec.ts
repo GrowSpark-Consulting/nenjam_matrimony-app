@@ -27,8 +27,18 @@ function build() {
     findFeedProfilesByUserIds: jest.fn().mockResolvedValue([]),
   };
   const profileMapper = { toDtoList: jest.fn().mockResolvedValue([]) };
-  const service = new BlocksService(repo as never, profileMapper as never);
-  return { service, repo, profileMapper };
+  // Blocking invalidates BOTH members' feeds; these tests assert the block
+  // itself, so the signalling is stubbed and asserted separately.
+  const feedInvalidation = {
+    invalidate: jest.fn().mockResolvedValue(undefined),
+    invalidatePair: jest.fn().mockResolvedValue(undefined),
+  };
+  const service = new BlocksService(
+    feedInvalidation as never,
+    repo as never,
+    profileMapper as never,
+  );
+  return { service, repo, profileMapper, feedInvalidation };
 }
 
 const PAGE = { skip: 0, take: 20, pageNumber: 1 } as never;

@@ -227,7 +227,7 @@ export function buildFeedWhere(
  *  - "Any"/meta/grouped label → dropped.
  * De-duplicated, order-preserving.
  */
-function resolveValues(raw: unknown, ownValue?: string | null): string[] {
+export function resolveValues(raw: unknown, ownValue?: string | null): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   for (const token of toStringArray(raw)) {
@@ -284,7 +284,7 @@ function insensitiveEquals(
 
 /** A stored value is a literal, matchable profile value only if it is non-empty,
  *  not an "Any"/meta token, and not a grouped UI label (`/` or `+`). */
-function isLiteral(token: string): boolean {
+export function isLiteral(token: string): boolean {
   const t = token.trim();
   if (t.length === 0) return false;
   if (MEANINGLESS_TOKENS.has(t.toLowerCase())) return false;
