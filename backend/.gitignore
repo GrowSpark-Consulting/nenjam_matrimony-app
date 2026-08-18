@@ -55,7 +55,11 @@ Thumbs.db
 # temp-file handling is added before upload.
 temp/
 uploads/
-cache/
+# Anchored to the backend root on purpose. Unanchored, `cache/` matches at
+# ANY depth — it silently swallowed apps/api/src/modules/matches/cache/, and
+# `git add` skips ignored paths without error, so the whole directory was
+# missing from a commit that looked clean locally and only failed in CI.
+/cache/
 
 # Prisma — only the generated client is ignored. schema.prisma and
 # prisma/migrations/ are tracked deliberately (see report: migrations
