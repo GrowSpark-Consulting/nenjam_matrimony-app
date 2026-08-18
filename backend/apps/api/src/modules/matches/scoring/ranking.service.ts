@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { FeedProfileRow } from '../repositories/feed.repository';
 import type { CompatibilityBreakdown } from './compatibility.service';
+import { isAfterCursor, type FeedCursor } from './feed-cursor';
 
 /**
  * How a feed orders an already-scored, already-eligible candidate pool.
@@ -13,6 +14,13 @@ import type { CompatibilityBreakdown } from './compatibility.service';
  * strategy is what keeps that shared foundation from being copied five times.
  */
 export type RankingStrategy = 'compatibility' | 'mutual' | 'recency';
+
+export interface RankOptions {
+  /** Candidate ids recently shown to this member — demoted, never removed. */
+  seen?: Set<string>;
+  /** When present, paging is by cursor and `skip` is ignored. */
+  cursor?: FeedCursor | null;
+}
 
 export interface RankedCandidate {
   row: FeedProfileRow;
@@ -35,9 +43,56 @@ export class RankingService {
     candidates: RankedCandidate[],
     strategy: RankingStrategy,
     { skip, take }: { skip: number; take: number },
+    options: RankOptions = {},
   ): RankedCandidate[] {
-    const ordered = [...candidates].sort((a, b) => this.compare(a, b, strategy));
+    const { seen, cursor } = options;
+
+    // De-duplication happens BEFORE the sort, as a demotion rather than a
+    // filter: a seen candidate keeps its score but sorts behind every unseen
+    // one. Removing them outright would permanently hide people a member
+    // merely scrolled past — see FeedSeenService.
+    const ordered = [...candidates].sort((a, b) => {
+      if (seen && seen.size > 0) {
+        const aSeen = seen.has(this.idOf(a)) ? 1 : 0;
+        const bSeen = seen.has(this.idOf(b)) ? 1 : 0;
+        if (aSeen !== bSeen) return aSeen - bSeen;
+      }
+      return this.compare(a, b, strategy);
+    });
+
+    // Cursor paging: drop everything up to and including the previous page's
+    // last item. Because the sort key is total, this lands on exactly one
+    // boundary — no row can be both before and after it.
+    if (cursor) {
+      const after = ordered.filter((c) =>
+        isAfterCursor(
+          {
+            score: this.keyScore(c, strategy),
+            createdAt: this.createdAtOf(c),
+            userId: this.idOf(c),
+          },
+          cursor,
+        ),
+      );
+      return after.slice(0, take);
+    }
+
     return ordered.slice(skip, skip + take);
+  }
+
+  /** The score the cursor compares against — must match the active strategy. */
+  keyScore(c: RankedCandidate, strategy: RankingStrategy): number {
+    if (strategy === 'recency') return 0;
+    return strategy === 'mutual' ? this.mutualOf(c) : this.overallOf(c);
+  }
+
+  /** Builds the cursor for the last item of a page. */
+  cursorFor(c: RankedCandidate, strategy: RankingStrategy): FeedCursor {
+    return {
+      score: this.keyScore(c, strategy),
+      createdAt: this.createdAtOf(c),
+      userId: this.idOf(c),
+    };
   }
 
   private compare(
@@ -71,12 +126,12 @@ export class RankingService {
     return c.score?.mutualFit ?? c.score?.overall ?? 0;
   }
 
-  private createdAtOf(c: RankedCandidate): number {
+  createdAtOf(c: RankedCandidate): number {
     const v = (c.row as Record<string, unknown>).createdAt;
     return v instanceof Date ? v.getTime() : 0;
   }
 
-  private idOf(c: RankedCandidate): string {
+  idOf(c: RankedCandidate): string {
     return String((c.row as Record<string, unknown>).userId ?? '');
   }
 }

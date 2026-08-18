@@ -21,6 +21,7 @@ import { ProgressiveFallbackStrategy } from './recommendation/progressive-fallba
 import { SEARCH_STRATEGY } from './search/search.strategy';
 import { CompatibilityService } from './scoring/compatibility.service';
 import { FeedContextService } from './cache/feed-context.cache';
+import { FeedSeenService } from './cache/feed-seen.cache';
 import { RankingService } from './scoring/ranking.service';
 import { PostgresSearchStrategy } from './search/postgres-search.strategy';
 
@@ -44,6 +45,7 @@ import { PostgresSearchStrategy } from './search/postgres-search.strategy';
   providers: [
     CompatibilityService,
     FeedContextService,
+    FeedSeenService,
     RankingService,
     FeedService,
     SearchService,

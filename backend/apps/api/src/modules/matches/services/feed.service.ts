@@ -7,6 +7,8 @@ import { CompatibilityService } from '../scoring/compatibility.service';
 import type { CompatibilityBreakdown } from '../scoring/compatibility.service';
 import { toScorable } from '../scoring/scorable.mapper';
 import { RankingService } from '../scoring/ranking.service';
+import { FeedSeenService } from '../cache/feed-seen.cache';
+import { decodeFeedCursor, encodeFeedCursor } from '../scoring/feed-cursor';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -48,11 +50,17 @@ export class FeedService {
     private readonly mapper: ProfileFeedMapper,
     private readonly compatibility: CompatibilityService,
     private readonly ranking: RankingService,
+    private readonly seen: FeedSeenService,
   ) {}
 
   async getFeed(
     currentUserId: string,
-    query: { page?: number; limit?: number; category?: string },
+    query: {
+      page?: number;
+      limit?: number;
+      category?: string;
+      cursor?: string;
+    },
   ): Promise<DiscoverFeedResponseDto> {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(
@@ -60,6 +68,12 @@ export class FeedService {
       Math.max(1, Number(query.limit) || DEFAULT_LIMIT),
     );
     const skip = (page - 1) * limit;
+
+    // Cursor paging is additive: when a cursor is supplied it takes over and
+    // `page` is ignored, but every existing client that sends page/limit keeps
+    // working unchanged. A malformed cursor decodes to null and simply starts
+    // from the beginning rather than erroring.
+    const cursor = decodeFeedCursor(query.cursor);
 
     // Fetch the pool from the top, not the page — the page is cut after
     // ranking, so asking the database for rows 20-40 of ITS ordering would
@@ -88,22 +102,45 @@ export class FeedService {
     // Order by score, then cut the page. When there is no seeker profile there
     // are no scores, and ranking falls through to the deterministic
     // createdAt/id order — identical to the previous behaviour.
-    const ranked = this.ranking.rank(
-      result.rows.map((row) => ({
-        row,
-        score: scores?.get(String((row as Record<string, unknown>).userId ?? '')),
-      })),
-      scores ? 'compatibility' : 'recency',
-      { skip, take: limit },
-    );
+    const strategy = scores ? 'compatibility' : 'recency';
+    const candidates = result.rows.map((row) => ({
+      row,
+      score: scores?.get(String((row as Record<string, unknown>).userId ?? '')),
+    }));
+
+    // Recently-shown candidates are demoted so the four tabs don't all lead
+    // with the same faces. Read failures return an empty set, in which case
+    // the feed simply doesn't de-duplicate.
+    const seenIds = await this.seen.get(currentUserId);
+
+    const ranked = this.ranking.rank(candidates, strategy, { skip, take: limit }, {
+      seen: seenIds,
+      cursor,
+    });
     const pageRows = ranked.map((r) => r.row);
+
+    // Record what was served. Deliberately not awaited: the response is
+    // already assembled, and a member should never wait on bookkeeping.
+    void this.seen.record(
+      currentUserId,
+      pageRows.map((r) => String((r as Record<string, unknown>).userId ?? '')),
+    );
+
+    const last = ranked.at(-1);
+    const nextCursor =
+      last && ranked.length === limit
+        ? encodeFeedCursor(this.ranking.cursorFor(last, strategy))
+        : null;
 
     return {
       items: await this.mapper.toDtoList(pageRows, scores),
       page,
       limit,
       total: result.total,
-      hasMore: skip + pageRows.length < result.total,
+      hasMore: cursor
+        ? nextCursor !== null
+        : skip + pageRows.length < result.total,
+      nextCursor,
       // A strategy that doesn't implement tiered fallback (e.g. the plain
       // FilteredFeedStrategy, or search reusing the same shape) simply omits
       // these — default to "no fallback happened".
