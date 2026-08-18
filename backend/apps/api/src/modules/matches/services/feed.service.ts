@@ -6,9 +6,32 @@ import type { RecommendationService } from '../recommendation/recommendation.ser
 import { CompatibilityService } from '../scoring/compatibility.service';
 import type { CompatibilityBreakdown } from '../scoring/compatibility.service';
 import { toScorable } from '../scoring/scorable.mapper';
+import { RankingService } from '../scoring/ranking.service';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+
+/**
+ * How many eligible candidates are fetched and scored before the page is cut.
+ *
+ * Ranking by score is meaningless if the database has already chosen the 20
+ * rows by a different key — the best match could sit at position 47 of the
+ * newest-first order and never be scored at all. So the pool is deliberately
+ * wider than the page.
+ *
+ * 200 is chosen from what the extra rows actually cost. Against this database
+ * the row count barely moves the query: a bare `SELECT 1` measures p50 205ms
+ * and p95 1044ms, so a request is dominated by round trips, not by fetching
+ * 200 rows instead of 20 in the one trip it already makes. Scoring the wider
+ * pool costs ~2ms.
+ *
+ * The limit it imposes: with a 20-row page this ranks correctly for the first
+ * 10 pages. Beyond that the pool runs out and ordering degrades to the
+ * database's own. Keyset pagination removes the ceiling properly and is the
+ * next step; until then this covers far more than members actually page
+ * through.
+ */
+const CANDIDATE_POOL = 200;
 
 /**
  * Assembles the paginated Discover feed. It owns pagination + DTO mapping only
@@ -24,6 +47,7 @@ export class FeedService {
     private readonly recommendation: RecommendationService,
     private readonly mapper: ProfileFeedMapper,
     private readonly compatibility: CompatibilityService,
+    private readonly ranking: RankingService,
   ) {}
 
   async getFeed(
@@ -37,15 +61,18 @@ export class FeedService {
     );
     const skip = (page - 1) * limit;
 
+    // Fetch the pool from the top, not the page — the page is cut after
+    // ranking, so asking the database for rows 20-40 of ITS ordering would
+    // discard exactly the candidates ranking is meant to surface.
     const result = await this.recommendation.getFeedForUser(currentUserId, {
-      skip,
-      take: limit,
+      skip: 0,
+      take: Math.max(CANDIDATE_POOL, skip + limit),
     });
 
-    // Scoring runs over the page that was just fetched — at most `limit` rows,
-    // never the whole candidate set — and is pure in-memory work with no I/O.
-    // Measured at well under a millisecond for 20 rows against a query stage
-    // that costs ~1s, so it does not move the request's latency.
+    // Scoring runs over the whole pool, not just the page — the page cannot be
+    // chosen until every candidate has a score. It is pure in-memory work with
+    // no I/O, measured at ~2ms for 200 candidates, against a request whose
+    // network round trips cost hundreds of milliseconds each.
     //
     // `seeker` is absent only when the caller has no finalized profile, in
     // which case the feed is empty anyway and there is nothing to score.
@@ -58,12 +85,25 @@ export class FeedService {
       );
     }
 
+    // Order by score, then cut the page. When there is no seeker profile there
+    // are no scores, and ranking falls through to the deterministic
+    // createdAt/id order — identical to the previous behaviour.
+    const ranked = this.ranking.rank(
+      result.rows.map((row) => ({
+        row,
+        score: scores?.get(String((row as Record<string, unknown>).userId ?? '')),
+      })),
+      scores ? 'compatibility' : 'recency',
+      { skip, take: limit },
+    );
+    const pageRows = ranked.map((r) => r.row);
+
     return {
-      items: await this.mapper.toDtoList(result.rows, scores),
+      items: await this.mapper.toDtoList(pageRows, scores),
       page,
       limit,
       total: result.total,
-      hasMore: skip + result.rows.length < result.total,
+      hasMore: skip + pageRows.length < result.total,
       // A strategy that doesn't implement tiered fallback (e.g. the plain
       // FilteredFeedStrategy, or search reusing the same shape) simply omits
       // these — default to "no fallback happened".

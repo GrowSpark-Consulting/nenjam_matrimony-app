@@ -9,6 +9,8 @@ import { ProfileRepository } from '../repositories/profile.repository';
 import { PhotoRepository } from '../repositories/photo.repository';
 import { ProfileDraftService } from './profile-draft.service';
 import { ProfileCompletionService } from './profile-completion.service';
+import { RedisService } from '@app/cache';
+import { invalidateFeedContext } from '../../matches/cache/feed-context.cache';
 import { EmailDispatchService } from '../../notifications/services/email-dispatch.service';
 import { ProfileEntity } from '../entities/profile.entity';
 import { PhotoEntity } from '../entities/photo.entity';
@@ -146,6 +148,7 @@ export class ProfileService {
     private readonly draftService: ProfileDraftService,
     private readonly completionService: ProfileCompletionService,
     private readonly emailDispatch: EmailDispatchService,
+    private readonly redis: RedisService,
   ) {}
 
   // Assembles the full response: the finalized UserProfile plus everything
@@ -519,6 +522,16 @@ export class ProfileService {
       astrologyWrite,
       partnerPrefWrite,
     ]);
+
+    // Every matchable field the feed caches — gender, dob, height, religion,
+    // caste, community, mother tongue, education, profession, marital status,
+    // location, lifestyle — is written here, as are partner preferences. This
+    // is the single choke point both finalize() and syncMatchableFromDraft()
+    // pass through, so one invalidation covers both. After the writes, never
+    // before: dropping the key first would let a concurrent feed request
+    // repopulate it from the pre-update rows.
+    await invalidateFeedContext(this.redis, userId);
+
     return writtenProfile;
   }
 
@@ -543,6 +556,9 @@ export class ProfileService {
       userId,
       full.completion.percentage,
     );
+    // profileCompletePct is a scoring input and part of the cached context, so
+    // the stale copy has to go — but only now that the write has succeeded.
+    await invalidateFeedContext(this.redis, userId);
     full.profileCompletePct = full.completion.percentage;
     return full;
   }

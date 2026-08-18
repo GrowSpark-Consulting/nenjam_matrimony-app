@@ -1,3 +1,4 @@
+import type { RedisService } from '@app/cache';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '@app/database';
 import { ProfileRepository } from '../repositories/profile.repository';
@@ -182,6 +183,9 @@ describe('ProfileService', () => {
         sendWelcome:
           overrides?.sendWelcome ?? jest.fn().mockResolvedValue(undefined),
       } as never,
+      // Redis is only used to drop the cached feed context; a not-ready client
+      // makes every call a no-op, which is exactly what these tests want.
+      { getClient: () => ({ status: 'end' }) } as unknown as RedisService,
     );
   }
 
@@ -857,7 +861,10 @@ describe('ProfileService', () => {
           draftService,
           completionService,
           { sendWelcome: jest.fn().mockResolvedValue(undefined) } as never,
-        );
+      // Redis is only used to drop the cached feed context; a not-ready client
+      // makes every call a no-op, which is exactly what these tests want.
+      { getClient: () => ({ status: 'end' }) } as unknown as RedisService,
+    );
         return { service, updateProfileCompletePct };
       }
 

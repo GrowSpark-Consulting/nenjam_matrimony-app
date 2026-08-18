@@ -41,6 +41,10 @@ export const FEED_PROFILE_SELECT = {
   // Scoring inputs. `updatedAt` stands in for activity (there is no
   // lastActiveAt column — see ACTIVITY_NOTE in matching-weights.config.ts).
   updatedAt: true,
+  // Deterministic tie-break for ranking. Two candidates on the same score must
+  // order identically on every request, or one can appear on both page 1 and
+  // page 2 while another is skipped entirely.
+  createdAt: true,
   user: {
     select: {
       phone: true,

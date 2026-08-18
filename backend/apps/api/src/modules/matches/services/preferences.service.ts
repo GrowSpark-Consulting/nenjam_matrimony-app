@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { RedisService } from '@app/cache';
+import { invalidateFeedContext } from '../cache/feed-context.cache';
 import { PreferenceRepository } from '../repositories/preference.repository';
 import type { PartnerPreferenceRow } from '../repositories/preference.repository';
 import {
@@ -23,7 +25,10 @@ const DEFAULTS = {
  */
 @Injectable()
 export class PreferencesService {
-  constructor(private readonly preferenceRepository: PreferenceRepository) {}
+  constructor(
+    private readonly preferenceRepository: PreferenceRepository,
+    private readonly redis: RedisService,
+  ) {}
 
   async get(userId: string): Promise<PartnerPreferenceResponseDto> {
     const row = await this.preferenceRepository.findByUserId(userId);
@@ -59,6 +64,13 @@ export class PreferencesService {
     ).forEach(assign);
 
     const row = await this.preferenceRepository.upsert(userId, data as never);
+
+    // Preferences are half of the cached feed context, so the next feed
+    // request must not be served the old ones. Invalidated only AFTER the
+    // write succeeds — dropping the key before would let a concurrent request
+    // repopulate it from the pre-update row.
+    await invalidateFeedContext(this.redis, userId);
+
     return this.toDto(row);
   }
 

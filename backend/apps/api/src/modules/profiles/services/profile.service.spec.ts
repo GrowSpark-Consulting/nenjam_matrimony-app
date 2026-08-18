@@ -1,3 +1,4 @@
+import type { RedisService } from '@app/cache';
 import { ProfileService } from './profile.service';
 import type { ProfileRepository } from '../repositories/profile.repository';
 import type { PhotoRepository } from '../repositories/photo.repository';
@@ -87,7 +88,10 @@ function buildService(draftData: Record<string, unknown>) {
     draftService,
     completionService,
     emailDispatch as never,
-  );
+      // Redis is only used to drop the cached feed context; a not-ready client
+      // makes every call a no-op, which is exactly what these tests want.
+      { getClient: () => ({ status: 'end' }) } as unknown as RedisService,
+    );
   return { service, upsertProfile, emailDispatch };
 }
 
