@@ -19,6 +19,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { SupportModule } from './modules/support/support.module';
 import { BlocksModule } from './modules/blocks/blocks.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { FeedCacheModule } from './modules/matches/cache/feed-cache.module';
 import { throttlerConfig } from './throttling';
 
 @Module({
@@ -44,6 +45,8 @@ import { throttlerConfig } from './throttling';
     // Harmless functionally — both write to the same queue — but wasteful
     // against a managed Redis connection cap.
     RealtimeModule,
+    // Feed invalidation (version + feed.invalidate). @Global — see the module.
+    FeedCacheModule,
     ProfilesModule,
     MatchesModule,
     InterestsModule,

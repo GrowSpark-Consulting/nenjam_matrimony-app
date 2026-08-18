@@ -8,6 +8,7 @@ import type { CompatibilityBreakdown } from '../scoring/compatibility.service';
 import { toScorable } from '../scoring/scorable.mapper';
 import { RankingService } from '../scoring/ranking.service';
 import { FeedSeenService } from '../cache/feed-seen.cache';
+import { FeedVersionService } from '../cache/feed-version.cache';
 import { decodeFeedCursor, encodeFeedCursor } from '../scoring/feed-cursor';
 
 const DEFAULT_LIMIT = 20;
@@ -51,6 +52,7 @@ export class FeedService {
     private readonly compatibility: CompatibilityService,
     private readonly ranking: RankingService,
     private readonly seen: FeedSeenService,
+    private readonly feedVersion: FeedVersionService,
   ) {}
 
   async getFeed(
@@ -111,7 +113,12 @@ export class FeedService {
     // Recently-shown candidates are demoted so the four tabs don't all lead
     // with the same faces. Read failures return an empty set, in which case
     // the feed simply doesn't de-duplicate.
-    const seenIds = await this.seen.get(currentUserId);
+    // Seen-set and version are independent reads — issued together so the
+    // response costs one Redis round trip, not two.
+    const [seenIds, version] = await Promise.all([
+      this.seen.get(currentUserId),
+      this.feedVersion.get(currentUserId),
+    ]);
 
     const ranked = this.ranking.rank(candidates, strategy, { skip, take: limit }, {
       seen: seenIds,
@@ -141,6 +148,7 @@ export class FeedService {
         ? nextCursor !== null
         : skip + pageRows.length < result.total,
       nextCursor,
+      version,
       // A strategy that doesn't implement tiered fallback (e.g. the plain
       // FilteredFeedStrategy, or search reusing the same shape) simply omits
       // these — default to "no fallback happened".

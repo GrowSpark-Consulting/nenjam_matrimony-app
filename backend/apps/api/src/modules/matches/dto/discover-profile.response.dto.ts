@@ -68,6 +68,12 @@ export interface DiscoverFeedResponseDto {
   /** Opaque cursor for the next page, or null at the end. Additive: clients
    *  still using `page`/`limit` can ignore it entirely. */
   nextCursor?: string | null;
+  /** Monotonic feed version for this member. Bumped whenever their profile,
+   *  preferences or blocks change. A client holding an older value knows its
+   *  cached feed — and any cursor from it — is stale. 0 when Redis is
+   *  unavailable, which is a stable value rather than a changing one, so it
+   *  never triggers a refetch loop. */
+  version?: number;
   // ProgressiveFallbackStrategy metadata. `tier` 1 = exact match on the
   // caller's saved preferences; higher tiers mean the search was
   // progressively widened (see tier-plan.ts). `fallbackUsed` is the single

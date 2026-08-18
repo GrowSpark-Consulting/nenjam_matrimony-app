@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { RedisService } from '@app/cache';
-import { invalidateFeedContext } from '../cache/feed-context.cache';
+import { FeedInvalidationService } from '../cache/feed-invalidation.service';
 import { PreferenceRepository } from '../repositories/preference.repository';
 import type { PartnerPreferenceRow } from '../repositories/preference.repository';
 import {
@@ -27,7 +26,7 @@ const DEFAULTS = {
 export class PreferencesService {
   constructor(
     private readonly preferenceRepository: PreferenceRepository,
-    private readonly redis: RedisService,
+    private readonly feedInvalidation: FeedInvalidationService,
   ) {}
 
   async get(userId: string): Promise<PartnerPreferenceResponseDto> {
@@ -66,10 +65,11 @@ export class PreferencesService {
     const row = await this.preferenceRepository.upsert(userId, data as never);
 
     // Preferences are half of the cached feed context, so the next feed
-    // request must not be served the old ones. Invalidated only AFTER the
-    // write succeeds — dropping the key before would let a concurrent request
-    // repopulate it from the pre-update row.
-    await invalidateFeedContext(this.redis, userId);
+    // request must not be served the old ones. Runs only AFTER the write
+    // succeeds — dropping the key before would let a concurrent request
+    // repopulate it from the pre-update row. Also bumps the feed version and
+    // pushes feed.invalidate so an open client refreshes immediately.
+    await this.feedInvalidation.invalidate(userId, 'preferences_updated');
 
     return this.toDto(row);
   }

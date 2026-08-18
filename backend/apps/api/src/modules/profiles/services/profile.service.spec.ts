@@ -1,4 +1,4 @@
-import type { RedisService } from '@app/cache';
+import type { FeedInvalidationService } from '../../matches/cache/feed-invalidation.service';
 import { ProfileService } from './profile.service';
 import type { ProfileRepository } from '../repositories/profile.repository';
 import type { PhotoRepository } from '../repositories/photo.repository';
@@ -88,9 +88,9 @@ function buildService(draftData: Record<string, unknown>) {
     draftService,
     completionService,
     emailDispatch as never,
-      // Redis is only used to drop the cached feed context; a not-ready client
-      // makes every call a no-op, which is exactly what these tests want.
-      { getClient: () => ({ status: 'end' }) } as unknown as RedisService,
+      // Feed invalidation is fire-and-forget bookkeeping after a successful
+      // write; these tests assert the write, not the cache signalling.
+      { invalidate: jest.fn(), invalidatePair: jest.fn() } as unknown as FeedInvalidationService,
     );
   return { service, upsertProfile, emailDispatch };
 }

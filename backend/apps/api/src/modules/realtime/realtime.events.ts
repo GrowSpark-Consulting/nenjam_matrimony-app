@@ -41,6 +41,14 @@ export const RealtimeEvents = {
   // the push.
   chatViewing: 'chat.viewing',
   chatStopViewing: 'chat.stopViewing',
+  /**
+   * The member's Discover feed may no longer be accurate — their profile or
+   * preferences changed, or a block was created or removed. The payload
+   * carries only the new version and a reason; the client refetches through
+   * the normal API rather than receiving feed content over the socket, so this
+   * stays a small signal and never a second delivery path for profile data.
+   */
+  feedInvalidate: 'feed.invalidate',
 } as const;
 
 export type RealtimeEvent =
