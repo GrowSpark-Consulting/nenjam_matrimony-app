@@ -34,8 +34,6 @@ class NmErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -45,9 +43,7 @@ class NmErrorWidget extends StatelessWidget {
             Icon(
               icon,
               size: 64,
-              color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
+              color: AppColors.textTertiaryLight,
             ),
             const SizedBox(height: 20),
             Text(
@@ -62,9 +58,7 @@ class NmErrorWidget extends StatelessWidget {
               Text(
                 message!,
                 style: AppTypography.bodyMedium.copyWith(
-                  color: isDark
-                      ? AppColors.textTertiaryDark
-                      : AppColors.textTertiaryLight,
+                  color: AppColors.textTertiaryLight,
                 ),
                 textAlign: TextAlign.center,
               ),

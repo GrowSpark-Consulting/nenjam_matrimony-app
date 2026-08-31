@@ -7,22 +7,20 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/indicators/nm_gradient_progress_bar.dart';
 import '../../../../core/widgets/badges/premium_badge.dart' show NmBadgeSize;
 import '../../../../core/widgets/badges/verification_badge.dart';
-import '../../../../core/widgets/indicators/nm_score_ring.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../core/widgets/images/sized_network_photo.dart';
 
 /// Identity Hero Card — the profile header for the Personal Matchmaking HQ.
 ///
 /// Recreates the approved reference design: a 3:2 cover photo with rounded
-/// top corners, name + Matrimony ID beside an animated magenta trust-score
-/// ring, a 2×2 stat grid (Age / Height / Religion / Occupation), a location
-/// row, and an animated profile-completion bar.
+/// top corners, name + Matrimony ID, a 2×2 stat grid (Age / Height /
+/// Religion / Occupation), a location row, and an animated
+/// profile-completion bar.
 class NmIdentityHeroCard extends StatelessWidget {
   final String name;
   final int? age;
   final String nmId;
   final String location;
-  final int trustScore;
   final int profileCompletion;
   final bool isPremium;
   final bool isVerified;
@@ -42,7 +40,6 @@ class NmIdentityHeroCard extends StatelessWidget {
     required this.age,
     required this.nmId,
     required this.location,
-    this.trustScore = 92,
     this.profileCompletion = 82,
     this.isPremium = true,
     this.isVerified = true,
@@ -56,8 +53,6 @@ class NmIdentityHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Center(
       child: ConstrainedBox(
         // Keeps the card at a premium, phone-card proportion on tablets and
@@ -71,11 +66,11 @@ class NmIdentityHeroCard extends StatelessWidget {
             onTap: onEditTap,
             child: Ink(
               decoration: BoxDecoration(
-                color: isDark ? AppColors.cardDark : AppColors.cardLight,
+                color: AppColors.cardLight,
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.primary.withValues(
-                      alpha: isDark ? 0.25 : 0.08,
+                      alpha: 0.08,
                     ),
                     blurRadius: 24,
                     offset: const Offset(0, 8),
@@ -90,7 +85,7 @@ class NmIdentityHeroCard extends StatelessWidget {
                   // across every breakpoint without ever cropping oddly.
                   AspectRatio(
                     aspectRatio: 3 / 2,
-                    child: _CoverImage(imageUrl: imageUrl, isDark: isDark),
+                    child: _CoverImage(imageUrl: imageUrl),
                   ),
                   Padding(
                     padding: const EdgeInsets.all(AppSpacing.lg),
@@ -102,10 +97,8 @@ class NmIdentityHeroCard extends StatelessWidget {
                       faith: faith,
                       profession: profession,
                       location: location,
-                      trustScore: trustScore,
                       profileCompletion: profileCompletion,
                       isVerified: isVerified,
-                      isDark: isDark,
                     ),
                   ),
                 ],
@@ -121,9 +114,8 @@ class NmIdentityHeroCard extends StatelessWidget {
 /// Full-bleed 3:2 cover photo with a soft bottom gradient for readability.
 class _CoverImage extends StatelessWidget {
   final String? imageUrl;
-  final bool isDark;
 
-  const _CoverImage({this.imageUrl, required this.isDark});
+  const _CoverImage({this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -131,20 +123,16 @@ class _CoverImage extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         Container(
-          color: isDark
-              ? AppColors.surfaceVariantDark
-              : AppColors.surfaceVariantLight,
+          color: AppColors.surfaceVariantLight,
           child: imageUrl != null && imageUrl!.isNotEmpty
               ? (imageUrl!.startsWith('assets/')
                     ? Image.asset(imageUrl!, fit: BoxFit.cover)
                     : NmSizedNetworkPhoto(url: imageUrl!))
-              : Center(
+              : const Center(
                   child: Icon(
                     Icons.image_rounded,
                     size: 48,
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
+                    color: AppColors.textTertiaryLight,
                   ),
                 ),
         ),
@@ -156,7 +144,7 @@ class _CoverImage extends StatelessWidget {
   }
 }
 
-/// Name + ID, trust ring, stat grid, location, and completion bar.
+/// Name + ID, stat grid, location, and completion bar.
 class _HeroDetailsBlock extends StatelessWidget {
   final String name;
   final String nmId;
@@ -165,10 +153,8 @@ class _HeroDetailsBlock extends StatelessWidget {
   final String? faith;
   final String? profession;
   final String location;
-  final int trustScore;
   final int profileCompletion;
   final bool isVerified;
-  final bool isDark;
 
   const _HeroDetailsBlock({
     required this.name,
@@ -178,10 +164,8 @@ class _HeroDetailsBlock extends StatelessWidget {
     required this.faith,
     required this.profession,
     required this.location,
-    required this.trustScore,
     required this.profileCompletion,
     required this.isVerified,
-    required this.isDark,
   });
 
   @override
@@ -190,51 +174,33 @@ class _HeroDetailsBlock extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          name,
-                          style: AppTypography.profileName.copyWith(
-                            fontSize: 22,
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.primary,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (isVerified) ...[
-                        const SizedBox(width: AppSpacing.xs),
-                        const NmVerificationBadge(size: NmBadgeSize.small),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xs2),
-                  Text(
-                    AppLocalizations.of(context).profileIdLabel(nmId),
-                    style: AppTypography.labelSmall.copyWith(
-                      color: isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight,
-                      letterSpacing: 1.0,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+            Flexible(
+              child: Text(
+                name,
+                style: AppTypography.profileName.copyWith(
+                  fontSize: 22,
+                  color: AppColors.primary,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: AppSpacing.md),
-            _TrustScoreRing(score: trustScore),
+            if (isVerified) ...[
+              const SizedBox(width: AppSpacing.xs),
+              const NmVerificationBadge(size: NmBadgeSize.small),
+            ],
           ],
+        ),
+        const SizedBox(height: AppSpacing.xs2),
+        Text(
+          AppLocalizations.of(context).profileIdLabel(nmId),
+          style: AppTypography.labelSmall.copyWith(
+            color: AppColors.textTertiaryLight,
+            letterSpacing: 1.0,
+            fontWeight: FontWeight.w600,
+          ),
         ),
 
         const SizedBox(height: AppSpacing.xl2),
@@ -245,7 +211,6 @@ class _HeroDetailsBlock extends StatelessWidget {
           height: height,
           faith: faith,
           profession: profession,
-          isDark: isDark,
         ),
 
         const SizedBox(height: AppSpacing.lg),
@@ -276,70 +241,8 @@ class _HeroDetailsBlock extends StatelessWidget {
         const SizedBox(height: AppSpacing.lg),
 
         // Profile completion bar
-        _ProfileCompletionBar(percentage: profileCompletion, isDark: isDark),
+        _ProfileCompletionBar(percentage: profileCompletion),
       ],
-    );
-  }
-}
-
-/// Animated circular trust-score gauge (ring itself is the shared
-/// [NmScoreRing]) with a "TRUST" tag hanging off its bottom edge.
-class _TrustScoreRing extends StatelessWidget {
-  final int score;
-  const _TrustScoreRing({required this.score});
-
-  @override
-  Widget build(BuildContext context) {
-    const ringSize = 68.0;
-
-    return SizedBox(
-      width: ringSize,
-      // Extra height beyond the ring's own diameter so the "TRUST" tag has
-      // room to hang off the bottom without being clipped or stealing
-      // layout space from sibling rows.
-      height: ringSize + 14,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.topCenter,
-        children: [
-          NmScoreRing(
-            value: score / 100,
-            displayText: '$score',
-            color: AppColors.secondary,
-            backgroundColor: AppColors.surfaceVariantLight,
-            textColor: AppColors.primary,
-            size: ringSize,
-          ),
-          Positioned(
-            top: ringSize - 12,
-            child: MediaQuery.withNoTextScaling(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  'TRUST',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 9,
-                    letterSpacing: 0.6,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -351,14 +254,12 @@ class _StatGrid extends StatelessWidget {
   final String? height;
   final String? faith;
   final String? profession;
-  final bool isDark;
 
   const _StatGrid({
     required this.age,
     required this.height,
     required this.faith,
     required this.profession,
-    required this.isDark,
   });
 
   @override
@@ -380,7 +281,6 @@ class _StatGrid extends StatelessWidget {
                 child: _StatTile(
                   label: AppLocalizations.of(context).fieldAge,
                   value: age != null ? '$age Years' : '—',
-                  isDark: isDark,
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -388,7 +288,6 @@ class _StatGrid extends StatelessWidget {
                 child: _StatTile(
                   label: AppLocalizations.of(context).fieldHeight,
                   value: (height != null && height!.isNotEmpty) ? height! : '—',
-                  isDark: isDark,
                 ),
               ),
             ],
@@ -404,7 +303,6 @@ class _StatGrid extends StatelessWidget {
                   label: AppLocalizations.of(context).fieldReligion,
                   value: (faith != null && faith!.isNotEmpty) ? faith! : '—',
                   valueColor: identityValueColor,
-                  isDark: isDark,
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -415,7 +313,6 @@ class _StatGrid extends StatelessWidget {
                       ? profession!
                       : '—',
                   valueColor: identityValueColor,
-                  isDark: isDark,
                 ),
               ),
             ],
@@ -430,13 +327,11 @@ class _StatTile extends StatelessWidget {
   final String label;
   final String value;
   final Color? valueColor;
-  final bool isDark;
 
   const _StatTile({
     required this.label,
     required this.value,
     this.valueColor,
-    required this.isDark,
   });
 
   @override
@@ -448,9 +343,7 @@ class _StatTile extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.surfaceVariantDark
-            : AppColors.surfaceVariantLight,
+        color: AppColors.surfaceVariantLight,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
       child: Column(
@@ -461,9 +354,7 @@ class _StatTile extends StatelessWidget {
           Text(
             label.toUpperCase(),
             style: AppTypography.labelSmall.copyWith(
-              color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
+              color: AppColors.textTertiaryLight,
               fontSize: 10,
               letterSpacing: 0.6,
               fontWeight: FontWeight.w600,
@@ -476,9 +367,7 @@ class _StatTile extends StatelessWidget {
               fontWeight: FontWeight.w700,
               color:
                   valueColor ??
-                  (isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight),
+                  AppColors.textPrimaryLight,
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -492,9 +381,8 @@ class _StatTile extends StatelessWidget {
 /// Animated profile-completion bar — plum→magenta fill on a soft lavender track.
 class _ProfileCompletionBar extends StatelessWidget {
   final int percentage;
-  final bool isDark;
 
-  const _ProfileCompletionBar({required this.percentage, required this.isDark});
+  const _ProfileCompletionBar({required this.percentage});
 
   @override
   Widget build(BuildContext context) {
@@ -509,9 +397,7 @@ class _ProfileCompletionBar extends StatelessWidget {
               child: Text(
                 AppLocalizations.of(context).profileCompletionLabel,
                 style: AppTypography.labelMedium.copyWith(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
+                  color: AppColors.textSecondaryLight,
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 1,
@@ -522,9 +408,7 @@ class _ProfileCompletionBar extends StatelessWidget {
             Text(
               '$pct%',
               style: AppTypography.labelMedium.copyWith(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
+                color: AppColors.textSecondaryLight,
                 fontWeight: FontWeight.w700,
               ),
             ),

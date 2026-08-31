@@ -61,7 +61,6 @@ abstract final class AppConstants {
   static const String keyAccessToken = 'access_token';
   static const String keyRefreshToken = 'refresh_token';
   static const String keyUserId = 'user_id';
-  static const String keyThemeMode = 'theme_mode';
   static const String keyLanguage = 'selected_language';
   static const String keyOnboardingDone = 'onboarding_done';
   static const String keyNotificationsEnabled = 'notifications_enabled';

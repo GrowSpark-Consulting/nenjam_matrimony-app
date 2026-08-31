@@ -132,7 +132,6 @@ class _MessageBubbleContent extends StatelessWidget {
           : GestureDetector(onLongPress: onLongPress, child: deleted);
     }
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context);
     final isMine = message.isMine;
     final canRetry =
@@ -142,12 +141,10 @@ class _MessageBubbleContent extends StatelessWidget {
 
     final bubbleColor = isMine
         ? AppColors.primary
-        : (isDark
-              ? AppColors.surfaceVariantDark
-              : AppColors.surfaceVariantLight);
+        : AppColors.surfaceVariantLight;
     final textColor = isMine
         ? Colors.white
-        : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
+        : AppColors.textPrimaryLight;
 
     final bubble = AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -413,13 +410,8 @@ class _DeletedBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = isDark
-        ? AppColors.textTertiaryDark
-        : AppColors.textTertiaryLight;
-    final bg = isDark
-        ? AppColors.surfaceVariantDark
-        : AppColors.surfaceVariantLight;
+    const color = AppColors.textTertiaryLight;
+    const bg = AppColors.surfaceVariantLight;
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
@@ -436,7 +428,7 @@ class _DeletedBubble extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.block_rounded, size: 14, color: color),
+            const Icon(Icons.block_rounded, size: 14, color: color),
             const SizedBox(width: 6),
             Flexible(
               child: Text(

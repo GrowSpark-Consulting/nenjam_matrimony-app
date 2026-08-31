@@ -70,14 +70,12 @@ class RegistrationStickyBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    if (compact) return _buildCompact(context, isDark);
+    if (compact) return _buildCompact(context);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        color: AppColors.surfaceLight,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -111,9 +109,7 @@ class RegistrationStickyBottomBar extends StatelessWidget {
                   estimatedTimeLabel,
                   textAlign: TextAlign.end,
                   style: AppTypography.labelSmall.copyWith(
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
+                    color: AppColors.textTertiaryLight,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -179,9 +175,7 @@ class RegistrationStickyBottomBar extends StatelessWidget {
                 child: Text(
                   skipLabel ?? '',
                   style: AppTypography.labelLarge.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
+                    color: AppColors.textSecondaryLight,
                   ),
                 ),
               ),
@@ -194,11 +188,11 @@ class RegistrationStickyBottomBar extends StatelessWidget {
 
   /// Single-row variant used when vertical space is scarce. Keeps 48dp
   /// touch targets (above the 44dp minimum) while fitting in ~64dp total.
-  Widget _buildCompact(BuildContext context, bool isDark) {
+  Widget _buildCompact(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        color: AppColors.surfaceLight,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -250,9 +244,7 @@ class RegistrationStickyBottomBar extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.labelLarge.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
+                    color: AppColors.textSecondaryLight,
                   ),
                 ),
               ),

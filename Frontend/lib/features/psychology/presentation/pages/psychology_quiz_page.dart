@@ -139,7 +139,6 @@ class _QuestionView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(personalityQuizProvider);
     final notifier = ref.read(personalityQuizProvider.notifier);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (state.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -170,9 +169,7 @@ class _QuestionView extends ConsumerWidget {
             child: LinearProgressIndicator(
               value: (state.currentIndex + 1) / quiz.questions.length,
               minHeight: 6,
-              backgroundColor: isDark
-                  ? AppColors.surfaceVariantDark
-                  : AppColors.surfaceVariantLight,
+              backgroundColor: AppColors.surfaceVariantLight,
               valueColor: const AlwaysStoppedAnimation(AppColors.secondary),
             ),
           ),
@@ -183,9 +180,7 @@ class _QuestionView extends ConsumerWidget {
               quiz.questions.length,
             ),
             style: AppTypography.labelMedium.copyWith(
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
+              color: AppColors.textSecondaryLight,
             ),
           ),
           const SizedBox(height: AppSpacing.xl2),
@@ -212,9 +207,7 @@ class _QuestionView extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: selected
                         ? AppColors.primary.withValues(alpha: 0.1)
-                        : (isDark
-                              ? AppColors.surfaceVariantDark
-                              : AppColors.surfaceVariantLight),
+                        : AppColors.surfaceVariantLight,
                     borderRadius: AppSpacing.borderRadiusMd,
                     border: Border.all(
                       color: selected ? AppColors.primary : Colors.transparent,
@@ -229,9 +222,7 @@ class _QuestionView extends ConsumerWidget {
                             : Icons.radio_button_unchecked_rounded,
                         color: selected
                             ? AppColors.primary
-                            : (isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiaryLight),
+                            : AppColors.textTertiaryLight,
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Text(_likertLabels[i], style: AppTypography.bodyLarge),

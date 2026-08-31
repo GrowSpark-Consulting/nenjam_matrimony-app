@@ -77,7 +77,6 @@ class _StepReligionState extends State<StepReligion> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -86,7 +85,7 @@ class _StepReligionState extends State<StepReligion> {
         children: [
           Text(l10n.registrationWizardReligionHeadline, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text(l10n.registrationWizardReligionHook, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationWizardReligionHook, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight)),
           const SizedBox(height: 16),
           RegistrationHelperTip(text: l10n.registrationTipReligion),
           const SizedBox(height: 24),

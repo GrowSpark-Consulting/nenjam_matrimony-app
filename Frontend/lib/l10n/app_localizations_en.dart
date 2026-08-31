@@ -47,6 +47,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authCreateAccount => 'Create Account';
 
   @override
+  String get registrationLandingHeadline => 'Your story starts here';
+
+  @override
+  String get registrationLandingNewTo => 'New to Nenjam?';
+
+  @override
+  String get registrationLandingSignUpEmail => 'Sign Up with Email';
+
+  @override
+  String get registrationLandingSignUpMobile => 'Sign Up with Mobile';
+
+  @override
+  String get registrationLandingSignUpGoogle => 'Sign Up with Google';
+
+  @override
+  String get registrationLandingHaveAccount => 'Already have an account?';
+
+  @override
   String get authWelcomeBack => 'Welcome Back';
 
   @override
@@ -96,9 +114,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authEnterEmailOtp => 'Enter Email OTP';
-
-  @override
-  String get authRegisteringForLabel => 'Registering for';
 
   @override
   String get authSendOtp => 'Send OTP';
@@ -410,9 +425,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discoverStatAstroLabel => 'Astro';
-
-  @override
-  String get discoverStatTrustLabel => 'Trust';
 
   @override
   String get discoverUpgradeButton => 'Upgrade';
@@ -949,9 +961,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsAppPreferencesSection => 'App Preferences';
-
-  @override
-  String get settingsDarkMode => 'Dark Mode';
 
   @override
   String get settingsLanguage => 'Language';
@@ -2612,10 +2621,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileCompletionTierExceptional => 'Exceptional';
 
   @override
-  String get profileCompletionHighestImpactLabel =>
-      'Highest Impact Improvement';
-
-  @override
   String get profileCompletionCompletedSectionsTitle => 'Your Story So Far';
 
   @override
@@ -2645,7 +2650,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileCompletionActionPartnerPref => 'Sharpen Your Matches';
 
   @override
-  String get profileCompletionActionVerification => 'Build Trust';
+  String get profileCompletionActionVerification => 'Get Verified';
 
   @override
   String get profileCompletionActionHoroscope => 'Deepen Your Compatibility';
@@ -2754,9 +2759,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get drawerVerificationCenter => 'Verification Center';
-
-  @override
-  String get drawerTrustScore => 'Trust Score';
 
   @override
   String get drawerInterestSent => 'Interests Sent';
@@ -3866,23 +3868,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get trustScoreTitle => 'Trust Score';
-
-  @override
-  String get trustScoreUnavailableTitle => 'Trust Score Unavailable';
-
-  @override
-  String get trustScoreUnavailableMessage =>
-      'We can\'t show your trust score yet — this feature isn\'t available on your account.';
-
-  @override
-  String get trustScoreEmptyTitle => 'No Trust Signals Yet';
-
-  @override
-  String get trustScoreEmptyMessage =>
-      'Complete verification steps to build your trust score.';
-
-  @override
   String get drawerRateUs => 'Rate Us ⭐';
 
   @override
@@ -4162,15 +4147,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get verificationStatusIncomplete => 'Incomplete';
 
   @override
-  String get trustScoreHighCredibility => 'High credibility profile';
-
-  @override
-  String get trustScoreGoodCredibility => 'Good credibility profile';
-
-  @override
-  String get trustScoreBuildingCredibility => 'Building credibility';
-
-  @override
   String get profileNewMember => 'New Member';
 
   @override
@@ -4190,7 +4166,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your password is too weak. Use at least 8 characters with upper, lower, a number and a symbol.';
 
   @override
-  String get profilePriorityTrustImpact => '+12% Trust Score';
+  String get profilePriorityCompletionImpact => '+12% Profile Complete Score';
 
   @override
   String get profilePriorityVisibilityImpact => 'Boost Visibility by 40%';

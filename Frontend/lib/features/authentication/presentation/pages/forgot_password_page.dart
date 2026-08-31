@@ -58,7 +58,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(forgotPasswordControllerProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     ref.listen<ForgotPasswordState>(forgotPasswordControllerProvider,
         (prev, next) {
@@ -85,7 +84,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                   formKey: _formKey,
                   emailCtrl: _emailCtrl,
                   isLoading: state.isLoading,
-                  isDark: isDark,
                   onSubmit: _submit,
                 ),
         ),
@@ -98,14 +96,12 @@ class _FormView extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController emailCtrl;
   final bool isLoading;
-  final bool isDark;
   final VoidCallback onSubmit;
 
   const _FormView({
     required this.formKey,
     required this.emailCtrl,
     required this.isLoading,
-    required this.isDark,
     required this.onSubmit,
   });
 
@@ -142,9 +138,7 @@ class _FormView extends StatelessWidget {
           Text(
             l10n.authForgotPasswordSubtitle,
             style: AppTypography.bodyMedium.copyWith(
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
+              color: AppColors.textSecondaryLight,
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -197,7 +191,6 @@ class _SuccessView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -226,9 +219,7 @@ class _SuccessView extends StatelessWidget {
         Text(
           l10n.authResetEmailSent,
           style: AppTypography.bodyMedium.copyWith(
-            color: isDark
-                ? AppColors.textSecondaryDark
-                : AppColors.textSecondaryLight,
+            color: AppColors.textSecondaryLight,
             height: 1.5,
           ),
           textAlign: TextAlign.center,

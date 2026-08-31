@@ -76,10 +76,9 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp> {
           title: '${AppConstants.appName}${appConfig.environment.isProduction ? "" : " (${appConfig.environment.name.toUpperCase()})"}',
           debugShowCheckedModeBanner: !appConfig.environment.isProduction,
 
-          // Theme Configuration
-          themeMode: storageService.themeMode,
+          // Theme Configuration — light-mode only (see main.dart).
+          themeMode: ThemeMode.light,
           theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
 
           // Localization
           locale: locale,

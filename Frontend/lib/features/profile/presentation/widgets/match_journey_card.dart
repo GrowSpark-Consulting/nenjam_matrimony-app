@@ -51,29 +51,19 @@ class NmMatchJourneyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
+        color: AppColors.cardLight,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl2),
-        boxShadow: isDark
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,7 +80,6 @@ class NmMatchJourneyCard extends StatelessWidget {
                   child: _JourneyTimeline(
                     steps: _stepsFor(AppLocalizations.of(context)),
                     currentStep: currentStep,
-                    isDark: isDark,
                     minWidth: constraints.maxWidth,
                   ),
                 ),
@@ -107,7 +96,6 @@ class NmMatchJourneyCard extends StatelessWidget {
 class _JourneyTimeline extends StatelessWidget {
   final List<_JourneyStep> steps;
   final int currentStep;
-  final bool isDark;
 
   /// Width of the card's content area (measured above the scroll view),
   /// used so the timeline stretches to fill wide screens instead of
@@ -117,7 +105,6 @@ class _JourneyTimeline extends StatelessWidget {
   const _JourneyTimeline({
     required this.steps,
     required this.currentStep,
-    required this.isDark,
     required this.minWidth,
   });
 
@@ -144,9 +131,7 @@ class _JourneyTimeline extends StatelessWidget {
             right: nodeSize / 2,
             child: Container(
               height: 2,
-              color: isDark
-                  ? AppColors.surfaceVariantDark
-                  : AppColors.surfaceVariantLight,
+              color: AppColors.surfaceVariantLight,
             ),
           ),
 
@@ -163,7 +148,6 @@ class _JourneyTimeline extends StatelessWidget {
                 isCurrent: isCurrent,
                 isLocked: isLocked,
                 nodeSize: nodeSize,
-                isDark: isDark,
               );
             }),
           ),
@@ -180,7 +164,6 @@ class _StepNode extends StatelessWidget {
   final bool isCurrent;
   final bool isLocked;
   final double nodeSize;
-  final bool isDark;
 
   const _StepNode({
     required this.step,
@@ -188,7 +171,6 @@ class _StepNode extends StatelessWidget {
     required this.isCurrent,
     required this.isLocked,
     required this.nodeSize,
-    required this.isDark,
   });
 
   @override
@@ -206,12 +188,8 @@ class _StepNode extends StatelessWidget {
       iconColor = Colors.white;
       icon = _PulsingDot();
     } else {
-      bgColor = isDark
-          ? AppColors.surfaceVariantDark
-          : AppColors.surfaceVariantLight;
-      iconColor = isDark
-          ? AppColors.textTertiaryDark
-          : AppColors.textTertiaryLight;
+      bgColor = AppColors.surfaceVariantLight;
+      iconColor = AppColors.textTertiaryLight;
       icon = Icon(step.icon, size: 16, color: iconColor);
     }
 
@@ -235,9 +213,7 @@ class _StepNode extends StatelessWidget {
               style: AppTypography.labelSmall.copyWith(
                 color: isCurrent
                     ? AppColors.primary
-                    : (isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight),
+                    : AppColors.textSecondaryLight,
                 fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
                 fontSize: 10,
               ),

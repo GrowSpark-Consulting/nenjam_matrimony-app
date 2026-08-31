@@ -73,19 +73,14 @@ class _NmSearchBarState extends State<NmSearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final iconColor = isDark
-        ? AppColors.textTertiaryDark
-        : AppColors.textTertiaryLight;
+    const iconColor = AppColors.textTertiaryLight;
 
     return AnimatedContainer(
       duration: AppAnimationTokens.fast,
       curve: Curves.easeOut,
       height: 52,
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.surfaceVariantDark
-            : AppColors.surfaceVariantLight,
+        color: AppColors.surfaceVariantLight,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _isFocused ? AppColors.primary : Colors.transparent,

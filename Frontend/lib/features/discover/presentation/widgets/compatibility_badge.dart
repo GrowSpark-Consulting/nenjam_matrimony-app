@@ -29,7 +29,7 @@ class CompatibilityBadge extends StatelessWidget {
 }
 
 /// Row of score badges shown at the top of the reel card:
-///   ⚡ 98% AI Match   ✦ 92% Astro   🛡 95 Trust Score
+///   ⚡ 98% AI Match   ✦ 92% Astro
 ///
 /// Renders left-aligned with auto-wrap so it never overflows.
 /// Only shows badges for non-zero scores.
@@ -64,24 +64,13 @@ class CompatibilityBadgeRow extends StatelessWidget {
     if (compatibility.astroMatchPercent > 0) {
       badges.add(
         _GlassBadge(
-          // Lavender keys astrology, rose keys the AI/psychology match and
-          // green keys trust — the same three-way split the Astro tab uses,
-          // lightened so each stays legible on the plum photo scrim.
+          // Lavender keys astrology and rose keys the AI/psychology
+          // match — the same split the Astro tab uses, lightened so each
+          // stays legible on the plum photo scrim.
           icon: Icons.auto_awesome_rounded,
           iconColor: AppColors.primaryOnDark,
           label:
               '${compatibility.astroMatchPercent}% ${l10n.discoverStatAstroLabel}',
-        ),
-      );
-    }
-
-    if (compatibility.overallCompatibility > 0) {
-      badges.add(
-        _GlassBadge(
-          icon: Icons.shield_rounded,
-          iconColor: AppColors.faceVerificationGreen,
-          label:
-              '${compatibility.overallCompatibility} ${l10n.discoverStatTrustLabel}',
         ),
       );
     }

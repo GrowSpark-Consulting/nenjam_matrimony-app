@@ -332,7 +332,6 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Subscribe for rebuilds on auth-state changes; the *value* used for
     // rendering is always freshly read (see below) because linking a phone
@@ -365,9 +364,7 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
           Text(
             l10n.registrationWizardVerificationHook,
             style: AppTypography.bodyMedium.copyWith(
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
+              color: AppColors.textSecondaryLight,
             ),
           ),
           const SizedBox(height: 16),
@@ -449,9 +446,7 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
                       Text(
                         l10n.registrationPrivacySubtitle,
                         style: AppTypography.bodySmall.copyWith(
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
+                          color: AppColors.textSecondaryLight,
                         ),
                       ),
                     ],

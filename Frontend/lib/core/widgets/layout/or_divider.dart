@@ -11,28 +11,25 @@ class NmOrDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final dividerColor = isDark ? AppColors.borderDark : AppColors.dividerLight;
+    const dividerColor = AppColors.dividerLight;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         children: [
-          Expanded(child: Divider(color: dividerColor, thickness: 1)),
+          const Expanded(child: Divider(color: dividerColor, thickness: 1)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               label,
               style: AppTypography.labelSmall.copyWith(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
+                color: AppColors.textSecondaryLight,
                 fontWeight: FontWeight.w500,
                 letterSpacing: 0.5,
               ),
             ),
           ),
-          Expanded(child: Divider(color: dividerColor, thickness: 1)),
+          const Expanded(child: Divider(color: dividerColor, thickness: 1)),
         ],
       ),
     );

@@ -14,7 +14,6 @@ class DateSeparator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context);
 
     return Center(
@@ -22,13 +21,13 @@ class DateSeparator extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 12),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
+          color: AppColors.surfaceVariantLight,
           borderRadius: BorderRadius.circular(999),
         ),
         child: Text(
           formatDateSeparator(date, l10n),
           style: AppTypography.labelSmall.copyWith(
-            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            color: AppColors.textSecondaryLight,
             fontWeight: FontWeight.w600,
           ),
         ),

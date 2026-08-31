@@ -88,7 +88,6 @@ class _StepLocationState extends State<StepLocation> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -97,7 +96,7 @@ class _StepLocationState extends State<StepLocation> {
         children: [
           Text(l10n.registrationWizardLocationHeadline, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text(l10n.registrationWizardLocationHook, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationWizardLocationHook, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight)),
           const SizedBox(height: 16),
           RegistrationHelperTip(text: l10n.registrationTipLocation),
           const SizedBox(height: 24),

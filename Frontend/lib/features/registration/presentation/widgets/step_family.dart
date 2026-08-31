@@ -158,12 +158,11 @@ class _StepFamilyState extends State<StepFamily> {
 
   Widget _siblingRow(AppLocalizations l10n, int index) {
     final row = _siblings[index];
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
+        color: AppColors.surfaceVariantLight,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -231,7 +230,6 @@ class _StepFamilyState extends State<StepFamily> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -240,7 +238,7 @@ class _StepFamilyState extends State<StepFamily> {
         children: [
           Text(l10n.registrationWizardFamilyHeadline, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text(l10n.registrationWizardFamilyHook, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationWizardFamilyHook, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight)),
           const SizedBox(height: 16),
           RegistrationHelperTip(text: l10n.registrationTipFamily),
           const SizedBox(height: 24),

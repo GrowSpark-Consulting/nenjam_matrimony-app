@@ -8,7 +8,7 @@ import '../../domain/entities/lifestyle_info_entity.dart';
 import '../../domain/entities/partner_preferences_entity.dart';
 import '../../domain/entities/profile_detail_entity.dart';
 import '../../domain/entities/timeline_event_entity.dart';
-import '../../domain/entities/trust_score_entity.dart';
+import '../../domain/entities/verification_checklist_entity.dart';
 import '../../../../core/l10n/app_l10n.dart';
 
 /// In-memory stand-in for a future `GET /api/profiles/:id` call.
@@ -39,10 +39,6 @@ class ProfileDetailMockDataSource {
     final interests = <String>{
       for (var i = 0; i < 6; i++) interestsPool[(seed + i) % interestsPool.length],
     }.toList();
-
-    final overall = base.compatibility.overallCompatibility > 0
-        ? base.compatibility.overallCompatibility
-        : pickInt(65, 92);
 
     return ProfileDetailEntity(
       base: base,
@@ -104,34 +100,33 @@ class ProfileDetailMockDataSource {
         motherTonguePref: pick(const ['Same Mother Tongue', 'Any']),
         maritalStatusPref: 'Never Married',
       ),
-      trustScore: TrustScoreEntity(
-        overallPercent: overall,
+      verification: VerificationChecklistEntity(
         items: [
-          TrustItemEntity(
+          VerificationItemEntity(
             icon: Icons.phone_iphone_rounded,
             label: AppL10n.current.fieldPhone,
             status: base.phoneVerified
-                ? TrustItemStatus.verified
-                : TrustItemStatus.incomplete,
+                ? VerificationItemStatus.verified
+                : VerificationItemStatus.incomplete,
           ),
-          TrustItemEntity(
+          VerificationItemEntity(
             icon: Icons.mail_rounded,
             label: AppL10n.current.fieldEmail,
-            status: TrustItemStatus.verified,
+            status: VerificationItemStatus.verified,
           ),
-          TrustItemEntity(
+          VerificationItemEntity(
             icon: Icons.badge_rounded,
             label: AppL10n.current.fieldGovernmentId,
             status: base.isVerified
-                ? TrustItemStatus.verified
-                : TrustItemStatus.pending,
+                ? VerificationItemStatus.verified
+                : VerificationItemStatus.pending,
           ),
-          TrustItemEntity(
+          VerificationItemEntity(
             icon: Icons.face_rounded,
             label: AppL10n.current.fieldFaceMatch,
             status: base.isVerified
-                ? TrustItemStatus.verified
-                : TrustItemStatus.incomplete,
+                ? VerificationItemStatus.verified
+                : VerificationItemStatus.incomplete,
           ),
         ],
       ),

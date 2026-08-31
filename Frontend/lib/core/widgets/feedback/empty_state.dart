@@ -44,8 +44,6 @@ class NmEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -54,18 +52,14 @@ class NmEmptyState extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.surfaceVariantDark
-                    : AppColors.surfaceVariantLight,
+              decoration: const BoxDecoration(
+                color: AppColors.surfaceVariantLight,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
                 size: 48,
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
+                color: AppColors.textTertiaryLight,
               ),
             ),
             const SizedBox(height: 24),
@@ -81,9 +75,7 @@ class NmEmptyState extends StatelessWidget {
               Text(
                 message!,
                 style: AppTypography.bodyMedium.copyWith(
-                  color: isDark
-                      ? AppColors.textTertiaryDark
-                      : AppColors.textTertiaryLight,
+                  color: AppColors.textTertiaryLight,
                 ),
                 textAlign: TextAlign.center,
               ),

@@ -38,29 +38,19 @@ class NmPartnerPreferenceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
+        color: AppColors.cardLight,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl2),
-        boxShadow: isDark
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,14 +73,12 @@ class NmPartnerPreferenceCard extends StatelessWidget {
                   child: InkWell(
                     onTap: onEditTap,
                     borderRadius: BorderRadius.circular(20),
-                    child: Padding(
-                      padding: const EdgeInsets.all(6),
+                    child: const Padding(
+                      padding: EdgeInsets.all(6),
                       child: Icon(
                         Icons.edit_rounded,
                         size: 18,
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.primary,
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
@@ -114,9 +102,7 @@ class NmPartnerPreferenceCard extends StatelessWidget {
                         child: Text(
                           pref.label,
                           style: AppTypography.labelMedium.copyWith(
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
+                            color: AppColors.textSecondaryLight,
                           ),
                         ),
                       ),
@@ -126,9 +112,7 @@ class NmPartnerPreferenceCard extends StatelessWidget {
                           pref.value,
                           textAlign: TextAlign.end,
                           style: AppTypography.labelMedium.copyWith(
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimaryLight,
+                            color: AppColors.textPrimaryLight,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -137,11 +121,9 @@ class NmPartnerPreferenceCard extends StatelessWidget {
                   ),
                 ),
                 if (!isLast)
-                  Divider(
+                  const Divider(
                     height: 1,
-                    color: isDark
-                        ? AppColors.dividerDark
-                        : AppColors.dividerLight,
+                    color: AppColors.dividerLight,
                   ),
               ],
             );

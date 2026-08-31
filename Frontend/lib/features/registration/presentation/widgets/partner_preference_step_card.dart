@@ -29,7 +29,6 @@ class PartnerPreferenceStepCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasPreferences = details.hasAnyPreference;
 
     return SingleChildScrollView(
@@ -39,14 +38,14 @@ class PartnerPreferenceStepCard extends StatelessWidget {
         children: [
           Text(l10n.registrationWizardPartnerHeadline, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text(l10n.registrationWizardPartnerHook, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+          Text(l10n.registrationWizardPartnerHook, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondaryLight)),
           const SizedBox(height: 16),
           RegistrationHelperTip(text: l10n.registrationTipPartnerPref),
           const SizedBox(height: 32),
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
+              color: AppColors.surfaceVariantLight,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(

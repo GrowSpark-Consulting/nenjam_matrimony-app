@@ -45,12 +45,11 @@ class ProfilePhotoGallerySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: double.infinity,
       padding: AppSpacing.cardPaddingLarge,
-      decoration: AppDecorations.card(isDark: isDark),
+      decoration: AppDecorations.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -58,11 +57,10 @@ class ProfilePhotoGallerySection extends StatelessWidget {
           const SizedBox(height: AppSpacing.base),
           if (photoUrls.isEmpty)
             _EmptyGallery(
-              isDark: isDark,
               message: l10n.profileDetailNoMorePhotos,
             )
           else
-            ..._mosaic(context, isDark),
+            ..._mosaic(context),
         ],
       ),
     );
@@ -71,13 +69,12 @@ class ProfilePhotoGallerySection extends StatelessWidget {
   /// The large tile, then the row of up to three small tiles, then the wide
   /// closing tile — each part only rendered when there are photos to fill it,
   /// so 1, 2, 3, 4, and 5+ photos all lay out without gaps or placeholders.
-  List<Widget> _mosaic(BuildContext context, bool isDark) {
+  List<Widget> _mosaic(BuildContext context) {
     final visible = photoUrls.take(_maxTiles).toList();
     final overflowCount = photoUrls.length - visible.length;
 
     Widget tile(int index, {int badgeCount = 0}) => _GalleryTile(
       url: visible[index],
-      isDark: isDark,
       overflowCount: badgeCount,
       onTap: () => _openViewer(context, index),
     );
@@ -130,7 +127,6 @@ class ProfilePhotoGallerySection extends StatelessWidget {
 
 class _GalleryTile extends StatelessWidget {
   final String url;
-  final bool isDark;
   final VoidCallback onTap;
 
   /// When > 0, dims the tile and stacks a "+N" label over it — the photos
@@ -140,16 +136,13 @@ class _GalleryTile extends StatelessWidget {
 
   const _GalleryTile({
     required this.url,
-    required this.isDark,
     required this.onTap,
     this.overflowCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
-    final placeholderColor = isDark
-        ? AppColors.surfaceVariantDark
-        : AppColors.surfaceVariantLight;
+    const placeholderColor = AppColors.surfaceVariantLight;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -160,9 +153,9 @@ class _GalleryTile extends StatelessWidget {
               ? Image.asset(url, fit: BoxFit.cover)
               : NmSizedNetworkPhoto(
                   url: url,
-                  errorBuilder: (_, __, ___) => ColoredBox(
+                  errorBuilder: (_, __, ___) => const ColoredBox(
                     color: placeholderColor,
-                    child: const Icon(Icons.broken_image_outlined, size: 28),
+                    child: Icon(Icons.broken_image_outlined, size: 28),
                   ),
                 ),
           if (overflowCount > 0)
@@ -192,10 +185,9 @@ class _GalleryTile extends StatelessWidget {
 /// design system uses for empty slots, deliberately not shaped like a photo
 /// so it can't read as one.
 class _EmptyGallery extends StatelessWidget {
-  final bool isDark;
   final String message;
 
-  const _EmptyGallery({required this.isDark, required this.message});
+  const _EmptyGallery({required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -206,28 +198,22 @@ class _EmptyGallery extends StatelessWidget {
         vertical: AppSpacing.xl,
       ),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.surfaceVariantDark
-            : AppColors.surfaceVariantLight,
+        color: AppColors.surfaceVariantLight,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
       ),
       child: Column(
         children: [
-          Icon(
+          const Icon(
             Icons.photo_library_outlined,
             size: 28,
-            color: isDark
-                ? AppColors.textTertiaryDark
-                : AppColors.textTertiaryLight,
+            color: AppColors.textTertiaryLight,
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             message,
             textAlign: TextAlign.center,
             style: AppTypography.bodySmall.copyWith(
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
+              color: AppColors.textSecondaryLight,
             ),
           ),
         ],

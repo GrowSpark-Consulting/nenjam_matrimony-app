@@ -73,7 +73,6 @@ class NmInterestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final badgeBackground =
         statusBackgroundColor ??
         (isReceived ? AppColors.successLight : AppColors.infoLight);
@@ -81,7 +80,7 @@ class NmInterestCard extends StatelessWidget {
         statusTextColor ?? (isReceived ? AppColors.success : AppColors.info);
     final card = Container(
       padding: const EdgeInsets.all(16),
-      decoration: AppDecorations.card(isDark: isDark),
+      decoration: AppDecorations.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -142,9 +141,7 @@ class NmInterestCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.surfaceVariantDark
-                    : AppColors.surfaceVariantLight,
+                color: AppColors.surfaceVariantLight,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(

@@ -132,7 +132,6 @@ class _NotificationList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     // Items already arrive newest-first from the repository — group
     // without re-sorting so section order and in-section order both stay
     // stable.
@@ -163,7 +162,7 @@ class _NotificationList extends ConsumerWidget {
                 child: Text(
                   notificationSectionLabel(section, l10n),
                   style: AppTypography.labelLarge.copyWith(
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    color: AppColors.textSecondaryLight,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

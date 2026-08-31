@@ -121,17 +121,23 @@ class NmProfileHeroOverlay extends StatelessWidget {
   /// Lines the name may occupy before it has to ellipsize.
   final int nameMaxLines;
 
-  /// System inset to clear below the block, on top of [bottomGap].
+  /// Inset to clear below the block, on top of [bottomGap].
   ///
-  /// Deliberately passed in rather than read from a [SafeArea] here. In the
-  /// Matches reel the shell's Scaffold has already consumed the inset for its
-  /// navigation bar, so there is nothing to add and the default of zero is
-  /// right. In Profile Detail the hero runs to the physical screen edge and
-  /// there IS an inset to clear — but a [SafeArea] cannot see it: this
-  /// overlay renders inside a [SliverAppBar]'s flexible space, and
-  /// SliverAppBar wraps its header in `MediaQuery.removePadding(removeBottom:
-  /// true)`, so the ambient bottom padding is zero by the time it reaches
-  /// here. The caller reads it from above that boundary and passes it down.
+  /// Deliberately passed in rather than read from a [SafeArea] here, because
+  /// neither caller can see the value it needs at this point in its tree:
+  ///
+  ///  * In the Matches reel the card is full-bleed to the physical bottom of
+  ///    the screen — the shell's Scaffold sets `extendBody: true` so the
+  ///    floating nav pill is drawn OVER it, not above it. The inset to pass is
+  ///    the pill's height, which the shell publishes as the page's
+  ///    `MediaQuery.padding.bottom`; without it the metadata chips render
+  ///    underneath the pill.
+  ///  * In Profile Detail the hero also runs to the screen edge and there is a
+  ///    system inset to clear — but a [SafeArea] cannot see it: this overlay
+  ///    renders inside a [SliverAppBar]'s flexible space, and SliverAppBar
+  ///    wraps its header in `MediaQuery.removePadding(removeBottom: true)`, so
+  ///    the ambient bottom padding is zero by the time it reaches here. The
+  ///    caller reads it from above that boundary and passes it down.
   final double bottomInset;
 
   /// Optional content stacked directly above the identity block, inside the

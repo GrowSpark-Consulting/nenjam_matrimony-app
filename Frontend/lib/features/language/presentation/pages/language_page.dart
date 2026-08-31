@@ -27,7 +27,6 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final selected = ref.watch(localeProvider).languageCode;
     // True when this screen was pushed from inside the app (drawer /
     // Settings) rather than reached as the onboarding root. Drives both the
@@ -85,9 +84,7 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
                   Text(
                     l10n.languageChooseSubtitle,
                     style: AppTypography.bodyMedium.copyWith(
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
+                      color: AppColors.textSecondaryLight,
                     ),
                   ),
                   const SizedBox(height: 28),
@@ -103,7 +100,6 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
                         return _LanguageCard(
                           option: option,
                           isSelected: option.code == selected,
-                          isDark: isDark,
                           onTap: () => _onSelect(option.code),
                         );
                       },
@@ -177,22 +173,18 @@ class _LanguageOption {
 class _LanguageCard extends StatelessWidget {
   final _LanguageOption option;
   final bool isSelected;
-  final bool isDark;
   final VoidCallback onTap;
 
   const _LanguageCard({
     required this.option,
     required this.isSelected,
-    required this.isDark,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final baseSurface = isDark
-        ? AppColors.surfaceVariantDark
-        : AppColors.surfaceVariantLight;
-    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    const baseSurface = AppColors.surfaceVariantLight;
+    const borderColor = AppColors.borderLight;
 
     return Semantics(
       button: true,
@@ -203,9 +195,7 @@ class _LanguageCard extends StatelessWidget {
         curve: Curves.easeOut,
         decoration: BoxDecoration(
           color: isSelected
-              ? (isDark
-                    ? AppColors.primary.withValues(alpha: 0.18)
-                    : AppColors.primarySurface)
+              ? AppColors.primarySurface
               : baseSurface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
@@ -239,7 +229,7 @@ class _LanguageCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppColors.primary
-                          : (isDark ? AppColors.surfaceDark : Colors.white),
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Text(
@@ -267,9 +257,7 @@ class _LanguageCard extends StatelessWidget {
                         Text(
                           option.label,
                           style: AppTypography.bodySmall.copyWith(
-                            color: isDark
-                                ? AppColors.textTertiaryDark
-                                : AppColors.textTertiaryLight,
+                            color: AppColors.textTertiaryLight,
                           ),
                         ),
                       ],
@@ -303,9 +291,7 @@ class _LanguageCard extends StatelessWidget {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: isDark
-                                    ? AppColors.borderDark
-                                    : AppColors.borderLight,
+                                color: AppColors.borderLight,
                                 width: 1.5,
                               ),
                             ),

@@ -5,7 +5,7 @@ import 'horoscope_info_entity.dart';
 import 'lifestyle_info_entity.dart';
 import 'partner_preferences_entity.dart';
 import 'timeline_event_entity.dart';
-import 'trust_score_entity.dart';
+import 'verification_checklist_entity.dart';
 
 /// Full read-only detail view of ANOTHER member's profile.
 ///
@@ -25,7 +25,7 @@ class ProfileDetailEntity {
   final LifestyleInfoEntity lifestyle;
   final HoroscopeInfoEntity horoscope;
   final PartnerPreferencesEntity partnerPreferences;
-  final TrustScoreEntity trustScore;
+  final VerificationChecklistEntity verification;
   final PersonalityResult? personality;
   final List<TimelineEventEntity> timeline;
 
@@ -40,7 +40,7 @@ class ProfileDetailEntity {
     this.lifestyle = const LifestyleInfoEntity(),
     this.horoscope = const HoroscopeInfoEntity(),
     this.partnerPreferences = const PartnerPreferencesEntity(),
-    this.trustScore = const TrustScoreEntity(),
+    this.verification = const VerificationChecklistEntity(),
     this.personality,
     this.timeline = const [],
   });

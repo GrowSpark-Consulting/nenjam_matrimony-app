@@ -17,8 +17,6 @@ class CompatibilityResultWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -68,7 +66,7 @@ class CompatibilityResultWidget extends StatelessWidget {
             (factor) => Container(
               margin: const EdgeInsets.only(bottom: AppSpacing.sm),
               padding: AppSpacing.cardPaddingCompact,
-              decoration: AppDecorations.card(isDark: isDark),
+              decoration: AppDecorations.card(),
               child: Row(
                 children: [
                   Expanded(

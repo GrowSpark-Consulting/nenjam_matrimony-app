@@ -59,20 +59,14 @@ class NmVerificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.surfaceVariantDark
-            : AppColors.surfaceVariantLight,
+        color: AppColors.surfaceVariantLight,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl2),
         border: Border.all(
-          color: isDark
-              ? AppColors.borderDark.withValues(alpha: 0.5)
-              : AppColors.borderLight.withValues(alpha: 0.5),
+          color: AppColors.borderLight.withValues(alpha: 0.5),
         ),
       ),
       child: Column(
@@ -110,7 +104,7 @@ class NmVerificationCard extends StatelessWidget {
                     .map(
                       (item) => SizedBox(
                         width: tileWidth,
-                        child: _VerifTile(item: item, isDark: isDark),
+                        child: _VerifTile(item: item),
                       ),
                     )
                     .toList(),
@@ -125,9 +119,8 @@ class NmVerificationCard extends StatelessWidget {
 
 class _VerifTile extends StatelessWidget {
   final NmVerificationItem item;
-  final bool isDark;
 
-  const _VerifTile({required this.item, required this.isDark});
+  const _VerifTile({required this.item});
 
   Color get _borderColor {
     switch (item.status) {
@@ -172,7 +165,7 @@ class _VerifTile extends StatelessWidget {
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : AppColors.cardLight,
+          color: AppColors.cardLight,
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           border: Border(top: BorderSide(color: _borderColor, width: 2)),
         ),
@@ -188,9 +181,7 @@ class _VerifTile extends StatelessWidget {
                   Text(
                     item.label,
                     style: AppTypography.labelMedium.copyWith(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
+                      color: AppColors.textPrimaryLight,
                       fontWeight: FontWeight.w600,
                     ),
                     maxLines: 1,

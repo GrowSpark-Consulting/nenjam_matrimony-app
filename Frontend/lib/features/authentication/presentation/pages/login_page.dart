@@ -18,12 +18,13 @@ import '../../../../core/widgets/inputs/password_field.dart';
 import '../../../../core/widgets/layout/curved_header.dart';
 import '../../../../core/widgets/layout/or_divider.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../registration/presentation/providers/registration_provider.dart';
 import '../../data/services/backend_sync_service.dart';
 import '../controllers/login_controller.dart';
 import '../controllers/phone_auth_controller.dart';
 import '../controllers/signup_controller.dart';
 import '../providers/auth_providers.dart';
+import '../utils/post_auth_destination.dart';
+import 'registration_landing_page.dart' show SignUpFocus;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Login Page (Root)
@@ -32,7 +33,18 @@ import '../providers/auth_providers.dart';
 /// Authentication entry point — Login and Sign Up tabs, backed by Firebase.
 class LoginPage extends ConsumerStatefulWidget {
   final int initialTab;
-  const LoginPage({super.key, this.initialTab = 0});
+
+  /// Which Sign Up field to focus when the page opens on tab 1. Set by the
+  /// landing screen's "Sign Up with Email" / "Sign Up with Mobile" CTAs —
+  /// both open this same form, and this is what makes them lead somewhere
+  /// visibly different. Null (the default) focuses nothing.
+  final SignUpFocus? initialSignUpFocus;
+
+  const LoginPage({
+    super.key,
+    this.initialTab = 0,
+    this.initialSignUpFocus,
+  });
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -55,6 +67,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
 
+  // Owned here rather than inside _SignUpForm because that widget rebuilds
+  // with the TabBarView and would otherwise discard the node mid-focus.
+  final _signUpEmailFocus = FocusNode();
+  final _signUpPhoneFocus = FocusNode();
+
   int _currentTab = 0;
 
   @override
@@ -71,6 +88,22 @@ class _LoginPageState extends ConsumerState<LoginPage>
         setState(() => _currentTab = _tabController.index);
       }
     });
+
+    // After the first frame: the TabBarView's Sign Up page has no layout
+    // yet (so the field has no render object to scroll into view) until
+    // then, and focusing it early raises the keyboard over a blank tab.
+    final focus = widget.initialSignUpFocus;
+    if (focus != null && _currentTab == 1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        switch (focus) {
+          case SignUpFocus.email:
+            _signUpEmailFocus.requestFocus();
+          case SignUpFocus.mobile:
+            _signUpPhoneFocus.requestFocus();
+        }
+      });
+    }
   }
 
   @override
@@ -83,6 +116,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _signUpEmailFocus.dispose();
+    _signUpPhoneFocus.dispose();
     super.dispose();
   }
 
@@ -108,7 +143,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
       );
       return;
     }
-    _routeAfterLogin(result.needsVerification);
+    await _routeAfterLogin(result.needsVerification);
   }
 
   // ─── Login: Mobile OTP ─────────────────────────────────────────────
@@ -137,23 +172,32 @@ class _LoginPageState extends ConsumerState<LoginPage>
     }
     // Same routing as every other provider — including the best-effort
     // backend sync that materializes the Postgres row for a brand-new user.
-    _routeAfterLogin(result.needsVerification);
+    await _routeAfterLogin(result.needsVerification);
   }
 
-  void _routeAfterLogin(bool needsVerification) {
+  Future<void> _routeAfterLogin(bool needsVerification) async {
     // Best-effort: mirrors this Firebase session into the NestJS + Postgres
     // backend. Never awaited — must not block or fail the navigation below.
     unawaited(syncUserWithBackend(ref.read(apiClientProvider)));
 
-    if (!needsVerification) {
-      context.go(RouteNames.discover);
+    if (needsVerification) {
+      // Send the user to whichever verification step is still outstanding.
+      final emailVerified =
+          ref.read(firebaseAuthServiceProvider).currentUser?.emailVerified ??
+          false;
+      context.go(
+        emailVerified ? RouteNames.verifyPhone : RouteNames.verifyEmail,
+      );
       return;
     }
-    // Send the user to whichever verification step is still outstanding.
-    final emailVerified =
-        ref.read(firebaseAuthServiceProvider).currentUser?.emailVerified ??
-        false;
-    context.go(emailVerified ? RouteNames.verifyPhone : RouteNames.verifyEmail);
+
+    // Verified is not the same as registered: a signed-in account with a
+    // half-finished (or absent) profile belongs back in the registration
+    // flow, not in Discover with nothing to show. PostAuthDestination is
+    // the single place that decision is made — see its doc comment.
+    final route = await ref.read(postAuthDestinationProvider).resolve();
+    if (!mounted) return;
+    context.go(route);
   }
 
   // ─── Sign Up ───────────────────────────────────────────────────────
@@ -167,14 +211,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
       ..setPassword(_passwordCtrl.text)
       ..setPhone(_phoneCtrl.text.trim());
 
-    // Carry the "registering for" choice into the profile wizard.
-    final regNotifier = ref.read(registrationProvider.notifier);
-    regNotifier.goToStep(0);
-    final registeringFor = ref.read(signupControllerProvider).registeringFor;
-    if (registeringFor.isNotEmpty) {
-      regNotifier.setProfileCreatedFor(registeringFor);
-    }
-
+    // Deliberately seeds no registration state. "Who is this profile
+    // for?" is asked once, on CreateProfileForPage, *after* the account
+    // exists — this form is account creation only. The draft itself is
+    // started by that screen's startCreateMode().
     final ok = await notifier.submit();
     if (!mounted) return;
     if (!ok) {
@@ -195,7 +235,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
   @override
   Widget build(BuildContext context) {
     final isSignUp = _currentTab == 1;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final loginLoading = ref.watch(loginControllerProvider);
     final googleLoading = ref.watch(googleSignInControllerProvider);
     final signupLoading = ref.watch(signupControllerProvider).isSubmitting;
@@ -203,9 +242,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: isDark
-            ? AppColors.backgroundDark
-            : AppColors.backgroundLight,
+        backgroundColor: AppColors.backgroundLight,
         body: Stack(
           children: [
             NestedScrollView(
@@ -233,7 +270,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     pinned: true,
                     delegate: _StickyTabBarDelegate(
                       tabController: _tabController,
-                      isDark: isDark,
                     ),
                   ),
                 ];
@@ -242,7 +278,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
                 controller: _tabController,
                 children: [
                   _TabFormCard(
-                    isDark: isDark,
                     child: _LoginForm(
                       formKey: _loginFormKey,
                       phoneCtrl: _loginPhoneCtrl,
@@ -257,13 +292,14 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     ),
                   ),
                   _TabFormCard(
-                    isDark: isDark,
                     child: _SignUpForm(
                       formKey: _signUpFormKey,
                       usernameCtrl: _usernameCtrl,
                       phoneCtrl: _phoneCtrl,
                       emailCtrl: _emailCtrl,
                       passwordCtrl: _passwordCtrl,
+                      emailFocus: _signUpEmailFocus,
+                      phoneFocus: _signUpPhoneFocus,
                       isLoading: signupLoading,
                       onCreateAccount: _onCreateAccount,
                       onLoginTap: () => _tabController.animateTo(0),
@@ -339,9 +375,8 @@ class _SignUpHeader extends StatelessWidget {
 
 class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabController tabController;
-  final bool isDark;
 
-  _StickyTabBarDelegate({required this.tabController, required this.isDark});
+  _StickyTabBarDelegate({required this.tabController});
 
   @override
   double get minExtent => 62.0;
@@ -355,7 +390,7 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     final isPinned = shrinkOffset > 0;
-    final cardBg = isDark ? AppColors.surfaceDark : Colors.white;
+    const cardBg = Colors.white;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
@@ -413,10 +448,10 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
               ],
             ),
           ),
-          Divider(
+          const Divider(
             height: 1,
             thickness: 1,
-            color: isDark ? AppColors.borderDark : AppColors.dividerLight,
+            color: AppColors.dividerLight,
           ),
         ],
       ),
@@ -425,15 +460,13 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(_StickyTabBarDelegate oldDelegate) {
-    return tabController != oldDelegate.tabController ||
-        isDark != oldDelegate.isDark;
+    return tabController != oldDelegate.tabController;
   }
 }
 
 class _TabFormCard extends StatelessWidget {
-  final bool isDark;
   final Widget child;
-  const _TabFormCard({required this.isDark, required this.child});
+  const _TabFormCard({required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -444,7 +477,7 @@ class _TabFormCard extends StatelessWidget {
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : Colors.white,
+              color: Colors.white,
               borderRadius: const BorderRadius.vertical(
                 bottom: Radius.circular(28),
               ),
@@ -675,12 +708,14 @@ class _SegmentTab extends StatelessWidget {
 // Sign Up Form
 // ═══════════════════════════════════════════════════════════════════════════
 
-class _SignUpForm extends ConsumerWidget {
+class _SignUpForm extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController usernameCtrl;
   final TextEditingController phoneCtrl;
   final TextEditingController emailCtrl;
   final TextEditingController passwordCtrl;
+  final FocusNode emailFocus;
+  final FocusNode phoneFocus;
   final bool isLoading;
   final VoidCallback onCreateAccount;
   final VoidCallback onLoginTap;
@@ -691,48 +726,17 @@ class _SignUpForm extends ConsumerWidget {
     required this.phoneCtrl,
     required this.emailCtrl,
     required this.passwordCtrl,
+    required this.emailFocus,
+    required this.phoneFocus,
     required this.isLoading,
     required this.onCreateAccount,
     required this.onLoginTap,
   });
 
-  static const List<String> _registeringForOptions = [
-    'Myself',
-    'Son',
-    'Daughter',
-    'Brother',
-    'Sister',
-    'Friend',
-  ];
-
-  String _registeringForLabel(AppLocalizations l10n, String value) {
-    switch (value) {
-      case 'Myself':
-        return l10n.authRegForMyself;
-      case 'Son':
-        return l10n.authRegForSon;
-      case 'Daughter':
-        return l10n.authRegForDaughter;
-      case 'Brother':
-        return l10n.authRegForBrother;
-      case 'Sister':
-        return l10n.authRegForSister;
-      case 'Friend':
-        return l10n.authRegForFriend;
-      default:
-        return value;
-    }
-  }
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final registeringFor = ref.watch(
-      signupControllerProvider.select((s) => s.registeringFor),
-    );
-    final notifier = ref.read(signupControllerProvider.notifier);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final labelColor = isDark ? Colors.white70 : AppColors.textSecondaryLight;
+    const labelColor = AppColors.textSecondaryLight;
 
     return Form(
       key: formKey,
@@ -757,6 +761,7 @@ class _SignUpForm extends ConsumerWidget {
             const SizedBox(height: 8),
             NmTextField(
               controller: emailCtrl,
+              focusNode: emailFocus,
               hint: 'name@example.com',
               keyboardType: TextInputType.emailAddress,
               validator: Validators.email,
@@ -776,9 +781,7 @@ class _SignUpForm extends ConsumerWidget {
             Text(
               l10n.authPasswordHint,
               style: AppTypography.labelSmall.copyWith(
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
+                color: AppColors.textTertiaryLight,
               ),
             ),
             const SizedBox(height: 16),
@@ -788,23 +791,8 @@ class _SignUpForm extends ConsumerWidget {
             const SizedBox(height: 8),
             _Fixed91PhoneField(
               controller: phoneCtrl,
+              focusNode: phoneFocus,
               validator: Validators.phone,
-            ),
-            const SizedBox(height: 16),
-
-            // ─── Registering For ────────────────────────────────
-            _FieldLabel(l10n.authRegisteringForLabel, color: labelColor),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _registeringForOptions.map((option) {
-                return _RegisterChip(
-                  label: _registeringForLabel(l10n, option),
-                  isSelected: registeringFor == option,
-                  onTap: () => notifier.setRegisteringFor(option),
-                );
-              }).toList(),
             ),
             const SizedBox(height: 24),
 
@@ -866,20 +854,20 @@ class _FieldLabel extends StatelessWidget {
 /// Phone field with a fixed +91 (India) prefix and 10-digit limit.
 class _Fixed91PhoneField extends StatelessWidget {
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final String? Function(String?)? validator;
 
-  const _Fixed91PhoneField({required this.controller, this.validator});
+  const _Fixed91PhoneField({
+    required this.controller,
+    this.focusNode,
+    this.validator,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark
-        ? AppColors.surfaceVariantDark
-        : AppColors.surfaceVariantLight;
-    final borderColor = isDark
-        ? AppColors.borderDark.withValues(alpha: 0.5)
-        : AppColors.borderLight;
-    final textColor = isDark ? Colors.white : AppColors.textPrimaryLight;
+    const bgColor = AppColors.surfaceVariantLight;
+    const borderColor = AppColors.borderLight;
+    const textColor = AppColors.textPrimaryLight;
 
     return Container(
       constraints: const BoxConstraints(minHeight: 56),
@@ -912,6 +900,7 @@ class _Fixed91PhoneField extends StatelessWidget {
           Expanded(
             child: TextFormField(
               controller: controller,
+              focusNode: focusNode,
               validator: validator,
               keyboardType: TextInputType.phone,
               inputFormatters: [
@@ -922,7 +911,7 @@ class _Fixed91PhoneField extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: '9876543210',
                 hintStyle: AppTypography.bodyLarge.copyWith(
-                  color: isDark ? Colors.white38 : AppColors.textTertiaryLight,
+                  color: AppColors.textTertiaryLight,
                 ),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
@@ -933,45 +922,6 @@ class _Fixed91PhoneField extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// "Registering for" chip.
-class _RegisterChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _RegisterChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.white,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.borderLight,
-            width: isSelected ? 1.5 : 1.2,
-          ),
-        ),
-        child: Text(
-          label,
-          style: AppTypography.labelMedium.copyWith(
-            color: isSelected ? Colors.white : AppColors.textPrimaryLight,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-          ),
-        ),
       ),
     );
   }
@@ -1067,10 +1017,7 @@ class _TrustItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = isDark
-        ? AppColors.textSecondaryDark
-        : AppColors.textSecondaryLight;
+    const color = AppColors.textSecondaryLight;
 
     return Row(
       mainAxisSize: MainAxisSize.min,

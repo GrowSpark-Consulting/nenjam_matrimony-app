@@ -9,7 +9,6 @@ extension ContextExtensions on BuildContext {
   ThemeData get theme => Theme.of(this);
   ColorScheme get colorScheme => theme.colorScheme;
   TextTheme get textTheme => theme.textTheme;
-  bool get isDark => theme.brightness == Brightness.dark;
 
   // ─── Media Query ─────────────────────────────────────────────────
   MediaQueryData get mediaQuery => MediaQuery.of(this);
@@ -33,15 +32,11 @@ extension ContextExtensions on BuildContext {
 
   // ─── App Colors Quick Access ─────────────────────────────────────
   Color get primaryColor => colorScheme.primary;
-  Color get backgroundColor =>
-      isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-  Color get cardColor => isDark ? AppColors.cardDark : AppColors.cardLight;
-  Color get textPrimary =>
-      isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-  Color get textSecondary =>
-      isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-  Color get dividerColor =>
-      isDark ? AppColors.dividerDark : AppColors.dividerLight;
+  Color get backgroundColor => AppColors.backgroundLight;
+  Color get cardColor => AppColors.cardLight;
+  Color get textPrimary => AppColors.textPrimaryLight;
+  Color get textSecondary => AppColors.textSecondaryLight;
+  Color get dividerColor => AppColors.dividerLight;
 
   // ─── Navigation ──────────────────────────────────────────────────
   NavigatorState get navigator => Navigator.of(this);

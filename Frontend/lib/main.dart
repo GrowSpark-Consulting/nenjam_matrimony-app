@@ -14,7 +14,6 @@ import 'core/config/app_environment.dart';
 import 'core/constants/app_constants.dart';
 import 'firebase_options.dart';
 import 'core/providers/locale_provider.dart';
-import 'core/providers/theme_mode_provider.dart';
 import 'core/realtime/realtime_providers.dart';
 import 'features/inbox/presentation/providers/chat_realtime_sync.dart';
 import 'features/inbox/presentation/providers/inbox_providers.dart';
@@ -226,8 +225,8 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
     } else if (_tabRoutes.contains(location)) {
       unawaited(storageService.saveNavState(route: location));
     }
-    // Anything else (splash, auth/OTP, pushed detail screens like Trust
-    // Score) depends on ephemeral state or isn't worth resuming into —
+    // Anything else (splash, auth/OTP, pushed detail screens) depends on
+    // ephemeral state or isn't worth resuming into —
     // leave the last good snapshot as-is rather than overwrite it with
     // something we can't restore.
   }
@@ -235,15 +234,16 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
   /// The process stayed alive, so GoRouter/Riverpod state is already
   /// intact for free — never re-shows splash or restarts anything. The
   /// only thing that can have changed while backgrounded is the auth
-  /// session itself (token revoked/expired), so bounce to login if that
-  /// happened.
+  /// session itself (token revoked/expired), so bounce to the sign-up
+  /// landing screen if that happened — the same destination the router's
+  /// own redirect uses, so the two can't disagree.
   void _checkSessionOnResume() {
     final signedIn = ref.read(authRepositoryProvider).currentUser != null;
     final location = _currentLocation;
     final willRedirect =
         !signedIn && !RouteNames.publicRoutes.contains(location);
     if (willRedirect) {
-      router.go(RouteNames.login);
+      router.go(RouteNames.registrationLanding);
     }
   }
 
@@ -304,10 +304,12 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
           title: AppConstants.appName,
           debugShowCheckedModeBanner: false,
 
-          // Theme Configuration
-          themeMode: ref.watch(themeModeProvider),
+          // Theme Configuration — Nenjam is light-mode only. The app must
+          // render the light theme regardless of the device's system
+          // appearance, so the mode is a hard constant (never a provider or
+          // stored preference) and no dark ThemeData is supplied at all.
+          themeMode: ThemeMode.light,
           theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
 
           // Localization
           locale: locale,

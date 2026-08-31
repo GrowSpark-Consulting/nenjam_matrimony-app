@@ -11,31 +11,31 @@ import 'app_shadows.dart';
 /// premium" direction.
 abstract final class AppDecorations {
   // ─── Card Decorations ────────────────────────────────────────────
-  static BoxDecoration card({bool isDark = false}) => BoxDecoration(
-    color: isDark ? AppColors.cardDark : AppColors.cardLight,
+  static BoxDecoration card() => BoxDecoration(
+    color: AppColors.cardLight,
     borderRadius: BorderRadius.circular(20),
     border: Border.all(
-      color: isDark ? AppColors.borderDark : AppColors.borderLight,
+      color: AppColors.borderLight,
       width: 1,
     ),
-    boxShadow: isDark ? AppShadows.cardDark : AppShadows.cardLight,
+    boxShadow: AppShadows.cardLight,
   );
 
-  static BoxDecoration cardElevated({bool isDark = false}) => BoxDecoration(
-    color: isDark ? AppColors.cardElevatedDark : AppColors.cardElevatedLight,
+  static BoxDecoration cardElevated() => BoxDecoration(
+    color: AppColors.cardElevatedLight,
     borderRadius: BorderRadius.circular(24),
     border: Border.all(
-      color: isDark ? AppColors.borderDark : AppColors.borderLight,
+      color: AppColors.borderLight,
       width: 1,
     ),
-    boxShadow: isDark ? AppShadows.elevatedDark : AppShadows.elevated,
+    boxShadow: AppShadows.elevated,
   );
 
-  static BoxDecoration cardSubtle({bool isDark = false}) => BoxDecoration(
-    color: isDark ? AppColors.cardDark : AppColors.cardLight,
+  static BoxDecoration cardSubtle() => BoxDecoration(
+    color: AppColors.cardLight,
     borderRadius: BorderRadius.circular(16),
     border: Border.all(
-      color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+      color: AppColors.dividerLight,
       width: 1,
     ),
     boxShadow: AppShadows.subtle,
@@ -56,27 +56,23 @@ abstract final class AppDecorations {
   );
 
   // ─── Glass Decorations ───────────────────────────────────────────
-  static BoxDecoration glass({bool isDark = false}) => BoxDecoration(
-    gradient: isDark ? AppGradients.cardGlassDark : AppGradients.cardGlass,
+  static BoxDecoration glass() => BoxDecoration(
+    gradient: AppGradients.cardGlass,
     borderRadius: BorderRadius.circular(20),
     border: Border.all(
-      color: isDark
-          ? Colors.white.withValues(alpha: 0.08)
-          : Colors.white.withValues(alpha: 0.6),
+      color: Colors.white.withValues(alpha: 0.6),
       width: 1,
     ),
   );
 
-  static BoxDecoration glassElevated({bool isDark = false}) => BoxDecoration(
-    gradient: isDark ? AppGradients.cardGlassDark : AppGradients.cardGlass,
+  static BoxDecoration glassElevated() => BoxDecoration(
+    gradient: AppGradients.cardGlass,
     borderRadius: BorderRadius.circular(24),
     border: Border.all(
-      color: isDark
-          ? Colors.white.withValues(alpha: 0.1)
-          : Colors.white.withValues(alpha: 0.7),
+      color: Colors.white.withValues(alpha: 0.7),
       width: 1.5,
     ),
-    boxShadow: isDark ? AppShadows.elevatedDark : AppShadows.elevated,
+    boxShadow: AppShadows.elevated,
   );
 
   // ─── Premium Decorations ─────────────────────────────────────────
@@ -98,24 +94,24 @@ abstract final class AppDecorations {
   );
 
   // ─── Input Decorations ───────────────────────────────────────────
-  static BoxDecoration inputField({bool isDark = false}) => BoxDecoration(
-    color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceLight,
+  static BoxDecoration inputField() => BoxDecoration(
+    color: AppColors.surfaceLight,
     borderRadius: BorderRadius.circular(14),
     border: Border.all(
-      color: isDark ? AppColors.borderDark : AppColors.borderLight,
+      color: AppColors.borderLight,
       width: 1,
     ),
   );
 
-  static BoxDecoration inputFieldFocused({bool isDark = false}) =>
+  static BoxDecoration inputFieldFocused() =>
       BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        color: AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isDark ? AppColors.primaryOnDark : AppColors.primary,
+          color: AppColors.primary,
           width: 1.5,
         ),
-        boxShadow: isDark ? AppShadows.none : AppShadows.focusRing,
+        boxShadow: AppShadows.focusRing,
       );
 
   // ─── Container Decorations ───────────────────────────────────────
@@ -126,8 +122,8 @@ abstract final class AppDecorations {
       BoxDecoration(color: color, borderRadius: BorderRadius.circular(radius));
 
   // ─── Bottom Sheet Decoration ─────────────────────────────────────
-  static BoxDecoration bottomSheet({bool isDark = false}) => BoxDecoration(
-    color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+  static BoxDecoration bottomSheet() => BoxDecoration(
+    color: AppColors.surfaceLight,
     borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
     boxShadow: AppShadows.elevated,
   );

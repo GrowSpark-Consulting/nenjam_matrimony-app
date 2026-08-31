@@ -99,7 +99,6 @@ class NmNotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -107,14 +106,12 @@ class NmNotificationCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(16),
-          decoration: AppDecorations.card(isDark: isDark).copyWith(
+          decoration: AppDecorations.card().copyWith(
             // Unread reads as a soft lavender wash rather than a tinted
             // blue — the highlight has to belong to the brand, not signal
             // "information".
             color: isUnread
-                ? (isDark
-                      ? AppColors.surfaceVariantDark
-                      : AppColors.softLavender)
+                ? AppColors.softLavender
                 : null,
           ),
           child: Row(

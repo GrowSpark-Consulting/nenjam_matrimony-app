@@ -23,7 +23,6 @@ class PremiumConversationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -32,7 +31,7 @@ class PremiumConversationCard extends StatelessWidget {
       ),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.base),
-        decoration: AppDecorations.glass(isDark: isDark),
+        decoration: AppDecorations.glass(),
         child: Row(
           children: [
             Stack(
@@ -95,9 +94,7 @@ class PremiumConversationCard extends StatelessWidget {
                   Text(
                     l10n.inboxPremiumLockedMessage,
                     style: AppTypography.bodySmall.copyWith(
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
+                      color: AppColors.textSecondaryLight,
                       fontStyle: FontStyle.italic,
                     ),
                     maxLines: 2,

@@ -77,19 +77,10 @@ class NmChatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryText = isDark
-        ? AppColors.textPrimaryDark
-        : AppColors.textPrimaryLight;
-    final secondaryText = isDark
-        ? AppColors.textSecondaryDark
-        : AppColors.textSecondaryLight;
-    final tertiaryText = isDark
-        ? AppColors.textTertiaryDark
-        : AppColors.textTertiaryLight;
-    final unreadTint = isDark
-        ? AppColors.primaryLight
-        : AppColors.primarySurface;
+    const primaryText = AppColors.textPrimaryLight;
+    const secondaryText = AppColors.textSecondaryLight;
+    const tertiaryText = AppColors.textTertiaryLight;
+    const unreadTint = AppColors.primarySurface;
 
     final semanticParts = <String>[
       name,
@@ -103,7 +94,7 @@ class NmChatCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         color: unreadCount > 0
-            ? unreadTint.withValues(alpha: isDark ? 0.14 : 0.4)
+            ? unreadTint.withValues(alpha: 0.4)
             : Colors.transparent,
         child: InkWell(
           onTap: onTap,
@@ -170,7 +161,7 @@ class NmChatCard extends StatelessWidget {
                           ],
                           if (isMuted) ...[
                             const SizedBox(width: 4),
-                            Icon(
+                            const Icon(
                               Icons.notifications_off_rounded,
                               size: 14,
                               color: tertiaryText,

@@ -16,7 +16,7 @@ import '../../../../core/widgets/images/sized_network_photo.dart';
 /// Layout (layers from back to front):
 ///   1. Full-bleed profile photo
 ///   2. Strong bottom-to-top gradient scrim
-///   3. Top: CompatibilityBadgeRow (AI %, Astro %, Trust)
+///   3. Top: CompatibilityBadgeRow (AI %, Astro %)
 ///   4. Bottom: ProfileInfoOverlay + DiscoverActionRail
 ///
 /// Uses [RepaintBoundary] to isolate repaints during scroll.

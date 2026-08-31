@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/navigation/app_bottom_nav.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../interests/presentation/widgets/interest_list_view.dart';
 import '../providers/inbox_providers.dart';
@@ -89,7 +90,10 @@ class _MessagesTabView extends ConsumerWidget {
           }
           return ListView.separated(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            // Bottom padding clears the floating nav pill, which is drawn over
+            // this list — without it the last conversation cannot be scrolled
+            // out from under the pill.
+            padding: EdgeInsets.fromLTRB(0, 8, 0, navContentInset(context)),
             // A conversation row is comfortably taller than the default
             // 250px lookahead — widen it so swiping/scrolling never briefly
             // shows an unbuilt gap on a fast fling.

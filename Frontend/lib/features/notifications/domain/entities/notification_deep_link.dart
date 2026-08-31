@@ -26,7 +26,7 @@ enum NotificationDeepLinkKind {
   /// The viewer's profile, else the Notification Center.
   profileView,
 
-  /// Verification / trust badge screen.
+  /// Verification badge screen.
   verificationApproved,
 
   /// Premium plans.

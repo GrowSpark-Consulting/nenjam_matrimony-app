@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nenjam_matrimony/features/authentication/presentation/pages/auth_selection_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nenjam_matrimony/features/authentication/presentation/pages/registration_landing_page.dart';
 import 'package:nenjam_matrimony/features/profile/presentation/widgets/account_section.dart';
 import 'package:nenjam_matrimony/features/profile/presentation/widgets/activity_stats_card.dart';
 import 'package:nenjam_matrimony/features/profile/presentation/widgets/ai_match_coach_card.dart';
@@ -17,7 +18,7 @@ import 'package:nenjam_matrimony/features/profile/presentation/widgets/verificat
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 
 /// Regression coverage for the responsive audit: every modified Profile
-/// section and the Auth Selection screen must render without a
+/// section and the sign-up landing screen must render without a
 /// RenderFlex overflow (or any other layout exception) across small
 /// phones through tablets, in both orientations, and under large system
 /// font scaling.
@@ -103,7 +104,6 @@ void main() {
         age: 28,
         nmId: 'NM984523',
         location: 'Chennai, Tamil Nadu, India',
-        trustScore: 82,
         profileCompletion: 82,
         isPremium: true,
         isVerified: true,
@@ -246,7 +246,7 @@ void main() {
     );
   });
 
-  testWidgets('AuthSelectionPage has no overflow across breakpoints', (
+  testWidgets('RegistrationLandingPage has no overflow across breakpoints', (
     tester,
   ) async {
     for (final size in [
@@ -267,17 +267,19 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
 
       await tester.pumpWidget(
-        const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: AuthSelectionPage(),
+        const ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: RegistrationLandingPage(),
+          ),
         ),
       );
       await tester.pumpAndSettle();
       expect(
         tester.takeException(),
         isNull,
-        reason: 'AuthSelectionPage overflowed/errored at size=$size',
+        reason: 'RegistrationLandingPage overflowed/errored at size=$size',
       );
     }
   });

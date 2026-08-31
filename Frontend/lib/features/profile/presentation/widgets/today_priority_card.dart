@@ -27,8 +27,6 @@ class NmTodayPriorityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Semantics(
       button: true,
       label: title,
@@ -41,23 +39,15 @@ class NmTodayPriorityCard extends StatelessWidget {
             vertical: AppSpacing.md,
           ),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.cardDark : AppColors.cardLight,
+            color: AppColors.cardLight,
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            boxShadow: isDark
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.18),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ]
-                : [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.06),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
             border: Border(left: BorderSide(color: accentColor, width: 4)),
           ),
           child: Row(
@@ -82,9 +72,7 @@ class NmTodayPriorityCard extends StatelessWidget {
                     Text(
                       title,
                       style: AppTypography.labelLarge.copyWith(
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
+                        color: AppColors.textPrimaryLight,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -101,12 +89,10 @@ class NmTodayPriorityCard extends StatelessWidget {
               ),
 
               // Chevron
-              Icon(
+              const Icon(
                 Icons.chevron_right_rounded,
                 size: 20,
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
+                color: AppColors.textTertiaryLight,
               ),
             ],
           ),
@@ -132,7 +118,7 @@ class NmTodayPrioritiesSection extends StatelessWidget {
       icon: Icons.family_restroom_rounded,
       accentColor: AppColors.secondary,
       title: l10n.profileAddFamilyDetails,
-      impactLabel: l10n.profilePriorityTrustImpact,
+      impactLabel: l10n.profilePriorityCompletionImpact,
     ),
     NmPriorityItem(
       icon: Icons.add_a_photo_rounded,

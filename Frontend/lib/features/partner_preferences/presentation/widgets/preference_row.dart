@@ -24,7 +24,6 @@ class PreferenceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasValue = value.isNotEmpty;
 
     return InkWell(
@@ -45,16 +44,16 @@ class PreferenceRow extends StatelessWidget {
                     style: AppTypography.bodyMedium.copyWith(
                       fontWeight: hasValue ? FontWeight.w600 : FontWeight.w400,
                       color: hasValue
-                          ? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)
-                          : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                          ? AppColors.textPrimaryLight
+                          : AppColors.textSecondaryLight,
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(
+            const Icon(
               Icons.chevron_right_rounded,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              color: AppColors.textSecondaryLight,
             ),
           ],
         ),

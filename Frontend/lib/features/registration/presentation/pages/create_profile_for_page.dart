@@ -21,7 +21,18 @@ class CreateProfileForPage extends ConsumerStatefulWidget {
 }
 
 class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
-  String _selected = 'Myself';
+  late String _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    // Start on the answer the draft already carries rather than a hard
+    // 'Myself' default, so stepping back here from the wizard — or resuming
+    // a registration on a new device — shows the choice the user made
+    // instead of silently reverting it.
+    final existing = ref.read(registrationProvider).basicDetails.profileCreatedFor;
+    _selected = _options.any((o) => o.label == existing) ? existing : 'Myself';
+  }
 
   static const _options = [
     _ProfileForOption('Myself', Icons.person_rounded, 'I am looking for a match for myself'),
@@ -59,7 +70,6 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       body: SafeArea(
@@ -79,9 +89,7 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
               Text(
                 l10n.registrationProfileForSubtitle,
                 style: AppTypography.bodyMedium.copyWith(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
+                  color: AppColors.textSecondaryLight,
                 ),
               ),
               const SizedBox(height: 24),
@@ -98,7 +106,6 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
                       label: _relationLabel(l10n, opt.label),
                       subtitle: _relationSubtitle(l10n, opt.label),
                       isSelected: isSelected,
-                      isDark: isDark,
                       onTap: () => setState(() => _selected = opt.label),
                     );
                   },
@@ -131,7 +138,6 @@ class _ProfileForCard extends StatelessWidget {
   final String label;
   final String subtitle;
   final bool isSelected;
-  final bool isDark;
   final VoidCallback onTap;
 
   const _ProfileForCard({
@@ -139,7 +145,6 @@ class _ProfileForCard extends StatelessWidget {
     required this.label,
     required this.subtitle,
     required this.isSelected,
-    required this.isDark,
     required this.onTap,
   });
 
@@ -151,11 +156,11 @@ class _ProfileForCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: isSelected
-            ? AppDecorations.card(isDark: isDark).copyWith(
+            ? AppDecorations.card().copyWith(
                 border: Border.all(color: AppColors.primary, width: 2),
                 color: AppColors.primary.withValues(alpha: 0.05),
               )
-            : AppDecorations.card(isDark: isDark),
+            : AppDecorations.card(),
         child: Row(
           children: [
             Container(
@@ -164,9 +169,7 @@ class _ProfileForCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.primary
-                    : (isDark
-                        ? AppColors.surfaceVariantDark
-                        : AppColors.surfaceVariantLight),
+                    : AppColors.surfaceVariantLight,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
@@ -192,9 +195,7 @@ class _ProfileForCard extends StatelessWidget {
                   Text(
                     subtitle,
                     style: AppTypography.bodySmall.copyWith(
-                      color: isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight,
+                      color: AppColors.textTertiaryLight,
                     ),
                   ),
                 ],

@@ -36,11 +36,9 @@ class _NmExpandableSectionState extends State<NmExpandableSection> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
-      decoration: AppDecorations.card(isDark: isDark),
+      decoration: AppDecorations.card(),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,11 +87,9 @@ class _NmExpandableSectionState extends State<NmExpandableSection> {
                     turns: _expanded ? 0.5 : 0,
                     duration: AppAnimationTokens.fast,
                     curve: AppAnimationTokens.buttonPressCurve,
-                    child: Icon(
+                    child: const Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
+                      color: AppColors.textSecondaryLight,
                     ),
                   ),
                 ],

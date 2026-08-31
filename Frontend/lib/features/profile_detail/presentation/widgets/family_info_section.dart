@@ -16,15 +16,12 @@ class FamilyInfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textSecondary = isDark
-        ? AppColors.textSecondaryDark
-        : AppColors.textSecondaryLight;
+    const textSecondary = AppColors.textSecondaryLight;
 
     return Container(
       width: double.infinity,
       padding: AppSpacing.cardPaddingLarge,
-      decoration: AppDecorations.card(isDark: isDark),
+      decoration: AppDecorations.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -61,9 +58,9 @@ class FamilyInfoSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.base),
-          Divider(
+          const Divider(
             height: 1,
-            color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+            color: AppColors.dividerLight,
           ),
           const SizedBox(height: AppSpacing.base),
           if (family.fatherName.isNotEmpty ||
@@ -126,7 +123,6 @@ class _Tile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       width: 150,
       child: Column(
@@ -135,9 +131,7 @@ class _Tile extends StatelessWidget {
           Text(
             label.toUpperCase(),
             style: AppTypography.labelSmall.copyWith(
-              color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
+              color: AppColors.textTertiaryLight,
               letterSpacing: 0.8,
             ),
           ),

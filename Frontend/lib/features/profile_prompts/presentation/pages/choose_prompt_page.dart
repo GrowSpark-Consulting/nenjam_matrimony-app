@@ -49,7 +49,6 @@ class _ChoosePromptPageState extends ConsumerState<ChoosePromptPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final bankAsync = ref.watch(promptBankProvider(_selectedCategory));
     final chosenIds = _selection.map((a) => a.promptId).toSet();
     final atLimit = _selection.length >= 3;
@@ -97,9 +96,7 @@ class _ChoosePromptPageState extends ConsumerState<ChoosePromptPage> {
                 child: Text(
                   AppLocalizations.of(context).promptsMaxReached,
                   style: AppTypography.bodySmall.copyWith(
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
+                    color: AppColors.textTertiaryLight,
                   ),
                 ),
               ),
@@ -126,7 +123,6 @@ class _ChoosePromptPageState extends ConsumerState<ChoosePromptPage> {
                       final prompt = available[index];
                       return _PromptCard(
                         prompt: prompt,
-                        isDark: isDark,
                         onTap: atLimit ? null : () => _pickPrompt(prompt),
                       );
                     },
@@ -185,10 +181,9 @@ class _CategoryChip extends StatelessWidget {
 
 class _PromptCard extends StatelessWidget {
   final PromptBankItem prompt;
-  final bool isDark;
   final VoidCallback? onTap;
 
-  const _PromptCard({required this.prompt, required this.isDark, this.onTap});
+  const _PromptCard({required this.prompt, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -200,12 +195,10 @@ class _PromptCard extends StatelessWidget {
         onTap: onTap,
         child: Container(
           padding: AppSpacing.cardPaddingLarge,
-          decoration: AppDecorations.card(isDark: isDark).copyWith(
+          decoration: AppDecorations.card().copyWith(
             color: onTap == null
-                ? (isDark
-                    ? AppColors.surfaceVariantDark
-                    : AppColors.surfaceVariantLight)
-                : (isDark ? AppColors.cardDark : AppColors.cardLight),
+                ? AppColors.surfaceVariantLight
+                : AppColors.cardLight,
           ),
           child: Row(
             children: [
@@ -227,12 +220,10 @@ class _PromptCard extends StatelessWidget {
                       .copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
-              Icon(
+              const Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: 16,
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
+                color: AppColors.textTertiaryLight,
               ),
             ],
           ),
