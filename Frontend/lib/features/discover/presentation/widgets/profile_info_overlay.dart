@@ -37,9 +37,7 @@ class ProfileInfoOverlay extends StatelessWidget {
                 style: AppTypography.headlineMedium.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
-                  shadows: [
-                    const Shadow(blurRadius: 8, color: Colors.black54),
-                  ],
+                  shadows: [const Shadow(blurRadius: 8, color: Colors.black54)],
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -50,7 +48,7 @@ class ProfileInfoOverlay extends StatelessWidget {
               const Icon(
                 Icons.verified_rounded,
                 size: 22,
-                color: AppColors.accentGoldLight,
+                color: AppColors.accentLight,
               ),
             ],
           ],
@@ -94,14 +92,14 @@ class ProfileInfoOverlay extends StatelessWidget {
   }
 
   List<String> get _secondaryDetails => [
-        if (profile.height.isNotEmpty) profile.height,
-        if (profile.religion.isNotEmpty) profile.religion,
-        if (profile.community.isNotEmpty) profile.community,
-        if (profile.motherTongue.isNotEmpty) profile.motherTongue,
-        if (profile.education.isNotEmpty) profile.education,
-        if (profile.maritalStatus.isNotEmpty) profile.maritalStatus,
-        if (profile.diet.isNotEmpty) profile.diet,
-      ].take(6).toList();
+    if (profile.height.isNotEmpty) profile.height,
+    if (profile.religion.isNotEmpty) profile.religion,
+    if (profile.community.isNotEmpty) profile.community,
+    if (profile.motherTongue.isNotEmpty) profile.motherTongue,
+    if (profile.education.isNotEmpty) profile.education,
+    if (profile.maritalStatus.isNotEmpty) profile.maritalStatus,
+    if (profile.diet.isNotEmpty) profile.diet,
+  ].take(6).toList();
 
   List<String> get _tagPills {
     final pills = <String>[...profile.tags];
@@ -151,20 +149,21 @@ class _SecondaryDetails extends StatelessWidget {
         spacing: 4,
         runSpacing: 2,
         crossAxisAlignment: WrapCrossAlignment.center,
-        children: details
-            .map<Widget>(
-              (d) => Text(
-                d,
-                style: AppTypography.labelMedium.copyWith(
-                  color: Colors.white70,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            )
-            .expand((w) => [w, const _Dot()])
-            .toList()
-          ..removeLast(),
+        children:
+            details
+                .map<Widget>(
+                  (d) => Text(
+                    d,
+                    style: AppTypography.labelMedium.copyWith(
+                      color: Colors.white70,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                )
+                .expand((w) => [w, const _Dot()])
+                .toList()
+              ..removeLast(),
       ),
     );
   }
@@ -174,9 +173,9 @@ class _Dot extends StatelessWidget {
   const _Dot();
   @override
   Widget build(BuildContext context) => const Text(
-        ' • ',
-        style: TextStyle(color: Colors.white38, fontWeight: FontWeight.bold),
-      );
+    ' • ',
+    style: TextStyle(color: Colors.white38, fontWeight: FontWeight.bold),
+  );
 }
 
 /// Frosted-glass tag pill (NRI / Verified Identity / Premium Plus, etc.)

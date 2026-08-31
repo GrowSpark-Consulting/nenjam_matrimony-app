@@ -39,7 +39,7 @@ class NmCompatibilityCard extends StatelessWidget {
                       value: score / 100,
                       strokeWidth: 5,
                       backgroundColor: AppColors.divider,
-                      color: AppColors.accentGold,
+                      color: AppColors.secondary,
                     ),
                     Center(
                       child: Text(

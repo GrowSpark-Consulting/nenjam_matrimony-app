@@ -6,10 +6,14 @@ import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_typography.dart';
 
-/// Premium Membership upgrade card — gold gradient banner with crown icon
-/// and a "Explore Elite" CTA button integrated inside the card.
+/// Premium Membership upgrade card — deep plum banner with a cream crown
+/// and an "Explore Elite" CTA integrated inside the card.
 ///
-/// Matches the Stitch "Personal Matchmaking HQ" design.
+/// Deep plum rather than the magenta ramp: this is the largest premium
+/// surface on the Profile screen, and a full magenta/rose fill made it the
+/// pinkest element in the app while leaving its plum text at ~1.7:1. Plum
+/// carries the depth, magenta is spent on the single CTA, and cream is the
+/// luxury accent.
 class NmPremiumMembershipCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -32,9 +36,9 @@ class NmPremiumMembershipCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: AppGradients.gold,
+        gradient: AppGradients.premiumCard,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl3),
-        boxShadow: AppShadows.goldGlow,
+        boxShadow: AppShadows.elevated,
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
@@ -46,7 +50,7 @@ class NmPremiumMembershipCard extends StatelessWidget {
             child: Icon(
               Icons.workspace_premium_rounded,
               size: 140,
-              color: Colors.white.withValues(alpha: 0.12),
+              color: AppColors.premiumCream.withValues(alpha: 0.10),
             ),
           ),
 
@@ -63,12 +67,15 @@ class NmPremiumMembershipCard extends StatelessWidget {
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.25),
+                        color: Colors.white.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.premiumCream.withValues(alpha: 0.35),
+                        ),
                       ),
                       child: const Icon(
                         Icons.workspace_premium_rounded,
-                        color: AppColors.primary,
+                        color: AppColors.premiumCream,
                         size: 32,
                       ),
                     ),
@@ -82,7 +89,7 @@ class NmPremiumMembershipCard extends StatelessWidget {
                           Text(
                             isPremiumMember ? 'Nenjam Elite Member' : title,
                             style: AppTypography.titleMedium.copyWith(
-                              color: AppColors.primary,
+                              color: Colors.white,
                               fontWeight: FontWeight.w700,
                               fontSize: 18,
                             ),
@@ -93,7 +100,7 @@ class NmPremiumMembershipCard extends StatelessWidget {
                                 ? 'You have full access to all premium features.'
                                 : subtitle,
                             style: AppTypography.bodyMedium.copyWith(
-                              color: AppColors.primary.withValues(alpha: 0.8),
+                              color: Colors.white70,
                               height: 1.4,
                             ),
                           ),
@@ -108,7 +115,7 @@ class NmPremiumMembershipCard extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: onCtaTap,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: AppColors.secondary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 32,
@@ -120,7 +127,9 @@ class NmPremiumMembershipCard extends StatelessWidget {
                         ),
                       ),
                       elevation: 4,
-                      shadowColor: AppColors.primary.withValues(alpha: 0.3),
+                      shadowColor: AppColors.secondaryDark.withValues(
+                        alpha: 0.4,
+                      ),
                     ),
                     child: Text(
                       ctaLabel,

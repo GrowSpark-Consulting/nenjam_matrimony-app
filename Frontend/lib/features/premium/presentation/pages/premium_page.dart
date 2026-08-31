@@ -31,8 +31,23 @@ class PremiumPage extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    const Icon(Icons.workspace_premium_rounded,
-                        size: 48, color: AppColors.accentGold),
+                    Container(
+                      width: 76,
+                      height: 76,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.12),
+                        border: Border.all(
+                          color: AppColors.premiumCream.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.workspace_premium_rounded,
+                        size: 40,
+                        color: AppColors.premiumCream,
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       l10n.premiumHeroTitle,
@@ -86,7 +101,7 @@ class PremiumPage extends StatelessWidget {
               // Proceed CTA
               NmGradientButton(
                 label: l10n.premiumProceedToPayment,
-                useGoldGradient: true,
+                useAccentGradient: true,
                 onPressed: () => context.push(RouteNames.subscription),
               ),
               const SizedBox(height: 24),

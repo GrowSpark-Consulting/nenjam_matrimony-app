@@ -24,8 +24,11 @@ class RegistrationHelperTip extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.lightbulb_outline_rounded,
-                size: 18, color: AppColors.accentGold),
+            const Icon(
+              Icons.lightbulb_outline_rounded,
+              size: 18,
+              color: AppColors.secondary,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

@@ -211,7 +211,7 @@ class NmFloatingNavigation extends StatelessWidget {
           return IconButton(
             icon: Icon(
               entry.value,
-              color: isSelected ? AppColors.accentGold : Colors.white70,
+              color: isSelected ? AppColors.secondary : Colors.white70,
             ),
             onPressed: () => onItemSelected(entry.key),
           );

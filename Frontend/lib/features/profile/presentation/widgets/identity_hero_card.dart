@@ -4,6 +4,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/indicators/nm_gradient_progress_bar.dart';
 import '../../../../core/widgets/badges/premium_badge.dart' show NmBadgeSize;
 import '../../../../core/widgets/badges/verification_badge.dart';
 import '../../../../core/widgets/indicators/nm_score_ring.dart';
@@ -13,7 +14,7 @@ import '../../../../core/widgets/images/sized_network_photo.dart';
 /// Identity Hero Card — the profile header for the Personal Matchmaking HQ.
 ///
 /// Recreates the approved reference design: a 3:2 cover photo with rounded
-/// top corners, name + Matrimony ID beside an animated gold trust-score
+/// top corners, name + Matrimony ID beside an animated magenta trust-score
 /// ring, a 2×2 stat grid (Age / Height / Religion / Occupation), a location
 /// row, and an animated profile-completion bar.
 class NmIdentityHeroCard extends StatelessWidget {
@@ -239,14 +240,24 @@ class _HeroDetailsBlock extends StatelessWidget {
         const SizedBox(height: AppSpacing.xl2),
 
         // 2×2 stats grid
-        _StatGrid(age: age, height: height, faith: faith, profession: profession, isDark: isDark),
+        _StatGrid(
+          age: age,
+          height: height,
+          faith: faith,
+          profession: profession,
+          isDark: isDark,
+        ),
 
         const SizedBox(height: AppSpacing.lg),
 
         // Location row
         Row(
           children: [
-            const Icon(Icons.location_on_rounded, size: 16, color: AppColors.liked),
+            const Icon(
+              Icons.location_on_rounded,
+              size: 16,
+              color: AppColors.liked,
+            ),
             const SizedBox(width: AppSpacing.xs),
             Flexible(
               child: Text(
@@ -294,7 +305,7 @@ class _TrustScoreRing extends StatelessWidget {
           NmScoreRing(
             value: score / 100,
             displayText: '$score',
-            color: AppColors.accentGold,
+            color: AppColors.secondary,
             backgroundColor: AppColors.surfaceVariantLight,
             textColor: AppColors.primary,
             size: ringSize,
@@ -318,7 +329,7 @@ class _TrustScoreRing extends StatelessWidget {
                 child: Text(
                   'TRUST',
                   style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.accentGold,
+                    color: Colors.white,
                     fontWeight: FontWeight.w800,
                     fontSize: 9,
                     letterSpacing: 0.6,
@@ -376,9 +387,7 @@ class _StatGrid extends StatelessWidget {
               Expanded(
                 child: _StatTile(
                   label: AppLocalizations.of(context).fieldHeight,
-                  value: (height != null && height!.isNotEmpty)
-                      ? height!
-                      : '—',
+                  value: (height != null && height!.isNotEmpty) ? height! : '—',
                   isDark: isDark,
                 ),
               ),
@@ -467,7 +476,9 @@ class _StatTile extends StatelessWidget {
               fontWeight: FontWeight.w700,
               color:
                   valueColor ??
-                  (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                  (isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight),
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -478,7 +489,7 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-/// Animated profile-completion bar — gold fill on a light-grey track.
+/// Animated profile-completion bar — plum→magenta fill on a soft lavender track.
 class _ProfileCompletionBar extends StatelessWidget {
   final int percentage;
   final bool isDark;
@@ -520,22 +531,7 @@ class _ProfileCompletionBar extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: pct / 100),
-            duration: const Duration(milliseconds: 900),
-            curve: Curves.easeOutCubic,
-            builder: (_, value, __) => LinearProgressIndicator(
-              value: value,
-              minHeight: 8,
-              backgroundColor: isDark
-                  ? AppColors.dividerDark
-                  : AppColors.dividerLight,
-              valueColor: const AlwaysStoppedAnimation(AppColors.accentGold),
-            ),
-          ),
-        ),
+        NmGradientProgressBar(value: pct / 100),
       ],
     );
   }

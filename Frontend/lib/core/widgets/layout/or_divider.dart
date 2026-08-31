@@ -12,9 +12,7 @@ class NmOrDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final dividerColor = isDark
-        ? AppColors.borderDark
-        : const Color(0xFFC5C6CF).withValues(alpha: 0.3);
+    final dividerColor = isDark ? AppColors.borderDark : AppColors.dividerLight;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),

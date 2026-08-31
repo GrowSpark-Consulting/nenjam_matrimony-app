@@ -38,7 +38,7 @@ class CompatibilityResultWidget extends StatelessWidget {
                       strokeWidth: 8,
                       backgroundColor: Colors.white.withValues(alpha: 0.2),
                       valueColor: const AlwaysStoppedAnimation(
-                        AppColors.accentGold,
+                        AppColors.accentLight,
                       ),
                     ),
                     Text(
@@ -77,7 +77,7 @@ class CompatibilityResultWidget extends StatelessWidget {
                   Text(
                     '${factor.score}/${factor.maxScore}',
                     style: AppTypography.labelLarge.copyWith(
-                      color: AppColors.accentGoldDark,
+                      color: AppColors.scoreAstrology,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

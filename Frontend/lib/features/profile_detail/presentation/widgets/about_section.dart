@@ -31,7 +31,10 @@ class AboutSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(AppLocalizations.of(context).profileDetailTabAbout, style: AppTypography.titleLarge),
+          Text(
+            AppLocalizations.of(context).profileDetailTabAbout,
+            style: AppTypography.titleLarge,
+          ),
           if (detail.bio != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
@@ -57,9 +60,18 @@ class AboutSection extends StatelessWidget {
             child: Wrap(
               runSpacing: AppSpacing.base,
               children: [
-                _StatTile(label: AppLocalizations.of(context).fieldProfession, value: base.profession),
-                _StatTile(label: AppLocalizations.of(context).fieldEducation, value: base.education),
-                _StatTile(label: AppLocalizations.of(context).fieldHeight, value: base.height),
+                _StatTile(
+                  label: AppLocalizations.of(context).fieldProfession,
+                  value: base.profession,
+                ),
+                _StatTile(
+                  label: AppLocalizations.of(context).fieldEducation,
+                  value: base.education,
+                ),
+                _StatTile(
+                  label: AppLocalizations.of(context).fieldHeight,
+                  value: base.height,
+                ),
                 _StatTile(
                   label: AppLocalizations.of(context).fieldReligion,
                   value: [
@@ -72,7 +84,10 @@ class AboutSection extends StatelessWidget {
           ),
           if (detail.interests.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.base),
-            Text(AppLocalizations.of(context).fieldInterests, style: AppTypography.titleSmall),
+            Text(
+              AppLocalizations.of(context).fieldInterests,
+              style: AppTypography.titleSmall,
+            ),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
               spacing: AppSpacing.xs,
@@ -85,7 +100,10 @@ class AboutSection extends StatelessWidget {
           ],
           if (detail.coreValues.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.base),
-            Text(AppLocalizations.of(context).fieldCoreValues, style: AppTypography.titleSmall),
+            Text(
+              AppLocalizations.of(context).fieldCoreValues,
+              style: AppTypography.titleSmall,
+            ),
             const SizedBox(height: AppSpacing.sm),
             ...detail.coreValues.map(
               (value) => Padding(
@@ -96,7 +114,7 @@ class AboutSection extends StatelessWidget {
                     const Icon(
                       Icons.check_circle_rounded,
                       size: 16,
-                      color: AppColors.accentGold,
+                      color: AppColors.secondary,
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     Expanded(

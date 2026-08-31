@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/indicators/nm_gradient_progress_bar.dart';
 import '../../../../core/widgets/cards/checklist_item_card.dart';
 import '../../../../core/widgets/cards/growth_card.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
@@ -56,7 +58,8 @@ class _ProfileCompletionBody extends ConsumerWidget {
     // Headline percentage comes from the backend — the single source of truth
     // shared with the Profile page, Edit Profile, and Discover. The module
     // breakdown below still uses the aggregator to show which sections remain.
-    final pct = ref.watch(backendProfileCompletionProvider).valueOrNull ??
+    final pct =
+        ref.watch(backendProfileCompletionProvider).valueOrNull ??
         completeness.percentage;
     final highestImpact = completeness.highestImpactModule;
     // "Still Growing" excludes the module already featured above, so it
@@ -82,17 +85,23 @@ class _ProfileCompletionBody extends ConsumerWidget {
           _StrengthHero(completeness: completeness, percentage: pct),
           if (highestImpact != null) ...[
             const SizedBox(height: 24),
-            Text(l10n.profileCompletionHighestImpactLabel,
-                style: AppTypography.titleMedium
-                    .copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              l10n.profileCompletionHighestImpactLabel,
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 12),
             _HighestImpactCard(evaluated: highestImpact),
           ],
           if (completeness.completedModules.isNotEmpty) ...[
             const SizedBox(height: 32),
-            Text(l10n.profileCompletionCompletedSectionsTitle,
-                style: AppTypography.titleMedium
-                    .copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              l10n.profileCompletionCompletedSectionsTitle,
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 12),
             for (final e in completeness.completedModules)
               Padding(
@@ -109,9 +118,12 @@ class _ProfileCompletionBody extends ConsumerWidget {
           ],
           if (stillGrowing.isNotEmpty) ...[
             const SizedBox(height: 32),
-            Text(l10n.profileCompletionMissingSectionsTitle,
-                style: AppTypography.titleMedium
-                    .copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              l10n.profileCompletionMissingSectionsTitle,
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 12),
             for (final e in stillGrowing)
               Padding(
@@ -122,15 +134,21 @@ class _ProfileCompletionBody extends ConsumerWidget {
                   subtitle: moduleTip(l10n, e.module.id),
                   actionLabel: moduleAction(l10n, e.module.id),
                   isDone: false,
-                  onAction: () => openEditProfile(context, ref,
-                      wizardStep: e.status.wizardStep),
+                  onAction: () => openEditProfile(
+                    context,
+                    ref,
+                    wizardStep: e.status.wizardStep,
+                  ),
                 ),
               ),
           ],
           const SizedBox(height: 32),
-          Text(l10n.profileCompletionFutureGrowthTitle,
-              style: AppTypography.titleMedium
-                  .copyWith(fontWeight: FontWeight.w700)),
+          Text(
+            l10n.profileCompletionFutureGrowthTitle,
+            style: AppTypography.titleMedium.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
             l10n.profileCompletionFutureGrowthSubtitle,
@@ -177,7 +195,8 @@ class _ProfileCompletionBody extends ConsumerWidget {
 
 // ─── Module → display copy (small switch, not business logic) ────────────
 
-String _tierLabel(AppLocalizations l10n, ProfileStrengthTier tier) => switch (tier) {
+String _tierLabel(AppLocalizations l10n, ProfileStrengthTier tier) =>
+    switch (tier) {
       ProfileStrengthTier.building => l10n.profileCompletionTierBuilding,
       ProfileStrengthTier.good => l10n.profileCompletionTierGood,
       ProfileStrengthTier.strong => l10n.profileCompletionTierStrong,
@@ -210,15 +229,19 @@ class _StrengthHero extends StatelessWidget {
             children: [
               Text(
                 '$percentage%',
-                style: AppTypography.displaySmall
-                    .copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                style: AppTypography.displaySmall.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(width: 12),
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
@@ -226,7 +249,7 @@ class _StrengthHero extends StatelessWidget {
                   child: Text(
                     _tierLabel(l10n, completeness.tier),
                     style: AppTypography.labelMedium.copyWith(
-                      color: AppColors.accentGold,
+                      color: Colors.white,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -235,14 +258,10 @@ class _StrengthHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: percentage / 100,
-              minHeight: 8,
-              backgroundColor: Colors.white.withValues(alpha: 0.15),
-              color: AppColors.accentGold,
-            ),
+          NmGradientProgressBar(
+            value: percentage / 100,
+            gradient: AppGradients.match,
+            trackColor: Colors.white.withValues(alpha: 0.15),
           ),
         ],
       ),
@@ -265,7 +284,7 @@ class _HighestImpactCard extends ConsumerWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.goldBorder.copyWith(
+      decoration: AppDecorations.accentBorder.copyWith(
         color: isDark ? AppColors.cardDark : AppColors.cardLight,
       ),
       child: Row(
@@ -274,11 +293,14 @@ class _HighestImpactCard extends ConsumerWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppColors.accentGold.withValues(alpha: 0.15),
+              color: AppColors.secondary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(moduleIcon(evaluated.module.id),
-                color: AppColors.accentGold, size: 24),
+            child: Icon(
+              moduleIcon(evaluated.module.id),
+              color: AppColors.secondary,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -287,8 +309,9 @@ class _HighestImpactCard extends ConsumerWidget {
               children: [
                 Text(
                   moduleAction(l10n, evaluated.module.id),
-                  style: AppTypography.titleSmall
-                      .copyWith(fontWeight: FontWeight.w700),
+                  style: AppTypography.titleSmall.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -304,14 +327,18 @@ class _HighestImpactCard extends ConsumerWidget {
           ),
           const SizedBox(width: 12),
           IconButton(
-            onPressed: () => openEditProfile(context, ref,
-                wizardStep: evaluated.status.wizardStep),
-            icon: const Icon(Icons.arrow_forward_rounded,
-                color: AppColors.accentGold),
+            onPressed: () => openEditProfile(
+              context,
+              ref,
+              wizardStep: evaluated.status.wizardStep,
+            ),
+            icon: const Icon(
+              Icons.arrow_forward_rounded,
+              color: AppColors.secondary,
+            ),
           ),
         ],
       ),
     );
   }
 }
-

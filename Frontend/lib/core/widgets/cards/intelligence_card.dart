@@ -47,10 +47,10 @@ class NmIntelligenceCard extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: AppColors.accentGold.withValues(alpha: 0.12),
+                    color: AppColors.secondary.withValues(alpha: 0.12),
                     borderRadius: AppSpacing.borderRadiusMd,
                   ),
-                  child: Icon(icon, color: AppColors.accentGold),
+                  child: Icon(icon, color: AppColors.secondary),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(

@@ -23,7 +23,7 @@ class SmartIndicatorChip extends StatelessWidget {
   };
 
   static const _colors = {
-    ConversationSmartIndicator.newMatch: AppColors.accentGold,
+    ConversationSmartIndicator.newMatch: AppColors.secondary,
     ConversationSmartIndicator.interestAccepted: AppColors.success,
     ConversationSmartIndicator.interestDeclined: AppColors.error,
     ConversationSmartIndicator.messageRequest: AppColors.warning,
@@ -31,13 +31,15 @@ class SmartIndicatorChip extends StatelessWidget {
   };
 
   String _label(AppLocalizations l10n) => switch (indicator) {
-        ConversationSmartIndicator.newMatch => l10n.inboxSmartNewMatch,
-        ConversationSmartIndicator.interestAccepted => l10n.inboxSmartInterestAccepted,
-        ConversationSmartIndicator.interestDeclined => l10n.inboxSmartInterestDeclined,
-        ConversationSmartIndicator.messageRequest => l10n.inboxSmartMessageRequest,
-        ConversationSmartIndicator.aiSuggestedMatch => l10n.inboxSmartAiSuggested,
-        ConversationSmartIndicator.none => '',
-      };
+    ConversationSmartIndicator.newMatch => l10n.inboxSmartNewMatch,
+    ConversationSmartIndicator.interestAccepted =>
+      l10n.inboxSmartInterestAccepted,
+    ConversationSmartIndicator.interestDeclined =>
+      l10n.inboxSmartInterestDeclined,
+    ConversationSmartIndicator.messageRequest => l10n.inboxSmartMessageRequest,
+    ConversationSmartIndicator.aiSuggestedMatch => l10n.inboxSmartAiSuggested,
+    ConversationSmartIndicator.none => '',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +60,10 @@ class SmartIndicatorChip extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             _label(l10n),
-            style: AppTypography.labelSmall.copyWith(color: color, fontWeight: FontWeight.w700),
+            style: AppTypography.labelSmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),

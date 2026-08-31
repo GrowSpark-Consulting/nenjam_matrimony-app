@@ -51,28 +51,30 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyC2tPUqfWpUYymcLk4UQZj64urZeA54D3E',
-    appId: '1:1060875646049:android:d50390358c5a10ff4ca620',
+    appId: '1:1060875646049:android:3ac44bf77fdaae5e4ca620',
     messagingSenderId: '1060875646049',
     projectId: 'matrimony-platform-30b50',
     storageBucket: 'matrimony-platform-30b50.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBA2FjVgGXtFhubGHJwTh-SleZ-Neh5wu4',
-    appId: '1:1060875646049:ios:894cc66d9d2d54364ca620',
+    appId: '1:1060875646049:ios:f834708d684c9c4e4ca620',
     messagingSenderId: '1060875646049',
     projectId: 'matrimony-platform-30b50',
     storageBucket: 'matrimony-platform-30b50.firebasestorage.app',
-    iosBundleId: 'com.example.nenjamMatrimony',
+    androidClientId: '1060875646049-6r6p7me3ibdlo0bcvesh2khkj7okmdra.apps.googleusercontent.com',
+    iosClientId: '1060875646049-e5trfpemktrtiqpf349rj7er040n5pui.apps.googleusercontent.com',
+    iosBundleId: 'com.growspark.nenjam',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyBA2FjVgGXtFhubGHJwTh-SleZ-Neh5wu4',
-    appId: '1:1060875646049:ios:894cc66d9d2d54364ca620',
+    appId: '1:1060875646049:ios:f834708d684c9c4e4ca620',
     messagingSenderId: '1060875646049',
     projectId: 'matrimony-platform-30b50',
     storageBucket: 'matrimony-platform-30b50.firebasestorage.app',
-    iosBundleId: 'com.example.nenjamMatrimony',
+    androidClientId: '1060875646049-6r6p7me3ibdlo0bcvesh2khkj7okmdra.apps.googleusercontent.com',
+    iosClientId: '1060875646049-e5trfpemktrtiqpf349rj7er040n5pui.apps.googleusercontent.com',
+    iosBundleId: 'com.growspark.nenjam',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

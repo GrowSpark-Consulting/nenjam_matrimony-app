@@ -5,7 +5,7 @@ import '../../theme/app_gradients.dart';
 import '../../theme/app_shadows.dart';
 import '../../theme/app_typography.dart';
 
-/// Premium gradient button with primary or gold gradient.
+/// Premium gradient button with the primary plum or the magenta accent gradient.
 class NmGradientButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -13,7 +13,7 @@ class NmGradientButton extends StatelessWidget {
   final IconData? icon;
   final double? width;
   final double height;
-  final bool useGoldGradient;
+  final bool useAccentGradient;
 
   const NmGradientButton({
     super.key,
@@ -23,14 +23,16 @@ class NmGradientButton extends StatelessWidget {
     this.icon,
     this.width,
     this.height = 56,
-    this.useGoldGradient = false,
+    this.useAccentGradient = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final gradient = useGoldGradient ? AppGradients.gold : AppGradients.primary;
-    final textColor = useGoldGradient
-        ? AppColors.textOnGold
+    final gradient = useAccentGradient
+        ? AppGradients.accent
+        : AppGradients.primary;
+    final textColor = useAccentGradient
+        ? AppColors.textOnSecondary
         : AppColors.textOnPrimary;
 
     return SizedBox(
@@ -42,7 +44,7 @@ class NmGradientButton extends StatelessWidget {
           color: onPressed == null ? AppColors.textTertiaryLight : null,
           borderRadius: BorderRadius.circular(16),
           boxShadow: onPressed != null
-              ? (useGoldGradient ? AppShadows.goldGlow : AppShadows.button)
+              ? (useAccentGradient ? AppShadows.accentGlow : AppShadows.button)
               : null,
         ),
         child: Material(

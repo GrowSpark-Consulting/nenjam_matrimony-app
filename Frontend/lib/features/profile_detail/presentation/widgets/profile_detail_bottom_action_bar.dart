@@ -12,7 +12,7 @@ import '../../../interests/presentation/providers/interests_provider.dart';
 import '../../../interests/presentation/utils/interest_button_copy.dart';
 import '../../domain/entities/profile_detail_entity.dart';
 
-/// Sticky bottom bar: gold "Send Interest"/"Message" pill + chat icon
+/// Sticky bottom bar: gradient "Send Interest"/"Message" pill + chat icon
 /// button, matching the design reference's bottom action bar.
 ///
 /// Both buttons route through `handleInterestButtonTap`/
@@ -26,6 +26,21 @@ class ProfileDetailBottomActionBar extends ConsumerStatefulWidget {
   final ProfileDetailEntity detail;
 
   const ProfileDetailBottomActionBar({super.key, required this.detail});
+
+  /// The bar's own height, excluding the device's bottom inset — the 52px
+  /// buttons plus this widget's vertical padding. Declared here rather than
+  /// measured so the page can reserve room for the bar at the end of its
+  /// scroll content; see [reservedHeight].
+  static const double contentHeight = 52 + AppSpacing.sm * 2;
+
+  /// How much vertical space the bar covers on this device, inset included.
+  ///
+  /// The bar floats over the page rather than occupying a
+  /// `Scaffold.bottomNavigationBar` slot (see [ProfileDetailPage] for why),
+  /// so the scroll view has to reserve this much padding at its end to keep
+  /// the last card clear of it.
+  static double reservedHeight(BuildContext context) =>
+      contentHeight + MediaQuery.paddingOf(context).bottom;
 
   @override
   ConsumerState<ProfileDetailBottomActionBar> createState() =>
@@ -73,7 +88,9 @@ class _ProfileDetailBottomActionBarState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final status = ref.watch(interestRelationshipStatusProvider(widget.detail.base.id));
+    final status = ref.watch(
+      interestRelationshipStatusProvider(widget.detail.base.id),
+    );
     final settled = interestButtonIsSettled(status);
 
     return Container(
@@ -95,14 +112,16 @@ class _ProfileDetailBottomActionBarState
               borderRadius: AppSpacing.borderRadiusXl,
               clipBehavior: Clip.antiAlias,
               child: InkWell(
-                onTap: _isSending ? null : () => _handleSendInterest(l10n, status),
+                onTap: _isSending
+                    ? null
+                    : () => _handleSendInterest(l10n, status),
                 child: Ink(
                   height: 52,
                   decoration: BoxDecoration(
-                    gradient: settled ? null : AppGradients.gold,
+                    gradient: settled ? null : AppGradients.accent,
                     color: settled ? AppColors.faceVerificationGreen : null,
                     borderRadius: AppSpacing.borderRadiusXl,
-                    boxShadow: settled ? null : AppShadows.goldGlow,
+                    boxShadow: settled ? null : AppShadows.accentGlow,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -111,13 +130,20 @@ class _ProfileDetailBottomActionBarState
                         const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       else
                         Icon(
-                          settled ? Icons.check_circle_rounded : Icons.favorite_rounded,
+                          settled
+                              ? Icons.check_circle_rounded
+                              : Icons.favorite_rounded,
                           size: 20,
-                          color: settled ? Colors.white : AppColors.textOnGold,
+                          color: settled
+                              ? Colors.white
+                              : AppColors.textOnSecondary,
                         ),
                       const SizedBox(width: AppSpacing.sm),
                       Flexible(
@@ -131,7 +157,9 @@ class _ProfileDetailBottomActionBarState
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.button.copyWith(
-                            color: settled ? Colors.white : AppColors.textOnGold,
+                            color: settled
+                                ? Colors.white
+                                : AppColors.textOnSecondary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -146,7 +174,9 @@ class _ProfileDetailBottomActionBarState
           _CircleActionButton(
             icon: Icons.chat_bubble_rounded,
             isLoading: _isResolvingChat,
-            onTap: _isResolvingChat ? null : () => _handleMessageTap(l10n, status),
+            onTap: _isResolvingChat
+                ? null
+                : () => _handleMessageTap(l10n, status),
           ),
         ],
       ),
@@ -159,7 +189,11 @@ class _CircleActionButton extends StatelessWidget {
   final VoidCallback? onTap;
   final bool isLoading;
 
-  const _CircleActionButton({required this.icon, required this.onTap, this.isLoading = false});
+  const _CircleActionButton({
+    required this.icon,
+    required this.onTap,
+    this.isLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +211,10 @@ class _CircleActionButton extends StatelessWidget {
                   child: SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   ),
                 )
               : Icon(icon, color: Colors.white, size: 22),

@@ -51,16 +51,15 @@ class _OnboardingPageState extends State<OnboardingPage>
       duration: const Duration(milliseconds: 800),
     );
 
-    _entryFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _entryController, curve: Curves.easeOut),
-    );
+    _entryFade = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _entryController, curve: Curves.easeOut));
 
-    _entrySlide = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic),
-    );
+    _entrySlide = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic),
+        );
 
     _entryController.forward();
   }
@@ -116,8 +115,9 @@ class _OnboardingPageState extends State<OnboardingPage>
         if (!didPop) _onBack();
       },
       child: Scaffold(
-        backgroundColor:
-            isDark ? AppColors.surfaceDark : AppColors.backgroundLight,
+        backgroundColor: isDark
+            ? AppColors.surfaceDark
+            : AppColors.backgroundLight,
         body: SafeArea(
           child: FadeTransition(
             opacity: _entryFade,
@@ -185,10 +185,10 @@ class _OnboardingPageState extends State<OnboardingPage>
                           height: 4,
                           decoration: BoxDecoration(
                             color: isActive
-                                ? AppColors.accentGold
+                                ? AppColors.secondary
                                 : (isDark
-                                    ? AppColors.surfaceVariantDark
-                                    : AppColors.dividerLight),
+                                      ? AppColors.surfaceVariantDark
+                                      : AppColors.dividerLight),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         );
@@ -202,8 +202,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                   Expanded(
                     child: PageView(
                       controller: _controller,
-                      onPageChanged: (i) =>
-                          setState(() => _currentPage = i),
+                      onPageChanged: (i) => setState(() => _currentPage = i),
                       children: [
                         _AiMatchmakingSlide(
                           l10n: l10n,
@@ -284,8 +283,9 @@ class _AiMatchmakingSlide extends StatelessWidget {
                     height: 160,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.accentGoldSurface
-                          .withValues(alpha: isDark ? 0.15 : 0.4),
+                      color: AppColors.accentSoft.withValues(
+                        alpha: isDark ? 0.15 : 0.4,
+                      ),
                     ),
                   ),
                 ),
@@ -297,8 +297,9 @@ class _AiMatchmakingSlide extends StatelessWidget {
                     height: 200,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.primarySurface
-                          .withValues(alpha: isDark ? 0.15 : 0.3),
+                      color: AppColors.primarySurface.withValues(
+                        alpha: isDark ? 0.15 : 0.3,
+                      ),
                     ),
                   ),
                 ),
@@ -321,7 +322,7 @@ class _AiMatchmakingSlide extends StatelessWidget {
                   child: const Icon(
                     Icons.auto_awesome_rounded,
                     size: 80,
-                    color: AppColors.accentGold,
+                    color: Colors.white,
                   ),
                 ),
 
@@ -329,7 +330,8 @@ class _AiMatchmakingSlide extends StatelessWidget {
                 AnimatedBuilder(
                   animation: floatController,
                   builder: (context, child) {
-                    final offset = math.sin(floatController.value * math.pi) * 10;
+                    final offset =
+                        math.sin(floatController.value * math.pi) * 10;
                     return Positioned(
                       bottom: 30,
                       right: 20,
@@ -342,7 +344,7 @@ class _AiMatchmakingSlide extends StatelessWidget {
                   child: _GlassBadge(
                     isDark: isDark,
                     icon: Icons.auto_awesome,
-                    iconColor: AppColors.accentGold,
+                    iconColor: AppColors.secondary,
                     label: l10n.onboardingAiBadge,
                     subtitle: l10n.onboardingAiBadgeSub,
                   ),
@@ -421,8 +423,9 @@ class _VerifiedProfilesSlide extends StatelessWidget {
                   height: 200,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.accentGoldSurface
-                        .withValues(alpha: isDark ? 0.2 : 0.5),
+                    color: AppColors.accentSoft.withValues(
+                      alpha: isDark ? 0.2 : 0.5,
+                    ),
                   ),
                 ),
 
@@ -436,12 +439,12 @@ class _VerifiedProfilesSlide extends StatelessWidget {
                         ? AppColors.cardDark.withValues(alpha: 0.6)
                         : Colors.white.withValues(alpha: 0.6),
                     border: Border.all(
-                      color: AppColors.accentGold.withValues(alpha: 0.2),
+                      color: AppColors.secondary.withValues(alpha: 0.2),
                       width: 2,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.accentGold.withValues(alpha: 0.15),
+                        color: AppColors.secondary.withValues(alpha: 0.15),
                         blurRadius: 50,
                       ),
                     ],
@@ -449,7 +452,7 @@ class _VerifiedProfilesSlide extends StatelessWidget {
                   child: const Icon(
                     Icons.verified_user_rounded,
                     size: 80,
-                    color: AppColors.accentGold,
+                    color: AppColors.secondary,
                   ),
                 ),
 
@@ -581,7 +584,7 @@ class _AstroCompatibilitySlide extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: AppColors.accentGold.withValues(alpha: 0.1),
+                        color: AppColors.secondary.withValues(alpha: 0.1),
                         width: 1,
                       ),
                     ),
@@ -590,8 +593,7 @@ class _AstroCompatibilitySlide extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color:
-                              AppColors.accentGold.withValues(alpha: 0.15),
+                          color: AppColors.secondary.withValues(alpha: 0.15),
                           width: 1,
                         ),
                       ),
@@ -600,8 +602,7 @@ class _AstroCompatibilitySlide extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color:
-                                AppColors.accentGold.withValues(alpha: 0.2),
+                            color: AppColors.secondary.withValues(alpha: 0.2),
                             width: 1,
                           ),
                         ),
@@ -620,7 +621,7 @@ class _AstroCompatibilitySlide extends StatelessWidget {
                         ? AppColors.cardDark.withValues(alpha: 0.7)
                         : Colors.white.withValues(alpha: 0.7),
                     border: Border.all(
-                      color: AppColors.accentGold.withValues(alpha: 0.2),
+                      color: AppColors.secondary.withValues(alpha: 0.2),
                       width: 2,
                     ),
                     boxShadow: [
@@ -636,13 +637,13 @@ class _AstroCompatibilitySlide extends StatelessWidget {
                       const Icon(
                         Icons.auto_awesome,
                         size: 36,
-                        color: AppColors.accentGold,
+                        color: AppColors.secondary,
                       ),
                       const SizedBox(height: 6),
                       Text(
                         l10n.onboardingAstroSync,
                         style: AppTypography.labelSmall.copyWith(
-                          color: AppColors.accentGold,
+                          color: AppColors.secondary,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 1.5,
                         ),
@@ -700,7 +701,7 @@ class _AstroCompatibilitySlide extends StatelessWidget {
 
           const SizedBox(height: 40),
 
-          // Title with gold highlight
+          // Title with magenta highlight
           Text.rich(
             TextSpan(
               children: [
@@ -913,14 +914,12 @@ class _GlassPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 16, color: AppColors.accentGold),
+              Icon(icon, size: 16, color: AppColors.secondary),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: AppTypography.labelMedium.copyWith(
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.primary,
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.primary,
                   fontWeight: FontWeight.w600,
                 ),
               ),

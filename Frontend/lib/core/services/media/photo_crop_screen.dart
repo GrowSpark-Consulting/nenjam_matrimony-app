@@ -374,9 +374,7 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircularProgressIndicator(
-                      color: AppColors.accentGold,
-                    ),
+                    const CircularProgressIndicator(color: AppColors.secondary),
                     const SizedBox(height: 12),
                     Text(
                       AppLocalizations.of(context).commonProcessing,

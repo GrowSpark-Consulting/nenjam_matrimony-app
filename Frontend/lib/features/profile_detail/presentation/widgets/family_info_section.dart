@@ -28,18 +28,36 @@ class FamilyInfoSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(AppLocalizations.of(context).profileDetailFamilyInfo, style: AppTypography.titleLarge),
+          Text(
+            AppLocalizations.of(context).profileDetailFamilyInfo,
+            style: AppTypography.titleLarge,
+          ),
           const SizedBox(height: AppSpacing.base),
           Wrap(
             spacing: AppSpacing.base,
             runSpacing: AppSpacing.base,
             children: [
               if (family.familyType.isNotEmpty)
-                _Tile(label: AppLocalizations.of(context).registrationFamilyTypeLabel, value: family.familyType),
+                _Tile(
+                  label: AppLocalizations.of(
+                    context,
+                  ).registrationFamilyTypeLabel,
+                  value: family.familyType,
+                ),
               if (family.familyValues.isNotEmpty)
-                _Tile(label: AppLocalizations.of(context).registrationFamilyValuesLabel, value: family.familyValues),
+                _Tile(
+                  label: AppLocalizations.of(
+                    context,
+                  ).registrationFamilyValuesLabel,
+                  value: family.familyValues,
+                ),
               if (family.familyStatus.isNotEmpty)
-                _Tile(label: AppLocalizations.of(context).registrationFamilyStatusLabel, value: family.familyStatus),
+                _Tile(
+                  label: AppLocalizations.of(
+                    context,
+                  ).registrationFamilyStatusLabel,
+                  value: family.familyStatus,
+                ),
             ],
           ),
           const SizedBox(height: AppSpacing.base),
@@ -73,14 +91,18 @@ class FamilyInfoSection extends StatelessWidget {
                 const Icon(
                   Icons.groups_rounded,
                   size: 20,
-                  color: AppColors.accentGold,
+                  color: AppColors.secondary,
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     AppLocalizations.of(context).profileDetailSiblingsLine(
-                      AppLocalizations.of(context).profileDetailSiblingsBrothers(family.brothers),
-                      AppLocalizations.of(context).profileDetailSiblingsSisters(family.sisters),
+                      AppLocalizations.of(
+                        context,
+                      ).profileDetailSiblingsBrothers(family.brothers),
+                      AppLocalizations.of(
+                        context,
+                      ).profileDetailSiblingsSisters(family.sisters),
                     ),
                     style: AppTypography.bodyMedium.copyWith(
                       color: textSecondary,

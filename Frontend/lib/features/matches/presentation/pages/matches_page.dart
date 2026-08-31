@@ -10,9 +10,9 @@ import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/tokens/app_animation_tokens.dart';
 import '../../../../core/theme/tokens/app_touch_target.dart';
-import '../../../../core/widgets/avatars/gender_placeholder.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../core/widgets/cards/profile_hero_content.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../../interests/domain/repositories/interests_repository.dart';
 import '../../../interests/presentation/providers/interests_provider.dart';
@@ -23,7 +23,6 @@ import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
 import '../providers/matches_providers.dart';
 import '../providers/reel_feed_provider.dart';
-import '../../../../core/widgets/images/sized_network_photo.dart';
 
 /// Nenjam Matches — Instagram Reels-style vertical swipeable feed.
 ///
@@ -34,7 +33,7 @@ import '../../../../core/widgets/images/sized_network_photo.dart';
 ///     Matches category selector + avatar
 ///   • Right-side action column: ❤ Interested / ☆ Shortlist / ↗ Share / ⚑ More
 ///     (opens the Report User / Block User sheet)
-///   • Bottom info: gold AI Match pill, name + profession, glass chips
+///   • Bottom info: magenta AI Match pill, name + profession, glass chips
 ///   • Double-tap anywhere → heart burst animation
 class MatchesPage extends ConsumerStatefulWidget {
   const MatchesPage({super.key});
@@ -89,9 +88,7 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
         },
         loading: () => const _ReelLoading(),
         error: (_, __) => Center(
-          child: NmErrorWidget(
-            onRetry: () => ref.invalidate(reelFeedProvider),
-          ),
+          child: NmErrorWidget(onRetry: () => ref.invalidate(reelFeedProvider)),
         ),
       ),
     );
@@ -169,7 +166,7 @@ class _ReelHeader extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0x99000000), Colors.transparent],
+          colors: [AppColors.photoScrimVeil, Colors.transparent],
         ),
       ),
       // Category selector: Search / New / Daily / My Matches / Near Me /
@@ -275,7 +272,7 @@ class _MatchesCategoryBarState extends ConsumerState<_MatchesCategoryBar> {
   }
 }
 
-/// Small on-photo category pill with selected (gold gradient) / unselected
+/// Small on-photo category pill with selected (magenta gradient) / unselected
 /// (frosted-glass) states — mirrors the Discover reel's tab styling so both
 /// reel-style feeds share the same "Nenjam" on-photo selector language.
 class _MatchesCategoryChip extends StatelessWidget {
@@ -309,7 +306,7 @@ class _MatchesCategoryChip extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
                 gradient: isSelected
-                    ? AppGradients.gold
+                    ? AppGradients.accent
                     : AppGradients.cardGlass,
                 borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
                 border: isSelected
@@ -323,7 +320,9 @@ class _MatchesCategoryChip extends StatelessWidget {
                     Icon(
                       icon,
                       size: 15,
-                      color: isSelected ? AppColors.textOnGold : Colors.white,
+                      color: isSelected
+                          ? AppColors.textOnSecondary
+                          : Colors.white,
                     ),
                     const SizedBox(width: 4),
                   ],
@@ -331,7 +330,9 @@ class _MatchesCategoryChip extends StatelessWidget {
                     duration: AppAnimationTokens.normal,
                     curve: AppAnimationTokens.luxuryCurve,
                     style: AppTypography.labelSmall.copyWith(
-                      color: isSelected ? AppColors.textOnGold : Colors.white,
+                      color: isSelected
+                          ? AppColors.textOnSecondary
+                          : Colors.white,
                       fontWeight: isSelected
                           ? FontWeight.w700
                           : FontWeight.w500,
@@ -422,7 +423,9 @@ class _ReelCardState extends ConsumerState<_ReelCard>
 
   Future<void> _sendInterest() async {
     if (_isSending) return;
-    final status = ref.read(interestRelationshipStatusProvider(widget.profile.id));
+    final status = ref.read(
+      interestRelationshipStatusProvider(widget.profile.id),
+    );
     if (status != InterestRelationshipStatus.none &&
         status != InterestRelationshipStatus.cancelled) {
       return;
@@ -441,7 +444,9 @@ class _ReelCardState extends ConsumerState<_ReelCard>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final status = ref.watch(interestRelationshipStatusProvider(widget.profile.id));
+    final status = ref.watch(
+      interestRelationshipStatusProvider(widget.profile.id),
+    );
     final settled = interestButtonIsSettled(status);
     final shortlisted = ref.watch(isShortlistedProvider(widget.profile.id));
 
@@ -467,27 +472,14 @@ class _ReelCardState extends ConsumerState<_ReelCard>
             // ── Full-bleed photo ─────────────────────────────────────
             Hero(
               tag: 'profile-photo-matches-${widget.profile.id}',
-              child: _ProfilePhoto(
+              child: NmProfileHeroPhoto(
                 photoUrls: widget.profile.photoUrls,
                 gender: widget.profile.gender,
               ),
             ),
 
             // ── Gradient: top dark + bottom dark, clear middle ───────
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0x66000000), // black/40
-                    Colors.transparent,
-                    Color(0xE6000000), // black/90
-                  ],
-                  stops: [0.0, 0.45, 1.0],
-                ),
-              ),
-            ),
+            const NmProfileHeroScrim(),
 
             // ── Right action column ──────────────────────────────────
             Positioned(
@@ -495,10 +487,14 @@ class _ReelCardState extends ConsumerState<_ReelCard>
               bottom: 48,
               child: _ActionColumn(
                 interested: settled,
-                interestedLabel: interestButtonLabel(status, AppLocalizations.of(context)),
+                interestedLabel: interestButtonLabel(
+                  status,
+                  AppLocalizations.of(context),
+                ),
                 shortlisted: shortlisted,
                 onInterested: _sendInterest,
-                onShortlist: () => handleShortlistToggle(context, ref, widget.profile),
+                onShortlist: () =>
+                    handleShortlistToggle(context, ref, widget.profile),
                 onShare: () {},
                 onMore: () => showSafetyActionSheet(
                   context,
@@ -506,7 +502,9 @@ class _ReelCardState extends ConsumerState<_ReelCard>
                   userId: widget.profile.id,
                   userName: widget.profile.name,
                   onBlocked: () {
-                    ref.read(reelFeedProvider.notifier).removeProfile(widget.profile.id);
+                    ref
+                        .read(reelFeedProvider.notifier)
+                        .removeProfile(widget.profile.id);
                     // So this member shows up next time the Blocked Users
                     // list (Privacy & Safety) is opened, even if it was
                     // already loaded before this block happened.
@@ -517,17 +515,9 @@ class _ReelCardState extends ConsumerState<_ReelCard>
             ),
 
             // ── Bottom info area ─────────────────────────────────────
-            Positioned(
-              bottom: 16,
-              left: 0,
-              right: 80, // leave space for action column
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.base,
-                ),
-                child: _ProfileInfo(profile: widget.profile),
-              ),
-            ),
+            // Same widget Profile Detail's hero uses; the gutter it leaves on
+            // the right is the space the action column above occupies.
+            NmProfileHeroOverlay(profile: widget.profile),
 
             // ── Heart burst animation ────────────────────────────────
             if (_showHeart)
@@ -543,7 +533,7 @@ class _ReelCardState extends ConsumerState<_ReelCard>
                         scale: _heartScale.value,
                         child: const Icon(
                           Icons.favorite_rounded,
-                          color: Color(0xFFFED977),
+                          color: AppColors.accentLight,
                           size: 100,
                         ),
                       ),
@@ -592,17 +582,19 @@ class _ActionColumn extends StatelessWidget {
           icon: Icons.favorite_rounded,
           label: interestedLabel,
           active: interested,
-          activeColor: const Color(0xFFFED977),
+          activeColor: AppColors.accentLight,
           onTap: onInterested,
         ),
         const SizedBox(height: 24),
         _ActionButton(
           // Bookmark (not star) to match Discover/Search's icon for the
           // same concept — filled once shortlisted, outlined otherwise.
-          icon: shortlisted ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+          icon: shortlisted
+              ? Icons.bookmark_rounded
+              : Icons.bookmark_border_rounded,
           label: l10n.profileCardShortlist,
           active: shortlisted,
-          activeColor: const Color(0xFFFED977),
+          activeColor: AppColors.accentLight,
           onTap: onShortlist,
         ),
         const SizedBox(height: 24),
@@ -693,201 +685,6 @@ class _ActionButton extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Bottom profile info
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ProfileInfo extends StatelessWidget {
-  final DiscoveryProfileEntity profile;
-
-  const _ProfileInfo({required this.profile});
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // AI Match badge
-        if (profile.compatibility.aiMatchPercent > 0)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xE6FED977), // secondary-container/90
-              borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFED977).withValues(alpha: 0.4),
-                  blurRadius: 15,
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.auto_awesome_rounded,
-                  size: 14,
-                  color: Color(0xFF785D00), // on-secondary-container
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    '${profile.compatibility.aiMatchPercent}% ${l10n.discoverStatMatchLabel}',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: const Color(0xFF785D00),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-        const SizedBox(height: 12),
-
-        // Name, age
-        Text(
-          '${profile.name}, ${profile.age}',
-          style: AppTypography.displaySmall.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 36,
-            height: 1.0,
-            shadows: const [Shadow(blurRadius: 12, color: Colors.black54)],
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-
-        const SizedBox(height: 4),
-
-        // Profession
-        if (profile.profession.isNotEmpty)
-          Text(
-            profile.profession,
-            style: AppTypography.bodyLarge.copyWith(
-              color: Colors.white.withValues(alpha: 0.9),
-              fontWeight: FontWeight.w600,
-              shadows: const [Shadow(blurRadius: 8, color: Colors.black45)],
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-
-        const SizedBox(height: 12),
-
-        // Glass chip pills
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          children: _chips(
-            profile,
-          ).map((chip) => _GlassChip(label: chip.$1, icon: chip.$2)).toList(),
-        ),
-      ],
-    );
-  }
-
-  List<(String, IconData?)> _chips(DiscoveryProfileEntity p) {
-    final chips = <(String, IconData?)>[];
-    if (p.location.isNotEmpty) chips.add((p.location, null));
-    if (p.height.isNotEmpty) chips.add((p.height, Icons.height_rounded));
-    if (p.religion.isNotEmpty) chips.add((p.religion, null));
-    if (p.community.isNotEmpty) chips.add((p.community, null));
-    if (p.motherTongue.isNotEmpty) {
-      chips.add((p.motherTongue, Icons.translate_rounded));
-    }
-    if (p.education.isNotEmpty) chips.add((p.education, Icons.school_rounded));
-    if (p.maritalStatus.isNotEmpty) {
-      chips.add((p.maritalStatus, Icons.favorite_border_rounded));
-    }
-    if (p.diet.isNotEmpty) chips.add((p.diet, Icons.restaurant_rounded));
-    return chips.take(6).toList();
-  }
-}
-
-class _GlassChip extends StatelessWidget {
-  final String label;
-  final IconData? icon;
-
-  const _GlassChip({required this.label, this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 13, color: Colors.white),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            label,
-            style: AppTypography.labelSmall.copyWith(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Profile photo
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ProfilePhoto extends StatelessWidget {
-  final List<String> photoUrls;
-  final String gender;
-
-  const _ProfilePhoto({required this.photoUrls, this.gender = ''});
-
-  @override
-  Widget build(BuildContext context) {
-    if (photoUrls.isEmpty) return _placeholder();
-    final url = photoUrls.first;
-
-    if (url.startsWith('http')) {
-      return NmSizedNetworkPhoto(
-        url: url,
-        errorBuilder: (_, __, ___) => _placeholder(),
-        loadingBuilder: (_, child, progress) =>
-            progress == null ? child : _placeholder(),
-      );
-    }
-    return Image.asset(
-      url,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => _placeholder(),
-    );
-  }
-
-  Widget _placeholder() => NmGenderPlaceholder(
-    gender: gender,
-    iconSize: 72,
-    backgroundColor: AppColors.primaryDark,
-    iconColor: const Color(0xFF374668),
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Keep-alive page wrapper
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -922,7 +719,7 @@ class _ReelLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: CircularProgressIndicator(color: Color(0xFFFED977)),
+      child: CircularProgressIndicator(color: AppColors.accentLight),
     );
   }
 }
@@ -943,7 +740,7 @@ class _EmptyReel extends StatelessWidget {
             const Icon(
               Icons.favorite_border_rounded,
               size: 64,
-              color: Color(0xFFFED977),
+              color: AppColors.accentLight,
             ),
             const SizedBox(height: 16),
             Text(

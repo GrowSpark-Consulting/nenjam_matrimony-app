@@ -1,24 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nenjam_matrimony/core/widgets/avatars/gender_placeholder.dart';
+import 'package:nenjam_matrimony/core/widgets/cards/profile_hero_content.dart';
+import 'package:nenjam_matrimony/core/widgets/images/sized_network_photo.dart';
 import 'package:nenjam_matrimony/features/discover/domain/entities/compatibility_entity.dart';
 import 'package:nenjam_matrimony/features/discover/domain/entities/discovery_profile_entity.dart';
 import 'package:nenjam_matrimony/features/profile/presentation/widgets/partner_preference_card.dart';
-import 'package:nenjam_matrimony/features/profile/presentation/widgets/photo_gallery_card.dart';
 import 'package:nenjam_matrimony/features/profile_detail/presentation/pages/profile_detail_page.dart';
 import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/about_section.dart';
+import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/basic_information_section.dart';
+import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/compatibility_card_section.dart';
 import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/family_info_section.dart';
 import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/horoscope_section.dart';
 import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/lifestyle_section.dart';
 import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/profile_detail_bottom_action_bar.dart';
 import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/profile_detail_section_tab_bar.dart';
+import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/profile_detail_hero_app_bar.dart';
+import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/profile_photo_gallery_section.dart';
 import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/similar_profiles_section.dart';
-import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/timeline_section.dart';
 import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/verification_trust_section.dart';
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 
-DiscoveryProfileEntity _buildProfile() {
-  return const DiscoveryProfileEntity(
+DiscoveryProfileEntity _buildProfile({List<String> photoUrls = const []}) {
+  return DiscoveryProfileEntity(
+    photoUrls: photoUrls,
     id: 'diag-1',
     matrimonyId: 'NM123456',
     name: 'Diagnostic Tester With A Fairly Long Name',
@@ -26,7 +33,6 @@ DiscoveryProfileEntity _buildProfile() {
     location: 'Chennai, Tamil Nadu, India',
     profession: 'Senior Software Engineer',
     education: 'M.Tech, Computer Science',
-    photoUrls: [],
     isVerified: true,
     isPremium: true,
     isPsychologyCompleted: true,
@@ -34,7 +40,7 @@ DiscoveryProfileEntity _buildProfile() {
     horoscopeAvailable: true,
     photoProtected: false,
     phoneVerified: true,
-    compatibility: CompatibilityEntity(
+    compatibility: const CompatibilityEntity(
       aiMatchPercent: 88,
       astroMatchPercent: 76,
       psychologyMatchPercent: 81,
@@ -45,7 +51,7 @@ DiscoveryProfileEntity _buildProfile() {
       valuesMatchPercent: 88,
       goalsMatchPercent: 80,
     ),
-    tags: [],
+    tags: const [],
     religion: 'Hindu',
     caste: 'Iyer',
     community: 'Tamil',
@@ -62,12 +68,76 @@ DiscoveryProfileEntity _buildProfile() {
     company: 'Big Tech Corp',
     annualIncome: '25-30 Lakhs',
     bio: 'Loves travel and books.',
-    languages: ['Tamil', 'English', 'Hindi'],
-    hobbies: ['Reading', 'Travel'],
+    languages: const ['Tamil', 'English', 'Hindi'],
+    hobbies: const ['Reading', 'Travel'],
   );
 }
 
-Future<void> _pumpPage(WidgetTester tester, Size size) async {
+/// A profile whose field *lengths* match a realistic one, for the tests that
+/// measure how the hero chips wrap.
+///
+/// `_buildProfile()` deliberately carries oversized strings to stress
+/// overflow handling, and widget tests render with a fallback font whose
+/// glyphs are square — far wider than the Inter face the app ships — so
+/// counting wrapped rows with those values measures the test font, not the
+/// layout. These values mirror the design reference.
+DiscoveryProfileEntity _buildTypicalProfile({List<String> photoUrls = const []}) {
+  final base = _buildProfile(photoUrls: photoUrls);
+  return DiscoveryProfileEntity(
+    id: base.id,
+    matrimonyId: base.matrimonyId,
+    name: 'Raja Vijayan',
+    age: 22,
+    location: 'Chennai, Tamil Nadu',
+    profession: 'Software Engineer',
+    education: 'B.E/B.Tech',
+    photoUrls: photoUrls,
+    isVerified: base.isVerified,
+    compatibility: base.compatibility,
+    religion: 'Hindu',
+    caste: base.caste,
+    community: 'Tamil',
+    height: "5'3\"",
+    gender: base.gender,
+    maritalStatus: base.maritalStatus,
+    motherTongue: 'Tamil',
+    bio: base.bio,
+  );
+}
+
+/// A name/age override for the long-name case, leaving every other field of
+/// the profile alone.
+extension on DiscoveryProfileEntity {
+  DiscoveryProfileEntity copyName(String newName, int newAge) {
+    return DiscoveryProfileEntity(
+      id: id,
+      matrimonyId: matrimonyId,
+      name: newName,
+      age: newAge,
+      location: location,
+      profession: profession,
+      education: education,
+      photoUrls: photoUrls,
+      isVerified: isVerified,
+      compatibility: compatibility,
+      religion: religion,
+      caste: caste,
+      community: community,
+      height: height,
+      gender: gender,
+      maritalStatus: maritalStatus,
+      motherTongue: motherTongue,
+      bio: bio,
+    );
+  }
+}
+
+Future<void> _pumpPage(
+  WidgetTester tester,
+  Size size, {
+  List<String> photoUrls = const [],
+  DiscoveryProfileEntity? profile,
+}) async {
   await tester.binding.setSurfaceSize(size);
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -90,7 +160,9 @@ Future<void> _pumpPage(WidgetTester tester, Size size) async {
           highlightColor: Colors.transparent,
           splashColor: Colors.transparent,
         ),
-        home: ProfileDetailPage(profile: _buildProfile()),
+        home: ProfileDetailPage(
+          profile: profile ?? _buildProfile(photoUrls: photoUrls),
+        ),
       ),
     ),
   );
@@ -158,6 +230,18 @@ Finder _tabLabel(String label) => find.descendant(
       matching: find.text(label),
     );
 
+/// Scrolls down until the section navigation has been reached and pinned.
+///
+/// It now lives *below* the photo gallery instead of directly under the hero,
+/// so unlike before it is not built at all when the page is at rest — every
+/// test that needs to touch it has to bring it into view first.
+Future<void> _revealTabBar(WidgetTester tester, {int maxDrags = 20}) async {
+  for (var i = 0; i < maxDrags; i++) {
+    if (isVisible(tester, find.byType(ProfileDetailSectionTabBar))) return;
+    await _dragPage(tester, -300);
+  }
+}
+
 Future<void> _dragPage(WidgetTester tester, double dy) async {
   await tester.drag(
     find.byType(CustomScrollView).first,
@@ -192,6 +276,7 @@ Future<bool> _scrollToBottom(WidgetTester tester, {int maxDrags = 40}) async {
 /// the right edge has its centre outside the 375px screen, so the tap lands
 /// on nothing and silently does nothing.
 Future<Finder> _revealTab(WidgetTester tester, String label) async {
+  await _revealTabBar(tester);
   final target = _tabLabel(label);
   final viewport = tester.view.physicalSize / tester.view.devicePixelRatio;
 
@@ -257,13 +342,14 @@ void main() {
       // way down, so they are recorded as the page scrolls past them.
       final sections = <String, Finder>{
         'About': find.byType(AboutSection),
-        'Photo Gallery': find.byType(NmPhotoGalleryCard),
+        'Basic Information': find.byType(BasicInformationSection),
+        'Photo Gallery': find.byType(ProfilePhotoGallerySection),
         'Family Information': find.byType(FamilyInfoSection),
         'Lifestyle': find.byType(LifestyleSection),
         'Horoscope': find.byType(HoroscopeSection),
+        'Compatibility': find.byType(CompatibilityCardSection),
         'Partner Preferences': find.byType(NmPartnerPreferenceCard),
         'Verification': find.byType(VerificationTrustSection),
-        'Timeline': find.byType(TimelineSection),
         'Similar Profiles': find.byType(SimilarProfilesSection),
       };
 
@@ -298,14 +384,16 @@ void main() {
     testWidgets('a vertical drag started ON the pinned tab bar still scrolls the page',
         (tester) async {
       await _pumpPage(tester, const Size(375, 812));
+      await _revealTabBar(tester);
 
-      // The "Lifestyle" *tab* is on screen from the start; the Lifestyle
-      // *section* is far below the fold. Asserting on the section's widget
-      // type keeps those two apart.
+      // The "Lifestyle" *tab* is on screen once the navigation is reached;
+      // the Lifestyle *section* is still below the fold. Asserting on the
+      // section's widget type keeps those two apart.
       expect(
         isVisible(tester, _tabLabel('Lifestyle')),
         isTrue,
-        reason: 'the Lifestyle tab should be visible in the tab bar at rest',
+        reason: 'the Lifestyle tab should be visible once the navigation is '
+            'pinned',
       );
       expect(
         isVisible(tester, find.byType(LifestyleSection)),
@@ -314,7 +402,7 @@ void main() {
       );
 
       final position = _mainScrollable(tester).position;
-      expect(position.pixels, 0.0, reason: 'page starts at the top');
+      final startPixels = position.pixels;
 
       final tabBarCenter = tester.getCenter(find.byType(ProfileDetailSectionTabBar));
       await tester.timedDragFrom(
@@ -332,7 +420,7 @@ void main() {
       // carries far enough to sail straight past it.
       expect(
         position.pixels,
-        greaterThan(100.0),
+        greaterThan(startPixels + 100.0),
         reason: 'the horizontal tab-bar ListView must not swallow a vertical '
             'drag meant for the page',
       );
@@ -354,29 +442,32 @@ void main() {
       await _pumpPage(tester, const Size(375, 812));
 
       await _scrollToBottom(tester);
+      // Settle first: the hero toolbar now collapses to zero height, so the
+      // tab bar pins at the very top of the viewport rather than 56px down,
+      // and a ballistic frame still in flight reads as a small negative top.
+      await _settle(tester);
 
       // Pinned slivers must still be painted (not scrolled fully offscreen)
-      // once we're at the very bottom of the list.
+      // once we are at the very bottom of the list.
       expect(find.byType(ProfileDetailSectionTabBar), findsOneWidget);
       final tabBarRect = tester.getRect(find.byType(ProfileDetailSectionTabBar));
-      expect(tabBarRect.top, greaterThanOrEqualTo(0));
+      expect(tabBarRect.top, greaterThanOrEqualTo(-0.5));
       expect(tabBarRect.top, lessThan(200), reason: 'tab bar should be pinned near the top');
     });
   });
 
   group('Tab-tap scrollspy', () {
     // Tab label -> the section widget that tab scrolls to. Labels are read
-    // from the live UI (`_ProfileDetailScrollViewState._tabLabels`); all
-    // eight still exist.
+    // from the live UI (`_ProfileDetailScrollViewState._tabLabels`) — only
+    // the six sections that live *below* the navigation are addressable by
+    // it; About and Photos now sit above it and are reached by scrolling.
     final tabsAndSections = <String, Finder>{
-      'About': find.byType(AboutSection),
-      'Photos': find.byType(NmPhotoGalleryCard),
       'Family': find.byType(FamilyInfoSection),
       'Lifestyle': find.byType(LifestyleSection),
       'Horoscope': find.byType(HoroscopeSection),
+      'Compatibility': find.byType(CompatibilityCardSection),
       'Preferences': find.byType(NmPartnerPreferenceCard),
       'Verification': find.byType(VerificationTrustSection),
-      'Timeline': find.byType(TimelineSection),
     };
 
     for (final entry in tabsAndSections.entries) {
@@ -404,23 +495,679 @@ void main() {
     }
   });
 
-  group('Bottom action bar', () {
-    testWidgets('does not cover the last section once scrolled to the bottom', (tester) async {
+  group('Full-screen photo hero', () {
+    final photos = [
+      for (var i = 0; i < 9; i++) 'https://example.invalid/photo-$i.jpg',
+    ];
+
+    const sizes = <String, Size>{
+      'small phone': Size(320, 568),
+      'normal phone': Size(375, 812),
+      'large phone': Size(430, 932),
+    };
+
+    sizes.forEach((label, size) {
+      testWidgets('fills the first viewport on a $label', (tester) async {
+        await _pumpPage(tester, size, photoUrls: photos);
+
+        final heroRect = tester.getRect(find.byType(FlexibleSpaceBar));
+        expect(
+          heroRect.height,
+          greaterThan(size.height * 0.7),
+          reason: 'the photo hero should own essentially the whole first '
+              'viewport at $label, not a fraction of it',
+        );
+        expect(heroRect.width, closeTo(size.width, 1.0),
+            reason: 'the hero must be full-bleed horizontally');
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    testWidgets('is built from the shared Matches profile presentation',
+        (tester) async {
+      await _pumpPage(tester, const Size(375, 812), photoUrls: photos);
+
+      // The point of the extraction: Profile Detail must render the photo,
+      // scrim and identity block with the very widgets the Matches reel card
+      // uses, so the two screens cannot drift apart. Asserting on the widget
+      // types is what makes a divergent re-implementation fail here.
+      final hero = find.byType(ProfileDetailHeroAppBar);
+      expect(
+        find.descendant(of: hero, matching: find.byType(NmProfileHeroPhoto)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: hero, matching: find.byType(NmProfileHeroScrim)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: hero, matching: find.byType(NmProfileHeroInfo)),
+        findsOneWidget,
+      );
+      // Including the positioning strategy, not just the block: the overlay
+      // is what sets the block width and its offset from the bottom.
+      expect(
+        find.descendant(of: hero, matching: find.byType(NmProfileHeroOverlay)),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('feeds the shared info block the profile it is showing',
+        (tester) async {
+      final profile = _buildTypicalProfile(photoUrls: photos);
+      await _pumpPage(tester, const Size(375, 812), profile: profile);
+
+      final info = tester.widget<NmProfileHeroInfo>(
+        find
+            .descendant(
+              of: find.byType(ProfileDetailHeroAppBar),
+              matching: find.byType(NmProfileHeroInfo),
+            )
+            .first,
+      );
+      expect(info.profile.id, profile.id);
+      expect(info.profile.name, 'Raja Vijayan');
+
+      // And it renders that data, rather than the block being present but
+      // fed something else.
+      final hero = find.byType(ProfileDetailHeroAppBar);
+      expect(
+        find.descendant(of: hero, matching: find.text('Raja Vijayan, 22')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: hero, matching: find.text('Software Engineer')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: hero, matching: find.text('Chennai, Tamil Nadu')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('shows the primary photo full-bleed with the shared crop',
+        (tester) async {
+      await _pumpPage(tester, const Size(375, 812), photoUrls: photos);
+
+      final photo = tester.widget<NmSizedNetworkPhoto>(
+        find
+            .descendant(
+              of: find.byType(ProfileDetailHeroAppBar),
+              matching: find.byType(NmSizedNetworkPhoto),
+            )
+            .first,
+      );
+      expect(photo.url, photos.first);
+      // Whatever the shared component chooses, this screen must not override
+      // it with a crop of its own.
+      expect(photo.fit, BoxFit.cover);
+      expect(photo.alignment, Alignment.center);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('borrows none of the Matches action controls', (tester) async {
+      await _pumpPage(tester, const Size(375, 812), photoUrls: photos);
+
+      final hero = find.byType(ProfileDetailHeroAppBar);
+
+      // Matches' right-hand action column, and the hero's own former
+      // back/bookmark/share/more cluster.
+      for (final icon in const [
+        Icons.arrow_back_rounded,
+        Icons.bookmark_rounded,
+        Icons.bookmark_border_rounded,
+        Icons.ios_share_rounded,
+        Icons.more_vert_rounded,
+        Icons.favorite_rounded,
+      ]) {
+        expect(
+          find.descendant(of: hero, matching: find.byIcon(icon)),
+          findsNothing,
+          reason: 'the hero must not draw any action controls',
+        );
+      }
+      expect(
+        find.descendant(of: hero, matching: find.byType(InkWell)),
+        findsNothing,
+        reason: 'no button placeholders should remain in the hero',
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    sizes.forEach((label, size) {
+      testWidgets('lays the identity block out without overflow on a $label',
+          (tester) async {
+        await _pumpPage(
+          tester,
+          size,
+          profile: _buildTypicalProfile(photoUrls: photos),
+        );
+
+        final infoRect = tester.getRect(
+          find
+              .descendant(
+                of: find.byType(ProfileDetailHeroAppBar),
+                matching: find.byType(NmProfileHeroInfo),
+              )
+              .first,
+        );
+        expect(infoRect.left, greaterThanOrEqualTo(0.0));
+        expect(infoRect.right, lessThanOrEqualTo(size.width));
+        expect(
+          infoRect.bottom,
+          lessThanOrEqualTo(size.height),
+          reason: 'the identity block ran off the bottom at $label',
+        );
+        // Same bottom gap the reel card leaves (plus the device inset,
+        // which is zero in tests) but the FULL width: the reel's 80px
+        // right-hand gutter exists for its action column, and there is no
+        // action column here.
+        expect(
+          size.height - infoRect.bottom,
+          closeTo(NmProfileHeroOverlay.bottomGap, 1.0),
+        );
+        expect(
+          size.width - infoRect.right,
+          closeTo(16.0, 1.0),
+          reason: 'Profile Detail must not reserve the action-column gutter',
+        );
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    testWidgets('shows a long name in full rather than ellipsizing',
+        (tester) async {
+      // The reel card ellipsizes a long name to keep its card tidy; on the
+      // screen devoted to one person that is not acceptable.
+      final longName = _buildTypicalProfile(photoUrls: photos).copyName(
+        'Aravind Krishnamoorthy',
+        25,
+      );
+      await _pumpPage(tester, const Size(375, 812), profile: longName);
+
+      final hero = find.byType(ProfileDetailHeroAppBar);
+      final nameFinder =
+          find.descendant(of: hero, matching: find.text('Aravind Krishnamoorthy, 25'));
+      expect(
+        nameFinder,
+        findsOneWidget,
+        reason: 'the whole name must be rendered, not a truncation of it',
+      );
+
+      final name = tester.widget<Text>(nameFinder.first);
+      expect(
+        name.maxLines,
+        greaterThanOrEqualTo(2),
+        reason: 'a long name must be allowed to wrap rather than truncate',
+      );
+
+      // And the rendered text must not have been visually truncated.
+      final painted = tester.renderObject<RenderParagraph>(nameFinder.first);
+      expect(
+        painted.didExceedMaxLines,
+        isFalse,
+        reason: 'the name was clipped to its maxLines and shows an ellipsis',
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    sizes.forEach((label, size) {
+      testWidgets('keeps every metadata chip fully on screen at $label',
+          (tester) async {
+        await _pumpPage(
+          tester,
+          size,
+          profile: _buildTypicalProfile(photoUrls: photos),
+        );
+
+        final hero = find.byType(ProfileDetailHeroAppBar);
+        // The last chip in priority order is the one that would fall off the
+        // bottom if the block were hung from a fixed offset.
+        for (final label in const [
+          'Chennai, Tamil Nadu',
+          "5'3\"",
+          'Hindu',
+          'Tamil',
+          'B.E/B.Tech',
+        ]) {
+          final finder = find.descendant(of: hero, matching: find.text(label));
+          if (!tester.any(finder)) continue;
+          final rect = tester.getRect(finder.first);
+          expect(rect.bottom, lessThanOrEqualTo(size.height),
+              reason: '"$label" is clipped by the bottom edge');
+          expect(rect.top, greaterThanOrEqualTo(0.0),
+              reason: '"$label" is off the top');
+          expect(rect.right, lessThanOrEqualTo(size.width),
+              reason: '"$label" runs off the right edge');
+        }
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    // Every other test here runs with zero system insets, which is exactly
+    // why the hero could overshoot the viewport unnoticed: SliverAppBar adds
+    // the status-bar inset to expandedHeight itself, so the overshoot is
+    // invisible when that inset is 0. These pump with a real status bar and
+    // navigation bar.
+    group('with real system insets', () {
+      const topInset = 40.0;
+      const bottomInset = 48.0;
+
+      Future<void> pumpInset(WidgetTester tester, Size size) async {
+        tester.view.padding = const FakeViewPadding(
+          top: topInset,
+          bottom: bottomInset,
+        );
+        addTearDown(tester.view.resetPadding);
+        await _pumpPage(
+          tester,
+          size,
+          profile: _buildTypicalProfile(photoUrls: photos),
+        );
+      }
+
+      sizes.forEach((label, size) {
+        testWidgets('the hero is exactly the viewport, never taller, at $label',
+            (tester) async {
+          await pumpInset(tester, size);
+
+          final heroRect = tester.getRect(find.byType(FlexibleSpaceBar));
+          expect(
+            heroRect.bottom,
+            lessThanOrEqualTo(size.height + 0.5),
+            reason: 'the hero box hangs ${heroRect.bottom - size.height}px '
+                'below the viewport at $label — anything bottom-aligned in '
+                'it is clipped by exactly that much',
+          );
+          expect(tester.takeException(), isNull);
+        });
+
+        testWidgets('no chip is clipped or sits under the navigation bar at '
+            '$label', (tester) async {
+          await pumpInset(tester, size);
+
+          final hero = find.byType(ProfileDetailHeroAppBar);
+          final safeBottom = size.height - bottomInset;
+          var checked = 0;
+          for (final chip in const [
+            'Chennai, Tamil Nadu',
+            "5'3\"",
+            'Hindu',
+            'Tamil',
+            'B.E/B.Tech',
+          ]) {
+            final finder = find.descendant(of: hero, matching: find.text(chip));
+            if (!tester.any(finder)) continue;
+            checked++;
+            final rect = tester.getRect(finder.first);
+            expect(
+              rect.bottom,
+              lessThanOrEqualTo(safeBottom),
+              reason: '"$chip" reaches ${rect.bottom}, past the safe-area '
+                  'floor of $safeBottom at $label',
+            );
+          }
+          expect(checked, greaterThan(0), reason: 'no chips were rendered');
+          expect(tester.takeException(), isNull);
+        });
+      });
+
+      testWidgets('leaves breathing room under the last chip row',
+          (tester) async {
+        await pumpInset(tester, const Size(375, 812));
+
+        final infoRect = tester.getRect(
+          find
+              .descendant(
+                of: find.byType(ProfileDetailHeroAppBar),
+                matching: find.byType(NmProfileHeroInfo),
+              )
+              .first,
+        );
+        // The overlay's own 16px gap, measured from the safe-area floor.
+        expect(
+          (812.0 - bottomInset) - infoRect.bottom,
+          closeTo(NmProfileHeroOverlay.bottomGap, 1.0),
+        );
+      });
+    });
+
+    testWidgets('falls back to the plum placeholder when there is no photo',
+        (tester) async {
       await _pumpPage(tester, const Size(375, 812));
 
-      await _scrollToBottom(tester);
+      expect(
+        find.descendant(
+          of: find.byType(ProfileDetailHeroAppBar),
+          matching: find.byType(NmGenderPlaceholder),
+        ),
+        findsOneWidget,
+        reason: 'a member with no photo still gets a branded hero',
+      );
+      expect(tester.takeException(), isNull);
+    });
 
-      expect(find.byType(ProfileDetailBottomActionBar), findsOneWidget);
-      expect(find.byType(SimilarProfilesSection), findsOneWidget);
-
-      final actionBarTop = tester.getRect(find.byType(ProfileDetailBottomActionBar)).top;
-      final lastSectionBottom = tester.getRect(find.byType(SimilarProfilesSection)).bottom;
+    testWidgets('About is the first section revealed by a swipe', (tester) async {
+      await _pumpPage(tester, const Size(375, 812), photoUrls: photos);
 
       expect(
-        lastSectionBottom,
-        lessThanOrEqualTo(actionBarTop + 1.0),
-        reason: 'the bottom action bar must not overlap the last scrollable section',
+        isVisible(tester, find.byType(AboutSection)),
+        isFalse,
+        reason: 'nothing but the photo should share the first viewport',
       );
+
+      await _dragPage(tester, -812);
+      await _settle(tester);
+
+      expect(
+        isVisible(tester, find.byType(AboutSection)),
+        isTrue,
+        reason: 'About should be what the first swipe reveals',
+      );
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Scroll discovery cue', () {
+    final photos = [
+      for (var i = 0; i < 9; i++) 'https://example.invalid/photo-$i.jpg',
+    ];
+
+    const sizes = <String, Size>{
+      'small phone': Size(320, 568),
+      'normal phone': Size(375, 812),
+      'large phone': Size(430, 932),
+    };
+
+    /// The cue stays mounted and fades, so "showing" means opacity, not
+    /// presence.
+    double cueOpacity(WidgetTester tester) {
+      final finder = find.descendant(
+        of: find.byType(ProfileDetailHeroAppBar),
+        matching: find.byIcon(Icons.keyboard_arrow_down_rounded),
+      );
+      expect(finder, findsWidgets, reason: 'the chevron cue is not in the tree');
+      final opacity = tester.widget<AnimatedOpacity>(
+        find
+            .ancestor(of: finder.first, matching: find.byType(AnimatedOpacity))
+            .first,
+      );
+      return opacity.opacity;
+    }
+
+    testWidgets('is showing while the page is at the top', (tester) async {
+      await _pumpPage(tester, const Size(375, 812), photoUrls: photos);
+      await _settle(tester);
+
+      expect(cueOpacity(tester), 1.0);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('fades out once the reader scrolls, and stays gone',
+        (tester) async {
+      await _pumpPage(tester, const Size(375, 812), photoUrls: photos);
+      await _settle(tester);
+      expect(cueOpacity(tester), 1.0);
+
+      await _dragPage(tester, -60);
+      await _settle(tester);
+      expect(
+        cueOpacity(tester),
+        0.0,
+        reason: 'the cue has done its job the moment the page moves',
+      );
+
+      await _dragPage(tester, -400);
+      await _settle(tester);
+      expect(cueOpacity(tester), 0.0,
+          reason: 'it must not come back mid-profile');
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('comes back on a full return to the top', (tester) async {
+      await _pumpPage(tester, const Size(375, 812), photoUrls: photos);
+      await _dragPage(tester, -400);
+      await _settle(tester);
+      expect(cueOpacity(tester), 0.0);
+
+      _mainScrollable(tester).position.jumpTo(0);
+      await _settle(tester);
+
+      expect(cueOpacity(tester), 1.0);
+      expect(tester.takeException(), isNull);
+    });
+
+    sizes.forEach((label, size) {
+      testWidgets('never overlaps the profile content at $label',
+          (tester) async {
+        await _pumpPage(
+          tester,
+          size,
+          // The long-name profile: the identity block is at its tallest here,
+          // which is when a free-floating cue would collide with it.
+          profile: _buildTypicalProfile(photoUrls: photos)
+              .copyName('Aravind Krishnamoorthy', 25),
+        );
+        await _settle(tester);
+
+        final hero = find.byType(ProfileDetailHeroAppBar);
+        final cueRect = tester.getRect(
+          find
+              .descendant(
+                of: hero,
+                matching: find.byIcon(Icons.keyboard_arrow_down_rounded),
+              )
+              .first,
+        );
+
+        for (final line in const [
+          'Aravind Krishnamoorthy, 25',
+          'Software Engineer',
+          'Chennai, Tamil Nadu',
+          'B.E/B.Tech',
+        ]) {
+          final finder = find.descendant(of: hero, matching: find.text(line));
+          if (!tester.any(finder)) continue;
+          final rect = tester.getRect(finder.first);
+          expect(
+            cueRect.overlaps(rect),
+            isFalse,
+            reason: 'the cue sits on top of "$line" at $label',
+          );
+          expect(
+            cueRect.bottom,
+            lessThanOrEqualTo(rect.top + 0.5),
+            reason: 'the cue must stay above the profile content at $label',
+          );
+        }
+        expect(cueRect.top, greaterThanOrEqualTo(0.0),
+            reason: 'the cue is off the top of the hero at $label');
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    testWidgets('never swallows a gesture meant for the page', (tester) async {
+      await _pumpPage(tester, const Size(375, 812), photoUrls: photos);
+      await _settle(tester);
+
+      final cueCentre = tester.getCenter(
+        find
+            .descendant(
+              of: find.byType(ProfileDetailHeroAppBar),
+              matching: find.byIcon(Icons.keyboard_arrow_down_rounded),
+            )
+            .first,
+      );
+      final position = _mainScrollable(tester).position;
+      await tester.timedDragFrom(
+        cueCentre,
+        const Offset(0, -300),
+        const Duration(milliseconds: 300),
+      );
+      await _settle(tester);
+
+      expect(
+        position.pixels,
+        greaterThan(100.0),
+        reason: 'a drag started on the cue must still scroll the page',
+      );
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Restructured layout order', () {
+    testWidgets('the section navigation is not on screen at rest — it starts '
+        'after the photo gallery', (tester) async {
+      await _pumpPage(tester, const Size(375, 812));
+
+      expect(
+        isVisible(tester, find.byType(ProfileDetailSectionTabBar)),
+        isFalse,
+        reason: 'the navigation must no longer occupy the top of the profile',
+      );
+    });
+
+    testWidgets('about, basic info and gallery all precede the navigation',
+        (tester) async {
+      await _pumpPage(tester, const Size(375, 812));
+
+      // Scroll until the navigation pins, recording the bottom edge of each
+      // identity section as it goes. Everything above the navigation must
+      // have been laid out at a smaller scroll offset than it.
+      final position = _mainScrollable(tester).position;
+      final seenAt = <String, double>{};
+      final above = <String, Finder>{
+        'about': find.byType(AboutSection),
+        'basicInfo': find.byType(BasicInformationSection),
+        'gallery': find.byType(ProfilePhotoGallerySection),
+      };
+
+      for (var i = 0; i < 20; i++) {
+        above.forEach((name, finder) {
+          if (tester.any(finder)) {
+            seenAt[name] = position.pixels + tester.getRect(finder.first).top;
+          }
+        });
+        if (tester.any(find.byType(ProfileDetailSectionTabBar))) break;
+        await _dragPage(tester, -300);
+      }
+
+      expect(tester.takeException(), isNull);
+      expect(
+        seenAt.keys,
+        containsAll(above.keys),
+        reason: 'every identity section should have been built on the way '
+            'down to the navigation',
+      );
+      expect(seenAt['about']!, lessThan(seenAt['basicInfo']!));
+      expect(seenAt['basicInfo']!, lessThan(seenAt['gallery']!));
+    });
+
+    testWidgets('no timeline presentation remains anywhere on the page',
+        (tester) async {
+      await _pumpPage(tester, const Size(375, 812));
+
+      final seenTimelineText = <String>[];
+      for (var i = 0; i < 40; i++) {
+        if (tester.any(find.text('Timeline'))) seenTimelineText.add('Timeline');
+        final position = _mainScrollable(tester).position;
+        if ((position.pixels - position.maxScrollExtent).abs() < 1.0) break;
+        await _dragPage(tester, -400);
+      }
+
+      expect(
+        seenTimelineText,
+        isEmpty,
+        reason: 'the timeline section and its tab were removed from this page',
+      );
+    });
+  });
+
+  group('Responsive layout with photos', () {
+    // 1 hero photo + 8 additional, so the mosaic renders its full
+    // large + 3-small-row + wide-tile arrangement *and* a "+N" badge.
+    final photos = [
+      for (var i = 0; i < 9; i++) 'https://example.invalid/photo-$i.jpg',
+    ];
+
+    const widths = <String, Size>{
+      'small phone': Size(320, 568),
+      'normal phone': Size(375, 812),
+      'large phone': Size(430, 932),
+    };
+
+    widths.forEach((name, size) {
+      testWidgets('scrolls end to end on a $name without overflow or clipping',
+          (tester) async {
+        await _pumpPage(tester, size, photoUrls: photos);
+        expect(tester.takeException(), isNull,
+            reason: 'no layout exceptions on initial render at $name');
+
+        // The gallery is above the navigation, so it is passed on the way
+        // down — its mosaic laying out is what this width sweep is for.
+        var sawGallery = false;
+        final position = _mainScrollable(tester).position;
+        for (var i = 0; i < 40; i++) {
+          if (tester.any(find.byType(ProfilePhotoGallerySection))) {
+            sawGallery = true;
+          }
+          if ((position.pixels - position.maxScrollExtent).abs() < 1.0) break;
+          await _dragPage(tester, -400);
+        }
+        await _settle(tester);
+
+        expect(sawGallery, isTrue,
+            reason: 'the photo gallery should have been reached at $name');
+        expect(tester.takeException(), isNull,
+            reason: 'no layout exceptions while scrolling at $name');
+      });
+    });
+  });
+
+  group('No fixed action bar', () {
+    final photos = [
+      for (var i = 0; i < 9; i++) 'https://example.invalid/photo-$i.jpg',
+    ];
+
+    testWidgets('is absent at rest and stays absent through a full scroll',
+        (tester) async {
+      await _pumpPage(tester, const Size(375, 812), photoUrls: photos);
+      await _settle(tester);
+
+      expect(
+        find.byType(ProfileDetailBottomActionBar),
+        findsNothing,
+        reason: 'nothing should cover the hero photo in the first viewport',
+      );
+
+      await _scrollToBottom(tester);
+      await _settle(tester);
+
+      expect(
+        find.byType(ProfileDetailBottomActionBar),
+        findsNothing,
+        reason: 'the action bar was removed from this page entirely, not '
+            'merely delayed',
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the last section reaches the bottom of the viewport',
+        (tester) async {
+      await _pumpPage(tester, const Size(375, 812), photoUrls: photos);
+
+      await _scrollToBottom(tester);
+      await _settle(tester);
+
+      expect(find.byType(SimilarProfilesSection), findsOneWidget);
+      expect(
+        tester.getRect(find.byType(SimilarProfilesSection)).bottom,
+        lessThanOrEqualTo(812.0),
+        reason: 'the last section must still fit inside the viewport',
+      );
+      expect(tester.takeException(), isNull);
     });
   });
 

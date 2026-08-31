@@ -23,7 +23,9 @@ class HoroscopeMatchingPage extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context).astroMatchingTitle)),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context).astroMatchingTitle),
+      ),
       body: SafeArea(
         child: summaryAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -34,8 +36,10 @@ class HoroscopeMatchingPage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(AppLocalizations.of(context).astroYourDetailsTitle,
-                    style: AppTypography.titleMedium),
+                Text(
+                  AppLocalizations.of(context).astroYourDetailsTitle,
+                  style: AppTypography.titleMedium,
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 Container(
                   width: double.infinity,
@@ -49,13 +53,24 @@ class HoroscopeMatchingPage extends ConsumerWidget {
                         runSpacing: AppSpacing.sm,
                         children: [
                           if ((summary.rasi ?? '').isNotEmpty)
-                            NmInfoChip(label: AppLocalizations.of(context).astroRasiLabel(summary.rasi!)),
+                            NmInfoChip(
+                              label: AppLocalizations.of(
+                                context,
+                              ).astroRasiLabel(summary.rasi!),
+                            ),
                           if ((summary.nakshatra ?? '').isNotEmpty)
                             NmInfoChip(
-                                label: AppLocalizations.of(context).astroNakshatraLabel(summary.nakshatra!)),
+                              label: AppLocalizations.of(
+                                context,
+                              ).astroNakshatraLabel(summary.nakshatra!),
+                            ),
                           if ((summary.dosham ?? '').isNotEmpty &&
                               summary.dosham != 'NONE')
-                            NmInfoChip(label: AppLocalizations.of(context).astroDoshamLabel(summary.dosham!)),
+                            NmInfoChip(
+                              label: AppLocalizations.of(
+                                context,
+                              ).astroDoshamLabel(summary.dosham!),
+                            ),
                         ],
                       ),
                       if ((summary.birthTime ?? '').isNotEmpty ||
@@ -63,11 +78,18 @@ class HoroscopeMatchingPage extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.md),
                         if ((summary.birthTime ?? '').isNotEmpty)
                           _DetailRow(
-                              label: AppLocalizations.of(context).registrationBirthTimeLabel, value: summary.birthTime!),
+                            label: AppLocalizations.of(
+                              context,
+                            ).registrationBirthTimeLabel,
+                            value: summary.birthTime!,
+                          ),
                         if ((summary.birthPlace ?? '').isNotEmpty)
                           _DetailRow(
-                              label: AppLocalizations.of(context).registrationBirthPlaceLabel,
-                              value: summary.birthPlace!),
+                            label: AppLocalizations.of(
+                              context,
+                            ).registrationBirthPlaceLabel,
+                            value: summary.birthPlace!,
+                          ),
                       ],
                     ],
                   ),
@@ -82,12 +104,19 @@ class HoroscopeMatchingPage extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(AppLocalizations.of(context).astroAllowCompareTitle,
-                                style: AppTypography.bodyLarge
-                                    .copyWith(fontWeight: FontWeight.w600)),
+                            Text(
+                              AppLocalizations.of(
+                                context,
+                              ).astroAllowCompareTitle,
+                              style: AppTypography.bodyLarge.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                             const SizedBox(height: 2),
                             Text(
-                              AppLocalizations.of(context).astroAllowCompareSubtitle,
+                              AppLocalizations.of(
+                                context,
+                              ).astroAllowCompareSubtitle,
                               style: AppTypography.labelSmall.copyWith(
                                 color: isDark
                                     ? AppColors.textTertiaryDark
@@ -99,7 +128,6 @@ class HoroscopeMatchingPage extends ConsumerWidget {
                       ),
                       Switch.adaptive(
                         value: summary.matchingEnabled,
-                        activeThumbColor: AppColors.primary,
                         onChanged: (value) async {
                           await ref
                               .read(compatibilityRepositoryProvider)
@@ -111,7 +139,10 @@ class HoroscopeMatchingPage extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xl2),
-                Text(AppLocalizations.of(context).astroPreviewTitle, style: AppTypography.titleMedium),
+                Text(
+                  AppLocalizations.of(context).astroPreviewTitle,
+                  style: AppTypography.titleMedium,
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   AppLocalizations.of(context).astroPreviewSubtitle,
@@ -124,7 +155,9 @@ class HoroscopeMatchingPage extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.md),
                 Consumer(
                   builder: (context, ref, _) {
-                    final previewAsync = ref.watch(compatibilityPreviewProvider);
+                    final previewAsync = ref.watch(
+                      compatibilityPreviewProvider,
+                    );
                     return previewAsync.when(
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
@@ -169,9 +202,12 @@ class _DetailRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(value,
-                style: AppTypography.bodyMedium
-                    .copyWith(fontWeight: FontWeight.w600)),
+            child: Text(
+              value,
+              style: AppTypography.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),

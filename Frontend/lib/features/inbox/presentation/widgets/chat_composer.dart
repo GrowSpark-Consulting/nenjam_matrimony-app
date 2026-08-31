@@ -185,12 +185,18 @@ class _ChatComposerState extends State<ChatComposer> {
             children: [
               const SizedBox(height: 12),
               ListTile(
-                leading: const Icon(Icons.photo_library_rounded, color: AppColors.primary),
+                leading: const Icon(
+                  Icons.photo_library_rounded,
+                  color: AppColors.primary,
+                ),
                 title: Text(l10n.inboxChooseFromGallery),
                 onTap: () => Navigator.pop(ctx, ImageSource.gallery),
               ),
               ListTile(
-                leading: const Icon(Icons.camera_alt_rounded, color: AppColors.accentGold),
+                leading: const Icon(
+                  Icons.camera_alt_rounded,
+                  color: AppColors.secondary,
+                ),
                 title: Text(l10n.inboxTakePhoto),
                 onTap: () => Navigator.pop(ctx, ImageSource.camera),
               ),
@@ -249,7 +255,9 @@ class _ChatComposerState extends State<ChatComposer> {
     final startedAt = _recordingStartedAt;
     final path = await _voiceRecorder.stop();
     if (!mounted) return;
-    final duration = startedAt == null ? Duration.zero : DateTime.now().difference(startedAt);
+    final duration = startedAt == null
+        ? Duration.zero
+        : DateTime.now().difference(startedAt);
     setState(() {
       _isRecording = false;
       _recordingStartedAt = null;
@@ -270,9 +278,12 @@ class _ChatComposerState extends State<ChatComposer> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context);
-    final inertIconColor = isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
+    final inertIconColor = isDark
+        ? AppColors.textTertiaryDark
+        : AppColors.textTertiaryLight;
     final canSend =
-        (_hasText || _pendingAttachment != null || _pendingVoice != null) && !_isSending;
+        (_hasText || _pendingAttachment != null || _pendingVoice != null) &&
+        !_isSending;
 
     return PopScope(
       canPop: !_showEmojiPicker,
@@ -293,7 +304,9 @@ class _ChatComposerState extends State<ChatComposer> {
             if (_pendingAttachment != null)
               _AttachmentPreview(
                 file: _pendingAttachment!,
-                onRemove: _isSending ? null : () => setState(() => _pendingAttachment = null),
+                onRemove: _isSending
+                    ? null
+                    : () => setState(() => _pendingAttachment = null),
               ),
             if (_isRecording)
               _RecordingBar(onCancel: _cancelRecording, onStop: _stopRecording)
@@ -336,10 +349,14 @@ class _ChatComposerState extends State<ChatComposer> {
         Expanded(
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            constraints: const BoxConstraints(minHeight: AppTouchTarget.minSize),
+            constraints: const BoxConstraints(
+              minHeight: AppTouchTarget.minSize,
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
+              color: isDark
+                  ? AppColors.surfaceVariantDark
+                  : AppColors.surfaceVariantLight,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
                 color: _isFocused ? AppColors.primary : Colors.transparent,
@@ -393,7 +410,10 @@ class _ChatComposerState extends State<ChatComposer> {
                   onPressed: _isSending ? null : _toggleEmojiPicker,
                   color: _showEmojiPicker ? AppColors.primary : inertIconColor,
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
                   visualDensity: VisualDensity.compact,
                   icon: Icon(
                     _showEmojiPicker
@@ -411,7 +431,10 @@ class _ChatComposerState extends State<ChatComposer> {
           duration: const Duration(milliseconds: 200),
           transitionBuilder: (child, animation) => ScaleTransition(
             scale: animation,
-            child: RotationTransition(turns: animation.drive(Tween(begin: 0.75, end: 1)), child: child),
+            child: RotationTransition(
+              turns: animation.drive(Tween(begin: 0.75, end: 1)),
+              child: child,
+            ),
           ),
           child: _hasText || _pendingAttachment != null
               ? IconButton(
@@ -461,7 +484,8 @@ class _ReplyPreviewBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final senderLabel = replyTarget.isMine ? 'You' : peerName;
-    final showThumbnail = !replyTarget.isDeleted &&
+    final showThumbnail =
+        !replyTarget.isDeleted &&
         replyTarget.type == MessageType.image &&
         replyTarget.attachmentUrl != null;
 
@@ -469,9 +493,13 @@ class _ReplyPreviewBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
+        color: isDark
+            ? AppColors.surfaceVariantDark
+            : AppColors.surfaceVariantLight,
         borderRadius: BorderRadius.circular(12),
-        border: const Border(left: BorderSide(color: AppColors.primary, width: 3)),
+        border: const Border(
+          left: BorderSide(color: AppColors.primary, width: 3),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -508,7 +536,10 @@ class _ReplyPreviewBanner extends StatelessWidget {
                 width: 40,
                 height: 40,
                 child: replyTarget.attachmentUrl!.startsWith('http')
-                    ? Image.network(replyTarget.attachmentUrl!, fit: BoxFit.cover)
+                    ? Image.network(
+                        replyTarget.attachmentUrl!,
+                        fit: BoxFit.cover,
+                      )
                     : NmLocalMediaImage(
                         source: replyTarget.attachmentUrl!,
                         // 40x40 thumbnail — decode to size, not full photo.
@@ -556,8 +587,8 @@ class _AttachmentPreview extends StatelessWidget {
                 width: 64,
                 height: 64,
                 fit: BoxFit.cover,
-                cacheWidth:
-                    (64 * MediaQuery.devicePixelRatioOf(context)).round(),
+                cacheWidth: (64 * MediaQuery.devicePixelRatioOf(context))
+                    .round(),
               ),
             ),
             Positioned(
@@ -571,7 +602,11 @@ class _AttachmentPreview extends StatelessWidget {
                   child: const CircleAvatar(
                     radius: 12,
                     backgroundColor: AppColors.error,
-                    child: Icon(Icons.close_rounded, size: 14, color: Colors.white),
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 14,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -627,7 +662,9 @@ class _RecordingBarState extends State<_RecordingBar> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       constraints: const BoxConstraints(minHeight: AppTouchTarget.minSize),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
+        color: isDark
+            ? AppColors.surfaceVariantDark
+            : AppColors.surfaceVariantLight,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
@@ -635,16 +672,28 @@ class _RecordingBarState extends State<_RecordingBar> {
           IconButton(
             tooltip: AppLocalizations.of(context).inboxCancelRecording,
             onPressed: widget.onCancel,
-            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              color: AppColors.error,
+            ),
           ),
           const _RecordingDot(),
           const SizedBox(width: 8),
-          Text(_formatDuration(_elapsed), style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            _formatDuration(_elapsed),
+            style: AppTypography.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const Spacer(),
           IconButton(
             tooltip: AppLocalizations.of(context).inboxStopAndPreview,
             onPressed: widget.onStop,
-            icon: const Icon(Icons.stop_circle_rounded, color: AppColors.primary, size: 32),
+            icon: const Icon(
+              Icons.stop_circle_rounded,
+              color: AppColors.primary,
+              size: 32,
+            ),
           ),
         ],
       ),
@@ -666,7 +715,8 @@ class _RecordingDot extends StatefulWidget {
   State<_RecordingDot> createState() => _RecordingDotState();
 }
 
-class _RecordingDotState extends State<_RecordingDot> with SingleTickerProviderStateMixin {
+class _RecordingDotState extends State<_RecordingDot>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 700),
@@ -756,14 +806,19 @@ class _VoicePreviewBarState extends State<_VoicePreviewBar> {
     final total = widget.duration.inMilliseconds == 0
         ? const Duration(seconds: 1)
         : widget.duration;
-    final progress = (_position.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0);
+    final progress = (_position.inMilliseconds / total.inMilliseconds).clamp(
+      0.0,
+      1.0,
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       constraints: const BoxConstraints(minHeight: AppTouchTarget.minSize),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
+        color: isDark
+            ? AppColors.surfaceVariantDark
+            : AppColors.surfaceVariantLight,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
@@ -771,13 +826,18 @@ class _VoicePreviewBarState extends State<_VoicePreviewBar> {
           IconButton(
             tooltip: AppLocalizations.of(context).inboxDiscardRecording,
             onPressed: widget.onRemove,
-            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              color: AppColors.error,
+            ),
           ),
           IconButton(
             tooltip: _isPlaying ? 'Pause' : 'Play',
             onPressed: _togglePlay,
             icon: Icon(
-              _isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
+              _isPlaying
+                  ? Icons.pause_circle_filled_rounded
+                  : Icons.play_circle_fill_rounded,
               color: AppColors.primary,
               size: 30,
             ),
@@ -795,7 +855,11 @@ class _VoicePreviewBarState extends State<_VoicePreviewBar> {
           ),
           const SizedBox(width: 8),
           Text(
-            _formatDuration(_isPlaying || _position > Duration.zero ? _position : widget.duration),
+            _formatDuration(
+              _isPlaying || _position > Duration.zero
+                  ? _position
+                  : widget.duration,
+            ),
             style: AppTypography.labelSmall,
           ),
           IconButton(

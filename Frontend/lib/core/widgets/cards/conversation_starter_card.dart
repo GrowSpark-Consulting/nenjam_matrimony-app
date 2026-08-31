@@ -35,7 +35,7 @@ class NmConversationStarterCard extends StatelessWidget {
               const Icon(
                 Icons.chat_bubble_outline_rounded,
                 size: 18,
-                color: AppColors.accentGold,
+                color: AppColors.secondary,
               ),
               const SizedBox(width: 8),
               Expanded(child: Text(message, style: AppTypography.bodyMedium)),

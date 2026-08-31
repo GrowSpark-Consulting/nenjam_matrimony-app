@@ -35,7 +35,7 @@ class DiscoverTopBar extends ConsumerWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [AppColors.scrim, Colors.transparent],
+          colors: [AppColors.photoScrimVeil, Colors.transparent],
         ),
       ),
       child: Row(
@@ -103,7 +103,7 @@ class DiscoverTopBar extends ConsumerWidget {
   }
 }
 
-/// Small on-photo tab pill with selected (gold gradient) / unselected
+/// Small on-photo tab pill with selected (magenta gradient) / unselected
 /// (frosted-glass) states.
 class _DiscoverTabChip extends StatelessWidget {
   final String label;
@@ -124,7 +124,7 @@ class _DiscoverTabChip extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          gradient: isSelected ? AppGradients.gold : AppGradients.cardGlass,
+          gradient: isSelected ? AppGradients.accent : AppGradients.cardGlass,
           borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
           border: isSelected
               ? null
@@ -133,7 +133,7 @@ class _DiscoverTabChip extends StatelessWidget {
         child: Text(
           label,
           style: AppTypography.labelSmall.copyWith(
-            color: isSelected ? AppColors.textOnGold : Colors.white,
+            color: isSelected ? AppColors.textOnSecondary : Colors.white,
             fontWeight: FontWeight.w700,
           ),
           maxLines: 1,

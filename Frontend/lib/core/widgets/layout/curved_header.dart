@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
+import '../../theme/app_gradients.dart';
 import '../../theme/app_typography.dart';
 
-/// Curved header section matching the Stitch luxury design.
+/// Curved brand header.
 ///
-/// Features a deep navy background with elliptical bottom curvature,
-/// center gold icon badge, title, and subtitle.
+/// A deep plum panel with an elliptical bottom curvature, a centred accent
+/// badge, title, and subtitle.
 class NmCurvedHeader extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -43,17 +44,24 @@ class NmCurvedHeader extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Gold circular badge
+              // Accent circular badge
               Container(
                 width: 56,
                 height: 56,
+                // Gradient fill plus a translucent white ring: a flat
+                // magenta disc on the plum panel is barely over 1.5:1 and
+                // reads as a smudge rather than a badge.
                 decoration: BoxDecoration(
-                  color: AppColors.accentGold,
+                  gradient: AppGradients.match,
                   shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.35),
+                    width: 1.5,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.accentGold.withValues(alpha: 0.35),
-                      blurRadius: 16,
+                      color: AppColors.secondary.withValues(alpha: 0.45),
+                      blurRadius: 18,
                       offset: const Offset(0, 6),
                     ),
                   ],

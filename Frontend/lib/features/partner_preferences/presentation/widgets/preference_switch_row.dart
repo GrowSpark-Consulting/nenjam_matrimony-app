@@ -33,20 +33,27 @@ class PreferenceSwitchRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  label,
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 2),
                   Text(
                     subtitle!,
                     style: AppTypography.bodySmall.copyWith(
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
                     ),
                   ),
                 ],
               ],
             ),
           ),
-          Switch(value: value, activeThumbColor: AppColors.primary, onChanged: onChanged),
+          Switch(value: value, onChanged: onChanged),
         ],
       ),
     );

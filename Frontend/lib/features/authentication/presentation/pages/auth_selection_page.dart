@@ -145,10 +145,7 @@ class _HeroHeader extends StatelessWidget {
               alignment: Alignment.topLeft,
               child: IconButton(
                 onPressed: onBack,
-                icon: const Icon(
-                  Icons.arrow_back_rounded,
-                  color: Colors.white,
-                ),
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
               ),
             ),
             Center(
@@ -180,14 +177,14 @@ class _HeroHeader extends StatelessWidget {
                               color: Colors.white.withValues(alpha: 0.12),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: AppColors.accentGold.withValues(
+                                color: AppColors.secondary.withValues(
                                   alpha: 0.5,
                                 ),
                                 width: 2,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.accentGold.withValues(
+                                  color: AppColors.secondary.withValues(
                                     alpha: 0.2,
                                   ),
                                   blurRadius: 24,
@@ -198,7 +195,7 @@ class _HeroHeader extends StatelessWidget {
                             child: Icon(
                               Icons.volunteer_activism_rounded,
                               size: clampedLogoSize * 0.5,
-                              color: AppColors.accentGold,
+                              color: Colors.white,
                             ),
                           ),
                           const SizedBox(height: AppSpacing.xl),
@@ -215,7 +212,7 @@ class _HeroHeader extends StatelessWidget {
                           Text(
                             l10n.authTagline,
                             style: AppTypography.labelMedium.copyWith(
-                              color: AppColors.accentGold,
+                              color: Colors.white70,
                               letterSpacing: 3,
                               fontWeight: FontWeight.w700,
                             ),

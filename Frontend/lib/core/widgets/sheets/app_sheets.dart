@@ -395,7 +395,6 @@ class _MultiSelectionBodyState extends State<_MultiSelectionBody> {
                   ),
                 ),
                 value: isSelected,
-                activeColor: AppColors.primary,
                 onChanged: (checked) => setState(() {
                   if (checked ?? false) {
                     _selected.add(opt);

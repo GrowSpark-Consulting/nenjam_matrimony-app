@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 
 /// Instagram/WhatsApp-style count bubble that floats over a navigation icon.
@@ -16,8 +17,11 @@ import '../../theme/app_typography.dart';
 /// as `UnreadBadge` on the Inbox tabs — that one is an inline count pill sized
 /// for a text row; this one is the floating overlay for an icon.
 class NavBadge extends StatelessWidget {
-  /// Badge fill — the standard iOS/Instagram notification red.
-  static const Color badgeColor = Color(0xFFFF2D55);
+  /// Badge fill — brand magenta, which reads as "new" against the plum
+  /// navigation without borrowing the error red used for failures. Magenta
+  /// rather than the softer rose because the count sits on it as small
+  /// white text and needs 4.5:1.
+  static const Color badgeColor = AppColors.secondary;
 
   /// Minimum diameter. A single digit renders as an exact circle at this
   /// size; wider content ("12", "99+") grows it into a pill.

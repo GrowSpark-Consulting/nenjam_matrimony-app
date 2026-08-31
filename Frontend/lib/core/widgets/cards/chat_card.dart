@@ -146,7 +146,7 @@ class NmChatCard extends StatelessWidget {
                             const Icon(
                               Icons.push_pin_rounded,
                               size: 14,
-                              color: AppColors.accentGold,
+                              color: AppColors.secondary,
                             ),
                             const SizedBox(width: 4),
                           ],

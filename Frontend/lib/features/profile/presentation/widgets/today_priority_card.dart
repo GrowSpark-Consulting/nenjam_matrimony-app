@@ -130,7 +130,7 @@ class NmTodayPrioritiesSection extends StatelessWidget {
   static List<NmPriorityItem> defaultPrioritiesFor(AppLocalizations l10n) => [
     NmPriorityItem(
       icon: Icons.family_restroom_rounded,
-      accentColor: AppColors.accentGold,
+      accentColor: AppColors.secondary,
       title: l10n.profileAddFamilyDetails,
       impactLabel: l10n.profilePriorityTrustImpact,
     ),
@@ -147,7 +147,10 @@ class NmTodayPrioritiesSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(AppLocalizations.of(context).profileTodaysPriorities, style: AppTypography.titleMedium),
+        Text(
+          AppLocalizations.of(context).profileTodaysPriorities,
+          style: AppTypography.titleMedium,
+        ),
         const SizedBox(height: AppSpacing.md),
         ...priorities.map(
           (p) => Padding(

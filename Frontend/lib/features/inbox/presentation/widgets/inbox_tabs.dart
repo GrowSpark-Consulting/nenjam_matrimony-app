@@ -18,7 +18,7 @@ const double _kIndicatorHeight = 3;
 /// [inboxTabProvider] (a Riverpod `StateProvider`, so it survives widget
 /// rebuilds the same way any other piece of app state does).
 ///
-/// The gold active-indicator is a single bar that *slides* continuously
+/// The magenta active-indicator is a single bar that *slides* continuously
 /// between tabs (`AnimatedPositioned` over a `Stack`, sized from the
 /// measured row width) rather than three independent grow/shrink bars —
 /// the same visual language as a real `TabBar` indicator, and smoother
@@ -30,14 +30,27 @@ class InboxTabs extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final activeTab = ref.watch(inboxTabProvider);
-    final receivedCount = ref.watch(receivedInterestsProvider).valueOrNull?.length ?? 0;
+    final receivedCount =
+        ref.watch(receivedInterestsProvider).valueOrNull?.length ?? 0;
     final sentCount = ref.watch(sentInterestsProvider).valueOrNull?.length ?? 0;
     final unreadCount = ref.watch(unreadConversationsCountProvider);
 
     final tabs = [
-      (tab: InboxTab.interestsReceived, label: l10n.inboxTabInterestsReceived, count: receivedCount),
-      (tab: InboxTab.interestsSent, label: l10n.inboxTabInterestsSent, count: sentCount),
-      (tab: InboxTab.messages, label: l10n.inboxTabMessages, count: unreadCount),
+      (
+        tab: InboxTab.interestsReceived,
+        label: l10n.inboxTabInterestsReceived,
+        count: receivedCount,
+      ),
+      (
+        tab: InboxTab.interestsSent,
+        label: l10n.inboxTabInterestsSent,
+        count: sentCount,
+      ),
+      (
+        tab: InboxTab.messages,
+        label: l10n.inboxTabMessages,
+        count: unreadCount,
+      ),
     ];
     final activeIndex = tabs.indexWhere((t) => t.tab == activeTab);
 
@@ -54,7 +67,8 @@ class InboxTabs extends ConsumerWidget {
                       label: t.label,
                       count: t.count,
                       isActive: activeTab == t.tab,
-                      onTap: () => ref.read(inboxTabProvider.notifier).state = t.tab,
+                      onTap: () =>
+                          ref.read(inboxTabProvider.notifier).state = t.tab,
                     ),
                   ),
               ],
@@ -68,7 +82,7 @@ class InboxTabs extends ConsumerWidget {
               height: _kIndicatorHeight,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: AppColors.accentGold,
+                  color: AppColors.secondary,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -97,7 +111,9 @@ class _InboxTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const activeColor = AppColors.primary;
-    final inactiveColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final inactiveColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
 
     return Semantics(
       button: true,
@@ -118,9 +134,15 @@ class _InboxTab extends StatelessWidget {
                       duration: AppAnimationTokens.fast,
                       style: AppTypography.labelMedium.copyWith(
                         color: isActive ? activeColor : inactiveColor,
-                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: isActive
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                       ),
-                      child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 6),

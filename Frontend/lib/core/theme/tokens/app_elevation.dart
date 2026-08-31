@@ -21,6 +21,6 @@ abstract final class AppElevation {
     if (elevation <= medium) {
       return isDark ? AppShadows.floatingDark : AppShadows.floatingLight;
     }
-    return isDark ? AppShadows.floatingDark : AppShadows.glowGold;
+    return isDark ? AppShadows.floatingDark : AppShadows.glowAccent;
   }
 }

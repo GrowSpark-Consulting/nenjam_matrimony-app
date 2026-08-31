@@ -43,7 +43,7 @@ String interestButtonLabel(
 
 /// True once a relationship exists in some form — used to swap a button's
 /// icon/color to its "settled" look (checkmark, muted, etc.) instead of the
-/// raw "not yet interested" gold/outlined look.
+/// raw "not yet interested" outlined look.
 bool interestButtonIsSettled(InterestRelationshipStatus status) =>
     status != InterestRelationshipStatus.none &&
     status != InterestRelationshipStatus.cancelled;
@@ -67,12 +67,14 @@ Future<void> handleInterestButtonTap(
     case InterestRelationshipStatus.none:
     case InterestRelationshipStatus.cancelled:
       try {
-        await ref.read(interestsNotifierProvider.notifier).sendInterest(profile);
+        await ref
+            .read(interestsNotifierProvider.notifier)
+            .sendInterest(profile);
       } catch (_) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.interestsActionFailed)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.interestsActionFailed)));
       }
     case InterestRelationshipStatus.received:
       context.push(RouteNames.interestsReceived);
@@ -108,7 +110,8 @@ Future<void> handleMessageButtonTap(
         context,
         l10n.messageGateNoInterest,
         actionLabel: l10n.actionInterested,
-        onAction: () => ref.read(interestsNotifierProvider.notifier).sendInterest(profile),
+        onAction: () =>
+            ref.read(interestsNotifierProvider.notifier).sendInterest(profile),
       );
     case InterestRelationshipStatus.sent:
       _showMessageGate(context, l10n.messageGatePending);
@@ -149,15 +152,20 @@ Future<void> _openDirectChat(
   DiscoveryProfileEntity profile,
   AppLocalizations l10n,
 ) async {
-  final conversation =
-      await ref.read(conversationsNotifierProvider.notifier).getOrCreateConversationFor(profile);
+  final conversation = await ref
+      .read(conversationsNotifierProvider.notifier)
+      .getOrCreateConversationFor(profile);
   if (!context.mounted) return;
   if (conversation == null) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.messageGateError)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.messageGateError)));
     return;
   }
   if (conversation.isBlocked) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.messageGateBlocked)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.messageGateBlocked)));
     return;
   }
   openChatDetail(context, conversation);

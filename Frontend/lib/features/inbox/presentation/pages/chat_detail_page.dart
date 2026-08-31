@@ -577,10 +577,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
                       if (_replyTarget != null) {
                         setState(() => _replyTarget = null);
                       }
-                      return messagesNotifier.sendImage(
-                        file,
-                        replyTo: replyTo,
-                      );
+                      return messagesNotifier.sendImage(file, replyTo: replyTo);
                     },
                     onSendVoice: (path, duration) {
                       final replyTo = _resolveReplyTarget();
@@ -1089,13 +1086,13 @@ class _LockedThread extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: const BoxDecoration(
-                color: AppColors.accentGoldSurface,
+                color: AppColors.accentSoft,
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.lock_rounded,
                 size: 48,
-                color: AppColors.accentGoldDark,
+                color: AppColors.secondaryDark,
               ),
             ),
             const SizedBox(height: 24),

@@ -287,7 +287,7 @@ class _LanguageCard extends StatelessWidget {
                             width: 26,
                             height: 26,
                             decoration: const BoxDecoration(
-                              color: AppColors.accentGold,
+                              color: AppColors.secondary,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(

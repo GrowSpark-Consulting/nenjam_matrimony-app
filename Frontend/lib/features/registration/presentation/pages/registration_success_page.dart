@@ -38,21 +38,24 @@ class _SuccessSummary {
   /// while `profileCompletePct` is a persisted column refreshed only by
   /// writes. Immediately after finalize the live figure is the accurate one.
   static _SuccessSummary fromProfile(Profile profile) => _SuccessSummary(
-        completionPercent: profile.completion.percentage,
-        hasPhotos: profile.photos.isNotEmpty,
-        hasHoroscope: _profileHasHoroscope(profile.astrology),
-        hasPartnerPreference:
-            _profileHasPartnerPreference(profile.partnerPreference),
-      );
+    completionPercent: profile.completion.percentage,
+    hasPhotos: profile.photos.isNotEmpty,
+    hasHoroscope: _profileHasHoroscope(profile.astrology),
+    hasPartnerPreference: _profileHasPartnerPreference(
+      profile.partnerPreference,
+    ),
+  );
 
   static _SuccessSummary fromDraft(ProfileDraft draft) {
     final pref = draft.partnerPreference;
     return _SuccessSummary(
       completionPercent: draft.completionPercentage.round(),
-      hasPhotos: draft.photoGallery.primaryPhotoPath != null ||
+      hasPhotos:
+          draft.photoGallery.primaryPhotoPath != null ||
           draft.photoGallery.galleryPaths.isNotEmpty,
       hasHoroscope: draft.horoscopeDetails.horoscopeAvailable,
-      hasPartnerPreference: pref.preferredAgeRange.isNotEmpty ||
+      hasPartnerPreference:
+          pref.preferredAgeRange.isNotEmpty ||
           pref.preferredHeightRange.isNotEmpty ||
           pref.religionPref.isNotEmpty ||
           pref.castePref.isNotEmpty ||
@@ -136,7 +139,9 @@ class RegistrationSuccessPage extends ConsumerWidget {
       );
     }
 
-    return _Shell(child: _Celebration(summary: summary, isDark: isDark, l10n: l10n));
+    return _Shell(
+      child: _Celebration(summary: summary, isDark: isDark, l10n: l10n),
+    );
   }
 }
 
@@ -189,24 +194,27 @@ class _ErrorState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.cloud_off_rounded, size: 48, color: AppColors.primary),
+          const Icon(
+            Icons.cloud_off_rounded,
+            size: 48,
+            color: AppColors.primary,
+          ),
           const SizedBox(height: 16),
           Text(
             l10n.registrationCompletingErrorTitle,
             textAlign: TextAlign.center,
-            style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
+            style: AppTypography.titleMedium.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 24),
-          OutlinedButton(
-            onPressed: onRetry,
-            child: Text(l10n.commonRetry),
-          ),
+          OutlinedButton(onPressed: onRetry, child: Text(l10n.commonRetry)),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: NmGradientButton(
               label: l10n.registrationSuccessCta,
-              useGoldGradient: true,
+              useAccentGradient: true,
               icon: Icons.favorite_rounded,
               onPressed: () => context.go(RouteNames.discover),
             ),
@@ -256,15 +264,18 @@ class _Celebration extends StatelessWidget {
     return Column(
       children: [
         const Spacer(flex: 2),
-        const Icon(Icons.favorite_rounded, size: 64, color: AppColors.accentGold)
-            .animate()
-            .scale(duration: const Duration(milliseconds: 500)),
+        const Icon(
+          Icons.favorite_rounded,
+          size: 64,
+          color: AppColors.secondary,
+        ).animate().scale(duration: const Duration(milliseconds: 500)),
         const SizedBox(height: 24),
         Text(
           l10n.registrationSuccessHeadline,
           textAlign: TextAlign.center,
-          style:
-              AppTypography.headlineLarge.copyWith(fontWeight: FontWeight.w700),
+          style: AppTypography.headlineLarge.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
         ).animate().fadeIn(delay: const Duration(milliseconds: 150)),
         const SizedBox(height: 12),
         Text(
@@ -291,22 +302,24 @@ class _Celebration extends StatelessWidget {
                   Expanded(
                     child: Text(
                       cards[i].$2,
-                      style: AppTypography.bodyMedium
-                          .copyWith(fontWeight: FontWeight.w600),
+                      style: AppTypography.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ).animate().fadeIn(
-              delay: Duration(milliseconds: 450 + i * 120),
-              duration: const Duration(milliseconds: 350)),
+            delay: Duration(milliseconds: 450 + i * 120),
+            duration: const Duration(milliseconds: 350),
+          ),
         const Spacer(flex: 3),
         SizedBox(
           width: double.infinity,
           child: NmGradientButton(
             label: l10n.registrationSuccessCta,
-            useGoldGradient: true,
+            useAccentGradient: true,
             icon: Icons.favorite_rounded,
             onPressed: () => context.go(RouteNames.discover),
           ),

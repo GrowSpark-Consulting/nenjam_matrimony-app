@@ -1,4 +1,4 @@
-package com.example.nenjam_matrimony
+package com.growspark.nenjam
 
 import io.flutter.embedding.android.FlutterActivity
 

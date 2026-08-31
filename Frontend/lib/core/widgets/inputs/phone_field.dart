@@ -82,7 +82,7 @@ void showCountryPickerSheet(
                       c.code,
                       style: AppTypography.bodyMedium.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: AppColors.accentGold,
+                        color: AppColors.secondary,
                       ),
                     ),
                     onTap: () {

@@ -66,7 +66,7 @@ class NmProfileCompletionCard extends StatelessWidget {
                     : AppColors.surfaceVariantLight,
                 color: percentage >= 80
                     ? AppColors.success
-                    : AppColors.accentGold,
+                    : AppColors.secondary,
               ),
             ),
             const SizedBox(height: 12),

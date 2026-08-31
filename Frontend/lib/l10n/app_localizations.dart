@@ -5780,6 +5780,24 @@ abstract class AppLocalizations {
   /// **'Verification'**
   String get profileDetailTabVerification;
 
+  /// No description provided for @profileDetailTabCompatibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Compatibility'**
+  String get profileDetailTabCompatibility;
+
+  /// No description provided for @profileDetailAgeYears.
+  ///
+  /// In en, this message translates to:
+  /// **'{age} yrs'**
+  String profileDetailAgeYears(int age);
+
+  /// No description provided for @profileDetailNoMorePhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'No other photos shared yet'**
+  String get profileDetailNoMorePhotos;
+
   /// No description provided for @profileDetailTabTimeline.
   ///
   /// In en, this message translates to:
@@ -6313,6 +6331,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Marital Status'**
   String get fieldMaritalStatus;
+
+  /// No description provided for @fieldMatrimonyId.
+  ///
+  /// In en, this message translates to:
+  /// **'Matrimony ID'**
+  String get fieldMatrimonyId;
+
+  /// No description provided for @fieldDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance'**
+  String get fieldDistance;
 
   /// No description provided for @fieldPhone.
   ///

@@ -73,8 +73,11 @@ class _RegistrationCompletingPageState
     if (!mounted) return;
 
     if (hasError) {
-      setState(() => _errorMessage = AppLocalizations.of(context)
-          .registrationCompletingErrorMessage);
+      setState(
+        () => _errorMessage = AppLocalizations.of(
+          context,
+        ).registrationCompletingErrorMessage,
+      );
       return;
     }
     context.go(RouteNames.registrationSuccess);
@@ -106,7 +109,10 @@ class _RegistrationCompletingPageState
   }
 
   Widget _buildChecklist(
-      BuildContext context, AppLocalizations l10n, List<String> stages) {
+    BuildContext context,
+    AppLocalizations l10n,
+    List<String> stages,
+  ) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -115,37 +121,50 @@ class _RegistrationCompletingPageState
         Text(
           l10n.registrationCompletingHeadline,
           textAlign: TextAlign.center,
-          style: AppTypography.headlineSmall
-              .copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+          style: AppTypography.headlineSmall.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           l10n.registrationCompletingSubtitle,
           textAlign: TextAlign.center,
-          style: AppTypography.bodyMedium
-              .copyWith(color: Colors.white.withValues(alpha: 0.75)),
+          style: AppTypography.bodyMedium.copyWith(
+            color: Colors.white.withValues(alpha: 0.75),
+          ),
         ),
         const SizedBox(height: 32),
         for (var i = 0; i < stages.length; i++)
           if (i < _visibleStages)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle_rounded,
-                      color: AppColors.accentGold, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      stages[i],
-                      style: AppTypography.bodyMedium
-                          .copyWith(color: Colors.white),
-                    ),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.secondary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          stages[i],
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ).animate().fadeIn(duration: const Duration(milliseconds: 350)).slideX(
-                begin: -0.05, end: 0, duration: const Duration(milliseconds: 350)),
+                )
+                .animate()
+                .fadeIn(duration: const Duration(milliseconds: 350))
+                .slideX(
+                  begin: -0.05,
+                  end: 0,
+                  duration: const Duration(milliseconds: 350),
+                ),
       ],
     );
   }
@@ -159,20 +178,23 @@ class _RegistrationCompletingPageState
         Text(
           l10n.registrationCompletingErrorTitle,
           textAlign: TextAlign.center,
-          style: AppTypography.headlineSmall
-              .copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+          style: AppTypography.headlineSmall.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           l10n.registrationCompletingErrorMessage,
           textAlign: TextAlign.center,
-          style: AppTypography.bodyMedium
-              .copyWith(color: Colors.white.withValues(alpha: 0.8)),
+          style: AppTypography.bodyMedium.copyWith(
+            color: Colors.white.withValues(alpha: 0.8),
+          ),
         ),
         const SizedBox(height: 32),
         NmGradientButton(
           label: l10n.registrationCompletingRetryCta,
-          useGoldGradient: true,
+          useAccentGradient: true,
           onPressed: () => context.go(RouteNames.profileReview),
         ),
       ],
@@ -187,7 +209,8 @@ class _Sparkle extends StatefulWidget {
   State<_Sparkle> createState() => _SparkleState();
 }
 
-class _SparkleState extends State<_Sparkle> with SingleTickerProviderStateMixin {
+class _SparkleState extends State<_Sparkle>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
   @override
@@ -208,9 +231,10 @@ class _SparkleState extends State<_Sparkle> with SingleTickerProviderStateMixin 
   @override
   Widget build(BuildContext context) {
     return ScaleTransition(
-      scale: Tween(begin: 0.9, end: 1.05).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-      ),
+      scale: Tween(
+        begin: 0.9,
+        end: 1.05,
+      ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut)),
       child: Container(
         width: 96,
         height: 96,
@@ -218,12 +242,15 @@ class _SparkleState extends State<_Sparkle> with SingleTickerProviderStateMixin 
           shape: BoxShape.circle,
           color: Colors.white.withValues(alpha: 0.12),
           border: Border.all(
-            color: AppColors.accentGold.withValues(alpha: 0.6),
+            color: AppColors.secondary.withValues(alpha: 0.6),
             width: 1.5,
           ),
         ),
-        child: const Icon(Icons.auto_awesome_rounded,
-            size: 44, color: AppColors.accentGold),
+        child: const Icon(
+          Icons.auto_awesome_rounded,
+          size: 44,
+          color: AppColors.secondary,
+        ),
       ),
     );
   }

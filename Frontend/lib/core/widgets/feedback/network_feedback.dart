@@ -16,7 +16,7 @@ class NmLinearLoader extends StatelessWidget {
     return LinearProgressIndicator(
       value: value,
       backgroundColor: AppColors.primarySurface,
-      color: AppColors.accentGold,
+      color: AppColors.secondary,
       minHeight: 4,
     );
   }

@@ -60,12 +60,16 @@ class MessageBubble extends StatefulWidget {
   State<MessageBubble> createState() => _MessageBubbleState();
 }
 
-class _MessageBubbleState extends State<MessageBubble> with SingleTickerProviderStateMixin {
+class _MessageBubbleState extends State<MessageBubble>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 260),
   )..forward();
-  late final Animation<double> _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+  late final Animation<double> _fade = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeOut,
+  );
   late final Animation<Offset> _slide = Tween(
     begin: const Offset(0, 0.12),
     end: Offset.zero,
@@ -131,20 +135,25 @@ class _MessageBubbleContent extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context);
     final isMine = message.isMine;
-    final canRetry = message.status == MessageStatus.failed &&
+    final canRetry =
+        message.status == MessageStatus.failed &&
         message.clientMessageId != null &&
         onRetry != null;
 
     final bubbleColor = isMine
         ? AppColors.primary
-        : (isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight);
+        : (isDark
+              ? AppColors.surfaceVariantDark
+              : AppColors.surfaceVariantLight);
     final textColor = isMine
         ? Colors.white
         : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
 
     final bubble = AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width * 0.75,
+      ),
       margin: const EdgeInsets.symmetric(vertical: 3),
       padding: EdgeInsets.fromLTRB(
         message.type == MessageType.image ? 6 : 14,
@@ -158,7 +167,10 @@ class _MessageBubbleContent extends StatelessWidget {
         // ChatDetailPage flips isHighlighted, no separate AnimationController
         // needed.
         color: isHighlighted
-            ? Color.alphaBlend(AppColors.accentGoldLight.withValues(alpha: 0.4), bubbleColor)
+            ? Color.alphaBlend(
+                AppColors.accentLight.withValues(alpha: 0.4),
+                bubbleColor,
+              )
             : bubbleColor,
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(16),
@@ -180,7 +192,8 @@ class _MessageBubbleContent extends StatelessWidget {
                   ? null
                   : () => onTapReplyPreview!(message.replyTo!.id),
             ),
-          if (message.type == MessageType.image && message.attachmentUrl != null)
+          if (message.type == MessageType.image &&
+              message.attachmentUrl != null)
             _MessageImage(
               url: message.attachmentUrl!,
               sending: message.status == MessageStatus.sending,
@@ -191,7 +204,8 @@ class _MessageBubbleContent extends StatelessWidget {
               // compete with that gesture for the same tap.
               viewerEnabled: !canRetry,
             )
-          else if (message.type == MessageType.voice && message.attachmentUrl != null)
+          else if (message.type == MessageType.voice &&
+              message.attachmentUrl != null)
             _VoiceBubblePlayer(
               url: message.attachmentUrl!,
               knownDuration: message.voiceDuration,
@@ -199,7 +213,10 @@ class _MessageBubbleContent extends StatelessWidget {
               sending: message.status == MessageStatus.sending,
             )
           else
-            Text(message.text, style: AppTypography.chatMessages.copyWith(color: textColor)),
+            Text(
+              message.text,
+              style: AppTypography.chatMessages.copyWith(color: textColor),
+            ),
           Padding(
             padding: EdgeInsets.only(
               top: 4,
@@ -270,15 +287,16 @@ class _MessageBubbleContent extends StatelessWidget {
   }
 
   IconData _statusIcon() => switch (message.status) {
-        MessageStatus.sending => Icons.schedule_rounded,
-        MessageStatus.sent => Icons.check_rounded,
-        MessageStatus.delivered => Icons.done_all_rounded,
-        MessageStatus.read => Icons.done_all_rounded,
-        MessageStatus.failed => Icons.error_outline_rounded,
-      };
+    MessageStatus.sending => Icons.schedule_rounded,
+    MessageStatus.sent => Icons.check_rounded,
+    MessageStatus.delivered => Icons.done_all_rounded,
+    MessageStatus.read => Icons.done_all_rounded,
+    MessageStatus.failed => Icons.error_outline_rounded,
+  };
 
-  Color _statusColor(Color textColor) =>
-      message.status == MessageStatus.read ? AppColors.accentGoldLight : textColor.withValues(alpha: 0.7);
+  Color _statusColor(Color textColor) => message.status == MessageStatus.read
+      ? AppColors.accentLight
+      : textColor.withValues(alpha: 0.7);
 }
 
 /// The quoted-reply block shown inside a bubble that replies to another
@@ -311,7 +329,9 @@ class _ReplyQuote extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: (isMine ? Colors.white : AppColors.primary).withValues(alpha: 0.12),
+        color: (isMine ? Colors.white : AppColors.primary).withValues(
+          alpha: 0.12,
+        ),
         borderRadius: BorderRadius.circular(8),
         border: Border(left: BorderSide(color: barColor, width: 3)),
       ),
@@ -394,13 +414,19 @@ class _DeletedBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
-    final bg = isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight;
+    final color = isDark
+        ? AppColors.textTertiaryDark
+        : AppColors.textTertiaryLight;
+    final bg = isDark
+        ? AppColors.surfaceVariantDark
+        : AppColors.surfaceVariantLight;
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
         margin: const EdgeInsets.symmetric(vertical: 3),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
@@ -470,7 +496,11 @@ class _MessageImage extends StatelessWidget {
     final thumbnail = ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 160, minHeight: 160, maxHeight: 260),
+        constraints: const BoxConstraints(
+          minWidth: 160,
+          minHeight: 160,
+          maxHeight: 260,
+        ),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -482,7 +512,10 @@ class _MessageImage extends StatelessWidget {
                   child: SizedBox(
                     width: 28,
                     height: 28,
-                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -539,7 +572,10 @@ class _MessageImageError extends StatelessWidget {
     return const ColoredBox(
       color: AppColors.surfaceVariantLight,
       child: Center(
-        child: Icon(Icons.broken_image_outlined, color: AppColors.textTertiaryLight),
+        child: Icon(
+          Icons.broken_image_outlined,
+          color: AppColors.textTertiaryLight,
+        ),
       ),
     );
   }
@@ -626,8 +662,9 @@ class _VoiceBubblePlayerState extends State<_VoiceBubblePlayer> {
       await player.pause();
       return;
     }
-    final source =
-        widget.url.startsWith('http') ? UrlSource(widget.url) : DeviceFileSource(widget.url);
+    final source = widget.url.startsWith('http')
+        ? UrlSource(widget.url)
+        : DeviceFileSource(widget.url);
     await player.play(source);
   }
 
@@ -637,7 +674,9 @@ class _VoiceBubblePlayerState extends State<_VoiceBubblePlayer> {
     final progress = total == null || total.inMilliseconds == 0
         ? 0.0
         : (_position.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0);
-    final displayed = _isPlaying || _position > Duration.zero ? _position : total;
+    final displayed = _isPlaying || _position > Duration.zero
+        ? _position
+        : total;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -649,7 +688,9 @@ class _VoiceBubblePlayerState extends State<_VoiceBubblePlayer> {
           tooltip: _isPlaying ? 'Pause' : 'Play',
           onPressed: widget.sending ? null : _togglePlay,
           icon: Icon(
-            _isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
+            _isPlaying
+                ? Icons.pause_circle_filled_rounded
+                : Icons.play_circle_fill_rounded,
             color: widget.color,
             size: 30,
           ),

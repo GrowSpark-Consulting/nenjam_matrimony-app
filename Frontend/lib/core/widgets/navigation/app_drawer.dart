@@ -96,7 +96,7 @@ class NmDrawer extends StatelessWidget {
                     icon: Icons.workspace_premium_rounded,
                     label: AppLocalizations.of(context).navPremium,
                     onTap: onPremiumTap,
-                    iconColor: AppColors.accentGold,
+                    iconColor: AppColors.secondary,
                   ),
                   _DrawerItem(
                     icon: Icons.settings_outlined,

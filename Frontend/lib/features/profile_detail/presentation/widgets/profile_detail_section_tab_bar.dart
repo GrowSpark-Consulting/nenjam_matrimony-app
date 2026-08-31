@@ -87,9 +87,12 @@ class _UnderlineTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryText = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryText =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final primaryText = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final secondaryText = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
 
     return Material(
       color: Colors.transparent,
@@ -111,7 +114,7 @@ class _UnderlineTab extends StatelessWidget {
               height: 2.5,
               width: selected ? 20 : 0,
               decoration: BoxDecoration(
-                color: AppColors.accentGold,
+                color: AppColors.secondary,
                 borderRadius: AppSpacing.borderRadiusFull,
               ),
             ),

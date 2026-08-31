@@ -6,7 +6,6 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/network/backend_connectivity_checker.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/utils/story_perf.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -160,7 +159,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
                         child: const Icon(
                           Icons.favorite_rounded,
                           size: 48,
-                          color: AppColors.accentGold,
+                          color: Colors.white,
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -197,7 +196,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: AppColors.accentGold,
+                          color: Colors.white,
                         ),
                       )
                     : _StartupErrorState(
@@ -275,7 +274,7 @@ class _StartupErrorState extends StatelessWidget {
                     height: 24,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: AppColors.accentGold,
+                      color: Colors.white,
                     ),
                   )
                 : OutlinedButton(

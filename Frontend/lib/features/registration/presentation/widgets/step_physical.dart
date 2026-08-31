@@ -15,7 +15,11 @@ class StepPhysical extends StatefulWidget {
   final PhysicalDetails details;
   final void Function(PhysicalDetails) onChanged;
 
-  const StepPhysical({super.key, required this.details, required this.onChanged});
+  const StepPhysical({
+    super.key,
+    required this.details,
+    required this.onChanged,
+  });
 
   @override
   State<StepPhysical> createState() => _StepPhysicalState();
@@ -29,8 +33,25 @@ class _StepPhysicalState extends State<StepPhysical> {
   late String _bloodGroup;
   late String _disability;
 
-  static const _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Not Known'];
-  static const _disabilities = ['None', 'Physical', 'Hearing', 'Visual', 'Speech', 'Other'];
+  static const _bloodGroups = [
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'AB+',
+    'AB-',
+    'O+',
+    'O-',
+    'Not Known',
+  ];
+  static const _disabilities = [
+    'None',
+    'Physical',
+    'Hearing',
+    'Visual',
+    'Speech',
+    'Other',
+  ];
 
   static const _minHeightCm = 122;
   static const _maxHeightCm = 213;
@@ -43,17 +64,21 @@ class _StepPhysicalState extends State<StepPhysical> {
   void initState() {
     super.initState();
     _heightTouched = widget.details.height.isNotEmpty;
-    _heightCm = (_heightTouched
-            ? _parseHeightCm(widget.details.height, _defaultHeightCm)
-            : _defaultHeightCm)
-        .clamp(_minHeightCm, _maxHeightCm);
+    _heightCm =
+        (_heightTouched
+                ? _parseHeightCm(widget.details.height, _defaultHeightCm)
+                : _defaultHeightCm)
+            .clamp(_minHeightCm, _maxHeightCm);
     _weightTouched = widget.details.weight.isNotEmpty;
-    _weightKg = (_weightTouched
-            ? _parseLeadingInt(widget.details.weight, _defaultWeightKg)
-            : _defaultWeightKg)
-        .clamp(_minWeightKg, _maxWeightKg);
+    _weightKg =
+        (_weightTouched
+                ? _parseLeadingInt(widget.details.weight, _defaultWeightKg)
+                : _defaultWeightKg)
+            .clamp(_minWeightKg, _maxWeightKg);
     _bloodGroup = widget.details.bloodGroup;
-    _disability = widget.details.disability.isEmpty ? 'None' : widget.details.disability;
+    _disability = widget.details.disability.isEmpty
+        ? 'None'
+        : widget.details.disability;
   }
 
   static int _parseHeightCm(String value, int fallback) {
@@ -79,59 +104,92 @@ class _StepPhysicalState extends State<StepPhysical> {
   }
 
   void _emit() {
-    widget.onChanged(PhysicalDetails(
-      height: _heightTouched ? '$_heightCm cm' : '',
-      weight: _weightTouched ? '$_weightKg kg' : '',
-      bloodGroup: _bloodGroup,
-      disability: _disability,
-    ));
+    widget.onChanged(
+      PhysicalDetails(
+        height: _heightTouched ? '$_heightCm cm' : '',
+        weight: _weightTouched ? '$_weightKg kg' : '',
+        bloodGroup: _bloodGroup,
+        disability: _disability,
+      ),
+    );
   }
 
   /// Chip section with an optional value->label mapper (values stay English).
-  Widget _buildChipSection(String title, List<String> options, String selected,
-      void Function(String) onSelect,
-      {String Function(String)? labelOf}) {
+  Widget _buildChipSection(
+    String title,
+    List<String> options,
+    String selected,
+    void Function(String) onSelect, {
+    String Function(String)? labelOf,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: AppTypography.labelLarge),
         const SizedBox(height: 8),
-        Wrap(spacing: 8, runSpacing: 8, children: options.map((o) { final sel = selected == o; return ChoiceChip(label: Text(labelOf?.call(o) ?? o), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { onSelect(o); _emit(); }); }).toList()),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: options.map((o) {
+            final sel = selected == o;
+            return ChoiceChip(
+              label: Text(labelOf?.call(o) ?? o),
+              selected: sel,
+              selectedColor: AppColors.primarySurface,
+              onSelected: (_) {
+                onSelect(o);
+                _emit();
+              },
+            );
+          }).toList(),
+        ),
       ],
     );
   }
 
   String _disabilityLabel(AppLocalizations l10n, String v) => switch (v) {
-        'None' => l10n.disabilityNone,
-        'Physical' => l10n.disabilityPhysical,
-        'Hearing' => l10n.disabilityHearing,
-        'Visual' => l10n.disabilityVisual,
-        'Speech' => l10n.disabilitySpeech,
-        'Other' => l10n.disabilityOther,
-        _ => v,
-      };
+    'None' => l10n.disabilityNone,
+    'Physical' => l10n.disabilityPhysical,
+    'Hearing' => l10n.disabilityHearing,
+    'Visual' => l10n.disabilityVisual,
+    'Speech' => l10n.disabilitySpeech,
+    'Other' => l10n.disabilityOther,
+    _ => v,
+  };
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final secondaryColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final secondaryColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.registrationWizardPhysicalHeadline, style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.w700)),
+          Text(
+            l10n.registrationWizardPhysicalHeadline,
+            style: AppTypography.headlineSmall.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(l10n.registrationWizardPhysicalHook, style: AppTypography.bodyMedium.copyWith(color: secondaryColor)),
+          Text(
+            l10n.registrationWizardPhysicalHook,
+            style: AppTypography.bodyMedium.copyWith(color: secondaryColor),
+          ),
           const SizedBox(height: 16),
           RegistrationHelperTip(text: l10n.registrationTipPhysical),
           const SizedBox(height: 24),
           Text(l10n.registrationHeightLabel, style: AppTypography.labelLarge),
           const SizedBox(height: 4),
           Text(
-            _heightTouched ? _heightLabel(_heightCm) : l10n.registrationTapToSetHeightLabel,
+            _heightTouched
+                ? _heightLabel(_heightCm)
+                : l10n.registrationTapToSetHeightLabel,
             style: AppTypography.bodyMedium.copyWith(color: secondaryColor),
           ),
           Slider(
@@ -139,10 +197,12 @@ class _StepPhysicalState extends State<StepPhysical> {
             min: _minHeightCm.toDouble(),
             max: _maxHeightCm.toDouble(),
             divisions: _maxHeightCm - _minHeightCm,
-            activeColor: AppColors.primary,
             label: _heightLabel(_heightCm),
             onChanged: (v) {
-              setState(() { _heightCm = v.round(); _heightTouched = true; });
+              setState(() {
+                _heightCm = v.round();
+                _heightTouched = true;
+              });
               _emit();
             },
           ),
@@ -150,7 +210,9 @@ class _StepPhysicalState extends State<StepPhysical> {
           Text(l10n.registrationWeightLabel, style: AppTypography.labelLarge),
           const SizedBox(height: 4),
           Text(
-            _weightTouched ? '$_weightKg kg' : l10n.registrationTapToSetWeightLabel,
+            _weightTouched
+                ? '$_weightKg kg'
+                : l10n.registrationTapToSetWeightLabel,
             style: AppTypography.bodyMedium.copyWith(color: secondaryColor),
           ),
           Slider(
@@ -158,22 +220,34 @@ class _StepPhysicalState extends State<StepPhysical> {
             min: _minWeightKg.toDouble(),
             max: _maxWeightKg.toDouble(),
             divisions: _maxWeightKg - _minWeightKg,
-            activeColor: AppColors.primary,
-            label: AppLocalizations.of(context).registrationWeightKg('$_weightKg'),
+            label: AppLocalizations.of(
+              context,
+            ).registrationWeightKg('$_weightKg'),
             onChanged: (v) {
-              setState(() { _weightKg = v.round(); _weightTouched = true; });
+              setState(() {
+                _weightKg = v.round();
+                _weightTouched = true;
+              });
               _emit();
             },
           ),
           const SizedBox(height: 16),
-          _buildChipSection(l10n.registrationBloodGroupLabel, _bloodGroups, _bloodGroup, (v) => setState(() => _bloodGroup = v)),
+          _buildChipSection(
+            l10n.registrationBloodGroupLabel,
+            _bloodGroups,
+            _bloodGroup,
+            (v) => setState(() => _bloodGroup = v),
+          ),
           const SizedBox(height: 20),
           OtherOptionField(
             title: l10n.registrationDisabilityLabel,
             options: _disabilities,
             value: _disability,
             labelOf: (v) => _disabilityLabel(l10n, v),
-            onChanged: (v) { setState(() => _disability = v); _emit(); },
+            onChanged: (v) {
+              setState(() => _disability = v);
+              _emit();
+            },
           ),
           const SizedBox(height: 32),
         ],

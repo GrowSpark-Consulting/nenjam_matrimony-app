@@ -10,7 +10,7 @@ import '../../../../l10n/app_localizations.dart';
 /// Bottom action buttons for the Discover reel card, matching the Stitch design:
 ///
 /// ┌──────────────────────────────────┐
-/// │       ❤ Interested (gold full)   │
+/// │       ❤ Interested (gradient full) │
 /// ├─────────────────┬────────────────┤
 /// │ 🔖 Shortlist    │ 👤 View Profile │
 /// └─────────────────┴────────────────┘
@@ -46,9 +46,10 @@ class _DiscoverActionRailState extends State<DiscoverActionRail>
       vsync: this,
       duration: const Duration(milliseconds: 160),
     );
-    _pulse = Tween<double>(begin: 1.0, end: 0.93).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
+    _pulse = Tween<double>(
+      begin: 1.0,
+      end: 0.93,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -80,7 +81,7 @@ class _DiscoverActionRailState extends State<DiscoverActionRail>
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ── Interested Button (full-width gold) ──────────────────
+        // ── Interested Button (full-width gradient) ──────────────────
         ScaleTransition(
           scale: _pulse,
           child: _InterestedButton(
@@ -102,9 +103,7 @@ class _DiscoverActionRailState extends State<DiscoverActionRail>
                     ? Icons.star_rounded
                     : Icons.star_border_rounded,
                 label: l10n.profileCardShortlist,
-                iconColor: _shortlisted
-                    ? AppColors.accentGoldLight
-                    : Colors.white,
+                iconColor: _shortlisted ? AppColors.accentLight : Colors.white,
                 onTap: _handleShortlist,
               ),
             ),
@@ -151,10 +150,10 @@ class _InterestedButton extends StatelessWidget {
           onTap: onTap,
           child: Ink(
             decoration: BoxDecoration(
-              gradient: sent ? null : AppGradients.gold,
+              gradient: sent ? null : AppGradients.accent,
               color: sent ? AppColors.faceVerificationGreen : null,
               borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-              boxShadow: sent ? null : AppShadows.goldGlow,
+              boxShadow: sent ? null : AppShadows.accentGlow,
             ),
             child: Container(
               height: 54,
@@ -163,17 +162,15 @@ class _InterestedButton extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    sent
-                        ? Icons.check_circle_rounded
-                        : Icons.favorite_rounded,
+                    sent ? Icons.check_circle_rounded : Icons.favorite_rounded,
                     size: 20,
-                    color: sent ? Colors.white : AppColors.textOnGold,
+                    color: sent ? Colors.white : AppColors.textOnSecondary,
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Text(
                     label,
                     style: AppTypography.button.copyWith(
-                      color: sent ? Colors.white : AppColors.textOnGold,
+                      color: sent ? Colors.white : AppColors.textOnSecondary,
                       fontWeight: FontWeight.w700,
                     ),
                     maxLines: 1,
@@ -217,8 +214,7 @@ class _GlassButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              border:
-                  Border.all(color: Colors.white.withValues(alpha: 0.35)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
             ),
             child: SizedBox(
               height: 46,

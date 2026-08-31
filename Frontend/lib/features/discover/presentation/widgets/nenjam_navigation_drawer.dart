@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/indicators/nm_gradient_progress_bar.dart';
 import '../../../../core/widgets/avatars/app_avatars.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -24,13 +25,13 @@ import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 //
 // Width:    78% of screen, capped at 330px.
 // Height:   full screen.
-// Surface:  warm ivory (AppColors.backgroundLight).
+// Surface:  warm blush white (AppColors.backgroundLight).
 //
 // Layout (top → bottom):
 //   1. Compact profile header  (72px avatar + name + subtitle + ID pill)
-//   2. Profile Strength bar    (max 50px, gold progress)
-//   3. Scrollable menu list    (section dividers, active gold accent, 52px height)
-//   4. Premium upgrade strip   (compact, gold border)
+//   2. Profile Strength bar    (max 50px, plum→magenta progress)
+//   3. Scrollable menu list    (section dividers, active plum accent, 52px height)
+//   4. Premium upgrade strip   (compact, magenta border)
 //   5. Fixed bottom footer     (version + Rate Us)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -57,6 +58,7 @@ class NenjamNavigationDrawer extends ConsumerStatefulWidget {
   final VoidCallback? onSettingsTap;
   final VoidCallback? onPrivacyTap;
   final VoidCallback? onHelpTap;
+
   /// Future-returning so the drawer can show a loading state and guard
   /// against double-taps while the confirm dialog / sign-out call is
   /// in flight — see [_NenjamNavigationDrawerState._handleLogout].
@@ -94,7 +96,8 @@ class NenjamNavigationDrawer extends ConsumerStatefulWidget {
       _NenjamNavigationDrawerState();
 }
 
-class _NenjamNavigationDrawerState extends ConsumerState<NenjamNavigationDrawer> {
+class _NenjamNavigationDrawerState
+    extends ConsumerState<NenjamNavigationDrawer> {
   bool _loggingOut = false;
 
   /// Re-fetches every provider this drawer (and its badge counts) already
@@ -141,7 +144,9 @@ class _NenjamNavigationDrawerState extends ConsumerState<NenjamNavigationDrawer>
 
     return Drawer(
       width: drawerWidth,
-      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      backgroundColor: isDark
+          ? AppColors.backgroundDark
+          : AppColors.backgroundLight,
       elevation: 16,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
@@ -156,7 +161,9 @@ class _NenjamNavigationDrawerState extends ConsumerState<NenjamNavigationDrawer>
             if (identityLoading)
               const _IdentitySkeleton()
             else if (identityError)
-              _IdentityError(onRetry: () => ref.invalidate(profileDraftResponseProvider))
+              _IdentityError(
+                onRetry: () => ref.invalidate(profileDraftResponseProvider),
+              )
             else ...[
               _ProfileHeader(
                 imageUrl: null,
@@ -193,180 +200,180 @@ class _NenjamNavigationDrawerState extends ConsumerState<NenjamNavigationDrawer>
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _onRefresh,
-                color: AppColors.accentGold,
+                color: AppColors.secondary,
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: AppSpacing.xs),
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: AppSpacing.xs),
 
-                    // Profile group
-                    _DrawerItem(
-                      icon: Icons.person_outline_rounded,
-                      label: l10n.drawerProfile,
-                      isActive: true,
-                      onTap: () {
-                        Navigator.pop(context);
-                        widget.onMyProfileTap?.call();
-                      },
-                    ),
-                    _DrawerItem(
-                      icon: Icons.edit_outlined,
-                      label: l10n.drawerEditProfile,
-                      onTap: () {
-                        Navigator.pop(context);
-                        widget.onEditProfileTap?.call();
-                      },
-                    ),
-                    _DrawerItem(
-                      icon: Icons.favorite_border_rounded,
-                      label: l10n.drawerPartnerPreferences,
-                      onTap: () {
-                        Navigator.pop(context);
-                        widget.onPartnerPreferencesTap?.call();
-                      },
-                    ),
-                    _DrawerItem(
-                      icon: Icons.auto_awesome_rounded,
-                      label: l10n.drawerProfileIntelligence,
-                      onTap: () {
-                        Navigator.pop(context);
-                        widget.onProfileIntelligenceTap?.call();
-                      },
-                    ),
-                    _DrawerItem(
-                      icon: Icons.shield_outlined,
-                      label: l10n.drawerVerificationCenter,
-                      onTap: () {
-                        Navigator.pop(context);
-                        widget.onVerificationCenterTap?.call();
-                      },
-                    ),
-                    _DrawerItem(
-                      icon: Icons.star_outline_rounded,
-                      label: l10n.drawerTrustScore,
-                      onTap: () {
-                        Navigator.pop(context);
-                        widget.onTrustScoreTap?.call();
-                      },
-                    ),
-
-                    _MenuDivider(),
-
-                    // Match Activity group
-                    Consumer(
-                      builder: (context, ref, _) => _DrawerItem(
-                        icon: Icons.outbox_outlined,
-                        label: l10n.drawerInterestSent,
-                        count: ref
-                            .watch(sentInterestsProvider)
-                            .valueOrNull
-                            ?.where((r) => r.status == InterestStatus.pending)
-                            .length,
+                      // Profile group
+                      _DrawerItem(
+                        icon: Icons.person_outline_rounded,
+                        label: l10n.drawerProfile,
+                        isActive: true,
                         onTap: () {
                           Navigator.pop(context);
-                          widget.onInterestSentTap?.call();
+                          widget.onMyProfileTap?.call();
                         },
                       ),
-                    ),
-                    Consumer(
-                      builder: (context, ref, _) => _DrawerItem(
-                        icon: Icons.move_to_inbox_outlined,
-                        label: l10n.drawerInterestReceived,
-                        count: ref
-                            .watch(receivedInterestsProvider)
-                            .valueOrNull
-                            ?.where((r) => r.status == InterestStatus.pending)
-                            .length,
+                      _DrawerItem(
+                        icon: Icons.edit_outlined,
+                        label: l10n.drawerEditProfile,
                         onTap: () {
                           Navigator.pop(context);
-                          widget.onInterestReceivedTap?.call();
+                          widget.onEditProfileTap?.call();
                         },
                       ),
-                    ),
-                    Consumer(
-                      builder: (context, ref, _) => _DrawerItem(
-                        // Bookmark (not the heart already used by Partner
-                        // Preferences above) to match the icon used
-                        // everywhere else for this exact concept — Discover,
-                        // Matches, Search, Profile Detail.
-                        icon: Icons.bookmark_border_rounded,
-                        label: l10n.drawerShortlist,
-                        count: ref.watch(shortlistCountProvider),
+                      _DrawerItem(
+                        icon: Icons.favorite_border_rounded,
+                        label: l10n.drawerPartnerPreferences,
                         onTap: () {
                           Navigator.pop(context);
-                          widget.onShortlistTap?.call();
+                          widget.onPartnerPreferencesTap?.call();
                         },
                       ),
-                    ),
-                    _DrawerItem(
-                      // Same eye used by the Profile Viewers empty state and
-                      // by the PROFILE_VIEW notification icon.
-                      icon: Icons.visibility_outlined,
-                      label: l10n.profileViewersTitle,
-                      onTap: () {
-                        Navigator.pop(context);
-                        widget.onProfileViewersTap?.call();
-                      },
-                    ),
+                      _DrawerItem(
+                        icon: Icons.auto_awesome_rounded,
+                        label: l10n.drawerProfileIntelligence,
+                        onTap: () {
+                          Navigator.pop(context);
+                          widget.onProfileIntelligenceTap?.call();
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.shield_outlined,
+                        label: l10n.drawerVerificationCenter,
+                        onTap: () {
+                          Navigator.pop(context);
+                          widget.onVerificationCenterTap?.call();
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.star_outline_rounded,
+                        label: l10n.drawerTrustScore,
+                        onTap: () {
+                          Navigator.pop(context);
+                          widget.onTrustScoreTap?.call();
+                        },
+                      ),
 
-                    _MenuDivider(),
+                      _MenuDivider(),
 
-                    // Settings group
-                    _DrawerItem(
-                      icon: Icons.language_outlined,
-                      label: l10n.drawerLanguage,
-                      onTap: () {
-                        Navigator.pop(context);
-                        widget.onLanguageTap?.call();
-                      },
-                    ),
-                    _DrawerItem(
-                      icon: Icons.settings_outlined,
-                      label: l10n.drawerSettings,
-                      onTap: () {
-                        Navigator.pop(context);
-                        widget.onSettingsTap?.call();
-                      },
-                    ),
-                    _DrawerItem(
-                      icon: Icons.lock_outline_rounded,
-                      label: l10n.drawerPrivacy,
-                      onTap: () {
-                        Navigator.pop(context);
-                        widget.onPrivacyTap?.call();
-                      },
-                    ),
-                    _DrawerItem(
-                      icon: Icons.help_outline_rounded,
-                      label: l10n.drawerHelp,
-                      onTap: () {
-                        Navigator.pop(context);
-                        widget.onHelpTap?.call();
-                      },
-                    ),
+                      // Match Activity group
+                      Consumer(
+                        builder: (context, ref, _) => _DrawerItem(
+                          icon: Icons.outbox_outlined,
+                          label: l10n.drawerInterestSent,
+                          count: ref
+                              .watch(sentInterestsProvider)
+                              .valueOrNull
+                              ?.where((r) => r.status == InterestStatus.pending)
+                              .length,
+                          onTap: () {
+                            Navigator.pop(context);
+                            widget.onInterestSentTap?.call();
+                          },
+                        ),
+                      ),
+                      Consumer(
+                        builder: (context, ref, _) => _DrawerItem(
+                          icon: Icons.move_to_inbox_outlined,
+                          label: l10n.drawerInterestReceived,
+                          count: ref
+                              .watch(receivedInterestsProvider)
+                              .valueOrNull
+                              ?.where((r) => r.status == InterestStatus.pending)
+                              .length,
+                          onTap: () {
+                            Navigator.pop(context);
+                            widget.onInterestReceivedTap?.call();
+                          },
+                        ),
+                      ),
+                      Consumer(
+                        builder: (context, ref, _) => _DrawerItem(
+                          // Bookmark (not the heart already used by Partner
+                          // Preferences above) to match the icon used
+                          // everywhere else for this exact concept — Discover,
+                          // Matches, Search, Profile Detail.
+                          icon: Icons.bookmark_border_rounded,
+                          label: l10n.drawerShortlist,
+                          count: ref.watch(shortlistCountProvider),
+                          onTap: () {
+                            Navigator.pop(context);
+                            widget.onShortlistTap?.call();
+                          },
+                        ),
+                      ),
+                      _DrawerItem(
+                        // Same eye used by the Profile Viewers empty state and
+                        // by the PROFILE_VIEW notification icon.
+                        icon: Icons.visibility_outlined,
+                        label: l10n.profileViewersTitle,
+                        onTap: () {
+                          Navigator.pop(context);
+                          widget.onProfileViewersTap?.call();
+                        },
+                      ),
 
-                    _MenuDivider(),
+                      _MenuDivider(),
 
-                    // Logout — no Navigator.pop before the call: confirmAndLogout
-                    // shows its confirm dialog over the still-open drawer, and
-                    // its final context.go(RouteNames.login) replaces the whole
-                    // page (drawer included) once confirmed, so popping first
-                    // would only hide the loading state below without helping.
-                    _DrawerItem(
-                      icon: Icons.logout_rounded,
-                      label: l10n.drawerLogout,
-                      labelColor: AppColors.error,
-                      iconColor: AppColors.error,
-                      showChevron: false,
-                      isLoading: _loggingOut,
-                      onTap: _handleLogout,
-                    ),
+                      // Settings group
+                      _DrawerItem(
+                        icon: Icons.language_outlined,
+                        label: l10n.drawerLanguage,
+                        onTap: () {
+                          Navigator.pop(context);
+                          widget.onLanguageTap?.call();
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.settings_outlined,
+                        label: l10n.drawerSettings,
+                        onTap: () {
+                          Navigator.pop(context);
+                          widget.onSettingsTap?.call();
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.lock_outline_rounded,
+                        label: l10n.drawerPrivacy,
+                        onTap: () {
+                          Navigator.pop(context);
+                          widget.onPrivacyTap?.call();
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.help_outline_rounded,
+                        label: l10n.drawerHelp,
+                        onTap: () {
+                          Navigator.pop(context);
+                          widget.onHelpTap?.call();
+                        },
+                      ),
 
-                    const SizedBox(height: AppSpacing.sm),
-                  ],
-                ),
+                      _MenuDivider(),
+
+                      // Logout — no Navigator.pop before the call: confirmAndLogout
+                      // shows its confirm dialog over the still-open drawer, and
+                      // its final context.go(RouteNames.login) replaces the whole
+                      // page (drawer included) once confirmed, so popping first
+                      // would only hide the loading state below without helping.
+                      _DrawerItem(
+                        icon: Icons.logout_rounded,
+                        label: l10n.drawerLogout,
+                        labelColor: AppColors.error,
+                        iconColor: AppColors.error,
+                        showChevron: false,
+                        isLoading: _loggingOut,
+                        onTap: _handleLogout,
+                      ),
+
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -438,13 +445,19 @@ class _IdentityError extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.base),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded, size: 18, color: AppColors.error),
+          const Icon(
+            Icons.error_outline_rounded,
+            size: 18,
+            color: AppColors.error,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               AppLocalizations.of(context).commonCouldNotLoadProfile,
               style: AppTypography.bodySmall.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -455,7 +468,7 @@ class _IdentityError extends StatelessWidget {
             child: Text(
               AppLocalizations.of(context).commonRetry,
               style: AppTypography.labelMedium.copyWith(
-                color: AppColors.accentGoldDark,
+                color: AppColors.secondaryDark,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -498,7 +511,9 @@ class _ProfileHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final badgeRingColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final badgeRingColor = isDark
+        ? AppColors.backgroundDark
+        : AppColors.backgroundLight;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -510,13 +525,15 @@ class _ProfileHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // ── 72px circular avatar with gold ring ────────────────────────
+          // ── 72px circular avatar with plum ring ────────────────────────
           Stack(
             clipBehavior: Clip.none,
             children: [
               Semantics(
                 button: onAvatarTap != null,
-                label: AppLocalizations.of(context).drawerChangePhotoSemanticLabel,
+                label: AppLocalizations.of(
+                  context,
+                ).drawerChangePhotoSemanticLabel,
                 child: GestureDetector(
                   onTap: onAvatarTap,
                   child: Container(
@@ -526,17 +543,22 @@ class _ProfileHeader extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: AppColors.accentGold,
+                        color: AppColors.secondary,
                         width: 1.5,
                       ),
                     ),
                     child: Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isDark ? AppColors.surfaceVariantDark : AppColors.primarySurface,
+                        color: isDark
+                            ? AppColors.surfaceVariantDark
+                            : AppColors.primarySurface,
                       ),
                       clipBehavior: Clip.antiAlias,
-                      child: _LiveAvatarImage(imageUrl: imageUrl, gender: gender),
+                      child: _LiveAvatarImage(
+                        imageUrl: imageUrl,
+                        gender: gender,
+                      ),
                     ),
                   ),
                 ),
@@ -555,10 +577,7 @@ class _ProfileHeader extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: AppColors.verifiedBlue,
-                        border: Border.all(
-                          color: badgeRingColor,
-                          width: 1.5,
-                        ),
+                        border: Border.all(color: badgeRingColor, width: 1.5),
                       ),
                       child: const Icon(
                         Icons.add_rounded,
@@ -579,10 +598,7 @@ class _ProfileHeader extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: AppColors.verifiedBlue,
-                      border: Border.all(
-                        color: badgeRingColor,
-                        width: 1.5,
-                      ),
+                      border: Border.all(color: badgeRingColor, width: 1.5),
                     ),
                     child: const Icon(
                       Icons.check_rounded,
@@ -601,11 +617,8 @@ class _ProfileHeader extends StatelessWidget {
                     height: 20,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.accentGold,
-                      border: Border.all(
-                        color: badgeRingColor,
-                        width: 1.5,
-                      ),
+                      color: AppColors.secondary,
+                      border: Border.all(color: badgeRingColor, width: 1.5),
                     ),
                     child: const Icon(
                       Icons.workspace_premium_rounded,
@@ -628,7 +641,9 @@ class _ProfileHeader extends StatelessWidget {
                 child: Text(
                   name,
                   style: AppTypography.titleMedium.copyWith(
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.primary,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.primary,
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 1,
@@ -652,7 +667,9 @@ class _ProfileHeader extends StatelessWidget {
           Text(
             [if (age > 0) '$age', location].join(' • '),
             style: AppTypography.bodySmall.copyWith(
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -665,7 +682,7 @@ class _ProfileHeader extends StatelessWidget {
             Text(
               community,
               style: AppTypography.labelSmall.copyWith(
-                color: AppColors.accentGoldDark,
+                color: AppColors.secondaryDark,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.3,
               ),
@@ -684,16 +701,18 @@ class _ProfileHeader extends StatelessWidget {
                 vertical: 3,
               ),
               decoration: BoxDecoration(
-                color: AppColors.accentGoldSurface.withValues(alpha: isDark ? 0.16 : 1.0),
+                color: AppColors.accentSoft.withValues(
+                  alpha: isDark ? 0.16 : 1.0,
+                ),
                 borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
                 border: Border.all(
-                  color: AppColors.accentGold.withValues(alpha: 0.4),
+                  color: AppColors.secondary.withValues(alpha: 0.4),
                 ),
               ),
               child: Text(
                 AppLocalizations.of(context).profileIdLabel(profileId),
                 style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.accentGoldDark,
+                  color: AppColors.secondaryDark,
                   fontWeight: FontWeight.w600,
                   fontSize: 10,
                   letterSpacing: 0.5,
@@ -768,11 +787,9 @@ class _ProfileStrengthBar extends StatelessWidget {
           vertical: AppSpacing.xs,
         ),
         decoration: BoxDecoration(
-          color: AppColors.accentGoldSurface.withValues(alpha: isDark ? 0.16 : 1.0),
+          color: AppColors.softLavender.withValues(alpha: isDark ? 0.16 : 1.0),
           borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-          border: Border.all(
-            color: AppColors.accentGold.withValues(alpha: 0.25),
-          ),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -784,34 +801,24 @@ class _ProfileStrengthBar extends StatelessWidget {
                 Text(
                   l10n.drawerProfileStrength,
                   style: AppTypography.labelSmall.copyWith(
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
                   '$clamped%',
                   style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.accentGoldDark,
+                    color: AppColors.primaryDark,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 4),
-            // Gold progress bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-              child: SizedBox(
-                height: 4,
-                child: LinearProgressIndicator(
-                  value: clamped / 100.0,
-                  backgroundColor: isDark ? AppColors.borderDark : AppColors.borderLight,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    AppColors.accentGold,
-                  ),
-                ),
-              ),
-            ),
+            // Plum→magenta progress bar
+            NmGradientProgressBar(value: clamped / 100.0, height: 4),
           ],
         ),
       ),
@@ -849,9 +856,11 @@ class _DrawerItem extends StatefulWidget {
   final Color? labelColor;
   final Color? iconColor;
   final VoidCallback? onTap;
+
   /// Live count badge (e.g. pending received interests) — null/0 hides it.
   /// Never a hardcoded placeholder; callers derive this from real state.
   final int? count;
+
   /// Shows a small spinner in place of the trailing chevron and disables
   /// the tile — used by Logout while the confirm dialog / sign-out call is
   /// in flight, to prevent double-taps.
@@ -901,10 +910,11 @@ class _DrawerItemState extends State<_DrawerItem>
 
   Color get _effectiveIconColor =>
       widget.iconColor ??
-      (widget.isActive ? AppColors.accentGoldDark : AppColors.accentGold);
+      (widget.isActive ? AppColors.primary : AppColors.secondary);
 
   Color _effectiveLabelColor(bool isDark) =>
-      widget.labelColor ?? (isDark ? AppColors.textPrimaryDark : AppColors.primary);
+      widget.labelColor ??
+      (isDark ? AppColors.textPrimaryDark : AppColors.primary);
 
   @override
   Widget build(BuildContext context) {
@@ -936,32 +946,25 @@ class _DrawerItemState extends State<_DrawerItem>
                 margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                 decoration: BoxDecoration(
                   color: widget.isActive
-                      ? AppColors.accentGoldSurface.withValues(alpha: isDark ? 0.16 : 1.0)
+                      ? AppColors.softLavender.withValues(
+                          alpha: isDark ? 0.16 : 1.0,
+                        )
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   border: widget.isActive
                       ? const Border(
-                          left: BorderSide(
-                            color: AppColors.accentGold,
-                            width: 3,
-                          ),
+                          left: BorderSide(color: AppColors.primary, width: 3),
                         )
                       : null,
                 ),
                 child: Padding(
                   padding: EdgeInsets.only(
-                    left: widget.isActive
-                        ? AppSpacing.sm
-                        : AppSpacing.sm + 3,
+                    left: widget.isActive ? AppSpacing.sm : AppSpacing.sm + 3,
                     right: AppSpacing.sm,
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        widget.icon,
-                        size: 20,
-                        color: iconColor,
-                      ),
+                      Icon(widget.icon, size: 20, color: iconColor),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Text(
@@ -986,14 +989,18 @@ class _DrawerItemState extends State<_DrawerItem>
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(iconColor),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              iconColor,
+                            ),
                           ),
                         )
                       else if (widget.showChevron)
                         Icon(
                           Icons.chevron_right_rounded,
                           size: 18,
-                          color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
                         ),
                     ],
                   ),
@@ -1032,24 +1039,31 @@ class _PremiumStrip extends StatelessWidget {
           horizontal: AppSpacing.base,
           vertical: AppSpacing.sm,
         ),
+        // Cream hairline rather than magenta: a magenta border on the plum
+        // fill sits at ~1.7:1 and left the strip with no edge at all.
         decoration: BoxDecoration(
           color: AppColors.primary,
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          border: Border.all(color: AppColors.accentGold, width: 1),
+          border: Border.all(
+            color: AppColors.premiumCream.withValues(alpha: 0.30),
+            width: 1,
+          ),
         ),
         child: Row(
           children: [
             const Icon(
               Icons.workspace_premium_rounded,
               size: 18,
-              color: AppColors.accentGoldLight,
+              color: AppColors.accentSoft,
             ),
             const SizedBox(width: AppSpacing.xs),
             Expanded(
               child: Text(
                 l10n.drawerPremiumTitle,
+                // Blush *surface* tone, not the mid-rose: this sits on a
+                // solid plum fill where #F58CB4 lands under 4:1.
                 style: AppTypography.labelLarge.copyWith(
-                  color: AppColors.accentGoldLight,
+                  color: AppColors.accentSoft,
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 1,
@@ -1062,13 +1076,13 @@ class _PremiumStrip extends StatelessWidget {
                 vertical: 4,
               ),
               decoration: BoxDecoration(
-                color: AppColors.accentGold,
+                color: AppColors.secondary,
                 borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
               ),
               child: Text(
                 l10n.drawerUpgrade,
                 style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.textOnGold,
+                  color: AppColors.textOnSecondary,
                   fontWeight: FontWeight.w700,
                   fontSize: 11,
                 ),
@@ -1101,7 +1115,9 @@ class _DrawerFooter extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: isDark ? AppColors.dividerDark : AppColors.dividerLight),
+          top: BorderSide(
+            color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+          ),
         ),
       ),
       child: Row(
@@ -1111,7 +1127,9 @@ class _DrawerFooter extends StatelessWidget {
             child: Text(
               '${l10n.drawerVersionLabel} v2.4',
               style: AppTypography.labelSmall.copyWith(
-                color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
                 fontSize: 10,
               ),
               maxLines: 1,
@@ -1123,7 +1141,7 @@ class _DrawerFooter extends StatelessWidget {
             child: Text(
               AppLocalizations.of(context).drawerRateUs,
               style: AppTypography.labelSmall.copyWith(
-                color: AppColors.accentGoldDark,
+                color: AppColors.secondaryDark,
                 fontWeight: FontWeight.w700,
                 fontSize: 10,
               ),

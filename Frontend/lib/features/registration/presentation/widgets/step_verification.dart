@@ -74,31 +74,52 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
   void _syncMirrors() {
     final authUser = ref.read(authRepositoryProvider).currentAuthUser;
     final docs = ref.read(verificationStatusesProvider).valueOrNull ?? const {};
-    bool docVerified(VerificationDocumentType t) => docs[t]?.isVerified ?? false;
+    bool docVerified(VerificationDocumentType t) =>
+        docs[t]?.isVerified ?? false;
 
     var next = widget.status;
     var changed = false;
-    void apply(bool shouldBe, bool already, VerificationStatus Function() next_) {
+    void apply(
+      bool shouldBe,
+      bool already,
+      VerificationStatus Function() next_,
+    ) {
       if (shouldBe && !already) {
         next = next_();
         changed = true;
       }
     }
 
-    apply(authUser?.phoneVerified ?? false, next.mobileVerified,
-        () => next.copyWith(mobileVerified: true));
-    apply(authUser?.emailVerified ?? false, next.emailVerified,
-        () => next.copyWith(emailVerified: true));
-    apply(docVerified(VerificationDocumentType.income), next.incomeVerified,
-        () => next.copyWith(incomeVerified: true));
-    apply(docVerified(VerificationDocumentType.asset), next.assetVerified,
-        () => next.copyWith(assetVerified: true));
     apply(
-        docVerified(VerificationDocumentType.aadhaar),
-        next.aadhaarVerified && next.govIdVerified,
-        () => next.copyWith(aadhaarVerified: true, govIdVerified: true));
-    apply(docVerified(VerificationDocumentType.nri), next.nriVerified,
-        () => next.copyWith(nriVerified: true));
+      authUser?.phoneVerified ?? false,
+      next.mobileVerified,
+      () => next.copyWith(mobileVerified: true),
+    );
+    apply(
+      authUser?.emailVerified ?? false,
+      next.emailVerified,
+      () => next.copyWith(emailVerified: true),
+    );
+    apply(
+      docVerified(VerificationDocumentType.income),
+      next.incomeVerified,
+      () => next.copyWith(incomeVerified: true),
+    );
+    apply(
+      docVerified(VerificationDocumentType.asset),
+      next.assetVerified,
+      () => next.copyWith(assetVerified: true),
+    );
+    apply(
+      docVerified(VerificationDocumentType.aadhaar),
+      next.aadhaarVerified && next.govIdVerified,
+      () => next.copyWith(aadhaarVerified: true, govIdVerified: true),
+    );
+    apply(
+      docVerified(VerificationDocumentType.nri),
+      next.nriVerified,
+      () => next.copyWith(nriVerified: true),
+    );
 
     if (changed) widget.onChanged(next);
   }
@@ -111,7 +132,9 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   // ─── Mobile (real Firebase phone OTP) ─────────────────────────────────
@@ -198,7 +221,9 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
       if (confirmed != true || !mounted) return;
 
       try {
-        await ref.read(verificationStatusesProvider.notifier).submit(type, file);
+        await ref
+            .read(verificationStatusesProvider.notifier)
+            .submit(type, file);
       } catch (_) {
         if (!mounted) return;
         _snack('Upload failed. Please check your connection and try again.');
@@ -224,14 +249,18 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
           children: [
             const SizedBox(height: 12),
             ListTile(
-              leading: const Icon(Icons.photo_library_rounded,
-                  color: AppColors.primary),
+              leading: const Icon(
+                Icons.photo_library_rounded,
+                color: AppColors.primary,
+              ),
               title: Text(AppLocalizations.of(context).inboxChooseFromGallery),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt_rounded,
-                  color: AppColors.accentGold),
+              leading: const Icon(
+                Icons.camera_alt_rounded,
+                color: AppColors.secondary,
+              ),
               title: Text(AppLocalizations.of(context).inboxTakePhoto),
               onTap: () => Navigator.pop(ctx, ImageSource.camera),
             ),
@@ -256,7 +285,10 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(AppLocalizations.of(context).registrationPreviewDocument, style: AppTypography.titleLarge),
+              Text(
+                AppLocalizations.of(context).registrationPreviewDocument,
+                style: AppTypography.titleLarge,
+              ),
               const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
@@ -264,8 +296,8 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
                   source: file.path,
                   height: 240,
                   fit: BoxFit.cover,
-                  cacheWidth:
-                      (240 * MediaQuery.devicePixelRatioOf(context)).round(),
+                  cacheWidth: (240 * MediaQuery.devicePixelRatioOf(context))
+                      .round(),
                 ),
               ),
               const SizedBox(height: 16),
@@ -274,14 +306,18 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: Text(AppLocalizations.of(context).registrationChooseAgain),
+                      child: Text(
+                        AppLocalizations.of(context).registrationChooseAgain,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: Text(AppLocalizations.of(context).registrationConfirmUpload),
+                      child: Text(
+                        AppLocalizations.of(context).registrationConfirmUpload,
+                      ),
                     ),
                   ),
                 ],
@@ -392,7 +428,11 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.shield_rounded, color: AppColors.success, size: 28),
+                const Icon(
+                  Icons.shield_rounded,
+                  color: AppColors.success,
+                  size: 28,
+                ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -471,30 +511,38 @@ class _StepVerificationState extends ConsumerState<StepVerification> {
               NmVerificationCardStatus.notVerified,
             VerificationSubmissionStatus.uploading =>
               NmVerificationCardStatus.uploading,
-            VerificationSubmissionStatus.pending => NmVerificationCardStatus.pending,
+            VerificationSubmissionStatus.pending =>
+              NmVerificationCardStatus.pending,
             VerificationSubmissionStatus.verified =>
               NmVerificationCardStatus.verified,
             VerificationSubmissionStatus.rejected =>
               NmVerificationCardStatus.rejected,
-            VerificationSubmissionStatus.failed => NmVerificationCardStatus.failed,
+            VerificationSubmissionStatus.failed =>
+              NmVerificationCardStatus.failed,
           };
-    final isRetryable = status == NmVerificationCardStatus.rejected ||
+    final isRetryable =
+        status == NmVerificationCardStatus.rejected ||
         status == NmVerificationCardStatus.failed;
-    final isActionable = status == NmVerificationCardStatus.notVerified || isRetryable;
+    final isActionable =
+        status == NmVerificationCardStatus.notVerified || isRetryable;
 
     return NmVerificationStatusCard(
       icon: icon,
       title: title,
       subtitle: subtitle,
       status: status,
-      actionLabel:
-          isRetryable ? l10n.registrationVerificationRetryButton : l10n.registrationVerifyButton,
+      actionLabel: isRetryable
+          ? l10n.registrationVerificationRetryButton
+          : l10n.registrationVerifyButton,
       onAction: isActionable ? () => _startDocumentUpload(type) : null,
       progress: progress,
       statusLabel: switch (status) {
-        NmVerificationCardStatus.pending => l10n.registrationVerificationPendingLabel,
-        NmVerificationCardStatus.rejected => l10n.registrationVerificationRejectedLabel,
-        NmVerificationCardStatus.failed => l10n.registrationVerificationFailedLabel,
+        NmVerificationCardStatus.pending =>
+          l10n.registrationVerificationPendingLabel,
+        NmVerificationCardStatus.rejected =>
+          l10n.registrationVerificationRejectedLabel,
+        NmVerificationCardStatus.failed =>
+          l10n.registrationVerificationFailedLabel,
         _ => null,
       },
       rejectionReason: record?.rejectionReason,
@@ -535,7 +583,9 @@ class _MobileOtpSheetState extends ConsumerState<_MobileOtpSheet> {
     controller.clearAutoCredential();
     setState(() => _verifying = true);
     try {
-      await ref.read(authRepositoryProvider).confirmAutoPhoneForSignup(credential);
+      await ref
+          .read(authRepositoryProvider)
+          .confirmAutoPhoneForSignup(credential);
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
@@ -549,7 +599,9 @@ class _MobileOtpSheetState extends ConsumerState<_MobileOtpSheet> {
     if (_otp.length != 6 || state.verificationId == null || _verifying) return;
     setState(() => _verifying = true);
     try {
-      await ref.read(authRepositoryProvider).confirmPhoneForSignup(
+      await ref
+          .read(authRepositoryProvider)
+          .confirmPhoneForSignup(
             verificationId: state.verificationId!,
             smsCode: _otp,
           );
@@ -563,7 +615,9 @@ class _MobileOtpSheetState extends ConsumerState<_MobileOtpSheet> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -572,7 +626,8 @@ class _MobileOtpSheetState extends ConsumerState<_MobileOtpSheet> {
     final state = ref.watch(phoneAuthControllerProvider);
 
     ref.listen<PhoneAuthState>(phoneAuthControllerProvider, (prev, next) {
-      if (next.status == PhoneAuthStatus.autoRetrieved && next.autoCredential != null) {
+      if (next.status == PhoneAuthStatus.autoRetrieved &&
+          next.autoCredential != null) {
         _onAutoVerified();
       }
       if (next.status == PhoneAuthStatus.error && next.errorMessage != null) {
@@ -596,11 +651,15 @@ class _MobileOtpSheetState extends ConsumerState<_MobileOtpSheet> {
           children: [
             Text(
               l10n.authEnterVerificationCode,
-              style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.w700),
+              style: AppTypography.titleLarge.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              isSending ? l10n.authSendingOtp : l10n.authOtpSentTo(widget.phone),
+              isSending
+                  ? l10n.authSendingOtp
+                  : l10n.authOtpSentTo(widget.phone),
               style: AppTypography.bodySmall,
             ),
             const SizedBox(height: 24),
@@ -634,7 +693,9 @@ class _MobileOtpSheetState extends ConsumerState<_MobileOtpSheet> {
                   : TextButton.icon(
                       onPressed: isSending
                           ? null
-                          : () => ref.read(phoneAuthControllerProvider.notifier).resend(),
+                          : () => ref
+                                .read(phoneAuthControllerProvider.notifier)
+                                .resend(),
                       icon: const Icon(Icons.refresh_rounded, size: 18),
                       label: Text(l10n.authResendOtp),
                     ),
@@ -666,7 +727,10 @@ class _EmailCheckSheetState extends ConsumerState<_EmailCheckSheet> {
   @override
   void initState() {
     super.initState();
-    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) => _check(silent: true));
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: 4),
+      (_) => _check(silent: true),
+    );
   }
 
   @override
@@ -679,7 +743,9 @@ class _EmailCheckSheetState extends ConsumerState<_EmailCheckSheet> {
   Future<void> _check({bool silent = false}) async {
     if (_checking) return;
     if (!silent) setState(() => _checking = true);
-    final verified = await ref.read(authRepositoryProvider).checkEmailVerified();
+    final verified = await ref
+        .read(authRepositoryProvider)
+        .checkEmailVerified();
     if (!mounted) return;
     if (!silent) setState(() => _checking = false);
     if (verified) {
@@ -687,8 +753,9 @@ class _EmailCheckSheetState extends ConsumerState<_EmailCheckSheet> {
       Navigator.pop(context, true);
     } else if (!silent) {
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10n.authEmailNotVerifiedYet)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.authEmailNotVerifiedYet)));
     }
   }
 
@@ -712,20 +779,23 @@ class _EmailCheckSheetState extends ConsumerState<_EmailCheckSheet> {
       });
       if (!mounted) return;
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10n.authVerificationEmailSent)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.authVerificationEmailSent)));
     } catch (_) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10n.authGenericError)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.authGenericError)));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final email = ref.watch(firebaseAuthServiceProvider).currentUser?.email ?? '';
+    final email =
+        ref.watch(firebaseAuthServiceProvider).currentUser?.email ?? '';
 
     return SafeArea(
       child: Padding(
@@ -736,10 +806,15 @@ class _EmailCheckSheetState extends ConsumerState<_EmailCheckSheet> {
           children: [
             Text(
               l10n.authVerifyEmailTitle,
-              style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.w700),
+              style: AppTypography.titleLarge.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 8),
-            Text(l10n.authVerifyEmailSentTo(email), style: AppTypography.bodySmall),
+            Text(
+              l10n.authVerifyEmailSentTo(email),
+              style: AppTypography.bodySmall,
+            ),
             const SizedBox(height: 20),
             NmGradientButton(
               label: l10n.authIveVerified,
@@ -752,9 +827,11 @@ class _EmailCheckSheetState extends ConsumerState<_EmailCheckSheet> {
               child: TextButton.icon(
                 onPressed: _resendCooldown > 0 ? null : _resend,
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: Text(_resendCooldown > 0
-                    ? l10n.authResendEmailIn(_resendCooldown.toString())
-                    : l10n.authResendEmail),
+                label: Text(
+                  _resendCooldown > 0
+                      ? l10n.authResendEmailIn(_resendCooldown.toString())
+                      : l10n.authResendEmail,
+                ),
               ),
             ),
           ],

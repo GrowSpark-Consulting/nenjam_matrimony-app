@@ -49,13 +49,18 @@ class NmProfilePerformanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(AppLocalizations.of(context).profilePerformanceTitle, style: AppTypography.titleMedium),
+          Text(
+            AppLocalizations.of(context).profilePerformanceTitle,
+            style: AppTypography.titleMedium,
+          ),
           const SizedBox(height: AppSpacing.lg),
           Row(
             children: [
               Expanded(
                 child: _GaugeWidget(
-                  label: AppLocalizations.of(context).profilePerformanceStrength,
+                  label: AppLocalizations.of(
+                    context,
+                  ).profilePerformanceStrength,
                   value: strengthPct / 100,
                   displayText: '$strengthPct%',
                   color: AppColors.faceVerificationGreen,
@@ -64,16 +69,20 @@ class NmProfilePerformanceCard extends StatelessWidget {
               ),
               Expanded(
                 child: _GaugeWidget(
-                  label: AppLocalizations.of(context).profilePerformanceVisibility,
+                  label: AppLocalizations.of(
+                    context,
+                  ).profilePerformanceVisibility,
                   value: visibilityPct / 100,
                   displayText: '$visibilityPct%',
-                  color: AppColors.accentGold,
+                  color: AppColors.secondary,
                   isDark: isDark,
                 ),
               ),
               Expanded(
                 child: _GaugeWidget(
-                  label: AppLocalizations.of(context).profilePerformanceResponse,
+                  label: AppLocalizations.of(
+                    context,
+                  ).profilePerformanceResponse,
                   value: 0.5,
                   displayText: responseTime,
                   color: AppColors.primary,
@@ -111,7 +120,9 @@ class _GaugeWidget extends StatelessWidget {
           value: value,
           displayText: displayText,
           color: color,
-          textColor: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+          textColor: isDark
+              ? AppColors.textPrimaryDark
+              : AppColors.textPrimaryLight,
           fontSize: 13,
           fontWeight: FontWeight.w700,
           duration: const Duration(milliseconds: 1200),
