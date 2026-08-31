@@ -61,9 +61,7 @@ class TicketHistoryPage extends ConsumerWidget {
                 return Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? AppColors.cardDark
-                        : AppColors.cardLight,
+                    color: AppColors.cardLight,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(

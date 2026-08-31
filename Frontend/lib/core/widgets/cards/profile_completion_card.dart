@@ -23,7 +23,6 @@ class NmProfileCompletionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final step = nextStep ?? l10n.homeStepAddPhoto;
 
     return GestureDetector(
@@ -31,7 +30,7 @@ class NmProfileCompletionCard extends StatelessWidget {
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
-        decoration: AppDecorations.card(isDark: isDark),
+        decoration: AppDecorations.card(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -61,9 +60,7 @@ class NmProfileCompletionCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: percentage / 100,
                 minHeight: 8,
-                backgroundColor: isDark
-                    ? AppColors.surfaceVariantDark
-                    : AppColors.surfaceVariantLight,
+                backgroundColor: AppColors.surfaceVariantLight,
                 color: percentage >= 80
                     ? AppColors.success
                     : AppColors.secondary,

@@ -41,10 +41,9 @@ void showCountryPickerSheet(
   BuildContext context, {
   required ValueChanged<CountryInfo> onSelect,
 }) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
   showModalBottomSheet<void>(
     context: context,
-    backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+    backgroundColor: AppColors.surfaceLight,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -58,7 +57,7 @@ void showCountryPickerSheet(
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: isDark ? Colors.white24 : Colors.black12,
+                color: Colors.black12,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),

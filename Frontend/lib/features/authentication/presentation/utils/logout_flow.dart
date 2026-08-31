@@ -7,8 +7,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../providers/auth_providers.dart';
 
-/// Confirms with the user, then signs out and returns to Login with a
-/// cleared navigation stack.
+/// Confirms with the user, then signs out and returns to the sign-up
+/// landing screen with a cleared navigation stack.
 ///
 /// The single logout entry point shared by every UI surface that can
 /// trigger one (Settings, nav drawer, ...) — actual session teardown
@@ -39,5 +39,5 @@ Future<void> confirmAndLogout(BuildContext context, WidgetRef ref) async {
 
   await ref.read(authRepositoryProvider).logout();
   if (!context.mounted) return;
-  context.go(RouteNames.login);
+  context.go(RouteNames.registrationLanding);
 }

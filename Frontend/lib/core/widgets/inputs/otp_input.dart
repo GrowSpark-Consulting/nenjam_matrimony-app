@@ -103,8 +103,6 @@ class _NmOtpInputState extends State<NmOtpInput> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -127,9 +125,7 @@ class _NmOtpInputState extends State<NmOtpInput> {
                   textAlign: TextAlign.center,
                   maxLength: widget.length, // allow paste of full code
                   style: AppTypography.headlineSmall.copyWith(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
+                    color: AppColors.textPrimaryLight,
                     fontWeight: FontWeight.w600,
                   ),
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -137,23 +133,17 @@ class _NmOtpInputState extends State<NmOtpInput> {
                     counterText: '',
                     contentPadding: EdgeInsets.zero,
                     filled: true,
-                    fillColor: isDark
-                        ? AppColors.surfaceVariantDark
-                        : AppColors.surfaceVariantLight,
+                    fillColor: AppColors.surfaceVariantLight,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: isDark
-                            ? AppColors.borderDark
-                            : AppColors.borderLight,
+                      borderSide: const BorderSide(
+                        color: AppColors.borderLight,
                       ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: isDark
-                            ? AppColors.borderDark
-                            : AppColors.borderLight,
+                      borderSide: const BorderSide(
+                        color: AppColors.borderLight,
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(

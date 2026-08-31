@@ -16,9 +16,8 @@ class LifestyleSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textSecondary =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    const textSecondary =
+        AppColors.textSecondaryLight;
 
     final facts = <(IconData, String, String)>[
       if (lifestyle.eatingHabit.isNotEmpty)
@@ -36,7 +35,7 @@ class LifestyleSection extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: AppSpacing.cardPaddingLarge,
-      decoration: AppDecorations.card(isDark: isDark),
+      decoration: AppDecorations.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

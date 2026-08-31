@@ -15,6 +15,7 @@ import '../../data/services/backend_sync_service.dart';
 import '../controllers/login_controller.dart';
 import '../controllers/phone_auth_controller.dart';
 import '../providers/auth_providers.dart';
+import '../utils/post_auth_destination.dart';
 
 /// Phone-OTP **login** screen (login Option 2).
 ///
@@ -40,7 +41,7 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
               verificationId: phoneState.verificationId!,
               smsCode: _otp,
             );
-    _handleResult(result);
+    await _handleResult(result);
   }
 
   Future<void> _verifyAuto() async {
@@ -50,10 +51,10 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
     final result = await ref
         .read(loginControllerProvider.notifier)
         .loginWithAutoCredential(credential);
-    _handleResult(result);
+    await _handleResult(result);
   }
 
-  void _handleResult(LoginResult result) {
+  Future<void> _handleResult(LoginResult result) async {
     if (!mounted) return;
     if (!result.success) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -74,15 +75,21 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
           ref.read(firebaseAuthServiceProvider).currentUser?.emailVerified ??
               false;
       context.go(emailVerified ? RouteNames.verifyPhone : RouteNames.verifyEmail);
-    } else {
-      context.go(RouteNames.discover);
+      return;
     }
+
+    // A phone number that has never signed in before creates the Firebase
+    // account here, so "logged in" and "registered" are especially far
+    // apart on this path — PostAuthDestination decides which of the two
+    // this user actually is.
+    final route = await ref.read(postAuthDestinationProvider).resolve();
+    if (!mounted) return;
+    context.go(route);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final phoneState = ref.watch(phoneAuthControllerProvider);
     final isLoading = ref.watch(loginControllerProvider);
 
@@ -121,9 +128,7 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColors.surfaceVariantDark
-                      : AppColors.primarySurface,
+                  color: AppColors.primarySurface,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -137,9 +142,7 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
                           ref.read(phoneAuthControllerProvider.notifier).phone,
                         ),
                         style: AppTypography.bodySmall.copyWith(
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
+                          color: AppColors.textSecondaryLight,
                         ),
                       ),
                     ),
@@ -170,9 +173,7 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
                           Text(
                             l10n.authResendOtpIn,
                             style: AppTypography.bodySmall.copyWith(
-                              color: isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiaryLight,
+                              color: AppColors.textTertiaryLight,
                             ),
                           ),
                           const SizedBox(height: 4),

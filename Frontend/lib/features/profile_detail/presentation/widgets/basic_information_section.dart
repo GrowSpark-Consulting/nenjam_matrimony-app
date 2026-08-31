@@ -17,7 +17,6 @@ class BasicInformationSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final base = detail.base;
 
     final rows = <(String, String)>[
@@ -38,7 +37,7 @@ class BasicInformationSection extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: AppSpacing.cardPaddingLarge,
-      decoration: AppDecorations.card(isDark: isDark),
+      decoration: AppDecorations.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -58,9 +57,7 @@ class BasicInformationSection extends StatelessWidget {
                         child: Text(
                           label,
                           style: AppTypography.labelMedium.copyWith(
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
+                            color: AppColors.textSecondaryLight,
                           ),
                         ),
                       ),
@@ -72,9 +69,7 @@ class BasicInformationSection extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.labelMedium.copyWith(
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimaryLight,
+                            color: AppColors.textPrimaryLight,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -83,11 +78,9 @@ class BasicInformationSection extends StatelessWidget {
                   ),
                 ),
                 if (!isLast)
-                  Divider(
+                  const Divider(
                     height: 1,
-                    color: isDark
-                        ? AppColors.dividerDark
-                        : AppColors.dividerLight,
+                    color: AppColors.dividerLight,
                   ),
               ],
             );

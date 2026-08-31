@@ -56,14 +56,13 @@ class HoroscopeCompatibilitySection extends StatelessWidget {
       );
     }
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasData =
         (rasi?.isNotEmpty ?? false) || (nakshatra?.isNotEmpty ?? false);
 
     return Container(
       width: double.infinity,
       padding: AppSpacing.cardPaddingLarge,
-      decoration: AppDecorations.card(isDark: isDark),
+      decoration: AppDecorations.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -102,9 +101,7 @@ class HoroscopeCompatibilitySection extends StatelessWidget {
             Text(
               AppLocalizations.of(context).riHoroscopeEmpty,
               style: AppTypography.bodySmall.copyWith(
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
+                color: AppColors.textTertiaryLight,
               ),
             ),
           const SizedBox(height: AppSpacing.sm),

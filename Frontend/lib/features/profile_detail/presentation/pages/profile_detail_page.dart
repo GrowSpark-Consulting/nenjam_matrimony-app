@@ -23,8 +23,7 @@ import '../widgets/profile_detail_hero_app_bar.dart';
 import '../widgets/profile_detail_section_tab_bar.dart';
 import '../widgets/profile_photo_gallery_section.dart';
 import '../widgets/similar_profiles_section.dart';
-import '../widgets/trust_score_card.dart';
-import '../widgets/verification_trust_section.dart';
+import '../widgets/verification_section.dart';
 
 /// Read-only detail view of another member's profile — opened by tapping
 /// a profile card from Discover, Matches, Search, or Similar Profiles.
@@ -96,7 +95,7 @@ class _ProfileDetailPageState extends ConsumerState<ProfileDetailPage> {
 ///
 /// full-screen hero photo → about → basic information → photo gallery →
 /// section navigation → family → lifestyle → horoscope → compatibility →
-/// psychology → preferences → trust → verification → similar profiles.
+/// psychology → preferences → verification → similar profiles.
 ///
 /// The hero occupies the entire first viewport, and the member's identity
 /// (name/age, profession, and the short profile chips) is overlaid across
@@ -447,14 +446,7 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
               const SizedBox(height: AppSpacing.md),
               KeyedSubtree(
                 key: _sectionKeys[5],
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TrustScoreCard(trust: detail.trustScore),
-                    const SizedBox(height: AppSpacing.md),
-                    VerificationTrustSection(detail: detail),
-                  ],
-                ),
+                child: VerificationSection(detail: detail),
               ),
               const SizedBox(height: AppSpacing.md),
               SimilarProfilesSection(baseProfile: base),

@@ -62,7 +62,7 @@ class _OtpPageState extends State<OtpPage> {
         if (mounted) {
           setState(() => _isLoading = false);
           if (flow == 'signup') {
-            context.go(RouteNames.registrationWizard);
+            context.go(RouteNames.createProfileFor);
           } else {
             context.go(RouteNames.discover);
           }
@@ -96,7 +96,6 @@ class _OtpPageState extends State<OtpPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final extra = _parseExtra(context);
     final identifier = extra['identifier'] ?? 'your number';
     final channel = extra['channel'] ?? 'phone';
@@ -133,9 +132,7 @@ class _OtpPageState extends State<OtpPage> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColors.surfaceVariantDark
-                      : AppColors.primarySurface,
+                  color: AppColors.primarySurface,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -150,9 +147,7 @@ class _OtpPageState extends State<OtpPage> {
                       child: Text(
                         l10n.authOtpSentTo(otpTarget),
                         style: AppTypography.bodySmall.copyWith(
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
+                          color: AppColors.textSecondaryLight,
                         ),
                       ),
                     ),
@@ -189,9 +184,7 @@ class _OtpPageState extends State<OtpPage> {
                           Text(
                             l10n.authResendOtpIn,
                             style: AppTypography.bodySmall.copyWith(
-                              color: isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiaryLight,
+                              color: AppColors.textTertiaryLight,
                             ),
                           ),
                           const SizedBox(height: 4),

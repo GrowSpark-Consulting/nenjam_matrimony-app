@@ -1,11 +1,9 @@
 import 'package:dio/dio.dart' show CancelToken;
 /// Pure abstract Dart interface. Concrete implementation lives in `data/`.
-/// Not wired to any provider today — `settings_page.dart`'s Dark Mode
-/// switch is hardcoded/non-functional (though it needs no backend call —
-/// `StorageService.setThemeMode()` already persists it locally), and there
-/// is no delete-account UI at all. Covers only the `settings` module's own
-/// endpoints; the Push Notifications toggle belongs to the `notifications`
-/// module, which is out of scope for this pass.
+/// Covers only the `settings` module's own endpoints; the Push
+/// Notifications toggle belongs to the `notifications` module, and the
+/// Language row is a purely local preference, so neither routes through
+/// here.
 abstract interface class SettingsRepository {
   /// `GET /settings`. Shape is undefined — the `settings` controller is
   /// currently an empty stub — so this returns the raw JSON rather than a

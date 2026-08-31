@@ -37,15 +37,13 @@ class ProfileDetailSectionTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       height: height,
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceLight,
         border: Border(
           bottom: BorderSide(
-            color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+            color: AppColors.dividerLight,
           ),
         ),
       ),
@@ -62,7 +60,6 @@ class ProfileDetailSectionTabBar extends StatelessWidget {
             child: _UnderlineTab(
               label: labels[index],
               selected: selected,
-              isDark: isDark,
               onTap: () => onTap(index),
             ),
           );
@@ -75,24 +72,18 @@ class ProfileDetailSectionTabBar extends StatelessWidget {
 class _UnderlineTab extends StatelessWidget {
   final String label;
   final bool selected;
-  final bool isDark;
   final VoidCallback onTap;
 
   const _UnderlineTab({
     required this.label,
     required this.selected,
-    required this.isDark,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final primaryText = isDark
-        ? AppColors.textPrimaryDark
-        : AppColors.textPrimaryLight;
-    final secondaryText = isDark
-        ? AppColors.textSecondaryDark
-        : AppColors.textSecondaryLight;
+    const primaryText = AppColors.textPrimaryLight;
+    const secondaryText = AppColors.textSecondaryLight;
 
     return Material(
       color: Colors.transparent,

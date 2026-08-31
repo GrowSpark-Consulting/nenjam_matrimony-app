@@ -24,7 +24,6 @@ class RegistrationJourneyHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentMilestone = milestoneForStep(stepIndex);
 
     return SafeArea(
@@ -52,9 +51,7 @@ class RegistrationJourneyHeader extends StatelessWidget {
                                 height: 2,
                                 color: isDone || isCurrent
                                     ? AppColors.primary
-                                    : (isDark
-                                        ? AppColors.surfaceVariantDark
-                                        : AppColors.surfaceVariantLight),
+                                    : AppColors.surfaceVariantLight,
                               ),
                             ),
                           AnimatedContainer(
@@ -69,9 +66,7 @@ class RegistrationJourneyHeader extends StatelessWidget {
                                   ? AppColors.primary
                                   : isCurrent
                                       ? AppColors.primary.withValues(alpha: 0.15)
-                                      : (isDark
-                                          ? AppColors.surfaceVariantDark
-                                          : AppColors.surfaceVariantLight),
+                                      : AppColors.surfaceVariantLight,
                               border: isCurrent
                                   ? Border.all(color: AppColors.primary, width: 2)
                                   : null,
@@ -88,9 +83,7 @@ class RegistrationJourneyHeader extends StatelessWidget {
                                 height: 2,
                                 color: isDone
                                     ? AppColors.primary
-                                    : (isDark
-                                        ? AppColors.surfaceVariantDark
-                                        : AppColors.surfaceVariantLight),
+                                    : AppColors.surfaceVariantLight,
                               ),
                             ),
                         ],

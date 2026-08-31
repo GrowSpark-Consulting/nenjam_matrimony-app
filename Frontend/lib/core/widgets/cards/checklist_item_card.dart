@@ -27,15 +27,13 @@ class NmChecklistItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: AppDecorations.card(isDark: isDark).copyWith(
+      decoration: AppDecorations.card().copyWith(
         border: Border.all(
           color: isDone
               ? AppColors.success
-              : (isDark ? AppColors.borderDark : AppColors.borderLight),
+              : AppColors.borderLight,
           width: isDone ? 1.5 : 1,
         ),
       ),
@@ -83,28 +81,35 @@ class NmChecklistItemCard extends StatelessWidget {
                 Text(
                   subtitle,
                   style: AppTypography.bodySmall.copyWith(
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
+                    color: AppColors.textTertiaryLight,
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 12),
+          // The action label is copy, so it can be long ("Take the
+          // Psychology Assessment") — and on a narrow phone an unbounded
+          // button squeezed the title column to a single character and
+          // still overflowed the row. Cap the button and let the label
+          // wrap instead.
           if (!isDone)
-            TextButton(
-              onPressed: onAction,
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 132),
+              child: TextButton(
+                onPressed: onAction,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                 ),
-              ),
-              child: Text(
-                actionLabel,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                child: Text(
+                  actionLabel,
+                  textAlign: TextAlign.end,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
             ),
         ],

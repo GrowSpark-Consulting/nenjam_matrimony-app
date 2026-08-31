@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_constants.dart';
@@ -6,35 +5,13 @@ import '../constants/app_constants.dart';
 /// Nenjam Matrimony — Local Storage Service
 ///
 /// Wraps SharedPreferences for type-safe, centralized local storage.
-/// Handles theme mode, language, tokens, and user preferences.
+/// Handles language, tokens, and user preferences.
 class StorageService {
   late final SharedPreferences _prefs;
 
   /// Must be called before using the service.
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
-  }
-
-  // ─── Theme ───────────────────────────────────────────────────────
-  ThemeMode get themeMode {
-    final value = _prefs.getString(AppConstants.keyThemeMode);
-    switch (value) {
-      case 'light':
-        return ThemeMode.light;
-      case 'dark':
-        return ThemeMode.dark;
-      default:
-        return ThemeMode.system;
-    }
-  }
-
-  Future<void> setThemeMode(ThemeMode mode) async {
-    final value = switch (mode) {
-      ThemeMode.light => 'light',
-      ThemeMode.dark => 'dark',
-      ThemeMode.system => 'system',
-    };
-    await _prefs.setString(AppConstants.keyThemeMode, value);
   }
 
   // ─── Language ────────────────────────────────────────────────────

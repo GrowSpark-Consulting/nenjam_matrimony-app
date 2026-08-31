@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../theme/app_typography.dart';
 
 /// Animated circular score/percent gauge shared by every "ring with a
-/// number in the middle" visual in the app (Trust Score, Profile
-/// Performance's Strength/Visibility/Response gauges) — extracted so each
+/// number in the middle" visual in the app (Profile Performance's
+/// Strength/Visibility/Response gauges) — extracted so each
 /// screen stops hand-rolling its own near-identical
 /// `TweenAnimationBuilder<double>` + `CircularProgressIndicator` pair.
 class NmScoreRing extends StatelessWidget {
@@ -38,8 +38,6 @@ class NmScoreRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return SizedBox(
       width: size,
       height: size,
@@ -56,7 +54,7 @@ class NmScoreRing extends StatelessWidget {
               strokeCap: StrokeCap.round,
               backgroundColor:
                   backgroundColor ??
-                  color.withValues(alpha: isDark ? 0.2 : 0.15),
+                  color.withValues(alpha: 0.15),
               valueColor: AlwaysStoppedAnimation(color),
             ),
           ),

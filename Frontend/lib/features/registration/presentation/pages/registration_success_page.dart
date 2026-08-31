@@ -104,16 +104,15 @@ class RegistrationSuccessPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final draft = ref.watch(registrationProvider);
     final profileAsync = ref.watch(myProfileProvider);
 
     // First name is the emptiness probe, not completionPercentage: a blank
-    // ProfileDraft already scores ~11% because `profileCreatedFor` defaults
-    // to 'Myself' and `country` to 'India'. An empty first name means the
-    // wizard was never filled in here — the user reached this route cold
-    // (deep link, or a process restart that cleared the draft).
+    // ProfileDraft still scores above zero because `country` defaults to
+    // 'India'. An empty first name means the wizard was never filled in
+    // here — the user reached this route cold (deep link, or a process
+    // restart that cleared the draft).
     final draftSummary = draft.basicDetails.firstName.trim().isNotEmpty
         ? _SuccessSummary.fromDraft(draft)
         : null;
@@ -131,7 +130,6 @@ class RegistrationSuccessPage extends ConsumerWidget {
       return _Shell(
         child: profileAsync.hasError
             ? _ErrorState(
-                isDark: isDark,
                 l10n: l10n,
                 onRetry: () => ref.invalidate(myProfileProvider),
               )
@@ -140,7 +138,7 @@ class RegistrationSuccessPage extends ConsumerWidget {
     }
 
     return _Shell(
-      child: _Celebration(summary: summary, isDark: isDark, l10n: l10n),
+      child: _Celebration(summary: summary, l10n: l10n),
     );
   }
 }
@@ -178,12 +176,10 @@ class _LoadingState extends StatelessWidget {
 /// but still lets the user into the app — a failed summary fetch must not
 /// trap someone whose registration already succeeded.
 class _ErrorState extends StatelessWidget {
-  final bool isDark;
   final AppLocalizations l10n;
   final VoidCallback onRetry;
 
   const _ErrorState({
-    required this.isDark,
     required this.l10n,
     required this.onRetry,
   });
@@ -229,12 +225,10 @@ class _ErrorState extends StatelessWidget {
 /// values it renders now come from [_SuccessSummary].
 class _Celebration extends StatelessWidget {
   final _SuccessSummary summary;
-  final bool isDark;
   final AppLocalizations l10n;
 
   const _Celebration({
     required this.summary,
-    required this.isDark,
     required this.l10n,
   });
 
@@ -282,9 +276,7 @@ class _Celebration extends StatelessWidget {
           l10n.registrationSuccessSubtitle,
           textAlign: TextAlign.center,
           style: AppTypography.bodyMedium.copyWith(
-            color: isDark
-                ? AppColors.textSecondaryDark
-                : AppColors.textSecondaryLight,
+            color: AppColors.textSecondaryLight,
           ),
         ).animate().fadeIn(delay: const Duration(milliseconds: 300)),
         const SizedBox(height: 32),
@@ -294,7 +286,7 @@ class _Celebration extends StatelessWidget {
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-              decoration: AppDecorations.cardSubtle(isDark: isDark),
+              decoration: AppDecorations.cardSubtle(),
               child: Row(
                 children: [
                   Icon(cards[i].$1, color: AppColors.primary, size: 22),

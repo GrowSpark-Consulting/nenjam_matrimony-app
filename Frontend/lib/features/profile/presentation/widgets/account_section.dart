@@ -17,8 +17,6 @@ class NmAccountSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Column(
       children: [
         // Logout row
@@ -62,9 +60,7 @@ class NmAccountSection extends StatelessWidget {
             child: Text(
               AppLocalizations.of(context).profileDeactivateAccount,
               style: AppTypography.labelSmall.copyWith(
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
+                color: AppColors.textTertiaryLight,
                 decoration: TextDecoration.underline,
               ),
             ),

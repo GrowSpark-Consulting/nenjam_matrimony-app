@@ -60,12 +60,11 @@ class NmProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        decoration: AppDecorations.card(isDark: isDark),
+        decoration: AppDecorations.card(),
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,23 +83,21 @@ class NmProfileCard extends StatelessWidget {
                   // Image placeholder
                   _wrapHero(
                     Container(
-                      color: isDark
-                          ? AppColors.surfaceVariantDark
-                          : AppColors.surfaceVariantLight,
+                      color: AppColors.surfaceVariantLight,
                       child: imageUrl != null
                           ? (imageUrl!.startsWith('assets/')
                                 ? Image.asset(
                                     imageUrl!,
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) =>
-                                        _buildPlaceholder(isDark),
+                                        _buildPlaceholder(),
                                   )
                                 : NmSizedNetworkPhoto(
                                     url: imageUrl!,
                                     errorBuilder: (_, __, ___) =>
-                                        _buildPlaceholder(isDark),
+                                        _buildPlaceholder(),
                                   ))
-                          : _buildPlaceholder(isDark),
+                          : _buildPlaceholder(),
                     ),
                   ),
 
@@ -188,9 +185,7 @@ class NmProfileCard extends StatelessWidget {
                     child: Text(
                       profession ?? '',
                       style: AppTypography.bodySmall.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
+                        color: AppColors.textSecondaryLight,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -226,7 +221,7 @@ class NmProfileCard extends StatelessWidget {
   Widget _wrapHero(Widget child) =>
       heroTag == null ? child : Hero(tag: heroTag!, child: child);
 
-  Widget _buildPlaceholder(bool isDark) => NmGenderPlaceholder(gender: gender);
+  Widget _buildPlaceholder() => NmGenderPlaceholder(gender: gender);
 }
 
 class _ActionIcon extends StatelessWidget {

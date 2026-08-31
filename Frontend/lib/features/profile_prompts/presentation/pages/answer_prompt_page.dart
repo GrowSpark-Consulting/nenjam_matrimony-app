@@ -56,7 +56,6 @@ class _AnswerPromptPageState extends State<AnswerPromptPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final category = widget.prompt.category;
 
     return Scaffold(
@@ -72,7 +71,7 @@ class _AnswerPromptPageState extends State<AnswerPromptPage> {
               Container(
                 width: double.infinity,
                 padding: AppSpacing.cardPaddingLarge,
-                decoration: AppDecorations.card(isDark: isDark),
+                decoration: AppDecorations.card(),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -111,9 +110,7 @@ class _AnswerPromptPageState extends State<AnswerPromptPage> {
                 child: Text(
                   '${_controller.text.length}/${AnswerPromptPage.maxLength}',
                   style: AppTypography.labelSmall.copyWith(
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
+                    color: AppColors.textTertiaryLight,
                   ),
                 ),
               ),

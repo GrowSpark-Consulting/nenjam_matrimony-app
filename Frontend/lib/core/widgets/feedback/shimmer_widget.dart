@@ -34,15 +34,9 @@ class NmShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Shimmer.fromColors(
-      baseColor: isDark
-          ? AppColors.shimmerBaseDark
-          : AppColors.shimmerBaseLight,
-      highlightColor: isDark
-          ? AppColors.shimmerHighlightDark
-          : AppColors.shimmerHighlightLight,
+      baseColor: AppColors.shimmerBaseLight,
+      highlightColor: AppColors.shimmerHighlightLight,
       child:
           child ??
           Container(

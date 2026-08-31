@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/permissions/nm_permission.dart';
 import '../../../../core/permissions/permission_providers.dart';
-import '../../../../core/providers/theme_mode_provider.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -127,7 +126,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
         ? l10n.languageTamil
         : l10n.languageEnglish;
     final notificationStatus = ref.watch(notificationPermissionStatusProvider);
-    final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
@@ -159,14 +157,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
               style: AppTypography.labelLarge,
             ),
             const SizedBox(height: 8),
-            NmToggleRow(
-              icon: Icons.dark_mode_outlined,
-              title: l10n.settingsDarkMode,
-              value: themeMode == ThemeMode.dark,
-              onChanged: (isDark) => ref
-                  .read(themeModeProvider.notifier)
-                  .setThemeMode(isDark ? ThemeMode.dark : ThemeMode.light),
-            ),
             ListTile(
               leading: const Icon(Icons.translate_rounded),
               title: Text(l10n.settingsLanguage),

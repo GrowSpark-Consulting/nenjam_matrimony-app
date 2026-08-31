@@ -29,8 +29,6 @@ class NmQuickActionsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -52,7 +50,7 @@ class NmQuickActionsCard extends StatelessWidget {
                   .map(
                     (action) => SizedBox(
                       width: tileWidth,
-                      child: _ActionTile(action: action, isDark: isDark),
+                      child: _ActionTile(action: action),
                     ),
                   )
                   .toList(),
@@ -66,21 +64,20 @@ class NmQuickActionsCard extends StatelessWidget {
 
 class _ActionTile extends StatelessWidget {
   final NmQuickAction action;
-  final bool isDark;
 
-  const _ActionTile({required this.action, required this.isDark});
+  const _ActionTile({required this.action});
 
   @override
   Widget build(BuildContext context) {
     final iconColor =
         action.iconColor ??
-        (isDark ? AppColors.textSecondaryDark : AppColors.primary);
+        AppColors.primary;
 
     return Semantics(
       label: action.label,
       button: true,
       child: Material(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
+        color: AppColors.cardLight,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         child: InkWell(
           onTap: action.onTap,
@@ -88,15 +85,13 @@ class _ActionTile extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              boxShadow: isDark
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -106,9 +101,7 @@ class _ActionTile extends StatelessWidget {
                 Text(
                   action.label,
                   style: AppTypography.labelSmall.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
+                    color: AppColors.textSecondaryLight,
                     fontWeight: FontWeight.w600,
                   ),
                   textAlign: TextAlign.center,

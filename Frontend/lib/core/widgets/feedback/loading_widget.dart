@@ -12,8 +12,6 @@ class NmLoadingWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -23,9 +21,7 @@ class NmLoadingWidget extends StatelessWidget {
             height: size,
             child: CircularProgressIndicator(
               strokeWidth: 3,
-              color:
-                  color ??
-                  (isDark ? AppColors.primaryOnDark : AppColors.primary),
+              color: color ?? AppColors.primary,
             ),
           ),
           if (message != null) ...[
@@ -33,9 +29,7 @@ class NmLoadingWidget extends StatelessWidget {
             Text(
               message!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
+                color: AppColors.textSecondaryLight,
               ),
               textAlign: TextAlign.center,
             ),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 /// Icon + title (+ optional subtitle) + trailing `Switch` row — extracted
-/// from the pattern `settings_page.dart` hand-rolled twice already
-/// (notifications, dark mode), so a third near-identical settings toggle
-/// (Privacy's visibility switches) reuses it instead of duplicating the
+/// from the pattern `settings_page.dart` hand-rolled for its Push
+/// Notifications row, so the near-identical settings toggles elsewhere
+/// (Privacy's visibility switches) reuse it instead of duplicating the
 /// `ListTile`+`Switch` composition again.
 class NmToggleRow extends StatelessWidget {
   final IconData icon;

@@ -11,6 +11,26 @@ import '../../theme/app_typography.dart';
 import '../../theme/tokens/app_radius.dart';
 import 'nav_badge.dart';
 
+/// Bottom clearance a page's scrollable content needs so its last item can
+/// scroll clear of the floating pill instead of ending up underneath it.
+///
+/// There is deliberately nothing to measure or hardcode here. [AppBottomNavShell]
+/// sets `extendBody: true`, and Flutter's own `Scaffold` responds by publishing
+/// `max(viewPadding.bottom, <height of the bottomNavigationBar widget>)` as the
+/// body's `MediaQuery.padding.bottom` (see `_BodyBuilder` in Scaffold's source).
+/// That number is the pill's real laid-out height plus its SafeArea margin, on
+/// this device, at this text scale — so reading it back covers the floating bar,
+/// the system navigation area and gesture insets in one value, and adapts by
+/// itself when any of them change.
+///
+/// [gap] is the breathing room between the last content and the top of the pill.
+///
+/// Safe to call from a page that is not inside the shell: a pushed route has no
+/// pill over it, so `padding.bottom` is just the system inset and this returns
+/// that plus the gap.
+double navContentInset(BuildContext context, {double gap = AppSpacing.base}) =>
+    MediaQuery.paddingOf(context).bottom + gap;
+
 /// Floating pill-style bottom navigation shell that wraps tabbed routes —
 /// Discover / Matches / Inbox / Premium.
 ///
@@ -45,7 +65,6 @@ class AppBottomNavShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentIndex = navigationShell.currentIndex;
     final l10n = AppLocalizations.of(context);
     final labels = _labels(l10n);
@@ -55,9 +74,7 @@ class AppBottomNavShell extends ConsumerWidget {
     // thread, mark read/unread, a reconnect or foreground re-sync — without
     // any of them knowing this widget exists.
     final unreadMessages = ref.watch(unreadMessagesCountProvider);
-    final surfaceColor = isDark
-        ? AppColors.surfaceDark
-        : AppColors.surfaceLight;
+    const surfaceColor = AppColors.surfaceLight;
 
     // Android/iOS back button: only the Discover branch is a true "root" —
     // every other branch was reached by switching tabs, not by pushing on
@@ -75,6 +92,14 @@ class AppBottomNavShell extends ConsumerWidget {
         navigationShell.goBranch(0);
       },
       child: Scaffold(
+        // Lets each page's body paint all the way to the bottom of the
+        // screen instead of stopping above a reserved bottomNavigationBar
+        // slot — without this, Flutter fills that slot with this Scaffold's
+        // own opaque scaffoldBackgroundColor, which shows as a full-width
+        // rectangle behind (and around) the pill on every page, regardless
+        // of that page's own background. With it, only the pill itself
+        // paints, and whatever page is underneath shows through beside it.
+        extendBody: true,
         body: navigationShell,
         bottomNavigationBar: SafeArea(
           top: false,
@@ -160,13 +185,8 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final inactiveColor = isDark
-        ? AppColors.textTertiaryDark
-        : AppColors.textTertiaryLight;
-    final activeLabelColor = isDark
-        ? AppColors.textPrimaryDark
-        : AppColors.textPrimaryLight;
+    const inactiveColor = AppColors.textTertiaryLight;
+    const activeLabelColor = AppColors.textPrimaryLight;
 
     return Semantics(
       button: true,

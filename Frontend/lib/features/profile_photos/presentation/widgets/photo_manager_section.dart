@@ -35,7 +35,6 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
   @override
   Widget build(BuildContext context) {
     final photosAsync = ref.watch(myPhotosProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final photos = photosAsync.valueOrNull ?? const <UserPhoto>[];
     final busy = photosAsync.isLoading;
 
@@ -53,9 +52,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
             Text(
               '${photos.length}/$kMaxPhotos',
               style: AppTypography.labelSmall.copyWith(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
+                color: AppColors.textSecondaryLight,
               ),
             ),
           ],
@@ -66,7 +63,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
           // during mutations the previous list stays visible with an overlay.
           loading: () => photos.isEmpty
               ? const _LoadingState()
-              : _buildGallery(context, photos, isDark, busy: true),
+              : _buildGallery(context, photos, busy: true),
           error: (error, _) => _ErrorState(
             message: error is PhotoApiException
                 ? error.message
@@ -75,7 +72,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
           ),
           data: (list) => list.isEmpty
               ? _EmptyState(onAdd: _onAddTap)
-              : _buildGallery(context, list, isDark, busy: busy),
+              : _buildGallery(context, list, busy: busy),
         ),
       ],
     );
@@ -83,8 +80,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
 
   Widget _buildGallery(
     BuildContext context,
-    List<UserPhoto> photos,
-    bool isDark, {
+    List<UserPhoto> photos, {
     required bool busy,
   }) {
     final canAddMore = photos.length < kMaxPhotos;
@@ -110,7 +106,6 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
                       padding: const EdgeInsets.only(right: 12),
                       child: _PhotoTile(
                         photo: photo,
-                        isDark: isDark,
                         onTap: () => _showPhotoOptions(photo),
                       ),
                     ),
@@ -138,9 +133,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
         Text(
           AppLocalizations.of(context).photosReorderHint,
           style: AppTypography.bodySmall.copyWith(
-            color: isDark
-                ? AppColors.textTertiaryDark
-                : AppColors.textTertiaryLight,
+            color: AppColors.textTertiaryLight,
           ),
         ),
       ],
@@ -335,12 +328,10 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
 class _PhotoTile extends StatelessWidget {
   const _PhotoTile({
     required this.photo,
-    required this.isDark,
     required this.onTap,
   });
 
   final UserPhoto photo;
-  final bool isDark;
   final VoidCallback onTap;
 
   @override
@@ -363,16 +354,12 @@ class _PhotoTile extends StatelessWidget {
               placeholder: (_, __) => Container(
                 width: 116,
                 height: 160,
-                color: isDark
-                    ? AppColors.surfaceVariantDark
-                    : AppColors.surfaceVariantLight,
+                color: AppColors.surfaceVariantLight,
               ),
               errorWidget: (_, __, ___) => Container(
                 width: 116,
                 height: 160,
-                color: isDark
-                    ? AppColors.surfaceVariantDark
-                    : AppColors.surfaceVariantLight,
+                color: AppColors.surfaceVariantLight,
                 child: const Icon(Icons.broken_image_outlined, size: 28),
               ),
             ),
@@ -429,7 +416,6 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: onAdd,
       child: Container(
@@ -441,9 +427,7 @@ class _EmptyState extends StatelessWidget {
             color: AppColors.primary.withValues(alpha: 0.3),
             width: 2,
           ),
-          color: isDark
-              ? AppColors.surfaceVariantDark.withValues(alpha: 0.4)
-              : AppColors.surfaceVariantLight,
+          color: AppColors.surfaceVariantLight,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

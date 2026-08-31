@@ -46,6 +46,17 @@ class BasicDetails {
   final String gender;
   final DateTime? dob;
   final String maritalStatus;
+
+  /// Who the profile is being created for ('Myself', 'Son', ...).
+  ///
+  /// Empty means **the user has not chosen yet** — it is deliberately not
+  /// defaulted to 'Myself'. CreateProfileForPage is the only writer, and
+  /// routing (see PostAuthDestination.resolve) sends anyone whose value is
+  /// still empty to that screen. A non-empty default would be
+  /// indistinguishable from a real answer, which is exactly how a
+  /// brand-new user used to skip the question and silently register as
+  /// 'Myself'. `toJson` omits the field while it is empty, so an unset
+  /// value is never sent to the backend as a choice either.
   final String profileCreatedFor;
 
   const BasicDetails({
@@ -54,7 +65,7 @@ class BasicDetails {
     this.gender = '',
     this.dob,
     this.maritalStatus = '',
-    this.profileCreatedFor = 'Myself',
+    this.profileCreatedFor = '',
   });
 
   int? get age {
@@ -108,8 +119,9 @@ class BasicDetails {
             : null,
         maritalStatus: _fromEnumValue(
             json['maritalStatus'] as String?, _maritalStatusReverseMap),
-        profileCreatedFor:
-            json['profileCreatedFor'] as String? ?? 'Myself',
+        // Absent means the backend has never been told a choice — keep it
+        // empty so the router can tell that apart from a real answer.
+        profileCreatedFor: json['profileCreatedFor'] as String? ?? '',
       );
 
   Map<String, dynamic> toJson() => {

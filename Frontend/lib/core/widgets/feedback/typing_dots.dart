@@ -31,10 +31,7 @@ class _NmTypingDotsState extends State<NmTypingDots>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color =
-        widget.color ??
-        (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight);
+    final color = widget.color ?? AppColors.textTertiaryLight;
 
     return AnimatedBuilder(
       animation: _controller,

@@ -276,11 +276,8 @@ class _ChatComposerState extends State<ChatComposer> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context);
-    final inertIconColor = isDark
-        ? AppColors.textTertiaryDark
-        : AppColors.textTertiaryLight;
+    const inertIconColor = AppColors.textTertiaryLight;
     final canSend =
         (_hasText || _pendingAttachment != null || _pendingVoice != null) &&
         !_isSending;
@@ -336,7 +333,6 @@ class _ChatComposerState extends State<ChatComposer> {
     Color inertIconColor,
     bool canSend,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -354,9 +350,7 @@ class _ChatComposerState extends State<ChatComposer> {
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: isDark
-                  ? AppColors.surfaceVariantDark
-                  : AppColors.surfaceVariantLight,
+              color: AppColors.surfaceVariantLight,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
                 color: _isFocused ? AppColors.primary : Colors.transparent,
@@ -482,7 +476,6 @@ class _ReplyPreviewBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final senderLabel = replyTarget.isMine ? 'You' : peerName;
     final showThumbnail =
         !replyTarget.isDeleted &&
@@ -493,9 +486,7 @@ class _ReplyPreviewBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.surfaceVariantDark
-            : AppColors.surfaceVariantLight,
+        color: AppColors.surfaceVariantLight,
         borderRadius: BorderRadius.circular(12),
         border: const Border(
           left: BorderSide(color: AppColors.primary, width: 3),
@@ -656,15 +647,12 @@ class _RecordingBarState extends State<_RecordingBar> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       constraints: const BoxConstraints(minHeight: AppTouchTarget.minSize),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.surfaceVariantDark
-            : AppColors.surfaceVariantLight,
+        color: AppColors.surfaceVariantLight,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
@@ -802,7 +790,6 @@ class _VoicePreviewBarState extends State<_VoicePreviewBar> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final total = widget.duration.inMilliseconds == 0
         ? const Duration(seconds: 1)
         : widget.duration;
@@ -816,9 +803,7 @@ class _VoicePreviewBarState extends State<_VoicePreviewBar> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       constraints: const BoxConstraints(minHeight: AppTouchTarget.minSize),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.surfaceVariantDark
-            : AppColors.surfaceVariantLight,
+        color: AppColors.surfaceVariantLight,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(

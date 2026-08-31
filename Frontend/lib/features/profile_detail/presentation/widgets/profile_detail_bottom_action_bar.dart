@@ -87,7 +87,6 @@ class _ProfileDetailBottomActionBarState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final status = ref.watch(
       interestRelationshipStatusProvider(widget.detail.base.id),
     );
@@ -101,7 +100,7 @@ class _ProfileDetailBottomActionBarState
         AppSpacing.sm + MediaQuery.paddingOf(context).bottom,
       ),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        color: AppColors.surfaceLight,
         boxShadow: AppShadows.bottomNav,
       ),
       child: Row(

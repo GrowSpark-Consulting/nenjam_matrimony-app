@@ -27,8 +27,6 @@ class NmIntelligenceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Material(
       color: Colors.transparent,
       borderRadius: AppSpacing.borderRadiusXl,
@@ -40,7 +38,7 @@ class NmIntelligenceCard extends StatelessWidget {
           child: Container(
             width: double.infinity,
             padding: AppSpacing.cardPaddingLarge,
-            decoration: AppDecorations.card(isDark: isDark),
+            decoration: AppDecorations.card(),
             child: Row(
               children: [
                 Container(
@@ -67,9 +65,7 @@ class NmIntelligenceCard extends StatelessWidget {
                       Text(
                         subtitle,
                         style: AppTypography.labelSmall.copyWith(
-                          color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
+                          color: AppColors.textTertiaryLight,
                         ),
                       ),
                     ],
@@ -79,9 +75,7 @@ class NmIntelligenceCard extends StatelessWidget {
                   locked
                       ? Icons.lock_outline_rounded
                       : Icons.chevron_right_rounded,
-                  color: isDark
-                      ? AppColors.textTertiaryDark
-                      : AppColors.textTertiaryLight,
+                  color: AppColors.textTertiaryLight,
                 ),
               ],
             ),

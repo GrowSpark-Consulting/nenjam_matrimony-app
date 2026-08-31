@@ -18,8 +18,6 @@ class NmFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     // Selected is a solid plum fill, unselected a soft lavender one — the
     // two states have to differ in *fill*, not only in border, so the
     // selection is readable at a glance in a dense filter row.
@@ -27,19 +25,13 @@ class NmFilterChip extends StatelessWidget {
       label: Text(label),
       selected: isSelected,
       onSelected: onSelected,
-      backgroundColor: isDark
-          ? AppColors.surfaceVariantDark
-          : AppColors.softLavender,
-      selectedColor: isDark
-          ? AppColors.primaryContainerDark
-          : AppColors.primary,
-      checkmarkColor: isDark
-          ? AppColors.primaryOnDark
-          : AppColors.textOnPrimary,
+      backgroundColor: AppColors.softLavender,
+      selectedColor: AppColors.primary,
+      checkmarkColor: AppColors.textOnPrimary,
       labelStyle: AppTypography.labelMedium.copyWith(
         color: isSelected
-            ? (isDark ? AppColors.primaryOnDark : AppColors.textOnPrimary)
-            : (isDark ? AppColors.textSecondaryDark : AppColors.primaryDark),
+            ? AppColors.textOnPrimary
+            : AppColors.primaryDark,
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
       ),
       shape: RoundedRectangleBorder(
@@ -47,7 +39,7 @@ class NmFilterChip extends StatelessWidget {
         side: BorderSide(
           color: isSelected
               ? AppColors.primary
-              : (isDark ? AppColors.borderDark : AppColors.borderLight),
+              : AppColors.borderLight,
         ),
       ),
     );
@@ -71,9 +63,7 @@ class NmRemovableChip extends StatelessWidget {
       label: Text(label, style: AppTypography.labelMedium),
       deleteIcon: const Icon(Icons.close_rounded, size: 16),
       onDeleted: onDeleted,
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? AppColors.surfaceVariantDark
-          : AppColors.softLavender,
+      backgroundColor: AppColors.softLavender,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
     );
   }

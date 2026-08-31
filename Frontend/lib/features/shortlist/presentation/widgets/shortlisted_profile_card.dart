@@ -33,7 +33,6 @@ class ShortlistedProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final details = [
       '${profile.age}',
       if (profile.location.isNotEmpty) profile.location,
@@ -48,7 +47,7 @@ class ShortlistedProfileCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.all(16),
-          decoration: AppDecorations.card(isDark: isDark),
+          decoration: AppDecorations.card(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

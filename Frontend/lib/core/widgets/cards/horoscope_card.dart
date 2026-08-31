@@ -24,7 +24,6 @@ class NmHoroscopeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final progress = maxScore > 0 ? gunaScore / maxScore : 0.0;
 
     return GestureDetector(
@@ -32,7 +31,7 @@ class NmHoroscopeCard extends StatelessWidget {
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
-        decoration: AppDecorations.card(isDark: isDark),
+        decoration: AppDecorations.card(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -63,9 +62,7 @@ class NmHoroscopeCard extends StatelessWidget {
                     children: [
                       CircularProgressIndicator(
                         value: progress,
-                        backgroundColor: isDark
-                            ? AppColors.surfaceVariantDark
-                            : AppColors.surfaceVariantLight,
+                        backgroundColor: AppColors.surfaceVariantLight,
                         color: AppColors.secondary,
                         strokeWidth: 6,
                       ),
@@ -95,9 +92,7 @@ class NmHoroscopeCard extends StatelessWidget {
                       Text(
                         summary,
                         style: AppTypography.bodySmall.copyWith(
-                          color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
+                          color: AppColors.textTertiaryLight,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,

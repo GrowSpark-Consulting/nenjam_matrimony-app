@@ -723,9 +723,7 @@ class _FilterSheetFooter extends StatelessWidget {
         AppSpacing.base + MediaQuery.paddingOf(context).bottom,
       ),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? AppColors.surfaceDark
-            : AppColors.surfaceLight,
+        color: AppColors.surfaceLight,
         boxShadow: AppShadows.bottomNav,
       ),
       child: Row(

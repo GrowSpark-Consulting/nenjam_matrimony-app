@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/cards/interest_card.dart';
 import '../../../../core/widgets/feedback/empty_state.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
+import '../../../../core/widgets/navigation/app_bottom_nav.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../inbox/presentation/widgets/inbox_shimmer.dart';
 import '../../domain/repositories/interests_repository.dart';
@@ -104,7 +105,10 @@ class _InterestListViewState extends ConsumerState<InterestListView> {
           }
           return ListView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
+            // Bottom padding clears the floating nav pill drawn over this list
+            // (this view is one of the Inbox tabs); it collapses to the plain
+            // 16 wherever this list is used outside the nav shell.
+            padding: EdgeInsets.fromLTRB(16, 16, 16, navContentInset(context)),
             scrollCacheExtent: const ScrollCacheExtent.pixels(600),
             itemCount: records.length,
             itemBuilder: (context, index) {

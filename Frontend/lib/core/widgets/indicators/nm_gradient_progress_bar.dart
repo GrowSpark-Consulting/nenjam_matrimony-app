@@ -34,12 +34,9 @@ class NmGradientProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final track =
         trackColor ??
-        (isDark
-            ? AppColors.surfaceVariantDark
-            : AppColors.primarySurfaceStrong);
+        AppColors.primarySurfaceStrong;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(height),
@@ -58,6 +55,15 @@ class NmGradientProgressBar extends StatelessWidget {
                 // rounded nub, so the fraction is used directly rather than
                 // clamped to a minimum.
                 widthFactor: v,
+                // heightFactor is REQUIRED, not decorative: Align hands its
+                // child loose constraints, so without it the childless
+                // DecoratedBox below sized itself to the smallest allowed
+                // box — the fill measured `width x 0` and the gradient never
+                // painted a single pixel. Every bar in the app (profile
+                // strength, completion hero, identity card) rendered as a
+                // bare track. Pinning the fill to the full track height is
+                // what makes the ramp visible.
+                heightFactor: 1,
                 child: DecoratedBox(
                   decoration: BoxDecoration(gradient: gradient),
                 ),

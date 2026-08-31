@@ -2,35 +2,35 @@ import 'package:flutter/material.dart';
 
 import '../../../profile/presentation/widgets/verification_card.dart';
 import '../../domain/entities/profile_detail_entity.dart';
-import '../../domain/entities/trust_score_entity.dart';
+import '../../domain/entities/verification_checklist_entity.dart';
 
 /// Verification checklist ([NmVerificationCard]) for the "Verification"
-/// tab. The trust-score ring headline now lives at the top of the page
-/// as [TrustScoreCard] — this section is just the itemized breakdown.
-class VerificationTrustSection extends StatelessWidget {
+/// tab — the itemized breakdown of which identity checks this member has
+/// passed. There is no aggregate score above it.
+class VerificationSection extends StatelessWidget {
   final ProfileDetailEntity detail;
 
-  const VerificationTrustSection({super.key, required this.detail});
+  const VerificationSection({super.key, required this.detail});
 
-  static NmVerificationStatus _mapStatus(TrustItemStatus status) {
+  static NmVerificationStatus _mapStatus(VerificationItemStatus status) {
     switch (status) {
-      case TrustItemStatus.verified:
+      case VerificationItemStatus.verified:
         return NmVerificationStatus.verified;
-      case TrustItemStatus.pending:
+      case VerificationItemStatus.pending:
         return NmVerificationStatus.pending;
-      case TrustItemStatus.incomplete:
+      case VerificationItemStatus.incomplete:
         return NmVerificationStatus.incomplete;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final trust = detail.trustScore;
-    if (trust.items.isEmpty) return const SizedBox.shrink();
+    final items = detail.verification.items;
+    if (items.isEmpty) return const SizedBox.shrink();
 
     return NmVerificationCard(
       items: [
-        for (final item in trust.items)
+        for (final item in items)
           NmVerificationItem(
             icon: item.icon,
             label: item.label,

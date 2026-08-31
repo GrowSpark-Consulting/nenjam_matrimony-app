@@ -13,14 +13,14 @@ abstract final class AppElevation {
   static const double floating = 16.0;
 
   /// Returns corresponding luxury soft shadows based on elevation token.
-  static List<BoxShadow> shadow(double elevation, {bool isDark = false}) {
+  static List<BoxShadow> shadow(double elevation) {
     if (elevation == flat) return const [];
     if (elevation <= low) {
-      return isDark ? AppShadows.cardDark : AppShadows.cardLight;
+      return AppShadows.cardLight;
     }
     if (elevation <= medium) {
-      return isDark ? AppShadows.floatingDark : AppShadows.floatingLight;
+      return AppShadows.floatingLight;
     }
-    return isDark ? AppShadows.floatingDark : AppShadows.glowAccent;
+    return AppShadows.glowAccent;
   }
 }

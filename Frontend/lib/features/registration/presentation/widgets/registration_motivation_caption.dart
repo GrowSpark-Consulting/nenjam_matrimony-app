@@ -19,8 +19,6 @@ class RegistrationMotivationCaption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 400),
       transitionBuilder: (child, animation) => FadeTransition(
@@ -41,9 +39,7 @@ class RegistrationMotivationCaption extends StatelessWidget {
           textAlign: TextAlign.center,
           style: AppTypography.bodySmall.copyWith(
             fontStyle: FontStyle.italic,
-            color: isDark
-                ? AppColors.textSecondaryDark
-                : AppColors.textSecondaryLight,
+            color: AppColors.textSecondaryLight,
           ),
         ),
       ),

@@ -11,7 +11,6 @@ class SignupState {
   final String email;
   final String password;
   final String phone;
-  final String registeringFor;
   final bool isSubmitting;
   final String? errorMessage;
 
@@ -20,7 +19,6 @@ class SignupState {
     this.email = '',
     this.password = '',
     this.phone = '',
-    this.registeringFor = 'Myself',
     this.isSubmitting = false,
     this.errorMessage,
   });
@@ -30,7 +28,6 @@ class SignupState {
     String? email,
     String? password,
     String? phone,
-    String? registeringFor,
     bool? isSubmitting,
     String? errorMessage,
     bool clearError = false,
@@ -40,7 +37,6 @@ class SignupState {
       email: email ?? this.email,
       password: password ?? this.password,
       phone: phone ?? this.phone,
-      registeringFor: registeringFor ?? this.registeringFor,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
@@ -60,7 +56,6 @@ class SignupController extends Notifier<SignupState> {
   void setEmail(String v) => state = state.copyWith(email: v, clearError: true);
   void setPassword(String v) => state = state.copyWith(password: v, clearError: true);
   void setPhone(String v) => state = state.copyWith(phone: v, clearError: true);
-  void setRegisteringFor(String v) => state = state.copyWith(registeringFor: v);
 
   /// Attempts to create the account. Returns `true` when the user is created
   /// and the verification email has been sent (caller should navigate to the

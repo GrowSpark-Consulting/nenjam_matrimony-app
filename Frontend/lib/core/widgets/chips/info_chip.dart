@@ -49,7 +49,6 @@ class NmInfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final chipColor = selectedColor ?? AppColors.primary;
 
     return GestureDetector(
@@ -60,9 +59,7 @@ class NmInfoChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? chipColor.withValues(alpha: 0.12)
-              : (isDark
-                    ? AppColors.surfaceVariantDark
-                    : AppColors.surfaceVariantLight),
+              : AppColors.surfaceVariantLight,
           borderRadius: BorderRadius.circular(12),
           border: isSelected
               ? Border.all(color: chipColor.withValues(alpha: 0.4))
@@ -77,9 +74,7 @@ class NmInfoChip extends StatelessWidget {
                 size: 16,
                 color: isSelected
                     ? chipColor
-                    : (isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight),
+                    : AppColors.textTertiaryLight,
               ),
               const SizedBox(width: 6),
             ],
@@ -91,9 +86,7 @@ class NmInfoChip extends StatelessWidget {
                 style: AppTypography.labelMedium.copyWith(
                   color: isSelected
                       ? chipColor
-                      : (isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight),
+                      : AppColors.textSecondaryLight,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),

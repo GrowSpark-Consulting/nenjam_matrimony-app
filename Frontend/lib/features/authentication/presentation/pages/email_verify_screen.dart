@@ -117,7 +117,6 @@ class _EmailVerifyScreenState extends ConsumerState<EmailVerifyScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final email =
         ref.watch(firebaseAuthServiceProvider).currentUser?.email ?? '';
 
@@ -171,9 +170,7 @@ class _EmailVerifyScreenState extends ConsumerState<EmailVerifyScreen> {
               Text(
                 l10n.authVerifyEmailSentTo(email),
                 style: AppTypography.bodyMedium.copyWith(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
+                  color: AppColors.textSecondaryLight,
                   height: 1.5,
                 ),
                 textAlign: TextAlign.center,
@@ -182,9 +179,7 @@ class _EmailVerifyScreenState extends ConsumerState<EmailVerifyScreen> {
               Text(
                 l10n.authVerifyEmailInstruction,
                 style: AppTypography.bodySmall.copyWith(
-                  color: isDark
-                      ? AppColors.textTertiaryDark
-                      : AppColors.textTertiaryLight,
+                  color: AppColors.textTertiaryLight,
                   height: 1.5,
                 ),
                 textAlign: TextAlign.center,

@@ -12,16 +12,18 @@ import '../../../../core/widgets/cards/checklist_item_card.dart';
 import '../../../../core/widgets/cards/growth_card.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../profile/presentation/providers/profile_dashboard_providers.dart';
 import '../../../registration/presentation/utils/open_edit_profile.dart';
 import '../../domain/profile_completion_aggregator.dart';
 import '../providers/profile_completeness_provider.dart';
 import '../utils/module_copy.dart';
 
-/// "Profile Strength" — a growth-journey hub, not a checklist: overall
-/// strength, the single highest-impact improvement, what's already done,
+/// "Profile Strength" — a growth-journey hub answering exactly one question:
+/// *how complete is my profile?* Overall completion, what's already done,
 /// what's still growing, and an always-on "keep growing" surface pointing
 /// at Nenjam's other Relationship Intelligence features.
+///
+/// Verification is a separate concept and is deliberately absent here: no
+/// verification recommendation and no verification callout.
 class ProfileCompletionPage extends ConsumerWidget {
   const ProfileCompletionPage({super.key});
 
@@ -54,19 +56,16 @@ class _ProfileCompletionBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Headline percentage comes from the backend — the single source of truth
-    // shared with the Profile page, Edit Profile, and Discover. The module
-    // breakdown below still uses the aggregator to show which sections remain.
-    final pct =
-        ref.watch(backendProfileCompletionProvider).valueOrNull ??
-        completeness.percentage;
-    final highestImpact = completeness.highestImpactModule;
-    // "Still Growing" excludes the module already featured above, so it
-    // isn't shown twice on the same screen.
-    final stillGrowing = completeness.missingModules
-        .where((e) => e.module.id != highestImpact?.module.id)
-        .toList();
+    // Headline percentage IS the backend's `completionPercentage`, carried
+    // through untouched by [profileCompletenessFromBackend] — the very same
+    // number the Profile dashboard, Edit Profile, and Discover show. Nothing
+    // on this screen recomputes it from the cards below, so filtering or
+    // reordering a section never moves the figure.
+    final pct = completeness.percentage;
+    final completed =
+        completeness.completedModules.where(_isCompletionSection).toList();
+    final stillGrowing =
+        completeness.missingModules.where(_isCompletionSection).toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -76,25 +75,12 @@ class _ProfileCompletionBody extends ConsumerWidget {
           Text(
             l10n.profileCompletionScreenSubtitle,
             style: AppTypography.bodyMedium.copyWith(
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
+              color: AppColors.textSecondaryLight,
             ),
           ),
           const SizedBox(height: 24),
           _StrengthHero(completeness: completeness, percentage: pct),
-          if (highestImpact != null) ...[
-            const SizedBox(height: 24),
-            Text(
-              l10n.profileCompletionHighestImpactLabel,
-              style: AppTypography.titleMedium.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _HighestImpactCard(evaluated: highestImpact),
-          ],
-          if (completeness.completedModules.isNotEmpty) ...[
+          if (completed.isNotEmpty) ...[
             const SizedBox(height: 32),
             Text(
               l10n.profileCompletionCompletedSectionsTitle,
@@ -103,7 +89,7 @@ class _ProfileCompletionBody extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 12),
-            for (final e in completeness.completedModules)
+            for (final e in completed)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: NmChecklistItemCard(
@@ -153,9 +139,7 @@ class _ProfileCompletionBody extends ConsumerWidget {
           Text(
             l10n.profileCompletionFutureGrowthSubtitle,
             style: AppTypography.bodySmall.copyWith(
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
+              color: AppColors.textSecondaryLight,
             ),
           ),
           const SizedBox(height: 12),
@@ -192,6 +176,17 @@ class _ProfileCompletionBody extends ConsumerWidget {
     );
   }
 }
+
+// ─── Which modules this screen shows ─────────────────────────────────────
+
+/// Profile Strength shows profile-*completion* sections only. The backend's
+/// `verification` module is scored as part of the completion percentage (and
+/// stays that way — the backend calculation is untouched), but every piece of
+/// copy attached to it is verification-framed ("Get Verified", "Verified
+/// profiles earn better responses…"), which is a different concept from "how
+/// complete is my profile". So it is filtered out of this screen's cards
+/// while still being counted in the headline percentage above.
+bool _isCompletionSection(EvaluatedModule e) => e.module.id != 'verification';
 
 // ─── Module → display copy (small switch, not business logic) ────────────
 
@@ -262,80 +257,6 @@ class _StrengthHero extends StatelessWidget {
             value: percentage / 100,
             gradient: AppGradients.match,
             trackColor: Colors.white.withValues(alpha: 0.15),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Highest impact callout ───────────────────────────────────────────
-
-class _HighestImpactCard extends ConsumerWidget {
-  final EvaluatedModule evaluated;
-
-  const _HighestImpactCard({required this.evaluated});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.accentBorder.copyWith(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.secondary.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              moduleIcon(evaluated.module.id),
-              color: AppColors.secondary,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  moduleAction(l10n, evaluated.module.id),
-                  style: AppTypography.titleSmall.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  moduleTip(l10n, evaluated.module.id),
-                  style: AppTypography.bodySmall.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          IconButton(
-            onPressed: () => openEditProfile(
-              context,
-              ref,
-              wizardStep: evaluated.status.wizardStep,
-            ),
-            icon: const Icon(
-              Icons.arrow_forward_rounded,
-              color: AppColors.secondary,
-            ),
           ),
         ],
       ),

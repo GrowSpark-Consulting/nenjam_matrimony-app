@@ -13,7 +13,6 @@ Future<void> _pump(
   WidgetTester tester,
   List<String> photos, {
   Size size = const Size(375, 812),
-  Brightness brightness = Brightness.light,
 }) async {
   await tester.binding.setSurfaceSize(size);
   tester.view.physicalSize = size;
@@ -26,7 +25,7 @@ Future<void> _pump(
     MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData(brightness: brightness),
+      theme: ThemeData(brightness: Brightness.light),
       home: Scaffold(
         body: SingleChildScrollView(
           child: Padding(
@@ -109,10 +108,4 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('renders in dark mode', (tester) async {
-    await _pump(tester, _photos(5), brightness: Brightness.dark);
-
-    expect(_tileCount(tester), 5);
-    expect(tester.takeException(), isNull);
-  });
 }

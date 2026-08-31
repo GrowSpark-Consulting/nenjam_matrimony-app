@@ -29,8 +29,6 @@ class NmSubscriptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -38,9 +36,9 @@ class NmSubscriptionCard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         decoration: isSelected
             ? AppDecorations.accentBorder.copyWith(
-                color: isDark ? AppColors.cardDark : AppColors.cardLight,
+                color: AppColors.cardLight,
               )
-            : AppDecorations.card(isDark: isDark),
+            : AppDecorations.card(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -106,9 +104,7 @@ class NmSubscriptionCard extends StatelessWidget {
                     child: Text(
                       '/ $duration',
                       style: AppTypography.bodySmall.copyWith(
-                        color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
+                        color: AppColors.textTertiaryLight,
                       ),
                     ),
                   ),

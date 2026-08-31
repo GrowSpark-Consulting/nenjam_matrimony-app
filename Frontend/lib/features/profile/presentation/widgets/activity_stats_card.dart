@@ -23,29 +23,19 @@ class NmActivityStatsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
+        color: AppColors.cardLight,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl2),
-        boxShadow: isDark
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,7 +52,6 @@ class NmActivityStatsCard extends StatelessWidget {
                   value: interestsReceived,
                   label: AppLocalizations.of(context).fieldInterests,
                   color: AppColors.liked,
-                  isDark: isDark,
                   onTap: onInterestsTap,
                 ),
               ),
@@ -72,7 +61,6 @@ class NmActivityStatsCard extends StatelessWidget {
                   value: matches,
                   label: AppLocalizations.of(context).profileMatchesLabel,
                   color: AppColors.secondary,
-                  isDark: isDark,
                   onTap: onMatchesTap,
                 ),
               ),
@@ -88,14 +76,12 @@ class _StatTile extends StatelessWidget {
   final int value;
   final String label;
   final Color color;
-  final bool isDark;
   final VoidCallback? onTap;
 
   const _StatTile({
     required this.value,
     required this.label,
     required this.color,
-    required this.isDark,
     this.onTap,
   });
 
@@ -131,9 +117,7 @@ class _StatTile extends StatelessWidget {
             Text(
               label.toUpperCase(),
               style: AppTypography.labelSmall.copyWith(
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
+                color: AppColors.textTertiaryLight,
                 letterSpacing: 0.8,
                 fontSize: 10,
               ),
