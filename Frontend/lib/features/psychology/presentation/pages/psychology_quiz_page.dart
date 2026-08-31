@@ -25,7 +25,9 @@ class PsychologyQuizPage extends ConsumerWidget {
     final state = ref.watch(personalityQuizProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context).psychologyQuizTitle)),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context).psychologyQuizTitle),
+      ),
       body: SafeArea(
         child: switch (state.phase) {
           QuizPhase.intro => const _IntroView(),
@@ -63,8 +65,11 @@ class _IntroView extends ConsumerWidget {
                     color: Colors.white.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.psychology_alt_rounded,
-                      color: AppColors.accentGold, size: 30),
+                  child: const Icon(
+                    Icons.psychology_alt_rounded,
+                    color: AppColors.secondary,
+                    size: 30,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
@@ -85,13 +90,17 @@ class _IntroView extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.md),
                 Row(
                   children: [
-                    const Icon(Icons.access_time_rounded,
-                        size: 16, color: Colors.white70),
+                    const Icon(
+                      Icons.access_time_rounded,
+                      size: 16,
+                      color: Colors.white70,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       AppLocalizations.of(context).psychologyTakesMinutes,
-                      style: AppTypography.labelMedium
-                          .copyWith(color: Colors.white70),
+                      style: AppTypography.labelMedium.copyWith(
+                        color: Colors.white70,
+                      ),
                     ),
                   ],
                 ),
@@ -101,9 +110,10 @@ class _IntroView extends ConsumerWidget {
           const Spacer(),
           NmGradientButton(
             label: AppLocalizations.of(context).psychologyStartQuiz,
-            useGoldGradient: true,
+            useAccentGradient: true,
             icon: Icons.play_arrow_rounded,
-            onPressed: () => ref.read(personalityQuizProvider.notifier).startQuiz(),
+            onPressed: () =>
+                ref.read(personalityQuizProvider.notifier).startQuiz(),
           ),
           const SizedBox(height: AppSpacing.base),
         ],
@@ -163,12 +173,15 @@ class _QuestionView extends ConsumerWidget {
               backgroundColor: isDark
                   ? AppColors.surfaceVariantDark
                   : AppColors.surfaceVariantLight,
-              valueColor: const AlwaysStoppedAnimation(AppColors.accentGold),
+              valueColor: const AlwaysStoppedAnimation(AppColors.secondary),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            AppLocalizations.of(context).psychologyQuestionProgress(state.currentIndex + 1, quiz.questions.length),
+            AppLocalizations.of(context).psychologyQuestionProgress(
+              state.currentIndex + 1,
+              quiz.questions.length,
+            ),
             style: AppTypography.labelMedium.copyWith(
               color: isDark
                   ? AppColors.textSecondaryDark
@@ -178,8 +191,9 @@ class _QuestionView extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xl2),
           Text(
             question.questionText,
-            style: AppTypography.headlineSmall
-                .copyWith(fontWeight: FontWeight.w700),
+            style: AppTypography.headlineSmall.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: AppSpacing.xl2),
           ...List.generate(5, (i) {
@@ -199,8 +213,8 @@ class _QuestionView extends ConsumerWidget {
                     color: selected
                         ? AppColors.primary.withValues(alpha: 0.1)
                         : (isDark
-                            ? AppColors.surfaceVariantDark
-                            : AppColors.surfaceVariantLight),
+                              ? AppColors.surfaceVariantDark
+                              : AppColors.surfaceVariantLight),
                     borderRadius: AppSpacing.borderRadiusMd,
                     border: Border.all(
                       color: selected ? AppColors.primary : Colors.transparent,
@@ -216,8 +230,8 @@ class _QuestionView extends ConsumerWidget {
                         color: selected
                             ? AppColors.primary
                             : (isDark
-                                ? AppColors.textTertiaryDark
-                                : AppColors.textTertiaryLight),
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiaryLight),
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Text(_likertLabels[i], style: AppTypography.bodyLarge),
@@ -245,8 +259,8 @@ class _QuestionView extends ConsumerWidget {
                   onPressed: selectedScore == null
                       ? null
                       : () => state.isLastQuestion
-                          ? notifier.submit()
-                          : notifier.nextQuestion(),
+                            ? notifier.submit()
+                            : notifier.nextQuestion(),
                 ),
               ),
             ],
@@ -274,14 +288,18 @@ class _ResultView extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: AppSpacing.md),
-          const Icon(Icons.check_circle_rounded,
-              color: AppColors.success, size: 48),
+          const Icon(
+            Icons.check_circle_rounded,
+            color: AppColors.success,
+            size: 48,
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             AppLocalizations.of(context).psychologyYourProfile,
             textAlign: TextAlign.center,
-            style: AppTypography.headlineSmall
-                .copyWith(fontWeight: FontWeight.w700),
+            style: AppTypography.headlineSmall.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: AppSpacing.xl),
           Expanded(
@@ -291,7 +309,7 @@ class _ResultView extends ConsumerWidget {
           ),
           NmGradientButton(
             label: AppLocalizations.of(context).commonDone,
-            useGoldGradient: true,
+            useAccentGradient: true,
             onPressed: () => context.pop(result),
           ),
           const SizedBox(height: AppSpacing.base),

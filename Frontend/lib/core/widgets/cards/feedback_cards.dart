@@ -108,10 +108,13 @@ class NmNotificationCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: AppDecorations.card(isDark: isDark).copyWith(
+            // Unread reads as a soft lavender wash rather than a tinted
+            // blue — the highlight has to belong to the brand, not signal
+            // "information".
             color: isUnread
                 ? (isDark
                       ? AppColors.surfaceVariantDark
-                      : AppColors.infoLight.withValues(alpha: 0.5))
+                      : AppColors.softLavender)
                 : null,
           ),
           child: Row(
@@ -167,7 +170,7 @@ class NmNotificationCard extends StatelessWidget {
                   height: 8,
                   margin: const EdgeInsets.only(top: 4),
                   decoration: const BoxDecoration(
-                    color: AppColors.primary,
+                    color: AppColors.secondary,
                     shape: BoxShape.circle,
                   ),
                 ),

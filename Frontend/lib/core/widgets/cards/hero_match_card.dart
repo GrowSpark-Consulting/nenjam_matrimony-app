@@ -62,8 +62,8 @@ class NmHeroMatchCard extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Color(0x4D041635),
-                      Color(0xF2041635),
+                      AppColors.photoScrimSoft,
+                      AppColors.photoScrimStrong,
                     ],
                     stops: [0.0, 0.4, 1.0],
                   ),
@@ -107,7 +107,7 @@ class NmHeroMatchCard extends StatelessWidget {
                             const Icon(
                               Icons.verified_rounded,
                               size: 20,
-                              color: Color(0xFFFFE08F),
+                              color: AppColors.accentLight,
                             ),
                           ],
                         ],
@@ -132,7 +132,7 @@ class NmHeroMatchCard extends StatelessWidget {
                         Text(
                           whyLabel,
                           style: AppTypography.labelMedium.copyWith(
-                            color: AppColors.accentGoldLight,
+                            color: AppColors.accentLight,
                             fontWeight: FontWeight.w700,
                           ),
                         ),

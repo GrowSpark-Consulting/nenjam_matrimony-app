@@ -37,14 +37,14 @@ class RegistrationWelcomePage extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: Colors.white.withValues(alpha: 0.12),
                       border: Border.all(
-                        color: AppColors.accentGold.withValues(alpha: 0.6),
+                        color: AppColors.secondary.withValues(alpha: 0.6),
                         width: 1.5,
                       ),
                     ),
                     child: const Icon(
                       Icons.favorite_rounded,
                       size: 56,
-                      color: AppColors.accentGold,
+                      color: AppColors.secondary,
                     ),
                   ),
                 ),
@@ -75,7 +75,7 @@ class RegistrationWelcomePage extends StatelessWidget {
                     width: double.infinity,
                     child: NmGradientButton(
                       label: l10n.registrationWelcomeCta,
-                      useGoldGradient: true,
+                      useAccentGradient: true,
                       icon: Icons.arrow_forward_rounded,
                       onPressed: () =>
                           context.go(RouteNames.registrationWizard),

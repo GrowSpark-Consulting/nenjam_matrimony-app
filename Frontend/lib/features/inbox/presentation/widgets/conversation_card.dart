@@ -31,7 +31,9 @@ class ConversationCard extends ConsumerWidget {
       if (profile.age > 0) '${profile.age}',
       if (profile.location.isNotEmpty) profile.location,
       if (profile.compatibility.overallCompatibility > 0)
-        l10n.inboxCompatibilityLabel(profile.compatibility.overallCompatibility),
+        l10n.inboxCompatibilityLabel(
+          profile.compatibility.overallCompatibility,
+        ),
     ];
     return parts.join(' · ');
   }
@@ -46,7 +48,11 @@ class ConversationCard extends ConsumerWidget {
     };
   }
 
-  void _showOptionsSheet(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+  void _showOptionsSheet(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) {
     final notifier = ref.read(conversationsNotifierProvider.notifier);
     AppSheets.showActionSheet(
       context,
@@ -55,21 +61,38 @@ class ConversationCard extends ConsumerWidget {
         AppSheetAction(
           icon: Icons.person_outline_rounded,
           label: l10n.inboxActionViewProfile,
-          onTap: () => openProfileDetail(context, conversation.profile, isBlocked: conversation.isBlocked),
+          onTap: () => openProfileDetail(
+            context,
+            conversation.profile,
+            isBlocked: conversation.isBlocked,
+          ),
         ),
         AppSheetAction(
-          icon: conversation.isMuted ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
-          label: conversation.isMuted ? l10n.inboxActionUnmute : l10n.inboxActionMute,
+          icon: conversation.isMuted
+              ? Icons.notifications_active_outlined
+              : Icons.notifications_off_outlined,
+          label: conversation.isMuted
+              ? l10n.inboxActionUnmute
+              : l10n.inboxActionMute,
           onTap: () => notifier.mute(conversation.id, !conversation.isMuted),
         ),
         AppSheetAction(
-          icon: conversation.isArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
-          label: conversation.isArchived ? l10n.inboxActionUnarchive : l10n.inboxActionArchive,
-          onTap: () => notifier.archive(conversation.id, !conversation.isArchived),
+          icon: conversation.isArchived
+              ? Icons.unarchive_outlined
+              : Icons.archive_outlined,
+          label: conversation.isArchived
+              ? l10n.inboxActionUnarchive
+              : l10n.inboxActionArchive,
+          onTap: () =>
+              notifier.archive(conversation.id, !conversation.isArchived),
         ),
         AppSheetAction(
-          icon: conversation.isBlocked ? Icons.lock_open_rounded : Icons.block_rounded,
-          label: conversation.isBlocked ? l10n.inboxActionUnblock : l10n.inboxActionBlock,
+          icon: conversation.isBlocked
+              ? Icons.lock_open_rounded
+              : Icons.block_rounded,
+          label: conversation.isBlocked
+              ? l10n.inboxActionUnblock
+              : l10n.inboxActionBlock,
           isDestructive: !conversation.isBlocked,
           onTap: () => _confirmBlock(context, ref, l10n),
         ),
@@ -83,7 +106,11 @@ class ConversationCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _confirmBlock(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
+  Future<void> _confirmBlock(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) async {
     if (conversation.isBlocked) {
       await handleUnblockConversation(context, ref, conversation);
       return;
@@ -95,11 +122,17 @@ class ConversationCard extends ConsumerWidget {
       confirmLabel: l10n.inboxActionBlock,
     );
     if (confirmed ?? false) {
-      ref.read(conversationsNotifierProvider.notifier).block(conversation.id, true);
+      ref
+          .read(conversationsNotifierProvider.notifier)
+          .block(conversation.id, true);
     }
   }
 
-  Future<void> _confirmDelete(BuildContext context, ConversationsNotifier notifier, AppLocalizations l10n) async {
+  Future<void> _confirmDelete(
+    BuildContext context,
+    ConversationsNotifier notifier,
+    AppLocalizations l10n,
+  ) async {
     final confirmed = await AppDialogs.showDelete(
       context,
       title: l10n.inboxDeleteConfirmTitle,
@@ -115,8 +148,9 @@ class ConversationCard extends ConsumerWidget {
 
     // Live presence for this peer only — a narrow `select` so just this row
     // rebuilds (and only when its peer's online/typing flips), never the list.
-    final presence =
-        ref.watch(presenceProvider.select((m) => m[conversation.profile.id]));
+    final presence = ref.watch(
+      presenceProvider.select((m) => m[conversation.profile.id]),
+    );
     final isOnline = presence?.isOnline ?? conversation.isOnline;
     final isTyping = presence?.isTyping ?? conversation.isTyping;
 
@@ -127,7 +161,9 @@ class ConversationCard extends ConsumerWidget {
       unreadCount: conversation.unreadCount,
       isOnline: isOnline,
       gender: conversation.profile.gender,
-      avatarUrl: conversation.profile.photoUrls.isNotEmpty ? conversation.profile.photoUrls.first : null,
+      avatarUrl: conversation.profile.photoUrls.isNotEmpty
+          ? conversation.profile.photoUrls.first
+          : null,
       subtitleMeta: _subtitleMeta(l10n),
       isVerified: conversation.profile.isVerified,
       isPremium: conversation.profile.isPremium,
@@ -139,7 +175,11 @@ class ConversationCard extends ConsumerWidget {
           ? null
           : SmartIndicatorChip(indicator: conversation.smartIndicator),
       heroTag: 'conversation-avatar-${conversation.id}',
-      onAvatarTap: () => openProfileDetail(context, conversation.profile, isBlocked: conversation.isBlocked),
+      onAvatarTap: () => openProfileDetail(
+        context,
+        conversation.profile,
+        isBlocked: conversation.isBlocked,
+      ),
       // Marking read now happens in ChatDetailPage's own lifecycle (entry-
       // point-agnostic — also covers Profile Detail's Message button and any
       // future deep link/push route), not here, so it can't double-fire.
@@ -153,12 +193,15 @@ class ConversationCard extends ConsumerWidget {
         extentRatio: 0.5,
         children: [
           SlidableAction(
-            onPressed: (_) => notifier.pin(conversation.id, !conversation.isPinned),
-            backgroundColor: AppColors.accentGold,
+            onPressed: (_) =>
+                notifier.pin(conversation.id, !conversation.isPinned),
+            backgroundColor: AppColors.secondary,
             foregroundColor: Colors.white,
             icon: Icons.push_pin_rounded,
             label: l10n.inboxActionPin,
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(18)),
+            borderRadius: const BorderRadius.horizontal(
+              left: Radius.circular(18),
+            ),
             padding: EdgeInsets.zero,
           ),
           SlidableAction(
@@ -176,7 +219,8 @@ class ConversationCard extends ConsumerWidget {
         extentRatio: 0.5,
         children: [
           SlidableAction(
-            onPressed: (_) => notifier.archive(conversation.id, !conversation.isArchived),
+            onPressed: (_) =>
+                notifier.archive(conversation.id, !conversation.isArchived),
             backgroundColor: AppColors.warning,
             foregroundColor: Colors.white,
             icon: Icons.archive_rounded,
@@ -184,12 +228,15 @@ class ConversationCard extends ConsumerWidget {
             padding: EdgeInsets.zero,
           ),
           SlidableAction(
-            onPressed: (actionContext) => _confirmDelete(actionContext, notifier, l10n),
+            onPressed: (actionContext) =>
+                _confirmDelete(actionContext, notifier, l10n),
             backgroundColor: AppColors.error,
             foregroundColor: Colors.white,
             icon: Icons.delete_rounded,
             label: l10n.inboxActionDelete,
-            borderRadius: const BorderRadius.horizontal(right: Radius.circular(18)),
+            borderRadius: const BorderRadius.horizontal(
+              right: Radius.circular(18),
+            ),
             padding: EdgeInsets.zero,
           ),
         ],

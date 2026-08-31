@@ -24,7 +24,7 @@ class NmVerificationItem {
 }
 
 /// Verification Center card — 2×2 grid of verification items with
-/// colour-coded status indicators (green = verified, gold = pending,
+/// colour-coded status indicators (green = verified, magenta = pending,
 /// grey = incomplete).
 class NmVerificationCard extends StatelessWidget {
   final List<NmVerificationItem> items;
@@ -102,8 +102,7 @@ class NmVerificationCard extends StatelessWidget {
           // unlike a fixed-aspect-ratio GridView.
           LayoutBuilder(
             builder: (context, constraints) {
-              final tileWidth =
-                  (constraints.maxWidth - AppSpacing.sm) / 2;
+              final tileWidth = (constraints.maxWidth - AppSpacing.sm) / 2;
               return Wrap(
                 spacing: AppSpacing.sm,
                 runSpacing: AppSpacing.sm,
@@ -135,7 +134,7 @@ class _VerifTile extends StatelessWidget {
       case NmVerificationStatus.verified:
         return AppColors.faceVerificationGreen;
       case NmVerificationStatus.pending:
-        return AppColors.accentGold;
+        return AppColors.secondary;
       case NmVerificationStatus.incomplete:
         return AppColors.disabled;
     }
@@ -146,7 +145,7 @@ class _VerifTile extends StatelessWidget {
       case NmVerificationStatus.verified:
         return AppColors.faceVerificationGreen;
       case NmVerificationStatus.pending:
-        return AppColors.accentGold;
+        return AppColors.secondary;
       case NmVerificationStatus.incomplete:
         return AppColors.disabled;
     }

@@ -26,14 +26,12 @@ import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/pr
 /// that takes 10 minutes to fail isn't worth keeping in the suite. The fix
 /// below is what matters, and it passes in well under a second.
 const _labels = [
-  'About',
-  'Photos',
   'Family',
   'Lifestyle',
   'Horoscope',
+  'Compatibility',
   'Preferences',
   'Verification',
-  'Timeline',
 ];
 
 class _Harness extends StatefulWidget {
@@ -120,7 +118,7 @@ void main() {
     await tester.pump();
     expect(state.mainController.offset, 900);
 
-    await _revealTab(state, 2); // Family — an arbitrary mid-list tab.
+    await _revealTab(state, 2); // Horoscope — an arbitrary mid-list tab.
     await tester.pumpAndSettle();
 
     expect(
@@ -132,8 +130,8 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('reaching the Photos tab (index 1) specifically does not reset '
-      'the main scroll', (tester) async {
+  testWidgets('reaching the Lifestyle tab (index 1) specifically does not '
+      'reset the main scroll', (tester) async {
     await tester.pumpWidget(const _Harness());
     await tester.pumpAndSettle();
 
@@ -142,7 +140,7 @@ void main() {
     state.mainController.jumpTo(900);
     await tester.pump();
 
-    await _revealTab(state, 1); // Photos.
+    await _revealTab(state, 1); // Lifestyle.
     await tester.pumpAndSettle();
 
     expect(state.mainController.offset, closeTo(900, 1.0));

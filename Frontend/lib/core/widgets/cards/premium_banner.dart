@@ -44,7 +44,7 @@ class NmPremiumBanner extends StatelessWidget {
               children: [
                 const Icon(
                   Icons.workspace_premium_rounded,
-                  color: AppColors.accentGold,
+                  color: AppColors.premiumCream,
                   size: 24,
                 ),
                 const SizedBox(width: 8),
@@ -66,13 +66,13 @@ class NmPremiumBanner extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
-                gradient: AppGradients.gold,
+                gradient: AppGradients.accent,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 actionLabel,
                 style: AppTypography.labelLarge.copyWith(
-                  color: AppColors.textOnGold,
+                  color: AppColors.textOnSecondary,
                   fontWeight: FontWeight.w600,
                 ),
               ),

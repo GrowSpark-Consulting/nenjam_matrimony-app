@@ -60,7 +60,9 @@ class _AnswerPromptPageState extends State<AnswerPromptPage> {
     final category = widget.prompt.category;
 
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context).promptsYourAnswer)),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context).promptsYourAnswer),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: AppSpacing.pagePadding,
@@ -87,8 +89,9 @@ class _AnswerPromptPageState extends State<AnswerPromptPage> {
                     Expanded(
                       child: Text(
                         widget.prompt.promptText,
-                        style: AppTypography.titleMedium
-                            .copyWith(fontWeight: FontWeight.w700),
+                        style: AppTypography.titleMedium.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
@@ -117,7 +120,7 @@ class _AnswerPromptPageState extends State<AnswerPromptPage> {
               const SizedBox(height: AppSpacing.xl),
               NmGradientButton(
                 label: AppLocalizations.of(context).actionSave,
-                useGoldGradient: true,
+                useAccentGradient: true,
                 onPressed: _controller.text.trim().isEmpty ? null : _save,
               ),
             ],

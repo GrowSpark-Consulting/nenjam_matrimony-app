@@ -40,12 +40,12 @@ class PsychologySection extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
+                  color: AppColors.scorePsychology.withValues(alpha: 0.10),
                   borderRadius: AppSpacing.borderRadiusMd,
                 ),
                 child: const Icon(
                   Icons.psychology_alt_rounded,
-                  color: AppColors.primary,
+                  color: AppColors.scorePsychology,
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -73,7 +73,7 @@ class PsychologySection extends StatelessWidget {
               ),
               const Icon(
                 Icons.chevron_right_rounded,
-                color: AppColors.accentGold,
+                color: AppColors.secondary,
               ),
             ],
           ),
@@ -100,7 +100,7 @@ class PsychologySection extends StatelessWidget {
             children: [
               const Icon(
                 Icons.psychology_alt_rounded,
-                color: AppColors.primary,
+                color: AppColors.scorePsychology,
                 size: 22,
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -152,7 +152,7 @@ class PsychologySection extends StatelessWidget {
                           ? AppColors.surfaceVariantDark
                           : AppColors.surfaceVariantLight,
                       valueColor: const AlwaysStoppedAnimation(
-                        AppColors.accentGold,
+                        AppColors.scorePsychology,
                       ),
                     ),
                   ),

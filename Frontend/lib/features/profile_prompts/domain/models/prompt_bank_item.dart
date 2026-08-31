@@ -9,25 +9,25 @@ enum PromptCategory { personality, marriageCompatibility, family, career }
 
 extension PromptCategoryDisplay on PromptCategory {
   String get label => switch (this) {
-        PromptCategory.personality => 'Personality',
-        PromptCategory.marriageCompatibility => 'Marriage & Compatibility',
-        PromptCategory.family => 'Family',
-        PromptCategory.career => 'Career',
-      };
+    PromptCategory.personality => 'Personality',
+    PromptCategory.marriageCompatibility => 'Marriage & Compatibility',
+    PromptCategory.family => 'Family',
+    PromptCategory.career => 'Career',
+  };
 
   IconData get icon => switch (this) {
-        PromptCategory.personality => Icons.emoji_emotions_rounded,
-        PromptCategory.marriageCompatibility => Icons.favorite_rounded,
-        PromptCategory.family => Icons.family_restroom_rounded,
-        PromptCategory.career => Icons.work_rounded,
-      };
+    PromptCategory.personality => Icons.emoji_emotions_rounded,
+    PromptCategory.marriageCompatibility => Icons.favorite_rounded,
+    PromptCategory.family => Icons.family_restroom_rounded,
+    PromptCategory.career => Icons.work_rounded,
+  };
 
   Color get accentColor => switch (this) {
-        PromptCategory.personality => AppColors.accentGold,
-        PromptCategory.marriageCompatibility => AppColors.liked,
-        PromptCategory.family => AppColors.info,
-        PromptCategory.career => AppColors.primary,
-      };
+    PromptCategory.personality => AppColors.secondary,
+    PromptCategory.marriageCompatibility => AppColors.liked,
+    PromptCategory.family => AppColors.info,
+    PromptCategory.career => AppColors.primary,
+  };
 }
 
 /// A single pickable prompt from the bank (unanswered).

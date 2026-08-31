@@ -40,7 +40,7 @@ class NmHoroscopeCard extends StatelessWidget {
               children: [
                 const Icon(
                   Icons.auto_awesome_rounded,
-                  color: AppColors.accentGold,
+                  color: AppColors.secondary,
                   size: 22,
                 ),
                 const SizedBox(width: 8),
@@ -66,7 +66,7 @@ class NmHoroscopeCard extends StatelessWidget {
                         backgroundColor: isDark
                             ? AppColors.surfaceVariantDark
                             : AppColors.surfaceVariantLight,
-                        color: AppColors.accentGold,
+                        color: AppColors.secondary,
                         strokeWidth: 6,
                       ),
                       Text(

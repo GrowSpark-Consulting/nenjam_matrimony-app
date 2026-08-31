@@ -31,7 +31,7 @@ class NmSocialButton extends StatelessWidget {
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? AppColors.borderDark : const Color(0xFFC5C6CF),
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
           width: 1,
         ),
         boxShadow: [
@@ -77,7 +77,7 @@ class NmSocialButton extends StatelessWidget {
                   style: AppTypography.labelLarge.copyWith(
                     color: isDark
                         ? AppColors.textPrimaryDark
-                        : const Color(0xFF1B1C19),
+                        : AppColors.textPrimaryLight,
                     fontWeight: FontWeight.w600,
                     fontSize: 15,
                   ),

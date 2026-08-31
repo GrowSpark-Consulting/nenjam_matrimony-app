@@ -45,7 +45,10 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
         Row(
           children: [
             Expanded(
-              child: Text(AppLocalizations.of(context).photosYourPhotos, style: AppTypography.labelLarge),
+              child: Text(
+                AppLocalizations.of(context).photosYourPhotos,
+                style: AppTypography.labelLarge,
+              ),
             ),
             Text(
               '${photos.length}/$kMaxPhotos',
@@ -117,7 +120,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
               if (busy)
                 const Positioned.fill(
                   child: ColoredBox(
-                    color: Color(0x22000000),
+                    color: AppColors.photoScrimSoft,
                     child: Center(child: CircularProgressIndicator()),
                   ),
                 ),
@@ -155,9 +158,11 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
     final reordered = [...photos];
     final moved = reordered.removeAt(oldIndex);
     reordered.insert(newIndex, moved);
-    await _run(() => ref
-        .read(myPhotosProvider.notifier)
-        .reorder(reordered.map((p) => p.id).toList()));
+    await _run(
+      () => ref
+          .read(myPhotosProvider.notifier)
+          .reorder(reordered.map((p) => p.id).toList()),
+    );
   }
 
   void _onAddTap() => _pickAndUpload(makePrimaryIfFirst: true);
@@ -223,14 +228,18 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
           children: [
             const SizedBox(height: 12),
             ListTile(
-              leading: const Icon(Icons.photo_library_rounded,
-                  color: AppColors.primary),
+              leading: const Icon(
+                Icons.photo_library_rounded,
+                color: AppColors.primary,
+              ),
               title: Text(AppLocalizations.of(context).inboxChooseFromGallery),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt_rounded,
-                  color: AppColors.accentGold),
+              leading: const Icon(
+                Icons.camera_alt_rounded,
+                color: AppColors.secondary,
+              ),
               title: Text(AppLocalizations.of(context).inboxTakePhoto),
               onTap: () => Navigator.pop(ctx, ImageSource.camera),
             ),
@@ -254,12 +263,18 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
             const SizedBox(height: 12),
             if (!photo.isPrimary)
               ListTile(
-                leading: const Icon(Icons.star_rounded, color: AppColors.accentGold),
+                leading: const Icon(
+                  Icons.star_rounded,
+                  color: AppColors.secondary,
+                ),
                 title: Text(AppLocalizations.of(context).photosSetAsDisplay),
                 onTap: () {
                   Navigator.pop(ctx);
-                  _run(() =>
-                      ref.read(myPhotosProvider.notifier).setPrimary(photo.id));
+                  _run(
+                    () => ref
+                        .read(myPhotosProvider.notifier)
+                        .setPrimary(photo.id),
+                  );
                 },
               ),
             ListTile(
@@ -267,17 +282,23 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
               title: Text(AppLocalizations.of(context).photosReplace),
               onTap: () {
                 Navigator.pop(ctx);
-                _pickAndUpload(replaceId: photo.id, replacingPrimary: photo.isPrimary);
+                _pickAndUpload(
+                  replaceId: photo.id,
+                  replacingPrimary: photo.isPrimary,
+                );
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline_rounded,
-                  color: AppColors.error),
+              leading: const Icon(
+                Icons.delete_outline_rounded,
+                color: AppColors.error,
+              ),
               title: Text(AppLocalizations.of(context).photosDelete),
               onTap: () {
                 Navigator.pop(ctx);
-                _run(() =>
-                    ref.read(myPhotosProvider.notifier).delete(photo.id));
+                _run(
+                  () => ref.read(myPhotosProvider.notifier).delete(photo.id),
+                );
               },
             ),
             const SizedBox(height: 12),
@@ -305,8 +326,9 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -336,8 +358,8 @@ class _PhotoTile extends StatelessWidget {
               fit: BoxFit.cover,
               // Grid thumbnails, not full photos — decode to the tile's
               // longest edge rather than the source 1080².
-              memCacheWidth:
-                  (160 * MediaQuery.devicePixelRatioOf(context)).round(),
+              memCacheWidth: (160 * MediaQuery.devicePixelRatioOf(context))
+                  .round(),
               placeholder: (_, __) => Container(
                 width: 116,
                 height: 160,
@@ -362,20 +384,26 @@ class _PhotoTile extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.accentGold,
+                  color: AppColors.secondary,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.star_rounded, size: 12, color: Colors.white),
+                    const Icon(
+                      Icons.star_rounded,
+                      size: 12,
+                      color: Colors.white,
+                    ),
                     const SizedBox(width: 3),
-                    Text('DISPLAY',
-                        style: AppTypography.labelSmall.copyWith(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                        )),
+                    Text(
+                      'DISPLAY',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -390,9 +418,9 @@ class _LoadingState extends StatelessWidget {
   const _LoadingState();
   @override
   Widget build(BuildContext context) => const SizedBox(
-        height: 160,
-        child: Center(child: CircularProgressIndicator()),
-      );
+    height: 160,
+    child: Center(child: CircularProgressIndicator()),
+  );
 }
 
 class _EmptyState extends StatelessWidget {
@@ -420,12 +448,18 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_a_photo_rounded,
-                size: 44, color: AppColors.primary.withValues(alpha: 0.6)),
+            Icon(
+              Icons.add_a_photo_rounded,
+              size: 44,
+              color: AppColors.primary.withValues(alpha: 0.6),
+            ),
             const SizedBox(height: 12),
-            Text(AppLocalizations.of(context).photosAddFirst,
-                style: AppTypography.labelMedium
-                    .copyWith(color: AppColors.primary)),
+            Text(
+              AppLocalizations.of(context).photosAddFirst,
+              style: AppTypography.labelMedium.copyWith(
+                color: AppColors.primary,
+              ),
+            ),
           ],
         ),
       ),
@@ -451,10 +485,16 @@ class _ErrorState extends StatelessWidget {
         children: [
           const Icon(Icons.cloud_off_rounded, color: AppColors.error, size: 32),
           const SizedBox(height: 8),
-          Text(message,
-              textAlign: TextAlign.center, style: AppTypography.bodySmall),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: AppTypography.bodySmall,
+          ),
           const SizedBox(height: 12),
-          OutlinedButton(onPressed: onRetry, child: Text(AppLocalizations.of(context).commonRetry)),
+          OutlinedButton(
+            onPressed: onRetry,
+            child: Text(AppLocalizations.of(context).commonRetry),
+          ),
         ],
       ),
     );

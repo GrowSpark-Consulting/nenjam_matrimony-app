@@ -25,7 +25,7 @@ class NmLoadingWidget extends StatelessWidget {
               strokeWidth: 3,
               color:
                   color ??
-                  (isDark ? const Color(0xFF7B9AD6) : AppColors.primary),
+                  (isDark ? AppColors.primaryOnDark : AppColors.primary),
             ),
           ),
           if (message != null) ...[

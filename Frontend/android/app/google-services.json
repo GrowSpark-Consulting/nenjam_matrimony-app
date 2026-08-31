@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "1060875646049-aj0lcs07u5hhveomhso21cs4q1s6uqh0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.nenjam_matrimony",
+            "certificate_hash": "36f7c6f55d008a86776bb0d65a85db322fe5ad3e"
+          }
+        },
+        {
           "client_id": "1060875646049-lj6dfvsbb05o7jpi70jma08m5iv2nat3.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -39,10 +47,62 @@
               "client_type": 3
             },
             {
-              "client_id": "1060875646049-q6mdnrf9cdj9ttfs6li4845trtgff1sp.apps.googleusercontent.com",
+              "client_id": "1060875646049-e5trfpemktrtiqpf349rj7er040n5pui.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.nenjamMatrimony"
+                "bundle_id": "com.growspark.nenjam"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1060875646049:android:3ac44bf77fdaae5e4ca620",
+        "android_client_info": {
+          "package_name": "com.growspark.nenjam"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1060875646049-sv04d4cmsv8offuu1fhn53ngmoik668p.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.growspark.nenjam",
+            "certificate_hash": "36f7c6f55d008a86776bb0d65a85db322fe5ad3e"
+          }
+        },
+        {
+          "client_id": "1060875646049-svn0lp27bvc9cfn77okt9kbi5tafnksv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.growspark.nenjam",
+            "certificate_hash": "68417943a81249c94135fd15a5889e396c1968e6"
+          }
+        },
+        {
+          "client_id": "1060875646049-lj6dfvsbb05o7jpi70jma08m5iv2nat3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2tPUqfWpUYymcLk4UQZj64urZeA54D3E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1060875646049-lj6dfvsbb05o7jpi70jma08m5iv2nat3.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1060875646049-e5trfpemktrtiqpf349rj7er040n5pui.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.growspark.nenjam"
               }
             }
           ]

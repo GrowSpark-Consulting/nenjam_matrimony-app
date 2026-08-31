@@ -5,7 +5,7 @@ import '../../theme/app_gradients.dart';
 import '../../theme/app_shadows.dart';
 import '../../theme/app_typography.dart';
 
-/// Luxury premium gold gradient action button with subtle glow.
+/// Luxury premium magenta gradient action button with a subtle glow.
 class NmPremiumButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -30,9 +30,9 @@ class NmPremiumButton extends StatelessWidget {
       width: width ?? double.infinity,
       height: height,
       decoration: BoxDecoration(
-        gradient: AppGradients.goldButton,
+        gradient: AppGradients.accentButton,
         borderRadius: BorderRadius.circular(height / 2),
-        boxShadow: onPressed == null || isLoading ? [] : AppShadows.glowGold,
+        boxShadow: onPressed == null || isLoading ? [] : AppShadows.glowAccent,
       ),
       child: Material(
         color: Colors.transparent,
@@ -46,20 +46,20 @@ class NmPremiumButton extends StatelessWidget {
                     width: 22,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
-                      color: AppColors.textOnGold,
+                      color: AppColors.textOnSecondary,
                     ),
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (icon != null) ...[
-                        Icon(icon, size: 20, color: AppColors.textOnGold),
+                        Icon(icon, size: 20, color: AppColors.textOnSecondary),
                         const SizedBox(width: 8),
                       ],
                       Text(
                         label,
                         style: AppTypography.button.copyWith(
-                          color: AppColors.textOnGold,
+                          color: AppColors.textOnSecondary,
                         ),
                       ),
                     ],

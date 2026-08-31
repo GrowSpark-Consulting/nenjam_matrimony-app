@@ -3092,6 +3092,18 @@ class AppLocalizationsTa extends AppLocalizations {
   String get profileDetailTabVerification => 'சரிபார்ப்பு';
 
   @override
+  String get profileDetailTabCompatibility => 'பொருத்தம்';
+
+  @override
+  String profileDetailAgeYears(int age) {
+    return '$age வயது';
+  }
+
+  @override
+  String get profileDetailNoMorePhotos =>
+      'வேறு புகைப்படங்கள் இதுவரை பகிரப்படவில்லை';
+
+  @override
   String get profileDetailTabTimeline => 'காலவரிசை';
 
   @override
@@ -3376,6 +3388,12 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get fieldMaritalStatus => 'திருமண நிலை';
+
+  @override
+  String get fieldMatrimonyId => 'திருமண அடையாள எண்';
+
+  @override
+  String get fieldDistance => 'தூரம்';
 
   @override
   String get fieldPhone => 'தொலைபேசி';

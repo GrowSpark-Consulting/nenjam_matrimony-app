@@ -119,13 +119,13 @@ class _CompatibilityBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: AppColors.accentGoldSurface,
+        color: AppColors.accentSoft,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         '$percentage%',
         style: AppTypography.labelSmall.copyWith(
-          color: AppColors.accentGoldDark,
+          color: AppColors.secondaryDark,
           fontWeight: FontWeight.w700,
         ),
       ),

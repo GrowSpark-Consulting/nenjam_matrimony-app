@@ -202,7 +202,7 @@ class NmProfileCard extends StatelessWidget {
                           ? Icons.bookmark_rounded
                           : Icons.bookmark_border_rounded,
                       onTap: onShortlistTap!,
-                      color: isShortlisted ? AppColors.accentGold : null,
+                      color: isShortlisted ? AppColors.secondary : null,
                       tooltip: l10n.profileCardShortlist,
                     ),
                   if (onLikeTap != null) ...[

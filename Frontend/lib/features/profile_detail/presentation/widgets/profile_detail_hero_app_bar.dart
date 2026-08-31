@@ -1,150 +1,96 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_gradients.dart';
-import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/avatars/gender_placeholder.dart';
-import '../../../../l10n/app_localizations.dart';
-import '../../../discover/presentation/providers/discover_providers.dart';
-import '../../../matches/presentation/providers/reel_feed_provider.dart';
-import '../../../safety/presentation/providers/blocked_users_provider.dart';
-import '../../../safety/presentation/utils/show_safety_action_sheet.dart';
-import '../../../shortlist/presentation/providers/shortlist_provider.dart';
-import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
+import '../../../../core/widgets/cards/profile_hero_content.dart';
 import '../../domain/entities/profile_detail_entity.dart';
-import '../../../../core/widgets/images/sized_network_photo.dart';
 
-/// Collapsing parallax hero for the Profile Detail page — cover photo,
-/// gradient scrim, a "Verified Profile" pill, and name/age/location
-/// overlaid on the photo, shrinking into a plain app bar on scroll.
+/// Full-bleed collapsing hero for the Profile Detail page.
 ///
-/// Bespoke rather than built on [NmSliverAppBar]: that widget has no
-/// gradient scrim, badge, or name overlay, so reusing it would mean
-/// immediately overriding most of its `flexibleSpace`.
-class ProfileDetailHeroAppBar extends ConsumerStatefulWidget {
+/// Renders the member's photo, scrim and identity block with
+/// [NmProfileHeroPhoto], [NmProfileHeroScrim] and [NmProfileHeroInfo] — the
+/// same three widgets the Matches reel card is built from, so the two screens
+/// show a profile identically by construction rather than by two teams
+/// agreeing on numbers. Everything specific to this screen lives here: the
+/// sliver, the viewport-height sizing, and the bottom inset.
+///
+/// Deliberately carries **no controls at all**. It used to own a back button,
+/// a shortlist toggle, share, and a "More" (block/report) menu, plus a bottom
+/// action bar for Send Interest and Chat; Matches' own right-hand action
+/// column is likewise not borrowed along with its presentation. Every one of
+/// those actions still exists on the feeds this page is opened from
+/// (Discover, Matches, Search). Back is left to the platform: the Android
+/// system back gesture/button and the iOS edge swipe both pop this route
+/// without anything being drawn for them.
+class ProfileDetailHeroAppBar extends StatelessWidget {
   final ProfileDetailEntity detail;
+
   /// The scoped Hero tag the tapped card used (Discover/Matches), when
   /// applicable — see `ProfileDetailArgs`'s doc comment for why those two
   /// screens need a scoped tag instead of the plain `'profile-photo-$id'`
   /// one. Null falls back to that plain scheme (Search/Similar
   /// Profiles/Shortlisted, or a direct/deep link).
   final String? heroTag;
-  /// Whether the caller already knows this member is blocked — see
-  /// `ProfileDetailArgs.isBlocked`'s doc comment. Only ever `true` when this
-  /// page was opened from Chat.
-  final bool isBlocked;
+
+  /// Height the expanded hero should occupy — the page passes its scroll
+  /// viewport's own height (measured with a [LayoutBuilder]) so the photo
+  /// fills exactly the first screenful on every device size.
+  ///
+  /// Null falls back to a measurement from [MediaQuery] for any caller that
+  /// isn't inside such a [LayoutBuilder].
+  final double? heroHeight;
+
+  /// Whether the "there is more below" chevron is showing.
+  ///
+  /// Driven by the page's existing scroll position: true only while the page
+  /// is at (or within a few pixels of) the top. The cue stays in the tree
+  /// either way and fades, so revealing it can never shift the identity block
+  /// underneath it.
+  final bool showScrollCue;
 
   const ProfileDetailHeroAppBar({
     super.key,
     required this.detail,
     this.heroTag,
-    this.isBlocked = false,
+    this.heroHeight,
+    this.showScrollCue = false,
   });
 
   @override
-  ConsumerState<ProfileDetailHeroAppBar> createState() => _ProfileDetailHeroAppBarState();
-}
-
-class _ProfileDetailHeroAppBarState extends ConsumerState<ProfileDetailHeroAppBar> {
-  // Prevents a rapid double-tap from firing two toggles before the first
-  // resolves, and — combined with `shortlistLoading` below — makes sure a
-  // tap that arrives before `shortlistNotifierProvider`'s initial (mock-
-  // delayed) fetch resolves gets a disabled button instead of silently
-  // doing nothing: the notifier's own guard (`state.valueOrNull == null`)
-  // would otherwise no-op that tap with zero visual feedback.
-  bool _isToggling = false;
-
-  // Local override of `widget.isBlocked` — there's no backend read endpoint
-  // for block status (see `ProfileDetailArgs.isBlocked`'s doc comment), so a
-  // successful block/unblock from this page's own "More" menu can only ever
-  // update this widget's own copy, not re-fetch a fresher one.
-  late bool _isBlocked = widget.isBlocked;
-
-  @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final base = widget.detail.base;
-    final shortlisted = ref.watch(isShortlistedProvider(base.id));
-    final shortlistLoading = ref.watch(shortlistNotifierProvider).isLoading;
-    final photoUrl = base.photoUrls.isNotEmpty ? base.photoUrls.first : null;
-    final effectiveHeroTag = widget.heroTag ?? 'profile-photo-${base.id}';
+    final base = detail.base;
+    final effectiveHeroTag = heroTag ?? 'profile-photo-${base.id}';
 
-    // Half the viewport on tall/portrait screens, capped at 420 so it
-    // never dominates a tablet or landscape viewport where half the
-    // screen height would otherwise dwarf the content below it.
-    final screenHeight = MediaQuery.sizeOf(context).height;
-    final expandedHeight = (screenHeight * 0.5).clamp(280.0, 420.0);
+    // The photo *is* the first screen, so the hero should end up exactly as
+    // tall as the scroll viewport the page measured for it.
+    //
+    // Note what SliverAppBar does with this number: with primary: true its
+    // delegate reports `maxExtent = topPadding + expandedHeight`, adding the
+    // status-bar inset on top of whatever is passed. Handing it the whole
+    // viewport therefore built a box a status bar TALLER than the screen,
+    // and since the identity block is bottom-aligned inside that box, the
+    // bottom of it — the last row of chips — was laid out below the
+    // viewport and clipped. Subtracting the inset here is what makes
+    // maxExtent come back out as the viewport height exactly.
+    //
+    // Only the top inset: the hero deliberately runs to the physical bottom
+    // of the screen, and the overlay's own SafeArea holds its text clear of
+    // the system navigation bar.
+    final mediaQuery = MediaQuery.of(context);
+    final viewportHeight = heroHeight ?? mediaQuery.size.height;
+    final expandedHeight = (viewportHeight - mediaQuery.padding.top)
+        .clamp(280.0, double.infinity);
 
     return SliverAppBar(
       expandedHeight: expandedHeight,
       pinned: true,
       stretch: true,
+      // Nothing is drawn in the toolbar any more, so it collapses to just the
+      // status-bar strip rather than an empty 56px plum bar. Keeping it
+      // pinned at that height is what stops the section navigation below from
+      // pinning underneath the status bar.
+      toolbarHeight: 0,
+      automaticallyImplyLeading: false,
       backgroundColor: AppColors.primary,
-      foregroundColor: Colors.white,
-      leading: _CircleIconButton(
-        icon: Icons.arrow_back_rounded,
-        onTap: () => context.pop(),
-      ),
-      actions: [
-        _CircleIconButton(
-          icon: shortlisted ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-          iconColor: shortlisted ? AppColors.accentGold : Colors.white,
-          isLoading: _isToggling || shortlistLoading,
-          onTap: (_isToggling || shortlistLoading)
-              ? null
-              : () async {
-                  setState(() => _isToggling = true);
-                  await handleShortlistToggle(context, ref, base);
-                  if (mounted) setState(() => _isToggling = false);
-                },
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        _CircleIconButton(
-          icon: Icons.ios_share_rounded,
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.profileDetailShareComingSoon)),
-            );
-          },
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        _CircleIconButton(
-          icon: Icons.more_vert_rounded,
-          onTap: () => showSafetyActionSheet(
-            context,
-            ref,
-            userId: base.id,
-            userName: base.name,
-            isBlocked: _isBlocked,
-            onBlocked: () {
-              // This page was reached by tapping a card somewhere — Matches,
-              // Discover, or Search (or Similar Profiles/Shortlisted, which
-              // re-project the same feed) — that screen doesn't know about
-              // the block yet. Invalidating forces a refetch next time
-              // either is shown, so the blocked member doesn't linger in a
-              // stale list; cheap even when the provider isn't currently
-              // being watched (Riverpod just drops the cached value).
-              // `handleBlockUser` only calls this after the block has
-              // actually succeeded, the loading dialog has fully closed, and
-              // the success SnackBar has been shown — see its doc comment.
-              ref.invalidate(reelFeedProvider);
-              ref.invalidate(discoverFeedProvider);
-              // So this member shows up next time the Blocked Users list
-              // (Privacy & Safety) is opened, even if it was already loaded
-              // before this block happened.
-              ref.invalidate(blockedUsersNotifierProvider);
-              if (context.mounted && context.canPop()) context.pop();
-            },
-            onUnblocked: () {
-              if (mounted) setState(() => _isBlocked = false);
-            },
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-      ],
       flexibleSpace: FlexibleSpaceBar(
         stretchModes: const [StretchMode.zoomBackground],
         background: Stack(
@@ -152,103 +98,33 @@ class _ProfileDetailHeroAppBarState extends ConsumerState<ProfileDetailHeroAppBa
           children: [
             Hero(
               tag: effectiveHeroTag,
-              child: photoUrl == null
-                  ? NmGenderPlaceholder(gender: base.gender, iconSize: 72)
-                  // BoxFit.contain (not .cover) so the complete uploaded
-                  // photo stays visible — no top/bottom clipping — while
-                  // preserving its original aspect ratio.
-                  : (photoUrl.startsWith('assets/')
-                        ? Image.asset(photoUrl, fit: BoxFit.contain)
-                        : NmSizedNetworkPhoto(
-                            url: photoUrl,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => NmGenderPlaceholder(
-                              gender: base.gender,
-                              iconSize: 72,
-                            ),
-                          )),
-            ),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: AppGradients.imageOverlayStrong,
+              child: NmProfileHeroPhoto(
+                photoUrls: base.photoUrls,
+                gender: base.gender,
               ),
             ),
-            Positioned(
-              left: AppSpacing.base,
-              right: AppSpacing.base,
-              bottom: AppSpacing.lg,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (base.isVerified)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: AppSpacing.xs,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.faceVerificationGreen,
-                        borderRadius: AppSpacing.borderRadiusFull,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.verified_rounded,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              AppLocalizations.of(context).profileDetailVerifiedBanner,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.labelSmall.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    '${base.name}, ${base.age}',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.profileName.copyWith(
-                      color: Colors.white,
-                      fontSize: 26,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on_rounded,
-                        size: 16,
-                        color: Colors.white70,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          base.caste.isNotEmpty
-                              ? '${base.location} • ${base.caste}'
-                              : base.location,
-                          style: AppTypography.profileMetadata.copyWith(
-                            color: Colors.white70,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            const NmProfileHeroScrim(),
+            // The reel card's own overlay, with the two things that are
+            // properties of *that* screen rather than of the design turned
+            // off: there is no action column here to keep clear, so the
+            // block takes the full width, and the name gets room to wrap
+            // rather than ellipsizing — on the screen devoted to one person,
+            // seeing their whole name matters more than a tidy single line.
+            // Three lines is past any real name at this width (the longest
+            // in the seed data takes two), so the cap is only a guard against
+            // pathological input rather than something users meet.
+            NmProfileHeroOverlay(
+              profile: base,
+              reserveActionColumn: false,
+              nameMaxLines: 3,
+              // Read out here, above the SliverAppBar: it strips the bottom
+              // padding from its header's MediaQuery, so nothing inside the
+              // flexible space can see the system navigation bar on its own.
+              bottomInset: mediaQuery.padding.bottom,
+              // In the overlay's own column rather than free-floating in the
+              // Stack, so it can never land on the name or the chips however
+              // long they run.
+              above: _ScrollDiscoveryCue(visible: showScrollCue),
             ),
           ],
         ),
@@ -257,44 +133,109 @@ class _ProfileDetailHeroAppBarState extends ConsumerState<ProfileDetailHeroAppBa
   }
 }
 
-class _CircleIconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-  final Color iconColor;
-  final bool isLoading;
+/// A pair of softly drifting chevrons: the whole of the "this page continues
+/// below" affordance.
+///
+/// The first viewport is a photograph with no other UI on it, which is the
+/// look that was asked for but gives a first-time reader nothing to suggest
+/// About is a swipe away. Deliberately wordless and low-contrast — an
+/// instruction banner would undo the point of a clean hero.
+class _ScrollDiscoveryCue extends StatefulWidget {
+  final bool visible;
 
-  const _CircleIconButton({
-    required this.icon,
-    required this.onTap,
-    this.iconColor = Colors.white,
-    this.isLoading = false,
-  });
+  const _ScrollDiscoveryCue({required this.visible});
+
+  @override
+  State<_ScrollDiscoveryCue> createState() => _ScrollDiscoveryCueState();
+}
+
+class _ScrollDiscoveryCueState extends State<_ScrollDiscoveryCue>
+    with SingleTickerProviderStateMixin {
+  /// Small enough to read as a drift rather than a bounce.
+  static const double _travel = 7;
+  static const Duration _fade = Duration(milliseconds: 260);
+
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  );
+
+  late final Animation<double> _drift = Tween<double>(
+    begin: 0,
+    end: _travel,
+  ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.visible) _controller.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_ScrollDiscoveryCue oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.visible == oldWidget.visible) return;
+    // Idle rather than spinning invisibly once the reader has scrolled past.
+    if (widget.visible) {
+      _controller.repeat(reverse: true);
+    } else {
+      _controller.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xs),
-      child: Material(
-        color: Colors.black.withValues(alpha: 0.25),
-        shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: SizedBox(
-            width: 40,
-            height: 40,
-            child: isLoading
-                ? Center(
-                    child: SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: iconColor),
-                    ),
-                  )
-                : Icon(icon, size: 20, color: iconColor),
+    return IgnorePointer(
+      child: AnimatedOpacity(
+        opacity: widget.visible ? 1 : 0,
+        duration: _fade,
+        curve: Curves.easeOut,
+        child: Center(
+          child: AnimatedBuilder(
+            animation: _drift,
+            builder: (context, child) => Transform.translate(
+              offset: Offset(0, _drift.value),
+              child: child,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const _Chevron(alpha: 0.75),
+                // Pulled up so the two read as one double-chevron rather than
+                // as two separate arrows; a negative SizedBox is not a thing.
+                Transform.translate(
+                  offset: const Offset(0, -12),
+                  child: const _Chevron(alpha: 0.4),
+                ),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _Chevron extends StatelessWidget {
+  final double alpha;
+
+  const _Chevron({required this.alpha});
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(
+      Icons.keyboard_arrow_down_rounded,
+      size: 26,
+      color: Colors.white.withValues(alpha: alpha),
+      // The scrim is weakest this far up the photo, so the cue carries its
+      // own shadow to stay legible over a bright one.
+      shadows: const [Shadow(blurRadius: 8, color: Colors.black45)],
     );
   }
 }

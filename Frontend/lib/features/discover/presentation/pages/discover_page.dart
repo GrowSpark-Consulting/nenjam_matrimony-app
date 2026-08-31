@@ -6,6 +6,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/router/profile_navigation.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/avatars/app_avatars.dart';
@@ -41,7 +42,7 @@ import '../widgets/nenjam_navigation_drawer.dart';
 ///   4. Recently Joined — horizontal scroll compact cards
 ///   5. Verified Profiles — full-height card with stats
 ///   6. Near You — 2-column grid
-///   7. Premium Members — dark navy section
+///   7. Premium Members — deep plum section
 ///
 /// Profile Intelligence is optional enrichment, never auto-opened here —
 /// users reach it deliberately via the navigation drawer or Profile page.
@@ -147,7 +148,7 @@ class _DiscoverFeedView extends ConsumerWidget {
         feed.premiumMembers.isEmpty;
 
     return RefreshIndicator(
-      color: AppColors.accentGold,
+      color: AppColors.secondary,
       onRefresh: () => ref.refresh(discoverFeedProvider.future),
       child: CustomScrollView(
         physics: const BouncingScrollPhysics(),
@@ -178,7 +179,7 @@ class _DiscoverFeedView extends ConsumerWidget {
                   child: _FeedSection(
                     title: l10n.discoverAiRecommendedTitle,
                     icon: Icons.auto_awesome_rounded,
-                    iconColor: AppColors.accentGold,
+                    iconColor: AppColors.secondary,
                     child: _LargeProfileCard(
                       profile: feed.aiRecommended.first,
                       showStats: false,
@@ -223,7 +224,7 @@ class _DiscoverFeedView extends ConsumerWidget {
                   child: _FeedSection(
                     title: l10n.discoverNearYouTitle,
                     icon: Icons.location_on_rounded,
-                    iconColor: AppColors.accentGold,
+                    iconColor: AppColors.secondary,
                     child: _NearYouGrid(profiles: feed.nearYou),
                   ),
                 ),
@@ -413,10 +414,10 @@ class _FallbackBanner extends StatelessWidget {
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: AppColors.accentGold.withValues(alpha: 0.10),
+          color: AppColors.secondary.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           border: Border.all(
-            color: AppColors.accentGold.withValues(alpha: 0.25),
+            color: AppColors.secondary.withValues(alpha: 0.25),
           ),
         ),
         child: Row(
@@ -424,7 +425,7 @@ class _FallbackBanner extends StatelessWidget {
             const Icon(
               Icons.tune_rounded,
               size: 16,
-              color: AppColors.accentGold,
+              color: AppColors.secondary,
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
@@ -524,13 +525,7 @@ class _StoryBubble extends StatelessWidget {
             padding: const EdgeInsets.all(2.5),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: story.hasNewStory
-                  ? const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF755B00), Color(0xFFFED977)],
-                    )
-                  : null,
+              gradient: story.hasNewStory ? AppGradients.match : null,
               color: story.hasNewStory
                   ? null
                   : AppColors.dividerLight.withValues(alpha: 0.5),
@@ -651,7 +646,7 @@ class _FeedSection extends StatelessWidget {
                       Icon(
                         icon,
                         size: 20,
-                        color: iconColor ?? AppColors.accentGold,
+                        color: iconColor ?? AppColors.secondary,
                       ),
                       const SizedBox(width: AppSpacing.sm),
                     ],
@@ -675,7 +670,7 @@ class _FeedSection extends StatelessWidget {
                 child: Text(
                   l10n.discoverViewAllButton.toUpperCase(),
                   style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.accentGold,
+                    color: AppColors.secondary,
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 1,
@@ -744,8 +739,8 @@ class _LargeProfileCard extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Color(0x4D041635), // primary/30
-                        Color(0xF2041635), // primary/95
+                        AppColors.photoScrimSoft,
+                        AppColors.photoScrimStrong,
                       ],
                       stops: [0.0, 0.45, 1.0],
                     ),
@@ -795,7 +790,7 @@ class _LargeProfileCard extends StatelessWidget {
                               const Icon(
                                 Icons.verified_rounded,
                                 size: 20,
-                                color: Color(0xFFFFE08F), // secondary-fixed
+                                color: AppColors.accentLight,
                               ),
                             ],
                           ],
@@ -897,7 +892,7 @@ class _StatsRow extends StatelessWidget {
           child: _Stat(
             label: l10n.discoverStatMatchLabel,
             value: '${compatibility.aiMatchPercent}%',
-            isGold: true,
+            isAccent: true,
           ),
         ),
         _Divider(),
@@ -905,7 +900,7 @@ class _StatsRow extends StatelessWidget {
           child: _Stat(
             label: l10n.discoverStatAstroLabel,
             value: '${compatibility.astroMatchPercent}%',
-            isGold: true,
+            isAccent: true,
           ),
         ),
         _Divider(),
@@ -913,7 +908,7 @@ class _StatsRow extends StatelessWidget {
           child: _Stat(
             label: l10n.discoverStatTrustLabel,
             value: '${compatibility.overallCompatibility}/100',
-            isGold: false,
+            isAccent: false,
           ),
         ),
       ],
@@ -924,9 +919,13 @@ class _StatsRow extends StatelessWidget {
 class _Stat extends StatelessWidget {
   final String label;
   final String value;
-  final bool isGold;
+  final bool isAccent;
 
-  const _Stat({required this.label, required this.value, required this.isGold});
+  const _Stat({
+    required this.label,
+    required this.value,
+    required this.isAccent,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -947,8 +946,8 @@ class _Stat extends StatelessWidget {
         Text(
           value,
           style: AppTypography.labelMedium.copyWith(
-            color: isGold
-                ? const Color(0xFFFFE08F)
+            color: isAccent
+                ? AppColors.accentLight
                 : AppColors.faceVerificationGreen,
             fontWeight: FontWeight.w700,
             fontSize: 14,
@@ -971,7 +970,7 @@ class _Divider extends StatelessWidget {
   );
 }
 
-/// Interested (full-width gold) + Shortlist / View Profile buttons.
+/// Interested (full-width gradient) + Shortlist / View Profile buttons.
 class _CardButtons extends ConsumerStatefulWidget {
   final DiscoveryProfileEntity profile;
 
@@ -1019,14 +1018,13 @@ class _CardButtonsState extends ConsumerState<_CardButtons> {
               decoration: BoxDecoration(
                 color: settled ? AppColors.faceVerificationGreen : null,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: settled ? null : AppShadows.goldGlow,
+                boxShadow: settled ? null : AppShadows.accentGlow,
               ),
               child: Container(
                 height: 54,
                 decoration: BoxDecoration(
-                  color: settled
-                      ? AppColors.faceVerificationGreen
-                      : const Color(0xFFFFE08F),
+                  color: settled ? AppColors.faceVerificationGreen : null,
+                  gradient: settled ? null : AppGradients.accent,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -1047,16 +1045,14 @@ class _CardButtonsState extends ConsumerState<_CardButtons> {
                             ? Icons.check_circle_rounded
                             : Icons.favorite_rounded,
                         size: 20,
-                        color: settled ? Colors.white : const Color(0xFF241A00),
+                        color: Colors.white,
                       ),
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
                         interestButtonLabel(status, l10n),
                         style: AppTypography.button.copyWith(
-                          color: settled
-                              ? Colors.white
-                              : const Color(0xFF241A00),
+                          color: Colors.white,
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
                         ),
@@ -1083,9 +1079,7 @@ class _CardButtonsState extends ConsumerState<_CardButtons> {
                 label: l10n.profileCardShortlist,
                 onTap: () =>
                     handleShortlistToggle(context, ref, widget.profile),
-                iconColor: shortlisted
-                    ? AppColors.accentGoldLight
-                    : Colors.white,
+                iconColor: shortlisted ? AppColors.accentLight : Colors.white,
               ),
             ),
             const SizedBox(width: 12),
@@ -1309,7 +1303,7 @@ class _CompactProfileCardState extends ConsumerState<_CompactProfileCard> {
                               const Icon(
                                 Icons.bolt_rounded,
                                 size: 10,
-                                color: Color(0xFFFFE08F),
+                                color: AppColors.accentLight,
                               ),
                               const SizedBox(width: 3),
                               Flexible(
@@ -1381,11 +1375,11 @@ class _CompactProfileCardState extends ConsumerState<_CompactProfileCard> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: settled
                             ? AppColors.success
-                            : AppColors.accentGold,
+                            : AppColors.secondary,
                         side: BorderSide(
                           color: settled
                               ? AppColors.success
-                              : AppColors.accentGold,
+                              : AppColors.secondary,
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         minimumSize: Size.zero,
@@ -1545,11 +1539,11 @@ class _NearYouCardState extends ConsumerState<_NearYouCard> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: settled
                             ? AppColors.success
-                            : AppColors.accentGold,
+                            : AppColors.secondary,
                         side: BorderSide(
                           color: settled
                               ? AppColors.success
-                              : AppColors.accentGold,
+                              : AppColors.secondary,
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         minimumSize: Size.zero,
@@ -1582,7 +1576,7 @@ class _NearYouCardState extends ConsumerState<_NearYouCard> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Premium Members — dark navy section
+// Premium Members — deep plum section
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _PremiumMembersSection extends StatelessWidget {
@@ -1600,7 +1594,7 @@ class _PremiumMembersSection extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
         padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
-          color: AppColors.primary, // primary-container #1b2b4b
+          color: AppColors.primary, // primary-container #6b21a8
           borderRadius: BorderRadius.circular(32),
         ),
         child: Column(
@@ -1615,7 +1609,7 @@ class _PremiumMembersSection extends StatelessWidget {
                     children: [
                       const Icon(
                         Icons.workspace_premium_rounded,
-                        color: Color(0xFFFFE08F),
+                        color: AppColors.accentLight,
                         size: 20,
                       ),
                       const SizedBox(width: AppSpacing.sm),
@@ -1623,7 +1617,7 @@ class _PremiumMembersSection extends StatelessWidget {
                         child: Text(
                           l10n.discoverPremiumMembersTitle,
                           style: AppTypography.titleMedium.copyWith(
-                            color: const Color(0xFFFFE08F),
+                            color: AppColors.accentLight,
                             fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,
@@ -1638,7 +1632,7 @@ class _PremiumMembersSection extends StatelessWidget {
                   child: Text(
                     l10n.discoverUpgradeButton.toUpperCase(),
                     style: AppTypography.labelSmall.copyWith(
-                      color: const Color(0xFFFFE08F),
+                      color: AppColors.accentLight,
                       fontWeight: FontWeight.w700,
                     ),
                     maxLines: 1,
@@ -1691,7 +1685,7 @@ class _PremiumMemberCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: const Color(0xFFFFE08F).withValues(alpha: 0.3),
+              color: AppColors.accentLight.withValues(alpha: 0.3),
             ),
           ),
           clipBehavior: Clip.antiAlias,
@@ -1711,7 +1705,7 @@ class _PremiumMemberCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Color(0xCC041635)],
+                    colors: [Colors.transparent, AppColors.photoScrimMedium],
                   ),
                 ),
               ),
@@ -1726,7 +1720,7 @@ class _PremiumMemberCard extends StatelessWidget {
                     Text(
                       l10n.discoverEliteMemberLabel.toUpperCase(),
                       style: AppTypography.labelSmall.copyWith(
-                        color: const Color(0xFFFFE08F),
+                        color: AppColors.accentLight,
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1,
@@ -1753,8 +1747,8 @@ class _PremiumMemberCard extends StatelessWidget {
                             child: ElevatedButton(
                               onPressed: () {},
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFFE08F),
-                                foregroundColor: const Color(0xFF241A00),
+                                backgroundColor: AppColors.secondary,
+                                foregroundColor: AppColors.textOnSecondary,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1842,7 +1836,7 @@ class _DiscoverEmptyState extends ConsumerWidget {
                 ? Icons.person_add_alt_1_rounded
                 : Icons.travel_explore_rounded,
             size: 64,
-            color: AppColors.accentGold.withValues(alpha: 0.6),
+            color: AppColors.secondary.withValues(alpha: 0.6),
           ),
           const SizedBox(height: AppSpacing.base),
           Text(
@@ -1867,8 +1861,8 @@ class _DiscoverEmptyState extends ConsumerWidget {
                 ? openEditProfile(context, ref)
                 : openPartnerPreferences(context, ref),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentGold,
-              foregroundColor: const Color(0xFF241A00),
+              backgroundColor: AppColors.secondary,
+              foregroundColor: AppColors.textOnSecondary,
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.xl,
                 vertical: AppSpacing.base,

@@ -15,10 +15,10 @@ class TrustScorePage extends ConsumerWidget {
   const TrustScorePage({super.key});
 
   NmVerificationStatus _mapStatus(TrustItemStatus status) => switch (status) {
-        TrustItemStatus.verified => NmVerificationStatus.verified,
-        TrustItemStatus.pending => NmVerificationStatus.pending,
-        TrustItemStatus.incomplete => NmVerificationStatus.incomplete,
-      };
+    TrustItemStatus.verified => NmVerificationStatus.verified,
+    TrustItemStatus.pending => NmVerificationStatus.pending,
+    TrustItemStatus.incomplete => NmVerificationStatus.incomplete,
+  };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,7 +29,7 @@ class TrustScorePage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.drawerTrustScore)),
       body: RefreshIndicator(
-        color: AppColors.accentGold,
+        color: AppColors.secondary,
         onRefresh: () => ref.refresh(myTrustScoreProvider.future),
         child: scoreAsync.when(
           data: (score) => _TrustScoreContent(
@@ -45,7 +45,9 @@ class TrustScorePage extends ConsumerWidget {
               child: NmEmptyState(
                 icon: Icons.star_outline_rounded,
                 title: AppLocalizations.of(context).trustScoreUnavailableTitle,
-                message: AppLocalizations.of(context).trustScoreUnavailableMessage,
+                message: AppLocalizations.of(
+                  context,
+                ).trustScoreUnavailableMessage,
                 action: OutlinedButton.icon(
                   onPressed: () => ref.invalidate(myTrustScoreProvider),
                   icon: const Icon(Icons.refresh_rounded),
@@ -85,8 +87,10 @@ class _TrustScoreContent extends StatelessWidget {
                 NmScoreRing(
                   value: score.overallPercent / 100,
                   displayText: '${score.overallPercent}',
-                  color: AppColors.accentGold,
-                  textColor: isDark ? AppColors.textPrimaryDark : AppColors.primary,
+                  color: AppColors.secondary,
+                  textColor: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.primary,
                   size: 140,
                   strokeWidth: 10,
                   fontSize: 40,

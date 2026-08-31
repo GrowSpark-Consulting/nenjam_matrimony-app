@@ -7,7 +7,7 @@ import '../../theme/app_typography.dart';
 /// Badge size variants.
 enum NmBadgeSize { small, medium, large }
 
-/// Premium gold badge.
+/// Premium magenta badge.
 class NmPremiumBadge extends StatelessWidget {
   final NmBadgeSize size;
   final bool showLabel;
@@ -38,7 +38,7 @@ class NmPremiumBadge extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: AppColors.accentGold.withValues(alpha: 0.15),
+        color: AppColors.secondary.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -47,14 +47,14 @@ class NmPremiumBadge extends StatelessWidget {
           Icon(
             Icons.workspace_premium_rounded,
             size: iconSize,
-            color: AppColors.accentGold,
+            color: AppColors.secondary,
           ),
           if (showLabel) ...[
             const SizedBox(width: 4),
             Text(
               AppLocalizations.of(context).navPremium,
               style: AppTypography.labelSmall.copyWith(
-                color: AppColors.accentGoldDark,
+                color: AppColors.secondaryDark,
                 fontWeight: FontWeight.w600,
               ),
             ),

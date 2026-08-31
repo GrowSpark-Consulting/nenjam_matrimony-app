@@ -26,9 +26,7 @@ class VerificationPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.registrationVerificationTitle),
-      ),
+      appBar: AppBar(title: Text(l10n.registrationVerificationTitle)),
       body: SafeArea(
         // StepVerification already wraps its own content in a
         // SingleChildScrollView — RefreshIndicator only needs a Scrollable
@@ -37,8 +35,9 @@ class VerificationPage extends ConsumerWidget {
         // (nesting two vertical scroll views causes an unbounded-height
         // layout assertion).
         child: RefreshIndicator(
-          color: AppColors.accentGold,
-          onRefresh: () => ref.read(verificationStatusesProvider.notifier).refresh(),
+          color: AppColors.secondary,
+          onRefresh: () =>
+              ref.read(verificationStatusesProvider.notifier).refresh(),
           child: const StepVerification(
             status: VerificationStatus(),
             onChanged: _noop,

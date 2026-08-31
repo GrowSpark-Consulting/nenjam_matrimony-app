@@ -21,7 +21,7 @@ class CompatibilityBadge extends StatelessWidget {
       constraints: BoxConstraints(maxWidth: maxWidth),
       child: _GlassBadge(
         icon: Icons.bolt_rounded,
-        iconColor: AppColors.accentGoldLight,
+        iconColor: AppColors.accentLight,
         label: '${compatibility.aiMatchPercent}% ${l10n.discoverAiMatchLabel}',
       ),
     );
@@ -51,35 +51,49 @@ class CompatibilityBadgeRow extends StatelessWidget {
     final badges = <Widget>[];
 
     if (compatibility.aiMatchPercent > 0) {
-      badges.add(_GlassBadge(
-        icon: Icons.bolt_rounded,
-        iconColor: AppColors.accentGoldLight,
-        label: '${compatibility.aiMatchPercent}% ${l10n.discoverAiMatchLabel}',
-      ));
+      badges.add(
+        _GlassBadge(
+          icon: Icons.bolt_rounded,
+          iconColor: AppColors.accentLight,
+          label:
+              '${compatibility.aiMatchPercent}% ${l10n.discoverAiMatchLabel}',
+        ),
+      );
     }
 
     if (compatibility.astroMatchPercent > 0) {
-      badges.add(_GlassBadge(
-        icon: Icons.auto_awesome_rounded,
-        iconColor: AppColors.accentGoldLight,
-        label: '${compatibility.astroMatchPercent}% ${l10n.discoverStatAstroLabel}',
-      ));
+      badges.add(
+        _GlassBadge(
+          // Lavender keys astrology, rose keys the AI/psychology match and
+          // green keys trust — the same three-way split the Astro tab uses,
+          // lightened so each stays legible on the plum photo scrim.
+          icon: Icons.auto_awesome_rounded,
+          iconColor: AppColors.primaryOnDark,
+          label:
+              '${compatibility.astroMatchPercent}% ${l10n.discoverStatAstroLabel}',
+        ),
+      );
     }
 
     if (compatibility.overallCompatibility > 0) {
-      badges.add(_GlassBadge(
-        icon: Icons.shield_rounded,
-        iconColor: AppColors.faceVerificationGreen,
-        label: '${compatibility.overallCompatibility} ${l10n.discoverStatTrustLabel}',
-      ));
+      badges.add(
+        _GlassBadge(
+          icon: Icons.shield_rounded,
+          iconColor: AppColors.faceVerificationGreen,
+          label:
+              '${compatibility.overallCompatibility} ${l10n.discoverStatTrustLabel}',
+        ),
+      );
     }
 
     if (isVerified && badges.isEmpty) {
-      badges.add(_GlassBadge(
-        icon: Icons.task_alt_rounded,
-        iconColor: AppColors.faceVerificationGreen,
-        label: l10n.discoverVerifiedLabel.toUpperCase(),
-      ));
+      badges.add(
+        _GlassBadge(
+          icon: Icons.task_alt_rounded,
+          iconColor: AppColors.faceVerificationGreen,
+          label: l10n.discoverVerifiedLabel.toUpperCase(),
+        ),
+      );
     }
 
     if (badges.isEmpty) return const SizedBox.shrink();

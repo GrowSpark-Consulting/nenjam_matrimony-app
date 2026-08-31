@@ -55,7 +55,9 @@ class ShortlistedProfileCard extends StatelessWidget {
               Row(
                 children: [
                   NmCircleAvatar(
-                    imageUrl: profile.photoUrls.isNotEmpty ? profile.photoUrls.first : null,
+                    imageUrl: profile.photoUrls.isNotEmpty
+                        ? profile.photoUrls.first
+                        : null,
                     size: 52,
                     gender: profile.gender,
                   ),
@@ -72,7 +74,9 @@ class ShortlistedProfileCard extends StatelessWidget {
                         ),
                         Text(
                           details,
-                          style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondaryLight),
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.textSecondaryLight,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -85,15 +89,18 @@ class ShortlistedProfileCard extends StatelessWidget {
                   else if (profile.compatibility.aiMatchPercent > 0)
                     Flexible(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: AppColors.accentGold.withValues(alpha: 0.15),
+                          color: AppColors.secondary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
                           '${profile.compatibility.aiMatchPercent}%',
                           style: AppTypography.labelSmall.copyWith(
-                            color: AppColors.accentGoldDark,
+                            color: AppColors.secondaryDark,
                             fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,

@@ -11,7 +11,6 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../../profile/presentation/widgets/partner_preference_card.dart';
 import '../../../profile_views/presentation/providers/profile_views_provider.dart';
-import '../../../profile/presentation/widgets/photo_gallery_card.dart';
 import '../../domain/entities/profile_detail_entity.dart';
 import '../providers/profile_detail_providers.dart';
 import '../widgets/about_section.dart';
@@ -20,12 +19,10 @@ import '../widgets/compatibility_card_section.dart';
 import '../widgets/family_info_section.dart';
 import '../widgets/horoscope_section.dart';
 import '../widgets/lifestyle_section.dart';
-import '../widgets/profile_detail_bottom_action_bar.dart';
 import '../widgets/profile_detail_hero_app_bar.dart';
 import '../widgets/profile_detail_section_tab_bar.dart';
-import '../widgets/profile_photo_viewer_page.dart';
+import '../widgets/profile_photo_gallery_section.dart';
 import '../widgets/similar_profiles_section.dart';
-import '../widgets/timeline_section.dart';
 import '../widgets/trust_score_card.dart';
 import '../widgets/verification_trust_section.dart';
 
@@ -38,8 +35,12 @@ class ProfileDetailPage extends ConsumerStatefulWidget {
   /// Null falls back to the plain `'profile-photo-$id'` scheme.
   final String? heroTag;
   /// Whether the caller already knows this member is blocked — see
-  /// `ProfileDetailArgs.isBlocked`'s doc comment. Drives whether the hero
-  /// app bar's "More" menu offers Block or Unblock.
+  /// `ProfileDetailArgs.isBlocked`'s doc comment.
+  ///
+  /// Currently unread: the hero's "More" menu, the only thing that branched
+  /// on it, was removed along with the rest of the hero controls. Kept on the
+  /// constructor because the route still supplies it and the block/unblock
+  /// affordance is expected back on this page later.
   final bool isBlocked;
 
   const ProfileDetailPage({
@@ -70,46 +71,58 @@ class _ProfileDetailPageState extends ConsumerState<ProfileDetailPage> {
   Widget build(BuildContext context) {
     final profile = widget.profile;
     final heroTag = widget.heroTag;
-    final isBlocked = widget.isBlocked;
     final detailAsync = ref.watch(profileDetailProvider(profile));
 
+    // No `bottomNavigationBar:` — this page shows no fixed action bar at all
+    // any more. Send Interest and Chat live on the feeds this page is opened
+    // from; here the photograph gets the whole first screen, and the body
+    // runs edge to edge because nothing is reserving space below it.
     return Scaffold(
       body: detailAsync.when(
         data: (detail) => _ProfileDetailScrollView(
           detail: detail,
           heroTag: heroTag,
-          isBlocked: isBlocked,
         ),
         loading: () => const NmLoadingWidget(),
         error: (_, __) => NmErrorWidget(
           onRetry: () => ref.invalidate(profileDetailProvider(profile)),
         ),
       ),
-      bottomNavigationBar: detailAsync.maybeWhen(
-        data: (detail) => ProfileDetailBottomActionBar(detail: detail),
-        orElse: () => null,
-      ),
     );
   }
 }
 
+/// One long, naturally-scrolling profile:
+///
+/// full-screen hero photo → about → basic information → photo gallery →
+/// section navigation → family → lifestyle → horoscope → compatibility →
+/// psychology → preferences → trust → verification → similar profiles.
+///
+/// The hero occupies the entire first viewport, and the member's identity
+/// (name/age, profession, and the short profile chips) is overlaid across
+/// the bottom of the photo — so the first thing a swipe reveals is the About
+/// card, not a card repeating what was still on screen a moment ago.
+///
+/// The section navigation deliberately sits *between* the two content
+/// slivers rather than directly under the hero: everything above it (who
+/// this person is, and their photos) is meant to be discovered by scrolling,
+/// and only the deeper sections below it are worth jumping to. Being a
+/// pinned sliver at that position means it scrolls up with the content and
+/// only sticks once the reader has actually reached it.
 class _ProfileDetailScrollView extends StatefulWidget {
   final ProfileDetailEntity detail;
   final String? heroTag;
-  final bool isBlocked;
 
-  const _ProfileDetailScrollView({
-    required this.detail,
-    this.heroTag,
-    this.isBlocked = false,
-  });
+  const _ProfileDetailScrollView({required this.detail, this.heroTag});
 
   @override
   State<_ProfileDetailScrollView> createState() => _ProfileDetailScrollViewState();
 }
 
 class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
-  static const _sectionCount = 8;
+  /// Only the sections that live *below* the navigation are addressable by
+  /// it — About and Photos are above it and can no longer be scrolled "to".
+  static const _sectionCount = 6;
 
   final _sectionKeys = List.generate(_sectionCount, (_) => GlobalKey());
   // One key per tab label, mirroring _sectionKeys — lets the active tab's
@@ -132,29 +145,52 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
   // scrolling is still the only thing driving the sync the rest of the time.
   bool _isProgrammaticScroll = false;
 
+  /// How far the page may move before the "more below" cue is dismissed.
+  /// Small enough that any deliberate swipe clears it immediately, large
+  /// enough that an overscroll bounce at the top doesn't flicker it.
+  static const double _scrollCueDismissThreshold = 8.0;
+
+  bool _showScrollCue = true;
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_syncActiveTabWithScroll);
+    _scrollController.addListener(_syncScrollCue);
   }
 
   @override
   void dispose() {
     _scrollController.removeListener(_syncActiveTabWithScroll);
+    _scrollController.removeListener(_syncScrollCue);
     _scrollController.dispose();
     _tabBarScrollController.dispose();
     super.dispose();
   }
 
+  // The cue has done its job the moment the page moves, so it fades out and
+  // stays gone for the rest of the profile — and comes back only on a full
+  // return to the top.
+  //
+  // Deliberately a second listener on the *same* controller rather than a
+  // branch inside _syncActiveTabWithScroll: that one suppresses itself while
+  // a tab tap drives a programmatic scroll, and the cue must clear then too.
+  void _syncScrollCue() {
+    if (!mounted || !_scrollController.hasClients) return;
+    final shouldShow =
+        _scrollController.position.pixels <= _scrollCueDismissThreshold;
+    if (shouldShow != _showScrollCue) {
+      setState(() => _showScrollCue = shouldShow);
+    }
+  }
+
   List<String> _tabLabels(AppLocalizations l10n) => [
-        l10n.profileDetailTabAbout,
-        l10n.profileDetailTabPhotos,
         l10n.profileDetailTabFamily,
         l10n.profileDetailTabLifestyle,
         l10n.profileDetailTabHoroscope,
+        l10n.profileDetailTabCompatibility,
         l10n.profileDetailTabPreferences,
         l10n.profileDetailTabVerification,
-        l10n.profileDetailTabTimeline,
       ];
 
   Future<void> _scrollToSection(int index) async {
@@ -176,8 +212,8 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
   /// [GlobalKey] has a null `currentContext`, and [Scrollable.ensureVisible]
   /// has nothing to aim at. This used to be a bare `if (context != null)`
   /// around the ensureVisible call, which meant tapping *any* tab whose
-  /// section was off screen silently did nothing at all: only "About"
-  /// (mounted at rest) ever worked. Walk the viewport towards the target in
+  /// section was off screen silently did nothing at all: only the section
+  /// mounted at rest ever worked. Walk the viewport towards the target in
   /// bounded steps until the sliver builds it, then hand off to
   /// ensureVisible for the final, correctly-aligned landing.
   ///
@@ -273,8 +309,10 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
   void _syncActiveTabWithScroll() {
     if (_isProgrammaticScroll || !mounted) return;
 
-    final activationLine = kToolbarHeight +
-        MediaQuery.paddingOf(context).top +
+    // The hero's toolbar collapses to zero height (it holds nothing), so the
+    // pinned header stack above a section is just the status bar strip plus
+    // the tab bar itself.
+    final activationLine = MediaQuery.paddingOf(context).top +
         ProfileDetailSectionTabBar.height;
 
     var activeIndex = 0;
@@ -297,9 +335,29 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
 
   @override
   Widget build(BuildContext context) {
+    // LayoutBuilder rather than MediaQuery: this measures the scroll view's
+    // own box, so the hero can be exactly the first screenful of *content*
+    // on every phone size rather than the raw screen height.
+    return LayoutBuilder(
+      builder: (context, constraints) => _buildScrollView(
+        context,
+        viewportHeight: constraints.maxHeight,
+      ),
+    );
+  }
+
+  Widget _buildScrollView(
+    BuildContext context, {
+    required double viewportHeight,
+  }) {
     final l10n = AppLocalizations.of(context);
     final detail = widget.detail;
     final base = detail.base;
+
+    // The hero already shows photo #1 full-bleed at the top of the page, so
+    // the gallery below is specifically "their *other* photos".
+    final additionalPhotos =
+        base.photoUrls.isEmpty ? const <String>[] : base.photoUrls.sublist(1);
 
     return CustomScrollView(
       controller: _scrollController,
@@ -307,8 +365,30 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
         ProfileDetailHeroAppBar(
           detail: detail,
           heroTag: widget.heroTag,
-          isBlocked: widget.isBlocked,
+          heroHeight: viewportHeight,
+          showScrollCue: _showScrollCue,
         ),
+
+        // ── About and the details behind it, then their photos ───────
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.base,
+            AppSpacing.base,
+            AppSpacing.base,
+            AppSpacing.md,
+          ),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              AboutSection(detail: detail),
+              const SizedBox(height: AppSpacing.md),
+              BasicInformationSection(detail: detail),
+              const SizedBox(height: AppSpacing.md),
+              ProfilePhotoGallerySection(photoUrls: additionalPhotos),
+            ]),
+          ),
+        ),
+
+        // ── Jump-to navigation for everything below ──────────────────
         SliverPersistentHeader(
           pinned: true,
           delegate: ProfileDetailTabBarDelegate(
@@ -321,45 +401,37 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
             ),
           ),
         ),
+
+        // ── The deeper sections ──────────────────────────────────────
         SliverPadding(
-          padding: const EdgeInsets.all(AppSpacing.base),
+          // The page reserves no bottom bar, so the only thing the list has
+          // to clear at its end is the device's own bottom inset.
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.base,
+            AppSpacing.md,
+            AppSpacing.base,
+            AppSpacing.base + MediaQuery.paddingOf(context).bottom,
+          ),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              TrustScoreCard(trust: detail.trustScore),
-              const SizedBox(height: AppSpacing.md),
               KeyedSubtree(
                 key: _sectionKeys[0],
-                child: AboutSection(detail: detail),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              CompatibilityCardSection(detail: detail),
-              const SizedBox(height: AppSpacing.md),
-              KeyedSubtree(
-                key: _sectionKeys[1],
-                child: NmPhotoGalleryCard(
-                  photoUrls: base.photoUrls,
-                  maxPhotos: base.photoUrls.length,
-                  onPhotoTap: (index) => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => ProfilePhotoViewerPage(
-                        photoUrls: base.photoUrls,
-                        initialIndex: index,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              BasicInformationSection(detail: detail),
-              const SizedBox(height: AppSpacing.md),
-              KeyedSubtree(
-                key: _sectionKeys[2],
                 child: FamilyInfoSection(family: detail.family),
               ),
               const SizedBox(height: AppSpacing.md),
               KeyedSubtree(
-                key: _sectionKeys[3],
+                key: _sectionKeys[1],
                 child: LifestyleSection(lifestyle: detail.lifestyle),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              KeyedSubtree(
+                key: _sectionKeys[2],
+                child: HoroscopeSection(detail: detail),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              KeyedSubtree(
+                key: _sectionKeys[3],
+                child: CompatibilityCardSection(detail: detail),
               ),
               if (detail.personality != null) ...[
                 const SizedBox(height: AppSpacing.md),
@@ -368,24 +440,21 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
               const SizedBox(height: AppSpacing.md),
               KeyedSubtree(
                 key: _sectionKeys[4],
-                child: HoroscopeSection(detail: detail),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              KeyedSubtree(
-                key: _sectionKeys[5],
                 child: NmPartnerPreferenceCard(
                   preferences: _preferenceRows(detail, l10n),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
               KeyedSubtree(
-                key: _sectionKeys[6],
-                child: VerificationTrustSection(detail: detail),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              KeyedSubtree(
-                key: _sectionKeys[7],
-                child: TimelineSection(events: detail.timeline),
+                key: _sectionKeys[5],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TrustScoreCard(trust: detail.trustScore),
+                    const SizedBox(height: AppSpacing.md),
+                    VerificationTrustSection(detail: detail),
+                  ],
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
               SimilarProfilesSection(baseProfile: base),

@@ -4,7 +4,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
 
-/// A single rotating personalized insight, styled as a warm gold-bordered
+/// A single rotating personalized insight, styled as a soft lavender-bordered
 /// callout so it reads as a daily "gift" rather than another checklist item.
 class NmDailyInsightCard extends StatelessWidget {
   final String title;
@@ -23,7 +23,7 @@ class NmDailyInsightCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.goldBorder.copyWith(
+      decoration: AppDecorations.accentBorder.copyWith(
         color: isDark ? AppColors.cardDark : AppColors.cardLight,
       ),
       child: Row(
@@ -33,12 +33,12 @@ class NmDailyInsightCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AppColors.accentGold.withValues(alpha: 0.15),
+              color: AppColors.secondary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
               Icons.auto_awesome_rounded,
-              color: AppColors.accentGold,
+              color: AppColors.secondary,
               size: 22,
             ),
           ),

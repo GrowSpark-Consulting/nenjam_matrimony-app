@@ -8,20 +8,20 @@ class NmFloatingActionButton extends StatelessWidget {
   final VoidCallback onPressed;
   final IconData icon;
   final String? label;
-  final bool isGold;
+  final bool isAccent;
 
   const NmFloatingActionButton({
     super.key,
     required this.onPressed,
     required this.icon,
     this.label,
-    this.isGold = false,
+    this.isAccent = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bg = isGold ? AppColors.accentGold : AppColors.primary;
-    final fg = isGold ? AppColors.textOnGold : Colors.white;
+    final bg = isAccent ? AppColors.secondary : AppColors.primary;
+    final fg = isAccent ? AppColors.textOnSecondary : Colors.white;
 
     if (label != null) {
       return Container(

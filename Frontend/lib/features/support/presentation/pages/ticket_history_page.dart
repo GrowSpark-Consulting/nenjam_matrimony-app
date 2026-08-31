@@ -13,18 +13,18 @@ class TicketHistoryPage extends ConsumerWidget {
   const TicketHistoryPage({super.key});
 
   Color _statusColor(SupportTicketStatus status) => switch (status) {
-        SupportTicketStatus.open => AppColors.info,
-        SupportTicketStatus.inProgress => AppColors.warning,
-        SupportTicketStatus.resolved => AppColors.success,
-        SupportTicketStatus.closed => AppColors.textTertiaryLight,
-      };
+    SupportTicketStatus.open => AppColors.info,
+    SupportTicketStatus.inProgress => AppColors.warning,
+    SupportTicketStatus.resolved => AppColors.success,
+    SupportTicketStatus.closed => AppColors.textTertiaryLight,
+  };
 
   String _statusLabel(SupportTicketStatus status) => switch (status) {
-        SupportTicketStatus.open => 'Open',
-        SupportTicketStatus.inProgress => 'In Progress',
-        SupportTicketStatus.resolved => 'Resolved',
-        SupportTicketStatus.closed => 'Closed',
-      };
+    SupportTicketStatus.open => 'Open',
+    SupportTicketStatus.inProgress => 'In Progress',
+    SupportTicketStatus.resolved => 'Resolved',
+    SupportTicketStatus.closed => 'Closed',
+  };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,7 +34,7 @@ class TicketHistoryPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.supportTicketHistoryTitle)),
       body: RefreshIndicator(
-        color: AppColors.accentGold,
+        color: AppColors.secondary,
         onRefresh: () => ref.refresh(myTicketsProvider.future),
         child: ticketsAsync.when(
           data: (tickets) {
@@ -72,12 +72,20 @@ class TicketHistoryPage extends ConsumerWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(ticket.subject, style: AppTypography.titleSmall),
+                            child: Text(
+                              ticket.subject,
+                              style: AppTypography.titleSmall,
+                            ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: _statusColor(ticket.status).withValues(alpha: 0.12),
+                              color: _statusColor(
+                                ticket.status,
+                              ).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
@@ -91,7 +99,11 @@ class TicketHistoryPage extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(ticket.message, maxLines: 2, overflow: TextOverflow.ellipsis),
+                      Text(
+                        ticket.message,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
                 );

@@ -3045,6 +3045,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileDetailTabVerification => 'Verification';
 
   @override
+  String get profileDetailTabCompatibility => 'Compatibility';
+
+  @override
+  String profileDetailAgeYears(int age) {
+    return '$age yrs';
+  }
+
+  @override
+  String get profileDetailNoMorePhotos => 'No other photos shared yet';
+
+  @override
   String get profileDetailTabTimeline => 'Timeline';
 
   @override
@@ -3326,6 +3337,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fieldMaritalStatus => 'Marital Status';
+
+  @override
+  String get fieldMatrimonyId => 'Matrimony ID';
+
+  @override
+  String get fieldDistance => 'Distance';
 
   @override
   String get fieldPhone => 'Phone';

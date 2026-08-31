@@ -6,6 +6,7 @@ import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/indicators/nm_gradient_progress_bar.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/relationship_intelligence/horoscope_compatibility_section.dart';
 import '../../../../core/widgets/relationship_intelligence/profile_prompt_section.dart';
@@ -58,7 +59,13 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
       if (!mounted) return;
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).registrationSaveProfileErrorDetail(e.message))),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(
+              context,
+            ).registrationSaveProfileErrorDetail(e.message),
+          ),
+        ),
       );
       return;
     } catch (_) {
@@ -66,8 +73,9 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text(AppLocalizations.of(context).registrationSaveProfileError),
+          content: Text(
+            AppLocalizations.of(context).registrationSaveProfileError,
+          ),
         ),
       );
       return;
@@ -93,7 +101,9 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
     ref.read(registrationProvider.notifier).startCreateMode();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context).registrationProfileUpdated)),
+      SnackBar(
+        content: Text(AppLocalizations.of(context).registrationProfileUpdated),
+      ),
     );
     context.go(RouteNames.discover);
   }
@@ -108,14 +118,16 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
     // Photos are a backend resource (PhotoController), not part of the draft —
     // read them from the single source of truth so the count/primary here
     // matches the wizard photo step and the profile dashboard exactly.
-    final photos = ref.watch(myPhotosProvider).valueOrNull ?? const <UserPhoto>[];
+    final photos =
+        ref.watch(myPhotosProvider).valueOrNull ?? const <UserPhoto>[];
     final hasPrimaryPhoto = photos.any((p) => p.isPrimary);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     // Single source of truth: the backend-computed completion (same value the
     // Profile page, Discover drawer, and completion screen show). Never a
     // locally recomputed number — that's what caused Edit Profile (57%) to
     // disagree with the Profile page (83%).
-    final completion = ref.watch(backendProfileCompletionProvider).valueOrNull ?? 0;
+    final completion =
+        ref.watch(backendProfileCompletionProvider).valueOrNull ?? 0;
 
     void editStep(int step) {
       notifier.goToStep(step);
@@ -141,22 +153,14 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                     const SizedBox(height: 8),
 
                     // ─── Completion progress bar ───────────────────
-                    LinearProgressIndicator(
-                      value: completion / 100,
-                      backgroundColor: isDark
-                          ? AppColors.surfaceVariantDark
-                          : AppColors.surfaceVariantLight,
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                          AppColors.accentGold),
-                      minHeight: 6,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                    NmGradientProgressBar(value: completion / 100, height: 6),
                     const SizedBox(height: 24),
 
                     Text(
                       l10n.registrationProfileSummary,
-                      style: AppTypography.headlineSmall
-                          .copyWith(fontWeight: FontWeight.w700),
+                      style: AppTypography.headlineSmall.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 16),
 
@@ -168,16 +172,22 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       isDark: isDark,
                       onEdit: () => editStep(0),
                       items: [
-                        _ri('Name',
-                            '${draft.basicDetails.firstName} ${draft.basicDetails.lastName}'),
+                        _ri(
+                          'Name',
+                          '${draft.basicDetails.firstName} ${draft.basicDetails.lastName}',
+                        ),
                         _ri('Gender', draft.basicDetails.gender),
-                        _ri('Profile For',
-                            draft.basicDetails.profileCreatedFor),
+                        _ri(
+                          'Profile For',
+                          draft.basicDetails.profileCreatedFor,
+                        ),
                         _ri('Marital Status', draft.basicDetails.maritalStatus),
-                        _ri('Date of Birth',
-                            draft.basicDetails.dob != null
-                                ? '${draft.basicDetails.dob!.day}/${draft.basicDetails.dob!.month}/${draft.basicDetails.dob!.year}'
-                                : ''),
+                        _ri(
+                          'Date of Birth',
+                          draft.basicDetails.dob != null
+                              ? '${draft.basicDetails.dob!.day}/${draft.basicDetails.dob!.month}/${draft.basicDetails.dob!.year}'
+                              : '',
+                        ),
                         if (draft.basicDetails.age != null)
                           _ri('Age', '${draft.basicDetails.age} years'),
                       ],
@@ -209,10 +219,14 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       isDark: isDark,
                       onEdit: () => editStep(2),
                       items: [
-                        _ri('Mother Tongue',
-                            draft.languageDetails.motherTongue),
-                        _ri('Languages Known',
-                            draft.languageDetails.languagesKnown.join(', ')),
+                        _ri(
+                          'Mother Tongue',
+                          draft.languageDetails.motherTongue,
+                        ),
+                        _ri(
+                          'Languages Known',
+                          draft.languageDetails.languagesKnown.join(', '),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -243,14 +257,21 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       isDark: isDark,
                       onEdit: () => editStep(4),
                       items: [
-                        _ri('Qualification',
-                            draft.educationDetails.qualification),
+                        _ri(
+                          'Qualification',
+                          draft.educationDetails.qualification,
+                        ),
                         _ri('College', draft.educationDetails.college),
                         _ri('Occupation', draft.educationDetails.occupation),
                         _ri('Company', draft.educationDetails.company),
-                        _ri('Employment Type',
-                            draft.educationDetails.employmentType),
-                        _ri('Annual Income', draft.educationDetails.annualIncome),
+                        _ri(
+                          'Employment Type',
+                          draft.educationDetails.employmentType,
+                        ),
+                        _ri(
+                          'Annual Income',
+                          draft.educationDetails.annualIncome,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -283,8 +304,10 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                         _ri('Smoking', draft.lifestyleDetails.smoking),
                         _ri('Drinking', draft.lifestyleDetails.drinking),
                         _ri('Fitness', draft.lifestyleDetails.fitness),
-                        _ri('Hobbies',
-                            draft.lifestyleDetails.hobbies.join(', ')),
+                        _ri(
+                          'Hobbies',
+                          draft.lifestyleDetails.hobbies.join(', '),
+                        ),
                         _ri('About Me', draft.lifestyleDetails.aboutMe),
                       ],
                     ),
@@ -317,9 +340,11 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                         _ri('Family Type', draft.familyDetails.familyType),
                         _ri('Family Values', draft.familyDetails.familyValues),
                         _ri('Family Status', draft.familyDetails.familyStatus),
-                        for (var i = 0;
-                            i < draft.familyDetails.siblings.length;
-                            i++)
+                        for (
+                          var i = 0;
+                          i < draft.familyDetails.siblings.length;
+                          i++
+                        )
                           _ri(
                             draft.familyDetails.siblings[i].relation ==
                                     SiblingRelation.brother
@@ -363,22 +388,27 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                     // block below — no separate review-row implementation.
                     Text(
                       l10n.registrationWizardQuizHeadline,
-                      style: AppTypography.titleMedium
-                          .copyWith(fontWeight: FontWeight.w700),
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 8),
-                    Consumer(builder: (context, ref, _) {
-                      final personalityAsync =
-                          ref.watch(myPersonalityResultProvider);
-                      return PsychologySection(
-                        result: personalityAsync.value ??
-                            const PersonalityResult(),
-                        onTakeQuizTap: () async {
-                          await context.push(RouteNames.psychologyQuiz);
-                          ref.invalidate(myPersonalityResultProvider);
-                        },
-                      );
-                    }),
+                    Consumer(
+                      builder: (context, ref, _) {
+                        final personalityAsync = ref.watch(
+                          myPersonalityResultProvider,
+                        );
+                        return PsychologySection(
+                          result:
+                              personalityAsync.value ??
+                              const PersonalityResult(),
+                          onTakeQuizTap: () async {
+                            await context.push(RouteNames.psychologyQuiz);
+                            ref.invalidate(myPersonalityResultProvider);
+                          },
+                        );
+                      },
+                    ),
                     const SizedBox(height: 16),
 
                     // ─── Step 11: Partner Preferences ─────────────
@@ -389,17 +419,18 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       isDark: isDark,
                       onEdit: () => editStep(10),
                       items: [
-                        _ri('Age Range',
-                            draft.partnerPreference.preferredAgeRange),
-                        _ri('Height Range',
-                            draft.partnerPreference.preferredHeightRange),
-                        _ri('Religion',
-                            draft.partnerPreference.religionPref),
+                        _ri(
+                          'Age Range',
+                          draft.partnerPreference.preferredAgeRange,
+                        ),
+                        _ri(
+                          'Height Range',
+                          draft.partnerPreference.preferredHeightRange,
+                        ),
+                        _ri('Religion', draft.partnerPreference.religionPref),
                         _ri('Caste', draft.partnerPreference.castePref),
-                        _ri('Education',
-                            draft.partnerPreference.educationPref),
-                        _ri('Location',
-                            draft.partnerPreference.locationPref),
+                        _ri('Education', draft.partnerPreference.educationPref),
+                        _ri('Location', draft.partnerPreference.locationPref),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -412,8 +443,10 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       isDark: isDark,
                       onEdit: () => editStep(11),
                       items: [
-                        _ri('Primary Photo',
-                            hasPrimaryPhoto ? 'Uploaded' : 'Not Uploaded'),
+                        _ri(
+                          'Primary Photo',
+                          hasPrimaryPhoto ? 'Uploaded' : 'Not Uploaded',
+                        ),
                         _ri('Gallery Photos', '${photos.length} photo(s)'),
                       ],
                     ),
@@ -427,24 +460,42 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       isDark: isDark,
                       onEdit: () => editStep(12),
                       items: [
-                        _ri('Mobile', draft.verificationStatus.mobileVerified
-                            ? 'Verified ✓'
-                            : 'Pending'),
-                        _ri('Email', draft.verificationStatus.emailVerified
-                            ? 'Verified ✓'
-                            : 'Pending'),
-                        _ri('Income', draft.verificationStatus.incomeVerified
-                            ? 'Verified ✓'
-                            : 'Pending'),
-                        _ri('Asset', draft.verificationStatus.assetVerified
-                            ? 'Verified ✓'
-                            : 'Pending'),
-                        _ri('Aadhaar', draft.verificationStatus.aadhaarVerified
-                            ? 'Verified ✓'
-                            : 'Pending'),
-                        _ri('NRI', draft.verificationStatus.nriVerified
-                            ? 'Verified ✓'
-                            : 'Pending'),
+                        _ri(
+                          'Mobile',
+                          draft.verificationStatus.mobileVerified
+                              ? 'Verified ✓'
+                              : 'Pending',
+                        ),
+                        _ri(
+                          'Email',
+                          draft.verificationStatus.emailVerified
+                              ? 'Verified ✓'
+                              : 'Pending',
+                        ),
+                        _ri(
+                          'Income',
+                          draft.verificationStatus.incomeVerified
+                              ? 'Verified ✓'
+                              : 'Pending',
+                        ),
+                        _ri(
+                          'Asset',
+                          draft.verificationStatus.assetVerified
+                              ? 'Verified ✓'
+                              : 'Pending',
+                        ),
+                        _ri(
+                          'Aadhaar',
+                          draft.verificationStatus.aadhaarVerified
+                              ? 'Verified ✓'
+                              : 'Pending',
+                        ),
+                        _ri(
+                          'NRI',
+                          draft.verificationStatus.nriVerified
+                              ? 'Verified ✓'
+                              : 'Pending',
+                        ),
                       ],
                     ),
                     // ─── Profile Intelligence (EDIT MODE ONLY) ─────
@@ -461,8 +512,9 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       const SizedBox(height: 24),
                       Text(
                         AppLocalizations.of(context).drawerProfileIntelligence,
-                        style: AppTypography.headlineSmall
-                            .copyWith(fontWeight: FontWeight.w700),
+                        style: AppTypography.headlineSmall.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -474,43 +526,50 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Consumer(builder: (context, ref, _) {
-                        final promptsAsync = ref.watch(myPromptsProvider);
-                        final prompts = promptsAsync.value ?? const [];
-                        return ProfilePromptSection(
-                          prompts: prompts,
-                          editable: true,
-                          onEditTap: () async {
-                            final result = await context.push<List<PromptAnswer>>(
-                                RouteNames.choosePrompt,
-                                extra: prompts);
-                            if (result != null) {
-                              await ref
-                                  .read(profilePromptRepositoryProvider)
-                                  .saveUserPrompts(result);
-                            }
-                            ref.invalidate(myPromptsProvider);
-                          },
-                        );
-                      }),
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final promptsAsync = ref.watch(myPromptsProvider);
+                          final prompts = promptsAsync.value ?? const [];
+                          return ProfilePromptSection(
+                            prompts: prompts,
+                            editable: true,
+                            onEditTap: () async {
+                              final result = await context
+                                  .push<List<PromptAnswer>>(
+                                    RouteNames.choosePrompt,
+                                    extra: prompts,
+                                  );
+                              if (result != null) {
+                                await ref
+                                    .read(profilePromptRepositoryProvider)
+                                    .saveUserPrompts(result);
+                              }
+                              ref.invalidate(myPromptsProvider);
+                            },
+                          );
+                        },
+                      ),
                       const SizedBox(height: 16),
-                      Consumer(builder: (context, ref, _) {
-                        final horoscopeAsync =
-                            ref.watch(myHoroscopeSummaryProvider);
-                        final summary = horoscopeAsync.value;
-                        return GestureDetector(
-                          onTap: () async {
-                            await context.push(RouteNames.horoscopeMatching);
-                            ref.invalidate(myHoroscopeSummaryProvider);
-                          },
-                          child: HoroscopeCompatibilitySection(
-                            rasi: summary?.rasi,
-                            nakshatra: summary?.nakshatra,
-                            dosham: summary?.dosham,
-                            matchingEnabled: summary?.matchingEnabled ?? true,
-                          ),
-                        );
-                      }),
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final horoscopeAsync = ref.watch(
+                            myHoroscopeSummaryProvider,
+                          );
+                          final summary = horoscopeAsync.value;
+                          return GestureDetector(
+                            onTap: () async {
+                              await context.push(RouteNames.horoscopeMatching);
+                              ref.invalidate(myHoroscopeSummaryProvider);
+                            },
+                            child: HoroscopeCompatibilitySection(
+                              rasi: summary?.rasi,
+                              nakshatra: summary?.nakshatra,
+                              dosham: summary?.dosham,
+                              matchingEnabled: summary?.matchingEnabled ?? true,
+                            ),
+                          );
+                        },
+                      ),
                     ],
                     const SizedBox(height: 32),
                   ],
@@ -532,9 +591,10 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                 ],
               ),
               child: NmGradientButton(
-                label:
-                    isEditMode ? 'Save Changes' : l10n.registrationContinueYourStory,
-                useGoldGradient: true,
+                label: isEditMode
+                    ? 'Save Changes'
+                    : l10n.registrationContinueYourStory,
+                useAccentGradient: true,
                 icon: Icons.favorite_rounded,
                 isLoading: _isSaving,
                 onPressed: _isSaving ? null : _onEnterApp,
@@ -607,19 +667,23 @@ class _ReviewSection extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: AppTypography.titleMedium
-                      .copyWith(fontWeight: FontWeight.w700),
+                  style: AppTypography.titleMedium.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               TextButton.icon(
                 onPressed: onEdit,
                 icon: const Icon(Icons.edit_rounded, size: 14),
-                label: Text(AppLocalizations.of(context).registrationEditButton),
+                label: Text(
+                  AppLocalizations.of(context).registrationEditButton,
+                ),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.primary,
                   visualDensity: VisualDensity.compact,
-                  textStyle: AppTypography.labelSmall
-                      .copyWith(fontWeight: FontWeight.w600),
+                  textStyle: AppTypography.labelSmall.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -693,8 +757,11 @@ class _CompletionBanner extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.workspace_premium_rounded,
-                color: AppColors.accentGold, size: 30),
+            child: const Icon(
+              Icons.workspace_premium_rounded,
+              color: AppColors.secondary,
+              size: 30,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(

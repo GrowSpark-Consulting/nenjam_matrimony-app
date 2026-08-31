@@ -37,7 +37,7 @@ class NmSubscriptionCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: isSelected
-            ? AppDecorations.goldBorder.copyWith(
+            ? AppDecorations.accentBorder.copyWith(
                 color: isDark ? AppColors.cardDark : AppColors.cardLight,
               )
             : AppDecorations.card(isDark: isDark),
@@ -68,13 +68,13 @@ class NmSubscriptionCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      gradient: AppGradients.gold,
+                      gradient: AppGradients.accent,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       AppLocalizations.of(context).commonPopular,
                       style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.textOnGold,
+                        color: AppColors.textOnSecondary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

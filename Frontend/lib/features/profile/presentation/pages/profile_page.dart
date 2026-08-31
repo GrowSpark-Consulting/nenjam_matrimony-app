@@ -115,14 +115,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     // supply elegant fallbacks for anything still null.
     final authUser = ref.watch(currentAuthUserProvider);
     final ProfileDraft? draft = ref.watch(myProfileDraftProvider).valueOrNull;
-    final completeness = ref.watch(profileCompletenessSnapshotProvider).valueOrNull;
+    final completeness = ref
+        .watch(profileCompletenessSnapshotProvider)
+        .valueOrNull;
     // Backend-computed completion % — the single source of truth for the
     // figure shown on this screen (hero card + AI coach), so it always matches
     // what the backend calculated rather than a separately recomputed number.
     final completionPct =
         ref.watch(backendProfileCompletionProvider).valueOrNull ??
-            completeness?.percentage ??
-            0;
+        completeness?.percentage ??
+        0;
     // Single source of truth for photos (PhotoController) — the header hero
     // image and the gallery card below both read this, so the primary photo is
     // identical here and on the Edit Profile screen.
@@ -136,7 +138,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     // Highest-impact-first, per the existing aggregator's own sort order.
     final missingModules = completeness?.missingModules ?? const [];
-    const priorityAccentColors = [AppColors.accentGold, AppColors.primary];
+    const priorityAccentColors = [AppColors.secondary, AppColors.primary];
 
     const gap = SizedBox(height: AppSpacing.xl);
     const smallGap = SizedBox(height: AppSpacing.base);
@@ -192,20 +194,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   delay: 60,
                   child: NmTodayPrioritiesSection(
                     priorities: [
-                      for (
-                        var i = 0;
-                        i < missingModules.length && i < 2;
-                        i++
-                      )
+                      for (var i = 0; i < missingModules.length && i < 2; i++)
                         NmPriorityItem(
                           icon: moduleIcon(missingModules[i].module.id),
                           accentColor:
                               priorityAccentColors[i %
                                   priorityAccentColors.length],
-                          title: moduleTitle(
-                            l10n,
-                            missingModules[i].module.id,
-                          ),
+                          title: moduleTitle(l10n, missingModules[i].module.id),
                           impactLabel: moduleAction(
                             l10n,
                             missingModules[i].module.id,
@@ -269,10 +264,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         // backend-ready) shared Interest state — see
                         // interests_provider.dart. Matches still has no
                         // backing data source.
-                        interestsReceived: ref
+                        interestsReceived:
+                            ref
                                 .watch(receivedInterestsProvider)
                                 .valueOrNull
-                                ?.where((r) => r.status == InterestStatus.pending)
+                                ?.where(
+                                  (r) => r.status == InterestStatus.pending,
+                                )
                                 .length ??
                             0,
                         matches: 0,
@@ -391,7 +389,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         // VerificationStatus.fromJson) — this reflects
                         // whatever the draft last echoed, which defaults
                         // to incomplete until that module ships.
-                        status: (draft?.verificationStatus.govIdVerified ?? false)
+                        status:
+                            (draft?.verificationStatus.govIdVerified ?? false)
                             ? NmVerificationStatus.verified
                             : NmVerificationStatus.incomplete,
                         onTap: () => context.push(RouteNames.verification),
@@ -399,7 +398,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       NmVerificationItem(
                         icon: Icons.face_rounded,
                         label: l10n.fieldFaceMatch,
-                        status: (draft?.verificationStatus.faceVerified ?? false)
+                        status:
+                            (draft?.verificationStatus.faceVerified ?? false)
                             ? NmVerificationStatus.verified
                             : NmVerificationStatus.incomplete,
                         onTap: () => context.push(RouteNames.verification),

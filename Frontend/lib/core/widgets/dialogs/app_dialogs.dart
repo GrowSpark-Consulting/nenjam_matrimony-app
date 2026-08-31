@@ -68,9 +68,15 @@ abstract final class AppDialogs {
           children: [
             const Icon(Icons.delete_forever_rounded, color: AppColors.error),
             const SizedBox(width: 8),
-            Text(
-              title,
-              style: AppTypography.titleLarge.copyWith(color: AppColors.error),
+            // Expanded so the title wraps within the dialog instead of
+            // overflowing the Row on narrow screens / long or localized titles.
+            Expanded(
+              child: Text(
+                title,
+                style: AppTypography.titleLarge.copyWith(
+                  color: AppColors.error,
+                ),
+              ),
             ),
           ],
         ),
@@ -111,7 +117,7 @@ abstract final class AppDialogs {
             const Icon(
               Icons.workspace_premium_rounded,
               size: 64,
-              color: AppColors.accentGold,
+              color: AppColors.secondary,
             ),
             const SizedBox(height: 16),
             Text(
@@ -197,9 +203,11 @@ abstract final class AppDialogs {
           children: [
             const Icon(Icons.error_outline_rounded, color: AppColors.error),
             const SizedBox(width: 8),
-            Text(
-              AppLocalizations.of(context).commonError,
-              style: AppTypography.titleLarge,
+            Expanded(
+              child: Text(
+                AppLocalizations.of(context).commonError,
+                style: AppTypography.titleLarge,
+              ),
             ),
           ],
         ),
@@ -231,7 +239,7 @@ abstract final class AppDialogs {
               color: AppColors.success,
             ),
             const SizedBox(width: 8),
-            Text(title, style: AppTypography.titleLarge),
+            Expanded(child: Text(title, style: AppTypography.titleLarge)),
           ],
         ),
         content: Text(message, style: AppTypography.bodyMedium),

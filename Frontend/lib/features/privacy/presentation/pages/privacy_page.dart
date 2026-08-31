@@ -13,8 +13,18 @@ import '../../../safety/presentation/utils/handle_unblock_user.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
 
 const _shortMonths = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 String _formatBlockedDate(DateTime date) =>
@@ -40,14 +50,18 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
     if (_saving.contains(key)) return;
     setState(() => _saving.add(key));
     try {
-      await ref.read(settingsRepositoryProvider).updatePrivacySettings({key: value});
+      await ref.read(settingsRepositoryProvider).updatePrivacySettings({
+        key: value,
+      });
       if (!mounted) return;
       ref.invalidate(mySettingsProvider);
     } catch (_) {
       if (!mounted) return;
       ref.invalidate(mySettingsProvider);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).privacySaveErrorMessage)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).privacySaveErrorMessage),
+        ),
       );
     } finally {
       if (mounted) setState(() => _saving.remove(key));
@@ -63,7 +77,7 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.drawerPrivacy)),
       body: RefreshIndicator(
-        color: AppColors.accentGold,
+        color: AppColors.secondary,
         onRefresh: () => Future.wait([
           ref.refresh(mySettingsProvider.future),
           ref.refresh(blockedUsersNotifierProvider.future),
@@ -72,7 +86,10 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(20),
           children: [
-            Text(l10n.privacyVisibilitySection, style: AppTypography.labelLarge),
+            Text(
+              l10n.privacyVisibilitySection,
+              style: AppTypography.labelLarge,
+            ),
             const SizedBox(height: 8),
             settingsAsync.when(
               data: (settings) => Column(
@@ -81,7 +98,9 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
                     icon: Icons.workspace_premium_outlined,
                     title: l10n.privacyPremiumOnlyTitle,
                     subtitle: l10n.privacyPremiumOnlySubtitle,
-                    value: settings['profileVisibleToPremiumOnly'] as bool? ?? false,
+                    value:
+                        settings['profileVisibleToPremiumOnly'] as bool? ??
+                        false,
                     onChanged: _saving.contains('profileVisibleToPremiumOnly')
                         ? null
                         : (v) => _toggle('profileVisibleToPremiumOnly', v),
@@ -90,7 +109,9 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
                     icon: Icons.photo_library_outlined,
                     title: l10n.privacyHidePhotosTitle,
                     subtitle: l10n.privacyHidePhotosSubtitle,
-                    value: settings['hidePhotosFromNonConnections'] as bool? ?? false,
+                    value:
+                        settings['hidePhotosFromNonConnections'] as bool? ??
+                        false,
                     onChanged: _saving.contains('hidePhotosFromNonConnections')
                         ? null
                         : (v) => _toggle('hidePhotosFromNonConnections', v),
@@ -108,7 +129,11 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      color: AppColors.error,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(child: Text(l10n.privacyLoadErrorMessage)),
                     TextButton(
@@ -138,7 +163,8 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
                         padding: const EdgeInsets.only(bottom: 12),
                         child: NmInterestCard(
                           name: blockedUser.profile.name,
-                          details: '${blockedUser.profile.age} • '
+                          details:
+                              '${blockedUser.profile.age} • '
                               '${blockedUser.profile.location} • '
                               '${l10n.privacyBlockedOnLabel(_formatBlockedDate(blockedUser.blockedAt))}',
                           message: '',

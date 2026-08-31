@@ -50,9 +50,18 @@ class NmDangerButton extends StatelessWidget {
                     Icon(icon, size: 20),
                     const SizedBox(width: 8),
                   ],
-                  Text(
-                    label,
-                    style: AppTypography.button.copyWith(color: Colors.white),
+                  // Flexible + ellipsis so a squeezed button (narrow
+                  // Expanded flex share, long localized label, or large
+                  // text-scale settings) truncates gracefully instead of
+                  // throwing a RenderFlex overflow. Matches NmPrimaryButton
+                  // and NmOutlinedButton.
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: AppTypography.button.copyWith(color: Colors.white),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),

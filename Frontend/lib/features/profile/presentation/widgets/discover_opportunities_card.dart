@@ -52,7 +52,7 @@ class NmDiscoverOpportunitiesCard extends StatelessWidget {
                 child: Text(
                   AppLocalizations.of(context).discoverViewAllButton,
                   style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.accentGoldDark,
+                    color: AppColors.secondaryDark,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
@@ -138,10 +138,15 @@ class _MatchCard extends StatelessWidget {
                     child: match.imageUrl != null
                         ? NmSizedNetworkPhoto(
                             url: match.imageUrl!,
-                            errorBuilder: (_, __, ___) =>
-                                NmGenderPlaceholder(gender: match.gender, iconSize: 40),
+                            errorBuilder: (_, __, ___) => NmGenderPlaceholder(
+                              gender: match.gender,
+                              iconSize: 40,
+                            ),
                           )
-                        : NmGenderPlaceholder(gender: match.gender, iconSize: 40),
+                        : NmGenderPlaceholder(
+                            gender: match.gender,
+                            iconSize: 40,
+                          ),
                   ),
 
                   // Gradient overlay + name
@@ -210,7 +215,7 @@ class _MatchCard extends StatelessWidget {
                       context,
                     ).profileCompatiblePercent(match.compatibilityPct),
                     style: AppTypography.labelMedium.copyWith(
-                      color: AppColors.accentGoldDark,
+                      color: AppColors.secondaryDark,
                       fontWeight: FontWeight.w700,
                     ),
                     // "85% Compatible" is one line in English but wraps in
@@ -253,6 +258,7 @@ class NmDiscoverMatch {
   final String profession;
   final int compatibilityPct;
   final String? imageUrl;
+
   /// 'Male' / 'Female' / '' — picks the gender-aware placeholder icon
   /// when [imageUrl] is null/fails to load.
   final String gender;

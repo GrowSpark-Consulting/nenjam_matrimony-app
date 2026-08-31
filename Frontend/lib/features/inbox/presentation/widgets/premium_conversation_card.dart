@@ -26,7 +26,10 @@ class PremiumConversationCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: 6,
+      ),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.base),
         decoration: AppDecorations.glass(isDark: isDark),
@@ -36,10 +39,26 @@ class PremiumConversationCard extends StatelessWidget {
               children: [
                 const ColorFiltered(
                   colorFilter: ColorFilter.matrix(<double>[
-                    0.2126, 0.7152, 0.0722, 0, 0,
-                    0.2126, 0.7152, 0.0722, 0, 0,
-                    0.2126, 0.7152, 0.0722, 0, 0,
-                    0, 0, 0, 1, 0,
+                    0.2126,
+                    0.7152,
+                    0.0722,
+                    0,
+                    0,
+                    0.2126,
+                    0.7152,
+                    0.0722,
+                    0,
+                    0,
+                    0.2126,
+                    0.7152,
+                    0.0722,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    1,
+                    0,
                   ]),
                   child: NmGenderPlaceholder(
                     gender: '',
@@ -54,7 +73,11 @@ class PremiumConversationCard extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: Colors.black.withValues(alpha: 0.35),
                     ),
-                    child: const Icon(Icons.lock_rounded, color: Colors.white, size: 22),
+                    child: const Icon(
+                      Icons.lock_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                   ),
                 ),
               ],
@@ -72,7 +95,9 @@ class PremiumConversationCard extends StatelessWidget {
                   Text(
                     l10n.inboxPremiumLockedMessage,
                     style: AppTypography.bodySmall.copyWith(
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
                       fontStyle: FontStyle.italic,
                     ),
                     maxLines: 2,
@@ -106,12 +131,17 @@ class _UpgradePill extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [AppColors.accentGold, AppColors.accentGoldDark]),
+            gradient: const LinearGradient(
+              colors: [AppColors.secondary, AppColors.secondaryDark],
+            ),
             borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
           ),
           child: Text(
             l10n.inboxUpgradeCta,
-            style: AppTypography.labelMedium.copyWith(color: AppColors.textOnGold, fontWeight: FontWeight.w700),
+            style: AppTypography.labelMedium.copyWith(
+              color: AppColors.textOnSecondary,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ),

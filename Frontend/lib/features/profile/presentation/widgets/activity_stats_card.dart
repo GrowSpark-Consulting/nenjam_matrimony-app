@@ -50,7 +50,10 @@ class NmActivityStatsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(AppLocalizations.of(context).profileTodaysActivity, style: AppTypography.titleMedium),
+          Text(
+            AppLocalizations.of(context).profileTodaysActivity,
+            style: AppTypography.titleMedium,
+          ),
           const SizedBox(height: AppSpacing.base),
           Row(
             children: [
@@ -68,7 +71,7 @@ class NmActivityStatsCard extends StatelessWidget {
                 child: _StatTile(
                   value: matches,
                   label: AppLocalizations.of(context).profileMatchesLabel,
-                  color: AppColors.accentGold,
+                  color: AppColors.secondary,
                   isDark: isDark,
                   onTap: onMatchesTap,
                 ),

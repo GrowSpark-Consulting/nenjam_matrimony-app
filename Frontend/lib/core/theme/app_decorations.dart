@@ -5,26 +5,54 @@ import 'app_shadows.dart';
 
 /// Nenjam Matrimony — Reusable Box Decorations
 ///
-/// Pre-built decorations for cards, glass effects, premium surfaces,
-/// and overlay containers used throughout the app.
+/// Cards are white on a warm-white background, so they need a hairline
+/// lavender border to separate from the page — the very soft shadow alone
+/// is not enough contrast, and a heavier shadow would break the "clean and
+/// premium" direction.
 abstract final class AppDecorations {
   // ─── Card Decorations ────────────────────────────────────────────
   static BoxDecoration card({bool isDark = false}) => BoxDecoration(
     color: isDark ? AppColors.cardDark : AppColors.cardLight,
     borderRadius: BorderRadius.circular(20),
+    border: Border.all(
+      color: isDark ? AppColors.borderDark : AppColors.borderLight,
+      width: 1,
+    ),
     boxShadow: isDark ? AppShadows.cardDark : AppShadows.cardLight,
   );
 
   static BoxDecoration cardElevated({bool isDark = false}) => BoxDecoration(
     color: isDark ? AppColors.cardElevatedDark : AppColors.cardElevatedLight,
-    borderRadius: BorderRadius.circular(20),
+    borderRadius: BorderRadius.circular(24),
+    border: Border.all(
+      color: isDark ? AppColors.borderDark : AppColors.borderLight,
+      width: 1,
+    ),
     boxShadow: isDark ? AppShadows.elevatedDark : AppShadows.elevated,
   );
 
   static BoxDecoration cardSubtle({bool isDark = false}) => BoxDecoration(
     color: isDark ? AppColors.cardDark : AppColors.cardLight,
     borderRadius: BorderRadius.circular(16),
+    border: Border.all(
+      color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+      width: 1,
+    ),
     boxShadow: AppShadows.subtle,
+  );
+
+  /// Soft lavender fill with no shadow — selected rows, info panels, and
+  /// unread notification highlights.
+  static BoxDecoration cardSoft({double radius = 16}) => BoxDecoration(
+    color: AppColors.softLavender,
+    borderRadius: BorderRadius.circular(radius),
+  );
+
+  /// Selected-state card: soft lavender fill + plum border.
+  static BoxDecoration cardSelected({double radius = 16}) => BoxDecoration(
+    color: AppColors.softLavender,
+    borderRadius: BorderRadius.circular(radius),
+    border: Border.all(color: AppColors.primary, width: 1.5),
   );
 
   // ─── Glass Decorations ───────────────────────────────────────────
@@ -54,26 +82,24 @@ abstract final class AppDecorations {
   // ─── Premium Decorations ─────────────────────────────────────────
   static BoxDecoration get premiumCard => BoxDecoration(
     gradient: AppGradients.premiumCard,
-    borderRadius: BorderRadius.circular(20),
+    borderRadius: BorderRadius.circular(24),
     boxShadow: AppShadows.elevated,
   );
 
-  static BoxDecoration get goldCard => BoxDecoration(
-    gradient: AppGradients.gold,
+  static BoxDecoration get accentCard => BoxDecoration(
+    gradient: AppGradients.accent,
     borderRadius: BorderRadius.circular(20),
-    boxShadow: AppShadows.goldGlow,
+    boxShadow: AppShadows.accentGlow,
   );
 
-  static BoxDecoration get goldBorder => BoxDecoration(
+  static BoxDecoration get accentBorder => BoxDecoration(
     borderRadius: BorderRadius.circular(20),
-    border: Border.all(color: AppColors.accentGold, width: 1.5),
+    border: Border.all(color: AppColors.secondary, width: 1.5),
   );
 
   // ─── Input Decorations ───────────────────────────────────────────
   static BoxDecoration inputField({bool isDark = false}) => BoxDecoration(
-    color: isDark
-        ? AppColors.surfaceVariantDark
-        : AppColors.surfaceVariantLight,
+    color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceLight,
     borderRadius: BorderRadius.circular(14),
     border: Border.all(
       color: isDark ? AppColors.borderDark : AppColors.borderLight,
@@ -85,14 +111,11 @@ abstract final class AppDecorations {
       BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primary, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: isDark ? AppColors.primaryOnDark : AppColors.primary,
+          width: 1.5,
+        ),
+        boxShadow: isDark ? AppShadows.none : AppShadows.focusRing,
       );
 
   // ─── Container Decorations ───────────────────────────────────────

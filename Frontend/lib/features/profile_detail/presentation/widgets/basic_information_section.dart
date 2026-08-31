@@ -16,19 +16,23 @@ class BasicInformationSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final base = detail.base;
 
     final rows = <(String, String)>[
-      ('Age', '${base.age} yrs'),
-      if (base.height.isNotEmpty) ('Height', base.height),
+      (l10n.fieldAge, l10n.profileDetailAgeYears(base.age)),
+      if (base.height.isNotEmpty) (l10n.fieldHeight, base.height),
       if (detail.maritalStatus.isNotEmpty)
-        ('Marital Status', detail.maritalStatus),
+        (l10n.fieldMaritalStatus, detail.maritalStatus),
       if (detail.motherTongue.isNotEmpty)
-        ('Mother Tongue', detail.motherTongue),
-      ('Matrimony ID', base.matrimonyId),
+        (l10n.fieldMotherTongue, detail.motherTongue),
+      (l10n.fieldMatrimonyId, base.matrimonyId),
       if (base.distanceKm != null)
-        ('Distance', '${base.distanceKm!.toStringAsFixed(0)} km away'),
+        (
+          l10n.fieldDistance,
+          '${base.distanceKm!.toStringAsFixed(0)} ${l10n.discoverKmAwaySuffix}',
+        ),
     ];
 
     return Container(
@@ -38,7 +42,7 @@ class BasicInformationSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(AppLocalizations.of(context).registrationBasicInfoTitle, style: AppTypography.titleLarge),
+          Text(l10n.registrationBasicInfoTitle, style: AppTypography.titleLarge),
           const SizedBox(height: AppSpacing.base),
           ...rows.asMap().entries.map((entry) {
             final isLast = entry.key == rows.length - 1;

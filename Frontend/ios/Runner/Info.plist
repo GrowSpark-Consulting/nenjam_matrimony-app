@@ -51,5 +51,18 @@
 	<string>Allow Nenjam to access photos you choose for your profile and chats.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Allow Nenjam to use your microphone to record voice messages.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.growspark.nenjam.googlesignin</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1060875646049-e5trfpemktrtiqpf349rj7er040n5pui</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

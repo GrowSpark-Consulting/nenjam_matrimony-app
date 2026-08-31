@@ -122,8 +122,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
   // ─── Login: Google ─────────────────────────────────────────────────
   Future<void> _onLoginGoogle() async {
-    final result =
-        await ref.read(googleSignInControllerProvider.notifier).signIn();
+    final result = await ref
+        .read(googleSignInControllerProvider.notifier)
+        .signIn();
     if (!mounted) return;
     // Dismissing the account picker is a decision, not a fault — return to
     // idle silently rather than accusing the user of an error.
@@ -275,7 +276,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
             // OTP — nothing to pop to) and pushed from Auth Selection (via
             // `push`, where the user needs a way back) — only show a back
             // affordance when there's actually something to pop. White
-            // icon: this overlays NmCurvedHeader's navy background.
+            // icon: this overlays NmCurvedHeader's plum background.
             if (context.canPop())
               Positioned(
                 top: MediaQuery.paddingOf(context).top,
@@ -373,7 +374,7 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
             )
           else
             BoxShadow(
-              color: const Color(0xFF1B2B4B).withValues(alpha: 0.12),
+              color: AppColors.primary.withValues(alpha: 0.12),
               blurRadius: 24,
               offset: const Offset(0, -4),
             ),
@@ -397,7 +398,7 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
               ),
               indicator: UnderlineTabIndicator(
                 borderSide: const BorderSide(
-                  color: AppColors.accentGold,
+                  color: AppColors.secondary,
                   width: 2.5,
                 ),
                 borderRadius: BorderRadius.circular(2),
@@ -415,7 +416,7 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
           Divider(
             height: 1,
             thickness: 1,
-            color: isDark ? AppColors.borderDark : const Color(0xFFF0EEE9),
+            color: isDark ? AppColors.borderDark : AppColors.dividerLight,
           ),
         ],
       ),
@@ -449,7 +450,7 @@ class _TabFormCard extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF1B2B4B).withValues(alpha: 0.12),
+                  color: AppColors.primary.withValues(alpha: 0.12),
                   blurRadius: 24,
                   offset: const Offset(0, 12),
                 ),
@@ -476,6 +477,7 @@ class _LoginForm extends StatefulWidget {
   final TextEditingController emailCtrl;
   final TextEditingController passwordCtrl;
   final bool isLoading;
+
   /// Separate from [isLoading] so tapping Google does not also put the email
   /// Login button into a spinner.
   final bool isGoogleLoading;
@@ -581,7 +583,7 @@ class _LoginFormState extends State<_LoginForm> {
                   child: Text(
                     l10n.authForgotPassword,
                     style: AppTypography.labelMedium.copyWith(
-                      color: AppColors.accentGold,
+                      color: AppColors.secondary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -619,7 +621,7 @@ class _LoginFormState extends State<_LoginForm> {
                     child: Text(
                       l10n.authCreateAccount,
                       style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.accentGold,
+                        color: AppColors.secondary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -873,10 +875,10 @@ class _Fixed91PhoneField extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark
         ? AppColors.surfaceVariantDark
-        : const Color(0xFFF5F3EE);
+        : AppColors.surfaceVariantLight;
     final borderColor = isDark
         ? AppColors.borderDark.withValues(alpha: 0.5)
-        : const Color(0xFFC5C6CF).withValues(alpha: 0.4);
+        : AppColors.borderLight;
     final textColor = isDark ? Colors.white : AppColors.textPrimaryLight;
 
     return Container(
@@ -975,7 +977,7 @@ class _RegisterChip extends StatelessWidget {
   }
 }
 
-/// Full-width navy primary button with loading state.
+/// Full-width plum primary button with loading state.
 class _PrimaryButton extends StatelessWidget {
   final String label;
   final bool isLoading;

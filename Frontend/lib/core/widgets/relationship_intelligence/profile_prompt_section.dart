@@ -33,12 +33,12 @@ class ProfilePromptSection extends StatelessWidget {
         child: Container(
           width: double.infinity,
           padding: AppSpacing.cardPaddingLarge,
-          decoration: AppDecorations.goldBorder,
+          decoration: AppDecorations.accentBorder,
           child: Row(
             children: [
               const Icon(
                 Icons.add_circle_outline_rounded,
-                color: AppColors.accentGold,
+                color: AppColors.secondary,
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
@@ -90,7 +90,7 @@ class ProfilePromptSection extends StatelessWidget {
                   children: [
                     const Icon(
                       Icons.format_quote_rounded,
-                      color: AppColors.accentGold,
+                      color: AppColors.secondary,
                       size: 20,
                     ),
                     const SizedBox(width: AppSpacing.sm),

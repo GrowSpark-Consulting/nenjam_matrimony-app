@@ -36,7 +36,7 @@ class NmInfoChip extends StatelessWidget {
     this.isSelected = false,
     this.onTap,
   }) : icon = Icons.temple_hindu_rounded,
-       selectedColor = AppColors.accentGold;
+       selectedColor = AppColors.secondary;
 
   /// Language chip factory.
   const NmInfoChip.language({

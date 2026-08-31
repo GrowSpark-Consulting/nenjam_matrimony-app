@@ -68,7 +68,7 @@ class _NmCompatibilityReportCardState extends State<NmCompatibilityReportCard> {
                       value: widget.overallScore / 100,
                       strokeWidth: 6,
                       backgroundColor: AppColors.divider,
-                      color: AppColors.accentGold,
+                      color: AppColors.secondary,
                     ),
                     Center(
                       child: Text(
@@ -147,7 +147,7 @@ class _AxisRow extends StatelessWidget {
             backgroundColor: isDark
                 ? AppColors.surfaceVariantDark
                 : AppColors.divider,
-            color: AppColors.accentGold,
+            color: AppColors.secondary,
           ),
         ),
       ],

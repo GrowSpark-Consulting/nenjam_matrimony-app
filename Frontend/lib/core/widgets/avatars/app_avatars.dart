@@ -171,7 +171,7 @@ class NmVerifiedAvatar extends StatelessWidget {
   }
 }
 
-/// Premium Avatar with gold border glow.
+/// Premium Avatar with a magenta border glow.
 class NmPremiumAvatar extends StatelessWidget {
   final String? imageUrl;
   final double size;
@@ -190,7 +190,7 @@ class NmPremiumAvatar extends StatelessWidget {
       padding: const EdgeInsets.all(2.5),
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
-        gradient: AppGradients.goldButton,
+        gradient: AppGradients.accentButton,
       ),
       child: NmCircleAvatar(imageUrl: imageUrl, size: size - 5, gender: gender),
     );
@@ -222,7 +222,7 @@ class NmStoryAvatar extends StatelessWidget {
         padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: hasStory ? AppGradients.goldButton : null,
+          gradient: hasStory ? AppGradients.accentButton : null,
           border: hasStory ? null : Border.all(color: AppColors.borderLight),
         ),
         child: Container(

@@ -71,7 +71,7 @@ class HoroscopeCompatibilitySection extends StatelessWidget {
             children: [
               const Icon(
                 Icons.auto_awesome_rounded,
-                color: AppColors.accentGold,
+                color: AppColors.scoreAstrology,
                 size: 22,
               ),
               const SizedBox(width: AppSpacing.sm),

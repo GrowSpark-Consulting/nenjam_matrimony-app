@@ -6,8 +6,8 @@ import '../../../../core/theme/app_typography.dart';
 import '../../domain/entities/trust_score_entity.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// Dark navy hero summary card shown directly under the section tabs —
-/// a large gold ring with the overall trust percentage plus a short
+/// Deep plum hero summary card shown directly under the section tabs —
+/// a large magenta ring with the overall trust percentage plus a short
 /// credibility blurb. The itemized checklist lives further down the
 /// page in [VerificationTrustSection]; this card is just the headline.
 class TrustScoreCard extends StatelessWidget {
@@ -45,7 +45,7 @@ class TrustScoreCard extends StatelessWidget {
                 Text(
                   _credibilityLabelOf(AppLocalizations.of(context)),
                   style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.accentGoldLight,
+                    color: AppColors.accentSoft,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -67,7 +67,7 @@ class TrustScoreCard extends StatelessWidget {
                     strokeWidth: 7,
                     strokeCap: StrokeCap.round,
                     backgroundColor: Colors.white.withValues(alpha: 0.15),
-                    color: AppColors.accentGold,
+                    color: AppColors.secondary,
                   ),
                 ),
                 Text(
