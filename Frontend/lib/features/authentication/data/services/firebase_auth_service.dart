@@ -18,6 +18,18 @@ class FirebaseAuthService {
 
   Future<void> signOut() => _auth.signOut();
 
+  /// Creates a real but unidentified Firebase session.
+  ///
+  /// Onboarding collects a whole profile before asking for any credential,
+  /// so at the end of it there is a finished profile and no account to hang
+  /// it on — and every authenticated route (Discover included) correctly
+  /// refuses a signed-out user. This is the session that closes that gap:
+  /// no SMS, no password, no billing, and a real uid the backend can accept.
+  ///
+  /// It is an upgrade path, not a dead end — `linkWithCredential` attaches
+  /// an email or phone to this same uid later, keeping the profile.
+  Future<UserCredential> signInAnonymously() => _auth.signInAnonymously();
+
   // ─── Email / Password ──────────────────────────────────────────────
 
   /// Creates an account with email + password. The password is handed
@@ -56,6 +68,24 @@ class FirebaseAuthService {
     if (user != null && !user.emailVerified) {
       await user.sendEmailVerification();
     }
+  }
+
+  /// Asks Firebase to attach [email] to the signed-in account once the
+  /// member opens the confirmation link. Used by the onboarding Email +
+  /// Mobile step for an account that has a number but no address.
+  ///
+  /// The address does NOT land on the account until that link is opened —
+  /// `currentUser.email` stays null in the meantime, which is why the caller
+  /// also records it locally (StorageService.pendingEmail).
+  Future<void> startEmailUpdate(String email) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: AppL10n.current.authNoSignedInUserToLink,
+      );
+    }
+    await user.verifyBeforeUpdateEmail(email);
   }
 
   Future<void> sendPasswordResetEmail(String email) {
