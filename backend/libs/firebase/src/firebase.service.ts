@@ -81,6 +81,68 @@ export class FirebaseService implements OnModuleInit {
   }
 
   /**
+   * Whether a Firebase Auth account already exists for this email or phone.
+   *
+   * Firebase Auth is the app's account store — there is no users table to
+   * query — so the Admin SDK is the authoritative answer. `auth/user-not-found`
+   * is the expected "no" and is not an error.
+   *
+   * Deliberately returns only a boolean per identifier: the caller is an
+   * unauthenticated signup screen, and it has no business learning a uid, a
+   * display name, or which provider an existing account uses.
+   *
+   * Throws when the SDK is unconfigured or the lookup genuinely fails, so a
+   * caller can tell "definitely free" from "could not check" — treating the
+   * latter as free is how duplicate accounts get created.
+   */
+  async accountExists(params: {
+    email?: string | null;
+    phone?: string | null;
+  }): Promise<{ emailExists: boolean; phoneExists: boolean }> {
+    if (!this.app) {
+      throw new InternalServerErrorException(
+        'Firebase Admin SDK is not configured on this server.',
+      );
+    }
+    const auth = getAuth(this.app);
+
+    const lookup = async (find: () => Promise<unknown>): Promise<boolean> => {
+      try {
+        await this.withTimeout(
+          find(),
+          10_000,
+          'Firebase account lookup timed out.',
+        );
+        return true;
+      } catch (error) {
+        const code = (error as { code?: string })?.code;
+        // The only "no" Firebase gives. Anything else — a network fault, a
+        // bad credential — must surface, never be reported as available.
+        if (code === 'auth/user-not-found') return false;
+        if (
+          code === 'auth/invalid-email' ||
+          code === 'auth/invalid-phone-number'
+        ) {
+          return false;
+        }
+        throw error;
+      }
+    };
+
+    const email = params.email?.trim().toLowerCase();
+    const phone = params.phone?.trim();
+
+    return {
+      emailExists: email
+        ? await lookup(() => auth.getUserByEmail(email))
+        : false,
+      phoneExists: phone
+        ? await lookup(() => auth.getUserByPhoneNumber(phone))
+        : false,
+    };
+  }
+
+  /**
    * Permanently deletes the Firebase Auth user, revoking every session plus all
    * ID/refresh tokens so a deleted account can never authenticate again. Used by
    * the hard account-deletion flow.
