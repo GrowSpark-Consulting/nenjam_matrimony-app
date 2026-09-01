@@ -10,9 +10,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../registration/presentation/providers/registration_provider.dart';
 import '../controllers/signup_controller.dart';
 import '../providers/auth_providers.dart';
+import '../utils/post_auth_destination.dart';
 
 /// Email Verification screen.
 ///
@@ -84,10 +84,17 @@ class _EmailVerifyScreenState extends ConsumerState<EmailVerifyScreen> {
           backgroundColor: AppColors.success,
         ),
       );
-      // Always CREATE MODE here — guarantees no stale draft/mode leaks in
-      // from a previous session (e.g. a prior user's edit on a shared device).
-      ref.read(registrationProvider.notifier).startCreateMode();
-      context.go(RouteNames.registrationWelcome);
+      // Ask where this member actually belongs rather than assuming the
+      // start of onboarding. Verifying an address is not only a sign-up
+      // step any more — the Email + Mobile step sends people here mid-flow,
+      // and jumping them back to the first screen would discard the answers
+      // they had already given. `resolve` rehydrates the draft from the
+      // backend and sets CREATE mode itself, so the guarantee that no stale
+      // edit-mode session leaks in from a shared device still holds.
+      await storageService.clearPendingEmail();
+      final route = await ref.read(postAuthDestinationProvider).resolve();
+      if (!mounted) return;
+      context.go(route);
     } else if (!silent) {
       final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(

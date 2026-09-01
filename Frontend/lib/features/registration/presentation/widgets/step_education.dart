@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/constants/profile_options.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
@@ -29,10 +30,12 @@ class _StepEducationState extends State<StepEducation> {
   late String _annualIncome;
   late final TextEditingController _workLocationCtrl;
 
-  static const _qualifications = ['B.E / B.Tech', 'M.Tech / M.E', 'MBBS / MD', 'MBA / PGDM', 'B.Sc / M.Sc', 'CA / CFA', 'B.Com / M.Com', 'Ph.D', 'Diploma', 'Other'];
-  static const _occupations = ['Software Engineer', 'Doctor', 'IAS / IPS / Govt', 'Business Owner', 'Finance / Banking', 'Civil / Mechanical Engg', 'Teacher / Professor', 'Lawyer', 'Architect', 'Other'];
-  static const _employmentTypes = ['Private', 'Government', 'Business', 'Self-Employed', 'Not Working', 'Student'];
-  static const _incomeRanges = ['Below 5 Lakhs', '5 - 10 Lakhs', '10 - 20 Lakhs', '20 - 50 Lakhs', '50 Lakhs - 1 Crore', '1 Crore+', 'Other'];
+  // Shared lists plus this step's own 'Other' escape, which OtherOptionField
+  // pairs with a free-text field so the literal 'Other' is never persisted.
+  static const _qualifications = [...ProfileOptions.qualifications, 'Other'];
+  static const _occupations = [...ProfileOptions.occupations, 'Other'];
+  static const _employmentTypes = ProfileOptions.employmentTypes;
+  static const _incomeRanges = [...ProfileOptions.incomeRanges, 'Other'];
 
   @override
   void initState() {

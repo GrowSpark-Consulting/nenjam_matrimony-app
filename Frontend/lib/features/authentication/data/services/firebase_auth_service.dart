@@ -18,18 +18,6 @@ class FirebaseAuthService {
 
   Future<void> signOut() => _auth.signOut();
 
-  /// Creates a real but unidentified Firebase session.
-  ///
-  /// Onboarding collects a whole profile before asking for any credential,
-  /// so at the end of it there is a finished profile and no account to hang
-  /// it on — and every authenticated route (Discover included) correctly
-  /// refuses a signed-out user. This is the session that closes that gap:
-  /// no SMS, no password, no billing, and a real uid the backend can accept.
-  ///
-  /// It is an upgrade path, not a dead end — `linkWithCredential` attaches
-  /// an email or phone to this same uid later, keeping the profile.
-  Future<UserCredential> signInAnonymously() => _auth.signInAnonymously();
-
   // ─── Email / Password ──────────────────────────────────────────────
 
   /// Creates an account with email + password. The password is handed

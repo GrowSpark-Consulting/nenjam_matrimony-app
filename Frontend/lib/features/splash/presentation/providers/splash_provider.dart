@@ -15,10 +15,15 @@ import '../../../registration/domain/models/profile_flow_mode.dart';
 import '../../../registration/presentation/providers/registration_provider.dart';
 
 /// Routes that a screen paused on may be safely resumed into on the next
-/// cold start — a mid-registration/edit session (data rehydrated from the
-/// saved draft) or simply the last bottom-nav tab. Anything else (splash,
-/// auth screens, OTP entry, ...) depends on ephemeral state that can't
-/// survive a process restart, so those are never restored to.
+/// cold start — an Edit Profile session (data rehydrated from the saved
+/// draft) or simply the last bottom-nav tab. Anything else (splash, auth
+/// screens, OTP entry, ...) depends on ephemeral state that can't survive a
+/// process restart, so those are never restored to.
+///
+/// Both entries below are Edit Profile's screens. Onboarding is deliberately
+/// absent: its two steps are resolved from the backend draft by
+/// [PostAuthDestination], which is authoritative and cannot be outvoted by
+/// a stale local snapshot.
 const _restorableRegistrationRoutes = {
   RouteNames.registrationWizard,
   RouteNames.profileReview,
@@ -36,12 +41,12 @@ const _restorableTabRoutes = {
 /// 1. First launch (no language chosen) → language selection.
 /// 2. No Firebase session → the sign-up landing screen.
 /// 3. Signed in but not fully verified → resume the verification flow.
-/// 4. Signed in, verified, and a mid-registration/edit session (or last
-///    tab) was saved before the process died → resume it exactly.
+/// 4. Signed in, verified, and an Edit Profile session (or last tab) was
+///    saved before the process died → resume it exactly.
 /// 5. Signed in and verified, with no local snapshot to resume → ask
-///    [PostAuthDestination]: an unfinished profile resumes registration
-///    (from the backend's own copy of the draft), a finished one opens
-///    Discover. This is what makes a reinstall, a new device, or a
+///    [PostAuthDestination]: an unanswered onboarding step reopens that
+///    step (from the backend's own copy of the draft), an answered one
+///    opens Discover. This is what makes a reinstall, a new device, or a
 ///    process killed before the debounced save landed still pick up where
 ///    the user left off instead of dropping them into an empty Discover.
 class SplashController extends Notifier<void> {
@@ -115,19 +120,16 @@ class SplashController extends Notifier<void> {
         final step = storageService.savedRegistrationStep ?? draft.currentStep;
         final mode = ProfileFlowMode.values.byName(modeStr);
 
-        // A snapshot is the one way into the wizard that doesn't pass
-        // through PostAuthDestination, so it needs the same gate: a CREATE
-        // session with no "profile is for" answer has nothing to resume
-        // into — step 0 requires that value and only CreateProfileForPage
-        // collects it. Deliberately does not restore the draft first: the
-        // user is starting the flow properly, and that screen's
-        // startCreateMode() would discard a half-restored one anyway.
-        // EDIT sessions are exempt — they act on an already-finalized
-        // profile and must never be sent through registration.
-        if (mode == ProfileFlowMode.create &&
-            draft.basicDetails.profileCreatedFor.trim().isEmpty) {
-          return RouteNames.createProfileFor;
-        }
+        // A snapshot is the one way into these screens that doesn't pass
+        // through PostAuthDestination, so it needs the same gate. Both of
+        // them belong to Edit Profile now, which acts on an
+        // already-finalized profile; a CREATE-mode snapshot is either a
+        // leftover from the removed 13-step signup wizard or stray
+        // hygiene state, and resuming it would drop the user back into a
+        // flow that no longer exists. Falling through to null hands the
+        // decision to PostAuthDestination, which reads the backend draft
+        // and reopens whichever onboarding step is genuinely unanswered.
+        if (mode != ProfileFlowMode.edit) return null;
 
         ref
             .read(registrationProvider.notifier)

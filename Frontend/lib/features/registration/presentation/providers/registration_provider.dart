@@ -1,10 +1,17 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/router/route_names.dart';
+import '../../../../core/services/storage_service.dart';
+import '../../../authentication/presentation/providers/auth_providers.dart';
 
 import '../../../../core/network/api_providers.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../../psychology/domain/models/personality_result.dart';
 import '../../../psychology/presentation/providers/personality_provider.dart';
 import '../../data/repositories/registration_repository.dart';
+import '../../domain/models/onboarding_forms.dart';
 import '../../domain/models/profile_draft.dart';
 import '../../domain/models/profile_flow_mode.dart';
 
@@ -171,6 +178,226 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   void setProfileCreatedFor(String value) {
     state = state.copyWith(
       basicDetails: state.basicDetails.copyWith(profileCreatedFor: value),
+    );
+  }
+
+  // ─── Onboarding persistence ────────────────────────────────────────
+  //
+  // Onboarding now runs before there is an account: the landing page's
+  // sign-up buttons go straight to Profile For, and credentials are
+  // collected part-way through (Email + Mobile) rather than up front. So a
+  // step cannot assume a Firebase session — a PATCH sent without one is a
+  // guaranteed 401, which would strand the member on a screen they have
+  // correctly filled in.
+  //
+  // Every answer is therefore written to the local draft first and snapshot
+  // to disk, so nothing is lost and a relaunch resumes where they stopped.
+  // The backend copy is brought up to date the moment a session exists —
+  // see [flushOnboardingToBackend].
+
+  /// Whether a Firebase session exists. Guarded: reading the auth service
+  /// before Firebase is initialised (a widget test, a very early call)
+  /// throws, and "cannot tell" must mean "persist locally", never a crash
+  /// that strands the member on a completed screen.
+  bool get _hasSession {
+    try {
+      return ref.read(firebaseAuthServiceProvider).currentUser != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Snapshots the draft locally. Cheap, and the only persistence available
+  /// while signed out.
+  Future<void> _snapshot() async {
+    // Best-effort: local storage may not be initialised (widget tests), and
+    // a snapshot failing must not fail the step the member just completed —
+    // the in-memory draft is still correct either way.
+    try {
+      await storageService.saveNavState(
+        route: RouteNames.createProfileFor,
+        profileFlowMode: ProfileFlowMode.create.name,
+        profileDraftJson: jsonEncode(state.toJson()),
+      );
+    } catch (_) {}
+  }
+
+  /// Runs [send] only when there is a session to authenticate it. Signed
+  /// out, the local snapshot above is the whole of persistence and this is
+  /// a no-op rather than a failure.
+  Future<void> _persist(Future<void> Function() send) async {
+    await _snapshot();
+    if (!_hasSession) return;
+    await send();
+  }
+
+  /// Step 3 — "Email + Mobile". Captured only; nothing is verified here and
+  /// no Phone Auth call is made. Both values live on the Firebase account
+  /// rather than the profile draft, so with no session yet they are held
+  /// locally until [flushOnboardingToBackend] has somewhere to send them.
+  Future<void> applyOnboardingContact({
+    required String email,
+    required String phoneE164,
+  }) async {
+    // Best-effort, like the draft snapshot: local storage may be
+    // unavailable, and losing a prefill must not fail a step the member has
+    // correctly completed.
+    try {
+      await storageService.setPendingEmail(email);
+      await storageService.setPendingPhone(phoneE164);
+    } catch (_) {}
+    await _snapshot();
+  }
+
+  /// Pushes every onboarding answer the draft holds to the backend. Called
+  /// once a session exists — after the Email + Mobile step links an account,
+  /// and again at the end of onboarding — so the work done while signed out
+  /// is not stranded on the device.
+  ///
+  /// Best-effort and never throws: the local draft remains the source of
+  /// truth until a call succeeds, and the next step's save retries anyway.
+  Future<void> flushOnboardingToBackend() async {
+    if (!_hasSession) return;
+    final repo = ref.read(registrationRepositoryProvider);
+    try {
+      await repo.updateBasicDetails(state.basicDetails);
+      await repo.updateReligionDetails(state.religionDetails);
+      await repo.updateLocationDetails(state.locationDetails);
+      await repo.updatePhysicalDetails(state.physicalDetails);
+      await repo.updateEducationDetails(state.educationDetails);
+      await repo.updateLifestyleDetails(state.lifestyleDetails);
+    } catch (_) {
+      // Left for the next successful save to carry.
+    }
+  }
+
+  // ─── Onboarding steps ──────────────────────────────────────────────
+  //
+  // Onboarding writes into the sections the profile already owns rather
+  // than a section of its own — religion/community onto Religion, and
+  // country/state/city onto Location — so Edit Profile reopens those
+  // screens pre-filled and the existing per-section PATCH carries the
+  // values to the backend. That mapping is why these live here and not in
+  // the pages: a page knows the answers it collected, not which sections
+  // they belong to.
+  //
+  // Both persist immediately. Onboarding is not the wizard: there is no
+  // later "Continue" that will sync the section for them, and a member goes
+  // straight to Discover at the end, so anything left only in local state
+  // would be lost on the next cold start.
+
+  /// Step 2 — "Your religion". Writes religion + community, the country the
+  /// member lives in, and (when ticked) the partner-community preference.
+  Future<void> applyOnboardingReligion(OnboardingReligionForm form) async {
+    state = state.copyWith(
+      religionDetails: state.religionDetails.copyWith(
+        religion: form.religion,
+        community: form.community,
+      ),
+      locationDetails: state.locationDetails.copyWith(country: form.livingIn),
+    );
+
+    await _persist(() async {
+      final repo = ref.read(registrationRepositoryProvider);
+      await repo.updateReligionDetails(state.religionDetails);
+      await repo.updateLocationDetails(state.locationDetails);
+    });
+
+    // Partner preference has no per-section sync of its own during
+    // onboarding, so the flag goes through the same call the standalone
+    // Partner Preferences page uses.
+    final castePref =
+        form.casteNoBar ? OnboardingReligionForm.casteNoBarPreference : '';
+    if (castePref == state.partnerPreference.castePref) return;
+    state = state.copyWith(
+      partnerPreference:
+          state.partnerPreference.copyWith(castePref: castePref),
+    );
+    await _persist(
+      () => ref
+          .read(registrationRepositoryProvider)
+          .updatePartnerPreference(state.partnerPreference),
+    );
+  }
+
+  /// Step 4 — "State & City".
+  Future<void> applyProfileBasics(ProfileBasicsForm form) async {
+    state = state.copyWith(
+      locationDetails: state.locationDetails.copyWith(
+        state: form.state,
+        city: form.city,
+      ),
+    );
+    await _persist(
+      () => ref
+          .read(registrationRepositoryProvider)
+          .updateLocationDetails(state.locationDetails),
+    );
+  }
+
+  /// Step 5 — "Marital status", which also carries height and diet. Three
+  /// sections, so three PATCHes: the backend has no combined endpoint and
+  /// inventing one for onboarding would duplicate what already works.
+  Future<void> applyOnboardingMarital(OnboardingMaritalForm form) async {
+    state = state.copyWith(
+      basicDetails:
+          state.basicDetails.copyWith(maritalStatus: form.maritalStatus),
+      physicalDetails: state.physicalDetails.copyWith(height: form.height),
+      lifestyleDetails:
+          state.lifestyleDetails.copyWith(eatingHabit: form.diet),
+    );
+    await _persist(() async {
+      final repo = ref.read(registrationRepositoryProvider);
+      await repo.updateBasicDetails(state.basicDetails);
+      await repo.updatePhysicalDetails(state.physicalDetails);
+      if (form.diet.trim().isNotEmpty) {
+        await repo.updateLifestyleDetails(state.lifestyleDetails);
+      }
+    });
+  }
+
+  /// Step 6 — "Highest qualification".
+  Future<void> applyOnboardingEducation(OnboardingEducationForm form) async {
+    state = state.copyWith(
+      educationDetails: state.educationDetails.copyWith(
+        qualification: form.qualification,
+        college: form.college,
+      ),
+    );
+    await _persist(
+      () => ref
+          .read(registrationRepositoryProvider)
+          .updateEducationDetails(state.educationDetails),
+    );
+  }
+
+  /// Step 7 — "Annual income" and work details. Same draft section as step 6,
+  /// so this PATCHes the whole of it again with both steps' answers merged.
+  Future<void> applyOnboardingIncome(OnboardingIncomeForm form) async {
+    state = state.copyWith(
+      educationDetails: state.educationDetails.copyWith(
+        annualIncome: form.annualIncome,
+        employmentType: form.workWith,
+        occupation: form.workAs,
+        company: form.companyName,
+      ),
+    );
+    await _persist(
+      () => ref
+          .read(registrationRepositoryProvider)
+          .updateEducationDetails(state.educationDetails),
+    );
+  }
+
+  /// Step 9 — "About yourself".
+  Future<void> applyOnboardingAbout(String aboutMe) async {
+    state = state.copyWith(
+      lifestyleDetails: state.lifestyleDetails.copyWith(aboutMe: aboutMe),
+    );
+    await _persist(
+      () => ref
+          .read(registrationRepositoryProvider)
+          .updateLifestyleDetails(state.lifestyleDetails),
     );
   }
 

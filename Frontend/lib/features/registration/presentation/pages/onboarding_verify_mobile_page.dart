@@ -12,9 +12,7 @@ import '../../../../core/widgets/inputs/otp_input.dart';
 import '../../../../core/widgets/layout/responsive_layout.dart';
 import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../../core/errors/auth_error_mapper.dart';
 import '../../../authentication/domain/services/otp_verifier.dart';
-import '../../../authentication/presentation/providers/auth_providers.dart';
 import '../providers/registration_provider.dart';
 import '../widgets/onboarding_scaffold.dart';
 
@@ -83,50 +81,31 @@ class _OnboardingVerifyMobilePageState
       return;
     }
 
-    // Onboarding collected a whole profile without ever asking for a
-    // credential, so at this point there is no Firebase session — and
-    // Discover, like every authenticated route, correctly refuses one.
-    // Without this the router's guard bounced the member straight back to
-    // the landing screen the instant they finished.
+    // Deliberately no Firebase call here. This step is the static
+    // development verifier: no SMS, no phone auth, and no anonymous
+    // sign-in either — that last one made finishing signup depend on
+    // Anonymous Auth being enabled in the Firebase console, and failed
+    // with "restricted to administrators only" when it was not.
     //
-    // An anonymous session is a real session with a real uid: it satisfies
-    // the guard, lets the accumulated draft reach the backend, and can be
-    // upgraded in place (linkWithCredential) once a credential is added.
-    // No SMS, no password, no billing.
-    if (!_hasSession()) {
-      try {
-        await ref.read(authRepositoryProvider).signInAnonymously();
-      } catch (e) {
-        if (!mounted) return;
-        setState(() => _verifying = false);
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(AuthErrorMapper.message(e))));
-        return;
-      }
-    }
+    // Instead onboarding records that it finished. The router treats that
+    // as permission to enter the app while the mock verifier is in use —
+    // see RouteNames.publicRoutes / the guard in app_router.dart.
+    await storageService.setOnboardingCompleted(true);
 
-    // Now that a session exists, the answers gathered while signed out can
-    // finally be sent. Best-effort — the local draft stays the source of
-    // truth if this fails.
+    // Best-effort: if a session does happen to exist (Google sign-up), the
+    // answers gathered along the way are sent now. A no-op when signed out.
     await ref.read(registrationProvider.notifier).flushOnboardingToBackend();
+
+    // Onboarding finished. The router treats this as permission to enter
+    // the app while the static verifier is in use — see
+    // StorageService.onboardingCompleted.
+    await storageService.setOnboardingCompleted(true);
 
     // Onboarding is finished. The number stops being "pending" the moment
     // it is verified.
     await storageService.clearPendingPhone();
     if (!mounted) return;
     context.go(RouteNames.discover);
-  }
-
-  /// Whether Firebase already has a session. Guarded: reading the auth
-  /// service before Firebase is initialised throws, and "cannot tell" has to
-  /// mean "sign in", never a crash on the last step of onboarding.
-  bool _hasSession() {
-    try {
-      return ref.read(firebaseAuthServiceProvider).currentUser != null;
-    } catch (_) {
-      return false;
-    }
   }
 
   @override

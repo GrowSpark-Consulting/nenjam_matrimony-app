@@ -2233,8 +2233,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Verify your mobile number to finish registration.';
 
   @override
-  String get registrationProfileForTitle =>
-      'Who are you creating this profile for?';
+  String get registrationProfileForTitle => 'This Profile is for';
 
   @override
   String get registrationProfileForSubtitle => 'Select the relationship';
@@ -2262,6 +2261,336 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileForFriendSub => 'Finding a match for a friend';
+
+  @override
+  String get profileForOptionMyself => 'Myself';
+
+  @override
+  String get profileForOptionSon => 'My Son';
+
+  @override
+  String get profileForOptionDaughter => 'My Daughter';
+
+  @override
+  String get profileForOptionBrother => 'My Brother';
+
+  @override
+  String get profileForOptionSister => 'My Sister';
+
+  @override
+  String get profileForOptionFriend => 'My Friend';
+
+  @override
+  String get profileForOptionRelative => 'My Relative';
+
+  @override
+  String get profileForNotice =>
+      'Nenjam is a space for people genuinely looking to marry. Profiles created with false details, or on behalf of a marriage bureau or any business, are removed from the platform.';
+
+  @override
+  String get profileBasicsHeadline => 'Now let\'s build your Profile';
+
+  @override
+  String get profileBasicsStateHint => 'State you live in';
+
+  @override
+  String get profileBasicsCityHint => 'City you live in';
+
+  @override
+  String get profileBasicsCasteNoBar =>
+      'Not particular about my partner\'s community (caste no bar)';
+
+  @override
+  String get onboardingReligionHeadline => 'Your religion';
+
+  @override
+  String get onboardingReligionLabel => 'Religion';
+
+  @override
+  String get onboardingReligionHint => 'Select your religion';
+
+  @override
+  String get onboardingCommunityLabel => 'Community';
+
+  @override
+  String get onboardingCommunityHint => 'Select your community';
+
+  @override
+  String get onboardingCommunityHelp =>
+      'Your community is the group you identify with — for some families that is a caste, for others a language or region.';
+
+  @override
+  String get onboardingLivingInLabel => 'Living in';
+
+  @override
+  String get onboardingLivingInHint => 'Country you live in';
+
+  @override
+  String get onboardingContactHeadline =>
+      'An active email ID & phone no. are required to secure your profile';
+
+  @override
+  String get onboardingContactEmailLabel => 'Email ID';
+
+  @override
+  String get onboardingContactEmailHint => 'your.name@example.com';
+
+  @override
+  String get onboardingContactMobileLabel => 'Mobile no.';
+
+  @override
+  String get onboardingContactMobileHint => 'Mobile no.';
+
+  @override
+  String get onboardingContactSubmit => 'Submit';
+
+  @override
+  String get onboardingContactLegal =>
+      'By creating an account, you agree to our Privacy Policy and T&C.';
+
+  @override
+  String get onboardingContactEmailInvalid => 'Enter a valid email address.';
+
+  @override
+  String get onboardingContactMobileInvalid =>
+      'Enter a valid 10-digit mobile number.';
+
+  @override
+  String get onboardingContactEmailLocked => 'Already linked to your account.';
+
+  @override
+  String get onboardingContactMobileLocked => 'Already linked to your account.';
+
+  @override
+  String get onboardingContactEmailLinkFailed =>
+      'We couldn\'t send a confirmation to that address. Try again, or use a different one.';
+
+  @override
+  String get onboardingMaritalHeadline => 'Marital status';
+
+  @override
+  String get onboardingMaritalLabel => 'Your marital status';
+
+  @override
+  String get onboardingMaritalHint => 'Select your marital status';
+
+  @override
+  String get onboardingHeightLabel => 'Height';
+
+  @override
+  String get onboardingHeightFieldLabel => 'Your height';
+
+  @override
+  String get onboardingHeightHint => 'Select your height';
+
+  @override
+  String get onboardingDietLabel => 'Diet';
+
+  @override
+  String get onboardingDietFieldLabel => 'Your diet';
+
+  @override
+  String get onboardingDietHint => 'Select your diet';
+
+  @override
+  String get onboardingEducationEyebrow => 'Great! Few more details';
+
+  @override
+  String get onboardingEducationHeadline => 'Highest qualification';
+
+  @override
+  String get onboardingQualificationLabel => 'Your highest qualification';
+
+  @override
+  String get onboardingQualificationHint => 'Select your qualification';
+
+  @override
+  String get onboardingCollegeLabel => 'College';
+
+  @override
+  String get onboardingCollegeFieldLabel => 'College you attended';
+
+  @override
+  String get onboardingCollegeHint => 'College you attended';
+
+  @override
+  String get onboardingIncomeEyebrow => 'You are almost done!';
+
+  @override
+  String get onboardingIncomeHeadline => 'Annual income';
+
+  @override
+  String get onboardingIncomeLabel => 'Your annual income';
+
+  @override
+  String get onboardingIncomeHint => 'Select your annual income';
+
+  @override
+  String get onboardingIncomeWhy => 'Why is income required?';
+
+  @override
+  String get onboardingIncomeWhyAnswer =>
+      'Income is one of the details members filter on, so adding it means your profile reaches the people actually looking for a match like you. It is never shown as an exact figure.';
+
+  @override
+  String get onboardingWorkHeadline => 'Work details';
+
+  @override
+  String get onboardingWorkWithLabel => 'You work with';
+
+  @override
+  String get onboardingWorkWithHint => 'Select where you work';
+
+  @override
+  String get onboardingWorkAsLabel => 'You work as';
+
+  @override
+  String get onboardingWorkAsHint => 'Select what you do';
+
+  @override
+  String get onboardingCompanyLabel => 'Your current company name';
+
+  @override
+  String get onboardingCompanyHint => 'Specify current organization';
+
+  @override
+  String get onboardingIncomeCta => 'Create Profile';
+
+  @override
+  String get onboardingPhotosHeadline => 'Add Photos to complete your Profile';
+
+  @override
+  String get onboardingPhotosSubtitle =>
+      'Photo privacy controls are available in Settings.';
+
+  @override
+  String get onboardingPhotosGallery => 'Add from Gallery';
+
+  @override
+  String get onboardingPhotosCamera => 'Use Camera';
+
+  @override
+  String get onboardingPhotosLater => 'Add Photos Later';
+
+  @override
+  String get onboardingPhotosFailed =>
+      'That photo couldn\'t be uploaded. Try again.';
+
+  @override
+  String get onboardingPhotosAddedOne => '1 photo added.';
+
+  @override
+  String onboardingPhotosAddedMany(String count) {
+    return '$count photos added.';
+  }
+
+  @override
+  String get onboardingAboutEyebrow =>
+      'We\'ve added a short description about you';
+
+  @override
+  String get onboardingAboutHeadline => 'About yourself';
+
+  @override
+  String get onboardingAboutHelper =>
+      'Edit the text above to make it more personal.';
+
+  @override
+  String get onboardingAboutRequired =>
+      'Tell us a little about yourself to continue.';
+
+  @override
+  String get accountExistsTitle => 'Account already exists';
+
+  @override
+  String get accountExistsBoth =>
+      'This email or mobile number is already registered. Please log in to continue.';
+
+  @override
+  String get accountExistsEmail =>
+      'An account with this email is already registered. Please log in to continue.';
+
+  @override
+  String get accountExistsMobile =>
+      'This mobile number is already registered. Please log in to continue.';
+
+  @override
+  String get accountExistsLogIn => 'Log In';
+
+  @override
+  String get accountExistsEdit => 'Edit details';
+
+  @override
+  String get accountCheckFailed =>
+      'Unable to check your account right now. Please try again.';
+
+  @override
+  String get accountCheckRetry => 'Try Again';
+
+  @override
+  String get onboardingVerifyMobileHeadline => 'Verify Mobile Number';
+
+  @override
+  String get onboardingVerifyMobileSentTo =>
+      'Confirm this is the number to reach you on';
+
+  @override
+  String get onboardingVerifyMobileEdit => 'Edit';
+
+  @override
+  String get onboardingVerifyMobileVerified => 'Number verified successfully';
+
+  @override
+  String get authInvalidOtp =>
+      'That code isn\'t right. Check it and try again.';
+
+  @override
+  String get onboardingVerifyMobileEnter =>
+      'Enter any 4-digit code to continue.';
+
+  @override
+  String get authEntrySignUp => 'Sign Up';
+
+  @override
+  String get authEntryLogin => 'Login';
+
+  @override
+  String get welcomeBackHeadline => 'Welcome back';
+
+  @override
+  String get welcomeBackSubtitle => 'Enter your details to continue';
+
+  @override
+  String get welcomeBackGetOtp => 'Get OTP';
+
+  @override
+  String get welcomeBackPassword => 'Login with Password';
+
+  @override
+  String get welcomeBackGoogle => 'Continue with Google';
+
+  @override
+  String get welcomeBackEmail => 'Continue with Email';
+
+  @override
+  String get welcomeBackNoAccount => 'Don\'t have an account?';
+
+  @override
+  String get welcomeBackSignUpFree => 'Sign Up Free';
+
+  @override
+  String profileBasicsMissing(String fields) {
+    return 'Select your $fields to continue.';
+  }
+
+  @override
+  String profileBasicsFieldJoin(String first, String second) {
+    return '$first and $second';
+  }
+
+  @override
+  String get profileBasicsPartnerPrefSaveFailed =>
+      'Saved your details, but we couldn\'t record the community preference. You can set it later in Partner Preferences.';
 
   @override
   String get registrationProfileCreatedForLabel => 'Profile Created For';

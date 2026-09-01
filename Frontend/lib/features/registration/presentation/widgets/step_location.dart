@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/profile_options.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
@@ -27,8 +28,11 @@ class _StepLocationState extends State<StepLocation> {
   late final TextEditingController _pinCtrl;
   late final TextEditingController _nativePlaceCtrl;
 
-  static const _countries = ['India', 'United States', 'United Kingdom', 'Singapore', 'UAE', 'Malaysia', 'Australia', 'Canada', 'Other'];
-  static const _states = ['Tamil Nadu', 'Karnataka', 'Kerala', 'Andhra Pradesh', 'Telangana', 'Maharashtra', 'Delhi', 'Gujarat', 'West Bengal', 'Rajasthan', 'UP', 'Other'];
+  static const _countries = [...ProfileOptions.countries, 'Other'];
+  // Shared list plus this step's own "Other" escape — OtherOptionField pairs
+  // that chip with a free-text field, so the literal "Other" is never what
+  // gets persisted (see OtherOptionField's doc).
+  static const _states = [...ProfileOptions.states, 'Other'];
 
   @override
   void initState() {
