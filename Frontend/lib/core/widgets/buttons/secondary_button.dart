@@ -24,17 +24,13 @@ class NmSecondaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return SizedBox(
       width: width ?? double.infinity,
       height: height,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: isDark
-              ? AppColors.surfaceVariantDark
-              : AppColors.primarySurface,
+          backgroundColor: AppColors.primarySurface,
           foregroundColor: AppColors.primary,
           elevation: 0,
           shape: RoundedRectangleBorder(

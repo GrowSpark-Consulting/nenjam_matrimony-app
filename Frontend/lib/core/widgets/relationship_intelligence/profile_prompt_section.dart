@@ -24,8 +24,6 @@ class ProfilePromptSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     if (prompts.isEmpty) {
       if (!editable) return const SizedBox.shrink();
       return GestureDetector(
@@ -81,7 +79,7 @@ class ProfilePromptSection extends StatelessWidget {
             width: double.infinity,
             margin: const EdgeInsets.only(bottom: AppSpacing.md),
             padding: AppSpacing.cardPaddingLarge,
-            decoration: AppDecorations.card(isDark: isDark),
+            decoration: AppDecorations.card(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -108,9 +106,7 @@ class ProfilePromptSection extends StatelessWidget {
                 Text(
                   p.answerText,
                   style: AppTypography.bodyMedium.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
+                    color: AppColors.textSecondaryLight,
                     height: 1.4,
                   ),
                 ),

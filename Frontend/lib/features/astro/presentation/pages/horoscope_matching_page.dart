@@ -20,7 +20,6 @@ class HoroscopeMatchingPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(myHoroscopeSummaryProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -44,7 +43,7 @@ class HoroscopeMatchingPage extends ConsumerWidget {
                 Container(
                   width: double.infinity,
                   padding: AppSpacing.cardPaddingLarge,
-                  decoration: AppDecorations.card(isDark: isDark),
+                  decoration: AppDecorations.card(),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -97,7 +96,7 @@ class HoroscopeMatchingPage extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.xl),
                 Container(
                   padding: AppSpacing.cardPaddingLarge,
-                  decoration: AppDecorations.card(isDark: isDark),
+                  decoration: AppDecorations.card(),
                   child: Row(
                     children: [
                       Expanded(
@@ -118,9 +117,7 @@ class HoroscopeMatchingPage extends ConsumerWidget {
                                 context,
                               ).astroAllowCompareSubtitle,
                               style: AppTypography.labelSmall.copyWith(
-                                color: isDark
-                                    ? AppColors.textTertiaryDark
-                                    : AppColors.textTertiaryLight,
+                                color: AppColors.textTertiaryLight,
                               ),
                             ),
                           ],
@@ -147,9 +144,7 @@ class HoroscopeMatchingPage extends ConsumerWidget {
                 Text(
                   AppLocalizations.of(context).astroPreviewSubtitle,
                   style: AppTypography.bodySmall.copyWith(
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
+                    color: AppColors.textTertiaryLight,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -185,7 +180,6 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.xs),
       child: Row(
@@ -195,9 +189,7 @@ class _DetailRow extends StatelessWidget {
             child: Text(
               label,
               style: AppTypography.bodySmall.copyWith(
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
+                color: AppColors.textTertiaryLight,
               ),
             ),
           ),

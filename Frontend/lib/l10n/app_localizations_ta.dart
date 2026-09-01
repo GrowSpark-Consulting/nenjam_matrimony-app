@@ -47,6 +47,24 @@ class AppLocalizationsTa extends AppLocalizations {
   String get authCreateAccount => 'கணக்கை உருவாக்கு';
 
   @override
+  String get registrationLandingHeadline => 'உங்கள் கதை இங்கே தொடங்குகிறது';
+
+  @override
+  String get registrationLandingNewTo => 'நெஞ்சத்திற்குப் புதியவரா?';
+
+  @override
+  String get registrationLandingSignUpEmail => 'மின்னஞ்சலில் பதிவு செய்க';
+
+  @override
+  String get registrationLandingSignUpMobile => 'மொபைல் மூலம் பதிவு செய்க';
+
+  @override
+  String get registrationLandingSignUpGoogle => 'Google மூலம் பதிவு செய்க';
+
+  @override
+  String get registrationLandingHaveAccount => 'ஏற்கனவே கணக்கு உள்ளதா?';
+
+  @override
   String get authWelcomeBack => 'மீண்டும் வரவேற்கிறோம்';
 
   @override
@@ -97,9 +115,6 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get authEnterEmailOtp => 'மின்னஞ்சல் OTP ஐ உள்ளிடவும்';
-
-  @override
-  String get authRegisteringForLabel => 'யாருக்காகப் பதிவு செய்கிறீர்கள்';
 
   @override
   String get authSendOtp => 'OTP அனுப்பு';
@@ -412,9 +427,6 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get discoverStatAstroLabel => 'ஜோதிடம்';
-
-  @override
-  String get discoverStatTrustLabel => 'நம்பிக்கை';
 
   @override
   String get discoverUpgradeButton => 'மேம்படுத்து';
@@ -958,9 +970,6 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get settingsAppPreferencesSection => 'பயன்பாட்டு விருப்பங்கள்';
-
-  @override
-  String get settingsDarkMode => 'இருண்ட பயன்முறை';
 
   @override
   String get settingsLanguage => 'மொழி';
@@ -2643,10 +2652,6 @@ class AppLocalizationsTa extends AppLocalizations {
   String get profileCompletionTierExceptional => 'விதிவிலக்கானது';
 
   @override
-  String get profileCompletionHighestImpactLabel =>
-      'அதிக தாக்கம் செலுத்தும் முன்னேற்றம்';
-
-  @override
   String get profileCompletionCompletedSectionsTitle =>
       'இதுவரையிலான உங்கள் கதை';
 
@@ -2680,8 +2685,7 @@ class AppLocalizationsTa extends AppLocalizations {
       'உங்கள் பொருத்தங்களை துல்லியமாக்குங்கள்';
 
   @override
-  String get profileCompletionActionVerification =>
-      'நம்பிக்கையை உருவாக்குங்கள்';
+  String get profileCompletionActionVerification => 'சரிபார்க்கப்படுங்கள்';
 
   @override
   String get profileCompletionActionHoroscope =>
@@ -2794,9 +2798,6 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get drawerVerificationCenter => 'சரிபார்ப்பு மையம்';
-
-  @override
-  String get drawerTrustScore => 'நம்பிக்கை மதிப்பெண்';
 
   @override
   String get drawerInterestSent => 'அனுப்பிய விருப்பங்கள்';
@@ -3925,24 +3926,6 @@ class AppLocalizationsTa extends AppLocalizations {
   }
 
   @override
-  String get trustScoreTitle => 'நம்பகத்தன்மை மதிப்பெண்';
-
-  @override
-  String get trustScoreUnavailableTitle =>
-      'நம்பகத்தன்மை மதிப்பெண் கிடைக்கவில்லை';
-
-  @override
-  String get trustScoreUnavailableMessage =>
-      'உங்கள் நம்பகத்தன்மை மதிப்பெண்ணை இன்னும் காட்ட முடியவில்லை — இந்த வசதி உங்கள் கணக்கில் கிடைக்கவில்லை.';
-
-  @override
-  String get trustScoreEmptyTitle => 'இதுவரை நம்பகத்தன்மை சமிக்ஞைகள் இல்லை';
-
-  @override
-  String get trustScoreEmptyMessage =>
-      'உங்கள் நம்பகத்தன்மை மதிப்பெண்ணை உருவாக்க சரிபார்ப்புப் படிகளை நிறைவு செய்யுங்கள்.';
-
-  @override
   String get drawerRateUs => 'எங்களை மதிப்பிடுங்கள் ⭐';
 
   @override
@@ -4228,15 +4211,6 @@ class AppLocalizationsTa extends AppLocalizations {
   String get verificationStatusIncomplete => 'முழுமையடையவில்லை';
 
   @override
-  String get trustScoreHighCredibility => 'உயர் நம்பகத்தன்மை சுயவிவரம்';
-
-  @override
-  String get trustScoreGoodCredibility => 'நல்ல நம்பகத்தன்மை சுயவிவரம்';
-
-  @override
-  String get trustScoreBuildingCredibility => 'நம்பகத்தன்மையை உருவாக்குகிறது';
-
-  @override
   String get profileNewMember => 'புதிய உறுப்பினர்';
 
   @override
@@ -4256,7 +4230,8 @@ class AppLocalizationsTa extends AppLocalizations {
       'உங்கள் கடவுச்சொல் மிகவும் பலவீனமானது. பெரிய எழுத்து, சிறிய எழுத்து, எண் மற்றும் குறியீடு உள்ளிட்ட குறைந்தது 8 எழுத்துகளைப் பயன்படுத்தவும்.';
 
   @override
-  String get profilePriorityTrustImpact => '+12% நம்பகத்தன்மை மதிப்பெண்';
+  String get profilePriorityCompletionImpact =>
+      '+12% சுயவிவர பூர்த்தி மதிப்பெண்';
 
   @override
   String get profilePriorityVisibilityImpact =>

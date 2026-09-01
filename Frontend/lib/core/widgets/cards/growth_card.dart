@@ -23,13 +23,11 @@ class NmGrowthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: AppDecorations.card(isDark: isDark),
+        decoration: AppDecorations.card(),
         child: Row(
           children: [
             Container(
@@ -56,19 +54,15 @@ class NmGrowthCard extends StatelessWidget {
                   Text(
                     subtitle,
                     style: AppTypography.bodySmall.copyWith(
-                      color: isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight,
+                      color: AppColors.textTertiaryLight,
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(
+            const Icon(
               Icons.chevron_right_rounded,
-              color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
+              color: AppColors.textTertiaryLight,
             ),
           ],
         ),

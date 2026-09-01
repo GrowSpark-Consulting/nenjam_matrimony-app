@@ -1,108 +1,72 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/widgets/indicators/nm_gradient_progress_bar.dart';
 import '../../../../core/widgets/avatars/app_avatars.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/presentation/providers/auth_providers.dart';
+import '../../../authentication/presentation/utils/logout_flow.dart';
 import '../../../inbox/presentation/widgets/unread_badge.dart';
 import '../../../interests/domain/repositories/interests_repository.dart';
 import '../../../interests/presentation/providers/interests_provider.dart';
+import '../../../partner_preferences/presentation/utils/open_partner_preferences.dart';
 import '../../../profile/presentation/providers/profile_dashboard_providers.dart';
 import '../../../profile/presentation/utils/profile_dashboard_mapper.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
+import '../../../profile_photos/presentation/widgets/photo_manager_bottom_sheet.dart';
+import '../../../registration/presentation/utils/open_edit_profile.dart';
 import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// NenjamNavigationDrawer
+// ProfileMenuPage
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// True Instagram-style premium side navigation drawer.
+// The profile / account menu, presented as a FULL-SCREEN page rather than the
+// partial-width side drawer it used to be. Reached by tapping the avatar in
+// the Discover app bar, which pushes RouteNames.profileMenu onto the ROOT
+// navigator — above the StatefulShellRoute — so nothing of Discover (nor the
+// floating bottom-nav pill, which belongs to the shell's own Scaffold) shows
+// behind or beside it, and the Android back button / iOS back-swipe pop it
+// like any other pushed page.
 //
-// Width:    78% of screen, capped at 330px.
-// Height:   full screen.
-// Surface:  warm blush white (AppColors.backgroundLight).
+// Surface:  warm blush white (AppColors.backgroundLight) — the same colour
+//           AppBarTheme paints, so the bar reads as part of the same sheet.
 //
 // Layout (top → bottom):
-//   1. Compact profile header  (72px avatar + name + subtitle + ID pill)
-//   2. Profile Strength bar    (max 50px, plum→magenta progress)
-//   3. Scrollable menu list    (section dividers, active plum accent, 52px height)
-//   4. Premium upgrade strip   (compact, magenta border)
-//   5. Fixed bottom footer     (version + Rate Us)
+//   0. Bare AppBar             (back button only; owns the status-bar inset)
+//   ┌ one scroll view ────────────────────────────────────────────────────┐
+//   │ 1. Profile header  (responsive 76–104dp avatar, name, subtitle, ID) │
+//   │ 2. Profile Strength bar   (backend %, plum→magenta fill)            │
+//   │ 3. Menu list      (section dividers, active plum accent, 52px rows) │
+//   └─────────────────────────────────────────────────────────────────────┘
+//   4. Premium upgrade strip   (pinned; compact, magenta border)
+//   5. Fixed bottom footer     (pinned; version + Rate Us)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class NenjamNavigationDrawer extends ConsumerStatefulWidget {
+class ProfileMenuPage extends ConsumerStatefulWidget {
   /// Whether the user is a premium subscriber.
+  ///
+  /// TODO(backend): no subscription/premium-status endpoint is wired yet —
+  /// the same placeholder the Discover and Profile pages already use.
   final bool isPremium;
 
-  /// Tapping the avatar or the "+" badge — both open the same photo
-  /// management bottom sheet ([showPhotoManagerBottomSheet]).
-  final VoidCallback? onAvatarTap;
-
-  // ── Tap callbacks ──────────────────────────────────────────────────────────
-  final VoidCallback? onMyProfileTap;
-  final VoidCallback? onEditProfileTap;
-  final VoidCallback? onPartnerPreferencesTap;
-  final VoidCallback? onProfileIntelligenceTap;
-  final VoidCallback? onVerificationCenterTap;
-  final VoidCallback? onTrustScoreTap;
-  final VoidCallback? onInterestSentTap;
-  final VoidCallback? onInterestReceivedTap;
-  final VoidCallback? onShortlistTap;
-  final VoidCallback? onNearMeTap;
-  final VoidCallback? onProfileViewersTap;
-  final VoidCallback? onLanguageTap;
-  final VoidCallback? onSettingsTap;
-  final VoidCallback? onPrivacyTap;
-  final VoidCallback? onHelpTap;
-
-  /// Future-returning so the drawer can show a loading state and guard
-  /// against double-taps while the confirm dialog / sign-out call is
-  /// in flight — see [_NenjamNavigationDrawerState._handleLogout].
-  final Future<void> Function()? onLogoutTap;
-  final VoidCallback? onUpgradeTap;
-  final VoidCallback? onCompleteProfileTap;
-  final VoidCallback? onRateUsTap;
-
-  const NenjamNavigationDrawer({
-    super.key,
-    this.isPremium = false,
-    this.onAvatarTap,
-    this.onMyProfileTap,
-    this.onEditProfileTap,
-    this.onPartnerPreferencesTap,
-    this.onProfileIntelligenceTap,
-    this.onVerificationCenterTap,
-    this.onTrustScoreTap,
-    this.onInterestSentTap,
-    this.onInterestReceivedTap,
-    this.onShortlistTap,
-    this.onNearMeTap,
-    this.onProfileViewersTap,
-    this.onLanguageTap,
-    this.onSettingsTap,
-    this.onPrivacyTap,
-    this.onHelpTap,
-    this.onLogoutTap,
-    this.onUpgradeTap,
-    this.onCompleteProfileTap,
-    this.onRateUsTap,
-  });
+  const ProfileMenuPage({super.key, this.isPremium = false});
 
   @override
-  ConsumerState<NenjamNavigationDrawer> createState() =>
-      _NenjamNavigationDrawerState();
+  ConsumerState<ProfileMenuPage> createState() => _ProfileMenuPageState();
 }
 
-class _NenjamNavigationDrawerState
-    extends ConsumerState<NenjamNavigationDrawer> {
+class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
   bool _loggingOut = false;
 
-  /// Re-fetches every provider this drawer (and its badge counts) already
+  /// Re-fetches every provider this page (and its badge counts) already
   /// reads — no new data sources, just re-triggering existing ones.
   Future<void> _onRefresh() async {
     await Future.wait([
@@ -113,11 +77,13 @@ class _NenjamNavigationDrawerState
     ]);
   }
 
+  /// Guards against double-taps while the confirm dialog / sign-out call is
+  /// in flight, and drives the row's inline spinner.
   Future<void> _handleLogout() async {
     if (_loggingOut) return;
     setState(() => _loggingOut = true);
     try {
-      await widget.onLogoutTap?.call();
+      await confirmAndLogout(context, ref);
     } finally {
       if (mounted) setState(() => _loggingOut = false);
     }
@@ -126,16 +92,11 @@ class _NenjamNavigationDrawerState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Drawer width: 78% of screen, max 330px
-    final drawerWidth = (screenWidth * 0.78).clamp(0.0, 330.0);
-
-    // Single fetch shared by the header + strength bar — same provider the
-    // Profile page and Profile Completion screen already read, so this
-    // drawer never disagrees with them about who the user is or how
-    // complete their profile is.
+    // Single fetch shared by the header + strength bar — the same provider the
+    // Profile page and Profile Completion screen already read, so this menu
+    // never disagrees with them about who the user is or how complete their
+    // profile is.
     final draftAsync = ref.watch(myProfileDraftProvider);
     final completionAsync = ref.watch(backendProfileCompletionProvider);
     final authUser = ref.watch(currentAuthUserProvider);
@@ -144,61 +105,35 @@ class _NenjamNavigationDrawerState
     final identityLoading = draftAsync.isLoading && !draftAsync.hasValue;
     final identityError = draftAsync.hasError && !draftAsync.hasValue;
 
-    return Drawer(
-      width: drawerWidth,
-      backgroundColor: isDark
-          ? AppColors.backgroundDark
-          : AppColors.backgroundLight,
-      elevation: 16,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topRight: Radius.circular(AppSpacing.radiusMd),
-          bottomRight: Radius.circular(AppSpacing.radiusMd),
-        ),
-      ),
-      child: SafeArea(
+    return Scaffold(
+      backgroundColor: AppColors.backgroundLight,
+      // Bare AppBar — no title, just the platform back button. It inherits the
+      // app-wide AppBarTheme (this page's own background, elevation 0,
+      // SystemUiOverlayStyle.dark/light), which is what keeps the status bar
+      // behaving exactly as on every other pushed page: no hardcoded inset,
+      // no immersive mode, no bespoke overlay style.
+      appBar: AppBar(),
+      // top: false — the AppBar already consumed the status-bar inset. This is
+      // here so the pinned footer clears the gesture bar / home indicator.
+      body: SafeArea(
+        top: false,
         child: Column(
           children: [
-            // ── 1 & 2. Compact profile header + Profile Strength bar ───────
-            if (identityLoading)
-              const _IdentitySkeleton()
-            else if (identityError)
-              _IdentityError(
-                onRetry: () => ref.invalidate(profileDraftResponseProvider),
-              )
-            else ...[
-              _ProfileHeader(
-                imageUrl: null,
-                gender: draft?.basicDetails.gender ?? '',
-                name: profileDisplayName(draft, authUser, l10n),
-                age: profileDisplayAge(draft) ?? 0,
-                location: profileDisplayLocation(draft, l10n),
-                community: draft?.religionDetails.community ?? '',
-                profileId: profileDisplayId(authUser),
-                isVerified: authUser?.isFullyVerified ?? false,
-                isPremium: widget.isPremium,
-                onAvatarTap: widget.onAvatarTap,
-              ),
-              _ProfileStrengthBar(
-                percent: completionAsync.valueOrNull ?? 85,
-                l10n: l10n,
-                onTap: () {
-                  Navigator.pop(context);
-                  widget.onCompleteProfileTap?.call();
-                },
-              ),
-            ],
-
-            // Thin divider
-            Divider(
-              height: 1,
-              thickness: 1,
-              color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
-              indent: AppSpacing.base,
-              endIndent: AppSpacing.base,
-            ),
-
-            // ── 3. Scrollable menu ─────────────────────────────────────────
+            // ── 1–3. Header, Profile Strength bar and menu — one scroll ────
+            //
+            // The header scrolls WITH the menu rather than staying pinned the
+            // way the drawer's did. Pinned, header + strength bar + premium
+            // strip + footer are ~310dp of fixed chrome, which is more than a
+            // landscape 320dp-tall viewport has to give: the Expanded menu
+            // collapsed to zero and the Column overflowed by up to 80px. As
+            // part of the scroll they simply scroll away instead, and the
+            // portrait layout is unchanged — the menu is always taller than
+            // the viewport, so it scrolled either way.
+            //
+            // Destinations, order and handlers are the drawer's exactly —
+            // only the close-the-drawer-first step is gone, since there is no
+            // drawer left to close. Each one pushes onto the root navigator,
+            // so this menu stays underneath and Back returns here.
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _onRefresh,
@@ -208,6 +143,49 @@ class _NenjamNavigationDrawerState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      if (identityLoading)
+                        const _IdentitySkeleton()
+                      else if (identityError)
+                        _IdentityError(
+                          onRetry: () =>
+                              ref.invalidate(profileDraftResponseProvider),
+                        )
+                      else ...[
+                        _ProfileHeader(
+                          imageUrl: null,
+                          gender: draft?.basicDetails.gender ?? '',
+                          name: profileDisplayName(draft, authUser, l10n),
+                          age: profileDisplayAge(draft) ?? 0,
+                          location: profileDisplayLocation(draft, l10n),
+                          community: draft?.religionDetails.community ?? '',
+                          profileId: profileDisplayId(authUser),
+                          isVerified: authUser?.isFullyVerified ?? false,
+                          isPremium: widget.isPremium,
+                          onAvatarTap: () =>
+                              showPhotoManagerBottomSheet(context),
+                        ),
+                        _ProfileStrengthBar(
+                          // The backend's `completionPercentage`, straight
+                          // off the same GET /profiles/draft response the
+                          // header above reads — never a number this page
+                          // derives. 0 while it is genuinely unknown, rather
+                          // than a flattering placeholder.
+                          percent: completionAsync.valueOrNull ?? 0,
+                          l10n: l10n,
+                          onTap: () =>
+                              context.push(RouteNames.profileCompletion),
+                        ),
+                      ],
+
+                      // Thin divider
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: AppColors.dividerLight,
+                        indent: AppSpacing.base,
+                        endIndent: AppSpacing.base,
+                      ),
+
                       const SizedBox(height: AppSpacing.xs),
 
                       // Profile group
@@ -215,50 +193,29 @@ class _NenjamNavigationDrawerState
                         icon: Icons.person_outline_rounded,
                         label: l10n.drawerProfile,
                         isActive: true,
-                        onTap: () {
-                          Navigator.pop(context);
-                          widget.onMyProfileTap?.call();
-                        },
+                        onTap: () => context.push(RouteNames.profile),
                       ),
                       _DrawerItem(
                         icon: Icons.edit_outlined,
                         label: l10n.drawerEditProfile,
-                        onTap: () {
-                          Navigator.pop(context);
-                          widget.onEditProfileTap?.call();
-                        },
+                        onTap: () => openEditProfile(context, ref),
                       ),
                       _DrawerItem(
                         icon: Icons.favorite_border_rounded,
                         label: l10n.drawerPartnerPreferences,
-                        onTap: () {
-                          Navigator.pop(context);
-                          widget.onPartnerPreferencesTap?.call();
-                        },
+                        onTap: () => openPartnerPreferences(context, ref),
                       ),
                       _DrawerItem(
                         icon: Icons.auto_awesome_rounded,
                         label: l10n.drawerProfileIntelligence,
-                        onTap: () {
-                          Navigator.pop(context);
-                          widget.onProfileIntelligenceTap?.call();
-                        },
+                        onTap: () =>
+                            context.push(RouteNames.profileIntelligence),
                       ),
                       _DrawerItem(
                         icon: Icons.shield_outlined,
                         label: l10n.drawerVerificationCenter,
-                        onTap: () {
-                          Navigator.pop(context);
-                          widget.onVerificationCenterTap?.call();
-                        },
-                      ),
-                      _DrawerItem(
-                        icon: Icons.star_outline_rounded,
-                        label: l10n.drawerTrustScore,
-                        onTap: () {
-                          Navigator.pop(context);
-                          widget.onTrustScoreTap?.call();
-                        },
+                        onTap: () =>
+                            openEditProfile(context, ref, wizardStep: 12),
                       ),
 
                       _MenuDivider(),
@@ -273,10 +230,7 @@ class _NenjamNavigationDrawerState
                               .valueOrNull
                               ?.where((r) => r.status == InterestStatus.pending)
                               .length,
-                          onTap: () {
-                            Navigator.pop(context);
-                            widget.onInterestSentTap?.call();
-                          },
+                          onTap: () => context.push(RouteNames.interestsSent),
                         ),
                       ),
                       Consumer(
@@ -288,10 +242,8 @@ class _NenjamNavigationDrawerState
                               .valueOrNull
                               ?.where((r) => r.status == InterestStatus.pending)
                               .length,
-                          onTap: () {
-                            Navigator.pop(context);
-                            widget.onInterestReceivedTap?.call();
-                          },
+                          onTap: () =>
+                              context.push(RouteNames.interestsReceived),
                         ),
                       ),
                       Consumer(
@@ -303,10 +255,7 @@ class _NenjamNavigationDrawerState
                           icon: Icons.bookmark_border_rounded,
                           label: l10n.drawerShortlist,
                           count: ref.watch(shortlistCountProvider),
-                          onTap: () {
-                            Navigator.pop(context);
-                            widget.onShortlistTap?.call();
-                          },
+                          onTap: () => context.push(RouteNames.shortlisted),
                         ),
                       ),
                       _DrawerItem(
@@ -314,20 +263,18 @@ class _NenjamNavigationDrawerState
                         // card uses, so the icon means one thing app-wide.
                         icon: Icons.near_me_outlined,
                         label: l10n.drawerNearMe,
-                        onTap: () {
-                          Navigator.pop(context);
-                          widget.onNearMeTap?.call();
-                        },
+                        onTap: () => context.push(RouteNames.nearby),
                       ),
                       _DrawerItem(
                         // Same eye used by the Profile Viewers empty state and
                         // by the PROFILE_VIEW notification icon.
                         icon: Icons.visibility_outlined,
                         label: l10n.profileViewersTitle,
-                        onTap: () {
-                          Navigator.pop(context);
-                          widget.onProfileViewersTap?.call();
-                        },
+                        // push (not go), and deliberately without
+                        // `openedFromNotification` — that omission is what
+                        // makes Back fall back here rather than to the
+                        // Notification Center.
+                        onTap: () => context.push(RouteNames.profileViewers),
                       ),
 
                       _MenuDivider(),
@@ -336,43 +283,30 @@ class _NenjamNavigationDrawerState
                       _DrawerItem(
                         icon: Icons.language_outlined,
                         label: l10n.drawerLanguage,
-                        onTap: () {
-                          Navigator.pop(context);
-                          widget.onLanguageTap?.call();
-                        },
+                        onTap: () => context.push(RouteNames.language),
                       ),
                       _DrawerItem(
                         icon: Icons.settings_outlined,
                         label: l10n.drawerSettings,
-                        onTap: () {
-                          Navigator.pop(context);
-                          widget.onSettingsTap?.call();
-                        },
+                        onTap: () => context.push(RouteNames.settings),
                       ),
                       _DrawerItem(
                         icon: Icons.lock_outline_rounded,
                         label: l10n.drawerPrivacy,
-                        onTap: () {
-                          Navigator.pop(context);
-                          widget.onPrivacyTap?.call();
-                        },
+                        onTap: () => context.push(RouteNames.privacy),
                       ),
                       _DrawerItem(
                         icon: Icons.help_outline_rounded,
                         label: l10n.drawerHelp,
-                        onTap: () {
-                          Navigator.pop(context);
-                          widget.onHelpTap?.call();
-                        },
+                        onTap: () => context.push(RouteNames.help),
                       ),
 
                       _MenuDivider(),
 
-                      // Logout — no Navigator.pop before the call: confirmAndLogout
-                      // shows its confirm dialog over the still-open drawer, and
-                      // its final context.go(RouteNames.login) replaces the whole
-                      // page (drawer included) once confirmed, so popping first
-                      // would only hide the loading state below without helping.
+                      // Logout — confirmAndLogout shows its confirm dialog over
+                      // this page, and its final context.go(RouteNames.login)
+                      // replaces the whole stack (this page included) once
+                      // confirmed, so there is nothing to pop first.
                       _DrawerItem(
                         icon: Icons.logout_rounded,
                         label: l10n.drawerLogout,
@@ -394,14 +328,13 @@ class _NenjamNavigationDrawerState
             if (!widget.isPremium)
               _PremiumStrip(
                 l10n: l10n,
-                onTap: () {
-                  Navigator.pop(context);
-                  widget.onUpgradeTap?.call();
-                },
+                // go (not push): Premium is a bottom-nav branch, so this
+                // switches to that tab and drops this page off the stack.
+                onTap: () => context.go(RouteNames.premium),
               ),
 
             // ── 5. Fixed footer ────────────────────────────────────────────
-            _DrawerFooter(onRateUsTap: widget.onRateUsTap, l10n: l10n),
+            _DrawerFooter(l10n: l10n),
           ],
         ),
       ),
@@ -412,7 +345,7 @@ class _NenjamNavigationDrawerState
 // ─────────────────────────────────────────────────────────────────────────────
 // Header/strength-bar loading + error placeholders — shown only on a cold
 // start with no cached draft yet; a failed pull-to-refresh keeps showing the
-// last-known values instead (see NenjamNavigationDrawer.build).
+// last-known values instead (see ProfileMenuPage.build).
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _IdentitySkeleton extends StatelessWidget {
@@ -420,24 +353,31 @@ class _IdentitySkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.base,
-        AppSpacing.base,
-        AppSpacing.base,
-        AppSpacing.sm,
-      ),
+    // Mirrors the loaded header's metrics so nothing jumps when the draft
+    // arrives.
+    final hPad = _headerHorizontalPadding(context);
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(hPad, AppSpacing.lg, hPad, AppSpacing.md),
       child: Column(
         children: [
-          NmShimmer.circle(size: 72),
-          SizedBox(height: AppSpacing.sm),
-          NmShimmer(width: 140, height: 18, borderRadius: AppSpacing.radiusSm),
-          SizedBox(height: AppSpacing.xs2),
-          NmShimmer(width: 100, height: 13, borderRadius: AppSpacing.radiusSm),
-          SizedBox(height: AppSpacing.sm),
-          Padding(
+          NmShimmer.circle(size: _avatarDiameter(context)),
+          const SizedBox(height: AppSpacing.md),
+          const NmShimmer(
+            width: 150,
+            height: 20,
+            borderRadius: AppSpacing.radiusSm,
+          ),
+          const SizedBox(height: AppSpacing.xs2),
+          const NmShimmer(
+            width: 110,
+            height: 14,
+            borderRadius: AppSpacing.radiusSm,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          const Padding(
             padding: EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-            child: NmShimmer(height: 46, borderRadius: AppSpacing.radiusSm),
+            child: NmShimmer(height: 52, borderRadius: AppSpacing.radiusSm),
           ),
         ],
       ),
@@ -452,7 +392,6 @@ class _IdentityError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.base),
       child: Row(
@@ -467,9 +406,7 @@ class _IdentityError extends StatelessWidget {
             child: Text(
               AppLocalizations.of(context).commonCouldNotLoadProfile,
               style: AppTypography.bodySmall.copyWith(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
+                color: AppColors.textSecondaryLight,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -492,8 +429,37 @@ class _IdentityError extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Profile Header — compact, 72px avatar
+// Profile Header — responsive avatar (76–104dp)
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// Avatar diameter as a bounded fraction of the device's SHORTEST side.
+///
+/// Shortest side rather than raw width so a rotated phone doesn't suddenly
+/// hand the header a 700dp-wide screen and an avatar that eats the whole
+/// landscape viewport — the same device gets the same avatar either way.
+/// The clamp is what keeps it honest at both ends: never smaller than the
+/// old fixed 72dp felt on a compact phone, never a portrait-filling disc on
+/// a tablet.
+///
+///   320dp → 76.8 · 360dp → 86.4 · 393dp → 94.3 · 412dp → 98.9 · 480dp+ → 104
+double _avatarDiameter(BuildContext context) =>
+    (MediaQuery.sizeOf(context).shortestSide * 0.24).clamp(76.0, 104.0);
+
+/// Overlay badge diameter ("+", verified tick, premium crown), tied to the
+/// avatar so the badges keep their proportion as it grows.
+double _avatarBadgeSize(double avatarDiameter) =>
+    (avatarDiameter * 0.26).clamp(20.0, 26.0);
+
+/// Horizontal padding for the header and the Profile Strength card. Phones
+/// keep the existing 16dp; only tablets/desktop widen, via the project's
+/// existing [ResponsiveUtils.adaptive] convention.
+double _headerHorizontalPadding(BuildContext context) =>
+    ResponsiveUtils.adaptive(
+      context,
+      phone: AppSpacing.base,
+      tablet: AppSpacing.xl,
+      desktop: AppSpacing.xl2,
+    );
 
 class _ProfileHeader extends StatelessWidget {
   final String? imageUrl;
@@ -522,22 +488,17 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final badgeRingColor = isDark
-        ? AppColors.backgroundDark
-        : AppColors.backgroundLight;
+    const badgeRingColor = AppColors.backgroundLight;
+    final avatar = _avatarDiameter(context);
+    final badge = _avatarBadgeSize(avatar);
+    final hPad = _headerHorizontalPadding(context);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.base,
-        AppSpacing.base,
-        AppSpacing.base,
-        AppSpacing.sm,
-      ),
+      padding: EdgeInsets.fromLTRB(hPad, AppSpacing.lg, hPad, AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // ── 72px circular avatar with plum ring ────────────────────────
+          // ── Circular avatar with plum ring ─────────────────────────────
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -549,8 +510,8 @@ class _ProfileHeader extends StatelessWidget {
                 child: GestureDetector(
                   onTap: onAvatarTap,
                   child: Container(
-                    width: 72,
-                    height: 72,
+                    width: avatar,
+                    height: avatar,
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
@@ -560,16 +521,16 @@ class _ProfileHeader extends StatelessWidget {
                       ),
                     ),
                     child: Container(
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isDark
-                            ? AppColors.surfaceVariantDark
-                            : AppColors.primarySurface,
+                        color: AppColors.primarySurface,
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: _LiveAvatarImage(
                         imageUrl: imageUrl,
                         gender: gender,
+                        // Inside the 2dp pad and the 1.5dp ring.
+                        size: avatar - 7,
                       ),
                     ),
                   ),
@@ -584,16 +545,16 @@ class _ProfileHeader extends StatelessWidget {
                   child: GestureDetector(
                     onTap: onAvatarTap,
                     child: Container(
-                      width: 20,
-                      height: 20,
+                      width: badge,
+                      height: badge,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: AppColors.verifiedBlue,
                         border: Border.all(color: badgeRingColor, width: 1.5),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.add_rounded,
-                        size: 14,
+                        size: badge * 0.68,
                         color: Colors.white,
                       ),
                     ),
@@ -605,16 +566,16 @@ class _ProfileHeader extends StatelessWidget {
                   right: 0,
                   bottom: 0,
                   child: Container(
-                    width: 20,
-                    height: 20,
+                    width: badge,
+                    height: badge,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: AppColors.verifiedBlue,
                       border: Border.all(color: badgeRingColor, width: 1.5),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.check_rounded,
-                      size: 11,
+                      size: badge * 0.55,
                       color: Colors.white,
                     ),
                   ),
@@ -625,16 +586,16 @@ class _ProfileHeader extends StatelessWidget {
                   left: 0,
                   bottom: 0,
                   child: Container(
-                    width: 20,
-                    height: 20,
+                    width: badge,
+                    height: badge,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: AppColors.secondary,
                       border: Border.all(color: badgeRingColor, width: 1.5),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.workspace_premium_rounded,
-                      size: 11,
+                      size: badge * 0.55,
                       color: Colors.white,
                     ),
                   ),
@@ -642,7 +603,7 @@ class _ProfileHeader extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.md),
 
           // ── Name ─────────────────────────────────────────
           Row(
@@ -652,10 +613,12 @@ class _ProfileHeader extends StatelessWidget {
               Flexible(
                 child: Text(
                   name,
+                  // 16 → 18: the header's anchor, so it takes the largest
+                  // share of this screen's ~10% type increase. Still a step
+                  // below titleLarge, which keeps the hierarchy intact.
                   style: AppTypography.titleMedium.copyWith(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.primary,
+                    fontSize: 18,
+                    color: AppColors.primary,
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 1,
@@ -667,7 +630,7 @@ class _ProfileHeader extends StatelessWidget {
                 const SizedBox(width: AppSpacing.xs2),
                 const Icon(
                   Icons.verified_rounded,
-                  size: 16,
+                  size: 18,
                   color: AppColors.verifiedBlue,
                 ),
               ],
@@ -678,10 +641,10 @@ class _ProfileHeader extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs2),
           Text(
             [if (age > 0) '$age', location].join(' • '),
+            // 12 → 13
             style: AppTypography.bodySmall.copyWith(
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
+              fontSize: 13,
+              color: AppColors.textSecondaryLight,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -693,7 +656,9 @@ class _ProfileHeader extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs2),
             Text(
               community,
+              // 11 → 12
               style: AppTypography.labelSmall.copyWith(
+                fontSize: 12,
                 color: AppColors.secondaryDark,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.3,
@@ -714,7 +679,7 @@ class _ProfileHeader extends StatelessWidget {
               ),
               decoration: BoxDecoration(
                 color: AppColors.accentSoft.withValues(
-                  alpha: isDark ? 0.16 : 1.0,
+                  alpha: 1.0,
                 ),
                 borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
                 border: Border.all(
@@ -726,7 +691,8 @@ class _ProfileHeader extends StatelessWidget {
                 style: AppTypography.labelSmall.copyWith(
                   color: AppColors.secondaryDark,
                   fontWeight: FontWeight.w600,
-                  fontSize: 10,
+                  // 10 → 11
+                  fontSize: 11,
                   letterSpacing: 0.5,
                 ),
                 maxLines: 1,
@@ -741,23 +707,26 @@ class _ProfileHeader extends StatelessWidget {
 }
 
 /// Reads the live current-user photo directly from [myPrimaryPhotoUrlProvider]
-/// — scoped to just this leaf widget (not the whole drawer) so uploading,
+/// — scoped to just this leaf widget (not the whole page) so uploading,
 /// replacing, or deleting a photo only rebuilds this small avatar, not the
-/// entire [NenjamNavigationDrawer] menu tree. Falls back to the [imageUrl]
+/// entire [ProfileMenuPage] menu tree. Falls back to the [imageUrl]
 /// prop (the caller's best-known value) until the provider has loaded, then
 /// to the gender placeholder if the user has no photos at all.
 class _LiveAvatarImage extends ConsumerWidget {
   final String? imageUrl;
   final String gender;
 
-  const _LiveAvatarImage({this.imageUrl, this.gender = ''});
+  /// Inner diameter, derived from the responsive ring around it.
+  final double size;
+
+  const _LiveAvatarImage({this.imageUrl, this.gender = '', this.size = 65});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final liveUrl = ref.watch(myPrimaryPhotoUrlProvider);
     return NmCircleAvatar(
       imageUrl: liveUrl ?? imageUrl,
-      size: 68,
+      size: size,
       gender: gender,
       // Bias the cover-crop upward so the face stays centered in the
       // circle without the head's top being cut off by a dead-center crop.
@@ -767,7 +736,11 @@ class _LiveAvatarImage extends ConsumerWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Profile Strength Bar — compact, max 50px
+// Profile Strength Bar
+//
+// [percent] is the backend's completionPercentage, passed straight through:
+// this widget renders it, it never computes a score of its own, and there is
+// no second metric on this card.
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ProfileStrengthBar extends StatelessWidget {
@@ -783,23 +756,23 @@ class _ProfileStrengthBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final clamped = percent.clamp(0, 100);
 
     return GestureDetector(
       onTap: clamped < 100 ? onTap : null,
       child: Container(
-        height: 46,
-        margin: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.base,
+        // No fixed height: the card now sizes to its own content, so a
+        // larger system text scale grows it instead of clipping the label.
+        margin: EdgeInsets.symmetric(
+          horizontal: _headerHorizontalPadding(context),
           vertical: AppSpacing.xs,
         ),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.xs,
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: AppColors.softLavender.withValues(alpha: isDark ? 0.16 : 1.0),
+          color: AppColors.softLavender.withValues(alpha: 1.0),
           borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
           border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
         ),
@@ -810,27 +783,36 @@ class _ProfileStrengthBar extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  l10n.drawerProfileStrength,
-                  style: AppTypography.labelSmall.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                    fontWeight: FontWeight.w500,
+                // 11 → 12
+                Flexible(
+                  child: Text(
+                    l10n.drawerProfileStrength,
+                    style: AppTypography.labelMedium.copyWith(
+                      color: AppColors.textSecondaryLight,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: AppSpacing.sm),
+                // 11 → 14: the figure is the point of the card.
                 Text(
                   '$clamped%',
-                  style: AppTypography.labelSmall.copyWith(
+                  style: AppTypography.labelLarge.copyWith(
                     color: AppColors.primaryDark,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
-            // Plum→magenta progress bar
-            NmGradientProgressBar(value: clamped / 100.0, height: 4),
+            const SizedBox(height: AppSpacing.sm),
+            // Plum→magenta fill over the soft lavender track, filled to
+            // exactly [clamped]% — 8dp so the ramp reads as a deliberate
+            // measure rather than a hairline. The fill animates itself in
+            // (NmGradientProgressBar already did), matching the completion
+            // hero on the Profile Strength screen.
+            NmGradientProgressBar(value: clamped / 100.0, height: 8),
           ],
         ),
       ),
@@ -845,11 +827,10 @@ class _ProfileStrengthBar extends StatelessWidget {
 class _MenuDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Divider(
+    return const Divider(
       height: 12,
       thickness: 1,
-      color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+      color: AppColors.dividerLight,
       indent: AppSpacing.base,
       endIndent: AppSpacing.base,
     );
@@ -857,7 +838,7 @@ class _MenuDivider extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Drawer Menu Item — 52px height
+// Drawer Menu Item — 54px height
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _DrawerItem extends StatefulWidget {
@@ -924,13 +905,12 @@ class _DrawerItemState extends State<_DrawerItem>
       widget.iconColor ??
       (widget.isActive ? AppColors.primary : AppColors.secondary);
 
-  Color _effectiveLabelColor(bool isDark) =>
+  Color _effectiveLabelColor() =>
       widget.labelColor ??
-      (isDark ? AppColors.textPrimaryDark : AppColors.primary);
+      AppColors.primary;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final iconColor = _effectiveIconColor;
 
     return Semantics(
@@ -954,12 +934,12 @@ class _DrawerItemState extends State<_DrawerItem>
                     }
                   : null,
               child: Container(
-                height: 52,
+                height: 54,
                 margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                 decoration: BoxDecoration(
                   color: widget.isActive
                       ? AppColors.softLavender.withValues(
-                          alpha: isDark ? 0.16 : 1.0,
+                          alpha: 1.0,
                         )
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -976,13 +956,15 @@ class _DrawerItemState extends State<_DrawerItem>
                   ),
                   child: Row(
                     children: [
-                      Icon(widget.icon, size: 20, color: iconColor),
+                      Icon(widget.icon, size: 22, color: iconColor),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Text(
                           widget.label,
+                          // 14 → 15
                           style: AppTypography.bodyMedium.copyWith(
-                            color: _effectiveLabelColor(isDark),
+                            fontSize: 15,
+                            color: _effectiveLabelColor(),
                             fontWeight: widget.isActive
                                 ? FontWeight.w600
                                 : FontWeight.w500,
@@ -1007,12 +989,10 @@ class _DrawerItemState extends State<_DrawerItem>
                           ),
                         )
                       else if (widget.showChevron)
-                        Icon(
+                        const Icon(
                           Icons.chevron_right_rounded,
-                          size: 18,
-                          color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
+                          size: 20,
+                          color: AppColors.textTertiaryLight,
                         ),
                     ],
                   ),
@@ -1112,23 +1092,21 @@ class _PremiumStrip extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _DrawerFooter extends StatelessWidget {
-  final VoidCallback? onRateUsTap;
   final AppLocalizations l10n;
 
-  const _DrawerFooter({required this.l10n, this.onRateUsTap});
+  const _DrawerFooter({required this.l10n});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.base,
         vertical: AppSpacing.xs,
       ),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         border: Border(
           top: BorderSide(
-            color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+            color: AppColors.dividerLight,
           ),
         ),
       ),
@@ -1138,25 +1116,25 @@ class _DrawerFooter extends StatelessWidget {
           Flexible(
             child: Text(
               '${l10n.drawerVersionLabel} v2.4',
+              // 10 → 11
               style: AppTypography.labelSmall.copyWith(
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
-                fontSize: 10,
+                color: AppColors.textTertiaryLight,
+                fontSize: 11,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          GestureDetector(
-            onTap: onRateUsTap,
-            child: Text(
-              AppLocalizations.of(context).drawerRateUs,
-              style: AppTypography.labelSmall.copyWith(
-                color: AppColors.secondaryDark,
-                fontWeight: FontWeight.w700,
-                fontSize: 10,
-              ),
+          // No tap handler — the drawer's `onRateUsTap` hook was never wired
+          // by any caller, so this label has always been inert. Kept exactly
+          // as it renders today rather than inventing a store-review flow.
+          Text(
+            AppLocalizations.of(context).drawerRateUs,
+            // 10 → 11
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.secondaryDark,
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
             ),
           ),
         ],

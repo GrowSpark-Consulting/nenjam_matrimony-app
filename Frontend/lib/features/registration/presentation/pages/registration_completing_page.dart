@@ -10,6 +10,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
+import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../providers/registration_provider.dart';
 
@@ -93,15 +94,21 @@ class _RegistrationCompletingPageState
       l10n.registrationCompletingStage4,
     ];
 
-    return Scaffold(
-      body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: AppGradients.splash),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: _errorMessage != null
-                ? _buildError(context, l10n)
-                : _buildChecklist(context, l10n, stages),
+    // Same dark brand gradient as the splash/welcome screens, drawn behind
+    // the status bar regardless of app theme — icon brightness is derived
+    // from that fixed background rather than the theme default.
+    return NmPageStatusBar(
+      background: AppGradients.splash.colors.first,
+      child: Scaffold(
+        body: DecoratedBox(
+          decoration: const BoxDecoration(gradient: AppGradients.splash),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: _errorMessage != null
+                  ? _buildError(context, l10n)
+                  : _buildChecklist(context, l10n, stages),
+            ),
           ),
         ),
       ),

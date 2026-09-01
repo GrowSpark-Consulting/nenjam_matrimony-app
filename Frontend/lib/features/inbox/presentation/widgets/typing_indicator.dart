@@ -11,16 +11,14 @@ class TypingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
-          borderRadius: const BorderRadius.only(
+        decoration: const BoxDecoration(
+          color: AppColors.surfaceVariantLight,
+          borderRadius: BorderRadius.only(
             topLeft: Radius.circular(4),
             topRight: Radius.circular(18),
             bottomLeft: Radius.circular(18),

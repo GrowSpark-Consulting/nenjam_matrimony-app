@@ -63,17 +63,16 @@ class NmVerificationStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = _accentColor();
     final isDone = status == NmVerificationCardStatus.verified;
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: AppDecorations.card(isDark: isDark).copyWith(
+      decoration: AppDecorations.card().copyWith(
         border: Border.all(
           color: isDone || status == NmVerificationCardStatus.pending
               ? accent
-              : (isDark ? AppColors.borderDark : AppColors.borderLight),
+              : AppColors.borderLight,
           width: isDone ? 1.5 : 1,
         ),
       ),
@@ -128,9 +127,7 @@ class NmVerificationStatusCard extends StatelessWidget {
                     Text(
                       subtitle,
                       style: AppTypography.bodySmall.copyWith(
-                        color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
+                        color: AppColors.textTertiaryLight,
                       ),
                     ),
                     if (statusLabel != null) ...[

@@ -8,6 +8,7 @@ import 'package:nenjam_matrimony/features/inbox/presentation/pages/inbox_page.da
 import 'package:nenjam_matrimony/features/matches/presentation/pages/matches_page.dart';
 import 'package:nenjam_matrimony/features/premium/presentation/pages/premium_page.dart';
 import 'package:nenjam_matrimony/features/profile_detail/presentation/pages/profile_detail_page.dart';
+import 'package:nenjam_matrimony/features/profile_menu/presentation/pages/profile_menu_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/profile_wizard_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/registration_page.dart';
 import 'package:nenjam_matrimony/features/settings/presentation/pages/settings_page.dart';
@@ -248,6 +249,10 @@ void main() {
 
   testWidgets('Inbox is responsive across phone sizes', (tester) async {
     await _audit(tester, 'InboxPage', () => const InboxPage());
+  });
+
+  testWidgets('Profile menu is responsive across phone sizes', (tester) async {
+    await _audit(tester, 'ProfileMenuPage', () => const ProfileMenuPage());
   });
 
   testWidgets('Premium is responsive across phone sizes', (tester) async {

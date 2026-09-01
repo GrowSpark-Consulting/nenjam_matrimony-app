@@ -15,12 +15,10 @@ class RegistrationHelperTip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return AppAnimations.fade(
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: AppDecorations.cardSubtle(isDark: isDark),
+        decoration: AppDecorations.cardSubtle(),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -34,9 +32,7 @@ class RegistrationHelperTip extends StatelessWidget {
               child: Text(
                 text,
                 style: AppTypography.bodySmall.copyWith(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
+                  color: AppColors.textSecondaryLight,
                 ),
               ),
             ),

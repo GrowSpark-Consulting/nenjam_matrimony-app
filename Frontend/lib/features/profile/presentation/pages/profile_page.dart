@@ -95,7 +95,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // ── Existing providers — UNCHANGED ─────────────────────────────
     final AsyncValue<HoroscopeSummary> horoscopeAsync = ref.watch(
@@ -144,10 +143,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     const smallGap = SizedBox(height: AppSpacing.base);
 
     return Scaffold(
-      backgroundColor: isDark
-          ? AppColors.backgroundDark
-          : AppColors.backgroundLight,
-      appBar: _buildAppBar(context, l10n, isDark),
+      backgroundColor: AppColors.backgroundLight,
+      appBar: _buildAppBar(context, l10n),
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
@@ -169,10 +166,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     nmId: profileDisplayId(authUser),
                     imageUrl: primaryPhotoUrl,
                     location: profileDisplayLocation(draft, l10n),
-                    // TODO(backend): no trust-score concept exists yet
-                    // anywhere in the app (no entity, no endpoint) —
-                    // placeholder until the backend defines one.
-                    trustScore: 0,
                     profileCompletion: completionPct,
                     // TODO(backend): no subscription/premium-status
                     // endpoint is wired yet (ApiEndpoints.
@@ -506,7 +499,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   PreferredSizeWidget _buildAppBar(
     BuildContext context,
     AppLocalizations l10n,
-    bool isDark,
   ) {
     return AppBar(
       automaticallyImplyLeading: false,
@@ -517,7 +509,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       title: Text(
         l10n.profileTitle,
         style: AppTypography.titleLarge.copyWith(
-          color: isDark ? AppColors.textPrimaryDark : AppColors.primary,
+          color: AppColors.primary,
         ),
       ),
       actions: [
@@ -525,9 +517,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         IconButton(
           tooltip: l10n.settingsTitle,
           onPressed: () => context.push(RouteNames.settings),
-          icon: Icon(
+          icon: const Icon(
             Icons.settings_outlined,
-            color: isDark ? AppColors.textSecondaryDark : AppColors.primary,
+            color: AppColors.primary,
           ),
         ),
         const SizedBox(width: AppSpacing.sm),

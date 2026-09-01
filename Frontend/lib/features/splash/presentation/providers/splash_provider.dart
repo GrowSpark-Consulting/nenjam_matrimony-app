@@ -9,6 +9,7 @@ import '../../../../core/router/route_names.dart';
 import '../../../../core/services/storage_service.dart';
 import '../../../authentication/data/services/backend_sync_service.dart';
 import '../../../authentication/presentation/providers/auth_providers.dart';
+import '../../../authentication/presentation/utils/post_auth_destination.dart';
 import '../../../registration/domain/models/profile_draft.dart';
 import '../../../registration/domain/models/profile_flow_mode.dart';
 import '../../../registration/presentation/providers/registration_provider.dart';
@@ -33,11 +34,16 @@ const _restorableTabRoutes = {
 ///
 /// Order of precedence:
 /// 1. First launch (no language chosen) → language selection.
-/// 2. No Firebase session → auth selection.
+/// 2. No Firebase session → the sign-up landing screen.
 /// 3. Signed in but not fully verified → resume the verification flow.
 /// 4. Signed in, verified, and a mid-registration/edit session (or last
 ///    tab) was saved before the process died → resume it exactly.
-/// 5. Signed in and verified → Discover.
+/// 5. Signed in and verified, with no local snapshot to resume → ask
+///    [PostAuthDestination]: an unfinished profile resumes registration
+///    (from the backend's own copy of the draft), a finished one opens
+///    Discover. This is what makes a reinstall, a new device, or a
+///    process killed before the debounced save landed still pick up where
+///    the user left off instead of dropping them into an empty Discover.
 class SplashController extends Notifier<void> {
   @override
   void build() {}
@@ -66,7 +72,7 @@ class SplashController extends Notifier<void> {
     final repo = ref.read(authRepositoryProvider);
     if (user == null) {
       await storageService.clearNavState();
-      return RouteNames.authSelection;
+      return RouteNames.registrationLanding;
     }
 
     // Best-effort: refreshes this session's mirror in the NestJS + Postgres
@@ -84,7 +90,11 @@ class SplashController extends Notifier<void> {
       return RouteNames.verifyEmail;
     }
 
-    return _resolveSavedRoute() ?? RouteNames.discover;
+    // The local snapshot wins when there is one — it is exact (the very
+    // step and field values the user last saw) and needs no network.
+    // Otherwise fall back to the backend's view of how far they got.
+    return _resolveSavedRoute() ??
+        await ref.read(postAuthDestinationProvider).resolve();
   }
 
   /// Resumes whatever screen was saved on the last [AppLifecycleState.paused]
@@ -104,6 +114,21 @@ class SplashController extends Notifier<void> {
         );
         final step = storageService.savedRegistrationStep ?? draft.currentStep;
         final mode = ProfileFlowMode.values.byName(modeStr);
+
+        // A snapshot is the one way into the wizard that doesn't pass
+        // through PostAuthDestination, so it needs the same gate: a CREATE
+        // session with no "profile is for" answer has nothing to resume
+        // into — step 0 requires that value and only CreateProfileForPage
+        // collects it. Deliberately does not restore the draft first: the
+        // user is starting the flow properly, and that screen's
+        // startCreateMode() would discard a half-restored one anyway.
+        // EDIT sessions are exempt — they act on an already-finalized
+        // profile and must never be sent through registration.
+        if (mode == ProfileFlowMode.create &&
+            draft.basicDetails.profileCreatedFor.trim().isEmpty) {
+          return RouteNames.createProfileFor;
+        }
+
         ref
             .read(registrationProvider.notifier)
             .restore(draft.copyWith(currentStep: step), mode);

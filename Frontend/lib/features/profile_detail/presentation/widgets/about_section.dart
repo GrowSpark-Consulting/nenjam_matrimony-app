@@ -18,16 +18,13 @@ class AboutSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final base = detail.base;
-    final textSecondary = isDark
-        ? AppColors.textSecondaryDark
-        : AppColors.textSecondaryLight;
+    const textSecondary = AppColors.textSecondaryLight;
 
     return Container(
       width: double.infinity,
       padding: AppSpacing.cardPaddingLarge,
-      decoration: AppDecorations.card(isDark: isDark),
+      decoration: AppDecorations.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -48,12 +45,10 @@ class AboutSection extends StatelessWidget {
           const SizedBox(height: AppSpacing.base),
           Container(
             padding: const EdgeInsets.only(top: AppSpacing.base),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               border: Border(
                 top: BorderSide(
-                  color: isDark
-                      ? AppColors.dividerDark
-                      : AppColors.dividerLight,
+                  color: AppColors.dividerLight,
                 ),
               ),
             ),
@@ -139,7 +134,6 @@ class _StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       width: 150,
       child: Column(
@@ -148,9 +142,7 @@ class _StatTile extends StatelessWidget {
           Text(
             label.toUpperCase(),
             style: AppTypography.labelSmall.copyWith(
-              color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
+              color: AppColors.textTertiaryLight,
               letterSpacing: 0.8,
             ),
           ),

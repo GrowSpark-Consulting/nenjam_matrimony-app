@@ -121,7 +121,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
     final photos =
         ref.watch(myPhotosProvider).valueOrNull ?? const <UserPhoto>[];
     final hasPrimaryPhoto = photos.any((p) => p.isPrimary);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     // Single source of truth: the backend-computed completion (same value the
     // Profile page, Discover drawer, and completion screen show). Never a
     // locally recomputed number — that's what caused Edit Profile (57%) to
@@ -169,7 +168,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       title: l10n.profileBasicDetailsTitle,
                       icon: Icons.person_rounded,
                       stepIndex: 0,
-                      isDark: isDark,
                       onEdit: () => editStep(0),
                       items: [
                         _ri(
@@ -199,7 +197,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       title: l10n.registrationReligionTitle,
                       icon: Icons.temple_hindu_rounded,
                       stepIndex: 1,
-                      isDark: isDark,
                       onEdit: () => editStep(1),
                       items: [
                         _ri('Religion', draft.religionDetails.religion),
@@ -216,7 +213,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       title: l10n.registrationLanguagesTitle,
                       icon: Icons.translate_rounded,
                       stepIndex: 2,
-                      isDark: isDark,
                       onEdit: () => editStep(2),
                       items: [
                         _ri(
@@ -236,7 +232,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       title: l10n.registrationLocationTitle,
                       icon: Icons.location_on_rounded,
                       stepIndex: 3,
-                      isDark: isDark,
                       onEdit: () => editStep(3),
                       items: [
                         _ri('Country', draft.locationDetails.country),
@@ -254,7 +249,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       title: l10n.registrationEducationTitle,
                       icon: Icons.school_rounded,
                       stepIndex: 4,
-                      isDark: isDark,
                       onEdit: () => editStep(4),
                       items: [
                         _ri(
@@ -281,7 +275,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       title: l10n.registrationPhysicalTitle,
                       icon: Icons.accessibility_new_rounded,
                       stepIndex: 5,
-                      isDark: isDark,
                       onEdit: () => editStep(5),
                       items: [
                         _ri('Height', draft.physicalDetails.height),
@@ -297,7 +290,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       title: l10n.registrationLifestyleTitle,
                       icon: Icons.favorite_rounded,
                       stepIndex: 6,
-                      isDark: isDark,
                       onEdit: () => editStep(6),
                       items: [
                         _ri('Diet', draft.lifestyleDetails.eatingHabit),
@@ -318,7 +310,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       title: l10n.registrationFamilyTitle,
                       icon: Icons.family_restroom_rounded,
                       stepIndex: 7,
-                      isDark: isDark,
                       onEdit: () => editStep(7),
                       items: [
                         _ri(
@@ -366,7 +357,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       title: l10n.registrationHoroscopeTitle,
                       icon: Icons.stars_rounded,
                       stepIndex: 8,
-                      isDark: isDark,
                       onEdit: () => editStep(8),
                       items: [
                         _ri('Rashi', draft.horoscopeDetails.rashi),
@@ -416,7 +406,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       title: l10n.registrationPartnerTitle,
                       icon: Icons.handshake_rounded,
                       stepIndex: 10,
-                      isDark: isDark,
                       onEdit: () => editStep(10),
                       items: [
                         _ri(
@@ -440,7 +429,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       title: l10n.registrationPhotosTitle,
                       icon: Icons.photo_library_rounded,
                       stepIndex: 11,
-                      isDark: isDark,
                       onEdit: () => editStep(11),
                       items: [
                         _ri(
@@ -457,7 +445,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       title: l10n.registrationStepVerification,
                       icon: Icons.verified_rounded,
                       stepIndex: 12,
-                      isDark: isDark,
                       onEdit: () => editStep(12),
                       items: [
                         _ri(
@@ -520,9 +507,7 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                       Text(
                         AppLocalizations.of(context).profileIntelReviewSubtitle,
                         style: AppTypography.bodyMedium.copyWith(
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
+                          color: AppColors.textSecondaryLight,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -581,7 +566,7 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                color: AppColors.surfaceLight,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.05),
@@ -631,7 +616,6 @@ class _ReviewSection extends StatelessWidget {
   final String title;
   final IconData icon;
   final int stepIndex;
-  final bool isDark;
   final VoidCallback onEdit;
   final List<_ReviewItem> items;
 
@@ -639,7 +623,6 @@ class _ReviewSection extends StatelessWidget {
     required this.title,
     required this.icon,
     required this.stepIndex,
-    required this.isDark,
     required this.onEdit,
     required this.items,
   });
@@ -648,7 +631,7 @@ class _ReviewSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.card(isDark: isDark),
+      decoration: AppDecorations.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -702,9 +685,7 @@ class _ReviewSection extends StatelessWidget {
                         child: Text(
                           it.label,
                           style: AppTypography.bodySmall.copyWith(
-                            color: isDark
-                                ? AppColors.textTertiaryDark
-                                : AppColors.textTertiaryLight,
+                            color: AppColors.textTertiaryLight,
                           ),
                         ),
                       ),
@@ -724,9 +705,7 @@ class _ReviewSection extends StatelessWidget {
             Text(
               AppLocalizations.of(context).registrationNoInfoYet,
               style: AppTypography.bodySmall.copyWith(
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
+                color: AppColors.textTertiaryLight,
                 fontStyle: FontStyle.italic,
               ),
             ),

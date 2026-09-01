@@ -135,7 +135,6 @@ class _ViewerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final profile = viewer.profile;
     final details = [
       '${profile.age}',
@@ -152,10 +151,10 @@ class _ViewerCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+            color: AppColors.surfaceLight,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+              color: AppColors.dividerLight,
             ),
           ),
           child: Row(
@@ -177,9 +176,7 @@ class _ViewerCard extends StatelessWidget {
                           child: Text(
                             profile.name,
                             style: AppTypography.titleSmall.copyWith(
-                              color: isDark
-                                  ? AppColors.textPrimaryDark
-                                  : AppColors.textPrimaryLight,
+                              color: AppColors.textPrimaryLight,
                               fontWeight: FontWeight.w700,
                             ),
                             maxLines: 1,
@@ -200,9 +197,7 @@ class _ViewerCard extends StatelessWidget {
                     Text(
                       details,
                       style: AppTypography.bodySmall.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
+                        color: AppColors.textSecondaryLight,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -220,11 +215,9 @@ class _ViewerCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
+              const Icon(
                 Icons.chevron_right_rounded,
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
+                color: AppColors.textSecondaryLight,
               ),
             ],
           ),

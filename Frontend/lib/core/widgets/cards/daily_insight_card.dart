@@ -18,13 +18,11 @@ class NmDailyInsightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: AppDecorations.accentBorder.copyWith(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
+        color: AppColors.cardLight,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

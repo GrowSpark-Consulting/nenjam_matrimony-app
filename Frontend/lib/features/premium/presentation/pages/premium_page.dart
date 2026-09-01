@@ -7,6 +7,7 @@ import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/cards/subscription_card.dart';
+import '../../../../core/widgets/navigation/app_bottom_nav.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// Premium plans showcase page.
@@ -18,9 +19,16 @@ class PremiumPage extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.premiumTitle)),
+      // bottom: false — the shell draws the floating nav pill over this page,
+      // and letting SafeArea eat that inset here would end the scroll viewport
+      // above the pill and leave this Scaffold's own opaque background painting
+      // a full-width strip behind it. The inset belongs on the scroll view's
+      // padding instead, so the page scrolls THROUGH the transparent area
+      // around the pill while the CTA below still comes to rest clear of it.
       body: SafeArea(
+        bottom: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.fromLTRB(20, 20, 20, navContentInset(context)),
           child: Column(
             children: [
               Container(

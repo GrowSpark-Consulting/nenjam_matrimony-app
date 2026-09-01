@@ -17,7 +17,6 @@ class StepPhotos extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -33,9 +32,7 @@ class StepPhotos extends ConsumerWidget {
           Text(
             l10n.registrationWizardPhotosHook,
             style: AppTypography.bodyMedium.copyWith(
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
+              color: AppColors.textSecondaryLight,
             ),
           ),
           const SizedBox(height: 16),

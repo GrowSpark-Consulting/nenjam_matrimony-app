@@ -25,8 +25,6 @@ class NmDiscoverOpportunitiesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -68,7 +66,7 @@ class NmDiscoverOpportunitiesCard extends StatelessWidget {
         // IntrinsicHeight) rather than a fixed height, so cards never
         // clip when their text grows under large font scaling.
         matches.isEmpty
-            ? SizedBox(height: 140, child: _EmptyState(isDark: isDark))
+            ? const SizedBox(height: 140, child: _EmptyState())
             : SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
@@ -77,7 +75,7 @@ class NmDiscoverOpportunitiesCard extends StatelessWidget {
                     children: [
                       for (var i = 0; i < matches.length; i++) ...[
                         if (i > 0) const SizedBox(width: AppSpacing.md),
-                        _MatchCard(match: matches[i], isDark: isDark),
+                        _MatchCard(match: matches[i]),
                       ],
                     ],
                   ),
@@ -91,9 +89,8 @@ class NmDiscoverOpportunitiesCard extends StatelessWidget {
 /// Individual match card in the discover list.
 class _MatchCard extends StatelessWidget {
   final NmDiscoverMatch match;
-  final bool isDark;
 
-  const _MatchCard({required this.match, required this.isDark});
+  const _MatchCard({required this.match});
 
   @override
   Widget build(BuildContext context) {
@@ -102,23 +99,15 @@ class _MatchCard extends StatelessWidget {
       child: Container(
         width: 168,
         decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : AppColors.cardLight,
+          color: AppColors.cardLight,
           borderRadius: BorderRadius.circular(AppSpacing.radiusXl2),
-          boxShadow: isDark
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.18),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.07),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.07),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -132,9 +121,7 @@ class _MatchCard extends StatelessWidget {
                 children: [
                   // Photo placeholder / image
                   Container(
-                    color: isDark
-                        ? AppColors.surfaceVariantDark
-                        : AppColors.surfaceVariantLight,
+                    color: AppColors.surfaceVariantLight,
                     child: match.imageUrl != null
                         ? NmSizedNetworkPhoto(
                             url: match.imageUrl!,
@@ -187,21 +174,17 @@ class _MatchCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.work_outline_rounded,
                         size: 12,
-                        color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
+                        color: AppColors.textTertiaryLight,
                       ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           match.profession,
                           style: AppTypography.labelSmall.copyWith(
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
+                            color: AppColors.textSecondaryLight,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -234,8 +217,7 @@ class _MatchCard extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  final bool isDark;
-  const _EmptyState({required this.isDark});
+  const _EmptyState();
 
   @override
   Widget build(BuildContext context) => Center(
@@ -243,9 +225,7 @@ class _EmptyState extends StatelessWidget {
       AppLocalizations.of(context).profileNoRecommendations,
       textAlign: TextAlign.center,
       style: AppTypography.bodySmall.copyWith(
-        color: isDark
-            ? AppColors.textSecondaryDark
-            : AppColors.textSecondaryLight,
+        color: AppColors.textSecondaryLight,
       ),
     ),
   );

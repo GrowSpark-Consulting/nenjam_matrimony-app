@@ -109,11 +109,8 @@ class _InboxTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     const activeColor = AppColors.primary;
-    final inactiveColor = isDark
-        ? AppColors.textSecondaryDark
-        : AppColors.textSecondaryLight;
+    const inactiveColor = AppColors.textSecondaryLight;
 
     return Semantics(
       button: true,

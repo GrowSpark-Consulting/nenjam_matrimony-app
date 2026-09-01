@@ -44,7 +44,6 @@ class _NmCompatibilityReportCardState extends State<NmCompatibilityReportCard> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final canExpand = widget.axes.length > widget.collapsedCount;
     final visibleAxes = _expanded
         ? widget.axes
@@ -52,7 +51,7 @@ class _NmCompatibilityReportCardState extends State<NmCompatibilityReportCard> {
 
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.card(isDark: isDark),
+      decoration: AppDecorations.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -122,8 +121,6 @@ class _AxisRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -144,9 +141,7 @@ class _AxisRow extends StatelessWidget {
           child: LinearProgressIndicator(
             value: axis.score / 100,
             minHeight: 6,
-            backgroundColor: isDark
-                ? AppColors.surfaceVariantDark
-                : AppColors.divider,
+            backgroundColor: AppColors.divider,
             color: AppColors.secondary,
           ),
         ),

@@ -7,7 +7,7 @@ import '../../../registration/domain/models/profile_draft.dart';
 import '../../../registration/presentation/widgets/step_verification.dart';
 import '../providers/verification_providers.dart';
 
-/// Trust & Verification center screen.
+/// Verification center screen.
 ///
 /// Renders the same [StepVerification] widget the registration wizard's
 /// step 13 uses — real Firebase mobile/email checks, real document

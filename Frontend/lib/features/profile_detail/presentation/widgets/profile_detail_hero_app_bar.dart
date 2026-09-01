@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/cards/profile_hero_content.dart';
+import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
 import '../../domain/entities/profile_detail_entity.dart';
 
 /// Full-bleed collapsing hero for the Profile Detail page.
@@ -77,8 +78,10 @@ class ProfileDetailHeroAppBar extends StatelessWidget {
     // the system navigation bar.
     final mediaQuery = MediaQuery.of(context);
     final viewportHeight = heroHeight ?? mediaQuery.size.height;
-    final expandedHeight = (viewportHeight - mediaQuery.padding.top)
-        .clamp(280.0, double.infinity);
+    final expandedHeight = (viewportHeight - mediaQuery.padding.top).clamp(
+      280.0,
+      double.infinity,
+    );
 
     return SliverAppBar(
       expandedHeight: expandedHeight,
@@ -91,6 +94,11 @@ class ProfileDetailHeroAppBar extends StatelessWidget {
       toolbarHeight: 0,
       automaticallyImplyLeading: false,
       backgroundColor: AppColors.primary,
+      // The hero is a full-bleed photo with a dark top scrim regardless of
+      // app theme, so its icon brightness is derived from that fixed
+      // background rather than left to the AppBarTheme default (dark icons
+      // in light mode), which would be invisible over this background.
+      systemOverlayStyle: NmStatusBarStyle.styleFor(AppColors.primary),
       flexibleSpace: FlexibleSpaceBar(
         stretchModes: const [StretchMode.zoomBackground],
         background: Stack(

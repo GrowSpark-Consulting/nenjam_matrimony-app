@@ -16,8 +16,9 @@ import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../core/widgets/images/sized_network_photo.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
+import '../../../../core/widgets/navigation/app_bottom_nav.dart';
+import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../authentication/presentation/utils/logout_flow.dart';
 import '../../../interests/presentation/providers/interests_provider.dart';
 import '../../../interests/presentation/utils/interest_button_copy.dart';
 import '../../../notifications/presentation/providers/notification_providers.dart';
@@ -25,7 +26,6 @@ import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../../partner_preferences/presentation/utils/open_partner_preferences.dart';
-import '../../../profile_photos/presentation/widgets/photo_manager_bottom_sheet.dart';
 import '../../../registration/presentation/utils/open_edit_profile.dart';
 import '../../../nearby/data/repositories/nearby_repository_impl.dart';
 import '../../../nearby/presentation/providers/nearby_providers.dart';
@@ -34,7 +34,6 @@ import '../../domain/entities/discover_feed_entity.dart';
 import '../../domain/entities/story_entity.dart';
 import '../providers/discover_providers.dart';
 import '../widgets/compatibility_badge.dart';
-import '../widgets/nenjam_navigation_drawer.dart';
 
 /// Nenjam Discover Page — pixel-faithful Flutter translation of the
 /// "Nenjam Home Feed" Stitch screen.
@@ -49,7 +48,7 @@ import '../widgets/nenjam_navigation_drawer.dart';
 ///   7. Premium Members — deep plum section
 ///
 /// Profile Intelligence is optional enrichment, never auto-opened here —
-/// users reach it deliberately via the navigation drawer or Profile page.
+/// users reach it deliberately via the profile menu or Profile page.
 class DiscoverPage extends ConsumerWidget {
   const DiscoverPage({super.key});
 
@@ -57,43 +56,22 @@ class DiscoverPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final feedAsync = ref.watch(discoverFeedProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      drawer: NenjamNavigationDrawer(
-        // TODO(backend): no subscription/premium-status endpoint is wired
-        // yet — same placeholder used on the Profile page.
-        isPremium: false,
-        onAvatarTap: () => showPhotoManagerBottomSheet(context),
-        onMyProfileTap: () => context.push(RouteNames.profile),
-        onEditProfileTap: () => openEditProfile(context, ref),
-        onPartnerPreferencesTap: () => openPartnerPreferences(context, ref),
-        onProfileIntelligenceTap: () =>
-            context.push(RouteNames.profileIntelligence),
-        onVerificationCenterTap: () =>
-            openEditProfile(context, ref, wizardStep: 12),
-        onTrustScoreTap: () => context.push(RouteNames.trustScore),
-        onInterestSentTap: () => context.push(RouteNames.interestsSent),
-        onInterestReceivedTap: () => context.push(RouteNames.interestsReceived),
-        onShortlistTap: () => context.push(RouteNames.shortlisted),
-        onNearMeTap: () => context.push(RouteNames.nearby),
-        // push (not go) so Back returns here — the drawer entry deliberately
-        // omits `openedFromNotification`, which is what makes Back fall back
-        // to Discover rather than the Notification Center.
-        onProfileViewersTap: () => context.push(RouteNames.profileViewers),
-        onLanguageTap: () => context.push(RouteNames.language),
-        onSettingsTap: () => context.push(RouteNames.settings),
-        onPrivacyTap: () => context.push(RouteNames.privacy),
-        onHelpTap: () => context.push(RouteNames.help),
-        onLogoutTap: () => confirmAndLogout(context, ref),
-        onUpgradeTap: () => context.go(RouteNames.premium),
-        onCompleteProfileTap: () => context.push(RouteNames.profileCompletion),
-      ),
-      body: feedAsync.when(
-        data: (feed) => _DiscoverFeedView(feed: feed),
-        loading: () => const _DiscoverLoading(),
-        error: (error, _) => Center(
-          child: NmErrorWidget(
-            onRetry: () => ref.invalidate(discoverFeedProvider),
+    // Explicit rather than left to AppBarTheme: the Scaffold below is
+    // hardcoded to a light background in every app theme, but
+    // AppBarTheme.systemOverlayStyle flips to light (white) icons in dark
+    // mode — invisible against this still-light background. Deriving the
+    // style from the actual background color sidesteps that drift.
+    return NmPageStatusBar(
+      background: AppColors.backgroundLight,
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundLight,
+        body: feedAsync.when(
+          data: (feed) => _DiscoverFeedView(feed: feed),
+          loading: () => const _DiscoverLoading(),
+          error: (error, _) => Center(
+            child: NmErrorWidget(
+              onRetry: () => ref.invalidate(discoverFeedProvider),
+            ),
           ),
         ),
       ),
@@ -258,8 +236,13 @@ class _DiscoverFeedView extends ConsumerWidget {
             // ── Footer ────────────────────────────────────────────────
             const SliverToBoxAdapter(child: _FeedFooter()),
 
-            // Bottom padding for nav bar
-            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl3)),
+            // Clearance for the floating nav pill. Measured from the shell
+            // rather than the fixed 40 this used to be — that guessed number
+            // was shorter than the pill on most devices, so the footer ended
+            // up partly behind it.
+            SliverToBoxAdapter(
+              child: SizedBox(height: navContentInset(context)),
+            ),
           ],
         ],
       ),
@@ -318,7 +301,10 @@ class _DiscoverAppBar extends StatelessWidget {
               builder: (context, ref, _) => NmCircleAvatar(
                 imageUrl: ref.watch(myPrimaryPhotoUrlProvider),
                 size: 32,
-                onTap: () => Scaffold.of(context).openDrawer(),
+                // Full-screen profile menu, pushed onto the root
+                // navigator so it covers this page and the bottom-nav
+                // shell entirely (see RouteNames.profileMenu).
+                onTap: () => context.push(RouteNames.profileMenu),
               ),
             ),
           ),
@@ -832,7 +818,7 @@ class _LargeProfileCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
 
-                        // Stats row (Match / Astro / Trust) for verified card
+                        // Stats row (Match / Astro) for verified card
                         if (showStats &&
                             profile.compatibility.aiMatchPercent > 0) ...[
                           const SizedBox(height: AppSpacing.sm),
@@ -896,7 +882,7 @@ String _localizedTag(AppLocalizations l10n, String tag) {
   }
 }
 
-/// Match / Astro / Trust stats row shown on verified profiles card.
+/// Match / Astro stats row shown on verified profiles card.
 class _StatsRow extends StatelessWidget {
   final AppLocalizations l10n;
   final dynamic compatibility;
@@ -920,14 +906,6 @@ class _StatsRow extends StatelessWidget {
             label: l10n.discoverStatAstroLabel,
             value: '${compatibility.astroMatchPercent}%',
             isAccent: true,
-          ),
-        ),
-        _Divider(),
-        Flexible(
-          child: _Stat(
-            label: l10n.discoverStatTrustLabel,
-            value: '${compatibility.overallCompatibility}/100',
-            isAccent: false,
           ),
         ),
       ],

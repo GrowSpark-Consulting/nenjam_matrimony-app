@@ -90,7 +90,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   void _goPastOnboarding() {
-    context.go(RouteNames.authSelection);
+    context.go(RouteNames.registrationLanding);
   }
 
   void _onBack() {
@@ -107,7 +107,6 @@ class _OnboardingPageState extends State<OnboardingPage>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return PopScope(
       canPop: false,
@@ -115,9 +114,7 @@ class _OnboardingPageState extends State<OnboardingPage>
         if (!didPop) _onBack();
       },
       child: Scaffold(
-        backgroundColor: isDark
-            ? AppColors.surfaceDark
-            : AppColors.backgroundLight,
+        backgroundColor: AppColors.backgroundLight,
         body: SafeArea(
           child: FadeTransition(
             opacity: _entryFade,
@@ -137,11 +134,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                         // Back button
                         IconButton(
                           onPressed: _onBack,
-                          icon: Icon(
+                          icon: const Icon(
                             Icons.arrow_back_rounded,
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.primary,
+                            color: AppColors.primary,
                           ),
                         ),
                         // App name
@@ -149,9 +144,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                           AppConstants.appName,
                           style: AppTypography.titleLarge.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.primary,
+                            color: AppColors.primary,
                           ),
                         ),
                         // Skip button
@@ -160,9 +153,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                           child: Text(
                             l10n.onboardingSkip,
                             style: AppTypography.labelLarge.copyWith(
-                              color: isDark
-                                  ? AppColors.textSecondaryDark
-                                  : AppColors.textSecondaryLight,
+                              color: AppColors.textSecondaryLight,
                             ),
                           ),
                         ),
@@ -186,9 +177,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                           decoration: BoxDecoration(
                             color: isActive
                                 ? AppColors.secondary
-                                : (isDark
-                                      ? AppColors.surfaceVariantDark
-                                      : AppColors.dividerLight),
+                                : AppColors.dividerLight,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         );
@@ -206,17 +195,14 @@ class _OnboardingPageState extends State<OnboardingPage>
                       children: [
                         _AiMatchmakingSlide(
                           l10n: l10n,
-                          isDark: isDark,
                           floatController: _floatController,
                         ),
                         _VerifiedProfilesSlide(
                           l10n: l10n,
-                          isDark: isDark,
                           floatController: _floatController,
                         ),
                         _AstroCompatibilitySlide(
                           l10n: l10n,
-                          isDark: isDark,
                           floatController: _floatController,
                         ),
                       ],
@@ -250,12 +236,10 @@ class _OnboardingPageState extends State<OnboardingPage>
 
 class _AiMatchmakingSlide extends StatelessWidget {
   final AppLocalizations l10n;
-  final bool isDark;
   final AnimationController floatController;
 
   const _AiMatchmakingSlide({
     required this.l10n,
-    required this.isDark,
     required this.floatController,
   });
 
@@ -284,7 +268,7 @@ class _AiMatchmakingSlide extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: AppColors.accentSoft.withValues(
-                        alpha: isDark ? 0.15 : 0.4,
+                        alpha: 0.4,
                       ),
                     ),
                   ),
@@ -298,7 +282,7 @@ class _AiMatchmakingSlide extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: AppColors.primarySurface.withValues(
-                        alpha: isDark ? 0.15 : 0.3,
+                        alpha: 0.3,
                       ),
                     ),
                   ),
@@ -342,7 +326,6 @@ class _AiMatchmakingSlide extends StatelessWidget {
                     );
                   },
                   child: _GlassBadge(
-                    isDark: isDark,
                     icon: Icons.auto_awesome,
                     iconColor: AppColors.secondary,
                     label: l10n.onboardingAiBadge,
@@ -360,7 +343,7 @@ class _AiMatchmakingSlide extends StatelessWidget {
             l10n.onboardingAiTitle,
             style: AppTypography.headlineLarge.copyWith(
               fontWeight: FontWeight.w700,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.primary,
+              color: AppColors.primary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -372,9 +355,7 @@ class _AiMatchmakingSlide extends StatelessWidget {
             child: Text(
               l10n.onboardingAiDescription,
               style: AppTypography.bodyMedium.copyWith(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
+                color: AppColors.textSecondaryLight,
                 height: 1.6,
               ),
               textAlign: TextAlign.center,
@@ -393,12 +374,10 @@ class _AiMatchmakingSlide extends StatelessWidget {
 
 class _VerifiedProfilesSlide extends StatelessWidget {
   final AppLocalizations l10n;
-  final bool isDark;
   final AnimationController floatController;
 
   const _VerifiedProfilesSlide({
     required this.l10n,
-    required this.isDark,
     required this.floatController,
   });
 
@@ -424,7 +403,7 @@ class _VerifiedProfilesSlide extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: AppColors.accentSoft.withValues(
-                      alpha: isDark ? 0.2 : 0.5,
+                      alpha: 0.5,
                     ),
                   ),
                 ),
@@ -435,9 +414,7 @@ class _VerifiedProfilesSlide extends StatelessWidget {
                   height: 180,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isDark
-                        ? AppColors.cardDark.withValues(alpha: 0.6)
-                        : Colors.white.withValues(alpha: 0.6),
+                    color: Colors.white.withValues(alpha: 0.6),
                     border: Border.all(
                       color: AppColors.secondary.withValues(alpha: 0.2),
                       width: 2,
@@ -471,8 +448,7 @@ class _VerifiedProfilesSlide extends StatelessWidget {
                       ),
                     );
                   },
-                  child: _GlassChip(
-                    isDark: isDark,
+                  child: const _GlassChip(
                     icon: Icons.check_circle,
                     iconColor: AppColors.success,
                   ),
@@ -494,7 +470,6 @@ class _VerifiedProfilesSlide extends StatelessWidget {
                     );
                   },
                   child: _GlassBadge(
-                    isDark: isDark,
                     icon: Icons.lock_rounded,
                     iconColor: AppColors.primary,
                     label: l10n.onboardingVerifiedBadge,
@@ -512,7 +487,7 @@ class _VerifiedProfilesSlide extends StatelessWidget {
             l10n.onboardingVerifiedTitle,
             style: AppTypography.headlineLarge.copyWith(
               fontWeight: FontWeight.w700,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.primary,
+              color: AppColors.primary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -524,9 +499,7 @@ class _VerifiedProfilesSlide extends StatelessWidget {
             child: Text(
               l10n.onboardingVerifiedDescription,
               style: AppTypography.bodyMedium.copyWith(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
+                color: AppColors.textSecondaryLight,
                 height: 1.6,
               ),
               textAlign: TextAlign.center,
@@ -545,12 +518,10 @@ class _VerifiedProfilesSlide extends StatelessWidget {
 
 class _AstroCompatibilitySlide extends StatelessWidget {
   final AppLocalizations l10n;
-  final bool isDark;
   final AnimationController floatController;
 
   const _AstroCompatibilitySlide({
     required this.l10n,
-    required this.isDark,
     required this.floatController,
   });
 
@@ -617,9 +588,7 @@ class _AstroCompatibilitySlide extends StatelessWidget {
                   height: 140,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isDark
-                        ? AppColors.cardDark.withValues(alpha: 0.7)
-                        : Colors.white.withValues(alpha: 0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                     border: Border.all(
                       color: AppColors.secondary.withValues(alpha: 0.2),
                       width: 2,
@@ -668,7 +637,6 @@ class _AstroCompatibilitySlide extends StatelessWidget {
                     );
                   },
                   child: _GlassPill(
-                    isDark: isDark,
                     icon: Icons.stars_rounded,
                     label: l10n.onboardingAstroBadgeGuna,
                   ),
@@ -690,7 +658,6 @@ class _AstroCompatibilitySlide extends StatelessWidget {
                     );
                   },
                   child: _GlassPill(
-                    isDark: isDark,
                     icon: Icons.balance_rounded,
                     label: l10n.onboardingAstroBadgeKundli,
                   ),
@@ -709,9 +676,7 @@ class _AstroCompatibilitySlide extends StatelessWidget {
                   text: l10n.onboardingAstroTitle,
                   style: AppTypography.headlineLarge.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.primary,
+                    color: AppColors.primary,
                   ),
                 ),
               ],
@@ -726,9 +691,7 @@ class _AstroCompatibilitySlide extends StatelessWidget {
             child: Text(
               l10n.onboardingAstroDescription,
               style: AppTypography.bodyMedium.copyWith(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
+                color: AppColors.textSecondaryLight,
                 height: 1.6,
               ),
               textAlign: TextAlign.center,
@@ -747,7 +710,6 @@ class _AstroCompatibilitySlide extends StatelessWidget {
 
 /// Glassmorphic badge with icon, label, and optional subtitle.
 class _GlassBadge extends StatelessWidget {
-  final bool isDark;
   final IconData icon;
   final Color iconColor;
   final String label;
@@ -755,7 +717,6 @@ class _GlassBadge extends StatelessWidget {
   final double iconSize;
 
   const _GlassBadge({
-    required this.isDark,
     required this.icon,
     required this.iconColor,
     required this.label,
@@ -772,14 +733,10 @@ class _GlassBadge extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.white.withValues(alpha: 0.7),
+            color: Colors.white.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.1)
-                  : AppColors.primary.withValues(alpha: 0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
             ),
             boxShadow: [
               BoxShadow(
@@ -801,9 +758,7 @@ class _GlassBadge extends StatelessWidget {
                   Text(
                     label,
                     style: AppTypography.labelMedium.copyWith(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.primary,
+                      color: AppColors.primary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -812,9 +767,7 @@ class _GlassBadge extends StatelessWidget {
                     Text(
                       subtitle!,
                       style: AppTypography.labelSmall.copyWith(
-                        color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textSecondaryLight,
+                        color: AppColors.textSecondaryLight,
                       ),
                     ),
                   ],
@@ -830,12 +783,10 @@ class _GlassBadge extends StatelessWidget {
 
 /// Small glassmorphic chip with just an icon.
 class _GlassChip extends StatelessWidget {
-  final bool isDark;
   final IconData icon;
   final Color iconColor;
 
   const _GlassChip({
-    required this.isDark,
     required this.icon,
     required this.iconColor,
   });
@@ -849,14 +800,10 @@ class _GlassChip extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.white.withValues(alpha: 0.7),
+            color: Colors.white.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.1)
-                  : AppColors.primary.withValues(alpha: 0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
             ),
             boxShadow: [
               BoxShadow(
@@ -875,12 +822,10 @@ class _GlassChip extends StatelessWidget {
 
 /// Pill-shaped glassmorphic badge with icon and text.
 class _GlassPill extends StatelessWidget {
-  final bool isDark;
   final IconData icon;
   final String label;
 
   const _GlassPill({
-    required this.isDark,
     required this.icon,
     required this.label,
   });
@@ -894,14 +839,10 @@ class _GlassPill extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.white.withValues(alpha: 0.7),
+            color: Colors.white.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.1)
-                  : AppColors.primary.withValues(alpha: 0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
             ),
             boxShadow: [
               BoxShadow(
@@ -919,7 +860,7 @@ class _GlassPill extends StatelessWidget {
               Text(
                 label,
                 style: AppTypography.labelMedium.copyWith(
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.primary,
+                  color: AppColors.primary,
                   fontWeight: FontWeight.w600,
                 ),
               ),

@@ -22,16 +22,14 @@ class NmSocialButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       width: double.infinity,
       height: 54,
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          color: AppColors.borderLight,
           width: 1,
         ),
         boxShadow: [
@@ -72,14 +70,21 @@ class NmSocialButton extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                 ],
-                Text(
-                  label,
-                  style: AppTypography.labelLarge.copyWith(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
+                // Flexible + ellipsis so a long localized label (Tamil runs
+                // materially longer than English) or large system text
+                // scaling truncates gracefully instead of throwing a
+                // RenderFlex overflow — the same treatment NmGradientButton
+                // and NmOutlinedButton already give their labels.
+                Flexible(
+                  child: Text(
+                    label,
+                    style: AppTypography.labelLarge.copyWith(
+                      color: AppColors.textPrimaryLight,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

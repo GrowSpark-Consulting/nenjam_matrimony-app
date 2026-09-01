@@ -28,7 +28,6 @@ class NearbyProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final details = [
       '${profile.age}',
@@ -47,7 +46,7 @@ class NearbyProfileCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.all(16),
-          decoration: AppDecorations.card(isDark: isDark),
+          decoration: AppDecorations.card(),
           child: Row(
             children: [
               NmCircleAvatar(

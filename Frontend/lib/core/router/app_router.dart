@@ -5,13 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/astro/presentation/pages/horoscope_matching_page.dart';
-import '../../features/authentication/presentation/pages/auth_selection_page.dart';
 import '../../features/authentication/presentation/pages/email_verify_screen.dart';
 import '../../features/authentication/presentation/pages/forgot_password_page.dart';
 import '../../features/authentication/presentation/pages/login_otp_screen.dart';
 import '../../features/authentication/presentation/pages/login_page.dart';
 import '../../features/authentication/presentation/pages/otp_page.dart';
 import '../../features/authentication/presentation/pages/phone_verify_screen.dart';
+import '../../features/authentication/presentation/pages/registration_landing_page.dart';
 import '../../features/discover/domain/entities/discovery_profile_entity.dart';
 import 'profile_navigation.dart';
 import '../../features/discover/presentation/pages/discover_page.dart';
@@ -35,6 +35,7 @@ import '../../features/privacy/presentation/pages/privacy_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile_detail/presentation/pages/profile_detail_page.dart';
 import '../../features/profile_intelligence/presentation/pages/profile_intelligence_page.dart';
+import '../../features/profile_menu/presentation/pages/profile_menu_page.dart';
 import '../../features/profile_views/presentation/pages/profile_viewers_page.dart';
 import '../../features/profile_prompts/domain/models/prompt_bank_item.dart';
 import '../../features/profile_prompts/presentation/pages/choose_prompt_page.dart';
@@ -52,7 +53,6 @@ import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/shortlist/presentation/pages/shortlisted_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 import '../../features/subscription/presentation/pages/subscription_page.dart';
-import '../../features/trust_score/presentation/pages/trust_score_page.dart';
 import '../../features/verification/presentation/pages/verification_page.dart';
 import '../../features/authentication/presentation/providers/auth_providers.dart';
 import '../../l10n/app_localizations.dart';
@@ -152,7 +152,10 @@ GoRouter createRouter(WidgetRef ref) {
 
       final user = await ref.read(authStateChangesProvider.future);
       if (user == null) {
-        return RouteNames.login;
+        // The landing screen, not Login: a signed-out visitor is far more
+        // often someone who has never had an account than someone whose
+        // session lapsed, and Login is one tap away from there anyway.
+        return RouteNames.registrationLanding;
       }
       return null;
     },
@@ -168,10 +171,20 @@ GoRouter createRouter(WidgetRef ref) {
         name: RouteNames.languageName,
         builder: (context, state) => const LanguagePage(),
       ),
+      // The sign-up landing screen replaced the old auth-selection hub, but
+      // the path outlived it — a deep link, a saved shortcut, or a session
+      // restored from before the rename can still ask for it. Redirecting
+      // (rather than keeping a second landing screen alive) means there is
+      // exactly one implementation to maintain.
       GoRoute(
         path: RouteNames.authSelection,
         name: RouteNames.authSelectionName,
-        builder: (context, state) => const AuthSelectionPage(),
+        redirect: (context, state) => RouteNames.registrationLanding,
+      ),
+      GoRoute(
+        path: RouteNames.registrationLanding,
+        name: RouteNames.registrationLandingName,
+        builder: (context, state) => const RegistrationLandingPage(),
       ),
       GoRoute(
         path: RouteNames.onboarding,
@@ -184,14 +197,24 @@ GoRouter createRouter(WidgetRef ref) {
         builder: (context, state) {
           final extra = state.extra;
           int initialTab = 0;
+          SignUpFocus? focus;
           if (extra is Map) {
             if (extra['tab'] is int) {
               initialTab = extra['tab'] as int;
             } else if (extra['initialTab'] is int) {
               initialTab = extra['initialTab'] as int;
             }
+            // Set by the landing screen's Email / Mobile CTAs so the Sign Up
+            // tab opens with that field already focused — the only thing
+            // that distinguishes the two, since both lead to the same form.
+            final focusName = extra['focus'];
+            if (focusName is String) {
+              for (final value in SignUpFocus.values) {
+                if (value.name == focusName) focus = value;
+              }
+            }
           }
-          return LoginPage(initialTab: initialTab);
+          return LoginPage(initialTab: initialTab, initialSignUpFocus: focus);
         },
       ),
       GoRoute(
@@ -330,11 +353,6 @@ GoRouter createRouter(WidgetRef ref) {
         builder: (context, state) => const PrivacyPage(),
       ),
       GoRoute(
-        path: RouteNames.trustScore,
-        name: RouteNames.trustScoreName,
-        builder: (context, state) => const TrustScorePage(),
-      ),
-      GoRoute(
         path: RouteNames.partnerPreferences,
         name: RouteNames.partnerPreferencesName,
         builder: (context, state) => const PartnerPreferencesPage(),
@@ -468,6 +486,17 @@ GoRouter createRouter(WidgetRef ref) {
         path: RouteNames.profile,
         name: RouteNames.profileName,
         builder: (context, state) => const ProfilePage(),
+      ),
+      // The profile/account menu. A root-navigator route (not a Drawer on
+      // Discover's Scaffold, which is what it used to be) so it covers the
+      // whole StatefulShellRoute — no sliver of Discover beside it, and no
+      // floating bottom-nav pill over it, since both belong to the shell
+      // underneath. A plain `builder:` gives it the default platform page
+      // transition, which is what carries the iOS back-swipe.
+      GoRoute(
+        path: RouteNames.profileMenu,
+        name: RouteNames.profileMenuName,
+        builder: (context, state) => const ProfileMenuPage(),
       ),
 
       // ─── Bottom Navigation — StatefulShellRoute ────────────────

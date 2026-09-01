@@ -170,6 +170,42 @@ abstract class AppLocalizations {
   /// **'Create Account'**
   String get authCreateAccount;
 
+  /// Headline on the sign-up landing screen shown to logged-out users
+  ///
+  /// In en, this message translates to:
+  /// **'Your story starts here'**
+  String get registrationLandingHeadline;
+
+  /// No description provided for @registrationLandingNewTo.
+  ///
+  /// In en, this message translates to:
+  /// **'New to Nenjam?'**
+  String get registrationLandingNewTo;
+
+  /// No description provided for @registrationLandingSignUpEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Up with Email'**
+  String get registrationLandingSignUpEmail;
+
+  /// No description provided for @registrationLandingSignUpMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Up with Mobile'**
+  String get registrationLandingSignUpMobile;
+
+  /// No description provided for @registrationLandingSignUpGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Up with Google'**
+  String get registrationLandingSignUpGoogle;
+
+  /// No description provided for @registrationLandingHaveAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account?'**
+  String get registrationLandingHaveAccount;
+
   /// No description provided for @authWelcomeBack.
   ///
   /// In en, this message translates to:
@@ -271,12 +307,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter Email OTP'**
   String get authEnterEmailOtp;
-
-  /// No description provided for @authRegisteringForLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Registering for'**
-  String get authRegisteringForLabel;
 
   /// No description provided for @authSendOtp.
   ///
@@ -853,12 +883,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Astro'**
   String get discoverStatAstroLabel;
-
-  /// No description provided for @discoverStatTrustLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Trust'**
-  String get discoverStatTrustLabel;
 
   /// No description provided for @discoverUpgradeButton.
   ///
@@ -1873,12 +1897,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'App Preferences'**
   String get settingsAppPreferencesSection;
-
-  /// No description provided for @settingsDarkMode.
-  ///
-  /// In en, this message translates to:
-  /// **'Dark Mode'**
-  String get settingsDarkMode;
 
   /// No description provided for @settingsLanguage.
   ///
@@ -5018,12 +5036,6 @@ abstract class AppLocalizations {
   /// **'Exceptional'**
   String get profileCompletionTierExceptional;
 
-  /// No description provided for @profileCompletionHighestImpactLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Highest Impact Improvement'**
-  String get profileCompletionHighestImpactLabel;
-
   /// No description provided for @profileCompletionCompletedSectionsTitle.
   ///
   /// In en, this message translates to:
@@ -5081,7 +5093,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileCompletionActionVerification.
   ///
   /// In en, this message translates to:
-  /// **'Build Trust'**
+  /// **'Get Verified'**
   String get profileCompletionActionVerification;
 
   /// No description provided for @profileCompletionActionHoroscope.
@@ -5281,12 +5293,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Verification Center'**
   String get drawerVerificationCenter;
-
-  /// No description provided for @drawerTrustScore.
-  ///
-  /// In en, this message translates to:
-  /// **'Trust Score'**
-  String get drawerTrustScore;
 
   /// No description provided for @drawerInterestSent.
   ///
@@ -7274,36 +7280,6 @@ abstract class AppLocalizations {
   /// **'{weight} kg'**
   String registrationWeightKg(String weight);
 
-  /// No description provided for @trustScoreTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Trust Score'**
-  String get trustScoreTitle;
-
-  /// No description provided for @trustScoreUnavailableTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Trust Score Unavailable'**
-  String get trustScoreUnavailableTitle;
-
-  /// No description provided for @trustScoreUnavailableMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'We can\'t show your trust score yet — this feature isn\'t available on your account.'**
-  String get trustScoreUnavailableMessage;
-
-  /// No description provided for @trustScoreEmptyTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'No Trust Signals Yet'**
-  String get trustScoreEmptyTitle;
-
-  /// No description provided for @trustScoreEmptyMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Complete verification steps to build your trust score.'**
-  String get trustScoreEmptyMessage;
-
   /// No description provided for @drawerRateUs.
   ///
   /// In en, this message translates to:
@@ -7742,24 +7718,6 @@ abstract class AppLocalizations {
   /// **'Incomplete'**
   String get verificationStatusIncomplete;
 
-  /// No description provided for @trustScoreHighCredibility.
-  ///
-  /// In en, this message translates to:
-  /// **'High credibility profile'**
-  String get trustScoreHighCredibility;
-
-  /// No description provided for @trustScoreGoodCredibility.
-  ///
-  /// In en, this message translates to:
-  /// **'Good credibility profile'**
-  String get trustScoreGoodCredibility;
-
-  /// No description provided for @trustScoreBuildingCredibility.
-  ///
-  /// In en, this message translates to:
-  /// **'Building credibility'**
-  String get trustScoreBuildingCredibility;
-
   /// No description provided for @profileNewMember.
   ///
   /// In en, this message translates to:
@@ -7796,11 +7754,11 @@ abstract class AppLocalizations {
   /// **'Your password is too weak. Use at least 8 characters with upper, lower, a number and a symbol.'**
   String get authErrorWeakPassword;
 
-  /// No description provided for @profilePriorityTrustImpact.
+  /// No description provided for @profilePriorityCompletionImpact.
   ///
   /// In en, this message translates to:
-  /// **'+12% Trust Score'**
-  String get profilePriorityTrustImpact;
+  /// **'+12% Profile Complete Score'**
+  String get profilePriorityCompletionImpact;
 
   /// No description provided for @profilePriorityVisibilityImpact.
   ///

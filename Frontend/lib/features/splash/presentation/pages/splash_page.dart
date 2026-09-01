@@ -8,6 +8,7 @@ import '../../../../core/router/route_names.dart';
 import '../../../../core/utils/story_perf.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../providers/splash_provider.dart';
 
@@ -85,8 +86,9 @@ class _SplashPageState extends ConsumerState<SplashPage>
   /// Resolves the destination and navigates. Guarded: session resolution
   /// touches Firebase and the network, and an unhandled throw here would
   /// strand the user on the splash forever with no way out. Falling back to
-  /// auth-selection is always a safe destination — the router's redirect
-  /// re-checks the session and bounces an already-signed-in user onward.
+  /// the sign-up landing screen is always a safe destination — the router's
+  /// redirect re-checks the session and bounces an already-signed-in user
+  /// onward.
   Future<void> _resolveAndNavigate() async {
     String route;
     try {
@@ -94,7 +96,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
           .read(splashControllerProvider.notifier)
           .resolveInitialRoute();
     } catch (_) {
-      route = RouteNames.authSelection;
+      route = RouteNames.registrationLanding;
     }
     StoryPerf.mark('initial route resolved ($route)');
     if (!mounted) return;
@@ -129,84 +131,92 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(gradient: AppGradients.splash),
-        child: SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(flex: 3),
+    // The launch screen paints the dark brand gradient behind the status
+    // bar regardless of app theme, so its icon brightness is derived from
+    // that fixed background — this is the app's first frame, so it also
+    // seeds the style every later screen without its own override would
+    // otherwise inherit.
+    return NmPageStatusBar(
+      background: AppGradients.splash.colors.first,
+      child: Scaffold(
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(gradient: AppGradients.splash),
+          child: SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Spacer(flex: 3),
 
-              // Animated Logo
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Logo Icon
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(28),
+                // Animated Logo
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Logo Icon
+                        Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          child: const Icon(
+                            Icons.favorite_rounded,
+                            size: 48,
+                            color: Colors.white,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.favorite_rounded,
-                          size: 48,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                      // App Name
-                      Text(
-                        AppConstants.appName,
-                        style: AppTypography.headlineLarge.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1,
+                        // App Name
+                        Text(
+                          AppConstants.appName,
+                          style: AppTypography.headlineLarge.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        AppConstants.appTagline,
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: Colors.white60,
-                          letterSpacing: 2,
+                        const SizedBox(height: 8),
+                        Text(
+                          AppConstants.appTagline,
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: Colors.white60,
+                            letterSpacing: 2,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              const Spacer(flex: 3),
+                const Spacer(flex: 3),
 
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: _startupFailure == null
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: _startupFailure == null
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : _StartupErrorState(
+                          failure: _startupFailure!,
+                          isRetrying: _isRetrying,
+                          onRetry: _retryStartup,
                         ),
-                      )
-                    : _StartupErrorState(
-                        failure: _startupFailure!,
-                        isRetrying: _isRetrying,
-                        onRetry: _retryStartup,
-                      ),
-              ),
-              const SizedBox(height: 40),
-            ],
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
       ),

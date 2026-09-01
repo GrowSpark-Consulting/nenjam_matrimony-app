@@ -36,7 +36,6 @@ class StepPsychologicalQuiz extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final personalityAsync = ref.watch(myPersonalityResultProvider);
 
     return SingleChildScrollView(
@@ -53,9 +52,7 @@ class StepPsychologicalQuiz extends ConsumerWidget {
           Text(
             l10n.registrationWizardQuizHook,
             style: AppTypography.bodyMedium.copyWith(
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
+              color: AppColors.textSecondaryLight,
             ),
           ),
           const SizedBox(height: 16),

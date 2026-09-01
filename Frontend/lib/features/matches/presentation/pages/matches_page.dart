@@ -13,6 +13,7 @@ import '../../../../core/theme/tokens/app_touch_target.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../core/widgets/cards/profile_hero_content.dart';
+import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../../interests/domain/repositories/interests_repository.dart';
 import '../../../interests/presentation/providers/interests_provider.dart';
@@ -71,24 +72,34 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
 
     final feedAsync = ref.watch(reelFeedProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.primary,
-      extendBodyBehindAppBar: true,
-      body: feedAsync.when(
-        data: (feed) {
-          if (feed.profiles.isEmpty) {
-            return const _EmptyReel();
-          }
-          return _ReelFeed(
-            profiles: feed.profiles,
-            controller: _pageController,
-            hasMore: feed.hasMore,
-            onNearEnd: () => ref.read(reelFeedProvider.notifier).loadMore(),
-          );
-        },
-        loading: () => const _ReelLoading(),
-        error: (_, __) => Center(
-          child: NmErrorWidget(onRetry: () => ref.invalidate(reelFeedProvider)),
+    // The reel is a full-bleed photo/plum background regardless of app
+    // theme, so it needs status-bar icons matched to that fixed background —
+    // without this it silently inherits whatever style the previously
+    // active screen left behind (e.g. Discover's dark icons for its white
+    // background), which are invisible against this dark one.
+    return NmPageStatusBar(
+      background: AppColors.primary,
+      child: Scaffold(
+        backgroundColor: AppColors.primary,
+        extendBodyBehindAppBar: true,
+        body: feedAsync.when(
+          data: (feed) {
+            if (feed.profiles.isEmpty) {
+              return const _EmptyReel();
+            }
+            return _ReelFeed(
+              profiles: feed.profiles,
+              controller: _pageController,
+              hasMore: feed.hasMore,
+              onNearEnd: () => ref.read(reelFeedProvider.notifier).loadMore(),
+            );
+          },
+          loading: () => const _ReelLoading(),
+          error: (_, __) => Center(
+            child: NmErrorWidget(
+              onRetry: () => ref.invalidate(reelFeedProvider),
+            ),
+          ),
         ),
       ),
     );
@@ -493,9 +504,13 @@ class _ReelCardState extends ConsumerState<_ReelCard>
             const NmProfileHeroScrim(),
 
             // ── Right action column ──────────────────────────────────
+            // The card runs to the physical bottom of the screen (the shell
+            // draws the floating nav over it), so the pill's own height is
+            // added to the offset — otherwise the lowest buttons sit behind
+            // the pill, which also swallows their taps.
             Positioned(
               right: 16,
-              bottom: 48,
+              bottom: 48 + MediaQuery.paddingOf(context).bottom,
               child: _ActionColumn(
                 interested: settled,
                 interestedLabel: interestButtonLabel(
@@ -528,7 +543,15 @@ class _ReelCardState extends ConsumerState<_ReelCard>
             // ── Bottom info area ─────────────────────────────────────
             // Same widget Profile Detail's hero uses; the gutter it leaves on
             // the right is the space the action column above occupies.
-            NmProfileHeroOverlay(profile: widget.profile),
+            //
+            // bottomInset is what keeps the name and the metadata chips
+            // (location, height, religion, education, ...) above the floating
+            // nav: the reel card is full-bleed to the bottom of the screen, so
+            // without it the last chip row renders underneath the pill.
+            NmProfileHeroOverlay(
+              profile: widget.profile,
+              bottomInset: MediaQuery.paddingOf(context).bottom,
+            ),
 
             // ── Heart burst animation ────────────────────────────────
             if (_showHeart)

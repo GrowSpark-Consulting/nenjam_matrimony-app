@@ -29,20 +29,17 @@ class NmGenderPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       color:
           backgroundColor ??
-          (isDark
-              ? AppColors.surfaceVariantDark
-              : AppColors.surfaceVariantLight),
+          AppColors.surfaceVariantLight,
       alignment: Alignment.center,
       child: Icon(
         _icon,
         size: iconSize,
         color:
             iconColor ??
-            (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
+            AppColors.textTertiaryLight,
       ),
     );
   }

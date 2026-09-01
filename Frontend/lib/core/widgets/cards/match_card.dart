@@ -32,12 +32,10 @@ class NmMatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        decoration: AppDecorations.card(isDark: isDark),
+        decoration: AppDecorations.card(),
         clipBehavior: Clip.antiAlias,
         child: Row(
           children: [
@@ -48,9 +46,9 @@ class NmMatchCard extends StatelessWidget {
               child: imageUrl != null
                   ? NmSizedNetworkPhoto(
                       url: imageUrl!,
-                      errorBuilder: (_, __, ___) => _placeholder(isDark),
+                      errorBuilder: (_, __, ___) => _placeholder(),
                     )
-                  : _placeholder(isDark),
+                  : _placeholder(),
             ),
 
             // Details
@@ -75,9 +73,7 @@ class NmMatchCard extends StatelessWidget {
                           child: Text(
                             matchReason,
                             style: AppTypography.labelSmall.copyWith(
-                              color: isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiaryLight,
+                              color: AppColors.textTertiaryLight,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -91,13 +87,11 @@ class NmMatchCard extends StatelessWidget {
             ),
 
             // Arrow
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
+            const Padding(
+              padding: EdgeInsets.only(right: 12),
               child: Icon(
                 Icons.chevron_right_rounded,
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
+                color: AppColors.textTertiaryLight,
               ),
             ),
           ],
@@ -106,7 +100,7 @@ class NmMatchCard extends StatelessWidget {
     );
   }
 
-  Widget _placeholder(bool isDark) =>
+  Widget _placeholder() =>
       NmGenderPlaceholder(gender: gender, iconSize: 32);
 }
 

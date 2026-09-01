@@ -24,8 +24,6 @@ class PsychologySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     if (!result.completed) {
       if (onTakeQuizTap == null) return const SizedBox.shrink();
       return GestureDetector(
@@ -33,7 +31,7 @@ class PsychologySection extends StatelessWidget {
         child: Container(
           width: double.infinity,
           padding: AppSpacing.cardPaddingLarge,
-          decoration: AppDecorations.card(isDark: isDark),
+          decoration: AppDecorations.card(),
           child: Row(
             children: [
               Container(
@@ -63,9 +61,7 @@ class PsychologySection extends StatelessWidget {
                     Text(
                       AppLocalizations.of(context).riQuizTeaser,
                       style: AppTypography.labelSmall.copyWith(
-                        color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
+                        color: AppColors.textTertiaryLight,
                       ),
                     ),
                   ],
@@ -92,7 +88,7 @@ class PsychologySection extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: AppSpacing.cardPaddingLarge,
-      decoration: AppDecorations.card(isDark: isDark),
+      decoration: AppDecorations.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -148,9 +144,7 @@ class PsychologySection extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: value / 100,
                       minHeight: 6,
-                      backgroundColor: isDark
-                          ? AppColors.surfaceVariantDark
-                          : AppColors.surfaceVariantLight,
+                      backgroundColor: AppColors.surfaceVariantLight,
                       valueColor: const AlwaysStoppedAnimation(
                         AppColors.scorePsychology,
                       ),

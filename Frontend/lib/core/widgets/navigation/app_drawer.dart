@@ -35,10 +35,8 @@ class NmDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Drawer(
-      backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      backgroundColor: AppColors.surfaceLight,
       child: SafeArea(
         child: Column(
           children: [
@@ -67,9 +65,7 @@ class NmDrawer extends StatelessWidget {
                           Text(
                             userEmail!,
                             style: AppTypography.bodySmall.copyWith(
-                              color: isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiaryLight,
+                              color: AppColors.textTertiaryLight,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,

@@ -20,7 +20,7 @@ import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/pr
 import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/profile_detail_hero_app_bar.dart';
 import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/profile_photo_gallery_section.dart';
 import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/similar_profiles_section.dart';
-import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/verification_trust_section.dart';
+import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/verification_section.dart';
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 
 DiscoveryProfileEntity _buildProfile({List<String> photoUrls = const []}) {
@@ -349,7 +349,7 @@ void main() {
         'Horoscope': find.byType(HoroscopeSection),
         'Compatibility': find.byType(CompatibilityCardSection),
         'Partner Preferences': find.byType(NmPartnerPreferenceCard),
-        'Verification': find.byType(VerificationTrustSection),
+        'Verification': find.byType(VerificationSection),
         'Similar Profiles': find.byType(SimilarProfilesSection),
       };
 
@@ -467,7 +467,7 @@ void main() {
       'Horoscope': find.byType(HoroscopeSection),
       'Compatibility': find.byType(CompatibilityCardSection),
       'Preferences': find.byType(NmPartnerPreferenceCard),
-      'Verification': find.byType(VerificationTrustSection),
+      'Verification': find.byType(VerificationSection),
     };
 
     for (final entry in tabsAndSections.entries) {

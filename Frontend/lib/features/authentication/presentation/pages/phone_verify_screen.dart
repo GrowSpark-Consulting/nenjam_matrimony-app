@@ -105,7 +105,7 @@ class _PhoneVerifyScreenState extends ConsumerState<PhoneVerifyScreen> {
     // Always CREATE MODE here — guarantees no stale draft/mode leaks in
     // from a previous session (e.g. a prior user's edit on a shared device).
     ref.read(registrationProvider.notifier).startCreateMode();
-    context.go(RouteNames.registrationWizard);
+    context.go(RouteNames.createProfileFor);
   }
 
   void _showError(String message) {
@@ -115,7 +115,6 @@ class _PhoneVerifyScreenState extends ConsumerState<PhoneVerifyScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final state = ref.watch(phoneAuthControllerProvider);
 
     // React to Android instant verification.
@@ -155,9 +154,7 @@ class _PhoneVerifyScreenState extends ConsumerState<PhoneVerifyScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColors.surfaceVariantDark
-                      : AppColors.primarySurface,
+                  color: AppColors.primarySurface,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -171,9 +168,7 @@ class _PhoneVerifyScreenState extends ConsumerState<PhoneVerifyScreen> {
                             ? l10n.authSendingOtp
                             : l10n.authOtpSentTo(_phone),
                         style: AppTypography.bodySmall.copyWith(
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
+                          color: AppColors.textSecondaryLight,
                         ),
                       ),
                     ),
@@ -204,9 +199,7 @@ class _PhoneVerifyScreenState extends ConsumerState<PhoneVerifyScreen> {
                           Text(
                             l10n.authResendOtpIn,
                             style: AppTypography.bodySmall.copyWith(
-                              color: isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiaryLight,
+                              color: AppColors.textTertiaryLight,
                             ),
                           ),
                           const SizedBox(height: 4),

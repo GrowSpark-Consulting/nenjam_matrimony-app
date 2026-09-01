@@ -6,6 +6,7 @@ abstract final class RouteNames {
   static const String splash = '/';
   static const String language = '/language';
   static const String authSelection = '/auth-selection';
+  static const String registrationLanding = '/registration-landing';
   static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String otp = '/otp';
@@ -27,6 +28,7 @@ abstract final class RouteNames {
   static const String messages = '/messages';
   static const String notifications = '/notifications';
   static const String profile = '/profile';
+  static const String profileMenu = '/profile-menu';
   static const String profileCompletion = '/profile-completion';
   static const String premium = '/premium';
   static const String settings = '/settings';
@@ -37,7 +39,6 @@ abstract final class RouteNames {
   static const String ticketHistory = '/help/tickets';
   static const String privacy = '/privacy';
   static const String about = '/about';
-  static const String trustScore = '/trust-score';
   static const String partnerPreferences = '/partner-preferences';
   static const String interestsSent = '/interests-sent';
   static const String interestsReceived = '/interests-received';
@@ -56,6 +57,7 @@ abstract final class RouteNames {
   static const String splashName = 'splash';
   static const String languageName = 'language';
   static const String authSelectionName = 'authSelection';
+  static const String registrationLandingName = 'registrationLanding';
   static const String onboardingName = 'onboarding';
   static const String loginName = 'login';
   static const String otpName = 'otp';
@@ -77,6 +79,7 @@ abstract final class RouteNames {
   static const String messagesName = 'messages';
   static const String notificationsName = 'notifications';
   static const String profileName = 'profile';
+  static const String profileMenuName = 'profileMenu';
   static const String profileCompletionName = 'profileCompletion';
   static const String premiumName = 'premium';
   static const String settingsName = 'settings';
@@ -87,7 +90,6 @@ abstract final class RouteNames {
   static const String ticketHistoryName = 'ticketHistory';
   static const String privacyName = 'privacy';
   static const String aboutName = 'about';
-  static const String trustScoreName = 'trustScore';
   static const String partnerPreferencesName = 'partnerPreferences';
   static const String interestsSentName = 'interestsSent';
   static const String interestsReceivedName = 'interestsReceived';
@@ -119,6 +121,7 @@ abstract final class RouteNames {
     splash,
     language,
     authSelection,
+    registrationLanding,
     onboarding,
     login,
     otp,
