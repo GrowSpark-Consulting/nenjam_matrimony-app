@@ -4373,7 +4373,7 @@ abstract class AppLocalizations {
   /// No description provided for @registrationProfileForTitle.
   ///
   /// In en, this message translates to:
-  /// **'Who are you creating this profile for?'**
+  /// **'This Profile is for'**
   String get registrationProfileForTitle;
 
   /// No description provided for @registrationProfileForSubtitle.
@@ -4429,6 +4429,612 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Finding a match for a friend'**
   String get profileForFriendSub;
+
+  /// No description provided for @profileForOptionMyself.
+  ///
+  /// In en, this message translates to:
+  /// **'Myself'**
+  String get profileForOptionMyself;
+
+  /// No description provided for @profileForOptionSon.
+  ///
+  /// In en, this message translates to:
+  /// **'My Son'**
+  String get profileForOptionSon;
+
+  /// No description provided for @profileForOptionDaughter.
+  ///
+  /// In en, this message translates to:
+  /// **'My Daughter'**
+  String get profileForOptionDaughter;
+
+  /// No description provided for @profileForOptionBrother.
+  ///
+  /// In en, this message translates to:
+  /// **'My Brother'**
+  String get profileForOptionBrother;
+
+  /// No description provided for @profileForOptionSister.
+  ///
+  /// In en, this message translates to:
+  /// **'My Sister'**
+  String get profileForOptionSister;
+
+  /// No description provided for @profileForOptionFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'My Friend'**
+  String get profileForOptionFriend;
+
+  /// No description provided for @profileForOptionRelative.
+  ///
+  /// In en, this message translates to:
+  /// **'My Relative'**
+  String get profileForOptionRelative;
+
+  /// No description provided for @profileForNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Nenjam is a space for people genuinely looking to marry. Profiles created with false details, or on behalf of a marriage bureau or any business, are removed from the platform.'**
+  String get profileForNotice;
+
+  /// No description provided for @profileBasicsHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Now let\'s build your Profile'**
+  String get profileBasicsHeadline;
+
+  /// No description provided for @profileBasicsStateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'State you live in'**
+  String get profileBasicsStateHint;
+
+  /// No description provided for @profileBasicsCityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'City you live in'**
+  String get profileBasicsCityHint;
+
+  /// No description provided for @profileBasicsCasteNoBar.
+  ///
+  /// In en, this message translates to:
+  /// **'Not particular about my partner\'s community (caste no bar)'**
+  String get profileBasicsCasteNoBar;
+
+  /// No description provided for @onboardingReligionHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Your religion'**
+  String get onboardingReligionHeadline;
+
+  /// No description provided for @onboardingReligionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Religion'**
+  String get onboardingReligionLabel;
+
+  /// No description provided for @onboardingReligionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your religion'**
+  String get onboardingReligionHint;
+
+  /// No description provided for @onboardingCommunityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get onboardingCommunityLabel;
+
+  /// No description provided for @onboardingCommunityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your community'**
+  String get onboardingCommunityHint;
+
+  /// No description provided for @onboardingCommunityHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Your community is the group you identify with — for some families that is a caste, for others a language or region.'**
+  String get onboardingCommunityHelp;
+
+  /// No description provided for @onboardingLivingInLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Living in'**
+  String get onboardingLivingInLabel;
+
+  /// No description provided for @onboardingLivingInHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Country you live in'**
+  String get onboardingLivingInHint;
+
+  /// No description provided for @onboardingContactHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'An active email ID & phone no. are required to secure your profile'**
+  String get onboardingContactHeadline;
+
+  /// No description provided for @onboardingContactEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email ID'**
+  String get onboardingContactEmailLabel;
+
+  /// No description provided for @onboardingContactEmailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'your.name@example.com'**
+  String get onboardingContactEmailHint;
+
+  /// No description provided for @onboardingContactMobileLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile no.'**
+  String get onboardingContactMobileLabel;
+
+  /// No description provided for @onboardingContactMobileHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile no.'**
+  String get onboardingContactMobileHint;
+
+  /// No description provided for @onboardingContactSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get onboardingContactSubmit;
+
+  /// No description provided for @onboardingContactLegal.
+  ///
+  /// In en, this message translates to:
+  /// **'By creating an account, you agree to our Privacy Policy and T&C.'**
+  String get onboardingContactLegal;
+
+  /// No description provided for @onboardingContactEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address.'**
+  String get onboardingContactEmailInvalid;
+
+  /// No description provided for @onboardingContactMobileInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid 10-digit mobile number.'**
+  String get onboardingContactMobileInvalid;
+
+  /// No description provided for @onboardingContactEmailLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Already linked to your account.'**
+  String get onboardingContactEmailLocked;
+
+  /// No description provided for @onboardingContactMobileLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Already linked to your account.'**
+  String get onboardingContactMobileLocked;
+
+  /// No description provided for @onboardingContactEmailLinkFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t send a confirmation to that address. Try again, or use a different one.'**
+  String get onboardingContactEmailLinkFailed;
+
+  /// No description provided for @onboardingMaritalHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Marital status'**
+  String get onboardingMaritalHeadline;
+
+  /// No description provided for @onboardingMaritalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your marital status'**
+  String get onboardingMaritalLabel;
+
+  /// No description provided for @onboardingMaritalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your marital status'**
+  String get onboardingMaritalHint;
+
+  /// No description provided for @onboardingHeightLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Height'**
+  String get onboardingHeightLabel;
+
+  /// No description provided for @onboardingHeightFieldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your height'**
+  String get onboardingHeightFieldLabel;
+
+  /// No description provided for @onboardingHeightHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your height'**
+  String get onboardingHeightHint;
+
+  /// No description provided for @onboardingDietLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet'**
+  String get onboardingDietLabel;
+
+  /// No description provided for @onboardingDietFieldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your diet'**
+  String get onboardingDietFieldLabel;
+
+  /// No description provided for @onboardingDietHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your diet'**
+  String get onboardingDietHint;
+
+  /// No description provided for @onboardingEducationEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Great! Few more details'**
+  String get onboardingEducationEyebrow;
+
+  /// No description provided for @onboardingEducationHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Highest qualification'**
+  String get onboardingEducationHeadline;
+
+  /// No description provided for @onboardingQualificationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your highest qualification'**
+  String get onboardingQualificationLabel;
+
+  /// No description provided for @onboardingQualificationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your qualification'**
+  String get onboardingQualificationHint;
+
+  /// No description provided for @onboardingCollegeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'College'**
+  String get onboardingCollegeLabel;
+
+  /// No description provided for @onboardingCollegeFieldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'College you attended'**
+  String get onboardingCollegeFieldLabel;
+
+  /// No description provided for @onboardingCollegeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'College you attended'**
+  String get onboardingCollegeHint;
+
+  /// No description provided for @onboardingIncomeEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'You are almost done!'**
+  String get onboardingIncomeEyebrow;
+
+  /// No description provided for @onboardingIncomeHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Annual income'**
+  String get onboardingIncomeHeadline;
+
+  /// No description provided for @onboardingIncomeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your annual income'**
+  String get onboardingIncomeLabel;
+
+  /// No description provided for @onboardingIncomeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your annual income'**
+  String get onboardingIncomeHint;
+
+  /// No description provided for @onboardingIncomeWhy.
+  ///
+  /// In en, this message translates to:
+  /// **'Why is income required?'**
+  String get onboardingIncomeWhy;
+
+  /// No description provided for @onboardingIncomeWhyAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Income is one of the details members filter on, so adding it means your profile reaches the people actually looking for a match like you. It is never shown as an exact figure.'**
+  String get onboardingIncomeWhyAnswer;
+
+  /// No description provided for @onboardingWorkHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Work details'**
+  String get onboardingWorkHeadline;
+
+  /// No description provided for @onboardingWorkWithLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'You work with'**
+  String get onboardingWorkWithLabel;
+
+  /// No description provided for @onboardingWorkWithHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select where you work'**
+  String get onboardingWorkWithHint;
+
+  /// No description provided for @onboardingWorkAsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'You work as'**
+  String get onboardingWorkAsLabel;
+
+  /// No description provided for @onboardingWorkAsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select what you do'**
+  String get onboardingWorkAsHint;
+
+  /// No description provided for @onboardingCompanyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your current company name'**
+  String get onboardingCompanyLabel;
+
+  /// No description provided for @onboardingCompanyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Specify current organization'**
+  String get onboardingCompanyHint;
+
+  /// No description provided for @onboardingIncomeCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Profile'**
+  String get onboardingIncomeCta;
+
+  /// No description provided for @onboardingPhotosHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Photos to complete your Profile'**
+  String get onboardingPhotosHeadline;
+
+  /// No description provided for @onboardingPhotosSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo privacy controls are available in Settings.'**
+  String get onboardingPhotosSubtitle;
+
+  /// No description provided for @onboardingPhotosGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Add from Gallery'**
+  String get onboardingPhotosGallery;
+
+  /// No description provided for @onboardingPhotosCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Camera'**
+  String get onboardingPhotosCamera;
+
+  /// No description provided for @onboardingPhotosLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Photos Later'**
+  String get onboardingPhotosLater;
+
+  /// No description provided for @onboardingPhotosFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That photo couldn\'t be uploaded. Try again.'**
+  String get onboardingPhotosFailed;
+
+  /// No description provided for @onboardingPhotosAddedOne.
+  ///
+  /// In en, this message translates to:
+  /// **'1 photo added.'**
+  String get onboardingPhotosAddedOne;
+
+  /// Confirms how many photos the member has uploaded so far
+  ///
+  /// In en, this message translates to:
+  /// **'{count} photos added.'**
+  String onboardingPhotosAddedMany(String count);
+
+  /// No description provided for @onboardingAboutEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ve added a short description about you'**
+  String get onboardingAboutEyebrow;
+
+  /// No description provided for @onboardingAboutHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'About yourself'**
+  String get onboardingAboutHeadline;
+
+  /// No description provided for @onboardingAboutHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit the text above to make it more personal.'**
+  String get onboardingAboutHelper;
+
+  /// No description provided for @onboardingAboutRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us a little about yourself to continue.'**
+  String get onboardingAboutRequired;
+
+  /// No description provided for @accountExistsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account already exists'**
+  String get accountExistsTitle;
+
+  /// No description provided for @accountExistsBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'This email or mobile number is already registered. Please log in to continue.'**
+  String get accountExistsBoth;
+
+  /// No description provided for @accountExistsEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'An account with this email is already registered. Please log in to continue.'**
+  String get accountExistsEmail;
+
+  /// No description provided for @accountExistsMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'This mobile number is already registered. Please log in to continue.'**
+  String get accountExistsMobile;
+
+  /// No description provided for @accountExistsLogIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Log In'**
+  String get accountExistsLogIn;
+
+  /// No description provided for @accountExistsEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit details'**
+  String get accountExistsEdit;
+
+  /// No description provided for @accountCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to check your account right now. Please try again.'**
+  String get accountCheckFailed;
+
+  /// No description provided for @accountCheckRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try Again'**
+  String get accountCheckRetry;
+
+  /// No description provided for @onboardingVerifyMobileHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify Mobile Number'**
+  String get onboardingVerifyMobileHeadline;
+
+  /// No description provided for @onboardingVerifyMobileSentTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm this is the number to reach you on'**
+  String get onboardingVerifyMobileSentTo;
+
+  /// No description provided for @onboardingVerifyMobileEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get onboardingVerifyMobileEdit;
+
+  /// No description provided for @onboardingVerifyMobileVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Number verified successfully'**
+  String get onboardingVerifyMobileVerified;
+
+  /// No description provided for @authInvalidOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'That code isn\'t right. Check it and try again.'**
+  String get authInvalidOtp;
+
+  /// No description provided for @onboardingVerifyMobileEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter any 4-digit code to continue.'**
+  String get onboardingVerifyMobileEnter;
+
+  /// No description provided for @authEntrySignUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Up'**
+  String get authEntrySignUp;
+
+  /// No description provided for @authEntryLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Login'**
+  String get authEntryLogin;
+
+  /// No description provided for @welcomeBackHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back'**
+  String get welcomeBackHeadline;
+
+  /// No description provided for @welcomeBackSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your details to continue'**
+  String get welcomeBackSubtitle;
+
+  /// No description provided for @welcomeBackGetOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'Get OTP'**
+  String get welcomeBackGetOtp;
+
+  /// No description provided for @welcomeBackPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Login with Password'**
+  String get welcomeBackPassword;
+
+  /// No description provided for @welcomeBackGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get welcomeBackGoogle;
+
+  /// No description provided for @welcomeBackEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Email'**
+  String get welcomeBackEmail;
+
+  /// No description provided for @welcomeBackNoAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t have an account?'**
+  String get welcomeBackNoAccount;
+
+  /// No description provided for @welcomeBackSignUpFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Up Free'**
+  String get welcomeBackSignUpFree;
+
+  /// Says which required fields on the Location & Sub-community step are still unanswered; {fields} is an already-joined list such as "state and city"
+  ///
+  /// In en, this message translates to:
+  /// **'Select your {fields} to continue.'**
+  String profileBasicsMissing(String fields);
+
+  /// Joins the last two entries of the missing-field list
+  ///
+  /// In en, this message translates to:
+  /// **'{first} and {second}'**
+  String profileBasicsFieldJoin(String first, String second);
+
+  /// No description provided for @profileBasicsPartnerPrefSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved your details, but we couldn\'t record the community preference. You can set it later in Partner Preferences.'**
+  String get profileBasicsPartnerPrefSaveFailed;
 
   /// No description provided for @registrationProfileCreatedForLabel.
   ///

@@ -2,16 +2,44 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/animations/app_animations.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/router/route_names.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/tokens/app_animation_tokens.dart';
+import '../../../../core/theme/tokens/app_radius.dart';
+import '../../../../core/theme/tokens/app_touch_target.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
+import '../../../../core/widgets/buttons/icon_button.dart';
+import '../../../../core/widgets/layout/responsive_layout.dart';
+import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/models/profile_for_relation.dart';
 import '../providers/registration_provider.dart';
 
-/// "Who are you creating this profile for?" selection screen.
+/// The options wrap into two columns on a phone, so each pill is capped at
+/// half the content width (minus the gap between them) — a long label
+/// therefore wraps onto the next row instead of stretching across it.
+const double _kPillColumns = 2;
+
+/// Gap between pills, both across a row and between rows. Shared with the
+/// half-width maths above so the two can never drift apart and leave the
+/// second column clipped.
+const double _kPillGap = AppSpacing.sm;
+
+/// Keeps the column of content from stretching to full tablet width, where
+/// a bled-out pill grid would leave the two columns far apart.
+const double _kContentMaxWidth = 480;
+
+/// "This Profile is for" — the first step of profile creation, and the only
+/// writer of `BasicDetails.profileCreatedFor`.
+///
+/// Every path that finishes sign-up lands here (see `PostAuthDestination`),
+/// including a resumed registration whose draft already carries an answer —
+/// which is why the initial selection is restored from the draft rather than
+/// defaulted. Nothing is selected until the user (or that draft) picks one,
+/// and Continue stays disabled until then: an unanswered question has to
+/// stay distinguishable from a real answer all the way to the backend.
 class CreateProfileForPage extends ConsumerStatefulWidget {
   const CreateProfileForPage({super.key});
 
@@ -21,111 +49,148 @@ class CreateProfileForPage extends ConsumerStatefulWidget {
 }
 
 class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
-  late String _selected;
+  ProfileForRelation? _selected;
 
   @override
   void initState() {
     super.initState();
     // Start on the answer the draft already carries rather than a hard
-    // 'Myself' default, so stepping back here from the wizard — or resuming
-    // a registration on a new device — shows the choice the user made
+    // default, so stepping back here from the wizard — or resuming a
+    // registration on a new device — shows the choice the user made
     // instead of silently reverting it.
-    final existing = ref.read(registrationProvider).basicDetails.profileCreatedFor;
-    _selected = _options.any((o) => o.label == existing) ? existing : 'Myself';
+    _selected = ProfileForRelation.fromStorage(
+      ref.read(registrationProvider).basicDetails.profileCreatedFor,
+    );
   }
 
-  static const _options = [
-    _ProfileForOption('Myself', Icons.person_rounded, 'I am looking for a match for myself'),
-    _ProfileForOption('Son', Icons.boy_rounded, 'Finding a match for my son'),
-    _ProfileForOption('Daughter', Icons.girl_rounded, 'Finding a match for my daughter'),
-    _ProfileForOption('Brother', Icons.people_rounded, 'Finding a match for my brother'),
-    _ProfileForOption('Sister', Icons.people_outline_rounded, 'Finding a match for my sister'),
-    _ProfileForOption('Relative', Icons.family_restroom_rounded, 'Finding a match for a relative'),
-    _ProfileForOption('Friend', Icons.handshake_rounded, 'Finding a match for a friend'),
-  ];
-
-  /// Localized display label for a stored relation value (value stays English).
-  String _relationLabel(AppLocalizations l10n, String v) => switch (v) {
-        'Myself' => l10n.authRegForMyself,
-        'Son' => l10n.authRegForSon,
-        'Daughter' => l10n.authRegForDaughter,
-        'Brother' => l10n.authRegForBrother,
-        'Sister' => l10n.authRegForSister,
-        'Relative' => l10n.profileForRelative,
-        'Friend' => l10n.authRegForFriend,
-        _ => v,
+  /// Localized label for a relation. [ProfileForRelation.storageValue] is
+  /// never localized — only what the user reads is.
+  String _label(AppLocalizations l10n, ProfileForRelation relation) =>
+      switch (relation) {
+        ProfileForRelation.myself => l10n.profileForOptionMyself,
+        ProfileForRelation.son => l10n.profileForOptionSon,
+        ProfileForRelation.daughter => l10n.profileForOptionDaughter,
+        ProfileForRelation.brother => l10n.profileForOptionBrother,
+        ProfileForRelation.sister => l10n.profileForOptionSister,
+        ProfileForRelation.friend => l10n.profileForOptionFriend,
+        ProfileForRelation.relative => l10n.profileForOptionRelative,
       };
 
-  String _relationSubtitle(AppLocalizations l10n, String v) => switch (v) {
-        'Myself' => l10n.profileForMyselfSub,
-        'Son' => l10n.profileForSonSub,
-        'Daughter' => l10n.profileForDaughterSub,
-        'Brother' => l10n.profileForBrotherSub,
-        'Sister' => l10n.profileForSisterSub,
-        'Relative' => l10n.profileForRelativeSub,
-        'Friend' => l10n.profileForFriendSub,
-        _ => v,
-      };
+  /// Leaves the first onboarding step. Reached via `go` from every sign-up
+  /// path (which replaces the whole stack), so there is usually nothing to
+  /// pop back to — the landing page is what precedes sign-up, and is where
+  /// Back belongs now that the welcome interstitial is out of the flow.
+  void _back() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(RouteNames.registrationLanding);
+    }
+  }
+
+  void _continue() {
+    final selected = _selected;
+    if (selected == null) return;
+    // Always CREATE MODE here — guarantees no stale draft/mode leaks in
+    // from a previous session.
+    final notifier = ref.read(registrationProvider.notifier);
+    notifier.startCreateMode();
+    notifier.setProfileCreatedFor(selected.storageValue);
+    context.go(RouteNames.onboardingReligion);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              Text(
-                l10n.registrationProfileForTitle,
-                style: AppTypography.headlineLarge.copyWith(
-                  fontWeight: FontWeight.w700,
+    return NmPageStatusBar(
+      background: theme.scaffoldBackgroundColor,
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _back();
+        },
+        child: Scaffold(
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                    ),
+                    child: NmIconButton(
+                      icon: Icons.arrow_back_rounded,
+                      tooltip: l10n.registrationBack,
+                      onPressed: _back,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.registrationProfileForSubtitle,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondaryLight,
+                // Scrolls rather than compresses: seven pills, a notice and
+                // a 200% text scale together outgrow a short phone.
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                      AppSpacing.lg,
+                      AppSpacing.xl,
+                    ),
+                    child: NmContentConstraint(
+                      maxWidth: _kContentMaxWidth,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Center(child: _ProfileForIllustration()),
+                          const SizedBox(height: AppSpacing.xl),
+                          Text(
+                            l10n.registrationProfileForTitle,
+                            style: AppTypography.headlineLarge.copyWith(
+                              color: colors.onSurface,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          _ProfileForOptions(
+                            options: ProfileForRelation.values,
+                            selected: _selected,
+                            labelOf: (relation) => _label(l10n, relation),
+                            onSelected: (relation) =>
+                                setState(() => _selected = relation),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          _ProfileForNotice(text: l10n.profileForNotice),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: _options.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: AppSpacing.md),
-                  itemBuilder: (context, index) {
-                    final opt = _options[index];
-                    final isSelected = _selected == opt.label;
-                    return _ProfileForCard(
-                      option: opt,
-                      label: _relationLabel(l10n, opt.label),
-                      subtitle: _relationSubtitle(l10n, opt.label),
-                      isSelected: isSelected,
-                      onTap: () => setState(() => _selected = opt.label),
-                    );
-                  },
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    0,
+                    AppSpacing.lg,
+                    AppSpacing.base,
+                  ),
+                  child: NmContentConstraint(
+                    maxWidth: _kContentMaxWidth,
+                    child: AppAnimations.buttonPress(
+                      NmGradientButton(
+                        label: l10n.commonContinue,
+                        icon: Icons.arrow_forward_rounded,
+                        // Null until a relation is picked — NmGradientButton
+                        // renders its own disabled state from that.
+                        onPressed: _selected == null ? null : _continue,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              NmGradientButton(
-                label: l10n.commonContinue,
-                icon: Icons.arrow_forward_rounded,
-                onPressed: () {
-                  // Always CREATE MODE here — guarantees no stale
-                  // draft/mode leaks in from a previous session.
-                  final notifier = ref.read(registrationProvider.notifier);
-                  notifier.startCreateMode();
-                  notifier.setProfileCreatedFor(_selected);
-                  context.go(RouteNames.registrationWizard);
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -133,101 +198,228 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
   }
 }
 
-class _ProfileForCard extends StatelessWidget {
-  final _ProfileForOption option;
-  final String label;
-  final String subtitle;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _ProfileForCard({
-    required this.option,
-    required this.label,
-    required this.subtitle,
-    required this.isSelected,
-    required this.onTap,
-  });
+/// Soft plum medallion standing in for the photo the user has not added
+/// yet. Drawn from theme tokens rather than an asset so it re-tints with
+/// the colour scheme instead of needing a second, dark-mode artwork file.
+class _ProfileForIllustration extends StatelessWidget {
+  const _ProfileForIllustration();
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: isSelected
-            ? AppDecorations.card().copyWith(
-                border: Border.all(color: AppColors.primary, width: 2),
-                color: AppColors.primary.withValues(alpha: 0.05),
-              )
-            : AppDecorations.card(),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.primary
-                    : AppColors.surfaceVariantLight,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                option.icon,
-                color: isSelected ? Colors.white : AppColors.primary,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w600,
-                      color: isSelected ? AppColors.primary : null,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textTertiaryLight,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isSelected ? AppColors.primary : Colors.transparent,
-                border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.borderLight,
-                  width: 2,
-                ),
-              ),
-              child: isSelected
-                  ? const Icon(Icons.check_rounded,
-                      size: 16, color: Colors.white)
-                  : null,
-            ),
-          ],
+    final colors = Theme.of(context).colorScheme;
+    return AppAnimations.scale(
+      Container(
+        width: AppSpacing.xl7,
+        height: AppSpacing.xl7,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: colors.primaryContainer,
+        ),
+        child: Icon(
+          Icons.person_rounded,
+          size: AppSpacing.xl3,
+          color: colors.primary,
         ),
       ),
     );
   }
 }
 
-class _ProfileForOption {
+/// The single-choice pill group.
+///
+/// A [Wrap] rather than a grid: pills size to their own label, so a locale
+/// with longer words reflows to fewer per row instead of ellipsizing, while
+/// the cap on each pill keeps the two-column reading at every phone width.
+class _ProfileForOptions extends StatelessWidget {
+  final List<ProfileForRelation> options;
+  final ProfileForRelation? selected;
+  final String Function(ProfileForRelation) labelOf;
+  final ValueChanged<ProfileForRelation> onSelected;
+
+  const _ProfileForOptions({
+    required this.options,
+    required this.selected,
+    required this.labelOf,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final pillMaxWidth =
+            (constraints.maxWidth - _kPillGap) / _kPillColumns;
+        return Wrap(
+          spacing: _kPillGap,
+          runSpacing: AppSpacing.md,
+          children: [
+            for (final option in options)
+              _ProfileForPill(
+                label: labelOf(option),
+                isSelected: option == selected,
+                maxWidth: pillMaxWidth,
+                onTap: () => onSelected(option),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ProfileForPill extends StatelessWidget {
   final String label;
-  final IconData icon;
-  final String subtitle;
-  const _ProfileForOption(this.label, this.icon, this.subtitle);
+  final bool isSelected;
+  final double maxWidth;
+  final VoidCallback onTap;
+
+  const _ProfileForPill({
+    required this.label,
+    required this.isSelected,
+    required this.maxWidth,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    // Selected and unselected differ in fill, border weight and label weight
+    // — not in the radio dot alone. The state has to be readable at a glance
+    // across a seven-option grid.
+    return Semantics(
+      inMutuallyExclusiveGroup: true,
+      selected: isSelected,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: maxWidth,
+          minHeight: AppTouchTarget.minSize,
+        ),
+        child: Material(
+          color: isSelected ? colors.primaryContainer : colors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: AppRadius.pill,
+            side: BorderSide(
+              color: isSelected ? colors.primary : colors.outline,
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const StadiumBorder(),
+            child: Padding(
+              // Trim, because the pill's width budget is half a phone: the
+              // chrome (padding + radio + gap) is what a label has to fit
+              // around, and at 360dp a wider one pushes "My Daughter" onto
+              // a second line.
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _RadioIndicator(isSelected: isSelected),
+                  const SizedBox(width: AppSpacing.sm),
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: AppTypography.labelLarge.copyWith(
+                        color: isSelected
+                            ? colors.onPrimaryContainer
+                            : colors.onSurface,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Ring-and-dot radio, matching the single-choice semantics of the group.
+class _RadioIndicator extends StatelessWidget {
+  final bool isSelected;
+
+  const _RadioIndicator({required this.isSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return AnimatedContainer(
+      duration: AppAnimationTokens.fast,
+      curve: AppAnimationTokens.luxuryCurve,
+      width: AppSpacing.lg,
+      height: AppSpacing.lg,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: colors.surface,
+        border: Border.all(
+          color: isSelected ? colors.primary : colors.outline,
+          width: 2,
+        ),
+      ),
+      child: Center(
+        child: AnimatedContainer(
+          duration: AppAnimationTokens.fast,
+          curve: AppAnimationTokens.luxuryCurve,
+          width: isSelected ? AppSpacing.sm : 0,
+          height: isSelected ? AppSpacing.sm : 0,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: colors.primary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Nenjam's own trust notice — about what this platform is for and what the
+/// moderation team actually removes, rather than generic legal boilerplate.
+class _ProfileForNotice extends StatelessWidget {
+  final String text;
+
+  const _ProfileForNotice({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return AppAnimations.fade(
+      Container(
+        padding: const EdgeInsets.all(AppSpacing.base),
+        decoration: BoxDecoration(
+          color: colors.secondaryContainer,
+          borderRadius: AppRadius.br16,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              size: AppSpacing.lg,
+              color: colors.secondary,
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Text(
+                text,
+                style: AppTypography.bodySmall.copyWith(
+                  color: colors.onSecondaryContainer,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      delay: const Duration(milliseconds: 150),
+    );
+  }
 }

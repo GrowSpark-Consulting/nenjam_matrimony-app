@@ -2252,8 +2252,7 @@ class AppLocalizationsTa extends AppLocalizations {
       'பதிவை முடிக்க உங்கள் மொபைல் எண்ணை சரிபார்க்கவும்.';
 
   @override
-  String get registrationProfileForTitle =>
-      'இந்தச் சுயவிவரத்தை யாருக்காக உருவாக்குகிறீர்கள்?';
+  String get registrationProfileForTitle => 'இந்தச் சுயவிவரம் யாருக்காக';
 
   @override
   String get registrationProfileForSubtitle => 'உறவைத் தேர்ந்தெடுக்கவும்';
@@ -2281,6 +2280,345 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get profileForFriendSub => 'ஒரு நண்பருக்கு பொருத்தம் தேடுகிறேன்';
+
+  @override
+  String get profileForOptionMyself => 'எனக்காக';
+
+  @override
+  String get profileForOptionSon => 'என் மகனுக்காக';
+
+  @override
+  String get profileForOptionDaughter => 'என் மகளுக்காக';
+
+  @override
+  String get profileForOptionBrother => 'என் சகோதரனுக்காக';
+
+  @override
+  String get profileForOptionSister => 'என் சகோதரிக்காக';
+
+  @override
+  String get profileForOptionFriend => 'என் நண்பருக்காக';
+
+  @override
+  String get profileForOptionRelative => 'என் உறவினருக்காக';
+
+  @override
+  String get profileForNotice =>
+      'உண்மையாகத் திருமணம் தேடுபவர்களுக்கான இடம் நெஞ்சம். தவறான தகவல்களுடன் உருவாக்கப்படும், அல்லது திருமணத் தரகு நிறுவனம் சார்பாக உருவாக்கப்படும் சுயவிவரங்கள் நீக்கப்படும்.';
+
+  @override
+  String get profileBasicsHeadline =>
+      'இப்போது உங்கள் சுயவிவரத்தை உருவாக்குவோம்';
+
+  @override
+  String get profileBasicsStateHint => 'நீங்கள் வசிக்கும் மாநிலம்';
+
+  @override
+  String get profileBasicsCityHint => 'நீங்கள் வசிக்கும் நகரம்';
+
+  @override
+  String get profileBasicsCasteNoBar =>
+      'என் துணையின் சமூகம் குறித்து எனக்கு நிபந்தனை இல்லை (சாதி தடை இல்லை)';
+
+  @override
+  String get onboardingReligionHeadline => 'உங்கள் மதம்';
+
+  @override
+  String get onboardingReligionLabel => 'மதம்';
+
+  @override
+  String get onboardingReligionHint => 'உங்கள் மதத்தைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get onboardingCommunityLabel => 'சமூகம்';
+
+  @override
+  String get onboardingCommunityHint => 'உங்கள் சமூகத்தைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get onboardingCommunityHelp =>
+      'நீங்கள் அடையாளம் காணும் குழுவே உங்கள் சமூகம் — சில குடும்பங்களுக்கு அது சாதி, சிலருக்கு மொழி அல்லது பகுதி.';
+
+  @override
+  String get onboardingLivingInLabel => 'வசிக்கும் இடம்';
+
+  @override
+  String get onboardingLivingInHint => 'நீங்கள் வசிக்கும் நாடு';
+
+  @override
+  String get onboardingContactHeadline =>
+      'உங்கள் சுயவிவரத்தைப் பாதுகாக்க செயலில் உள்ள மின்னஞ்சல் மற்றும் தொலைபேசி எண் தேவை';
+
+  @override
+  String get onboardingContactEmailLabel => 'மின்னஞ்சல் முகவரி';
+
+  @override
+  String get onboardingContactEmailHint => 'your.name@example.com';
+
+  @override
+  String get onboardingContactMobileLabel => 'கைபேசி எண்';
+
+  @override
+  String get onboardingContactMobileHint => 'கைபேசி எண்';
+
+  @override
+  String get onboardingContactSubmit => 'சமர்ப்பிக்கவும்';
+
+  @override
+  String get onboardingContactLegal =>
+      'கணக்கை உருவாக்குவதன் மூலம், எங்கள் தனியுரிமைக் கொள்கை மற்றும் விதிமுறைகளை ஏற்கிறீர்கள்.';
+
+  @override
+  String get onboardingContactEmailInvalid =>
+      'சரியான மின்னஞ்சல் முகவரியை உள்ளிடவும்.';
+
+  @override
+  String get onboardingContactMobileInvalid =>
+      'சரியான 10 இலக்க கைபேசி எண்ணை உள்ளிடவும்.';
+
+  @override
+  String get onboardingContactEmailLocked =>
+      'ஏற்கனவே உங்கள் கணக்குடன் இணைக்கப்பட்டுள்ளது.';
+
+  @override
+  String get onboardingContactMobileLocked =>
+      'ஏற்கனவே உங்கள் கணக்குடன் இணைக்கப்பட்டுள்ளது.';
+
+  @override
+  String get onboardingContactEmailLinkFailed =>
+      'அந்த முகவரிக்கு உறுதிப்படுத்தலை அனுப்ப முடியவில்லை. மீண்டும் முயற்சிக்கவும் அல்லது வேறு முகவரியைப் பயன்படுத்தவும்.';
+
+  @override
+  String get onboardingMaritalHeadline => 'திருமண நிலை';
+
+  @override
+  String get onboardingMaritalLabel => 'உங்கள் திருமண நிலை';
+
+  @override
+  String get onboardingMaritalHint =>
+      'உங்கள் திருமண நிலையைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get onboardingHeightLabel => 'உயரம்';
+
+  @override
+  String get onboardingHeightFieldLabel => 'உங்கள் உயரம்';
+
+  @override
+  String get onboardingHeightHint => 'உங்கள் உயரத்தைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get onboardingDietLabel => 'உணவுப் பழக்கம்';
+
+  @override
+  String get onboardingDietFieldLabel => 'உங்கள் உணவுப் பழக்கம்';
+
+  @override
+  String get onboardingDietHint =>
+      'உங்கள் உணவுப் பழக்கத்தைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get onboardingEducationEyebrow => 'அருமை! இன்னும் சில விவரங்கள்';
+
+  @override
+  String get onboardingEducationHeadline => 'உயர்கல்வித் தகுதி';
+
+  @override
+  String get onboardingQualificationLabel => 'உங்கள் உயர்கல்வித் தகுதி';
+
+  @override
+  String get onboardingQualificationHint =>
+      'உங்கள் தகுதியைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get onboardingCollegeLabel => 'கல்லூரி';
+
+  @override
+  String get onboardingCollegeFieldLabel => 'நீங்கள் படித்த கல்லூரி';
+
+  @override
+  String get onboardingCollegeHint => 'நீங்கள் படித்த கல்லூரி';
+
+  @override
+  String get onboardingIncomeEyebrow => 'கிட்டத்தட்ட முடிந்துவிட்டது!';
+
+  @override
+  String get onboardingIncomeHeadline => 'ஆண்டு வருமானம்';
+
+  @override
+  String get onboardingIncomeLabel => 'உங்கள் ஆண்டு வருமானம்';
+
+  @override
+  String get onboardingIncomeHint =>
+      'உங்கள் ஆண்டு வருமானத்தைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get onboardingIncomeWhy => 'வருமானம் ஏன் தேவை?';
+
+  @override
+  String get onboardingIncomeWhyAnswer =>
+      'வருமானம் உறுப்பினர்கள் வடிகட்டும் விவரங்களில் ஒன்று. அதைச் சேர்ப்பதால் உங்களைப் போன்ற பொருத்தத்தைத் தேடுபவர்களை உங்கள் சுயவிவரம் சென்றடையும். சரியான தொகை ஒருபோதும் காட்டப்படாது.';
+
+  @override
+  String get onboardingWorkHeadline => 'பணி விவரங்கள்';
+
+  @override
+  String get onboardingWorkWithLabel => 'நீங்கள் பணிபுரியும் இடம்';
+
+  @override
+  String get onboardingWorkWithHint => 'பணிபுரியும் இடத்தைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get onboardingWorkAsLabel => 'நீங்கள் செய்யும் பணி';
+
+  @override
+  String get onboardingWorkAsHint => 'உங்கள் பணியைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get onboardingCompanyLabel => 'தற்போதைய நிறுவனத்தின் பெயர்';
+
+  @override
+  String get onboardingCompanyHint => 'தற்போதைய நிறுவனத்தைக் குறிப்பிடவும்';
+
+  @override
+  String get onboardingIncomeCta => 'சுயவிவரத்தை உருவாக்கு';
+
+  @override
+  String get onboardingPhotosHeadline =>
+      'உங்கள் சுயவிவரத்தை முழுமையாக்க புகைப்படங்களைச் சேர்க்கவும்';
+
+  @override
+  String get onboardingPhotosSubtitle =>
+      'புகைப்படத் தனியுரிமைக் கட்டுப்பாடுகள் அமைப்புகளில் உள்ளன.';
+
+  @override
+  String get onboardingPhotosGallery => 'கேலரியிலிருந்து சேர்க்கவும்';
+
+  @override
+  String get onboardingPhotosCamera => 'கேமராவைப் பயன்படுத்து';
+
+  @override
+  String get onboardingPhotosLater => 'பின்னர் சேர்க்கிறேன்';
+
+  @override
+  String get onboardingPhotosFailed =>
+      'அந்தப் புகைப்படத்தைப் பதிவேற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get onboardingPhotosAddedOne => '1 புகைப்படம் சேர்க்கப்பட்டது.';
+
+  @override
+  String onboardingPhotosAddedMany(String count) {
+    return '$count புகைப்படங்கள் சேர்க்கப்பட்டன.';
+  }
+
+  @override
+  String get onboardingAboutEyebrow =>
+      'உங்களைப் பற்றி ஒரு சிறு விளக்கத்தைச் சேர்த்துள்ளோம்';
+
+  @override
+  String get onboardingAboutHeadline => 'உங்களைப் பற்றி';
+
+  @override
+  String get onboardingAboutHelper =>
+      'மேலே உள்ள உரையைத் திருத்தி இன்னும் தனிப்பட்டதாக்குங்கள்.';
+
+  @override
+  String get onboardingAboutRequired => 'தொடர உங்களைப் பற்றி சிறிது எழுதவும்.';
+
+  @override
+  String get accountExistsTitle => 'கணக்கு ஏற்கனவே உள்ளது';
+
+  @override
+  String get accountExistsBoth =>
+      'இந்த மின்னஞ்சல் அல்லது கைபேசி எண் ஏற்கனவே பதிவு செய்யப்பட்டுள்ளது. தொடர உள்நுழையவும்.';
+
+  @override
+  String get accountExistsEmail =>
+      'இந்த மின்னஞ்சலுடன் ஒரு கணக்கு ஏற்கனவே உள்ளது. தொடர உள்நுழையவும்.';
+
+  @override
+  String get accountExistsMobile =>
+      'இந்த கைபேசி எண் ஏற்கனவே பதிவு செய்யப்பட்டுள்ளது. தொடர உள்நுழையவும்.';
+
+  @override
+  String get accountExistsLogIn => 'உள்நுழைக';
+
+  @override
+  String get accountExistsEdit => 'விவரங்களைத் திருத்து';
+
+  @override
+  String get accountCheckFailed =>
+      'இப்போது உங்கள் கணக்கைச் சரிபார்க்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get accountCheckRetry => 'மீண்டும் முயற்சி';
+
+  @override
+  String get onboardingVerifyMobileHeadline => 'கைபேசி எண்ணைச் சரிபார்க்கவும்';
+
+  @override
+  String get onboardingVerifyMobileSentTo =>
+      'உங்களைத் தொடர்பு கொள்ள வேண்டிய எண் இதுவா என உறுதிப்படுத்தவும்';
+
+  @override
+  String get onboardingVerifyMobileEdit => 'திருத்து';
+
+  @override
+  String get onboardingVerifyMobileVerified =>
+      'எண் வெற்றிகரமாகச் சரிபார்க்கப்பட்டது';
+
+  @override
+  String get authInvalidOtp =>
+      'அந்தக் குறியீடு சரியல்ல. சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get onboardingVerifyMobileEnter =>
+      'தொடர ஏதேனும் 4 இலக்கக் குறியீட்டை உள்ளிடவும்.';
+
+  @override
+  String get authEntrySignUp => 'பதிவு செய்யவும்';
+
+  @override
+  String get authEntryLogin => 'உள்நுழையவும்';
+
+  @override
+  String get welcomeBackHeadline => 'மீண்டும் வருக';
+
+  @override
+  String get welcomeBackSubtitle => 'தொடர உங்கள் விவரங்களை உள்ளிடவும்';
+
+  @override
+  String get welcomeBackGetOtp => 'OTP பெறவும்';
+
+  @override
+  String get welcomeBackPassword => 'கடவுச்சொல்லுடன் உள்நுழைக';
+
+  @override
+  String get welcomeBackGoogle => 'Google மூலம் தொடரவும்';
+
+  @override
+  String get welcomeBackEmail => 'மின்னஞ்சல் மூலம் தொடரவும்';
+
+  @override
+  String get welcomeBackNoAccount => 'கணக்கு இல்லையா?';
+
+  @override
+  String get welcomeBackSignUpFree => 'இலவசமாகப் பதிவு செய்யவும்';
+
+  @override
+  String profileBasicsMissing(String fields) {
+    return 'தொடர $fields தேர்ந்தெடுக்கவும்.';
+  }
+
+  @override
+  String profileBasicsFieldJoin(String first, String second) {
+    return '$first மற்றும் $second';
+  }
+
+  @override
+  String get profileBasicsPartnerPrefSaveFailed =>
+      'உங்கள் விவரங்கள் சேமிக்கப்பட்டன, ஆனால் சமூக விருப்பத்தை பதிவு செய்ய முடியவில்லை. துணை விருப்பங்களில் பின்னர் அதை அமைக்கலாம்.';
 
   @override
   String get registrationProfileCreatedForLabel => 'யாருக்காக உருவாக்கப்பட்டது';

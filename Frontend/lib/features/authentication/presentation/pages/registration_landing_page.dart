@@ -66,15 +66,10 @@ class _RegistrationLandingPageState
 
   /// All three sign-up buttons go straight to the first onboarding step.
   ///
-  /// There is no credential form in between any more: the member is asked
-  /// for an email and a mobile number part-way through onboarding (the
-  /// Email + Mobile step), not before they have seen a single question. The
-  /// chosen method is recorded so that step can prefill the identifier they
-  /// picked and ask only for the other.
-  ///
-  /// Because there is no session yet, the steps persist locally and sync to
-  /// the backend once one exists — see
-  /// [RegistrationNotifier.flushOnboardingToBackend].
+  /// There is no credential form in front of onboarding: the member is asked
+  /// for an email and a mobile part-way through (the Email + Mobile step),
+  /// not before they have seen a single question. The chosen method is
+  /// recorded so that step can prefill the identifier they picked.
   void _signUpWith(SignUpFocus focus) {
     ref.read(signupMethodProvider.notifier).state = focus;
     ref.read(registrationProvider.notifier).startCreateMode();

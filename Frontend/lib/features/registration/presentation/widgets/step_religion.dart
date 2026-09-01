@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/profile_options.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
@@ -27,7 +28,7 @@ class _StepReligionState extends State<StepReligion> {
   late final TextEditingController _denominationCtrl;
   late final TextEditingController _communityCtrl;
 
-  static const _religions = ['Hindu', 'Christian', 'Muslim', 'Jain', 'Sikh', 'Buddhist', 'Inter-Religion', 'Other'];
+  static const _religions = [...ProfileOptions.religions, 'Other'];
 
   @override
   void initState() {

@@ -9,10 +9,25 @@ import 'package:nenjam_matrimony/features/matches/presentation/pages/matches_pag
 import 'package:nenjam_matrimony/features/premium/presentation/pages/premium_page.dart';
 import 'package:nenjam_matrimony/features/profile_detail/presentation/pages/profile_detail_page.dart';
 import 'package:nenjam_matrimony/features/profile_menu/presentation/pages/profile_menu_page.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/pages/create_profile_for_page.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_about_page.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_contact_page.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_education_page.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_income_page.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_marital_page.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_photos_page.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_religion_page.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/pages/profile_basics_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/profile_wizard_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/registration_page.dart';
+import 'package:nenjam_matrimony/features/profile_photos/data/repositories/photo_repository.dart';
+import 'package:nenjam_matrimony/features/profile_photos/domain/models/user_photo.dart';
+import 'package:nenjam_matrimony/features/profile_photos/presentation/providers/photo_providers.dart';
 import 'package:nenjam_matrimony/features/settings/presentation/pages/settings_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:nenjam_matrimony/core/services/storage_service.dart';
+import 'package:nenjam_matrimony/features/authentication/data/services/firebase_auth_service.dart';
+import 'package:nenjam_matrimony/features/authentication/presentation/providers/auth_providers.dart';
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -85,6 +100,28 @@ DiscoveryProfileEntity _profile() => const DiscoveryProfileEntity(
       hobbies: ['Reading', 'Travel'],
     );
 
+/// A signed-out auth service. The onboarding contact page reads the current
+/// user in `initState`; without this the audit would fail on "No Firebase App
+/// has been created", which is a harness gap, not a layout defect.
+class _SignedOutAuthService implements FirebaseAuthService {
+  @override
+  User? get currentUser => null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// A photo store with nothing in it — the empty state the Add Photos step
+/// opens on. Without it the audit would need a live API client and a
+/// Firebase token, neither of which says anything about layout.
+class _EmptyPhotoRepository implements PhotoRepository {
+  @override
+  Future<List<UserPhoto>> fetchPhotos() async => const [];
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 /// Drains every layout error recorded for the frame, not just the first —
 /// one screen can overflow in several places at once.
 List<Object> _drain(WidgetTester tester) {
@@ -117,6 +154,7 @@ Future<List<Object>> _pumpAt(
   Size size,
   Locale locale, {
   double keyboard = 0,
+  List<Override> overrides = const [],
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -135,6 +173,7 @@ Future<List<Object>> _pumpAt(
 
   await tester.pumpWidget(
     ProviderScope(
+      overrides: overrides,
       child: MaterialApp(
         locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -159,6 +198,7 @@ Future<void> _audit(
   Widget Function() build, {
   bool keyboard = false,
   List<Locale> locales = const [Locale('en'), Locale('ta')],
+  List<Override> overrides = const [],
 }) async {
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -173,7 +213,13 @@ Future<void> _audit(
           '${size.width > size.height ? 'landscape' : 'portrait'} '
           '[${locale.languageCode}]';
 
-      for (final e in await _pumpAt(tester, build(), size, locale)) {
+      for (final e in await _pumpAt(
+        tester,
+        build(),
+        size,
+        locale,
+        overrides: overrides,
+      )) {
         final line = '$name @ $tag -> ${_short(e)}';
         debugPrint('RESPFAIL $line');
         failures.add(line);
@@ -185,8 +231,14 @@ Future<void> _audit(
         // landscape phone as having ~15dp of usable space — a scenario no
         // real device produces.
         final inset = (size.height * 0.45).roundToDouble();
-        for (final e
-            in await _pumpAt(tester, build(), size, locale, keyboard: inset)) {
+        for (final e in await _pumpAt(
+          tester,
+          build(),
+          size,
+          locale,
+          keyboard: inset,
+          overrides: overrides,
+        )) {
           final line = '$name @ $tag +keyboard -> ${_short(e)}';
           debugPrint('RESPFAIL $line');
           failures.add(line);
@@ -236,6 +288,113 @@ void main() {
       () => const RegistrationPage(),
       keyboard: true,
     );
+  });
+
+  testWidgets('Profile For is responsive across phone sizes', (tester) async {
+    // Seven wrapping pills plus a notice and a pinned CTA — the run that is
+    // most likely to overflow is the shortest landscape phone in Tamil,
+    // whose labels are the longest of the two locales.
+    await _audit(
+      tester,
+      'CreateProfileForPage',
+      () => const CreateProfileForPage(),
+    );
+  });
+
+  testWidgets('Onboarding religion is responsive across phone sizes', (
+    tester,
+  ) async {
+    // Three dropdowns, one with a help affordance beside it, plus a
+    // two-line checkbox label and a pinned CTA.
+    await _audit(
+      tester,
+      'OnboardingReligionPage',
+      () => const OnboardingReligionPage(),
+    );
+  });
+
+  testWidgets('Onboarding contact is responsive across phone sizes', (
+    tester,
+  ) async {
+    // Two text fields (one with an inline country picker), a wrapping
+    // headline and a legal line under the CTA — audited with the keyboard
+    // up, since both fields raise one.
+    await _audit(
+      tester,
+      'OnboardingContactPage',
+      () => const OnboardingContactPage(),
+      keyboard: true,
+      overrides: [
+        firebaseAuthServiceProvider.overrideWithValue(_SignedOutAuthService()),
+      ],
+    );
+  });
+
+  testWidgets('Onboarding marital is responsive across phone sizes', (
+    tester,
+  ) async {
+    await _audit(
+      tester,
+      'OnboardingMaritalPage',
+      () => const OnboardingMaritalPage(),
+    );
+  });
+
+  testWidgets('Onboarding education is responsive across phone sizes', (
+    tester,
+  ) async {
+    // A dropdown and a free-text college field, so the keyboard matters.
+    await _audit(
+      tester,
+      'OnboardingEducationPage',
+      () => const OnboardingEducationPage(),
+      keyboard: true,
+    );
+  });
+
+  testWidgets('Onboarding income is responsive across phone sizes', (
+    tester,
+  ) async {
+    // The densest step: four fields, a help affordance and a longer CTA.
+    await _audit(
+      tester,
+      'OnboardingIncomePage',
+      () => const OnboardingIncomePage(),
+      keyboard: true,
+    );
+  });
+
+  testWidgets('Onboarding photos is responsive across phone sizes', (
+    tester,
+  ) async {
+    await _audit(
+      tester,
+      'OnboardingPhotosPage',
+      () => const OnboardingPhotosPage(),
+      overrides: [
+        photoRepositoryProvider.overrideWithValue(_EmptyPhotoRepository()),
+      ],
+    );
+  });
+
+  testWidgets('Onboarding about is responsive across phone sizes', (
+    tester,
+  ) async {
+    // A multi-line text area with a counter — the one step whose content
+    // grows as the member types.
+    await _audit(
+      tester,
+      'OnboardingAboutPage',
+      () => const OnboardingAboutPage(),
+      keyboard: true,
+    );
+  });
+
+  testWidgets('Profile basics is responsive across phone sizes', (tester) async {
+    // Three dropdowns, a two-line checkbox label and a pinned CTA — the run
+    // most likely to overflow is the shortest landscape phone in Tamil,
+    // whose caste-no-bar label is the longest of the two locales.
+    await _audit(tester, 'ProfileBasicsPage', () => const ProfileBasicsPage());
   });
 
   testWidgets('Profile wizard is responsive across phone sizes', (tester) async {
