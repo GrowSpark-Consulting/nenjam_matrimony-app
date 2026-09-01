@@ -53,6 +53,7 @@ class NenjamNavigationDrawer extends ConsumerStatefulWidget {
   final VoidCallback? onInterestSentTap;
   final VoidCallback? onInterestReceivedTap;
   final VoidCallback? onShortlistTap;
+  final VoidCallback? onNearMeTap;
   final VoidCallback? onProfileViewersTap;
   final VoidCallback? onLanguageTap;
   final VoidCallback? onSettingsTap;
@@ -80,6 +81,7 @@ class NenjamNavigationDrawer extends ConsumerStatefulWidget {
     this.onInterestSentTap,
     this.onInterestReceivedTap,
     this.onShortlistTap,
+    this.onNearMeTap,
     this.onProfileViewersTap,
     this.onLanguageTap,
     this.onSettingsTap,
@@ -306,6 +308,16 @@ class _NenjamNavigationDrawerState
                             widget.onShortlistTap?.call();
                           },
                         ),
+                      ),
+                      _DrawerItem(
+                        // Same near_me arrow the distance pill on each Near Me
+                        // card uses, so the icon means one thing app-wide.
+                        icon: Icons.near_me_outlined,
+                        label: l10n.drawerNearMe,
+                        onTap: () {
+                          Navigator.pop(context);
+                          widget.onNearMeTap?.call();
+                        },
                       ),
                       _DrawerItem(
                         // Same eye used by the Profile Viewers empty state and

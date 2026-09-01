@@ -51,6 +51,8 @@
 	<string>Allow Nenjam to access photos you choose for your profile and chats.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Allow Nenjam to use your microphone to record voice messages.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Allow Nenjam to use your location to show you matches near you. Your exact location is never shown to other members — only an approximate distance.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

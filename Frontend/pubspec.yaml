@@ -58,6 +58,14 @@ dependencies:
   # gallery access goes through the system photo picker and needs no
   # runtime permission, so it deliberately does not use this package.
   permission_handler: ^11.3.1
+  # Device location for the "Near Me" proximity search. Owns BOTH the runtime
+  # permission and the position fix, which is why location is deliberately not
+  # routed through permission_handler above — see nm_permission.dart. Requesting
+  # it through two packages would give two disagreeing answers about the same
+  # OS state, and only this one can also report whether location SERVICES are
+  # switched off (a different failure from a denied permission, with a
+  # different fix) or read the accuracy of a coarse "Approximate" grant.
+  geolocator: ^14.0.0
   # Emoji keyboard for the chat composer — inserts plain Unicode text at the
   # cursor via a TextEditingController, no custom message type involved.
   emoji_picker_flutter: ^4.4.0

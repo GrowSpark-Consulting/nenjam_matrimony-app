@@ -11,9 +11,11 @@ import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/avatars/app_avatars.dart';
 import '../../../../core/widgets/avatars/gender_placeholder.dart';
+import '../../../../core/permissions/permission_providers.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../core/widgets/images/sized_network_photo.dart';
+import '../../../../core/widgets/buttons/primary_button.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/presentation/utils/logout_flow.dart';
 import '../../../interests/presentation/providers/interests_provider.dart';
@@ -25,6 +27,8 @@ import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../../partner_preferences/presentation/utils/open_partner_preferences.dart';
 import '../../../profile_photos/presentation/widgets/photo_manager_bottom_sheet.dart';
 import '../../../registration/presentation/utils/open_edit_profile.dart';
+import '../../../nearby/data/repositories/nearby_repository_impl.dart';
+import '../../../nearby/presentation/providers/nearby_providers.dart';
 import '../../domain/entities/discovery_profile_entity.dart';
 import '../../domain/entities/discover_feed_entity.dart';
 import '../../domain/entities/story_entity.dart';
@@ -71,6 +75,7 @@ class DiscoverPage extends ConsumerWidget {
         onInterestSentTap: () => context.push(RouteNames.interestsSent),
         onInterestReceivedTap: () => context.push(RouteNames.interestsReceived),
         onShortlistTap: () => context.push(RouteNames.shortlisted),
+        onNearMeTap: () => context.push(RouteNames.nearby),
         // push (not go) so Back returns here — the drawer entry deliberately
         // omits `openedFromNotification`, which is what makes Back fall back
         // to Discover rather than the Notification Center.
@@ -147,6 +152,14 @@ class _DiscoverFeedView extends ConsumerWidget {
         feed.nearYou.isEmpty &&
         feed.premiumMembers.isEmpty;
 
+    // Near You reads no part of `feed`: different data source (the device's
+    // location, via `/profiles/nearby`), different filters, and its own
+    // permission state, which it renders itself. Defined once and placed in
+    // both branches below — it must survive an empty feed, and it must keep
+    // its position above Premium Members when the feed has content, so it
+    // cannot simply be appended after the branch.
+    const nearYouSliver = SliverToBoxAdapter(child: _NearYouSection());
+
     return RefreshIndicator(
       color: AppColors.secondary,
       onRefresh: () => ref.refresh(discoverFeedProvider.future),
@@ -156,12 +169,28 @@ class _DiscoverFeedView extends ConsumerWidget {
           // ── 1. Sticky App Bar ──────────────────────────────────────
           const _DiscoverAppBar(),
 
-          if (isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
+          // An empty preference-filtered feed no longer takes the whole page.
+          // `SliverFillRemaining(hasScrollBody: false)` used to, which meant a
+          // user with no preference matches also lost Near You — even though
+          // Near Me applies completely different rules (gender and safety
+          // only, no partner preferences, a radius instead) and may well have
+          // people to show. Sized to its content now, with Near You below it.
+          if (isEmpty) ...[
+            SliverToBoxAdapter(
               child: _DiscoverEmptyState(reason: feed.fallbackReason),
-            )
-          else ...[
+            ),
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.base,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Divider(height: 1),
+              ),
+            ),
+            nearYouSliver,
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl3)),
+          ] else ...[
             // ── Fallback banner (backend widened the search) ───────────
             if (feed.fallbackUsed)
               const SliverToBoxAdapter(child: _FallbackBanner()),
@@ -217,18 +246,8 @@ class _DiscoverFeedView extends ConsumerWidget {
                 ),
               ),
 
-            // ── 6. Near You grid ──────────────────────────────────────
-            if (feed.nearYou.isNotEmpty)
-              SliverToBoxAdapter(
-                child: _SectionPadding(
-                  child: _FeedSection(
-                    title: l10n.discoverNearYouTitle,
-                    icon: Icons.location_on_rounded,
-                    iconColor: AppColors.secondary,
-                    child: _NearYouGrid(profiles: feed.nearYou),
-                  ),
-                ),
-              ),
+            // ── 6. Near You — real device-location results ─────────────
+            nearYouSliver,
 
             // ── 7. Premium Members ─────────────────────────────────────
             if (feed.premiumMembers.isNotEmpty)
@@ -1420,6 +1439,242 @@ class _CompactProfileCardState extends ConsumerState<_CompactProfileCard> {
 // ─────────────────────────────────────────────────────────────────────────────
 // Near You — 2-column grid
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// The "Near You" section of the Discover feed, backed by the real
+/// location-based Nearby feature.
+///
+/// This is a view over [nearbyNotifierProvider] and nothing else — the same
+/// notifier the dedicated Near Me screen drives. There is no second location
+/// service, repository, permission flow or API call here; every branch below
+/// is a rendering of a state that notifier already produces, and the two
+/// surfaces therefore share one cached result.
+///
+/// Two consequences worth knowing:
+///
+///   * Opening Discover reads no location and shows no system dialog. The
+///     notifier starts [NearbyIdle] and does no work until asked, so this
+///     section renders its prompt from a state that cost nothing to compute.
+///     Tapping "Enable Location" is the only thing that requests a fix.
+///   * Loading once is loading for good. Coming back to Discover, or opening
+///     the Near Me screen afterwards, reuses the already-resolved state rather
+///     than issuing a second GPS read or a second `/profiles/nearby` call.
+class _NearYouSection extends ConsumerStatefulWidget {
+  const _NearYouSection();
+
+  @override
+  ConsumerState<_NearYouSection> createState() => _NearYouSectionState();
+}
+
+class _NearYouSectionState extends ConsumerState<_NearYouSection> {
+  @override
+  void initState() {
+    super.initState();
+
+    // A status check, never a prompt.
+    //
+    // `resolveIfIdle` asks the OS what the permission currently IS — an
+    // interrogation that shows no dialog — and only goes on to read a position
+    // when the answer is "already granted". Every other answer becomes a state
+    // that renders a call to action here and stops. So a user who granted
+    // location last week lands straight on results, and a user who has not is
+    // never ambushed by a system dialog for opening Discover. The dialog has
+    // exactly one trigger in this app: tapping "Enable Location", which routes
+    // to `requestPermissionAndLoad` instead.
+    //
+    // It also no-ops unless the state is still idle, so re-entering Discover
+    // reuses whatever was already resolved rather than re-reading GPS.
+    //
+    // Deferred off the build phase: the notifier sets state synchronously
+    // before its first await, and mutating a provider mid-build throws.
+    Future.microtask(
+      () => ref.read(nearbyNotifierProvider.notifier).resolveIfIdle(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final state = ref.watch(nearbyNotifierProvider);
+    final notifier = ref.read(nearbyNotifierProvider.notifier);
+
+    // A resolved-but-empty result hides the section outright, matching how
+    // every other section here omits itself when it has nothing to show. The
+    // dedicated Near Me screen is where "nobody within 100 km" gets explained
+    // at length; repeating that inside a browsing feed is just noise.
+    if (state is NearbyLoaded && state.profiles.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final Widget body = switch (state) {
+      NearbyLoaded(profiles: final profiles) => _NearYouGrid(
+        profiles: profiles,
+      ),
+      // Idle is momentary here — initState resolves it on the next microtask —
+      // so it shows the same placeholder as loading rather than a call to
+      // action that would flash for one frame and be replaced.
+      NearbyIdle() || NearbyLoading() => const _NearYouLoading(),
+      // Not granted, but the OS will still ask — so the button works.
+      //
+      // Invitation rather than complaint ("Find people near you", not
+      // "Location access is required"): on Android this same state covers a
+      // user who has simply never been asked, and scolding someone for
+      // withholding something nobody requested is a poor first impression.
+      // The dedicated Near Me screen keeps the firmer wording, where the user
+      // has deliberately navigated to a location feature.
+      NearbyPermissionRequired(isPermanentlyDenied: false) => _NearYouPrompt(
+        icon: Icons.location_on_rounded,
+        title: l10n.nearbyDiscoverPromptTitle,
+        message: l10n.nearbyDiscoverPromptMessage(_radiusLabel),
+        actionLabel: l10n.nearbyEnableLocation,
+        onAction: notifier.requestPermissionAndLoad,
+      ),
+      // Denied for good: the OS shows nothing on a retry, so offering one
+      // would be a button that cannot work. Settings is the only way back.
+      NearbyPermissionRequired() => _NearYouPrompt(
+        icon: Icons.location_off_rounded,
+        title: l10n.nearbyPermissionTitle,
+        message: l10n.nearbyPermissionBlockedMessage,
+        actionLabel: l10n.nearbyOpenSettings,
+        onAction: ref.read(appPermissionServiceProvider).openSettings,
+      ),
+      // Permission is irrelevant here — location is off device-wide, and the
+      // fix lives on a different settings screen.
+      NearbyLocationServicesOff() => _NearYouPrompt(
+        icon: Icons.gps_off_rounded,
+        title: l10n.nearbyServicesOffTitle,
+        message: l10n.nearbyServicesOffMessage,
+        actionLabel: l10n.nearbyTurnOnLocation,
+        onAction: notifier.openLocationSettings,
+      ),
+      NearbyLocationFailure() => _NearYouPrompt(
+        icon: Icons.error_outline_rounded,
+        title: l10n.nearbyErrorTitle,
+        message: l10n.nearbyLocationErrorMessage,
+        actionLabel: l10n.nearbyRetry,
+        onAction: notifier.refresh,
+      ),
+      // The location was fine; the request was not. Saying otherwise would
+      // send the user to a settings screen that cannot help them.
+      NearbyFetchFailure() => _NearYouPrompt(
+        icon: Icons.cloud_off_rounded,
+        title: l10n.nearbyErrorTitle,
+        message: l10n.nearbyFetchErrorMessage,
+        actionLabel: l10n.nearbyRetry,
+        onAction: notifier.refresh,
+      ),
+    };
+
+    return _SectionPadding(
+      child: _FeedSection(
+        title: l10n.discoverNearYouTitle,
+        icon: Icons.location_on_rounded,
+        iconColor: AppColors.secondary,
+        child: body,
+      ),
+    );
+  }
+
+  /// The radius the copy quotes, kept in step with the one actually searched
+  /// rather than hardcoded into a translated string.
+  static String get _radiusLabel =>
+      NearbyRepositoryImpl.defaultRadiusKm.round().toString();
+}
+
+/// Placeholder while a fix is being acquired, shaped like the 2x2 grid it
+/// resolves into so the feed does not jump when results land.
+class _NearYouLoading extends StatelessWidget {
+  const _NearYouLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: AppSpacing.base,
+          mainAxisSpacing: AppSpacing.base,
+          childAspectRatio: 0.75,
+        ),
+        itemCount: 2,
+        itemBuilder: (_, __) => const NmShimmer.card(),
+      ),
+    );
+  }
+}
+
+/// Inline card carrying one message and one action — the shape every
+/// non-result state of [_NearYouSection] renders in.
+///
+/// One widget for all of them so the states cannot drift apart visually; what
+/// differs between them is only the icon, the words and what the button does.
+class _NearYouPrompt extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  const _NearYouPrompt({
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.base),
+        decoration: BoxDecoration(
+          color: AppColors.secondary.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          border: Border.all(
+            color: AppColors.secondary.withValues(alpha: 0.18),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 20, color: AppColors.secondary),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: AppTypography.titleSmall.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              message,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textSecondaryLight,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.base),
+            SizedBox(
+              width: double.infinity,
+              child: NmPrimaryButton(label: actionLabel, onPressed: onAction),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _NearYouGrid extends StatelessWidget {
   final List<DiscoveryProfileEntity> profiles;

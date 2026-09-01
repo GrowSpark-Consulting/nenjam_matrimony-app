@@ -13,6 +13,7 @@ import { FeedInvalidationService } from '../../matches/cache/feed-invalidation.s
 import { EmailDispatchService } from '../../notifications/services/email-dispatch.service';
 import { ProfileEntity } from '../entities/profile.entity';
 import { PhotoEntity } from '../entities/photo.entity';
+import type { LocationResponseDto } from '../dto/update-location.dto';
 import {
   isBasicDetailsComplete,
   isEducationDetailsValid,
@@ -191,6 +192,51 @@ export class ProfileService {
     profile.astrology = astrology;
     profile.completion = completion;
     return profile;
+  }
+
+  /**
+   * Stores the caller's device coordinates so they become discoverable in
+   * other members' Near Me results.
+   *
+   * Writes only the authenticated caller's row — [userId] comes from the
+   * verified Firebase token, never from the request body, so there is no way
+   * to plant a location on someone else's profile.
+   *
+   * A missing UserProfile row (registration not finalized) surfaces from
+   * Prisma as P2025; it becomes a 404 rather than a 500, because "you have no
+   * profile yet" is a client-actionable state, not a server fault.
+   */
+  async updateLocation(
+    userId: string,
+    latitude: number,
+    longitude: number,
+    accuracyM?: number,
+  ): Promise<LocationResponseDto> {
+    try {
+      const row = await this.profileRepository.updateLocation(
+        userId,
+        latitude,
+        longitude,
+        accuracyM ?? null,
+      );
+
+      return {
+        latitude: row.latitude ?? latitude,
+        longitude: row.longitude ?? longitude,
+        accuracyM: row.locationAccuracyM,
+        updatedAt: (row.locationUpdatedAt ?? new Date()).toISOString(),
+      };
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2025') {
+        throw new NotFoundException(
+          'No profile found. Complete registration before sharing your location.',
+        );
+      }
+      this.logger.error(
+        `Failed to store location for user ${userId}: ${(error as Error).message}`,
+      );
+      throw error;
+    }
   }
 
   // Reads the accumulated wizard draft (see ProfileDraftService) and writes

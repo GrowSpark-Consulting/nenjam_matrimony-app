@@ -42,6 +42,7 @@ abstract final class RouteNames {
   static const String interestsSent = '/interests-sent';
   static const String interestsReceived = '/interests-received';
   static const String shortlisted = '/shortlisted';
+  static const String nearby = '/nearby';
   static const String profileViewers = '/profile-viewers';
   static const String profileDetail = '/profile-detail';
   static const String chatDetail = '/chat-detail';
@@ -91,6 +92,7 @@ abstract final class RouteNames {
   static const String interestsSentName = 'interestsSent';
   static const String interestsReceivedName = 'interestsReceived';
   static const String shortlistedName = 'shortlisted';
+  static const String nearbyName = 'nearby';
   static const String profileViewersName = 'profileViewers';
   static const String profileDetailName = 'profileDetail';
   static const String chatDetailName = 'chatDetail';

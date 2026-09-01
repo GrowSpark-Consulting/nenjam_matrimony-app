@@ -26,6 +26,7 @@ import '../../features/interests/presentation/pages/interests_received_page.dart
 import '../../features/interests/presentation/pages/interests_sent_page.dart';
 import '../../features/language/presentation/pages/language_page.dart';
 import '../../features/matches/presentation/pages/matches_page.dart';
+import '../../features/nearby/presentation/pages/nearby_page.dart';
 import '../../features/notifications/presentation/pages/notifications_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/partner_preferences/presentation/pages/partner_preferences_page.dart';
@@ -352,6 +353,14 @@ GoRouter createRouter(WidgetRef ref) {
         path: RouteNames.shortlisted,
         name: RouteNames.shortlistedName,
         builder: (context, state) => const ShortlistedPage(),
+      ),
+      // Near Me — pushed (not `go`) from the drawer and the Matches category
+      // bar, so back returns to whatever opened it, per the app-wide rule that
+      // secondary pages push rather than replace.
+      GoRoute(
+        path: RouteNames.nearby,
+        name: RouteNames.nearbyName,
+        builder: (context, state) => const NearbyPage(),
       ),
       GoRoute(
         path: RouteNames.profileViewers,

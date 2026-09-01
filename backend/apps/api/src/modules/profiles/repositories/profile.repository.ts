@@ -182,6 +182,47 @@ export class ProfileRepository {
     });
   }
 
+  /**
+   * Stores the caller's own device coordinates for Near Me.
+   *
+   * `update`, not `upsert`: a UserProfile row only exists once registration is
+   * finalized, and a member who has not finished registering has no business
+   * being discoverable. Prisma raises P2025 when the row is missing, which the
+   * service turns into a 404 rather than quietly creating a profile that
+   * consists of nothing but a pair of coordinates.
+   */
+  async updateLocation(
+    userId: string,
+    latitude: number,
+    longitude: number,
+    accuracyM: number | null,
+  ): Promise<{
+    latitude: number | null;
+    longitude: number | null;
+    locationAccuracyM: number | null;
+    locationUpdatedAt: Date | null;
+  }> {
+    return this.prisma.userProfile.update({
+      where: { userId },
+      data: {
+        latitude,
+        longitude,
+        locationAccuracyM: accuracyM,
+        // Server clock, never a client-supplied timestamp: this drives
+        // staleness decisions, and a device with a wrong clock (or a caller
+        // choosing its own value) would otherwise make a fix look fresher than
+        // it is.
+        locationUpdatedAt: new Date(),
+      },
+      select: {
+        latitude: true,
+        longitude: true,
+        locationAccuracyM: true,
+        locationUpdatedAt: true,
+      },
+    });
+  }
+
   private toEntity(row: UserProfile): ProfileEntity {
     const entity = new ProfileEntity();
     Object.assign(entity, {
