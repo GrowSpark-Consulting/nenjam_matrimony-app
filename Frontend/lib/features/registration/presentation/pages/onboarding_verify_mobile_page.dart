@@ -81,25 +81,25 @@ class _OnboardingVerifyMobilePageState
       return;
     }
 
-    // Deliberately no Firebase call here. This step is the static
-    // development verifier: no SMS, no phone auth, and no anonymous
-    // sign-in either — that last one made finishing signup depend on
-    // Anonymous Auth being enabled in the Firebase console, and failed
-    // with "restricted to administrators only" when it was not.
+    // Reaching here means the verifier said yes. In release that is
+    // FirebasePhoneOtpVerifier, so a real session now exists: the phone
+    // credential either signed the member in or was linked to the account
+    // they already had. Nothing further is needed to authenticate them —
+    // the router guard sees a genuine Firebase user from this point on.
     //
-    // Instead onboarding records that it finished. The router treats that
-    // as permission to enter the app while the mock verifier is in use —
-    // see RouteNames.publicRoutes / the guard in app_router.dart.
+    // The flag is still written for the debug mock, which verifies nothing
+    // and mints no session; it is what the guard accepts in its place, and
+    // only in a debug build (see `_onboardingCompletedLocally`). Harmless
+    // in release, where the session is real and the guard never consults it.
+    // It is cleared on sign-out along with everything else.
+    //
+    // (This write appeared twice, identically. The second was dead.)
     await storageService.setOnboardingCompleted(true);
 
-    // Best-effort: if a session does happen to exist (Google sign-up), the
-    // answers gathered along the way are sent now. A no-op when signed out.
+    // Now that a session exists, the answers gathered along the way are sent
+    // with a real ID token attached, so the backend can provision the
+    // internal User row against the verified uid.
     await ref.read(registrationProvider.notifier).flushOnboardingToBackend();
-
-    // Onboarding finished. The router treats this as permission to enter
-    // the app while the static verifier is in use — see
-    // StorageService.onboardingCompleted.
-    await storageService.setOnboardingCompleted(true);
 
     // Onboarding is finished. The number stops being "pending" the moment
     // it is verified.

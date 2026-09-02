@@ -53,12 +53,28 @@ export class ProfileRepository {
   ): Promise<RegistrationStep> {
     const existing = await this.getOrCreateRegistrationStep(userId);
 
+    // Only the keys the request actually carried. `plainToInstance` (the
+    // global ValidationPipe's `transform: true`) hands us a DTO INSTANCE with
+    // every declared property present — unset ones as `undefined` — so
+    // spreading it raw overwrote each absent sibling with `undefined`, and
+    // JSONB serialization then dropped those keys entirely. The result was a
+    // merge in code and a REPLACE in effect: patching {state, city} erased
+    // country, area, pinCode and nativePlace from the stored section, and the
+    // next materialization wrote them to the profile as null.
+    //
+    // Reproduced end-to-end before fixing: PATCH {state, city} against a
+    // draft holding country=India left the draft as {state, city} alone and
+    // nulled user_profiles.country.
+    const patch = Object.fromEntries(
+      Object.entries(sectionData).filter(([, value]) => value !== undefined),
+    );
+
     const draftData = {
       ...(existing.draftData as Record<string, unknown>),
       [section]: {
         ...((existing.draftData as Record<string, unknown>)[section] as
           Record<string, unknown> | undefined),
-        ...sectionData,
+        ...patch,
       },
     };
     const completedSteps = new Set((existing.completedSteps as number[]) ?? []);

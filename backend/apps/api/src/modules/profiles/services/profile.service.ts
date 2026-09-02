@@ -22,6 +22,7 @@ import {
   isLifestyleDetailsValid,
   isLocationDetailsComplete,
   isPhysicalDetailsValid,
+  isMatchableFromDraft,
   isReligionDetailsComplete,
 } from '../validation/registration-rules';
 
@@ -362,7 +363,14 @@ export class ProfileService {
           string,
           Record<string, unknown>
         >);
-      if (this.missingRequiredFields(data).length > 0) return;
+      // Matchability, not finalize-completeness. These are different
+      // questions and this used to ask the wrong one: the finalize rules
+      // demand subCaste/area/pinCode/nativePlace, all of which are NULLABLE
+      // columns, and the onboarding flow collects none of them — so every
+      // onboarding save returned here and `user_profiles` kept whatever a
+      // previous wizard run had left. finalize() still enforces the strict
+      // contract; see isMatchableFromDraft for why the sets differ.
+      if (!isMatchableFromDraft(data)) return;
 
       const writtenProfile = await this.writeProfileFromDraft(userId, data);
       console.log(

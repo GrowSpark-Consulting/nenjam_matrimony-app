@@ -182,9 +182,17 @@ class _WelcomeBackPageState extends ConsumerState<WelcomeBackPage> {
                           TextButton(
                             // The password form already exists; this screen
                             // does not reimplement it.
+                            //
+                            // `loginForm`, not `login`: RouteNames.login builds
+                            // THIS page, so pushing it stacked a second copy of
+                            // the screen the member was already looking at and
+                            // the button read as dead. The form lives behind
+                            // `loginForm`, which opens LoginPage on tab 0
+                            // (Login) — the `{'mode': ...}` payload it used to
+                            // send was never read by that route's builder.
                             onPressed: () => context.push(
-                              RouteNames.login,
-                              extra: const {'mode': 'password'},
+                              RouteNames.loginForm,
+                              extra: const {'tab': 0},
                             ),
                             child: Text(l10n.welcomeBackPassword),
                           ),
@@ -204,11 +212,14 @@ class _WelcomeBackPageState extends ConsumerState<WelcomeBackPage> {
                               size: AppSpacing.lg,
                               color: colors.primary,
                             ),
+                            // Same correction as the password button above:
+                            // this pushed RouteNames.login, which is this very
+                            // page, so "Continue with Email" went nowhere.
                             onPressed: googleBusy
                                 ? null
                                 : () => context.push(
-                                      RouteNames.login,
-                                      extra: const {'mode': 'email'},
+                                      RouteNames.loginForm,
+                                      extra: const {'tab': 0},
                                     ),
                           ),
                         ],

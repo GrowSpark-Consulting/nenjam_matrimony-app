@@ -80,6 +80,11 @@ abstract final class AppConstants {
   /// static development OTP verifier — see StorageService.onboardingCompleted.
   static const String keyOnboardingCompleted = 'onboarding_completed';
 
+  /// DEBUG ONLY — the phone number the dummy OTP accepted, standing in for a
+  /// Firebase session until real phone verification is switched on. Written
+  /// only by debug builds; see dev_auth_session.dart.
+  static const String keyDevAuthPhone = 'dev_auth_phone';
+
   /// Local-only search history — capped at [maxRecentSearches] entries.
   static const String keySearchHistory = 'search_history';
   static const int maxRecentSearches = 10;

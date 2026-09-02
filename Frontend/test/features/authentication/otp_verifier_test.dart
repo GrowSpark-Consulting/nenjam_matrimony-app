@@ -9,7 +9,7 @@ import 'package:nenjam_matrimony/features/authentication/domain/services/otp_ver
 /// BILLING_NOT_ENABLED and blocked the last step entirely. The seam stays so
 /// real verification can be restored by swapping the provider override.
 void main() {
-  const verifier = MockOtpVerifier();
+  final verifier = MockOtpVerifier();
 
   test('sending a code contacts nothing and cannot fail', () async {
     await verifier.send('+919876543210');
@@ -40,7 +40,7 @@ void main() {
   });
 
   test('the code length the UI asks for is configurable', () async {
-    const six = MockOtpVerifier(codeLength: 6);
+    final six = MockOtpVerifier(codeLength: 6);
     expect(six.codeLength, 6);
     expect(await six.verify('123456'), isTrue);
     expect(await six.verify('1234'), isFalse);

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/astro/presentation/pages/horoscope_matching_page.dart';
+import '../../features/authentication/data/services/dev_auth_session.dart';
 import '../../features/authentication/presentation/pages/email_verify_screen.dart';
 import '../../features/authentication/presentation/pages/forgot_password_page.dart';
 import '../../features/authentication/presentation/pages/login_otp_screen.dart';
@@ -66,7 +67,6 @@ import '../../features/subscription/presentation/pages/subscription_page.dart';
 import '../../features/verification/presentation/pages/verification_page.dart';
 import '../../features/authentication/presentation/providers/auth_providers.dart';
 import '../../l10n/app_localizations.dart';
-import '../services/storage_service.dart';
 import '../widgets/navigation/app_bottom_nav.dart';
 import 'route_names.dart';
 
@@ -143,12 +143,35 @@ class GoRouterRefreshStream extends ChangeNotifier {
 /// or a logout triggered from anywhere in the app — so the user is bounced
 /// to Login automatically without every call site needing its own
 /// navigation logic.
-/// Whether this device finished the new signup onboarding. Guarded: local
-/// storage may not be initialised when a redirect runs very early, and
-/// "cannot tell" must mean "not signed in", never a crash in the router.
-bool _onboardingCompletedLocally() {
+/// Whether to let a device with no Firebase user past the guard because it
+/// holds a dummy-OTP session.
+///
+/// It exists because signup currently ends in [MockOtpVerifier], which mints
+/// no Firebase session (see otp_verifier.dart). What it honours is not a bare
+/// preference: [DevAuthSession] holds a phone number the backend has agreed to
+/// authenticate, and every request this member makes carries it and is
+/// accepted or rejected server-side. So this admits exactly the people the
+/// server will also admit, which is the property the previous version of this
+/// bridge did not have — it keyed on a SharedPreferences boolean that nothing
+/// had ever verified.
+///
+/// [DevAuthSession.isEnabled] is the security boundary, and it is the same
+/// predicate that selects the dummy verifier: off in release unless the build
+/// deliberately passed `--dart-define=DUMMY_OTP=true`, and off everywhere
+/// under `USE_REAL_OTP=true`. A release build that opted in still gets nothing
+/// for free — the backend only accepts whitelisted numbers (`DUMMY_OTP_PHONES`),
+/// so an unlisted member is bounced by the server on the first request.
+///
+/// Deleted together with [MockOtpVerifier] and `dev-auth.ts` when real phone
+/// verification is wired.
+///
+/// Guarded: local storage may not be initialised when a redirect runs very
+/// early, and "cannot tell" must mean "not signed in", never a crash in the
+/// router.
+bool _hasDummyOtpSession() {
+  if (!DevAuthSession.isEnabled) return false;
   try {
-    return storageService.onboardingCompleted;
+    return devAuthSession.isActive;
   } catch (_) {
     return false;
   }
@@ -174,21 +197,15 @@ GoRouter createRouter(WidgetRef ref) {
 
       final user = await ref.read(authStateChangesProvider.future);
       if (user == null) {
-        // Development bridge, paired with the static OTP verifier: signup
-        // asks for no credential, so a member who finished onboarding has no
-        // session and would otherwise be bounced back to the landing screen
-        // from the last step. Deleted together with the mock verifier when
-        // real account creation returns.
-        if (_onboardingCompletedLocally()) return null;
-
-        // Development bridge, paired with the static OTP verifier: signup
-        // collects a whole profile before asking for a credential, so a
-        // member who finished onboarding has no session yet and would
-        // otherwise be bounced straight back to the landing screen from
-        // the last step. See StorageService.onboardingCompleted — this
-        // branch is deleted along with the mock verifier when real
-        // verification returns.
-        if (_onboardingCompletedLocally()) return null;
+        // Bridge for the dummy-OTP flow, paired with the static verifier:
+        // signup collects a whole profile before asking for a credential, so a
+        // member who finished onboarding has no Firebase user and would
+        // otherwise be bounced straight back to the landing screen from the
+        // last step. They do hold a dummy session the backend authenticates,
+        // which is what this checks — see [_hasDummyOtpSession].
+        //
+        // (This check appeared twice, identically. The second was dead.)
+        if (_hasDummyOtpSession()) return null;
 
         // The landing screen, not Login: a signed-out visitor is far more
         // often someone who has never had an account than someone whose

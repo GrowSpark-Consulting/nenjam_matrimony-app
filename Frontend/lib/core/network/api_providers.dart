@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/authentication/data/services/dev_auth_session.dart';
 import '../../features/authentication/presentation/providers/auth_providers.dart';
 import '../constants/app_constants.dart';
 import 'api_client.dart';
@@ -31,6 +32,9 @@ final apiClientProvider = Provider<ApiClient>((ref) {
       refreshAccessToken: () =>
           tokenService.getFirebaseToken(forceRefresh: true),
       onSessionExpired: () => ref.read(authRepositoryProvider).logout(),
+      // DEBUG ONLY — null in release, where DevAuthSession.isEnabled is a
+      // compile-time false and this returns null on every call.
+      devAuthPhone: () => devAuthSession.phone,
     ),
   );
 

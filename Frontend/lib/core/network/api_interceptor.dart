@@ -37,11 +37,17 @@ class AuthInterceptor extends Interceptor {
   final Future<String?> Function() refreshAccessToken;
   final Future<void> Function() onSessionExpired;
 
+  /// DEBUG ONLY — supplies the dev-auth phone number when there is no Firebase
+  /// session. Optional and null in production wiring, so the release build has
+  /// no path to this header at all. See dev_auth_session.dart.
+  final String? Function()? devAuthPhone;
+
   AuthInterceptor({
     required this.dio,
     required this.getAccessToken,
     required this.refreshAccessToken,
     required this.onSessionExpired,
+    this.devAuthPhone,
   });
 
   @override
@@ -50,9 +56,23 @@ class AuthInterceptor extends Interceptor {
     RequestInterceptorHandler handler,
   ) async {
     final token = await _safeToken(getAccessToken);
-    StoryPerf.mark('Firebase token obtained (${options.path})');
+    // Marks that the token LOOKUP finished, which is not the same as having
+    // one — this fires with `token == null` too. Reading it as "a token was
+    // obtained" is what made a session-less 401 look like a server fault.
+    StoryPerf.mark('Firebase token lookup done (${options.path})');
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
+    } else {
+      // DEBUG ONLY. Never reached in release: DevAuthSession.isEnabled folds
+      // to a constant false there, so `devAuthPhone` is always null and this
+      // adds nothing. Deliberately in the `else` — a real Firebase token
+      // always wins, and the two headers are never sent together, which is
+      // also the condition the backend guard requires before it will look at
+      // this header at all.
+      final devPhone = devAuthPhone?.call();
+      if (devPhone != null && devPhone.isNotEmpty) {
+        options.headers['X-Dev-Auth-Phone'] = devPhone;
+      }
     }
     handler.next(options);
   }
@@ -86,8 +106,18 @@ class AuthInterceptor extends Interceptor {
     return handler.next(err);
   }
 
-  bool _shouldAttemptRecovery(int? statusCode, RequestOptions options) =>
-      statusCode == 401 && options.extra[_authRetriedKey] != true;
+  bool _shouldAttemptRecovery(int? statusCode, RequestOptions options) {
+    if (statusCode != 401 || options.extra[_authRetriedKey] == true) {
+      return false;
+    }
+    // DEBUG ONLY. On a dev session there is no Firebase token to refresh, so
+    // recovery would refresh nothing, get null, and call onSessionExpired ->
+    // logout -> the widgets refetch -> 401 again: a sign-out storm rather than
+    // one honest error. A 401 here means the backend is not running with dev
+    // auth enabled, which is a configuration answer, not an expired session.
+    if (devAuthPhone?.call() != null) return false;
+    return true;
+  }
 
   /// Force-refreshes the token and replays [options] exactly once.
   ///

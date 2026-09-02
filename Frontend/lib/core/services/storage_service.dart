@@ -86,6 +86,24 @@ class StorageService {
     await _prefs.remove(AppConstants.keyPendingPhone);
   }
 
+  // ─── Dev-auth phone (DEBUG ONLY, local-only) ─────────────────────
+  //
+  // The number the dummy OTP accepted, stood in for a Firebase session by
+  // DevAuthSession. Only ever written by a debug build — see
+  // dev_auth_session.dart — and cleared on sign-out with everything else.
+  String? get devAuthPhone {
+    final value = _prefs.getString(AppConstants.keyDevAuthPhone);
+    return (value != null && value.isNotEmpty) ? value : null;
+  }
+
+  Future<void> setDevAuthPhone(String e164Phone) async {
+    await _prefs.setString(AppConstants.keyDevAuthPhone, e164Phone);
+  }
+
+  Future<void> clearDevAuthPhone() async {
+    await _prefs.remove(AppConstants.keyDevAuthPhone);
+  }
+
   // ─── Pending onboarding email (transient, local-only) ────────────
   //
   // Set when the Email + Mobile step has asked Firebase to confirm an
@@ -222,8 +240,25 @@ class StorageService {
   }
 
   /// Clears user-specific data while preserving app settings.
+  /// Everything that identifies the signed-out user, dropped together.
+  ///
+  /// [onboardingCompleted] belongs here and not only in the signup flow that
+  /// sets it: while it is set, the router lets a session-less device into
+  /// every protected route (debug builds — see `_onboardingCompletedLocally`).
+  /// Leaving it behind on sign-out meant logging out cleared the session but
+  /// not the thing standing in for one, so protected routes stayed reachable
+  /// and a relaunch resumed straight back into the app. Sign-out has to
+  /// revoke the substitute as well as the real credential.
   Future<void> clearUserData() async {
-    await Future.wait([clearTokens(), _prefs.remove(AppConstants.keyUserId)]);
+    await Future.wait([
+      clearTokens(),
+      _prefs.remove(AppConstants.keyUserId),
+      _prefs.remove(AppConstants.keyOnboardingCompleted),
+      // A dev session is a session: signing out has to end it too, or the
+      // next launch would still send the header and silently resume the
+      // account the member just left.
+      _prefs.remove(AppConstants.keyDevAuthPhone),
+    ]);
   }
 }
 

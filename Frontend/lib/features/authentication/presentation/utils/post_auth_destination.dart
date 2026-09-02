@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/router/route_names.dart';
 import '../../../../core/services/storage_service.dart';
+import '../../../profile/presentation/providers/profile_providers.dart';
+import '../../data/services/dev_auth_session.dart';
 import '../../../registration/domain/models/onboarding_forms.dart';
 import '../../../registration/domain/models/profile_draft.dart';
 import '../../../registration/domain/models/profile_flow_mode.dart';
@@ -67,6 +69,17 @@ class PostAuthDestination {
 
   Future<String> resolve() async {
     final user = _ref.read(firebaseAuthServiceProvider).currentUser;
+
+    // DEBUG ONLY — a dev session (dummy OTP, no Firebase account) is a real
+    // session as far as the backend is concerned, so it must not be sent to
+    // the landing screen. It has no Firebase user to read an email or a
+    // verified phone from, so the two account-derived gates below cannot be
+    // asked; the draft-derived ones still apply in full, and the finalized
+    // profile check does the rest. Compiled out of release.
+    if (user == null && devAuthSession.isActive) {
+      return _resolveFromDraftOnly();
+    }
+
     if (user == null) return RouteNames.registrationLanding;
 
     // Phone-only accounts have no address to verify, so this gate must key
@@ -77,6 +90,23 @@ class PostAuthDestination {
     if (email != null && email.isNotEmpty && !user.emailVerified) {
       return RouteNames.verifyEmail;
     }
+
+    // An existing member goes straight in.
+    //
+    // The onboarding gates below describe a REGISTRATION path: each asks
+    // whether a particular signup step was answered. A member who registered
+    // before those steps existed has answered none of them, so every gate
+    // fails and login drops them back into signup — the "Account already
+    // exists" they then hit is the Email + Mobile step's duplicate check
+    // refusing the number their own account already owns. The gates are right
+    // for someone still registering and wrong for someone who has finished.
+    //
+    // A finalized `user_profiles` row is what separates the two: the backend
+    // only writes one once registration genuinely produced a profile, and it
+    // is what Discover, matching and Near Me all read. Asking for it costs one
+    // request and replaces the draft fetch below for exactly the members who
+    // would otherwise be sent backwards.
+    if (await _hasFinalizedProfile()) return RouteNames.discover;
 
     final Map<String, dynamic> draft;
     try {
@@ -110,7 +140,9 @@ class PostAuthDestination {
     // read back from the sections applyOnboardingReligion writes them to.
     final religionStep = OnboardingReligionForm(
       religion: restored.religionDetails.religion,
+      caste: restored.religionDetails.caste,
       community: restored.religionDetails.community,
+      motherTongue: restored.languageDetails.motherTongue,
       livingIn: restored.locationDetails.country,
     );
     if (!religionStep.isComplete) return RouteNames.onboardingReligion;
@@ -127,6 +159,10 @@ class PostAuthDestination {
 
     // Step 4.
     final basicsStep = ProfileBasicsForm(
+      firstName: restored.basicDetails.firstName,
+      lastName: restored.basicDetails.lastName,
+      gender: restored.basicDetails.gender,
+      dob: restored.basicDetails.dob,
       state: restored.locationDetails.state,
       city: restored.locationDetails.city,
     );
@@ -162,6 +198,107 @@ class PostAuthDestination {
     // means linked to the account. `hasMobile` above already establishes
     // that, so reaching here means onboarding is genuinely finished.
     return RouteNames.discover;
+  }
+
+  /// DEBUG ONLY — the same gates as [resolve], minus the two that read the
+  /// Firebase account.
+  ///
+  /// A dev session has no Firebase user, so "is this email verified?" and
+  /// "is a mobile number linked?" have no answer here. Skipping them is
+  /// correct rather than lenient: the dummy OTP the member just passed *is*
+  /// this build's mobile verification, and there is no email address on a
+  /// dev session to verify. Every gate that reads the draft — which is every
+  /// gate that guards profile data — still applies exactly as it does for a
+  /// real session.
+  Future<String> _resolveFromDraftOnly() async {
+    if (await _hasFinalizedProfile()) return RouteNames.discover;
+
+    final Map<String, dynamic> draft;
+    try {
+      draft = await _ref
+          .read(registrationRepositoryProvider)
+          .getDraft()
+          .timeout(_draftLookupTimeout);
+    } catch (_) {
+      // Unlike the real path there is no account age to consult, and a dev
+      // session that cannot reach the backend has nothing to show in the app.
+      return RouteNames.createProfileFor;
+    }
+
+    final restored = ProfileDraft.fromJson(draft);
+    _ref
+        .read(registrationProvider.notifier)
+        .restore(restored, ProfileFlowMode.create);
+
+    if (restored.basicDetails.profileCreatedFor.trim().isEmpty) {
+      return RouteNames.createProfileFor;
+    }
+
+    final religionStep = OnboardingReligionForm(
+      religion: restored.religionDetails.religion,
+      caste: restored.religionDetails.caste,
+      community: restored.religionDetails.community,
+      motherTongue: restored.languageDetails.motherTongue,
+      livingIn: restored.locationDetails.country,
+    );
+    if (!religionStep.isComplete) return RouteNames.onboardingReligion;
+
+    final basicsStep = ProfileBasicsForm(
+      firstName: restored.basicDetails.firstName,
+      lastName: restored.basicDetails.lastName,
+      gender: restored.basicDetails.gender,
+      dob: restored.basicDetails.dob,
+      state: restored.locationDetails.state,
+      city: restored.locationDetails.city,
+    );
+    if (!basicsStep.isComplete) return RouteNames.profileBasics;
+
+    final maritalStep = OnboardingMaritalForm(
+      maritalStatus: restored.basicDetails.maritalStatus,
+      height: restored.physicalDetails.height,
+    );
+    if (!maritalStep.isComplete) return RouteNames.onboardingMarital;
+
+    final educationStep = OnboardingEducationForm(
+      qualification: restored.educationDetails.qualification,
+    );
+    if (!educationStep.isComplete) return RouteNames.onboardingEducation;
+
+    final incomeStep = OnboardingIncomeForm(
+      annualIncome: restored.educationDetails.annualIncome,
+    );
+    if (!incomeStep.isComplete) return RouteNames.onboardingIncome;
+
+    if (restored.lifestyleDetails.aboutMe.trim().isEmpty) {
+      return RouteNames.onboardingAbout;
+    }
+
+    return RouteNames.discover;
+  }
+
+  /// Whether the backend already holds a finalized profile for this member.
+  ///
+  /// `GET /profiles/me` answers with the row itself, or 404 when registration
+  /// never produced one — so a plain success/failure is the whole signal. It
+  /// shares [_draftLookupTimeout] for the same reason the draft lookup has
+  /// one: this is a routing decision, not a screen the member is waiting on,
+  /// and a stalled request must not hold the splash open.
+  ///
+  /// False on ANY failure — 404, timeout, offline, a malformed body. That is
+  /// the safe direction: it falls through to the gates below, which send an
+  /// established member to Discover anyway once the draft lookup also fails
+  /// (see the catch clause). Never throws, because this resolver's contract
+  /// is that it always returns a route.
+  Future<bool> _hasFinalizedProfile() async {
+    try {
+      await _ref
+          .read(profileRepositoryProvider)
+          .getMyProfile()
+          .timeout(_draftLookupTimeout);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// The address the Email + Mobile step is waiting on confirmation for, or
