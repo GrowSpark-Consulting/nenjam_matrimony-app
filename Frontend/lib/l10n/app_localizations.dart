@@ -4970,54 +4970,6 @@ abstract class AppLocalizations {
   /// **'Login'**
   String get authEntryLogin;
 
-  /// No description provided for @welcomeBackHeadline.
-  ///
-  /// In en, this message translates to:
-  /// **'Welcome back'**
-  String get welcomeBackHeadline;
-
-  /// No description provided for @welcomeBackSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter your details to continue'**
-  String get welcomeBackSubtitle;
-
-  /// No description provided for @welcomeBackGetOtp.
-  ///
-  /// In en, this message translates to:
-  /// **'Get OTP'**
-  String get welcomeBackGetOtp;
-
-  /// No description provided for @welcomeBackPassword.
-  ///
-  /// In en, this message translates to:
-  /// **'Login with Password'**
-  String get welcomeBackPassword;
-
-  /// No description provided for @welcomeBackGoogle.
-  ///
-  /// In en, this message translates to:
-  /// **'Continue with Google'**
-  String get welcomeBackGoogle;
-
-  /// No description provided for @welcomeBackEmail.
-  ///
-  /// In en, this message translates to:
-  /// **'Continue with Email'**
-  String get welcomeBackEmail;
-
-  /// No description provided for @welcomeBackNoAccount.
-  ///
-  /// In en, this message translates to:
-  /// **'Don\'t have an account?'**
-  String get welcomeBackNoAccount;
-
-  /// No description provided for @welcomeBackSignUpFree.
-  ///
-  /// In en, this message translates to:
-  /// **'Sign Up Free'**
-  String get welcomeBackSignUpFree;
-
   /// Says which required fields on the Location & Sub-community step are still unanswered; {fields} is an already-joined list such as "state and city"
   ///
   /// In en, this message translates to:
@@ -8443,6 +8395,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'ID: {id}'**
   String profileIdLabel(String id);
+
+  /// No description provided for @authIdentifierLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email or Mobile Number'**
+  String get authIdentifierLabel;
+
+  /// No description provided for @authIdentifierHint.
+  ///
+  /// In en, this message translates to:
+  /// **'name@example.com or 9876543210'**
+  String get authIdentifierHint;
+
+  /// No description provided for @authIdentifierRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email or mobile number'**
+  String get authIdentifierRequired;
+
+  /// No description provided for @authIdentifierInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address or 10-digit mobile number'**
+  String get authIdentifierInvalid;
+
+  /// No description provided for @authNoAccountForMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'No account found for this mobile number.'**
+  String get authNoAccountForMobile;
+
+  /// No description provided for @authAccountCheckUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the server. Please try again.'**
+  String get authAccountCheckUnavailable;
+
+  /// No description provided for @authOtpRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the code we sent you'**
+  String get authOtpRequired;
 }
 
 class _AppLocalizationsDelegate

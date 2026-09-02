@@ -15,18 +15,21 @@ abstract interface class OtpVerifier {
   /// code is an answer, not a failure.
   Future<bool> verify(String code);
 
-  /// Digits the UI should ask for.
+  /// Digits the UI should ask for. A presentation hint — how many boxes to
+  /// draw — not a rule [verify] is required to enforce.
   int get codeLength;
 }
 
-/// Development verifier: accepts **any** numeric code of the expected
-/// length and contacts nothing.
+/// Development verifier: accepts **any non-empty** code and contacts
+/// nothing.
 ///
 /// Deliberately permissive rather than a single magic value — nobody should
 /// have to memorise a code to walk the flow, and a fixed one invites being
-/// hardcoded into a screen. Screens ask [OtpVerifier.verify] instead of
-/// comparing strings themselves, so turning real verification back on is a
-/// one-line change in [otpVerifierProvider] with no screen changes at all.
+/// hardcoded into a screen. `123456`, `000000`, `999999` and `1234` are all
+/// accepted, because none of them is more real than any other while no SMS
+/// is being sent. Screens ask [OtpVerifier.verify] instead of comparing
+/// strings themselves, so turning real verification back on is a one-line
+/// change in [otpVerifierProvider] with no screen changes at all.
 ///
 /// While this is wired up: no SMS is sent, `verifyPhoneNumber` is never
 /// called, no OTP provider is contacted, and no Firebase billing is needed.
@@ -41,15 +44,11 @@ class MockOtpVerifier implements OtpVerifier {
     // Intentionally nothing: no SMS, no provider call, no network at all.
   }
 
-  /// True for any string of exactly [codeLength] digits. Anything shorter,
-  /// longer, or non-numeric is rejected, so the screen's error path stays
-  /// exercised.
+  /// True for any non-empty code. Only an empty one is rejected — that is
+  /// the user not having answered, which is a validation error the screens
+  /// still surface, so their error path stays exercised.
   @override
-  Future<bool> verify(String code) async {
-    final trimmed = code.trim();
-    return trimmed.length == codeLength &&
-        trimmed.runes.every((r) => r >= 0x30 && r <= 0x39);
-  }
+  Future<bool> verify(String code) async => code.trim().isNotEmpty;
 }
 
 /// The verifier the onboarding OTP step uses.

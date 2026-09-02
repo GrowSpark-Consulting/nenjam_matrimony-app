@@ -917,14 +917,6 @@
 
   "authEntrySignUp": "பதிவு செய்யவும்",
   "authEntryLogin": "உள்நுழையவும்",
-  "welcomeBackHeadline": "மீண்டும் வருக",
-  "welcomeBackSubtitle": "தொடர உங்கள் விவரங்களை உள்ளிடவும்",
-  "welcomeBackGetOtp": "OTP பெறவும்",
-  "welcomeBackPassword": "கடவுச்சொல்லுடன் உள்நுழைக",
-  "welcomeBackGoogle": "Google மூலம் தொடரவும்",
-  "welcomeBackEmail": "மின்னஞ்சல் மூலம் தொடரவும்",
-  "welcomeBackNoAccount": "கணக்கு இல்லையா?",
-  "welcomeBackSignUpFree": "இலவசமாகப் பதிவு செய்யவும்",
   "profileBasicsMissing": "தொடர {fields} தேர்ந்தெடுக்கவும்.",
   "profileBasicsFieldJoin": "{first} மற்றும் {second}",
   "profileBasicsPartnerPrefSaveFailed": "உங்கள் விவரங்கள் சேமிக்கப்பட்டன, ஆனால் சமூக விருப்பத்தை பதிவு செய்ய முடியவில்லை. துணை விருப்பங்களில் பின்னர் அதை அமைக்கலாம்.",
@@ -1530,5 +1522,12 @@
   "inboxPreviewDocument": "ஆவணம்",
   "inboxEditedSuffix": " (திருத்தப்பட்டது)",
   "astroExcellentMatch": "சிறந்த பொருத்தம்",
-  "profileIdLabel": "அடையாள எண்: {id}"
+  "profileIdLabel": "அடையாள எண்: {id}",
+  "authIdentifierLabel": "மின்னஞ்சல் அல்லது கைபேசி எண்",
+  "authIdentifierHint": "name@example.com அல்லது 9876543210",
+  "authIdentifierRequired": "உங்கள் மின்னஞ்சல் அல்லது கைபேசி எண்ணை உள்ளிடவும்",
+  "authIdentifierInvalid": "சரியான மின்னஞ்சல் முகவரி அல்லது 10 இலக்க கைபேசி எண்ணை உள்ளிடவும்",
+  "authNoAccountForMobile": "இந்த கைபேசி எண்ணுக்கு கணக்கு எதுவும் இல்லை.",
+  "authAccountCheckUnavailable": "சேவையகத்தை அணுக முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
+  "authOtpRequired": "நாங்கள் அனுப்பிய குறியீட்டை உள்ளிடவும்"
 }

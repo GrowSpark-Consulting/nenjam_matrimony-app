@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/services/local_auth_session.dart';
 import '../providers/auth_providers.dart';
 
 /// Confirms with the user, then signs out and returns to the sign-up
@@ -38,6 +39,10 @@ Future<void> confirmAndLogout(BuildContext context, WidgetRef ref) async {
   if (confirmed != true) return;
 
   await ref.read(authRepositoryProvider).logout();
+  // A mobile login leaves no Firebase session for the sign-out above to
+  // end, so the local one has to be closed explicitly — otherwise the
+  // router's guard would keep letting the "logged out" user back in.
+  await ref.read(localAuthSessionProvider).clear();
   if (!context.mounted) return;
   context.go(RouteNames.registrationLanding);
 }
