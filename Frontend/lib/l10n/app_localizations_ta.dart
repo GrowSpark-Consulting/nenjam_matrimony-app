@@ -4631,4 +4631,33 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get authOtpRequired => 'நாங்கள் அனுப்பிய குறியீட்டை உள்ளிடவும்';
+
+  @override
+  String get drawerSectionMatchActivity => 'உங்கள் பொருத்த செயல்பாடு';
+
+  @override
+  String get drawerSectionSettings => 'விருப்பங்கள் மற்றும் அமைப்புகள்';
+
+  @override
+  String get drawerCopyIdSemanticLabel => 'சுயவிவர ஐடியை நகலெடு';
+
+  @override
+  String get drawerIdCopied => 'சுயவிவர ஐடி நகலெடுக்கப்பட்டது';
+
+  @override
+  String get drawerTerms => 'விதிமுறைகள் மற்றும் நிபாதனைகள்';
+
+  @override
+  String drawerCopyright(String year) {
+    return '© $year நெஞ்சம் மேட்ரிமோனி';
+  }
+
+  @override
+  String drawerVersion(String version) {
+    return 'பதிப்பு $version';
+  }
+
+  @override
+  String get partnerPrefIntro =>
+      'நீங்கள் அமைத்த விருப்பங்களின் அடிப்படையில் பொருத்தங்கள் காண்பிக்கப்படும்';
 }

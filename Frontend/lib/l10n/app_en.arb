@@ -1589,5 +1589,15 @@
   "authIdentifierInvalid": "Enter a valid email address or 10-digit mobile number",
   "authNoAccountForMobile": "No account found for this mobile number.",
   "authAccountCheckUnavailable": "Couldn't reach the server. Please try again.",
-  "authOtpRequired": "Enter the code we sent you"
+  "authOtpRequired": "Enter the code we sent you",
+  "drawerSectionMatchActivity": "Your Match Activity",
+  "drawerSectionSettings": "Options & Settings",
+  "drawerCopyIdSemanticLabel": "Copy profile ID",
+  "drawerIdCopied": "Profile ID copied",
+  "drawerTerms": "Terms & Conditions",
+  "drawerCopyright": "© {year} Nenjam Matrimony",
+  "@drawerCopyright": {"placeholders": {"year": {"type": "String"}}},
+  "drawerVersion": "Version {version}",
+  "@drawerVersion": {"placeholders": {"version": {"type": "String"}}},
+  "partnerPrefIntro": "You will see Matches based on the Preferences you have set"
 }

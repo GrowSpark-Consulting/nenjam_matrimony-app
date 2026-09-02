@@ -4555,4 +4555,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authOtpRequired => 'Enter the code we sent you';
+
+  @override
+  String get drawerSectionMatchActivity => 'Your Match Activity';
+
+  @override
+  String get drawerSectionSettings => 'Options & Settings';
+
+  @override
+  String get drawerCopyIdSemanticLabel => 'Copy profile ID';
+
+  @override
+  String get drawerIdCopied => 'Profile ID copied';
+
+  @override
+  String get drawerTerms => 'Terms & Conditions';
+
+  @override
+  String drawerCopyright(String year) {
+    return '© $year Nenjam Matrimony';
+  }
+
+  @override
+  String drawerVersion(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get partnerPrefIntro =>
+      'You will see Matches based on the Preferences you have set';
 }

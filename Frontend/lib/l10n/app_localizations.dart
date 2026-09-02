@@ -8437,6 +8437,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter the code we sent you'**
   String get authOtpRequired;
+
+  /// No description provided for @drawerSectionMatchActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Match Activity'**
+  String get drawerSectionMatchActivity;
+
+  /// No description provided for @drawerSectionSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Options & Settings'**
+  String get drawerSectionSettings;
+
+  /// No description provided for @drawerCopyIdSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy profile ID'**
+  String get drawerCopyIdSemanticLabel;
+
+  /// No description provided for @drawerIdCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile ID copied'**
+  String get drawerIdCopied;
+
+  /// No description provided for @drawerTerms.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms & Conditions'**
+  String get drawerTerms;
+
+  /// No description provided for @drawerCopyright.
+  ///
+  /// In en, this message translates to:
+  /// **'© {year} Nenjam Matrimony'**
+  String drawerCopyright(String year);
+
+  /// No description provided for @drawerVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String drawerVersion(String version);
+
+  /// No description provided for @partnerPrefIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'You will see Matches based on the Preferences you have set'**
+  String get partnerPrefIntro;
 }
 
 class _AppLocalizationsDelegate
