@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../theme/app_colors.dart';
+import '../theme/tokens/app_animation_tokens.dart';
 import '../../features/astro/presentation/pages/horoscope_matching_page.dart';
 import '../../features/authentication/presentation/pages/email_verify_screen.dart';
 import '../../features/authentication/presentation/pages/forgot_password_page.dart';
@@ -12,7 +14,6 @@ import '../../features/authentication/presentation/pages/login_page.dart';
 import '../../features/authentication/presentation/pages/otp_page.dart';
 import '../../features/authentication/presentation/pages/phone_verify_screen.dart';
 import '../../features/authentication/presentation/pages/registration_landing_page.dart';
-import '../../features/authentication/presentation/pages/welcome_back_page.dart';
 import '../../features/discover/domain/entities/discovery_profile_entity.dart';
 import 'profile_navigation.dart';
 import '../../features/discover/presentation/pages/discover_page.dart';
@@ -63,6 +64,7 @@ import '../../features/shortlist/presentation/pages/shortlisted_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 import '../../features/subscription/presentation/pages/subscription_page.dart';
 import '../../features/verification/presentation/pages/verification_page.dart';
+import '../../features/authentication/domain/services/local_auth_session.dart';
 import '../../features/authentication/presentation/providers/auth_providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
@@ -153,6 +155,23 @@ bool _onboardingCompletedLocally() {
   }
 }
 
+/// Whether a signed-out visitor is nonetheless allowed into the app.
+///
+/// Two development bridges, both paired with the static OTP verifier and
+/// both deleted with it:
+///
+///  * signup collects a whole profile before asking for a credential, so a
+///    member who finished onboarding has no session and would otherwise be
+///    bounced back to the landing screen from the last step
+///    ([StorageService.onboardingCompleted]);
+///  * mobile login — by OTP or by password — cannot mint a Firebase session
+///    either, and records a [LocalAuthSession] instead.
+///
+/// Neither proves identity. Both exist only so a user the product considers
+/// logged in is not treated as signed out by the guard.
+bool _signedInLocally() =>
+    _onboardingCompletedLocally() || hasLocalAuthSession();
+
 GoRouter createRouter(WidgetRef ref) {
   return _appRouter = GoRouter(
     navigatorKey: rootNavigatorKey,
@@ -173,21 +192,9 @@ GoRouter createRouter(WidgetRef ref) {
 
       final user = await ref.read(authStateChangesProvider.future);
       if (user == null) {
-        // Development bridge, paired with the static OTP verifier: signup
-        // asks for no credential, so a member who finished onboarding has no
-        // session and would otherwise be bounced back to the landing screen
-        // from the last step. Deleted together with the mock verifier when
-        // real account creation returns.
-        if (_onboardingCompletedLocally()) return null;
-
-        // Development bridge, paired with the static OTP verifier: signup
-        // collects a whole profile before asking for a credential, so a
-        // member who finished onboarding has no session yet and would
-        // otherwise be bounced straight back to the landing screen from
-        // the last step. See StorageService.onboardingCompleted — this
-        // branch is deleted along with the mock verifier when real
-        // verification returns.
-        if (_onboardingCompletedLocally()) return null;
+        // Development bridges — see _signedInLocally, which is where both
+        // are documented and where both are deleted from.
+        if (_signedInLocally()) return null;
 
         // The landing screen, not Login: a signed-out visitor is far more
         // often someone who has never had an account than someone whose
@@ -228,35 +235,34 @@ GoRouter createRouter(WidgetRef ref) {
         name: RouteNames.onboardingName,
         builder: (context, state) => const OnboardingPage(),
       ),
+      // The login form is the login screen, and `/login` is the path four
+      // other screens (Settings, Verify Email, the Email + Mobile step, the
+      // landing screen) already mean when they say "send them to log in".
+      // Redirecting rather than mounting the page twice means there is
+      // exactly one login route to reason about, and no call site had to
+      // change to stop going through the removed Welcome Back screen.
       GoRoute(
         path: RouteNames.login,
         name: RouteNames.loginName,
-        builder: (context, state) => const WelcomeBackPage(),
+        redirect: (context, state) => RouteNames.loginForm,
       ),
       GoRoute(
         path: RouteNames.loginForm,
         name: RouteNames.loginFormName,
         builder: (context, state) {
           final extra = state.extra;
-          int initialTab = 0;
-          SignUpFocus? focus;
+          LoginFormMode mode = LoginFormMode.mobileOtp;
           if (extra is Map) {
-            if (extra['tab'] is int) {
-              initialTab = extra['tab'] as int;
-            } else if (extra['initialTab'] is int) {
-              initialTab = extra['initialTab'] as int;
-            }
-            // Set by the landing screen's Email / Mobile CTAs so the Sign Up
-            // tab opens with that field already focused — the only thing
-            // that distinguishes the two, since both lead to the same form.
-            final focusName = extra['focus'];
-            if (focusName is String) {
-              for (final value in SignUpFocus.values) {
-                if (value.name == focusName) focus = value;
+            // Which credential the form opens on. Absent means the mobile
+            // channel it has always opened on.
+            final modeName = extra['mode'];
+            if (modeName is String) {
+              for (final value in LoginFormMode.values) {
+                if (value.name == modeName) mode = value;
               }
             }
           }
-          return LoginPage(initialTab: initialTab, initialSignUpFocus: focus);
+          return LoginPage(mode: mode);
         },
       ),
       GoRoute(
@@ -566,16 +572,37 @@ GoRouter createRouter(WidgetRef ref) {
         name: RouteNames.profileName,
         builder: (context, state) => const ProfilePage(),
       ),
-      // The profile/account menu. A root-navigator route (not a Drawer on
-      // Discover's Scaffold, which is what it used to be) so it covers the
-      // whole StatefulShellRoute — no sliver of Discover beside it, and no
-      // floating bottom-nav pill over it, since both belong to the shell
-      // underneath. A plain `builder:` gives it the default platform page
-      // transition, which is what carries the iOS back-swipe.
+      // The profile/account menu, presented as a LEFT SIDE PANEL.
+      //
+      // Still a root-navigator route rather than a Drawer on Discover's
+      // Scaffold: a Drawer belongs to one Scaffold, so it could never be
+      // opened from anywhere but Discover, it cannot outrank the shell's
+      // floating bottom-nav pill, and it gives Android's back button
+      // nothing to pop. A route keeps both the deep link and the back
+      // button, while `opaque: false` is what lets Discover keep painting
+      // beside/behind the panel, which is the one thing the old full-screen
+      // page could not do. (A CustomTransitionPage carries no Cupertino
+      // back-swipe — the panel's own swipe-left-to-dismiss replaces it, see
+      // ProfileMenuPage.)
+      //
+      // `barrierColor` paints (and animates) the scrim over the shell, and
+      // `barrierDismissible` makes a tap outside the panel pop the route —
+      // ProfileMenuPage's own scrim gesture is the belt to this braces, so
+      // the tap works whether or not the Scaffold swallows it first.
       GoRoute(
         path: RouteNames.profileMenu,
         name: RouteNames.profileMenuName,
-        builder: (context, state) => const ProfileMenuPage(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          opaque: false,
+          barrierDismissible: true,
+          barrierColor: AppColors.scrim,
+          barrierLabel: RouteNames.profileMenuName,
+          transitionDuration: AppAnimationTokens.normal,
+          reverseTransitionDuration: AppAnimationTokens.fast,
+          child: const ProfileMenuPage(),
+          transitionsBuilder: _slideFromLeftTransition,
+        ),
       ),
 
       // ─── Bottom Navigation — StatefulShellRoute ────────────────
@@ -640,6 +667,28 @@ GoRouter createRouter(WidgetRef ref) {
 }
 
 // ─── Custom Transitions ────────────────────────────────────────────
+
+/// Slides a page in from the LEFT edge — the side-panel transition used by
+/// the profile menu. Paired with a non-opaque page so the screen underneath
+/// stays visible beside it for the whole animation.
+Widget _slideFromLeftTransition(
+  BuildContext context,
+  Animation<double> animation,
+  Animation<double> secondaryAnimation,
+  Widget child,
+) {
+  return SlideTransition(
+    position: Tween<Offset>(begin: const Offset(-1, 0), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: animation,
+            curve: AppAnimationTokens.luxuryCurve,
+            reverseCurve: Curves.easeInCubic,
+          ),
+        ),
+    child: child,
+  );
+}
 
 Widget _slideUpTransition(
   BuildContext context,

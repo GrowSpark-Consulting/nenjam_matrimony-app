@@ -127,6 +127,44 @@ class StorageService {
     await _prefs.setBool(AppConstants.keyOnboardingCompleted, value);
   }
 
+  // ─── Local development session (development bridge) ──────────────
+  //
+  // Two login paths cannot end in a Firebase session today: phone + OTP
+  // (the OTP is [MockOtpVerifier], so no phone credential is ever minted)
+  // and mobile + password (Firebase Auth has no such sign-in, and the
+  // backend has no login endpoint of its own — every backend route is
+  // guarded by FirebaseAuthGuard). Both record the session here instead.
+  //
+  // Like [onboardingCompleted] this is a development bridge, not an auth
+  // mechanism: it is local to the device and proves nothing about identity.
+  // Read it through `LocalAuthSession` rather than directly — that class is
+  // the single seam to delete when real verification and a real
+  // mobile-password endpoint arrive.
+  String? get localSessionIdentifier {
+    final value = _prefs.getString(AppConstants.keyLocalSessionIdentifier);
+    return (value != null && value.isNotEmpty) ? value : null;
+  }
+
+  String? get localSessionMethod =>
+      _prefs.getString(AppConstants.keyLocalSessionMethod);
+
+  Future<void> setLocalSession({
+    required String identifier,
+    required String method,
+  }) async {
+    await Future.wait([
+      _prefs.setString(AppConstants.keyLocalSessionIdentifier, identifier),
+      _prefs.setString(AppConstants.keyLocalSessionMethod, method),
+    ]);
+  }
+
+  Future<void> clearLocalSession() async {
+    await Future.wait([
+      _prefs.remove(AppConstants.keyLocalSessionIdentifier),
+      _prefs.remove(AppConstants.keyLocalSessionMethod),
+    ]);
+  }
+
   // ─── Search History ──────────────────────────────────────────────
   List<String> get recentSearches =>
       _prefs.getStringList(AppConstants.keySearchHistory) ?? const [];

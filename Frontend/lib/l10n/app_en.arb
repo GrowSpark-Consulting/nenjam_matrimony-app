@@ -929,14 +929,6 @@
 
   "authEntrySignUp": "Sign Up",
   "authEntryLogin": "Login",
-  "welcomeBackHeadline": "Welcome back",
-  "welcomeBackSubtitle": "Enter your details to continue",
-  "welcomeBackGetOtp": "Get OTP",
-  "welcomeBackPassword": "Login with Password",
-  "welcomeBackGoogle": "Continue with Google",
-  "welcomeBackEmail": "Continue with Email",
-  "welcomeBackNoAccount": "Don't have an account?",
-  "welcomeBackSignUpFree": "Sign Up Free",
   "profileBasicsMissing": "Select your {fields} to continue.",
   "@profileBasicsMissing": {
     "description": "Says which required fields on the Location & Sub-community step are still unanswered; {fields} is an already-joined list such as \"state and city\"",
@@ -1590,5 +1582,12 @@
   "inboxEditedSuffix": " (edited)",
   "astroExcellentMatch": "Excellent Match",
   "profileIdLabel": "ID: {id}",
-  "@profileIdLabel": { "placeholders": { "id": { "type": "String" } } }
+  "@profileIdLabel": { "placeholders": { "id": { "type": "String" } } },
+  "authIdentifierLabel": "Email or Mobile Number",
+  "authIdentifierHint": "name@example.com or 9876543210",
+  "authIdentifierRequired": "Enter your email or mobile number",
+  "authIdentifierInvalid": "Enter a valid email address or 10-digit mobile number",
+  "authNoAccountForMobile": "No account found for this mobile number.",
+  "authAccountCheckUnavailable": "Couldn't reach the server. Please try again.",
+  "authOtpRequired": "Enter the code we sent you"
 }

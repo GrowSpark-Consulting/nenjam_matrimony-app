@@ -9,6 +9,16 @@ abstract final class AppConstants {
   static const String appVersion = '1.0.0';
   static const String appBuildNumber = '1';
 
+  /// Android application id — must stay in step with `applicationId` in
+  /// android/app/build.gradle.kts.
+  static const String androidPackageId = 'com.growspark.nenjam';
+
+  /// Public store listing, opened by the profile menu's "Rate Us". The https
+  /// form (not `market://`) so the Play Store app takes it on Android and a
+  /// browser handles it everywhere else, instead of failing to launch.
+  static const String storeListingUrl =
+      'https://play.google.com/store/apps/details?id=$androidPackageId';
+
   // ─── API Configuration ───────────────────────────────────────────
   //
   // THE single source of truth for the backend origin. Every Dio client,
@@ -79,6 +89,14 @@ abstract final class AppConstants {
   /// Set once the new signup onboarding reaches its end. Paired with the
   /// static development OTP verifier — see StorageService.onboardingCompleted.
   static const String keyOnboardingCompleted = 'onboarding_completed';
+
+  /// The identifier (E.164 mobile or email) of a **local development
+  /// session** — a login completed against the static OTP verifier, or a
+  /// mobile + password login, neither of which Firebase can issue a real
+  /// session for yet. Paired with [keyLocalSessionMethod]; see
+  /// `LocalAuthSession`, which is the only thing that should read these.
+  static const String keyLocalSessionIdentifier = 'local_session_identifier';
+  static const String keyLocalSessionMethod = 'local_session_method';
 
   /// Local-only search history — capped at [maxRecentSearches] entries.
   static const String keySearchHistory = 'search_history';

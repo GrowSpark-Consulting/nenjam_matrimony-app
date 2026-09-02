@@ -2555,30 +2555,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authEntryLogin => 'Login';
 
   @override
-  String get welcomeBackHeadline => 'Welcome back';
-
-  @override
-  String get welcomeBackSubtitle => 'Enter your details to continue';
-
-  @override
-  String get welcomeBackGetOtp => 'Get OTP';
-
-  @override
-  String get welcomeBackPassword => 'Login with Password';
-
-  @override
-  String get welcomeBackGoogle => 'Continue with Google';
-
-  @override
-  String get welcomeBackEmail => 'Continue with Email';
-
-  @override
-  String get welcomeBackNoAccount => 'Don\'t have an account?';
-
-  @override
-  String get welcomeBackSignUpFree => 'Sign Up Free';
-
-  @override
   String profileBasicsMissing(String fields) {
     return 'Select your $fields to continue.';
   }
@@ -4555,4 +4531,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String profileIdLabel(String id) {
     return 'ID: $id';
   }
+
+  @override
+  String get authIdentifierLabel => 'Email or Mobile Number';
+
+  @override
+  String get authIdentifierHint => 'name@example.com or 9876543210';
+
+  @override
+  String get authIdentifierRequired => 'Enter your email or mobile number';
+
+  @override
+  String get authIdentifierInvalid =>
+      'Enter a valid email address or 10-digit mobile number';
+
+  @override
+  String get authNoAccountForMobile =>
+      'No account found for this mobile number.';
+
+  @override
+  String get authAccountCheckUnavailable =>
+      'Couldn\'t reach the server. Please try again.';
+
+  @override
+  String get authOtpRequired => 'Enter the code we sent you';
 }

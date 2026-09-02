@@ -8,6 +8,7 @@ import '../../../../core/network/backend_connectivity_checker.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/services/storage_service.dart';
 import '../../../authentication/data/services/backend_sync_service.dart';
+import '../../../authentication/domain/services/local_auth_session.dart';
 import '../../../authentication/presentation/providers/auth_providers.dart';
 import '../../../authentication/presentation/utils/post_auth_destination.dart';
 import '../../../registration/domain/models/profile_draft.dart';
@@ -76,6 +77,14 @@ class SplashController extends Notifier<void> {
     final user = await ref.read(authStateChangesProvider.future);
     final repo = ref.read(authRepositoryProvider);
     if (user == null) {
+      // A mobile login (OTP or password) opens a LocalAuthSession rather
+      // than a Firebase one — see that class for why. Without this the
+      // router would let the member in but the splash would send them
+      // back to the landing screen on the next cold start, so the login
+      // would look like it had not stuck.
+      if (ref.read(localAuthSessionProvider).isActive) {
+        return RouteNames.discover;
+      }
       await storageService.clearNavState();
       return RouteNames.registrationLanding;
     }
