@@ -12,6 +12,7 @@ import '../../features/authentication/presentation/pages/login_page.dart';
 import '../../features/authentication/presentation/pages/otp_page.dart';
 import '../../features/authentication/presentation/pages/phone_verify_screen.dart';
 import '../../features/authentication/presentation/pages/registration_landing_page.dart';
+import '../../features/authentication/presentation/pages/welcome_back_page.dart';
 import '../../features/discover/domain/entities/discovery_profile_entity.dart';
 import 'profile_navigation.dart';
 import '../../features/discover/presentation/pages/discover_page.dart';
@@ -42,6 +43,15 @@ import '../../features/profile_prompts/presentation/pages/choose_prompt_page.dar
 import '../../features/profile_completion/presentation/pages/profile_completion_page.dart';
 import '../../features/psychology/presentation/pages/psychology_quiz_page.dart';
 import '../../features/registration/presentation/pages/create_profile_for_page.dart';
+import '../../features/registration/presentation/pages/onboarding_about_page.dart';
+import '../../features/registration/presentation/pages/onboarding_contact_page.dart';
+import '../../features/registration/presentation/pages/onboarding_education_page.dart';
+import '../../features/registration/presentation/pages/onboarding_income_page.dart';
+import '../../features/registration/presentation/pages/onboarding_marital_page.dart';
+import '../../features/registration/presentation/pages/onboarding_photos_page.dart';
+import '../../features/registration/presentation/pages/onboarding_religion_page.dart';
+import '../../features/registration/presentation/pages/onboarding_verify_mobile_page.dart';
+import '../../features/registration/presentation/pages/profile_basics_page.dart';
 import '../../features/registration/presentation/pages/profile_review_page.dart';
 import '../../features/registration/presentation/pages/profile_wizard_page.dart';
 import '../../features/registration/presentation/pages/registration_completing_page.dart';
@@ -56,6 +66,7 @@ import '../../features/subscription/presentation/pages/subscription_page.dart';
 import '../../features/verification/presentation/pages/verification_page.dart';
 import '../../features/authentication/presentation/providers/auth_providers.dart';
 import '../../l10n/app_localizations.dart';
+import '../services/storage_service.dart';
 import '../widgets/navigation/app_bottom_nav.dart';
 import 'route_names.dart';
 
@@ -132,6 +143,17 @@ class GoRouterRefreshStream extends ChangeNotifier {
 /// or a logout triggered from anywhere in the app — so the user is bounced
 /// to Login automatically without every call site needing its own
 /// navigation logic.
+/// Whether this device finished the new signup onboarding. Guarded: local
+/// storage may not be initialised when a redirect runs very early, and
+/// "cannot tell" must mean "not signed in", never a crash in the router.
+bool _onboardingCompletedLocally() {
+  try {
+    return storageService.onboardingCompleted;
+  } catch (_) {
+    return false;
+  }
+}
+
 GoRouter createRouter(WidgetRef ref) {
   return _appRouter = GoRouter(
     navigatorKey: rootNavigatorKey,
@@ -152,6 +174,22 @@ GoRouter createRouter(WidgetRef ref) {
 
       final user = await ref.read(authStateChangesProvider.future);
       if (user == null) {
+        // Development bridge, paired with the static OTP verifier: signup
+        // asks for no credential, so a member who finished onboarding has no
+        // session and would otherwise be bounced back to the landing screen
+        // from the last step. Deleted together with the mock verifier when
+        // real account creation returns.
+        if (_onboardingCompletedLocally()) return null;
+
+        // Development bridge, paired with the static OTP verifier: signup
+        // collects a whole profile before asking for a credential, so a
+        // member who finished onboarding has no session yet and would
+        // otherwise be bounced straight back to the landing screen from
+        // the last step. See StorageService.onboardingCompleted — this
+        // branch is deleted along with the mock verifier when real
+        // verification returns.
+        if (_onboardingCompletedLocally()) return null;
+
         // The landing screen, not Login: a signed-out visitor is far more
         // often someone who has never had an account than someone whose
         // session lapsed, and Login is one tap away from there anyway.
@@ -194,6 +232,11 @@ GoRouter createRouter(WidgetRef ref) {
       GoRoute(
         path: RouteNames.login,
         name: RouteNames.loginName,
+        builder: (context, state) => const WelcomeBackPage(),
+      ),
+      GoRoute(
+        path: RouteNames.loginForm,
+        name: RouteNames.loginFormName,
         builder: (context, state) {
           final extra = state.extra;
           int initialTab = 0;
@@ -251,6 +294,51 @@ GoRouter createRouter(WidgetRef ref) {
         path: RouteNames.createProfileFor,
         name: RouteNames.createProfileForName,
         builder: (context, state) => const CreateProfileForPage(),
+      ),
+      GoRoute(
+        path: RouteNames.onboardingReligion,
+        name: RouteNames.onboardingReligionName,
+        builder: (context, state) => const OnboardingReligionPage(),
+      ),
+      GoRoute(
+        path: RouteNames.onboardingContact,
+        name: RouteNames.onboardingContactName,
+        builder: (context, state) => const OnboardingContactPage(),
+      ),
+      GoRoute(
+        path: RouteNames.profileBasics,
+        name: RouteNames.profileBasicsName,
+        builder: (context, state) => const ProfileBasicsPage(),
+      ),
+      GoRoute(
+        path: RouteNames.onboardingMarital,
+        name: RouteNames.onboardingMaritalName,
+        builder: (context, state) => const OnboardingMaritalPage(),
+      ),
+      GoRoute(
+        path: RouteNames.onboardingEducation,
+        name: RouteNames.onboardingEducationName,
+        builder: (context, state) => const OnboardingEducationPage(),
+      ),
+      GoRoute(
+        path: RouteNames.onboardingIncome,
+        name: RouteNames.onboardingIncomeName,
+        builder: (context, state) => const OnboardingIncomePage(),
+      ),
+      GoRoute(
+        path: RouteNames.onboardingPhotos,
+        name: RouteNames.onboardingPhotosName,
+        builder: (context, state) => const OnboardingPhotosPage(),
+      ),
+      GoRoute(
+        path: RouteNames.onboardingAbout,
+        name: RouteNames.onboardingAboutName,
+        builder: (context, state) => const OnboardingAboutPage(),
+      ),
+      GoRoute(
+        path: RouteNames.onboardingVerifyMobile,
+        name: RouteNames.onboardingVerifyMobileName,
+        builder: (context, state) => const OnboardingVerifyMobilePage(),
       ),
       GoRoute(
         path: RouteNames.registrationWelcome,

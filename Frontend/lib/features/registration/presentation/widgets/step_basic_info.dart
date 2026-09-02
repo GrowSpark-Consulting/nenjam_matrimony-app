@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/profile_options.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/utils/validators.dart';
@@ -219,12 +220,7 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
             runSpacing: 8,
             // Values stay English (stored/emitted); only the label is localized.
             children:
-                [
-                  'Never Married',
-                  'Divorced',
-                  'Widowed',
-                  'Awaiting Divorce',
-                ].map((s) {
+                ProfileOptions.maritalStatuses.map((s) {
                   final sel = _maritalStatus == s;
                   return ChoiceChip(
                     label: Text(_maritalLabel(l10n, s)),

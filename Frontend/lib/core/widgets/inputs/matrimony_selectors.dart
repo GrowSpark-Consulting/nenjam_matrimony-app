@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../constants/profile_options.dart';
 import 'app_dropdown.dart';
 
 /// Reusable Religion Selector.
@@ -44,17 +45,7 @@ class NmCasteSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    const castes = [
-      'Iyer',
-      'Iyengar',
-      'Mudaliar',
-      'Pillai',
-      'Chettiar',
-      'Gounder',
-      'Nadar',
-      'Vanniyar',
-      'Don\'t Wish to Specify',
-    ];
+    const castes = ProfileOptions.subCommunities;
     return NmDropdown<String>(
       label: l10n.fieldCasteDivision,
       hint: l10n.fieldCasteHint,
@@ -264,17 +255,7 @@ class NmLocationSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    const cities = [
-      'Chennai',
-      'Coimbatore',
-      'Madurai',
-      'Trichy',
-      'Bangalore',
-      'Hyderabad',
-      'Mumbai',
-      'Singapore',
-      'USA / UK / Abroad',
-    ];
+    const cities = ProfileOptions.cities;
     return NmDropdown<String>(
       label: l10n.fieldCurrentLocation,
       hint: l10n.fieldLocationHint,

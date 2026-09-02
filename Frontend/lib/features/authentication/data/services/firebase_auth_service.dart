@@ -58,6 +58,24 @@ class FirebaseAuthService {
     }
   }
 
+  /// Asks Firebase to attach [email] to the signed-in account once the
+  /// member opens the confirmation link. Used by the onboarding Email +
+  /// Mobile step for an account that has a number but no address.
+  ///
+  /// The address does NOT land on the account until that link is opened —
+  /// `currentUser.email` stays null in the meantime, which is why the caller
+  /// also records it locally (StorageService.pendingEmail).
+  Future<void> startEmailUpdate(String email) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: AppL10n.current.authNoSignedInUserToLink,
+      );
+    }
+    await user.verifyBeforeUpdateEmail(email);
+  }
+
   Future<void> sendPasswordResetEmail(String email) {
     return _auth.sendPasswordResetEmail(email: email);
   }

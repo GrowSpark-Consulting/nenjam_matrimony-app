@@ -5,6 +5,10 @@ abstract final class ApiEndpoints {
   // ─── Authentication ──────────────────────────────────────────────
   static const String login = '/auth/login';
   static const String register = '/auth/register';
+
+  /// Unauthenticated: asked by the signup Email + Mobile step before an
+  /// account exists, so it cannot carry a token.
+  static const String accountExists = '/auth/account-exists';
   static const String verifyOtp = '/auth/verify-otp';
   static const String resendOtp = '/auth/resend-otp';
   static const String refreshToken = '/auth/refresh';

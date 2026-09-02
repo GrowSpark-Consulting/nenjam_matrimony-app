@@ -9,6 +9,11 @@ abstract final class RouteNames {
   static const String registrationLanding = '/registration-landing';
   static const String onboarding = '/onboarding';
   static const String login = '/login';
+
+  /// The email/password form. No longer the auth entry — Welcome Back and
+  /// Sign Up are — but still the screen those two open for the email and
+  /// password routes, so the working forms are reused rather than rebuilt.
+  static const String loginForm = '/login/form';
   static const String otp = '/otp';
   static const String loginOtp = '/login-otp';
   static const String verifyEmail = '/verify-email';
@@ -16,6 +21,16 @@ abstract final class RouteNames {
   static const String forgotPassword = '/forgot-password';
   static const String registration = '/registration';
   static const String createProfileFor = '/create-profile-for';
+  // ─── Onboarding (the four screens between signup and Discover) ────
+  static const String onboardingReligion = '/registration/religion';
+  static const String onboardingContact = '/registration/contact';
+  static const String profileBasics = '/registration/profile-basics';
+  static const String onboardingMarital = '/registration/marital-status';
+  static const String onboardingEducation = '/registration/education';
+  static const String onboardingIncome = '/registration/income';
+  static const String onboardingPhotos = '/registration/photos';
+  static const String onboardingAbout = '/registration/about';
+  static const String onboardingVerifyMobile = '/registration/verify-mobile';
   static const String registrationWelcome = '/registration/welcome';
   static const String registrationWizard = '/registration/wizard';
   static const String psychologyQuiz = '/registration/psychology-quiz';
@@ -60,6 +75,7 @@ abstract final class RouteNames {
   static const String registrationLandingName = 'registrationLanding';
   static const String onboardingName = 'onboarding';
   static const String loginName = 'login';
+  static const String loginFormName = 'loginForm';
   static const String otpName = 'otp';
   static const String loginOtpName = 'loginOtp';
   static const String verifyEmailName = 'verifyEmail';
@@ -67,6 +83,15 @@ abstract final class RouteNames {
   static const String forgotPasswordName = 'forgotPassword';
   static const String registrationName = 'registration';
   static const String createProfileForName = 'createProfileFor';
+  static const String onboardingReligionName = 'onboardingReligion';
+  static const String onboardingContactName = 'onboardingContact';
+  static const String profileBasicsName = 'profileBasics';
+  static const String onboardingMaritalName = 'onboardingMarital';
+  static const String onboardingEducationName = 'onboardingEducation';
+  static const String onboardingIncomeName = 'onboardingIncome';
+  static const String onboardingPhotosName = 'onboardingPhotos';
+  static const String onboardingAboutName = 'onboardingAbout';
+  static const String onboardingVerifyMobileName = 'onboardingVerifyMobile';
   static const String registrationWelcomeName = 'registrationWelcome';
   static const String registrationWizardName = 'registrationWizard';
   static const String psychologyQuizName = 'psychologyQuiz';
@@ -124,6 +149,17 @@ abstract final class RouteNames {
     registrationLanding,
     onboarding,
     login,
+    loginForm,
+    createProfileFor,
+    onboardingReligion,
+    onboardingContact,
+    profileBasics,
+    onboardingMarital,
+    onboardingEducation,
+    onboardingIncome,
+    onboardingPhotos,
+    onboardingAbout,
+    onboardingVerifyMobile,
     otp,
     loginOtp,
     verifyEmail,

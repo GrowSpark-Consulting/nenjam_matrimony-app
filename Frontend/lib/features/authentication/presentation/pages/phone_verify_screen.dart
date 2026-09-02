@@ -3,17 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/errors/auth_error_mapper.dart';
-import '../../../../core/router/route_names.dart';
 import '../../../../core/services/storage_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/inputs/otp_input.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../registration/presentation/providers/registration_provider.dart';
 import '../controllers/phone_auth_controller.dart';
 import '../controllers/signup_controller.dart';
 import '../providers/auth_providers.dart';
+import '../utils/post_auth_destination.dart';
 
 /// Phone (Mobile) OTP verification for the signup flow.
 ///
@@ -90,7 +89,7 @@ class _PhoneVerifyScreenState extends ConsumerState<PhoneVerifyScreen> {
     }
   }
 
-  void _onVerifiedSuccess() {
+  Future<void> _onVerifiedSuccess() async {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -100,12 +99,17 @@ class _PhoneVerifyScreenState extends ConsumerState<PhoneVerifyScreen> {
       ),
     );
     ref.read(signupControllerProvider.notifier).reset();
-    storageService.clearPendingPhone();
-    // Account fully created + verified → build the matrimony profile.
-    // Always CREATE MODE here — guarantees no stale draft/mode leaks in
-    // from a previous session (e.g. a prior user's edit on a shared device).
-    ref.read(registrationProvider.notifier).startCreateMode();
-    context.go(RouteNames.createProfileFor);
+    await storageService.clearPendingPhone();
+    // Ask where this member actually belongs rather than assuming the start
+    // of onboarding. A number is linked here during sign-up *and* from the
+    // Email + Mobile step midway through, and sending the latter back to
+    // screen one would discard the answers they had already given.
+    // `resolve` rehydrates the draft from the backend and sets CREATE mode
+    // itself, so the guarantee that no stale edit-mode session leaks in
+    // from a shared device still holds.
+    final route = await ref.read(postAuthDestinationProvider).resolve();
+    if (!mounted) return;
+    context.go(route);
   }
 
   void _showError(String message) {

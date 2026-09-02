@@ -151,6 +151,12 @@ class FirebaseAuthRepository {
 
   // ─── Shared ────────────────────────────────────────────────────────
 
+  /// Starts attaching an email address to an account that has none — the
+  /// onboarding Email + Mobile step for a phone signup. See
+  /// [FirebaseAuthService.startEmailUpdate] for why the address is not on
+  /// the account the moment this returns.
+  Future<void> startEmailUpdate(String email) => _auth.startEmailUpdate(email);
+
   Future<void> resetPassword(String email) => _auth.sendPasswordResetEmail(email);
 
   Future<void> logout() async {

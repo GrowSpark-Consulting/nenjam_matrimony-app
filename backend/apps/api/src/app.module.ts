@@ -16,6 +16,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { ChatModule } from './modules/chat/chat.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { UsersModule } from './modules/users/users.module';
 import { SupportModule } from './modules/support/support.module';
 import { BlocksModule } from './modules/blocks/blocks.module';
 import { ReportsModule } from './modules/reports/reports.module';
@@ -53,6 +54,7 @@ import { throttlerConfig } from './throttling';
     NotificationsModule,
     ChatModule,
     SettingsModule,
+    UsersModule,
     SupportModule,
     BlocksModule,
     ReportsModule,

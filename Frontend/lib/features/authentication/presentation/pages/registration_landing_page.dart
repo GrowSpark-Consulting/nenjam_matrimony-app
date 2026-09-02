@@ -9,12 +9,14 @@ import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/buttons/icon_button.dart';
 import '../../../../core/widgets/buttons/outlined_button.dart';
 import '../../../../core/widgets/buttons/social_button.dart';
 import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/services/backend_sync_service.dart';
 import '../controllers/login_controller.dart';
+import '../../../registration/presentation/providers/registration_provider.dart';
 import '../utils/post_auth_destination.dart';
 
 /// Breakpoint above which the hero moves beside the actions rather than
@@ -25,6 +27,14 @@ const double _kLandscapeBreakpoint = 600;
 /// Which sign-up field the Login page should focus when it opens. Passed
 /// through GoRouter `extra` as a name string — see [LoginPage].
 enum SignUpFocus { email, mobile }
+
+/// Which sign-up button the member pressed, for the duration of onboarding.
+///
+/// Not a parallel state system — a single value the Email + Mobile step reads
+/// to know which identifier it already has and which it still needs. Null
+/// when onboarding was not entered from a sign-up button (a resumed session,
+/// say), which that step treats as "prefill whatever the account carries".
+final signupMethodProvider = StateProvider<SignUpFocus?>((ref) => null);
 
 /// The first screen a logged-out user sees after the splash.
 ///
@@ -54,14 +64,19 @@ class _RegistrationLandingPageState
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Opens the existing Login page on its Sign Up tab, with the field the
-  /// user asked for already focused. There is no second sign-up form — the
-  /// email and mobile CTAs are two doors into the one the app already has.
+  /// All three sign-up buttons go straight to the first onboarding step.
+  ///
+  /// There is no credential form in front of onboarding: the member is asked
+  /// for an email and a mobile part-way through (the Email + Mobile step),
+  /// not before they have seen a single question. The chosen method is
+  /// recorded so that step can prefill the identifier they picked.
   void _signUpWith(SignUpFocus focus) {
-    context.push(RouteNames.login, extra: {'tab': 1, 'focus': focus.name});
+    ref.read(signupMethodProvider.notifier).state = focus;
+    ref.read(registrationProvider.notifier).startCreateMode();
+    context.go(RouteNames.createProfileFor);
   }
 
-  void _login() => context.push(RouteNames.login, extra: {'tab': 0});
+  void _login() => context.push(RouteNames.login);
 
   Future<void> _signUpWithGoogle() async {
     if (_resolvingDestination) return;
@@ -88,11 +103,19 @@ class _RegistrationLandingPageState
     // cannot turn a successful sign-in into a failure.
     setState(() => _resolvingDestination = true);
     await syncUserWithBackend(ref.read(apiClientProvider));
+    ref.read(signupMethodProvider.notifier).state = SignUpFocus.email;
+    // Google already carries an address, so the destination lookup can tell
+    // a returning account from a new one and route accordingly — a brand-new
+    // one lands on Profile For like the other two buttons.
     final route = await ref.read(postAuthDestinationProvider).resolve();
     if (!mounted) return;
     setState(() => _resolvingDestination = false);
     context.go(route);
   }
+
+  /// Where Back goes, for both the arrow and the Android system gesture —
+  /// one definition so the two can never disagree.
+  void _back() => context.go(RouteNames.language);
 
   @override
   Widget build(BuildContext context) {
@@ -110,11 +133,13 @@ class _RegistrationLandingPageState
         // where the auth-selection screen this replaced also sent Back.
         canPop: false,
         onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) context.go(RouteNames.language);
+          if (!didPop) _back();
         },
         child: Scaffold(
           backgroundColor: AppColors.surfaceLight,
-          body: LayoutBuilder(
+          body: Stack(
+            children: [
+              LayoutBuilder(
             builder: (context, constraints) {
               final isLandscape =
                   constraints.maxWidth > constraints.maxHeight &&
@@ -153,7 +178,26 @@ class _RegistrationLandingPageState
                   ),
                 ],
               );
-            },
+                },
+              ),
+              // Layered over the hero rather than placed in the column: the
+              // hero bleeds to the screen edge in both orientations, and an
+              // arrow in the flow would either push it down or eat into the
+              // lockup's breathing room. White, because it always sits on
+              // the brand gradient.
+              PositionedDirectional(
+                top: 0,
+                start: AppSpacing.sm,
+                child: SafeArea(
+                  child: NmIconButton(
+                    icon: Icons.arrow_back_rounded,
+                    tooltip: l10n.registrationBack,
+                    color: AppColors.textOnPrimary,
+                    onPressed: _back,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

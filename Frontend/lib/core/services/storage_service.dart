@@ -86,6 +86,47 @@ class StorageService {
     await _prefs.remove(AppConstants.keyPendingPhone);
   }
 
+  // ─── Pending onboarding email (transient, local-only) ────────────
+  //
+  // Set when the Email + Mobile step has asked Firebase to confirm an
+  // address but the account does not carry it yet — Firebase only attaches
+  // the address once the member opens the link, which can be minutes or a
+  // device away. Without this marker the onboarding gate would keep sending
+  // them back to a step they have already completed. Cleared once the
+  // address actually lands on the account.
+  String? get pendingEmail {
+    final value = _prefs.getString(AppConstants.keyPendingEmail);
+    return (value != null && value.isNotEmpty) ? value : null;
+  }
+
+  Future<void> setPendingEmail(String email) async {
+    await _prefs.setString(AppConstants.keyPendingEmail, email);
+  }
+
+  Future<void> clearPendingEmail() async {
+    await _prefs.remove(AppConstants.keyPendingEmail);
+  }
+
+  // ─── Onboarding completion (development bridge) ──────────────────
+  //
+  // Signup collects a whole profile before asking for any credential, so a
+  // member reaches the end of onboarding with no Firebase session — and
+  // every authenticated route correctly refuses one. While the OTP step is
+  // the static development verifier (MockOtpVerifier), this flag is what
+  // lets a finished member into the app.
+  //
+  // It is a development bridge, not an auth mechanism: it is local to the
+  // device and proves nothing about identity. It exists exactly as long as
+  // the mock verifier does — when real verification is restored, the OTP
+  // step ends in a real session and both this flag and its branch in the
+  // router guard should be deleted together.
+  bool get onboardingCompleted =>
+      _prefs.getBool(AppConstants.keyOnboardingCompleted) ?? false;
+
+  Future<void> setOnboardingCompleted(bool value) async {
+    await _prefs.setBool(AppConstants.keyOnboardingCompleted, value);
+  }
+
   // ─── Search History ──────────────────────────────────────────────
   List<String> get recentSearches =>
       _prefs.getStringList(AppConstants.keySearchHistory) ?? const [];

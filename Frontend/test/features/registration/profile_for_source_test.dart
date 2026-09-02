@@ -28,7 +28,10 @@ void main() {
   }
 
   /// A real router, because Continue navigates with `context.go` — this also
-  /// asserts the screen hands off to the wizard rather than anywhere else.
+  /// asserts the screen hands off to the Your Religion step, the
+  /// one screen that follows it. The removed 13-step wizard is registered
+  /// too, so a regression that routed back into it would land on a
+  /// distinguishable screen rather than silently failing to navigate.
   GoRouter buildRouter() {
     return GoRouter(
       initialLocation: RouteNames.createProfileFor,
@@ -36,6 +39,11 @@ void main() {
         GoRoute(
           path: RouteNames.createProfileFor,
           builder: (context, state) => const CreateProfileForPage(),
+        ),
+        GoRoute(
+          path: RouteNames.onboardingReligion,
+          builder: (context, state) =>
+              const Scaffold(body: Text('religion-reached')),
         ),
         GoRoute(
           path: RouteNames.registrationWizard,
@@ -80,12 +88,12 @@ void main() {
 
     for (final label in [
       'Myself',
-      'Son',
-      'Daughter',
-      'Brother',
-      'Sister',
-      'Relative',
-      'Friend',
+      'My Son',
+      'My Daughter',
+      'My Brother',
+      'My Sister',
+      'My Friend',
+      'My Relative',
     ]) {
       expect(
         find.text(label),
@@ -95,7 +103,8 @@ void main() {
     }
   });
 
-  testWidgets('Continue writes the relation to the draft and opens the wizard',
+  testWidgets(
+      'Continue writes the relation to the draft and opens the Religion step',
       (tester) async {
     useTallSurface(tester);
     final container = ProviderContainer();
@@ -106,16 +115,29 @@ void main() {
 
     // Nothing is committed by merely opening the screen — the draft's copy is
     // written on Continue, which is what makes this the single source. The
-    // value is *empty*, not 'Myself': the screen highlights Myself as its
-    // default selection, but until Continue is tapped the draft records no
-    // answer at all, which is what keeps the router able to tell an
-    // unanswered draft from a deliberate "Myself".
+    // value is *empty*, not 'Myself': nothing is selected until the user
+    // picks, which is what keeps the router able to tell an unanswered draft
+    // from a deliberate "Myself".
     expect(
       container.read(registrationProvider).basicDetails.profileCreatedFor,
       isEmpty,
     );
 
-    await tester.tap(find.text('Daughter'));
+    // Continue is inert with nothing chosen — the screen cannot be walked
+    // past without answering.
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('religion-reached'), findsNothing);
+    expect(
+      container.read(registrationProvider).basicDetails.profileCreatedFor,
+      isEmpty,
+    );
+
+    // Two taps, one answer: the options are mutually exclusive, so the
+    // second choice replaces the first rather than adding to it.
+    await tester.tap(find.text('My Sister'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('My Daughter'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
@@ -124,7 +146,9 @@ void main() {
       container.read(registrationProvider).basicDetails.profileCreatedFor,
       'Daughter',
     );
-    expect(find.text('wizard-reached'), findsOneWidget);
+    expect(find.text('religion-reached'), findsOneWidget);
+    // The removed signup wizard is never what follows this screen.
+    expect(find.text('wizard-reached'), findsNothing);
   });
 
   testWidgets('the screen reopens on the choice already in the draft', (
@@ -138,17 +162,17 @@ void main() {
     await tester.pumpWidget(harness(container, buildRouter()));
     await tester.pumpAndSettle();
 
-    // Stepping back here from the wizard must not silently revert the answer
-    // to the 'Myself' default. Exactly one card shows the selected check.
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    // Stepping back here from the Religion step must not silently drop the
+    // answer. A restored choice counts as a selection, so Continue is live
+    // on arrival and carries the stored value straight through unchanged.
     expect(
       container.read(registrationProvider).basicDetails.profileCreatedFor,
       'Son',
     );
 
-    // Continuing without changing anything keeps the stored answer.
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
+    expect(find.text('religion-reached'), findsOneWidget);
     expect(
       container.read(registrationProvider).basicDetails.profileCreatedFor,
       'Son',

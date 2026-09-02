@@ -74,6 +74,11 @@ abstract final class AppConstants {
   /// Phone number captured during signup, held locally only until the number
   /// is verified and linked to the Firebase account. Not a profile store.
   static const String keyPendingPhone = 'pending_signup_phone';
+  static const String keyPendingEmail = 'pending_onboarding_email';
+
+  /// Set once the new signup onboarding reaches its end. Paired with the
+  /// static development OTP verifier — see StorageService.onboardingCompleted.
+  static const String keyOnboardingCompleted = 'onboarding_completed';
 
   /// Local-only search history — capped at [maxRecentSearches] entries.
   static const String keySearchHistory = 'search_history';

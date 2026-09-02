@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 
 /// Reusable dropdown input component.
@@ -22,12 +21,17 @@ class NmDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         if (label != null) ...[
-          Text(label!, style: AppTypography.labelMedium),
+          Text(
+            label!,
+            style: AppTypography.labelMedium
+                .copyWith(color: colors.onSurfaceVariant),
+          ),
           const SizedBox(width: 4, height: 6),
         ],
         DropdownButtonFormField<T>(
@@ -43,11 +47,20 @@ class NmDropdown<T> extends StatelessWidget {
             hintText: hint,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
           ),
-          icon: const Icon(
+          // Reads from the scheme rather than the light token so the chevron
+          // stays legible in a dark scheme. Identical in light: the light
+          // scheme maps onSurfaceVariant to AppColors.textSecondaryLight.
+          icon: Icon(
             Icons.keyboard_arrow_down_rounded,
-            color: AppColors.textSecondaryLight,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
-          style: AppTypography.bodyMedium,
+          // Both colours are explicit on purpose. AppTypography's styles come
+          // from GoogleFonts and carry NO colour, and this `style` is what
+          // the *open menu* paints its items with — leaving it unset resolved
+          // to white-on-white, making every option invisible once the menu
+          // was open. Never hand a colourless TextStyle to a dropdown.
+          dropdownColor: colors.surface,
+          style: AppTypography.bodyMedium.copyWith(color: colors.onSurface),
           // Truncates the closed-state selected value with an ellipsis
           // instead of wrapping/overflowing — wraps whatever widget each
           // caller's DropdownMenuItem uses (typically a plain Text) without
