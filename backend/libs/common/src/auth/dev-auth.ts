@@ -14,9 +14,12 @@
  *
  * ## Two modes, deliberately different in strictness
  *
- * **Development** (`NODE_ENV !== 'production'` AND `DEV_AUTH_ENABLED=true`):
- * any well-formed number. A developer's own machine, throwaway data, and a
- * flag that has to be set by hand.
+ * **Development** (`NODE_ENV !== 'production'` AND either
+ * `DEV_AUTH_ENABLED=true` or `DUMMY_OTP_ENABLED=true`): any well-formed
+ * number. A developer's own machine, throwaway data, and a flag that has to
+ * be set by hand. No whitelist — off production it only ever meant a
+ * developer registering each of their own test numbers by hand before they
+ * could sign up, against data that is disposable anyway.
  *
  * **Production** (`DUMMY_OTP_ENABLED=true` AND the number is listed in
  * `DUMMY_OTP_PHONES`): only the numbers the operator explicitly configured.
@@ -135,14 +138,32 @@ export function devAuthUid(phoneE164: string): string {
  * a wider one. Same flags, same whitelist, same fail-closed default.
  */
 export function dummyAuthAllows(phoneE164: string): boolean {
-  const devMode = isDevAuthEnabled();
-  const dummyMode = isDummyOtpEnabled();
-  if (!devMode && !dummyMode) return false;
+  // The master switch first: with real phone auth on, nothing below applies.
+  if (isRealOtpForced()) return false;
+
+  // A malformed value is never an identity, whatever the mode.
   if (!E164.test(phoneE164)) return false;
-  // Development mode admits any well-formed number; production mode admits
-  // only what was configured. Checked in this order for the reason given in
-  // readDevAuthPhone.
-  if (devMode) return true;
+
+  // Off unless an operator deliberately set a flag. Both default to absent,
+  // so an unconfigured environment admits nobody.
+  if (!isDevAuthEnabled() && !isDummyOtpEnabled()) return false;
+
+  // Outside production, either flag means "the dummy OTP is the verification
+  // mechanism here", and it admits ANY well-formed number. Requiring a
+  // whitelist off production made a developer register every test number by
+  // hand before they could sign up on their own machine — a list that can
+  // only ever be out of date, guarding data that is already throwaway.
+  //
+  // This leans on NODE_ENV being set on real deployments, which it is: the
+  // deployed start command is `start:prod`, and that sets
+  // NODE_ENV=production itself (see package.json / railway.toml). An
+  // environment that serves real members with NODE_ENV unset would fall into
+  // this branch, which is the one thing to keep true when changing how the
+  // API is started.
+  if (process.env.NODE_ENV !== 'production') return true;
+
+  // In production, only the numbers the operator configured — unchanged, and
+  // an unset or empty list admits nobody, so the mode still fails closed.
   return dummyOtpPhones().has(phoneE164);
 }
 

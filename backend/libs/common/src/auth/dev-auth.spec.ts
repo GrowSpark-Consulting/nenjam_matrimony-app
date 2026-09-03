@@ -1,6 +1,7 @@
 import {
   DEV_AUTH_HEADER,
   devAuthUid,
+  dummyAuthAllows,
   dummyOtpPhones,
   isDevAuthEnabled,
   isDummyOtpEnabled,
@@ -85,6 +86,76 @@ describe('dummy-OTP authentication', () => {
   });
 
   // ── production ─────────────────────────────────────────────────────────
+
+  describe('DUMMY_OTP_ENABLED off production needs no whitelist', () => {
+    // The whitelist off production only ever meant a developer registering
+    // each of their own test numbers by hand before they could sign up, on
+    // data that is throwaway anyway — and getting
+    // "this number is not enabled" on their own machine when they forgot.
+    it('admits any well-formed number, listed or not', () => {
+      env({ NODE_ENV: 'development', DUMMY_OTP_ENABLED: 'true' });
+
+      expect(dummyAuthAllows(LISTED)).toBe(true);
+      expect(dummyAuthAllows(UNLISTED)).toBe(true);
+      expect(dummyAuthAllows('+919876543212')).toBe(true);
+      expect(readDevAuthPhone(header(UNLISTED))).toBe(UNLISTED);
+    });
+
+    it('does not care that the whitelist is empty', () => {
+      env({
+        NODE_ENV: 'development',
+        DUMMY_OTP_ENABLED: 'true',
+        DUMMY_OTP_PHONES: '',
+      });
+
+      expect(dummyAuthAllows(UNLISTED)).toBe(true);
+    });
+
+    it('still refuses a malformed number', () => {
+      env({ NODE_ENV: 'development', DUMMY_OTP_ENABLED: 'true' });
+
+      for (const bad of [
+        '919876543210',
+        '+0123456789',
+        '+91 98765 43210',
+        'not-a-number',
+        '',
+        '+91',
+      ]) {
+        expect(dummyAuthAllows(bad)).toBe(false);
+      }
+    });
+
+    it('is still off when neither flag is set', () => {
+      env({ NODE_ENV: 'development' });
+
+      expect(dummyAuthAllows(UNLISTED)).toBe(false);
+      expect(dummyAuthAllows(LISTED)).toBe(false);
+    });
+
+    it('is still off once USE_REAL_OTP is set', () => {
+      env({
+        NODE_ENV: 'development',
+        DUMMY_OTP_ENABLED: 'true',
+        DEV_AUTH_ENABLED: 'true',
+        USE_REAL_OTP: 'true',
+      });
+
+      expect(dummyAuthAllows(UNLISTED)).toBe(false);
+    });
+
+    it('does NOT widen production, which still needs the list', () => {
+      // The one thing this change must not do.
+      env({
+        NODE_ENV: 'production',
+        DUMMY_OTP_ENABLED: 'true',
+        DUMMY_OTP_PHONES: LISTED,
+      });
+
+      expect(dummyAuthAllows(LISTED)).toBe(true);
+      expect(dummyAuthAllows(UNLISTED)).toBe(false);
+    });
+  });
 
   describe('production dummy OTP', () => {
     it('works only when explicitly enabled, for a whitelisted number', () => {
@@ -182,9 +253,9 @@ describe('dummy-OTP authentication', () => {
     });
 
     it('takes the first value when the header is repeated', () => {
-      expect(
-        readDevAuthPhone({ [DEV_AUTH_HEADER]: [LISTED, UNLISTED] }),
-      ).toBe(LISTED);
+      expect(readDevAuthPhone({ [DEV_AUTH_HEADER]: [LISTED, UNLISTED] })).toBe(
+        LISTED,
+      );
     });
 
     it.each([

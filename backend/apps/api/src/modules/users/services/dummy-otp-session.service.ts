@@ -62,38 +62,54 @@ export class DummyOtpSessionService {
       );
     }
 
+    // Each stage is timed separately. This endpoint makes two Admin SDK round
+    // trips to Google and one or two database round trips, and when it feels
+    // slow the only useful question is which of them was slow — a single
+    // total cannot tell an Admin SDK stall from a cold Neon compute. Durations
+    // and booleans only: no number, no uid-bearing token, no credentials.
+    const startedAt = Date.now();
+    const since = (from: number) => `${Date.now() - from}ms`;
+
     // 1. The Firebase account. Idempotent by phone, so a retry after any
     //    failure below resolves to the same uid instead of a second account.
+    const firebaseAt = Date.now();
     const { uid, created } = await this.firebase.findOrCreateUser({
       phone,
       email,
     });
+    const firebaseMs = since(firebaseAt);
 
     // 2. The internal row for it. A Firebase account whose `users` row failed
     //    to write is exactly the half-finished state this endpoint exists to
     //    prevent, so the failure surfaces rather than being swallowed — the
     //    client must not proceed believing signup succeeded. The Firebase user
     //    is left in place on purpose: it is what makes the retry idempotent.
+    const dbAt = Date.now();
     let userId: string;
     try {
       userId = await this.reconcileUser({ uid, phone, email });
     } catch (error) {
       this.logger.error(
-        `Firebase uid "${uid}" provisioned but the users row failed: ` +
-          `${(error as Error).message}`,
+        `Firebase uid "${uid}" provisioned but the users row failed after ` +
+          `${since(dbAt)}: ${(error as Error).message}`,
       );
       throw new InternalServerErrorException(
         'Could not create your account record. Please try again.',
       );
     }
+    const dbMs = since(dbAt);
 
     // 3. The credential itself, minted last so a token is never handed out for
     //    an identity the database does not yet carry.
+    const tokenAt = Date.now();
     const customToken = await this.firebase.createCustomToken(uid);
+    const tokenMs = since(tokenAt);
 
     this.logger.log(
       `Dummy-OTP session issued for uid "${uid}" ` +
-        `(firebase account ${created ? 'created' : 'reused'}, user ${userId}).`,
+        `(firebase account ${created ? 'created' : 'reused'}, user ${userId}) ` +
+        `— firebase ${firebaseMs}, db ${dbMs}, token ${tokenMs}, ` +
+        `total ${since(startedAt)}.`,
     );
 
     return { customToken, uid, userId };
