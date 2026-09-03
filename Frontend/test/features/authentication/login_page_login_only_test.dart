@@ -94,6 +94,53 @@ void main() {
     expect(find.byType(LoginPage), findsOneWidget);
     expect(router.state.matchedLocation, RouteNames.loginForm);
   });
+
+  // ─── The back arrow ─────────────────────────────────────────────────
+  //
+  // Welcome Back is reached two ways, and used to offer a way out of only
+  // one of them: pushed from the landing screen it had an arrow, but as a
+  // flow root (`go` from the splash or an OTP screen) it had none, so a
+  // member who opened it by mistake was stuck on it.
+
+  group('the back arrow', () {
+    testWidgets('is shown when the screen was pushed, and pops', (
+      tester,
+    ) async {
+      final router = await _pumpRouter(tester);
+      router.push(RouteNames.loginForm);
+      await tester.pumpAndSettle();
+      expect(find.byType(LoginPage), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.text('landing'), findsOneWidget);
+      expect(find.byType(LoginPage), findsNothing);
+    });
+
+    testWidgets('is shown as a flow root too, and goes to the landing screen',
+        (tester) async {
+      final router = await _pumpRouter(tester);
+      // `go`, not `push` — the stack is replaced, so there is nothing to pop.
+      router.go(RouteNames.loginForm);
+      await tester.pumpAndSettle();
+      expect(find.byType(LoginPage), findsOneWidget);
+
+      expect(
+        find.byIcon(Icons.arrow_back_rounded),
+        findsOneWidget,
+        reason: 'a screen with no way off it is the bug this fixes',
+      );
+
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.pumpAndSettle();
+
+      // Falls back to the screen that precedes signing in rather than
+      // popping an empty stack.
+      expect(find.text('landing'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
 
 /// Pumps the real [LoginPage] under a router — the page asks

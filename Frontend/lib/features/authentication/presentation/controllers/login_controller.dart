@@ -6,6 +6,7 @@ import '../../../../core/l10n/app_l10n.dart';
 import '../../data/models/auth_user.dart';
 import '../../data/services/google_auth_service.dart';
 import '../../domain/services/account_availability.dart';
+import '../../domain/services/dummy_otp_session.dart';
 import '../../domain/services/local_auth_session.dart';
 import '../../domain/services/login_identifier.dart';
 import '../../domain/services/otp_verifier.dart';
@@ -103,9 +104,18 @@ class LoginController extends Notifier<bool> {
   /// [otpVerifierProvider] override and the two lines below change — no
   /// widget contains `if (otp.isNotEmpty)`.
   ///
-  /// A pass opens a [LocalAuthSession] rather than a Firebase one, because
-  /// no phone credential exists to sign in with. See that class for why
-  /// that is a bridge and not a second auth system.
+  /// A pass is exchanged for a REAL Firebase session through the backend
+  /// ([DummyOtpSessionStarter]) — the same exchange the signup OTP screen
+  /// makes, so a member who signs up and a member who logs back in end up
+  /// holding the same kind of credential for the same account.
+  ///
+  /// It used to open a [LocalAuthSession] instead, because no phone credential
+  /// exists to sign in with. That marker proved nothing about identity and
+  /// left the session authenticating by header, which is what could leave a
+  /// member signed in as an account the backend had never created.
+  ///
+  /// A failed exchange is a failed login, reported as one: the alternative is
+  /// letting someone into the app with no account behind them.
   Future<LoginResult> loginWithMockOtp({
     required String phoneE164,
     required String code,
@@ -120,12 +130,14 @@ class LoginController extends Notifier<bool> {
           errorMessage: AppL10n.current.authInvalidOtp,
         );
       }
-      await ref.read(localAuthSessionProvider).start(
-            identifier: phoneE164,
-            method: LocalAuthMethod.mobileOtp,
-          );
+      await ref
+          .read(dummyOtpSessionStarterProvider)
+          .start(phoneE164: phoneE164);
       state = false;
       return const LoginResult(success: true);
+    } on DummyOtpSessionException catch (error) {
+      state = false;
+      return LoginResult(success: false, errorMessage: error.message);
     } catch (_) {
       state = false;
       return LoginResult(

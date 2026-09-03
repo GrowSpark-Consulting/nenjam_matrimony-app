@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/router/route_names.dart';
 import '../../../../core/services/storage_service.dart';
+import '../../../../core/utils/auth_trace.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../domain/services/local_auth_session.dart';
 import '../../../registration/domain/models/onboarding_forms.dart';
@@ -93,7 +94,11 @@ class PostAuthDestination {
       return _resolveFromDraftOnly();
     }
 
-    if (user == null) return RouteNames.registrationLanding;
+    if (user == null) {
+      AuthTrace.profileState('NEW (no session)');
+      AuthTrace.destination(RouteNames.registrationLanding);
+      return RouteNames.registrationLanding;
+    }
 
     // Phone-only accounts have no address to verify, so this gate must key
     // on "has an email that is unverified", not on `emailVerified` alone —
@@ -101,6 +106,7 @@ class PostAuthDestination {
     // nothing to resend to.
     final email = user.email;
     if (email != null && email.isNotEmpty && !user.emailVerified) {
+      AuthTrace.destination(RouteNames.verifyEmail);
       return RouteNames.verifyEmail;
     }
 
@@ -119,7 +125,11 @@ class PostAuthDestination {
     // is what Discover, matching and Near Me all read. Asking for it costs one
     // request and replaces the draft fetch below for exactly the members who
     // would otherwise be sent backwards.
-    if (await _hasFinalizedProfile()) return RouteNames.discover;
+    if (await _hasFinalizedProfile()) {
+      AuthTrace.profileState('COMPLETED');
+      AuthTrace.destination(RouteNames.discover);
+      return RouteNames.discover;
+    }
 
     final Map<String, dynamic> draft;
     try {
@@ -128,10 +138,13 @@ class PostAuthDestination {
           .getDraft()
           .timeout(_draftLookupTimeout);
     } catch (_) {
-      return _isBrandNewAccount(user.metadata.creationTime,
+      final fallback = _isBrandNewAccount(user.metadata.creationTime,
               user.metadata.lastSignInTime)
           ? RouteNames.createProfileFor
           : RouteNames.discover;
+      AuthTrace.profileState('UNKNOWN (draft lookup failed)');
+      AuthTrace.destination(fallback);
+      return fallback;
     }
 
     final restored = ProfileDraft.fromJson(draft);
@@ -150,7 +163,12 @@ class PostAuthDestination {
       profileCreatedFor: restored.basicDetails.profileCreatedFor,
       gender: restored.basicDetails.gender,
     );
-    if (!profileForStep.isComplete) return RouteNames.createProfileFor;
+    if (!profileForStep.isComplete) {
+      AuthTrace.profileState('NEW');
+      AuthTrace.destination(RouteNames.createProfileFor);
+      return RouteNames.createProfileFor;
+    }
+    AuthTrace.profileState('PARTIAL');
 
     // Step 2 — name and date of birth. Reconstructed through
     // OnboardingNameForm.fromDraft so the gate applies the screen's own rule
@@ -161,7 +179,10 @@ class PostAuthDestination {
       lastName: restored.basicDetails.lastName,
       dob: restored.basicDetails.dob,
     );
-    if (!nameStep.isComplete) return RouteNames.onboardingNameDob;
+    if (!nameStep.isComplete) {
+      AuthTrace.destination(RouteNames.onboardingNameDob);
+      return RouteNames.onboardingNameDob;
+    }
 
     // Step 3 — the same fields OnboardingReligionForm.isComplete requires,
     // read back from the sections applyOnboardingReligion writes them to.
@@ -170,7 +191,10 @@ class PostAuthDestination {
       community: restored.religionDetails.community,
       livingIn: restored.locationDetails.country,
     );
-    if (!religionStep.isComplete) return RouteNames.onboardingReligion;
+    if (!religionStep.isComplete) {
+      AuthTrace.destination(RouteNames.onboardingReligion);
+      return RouteNames.onboardingReligion;
+    }
 
     // Steps 5-10, evaluated up front because step 4 has to consult them —
     // see below. Each tests exactly the fields its own screen requires, which
@@ -231,27 +255,47 @@ class PostAuthDestination {
           (user.email ?? '').isNotEmpty || _pendingEmail().isNotEmpty;
       final hasMobile =
           (user.phoneNumber ?? '').isNotEmpty || _pendingPhone().isNotEmpty;
-      if (!hasEmail || !hasMobile) return RouteNames.onboardingContact;
+      if (!hasEmail || !hasMobile) {
+        AuthTrace.destination(RouteNames.onboardingContact);
+        return RouteNames.onboardingContact;
+      }
     }
 
     // Step 5.
-    if (!basicsStep.isComplete) return RouteNames.profileBasics;
+    if (!basicsStep.isComplete) {
+      AuthTrace.destination(RouteNames.profileBasics);
+      return RouteNames.profileBasics;
+    }
 
     // Step 6 — marital status and height.
-    if (!maritalStep.isComplete) return RouteNames.onboardingMarital;
+    if (!maritalStep.isComplete) {
+      AuthTrace.destination(RouteNames.onboardingMarital);
+      return RouteNames.onboardingMarital;
+    }
 
     // Step 7 — highest qualification.
-    if (!educationStep.isComplete) return RouteNames.onboardingEducation;
+    if (!educationStep.isComplete) {
+      AuthTrace.destination(RouteNames.onboardingEducation);
+      return RouteNames.onboardingEducation;
+    }
 
     // Step 8 — annual income.
-    if (!incomeStep.isComplete) return RouteNames.onboardingIncome;
+    if (!incomeStep.isComplete) {
+      AuthTrace.destination(RouteNames.onboardingIncome);
+      return RouteNames.onboardingIncome;
+    }
 
     // Step 9 (photos) is deliberately not a gate — it is optional, and a
     // member who chose "Add Photos Later" must not be sent back to it every
     // launch. Step 10 is, since a description is part of a usable profile.
-    if (!hasAbout) return RouteNames.onboardingAbout;
+    if (!hasAbout) {
+      AuthTrace.destination(RouteNames.onboardingAbout);
+      return RouteNames.onboardingAbout;
+    }
 
     // Every step that leaves a durable answer has one. Onboarding is done.
+    AuthTrace.profileState('COMPLETED');
+    AuthTrace.destination(RouteNames.discover);
     return RouteNames.discover;
   }
 

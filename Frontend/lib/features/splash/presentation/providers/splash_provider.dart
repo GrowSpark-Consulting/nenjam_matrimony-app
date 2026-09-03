@@ -93,15 +93,26 @@ class SplashController extends Notifier<void> {
     // backend on app resume. Never awaited — must not block the splash.
     unawaited(syncUserWithBackend(ref.read(apiClientProvider)));
 
-    try {
-      // Phone OTP verification is disabled for now — gate entry on email
-      // verification only.
-      final emailVerified = await repo.checkEmailVerified();
-      if (!emailVerified) return RouteNames.verifyEmail;
-    } catch (_) {
-      // Network hiccup while refreshing — fall back to the verify-email step
-      // rather than blocking the user at the splash.
-      return RouteNames.verifyEmail;
+    // Phone OTP verification is disabled for now, so email is the only thing
+    // gated on — and only for an account that actually carries an address.
+    //
+    // `emailVerified` alone is the wrong question. A phone-only account (every
+    // dummy-OTP signup, which mints a phone-provider Firebase user and keeps
+    // the member's address on the `users` row instead) has nothing to verify
+    // and can never make that flag true, so gating on it sent a member who had
+    // just finished signing up to a verify-email screen with no address to
+    // resend to and no way past. This is the same rule PostAuthDestination
+    // already applies, for the same reason — stated there in the same words.
+    final email = user.email;
+    if (email != null && email.isNotEmpty) {
+      try {
+        final emailVerified = await repo.checkEmailVerified();
+        if (!emailVerified) return RouteNames.verifyEmail;
+      } catch (_) {
+        // Network hiccup while refreshing — fall back to the verify-email step
+        // rather than blocking the user at the splash.
+        return RouteNames.verifyEmail;
+      }
     }
 
     // The local snapshot wins when there is one — it is exact (the very

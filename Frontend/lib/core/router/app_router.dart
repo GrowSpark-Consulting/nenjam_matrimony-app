@@ -26,6 +26,7 @@ import '../../features/interests/presentation/pages/interests_received_page.dart
 import '../../features/interests/presentation/pages/interests_sent_page.dart';
 import '../../features/language/presentation/pages/language_page.dart';
 import '../../features/matches/presentation/pages/matches_page.dart';
+import '../../features/nearby/presentation/pages/nearby_page.dart';
 import '../../features/notifications/presentation/pages/notifications_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/partner_preferences/presentation/pages/partner_preferences_page.dart';
@@ -468,6 +469,15 @@ GoRouter createRouter(WidgetRef ref) {
         path: RouteNames.shortlisted,
         name: RouteNames.shortlistedName,
         builder: (context, state) => const ShortlistedPage(),
+      ),
+      GoRoute(
+        // Pushed full-screen (from the drawer's Near Me item and from the
+        // Matches "Near Me" chip), not a bottom-nav branch: it has its own
+        // AppBar and Back, and the four StatefulShellRoute branches below
+        // are the four tabs the bottom bar actually renders.
+        path: RouteNames.nearby,
+        name: RouteNames.nearbyName,
+        builder: (context, state) => const NearbyPage(),
       ),
       GoRoute(
         path: RouteNames.profileViewers,

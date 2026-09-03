@@ -274,13 +274,12 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                           onTap: () => context.push(RouteNames.shortlisted),
                         ),
                       ),
-                      _DrawerItem(
-                        // Same near_me arrow the distance pill on each Near Me
-                        // card uses, so the icon means one thing app-wide.
-                        icon: Icons.near_me_outlined,
-                        label: l10n.drawerNearMe,
-                        onTap: () => context.push(RouteNames.nearby),
-                      ),
+                      // Near Me is withdrawn from this menu for now. The
+                      // feature itself is untouched — the `/nearby` route,
+                      // NearbyPage, the location providers and
+                      // `GET /profiles/nearby` all remain, and the Matches
+                      // "Near Me" chip still opens it — so restoring this row
+                      // is re-adding these six lines and nothing else.
                       _DrawerItem(
                         // Same eye used by the Profile Viewers empty state and
                         // by the PROFILE_VIEW notification icon.

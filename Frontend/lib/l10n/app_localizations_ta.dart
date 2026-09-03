@@ -2317,6 +2317,10 @@ class AppLocalizationsTa extends AppLocalizations {
   String get onboardingNameDobSection => 'à®ªà®¿à®±à®¨à¯à®¤ à®¤à¯à®¤à®¿';
 
   @override
+  String get onboardingNameDobHint =>
+      'உங்கள் பிறந்த தேதியைத் தேர்ந்தெடுக்கவும்';
+
+  @override
   String get onboardingNameDobDay => 'à®¨à®¾à®³à¯';
 
   @override
@@ -2614,6 +2618,10 @@ class AppLocalizationsTa extends AppLocalizations {
   @override
   String get onboardingVerifyMobileEnter =>
       'தொடர ஏதேனும் 4 இலக்கக் குறியீட்டை உள்ளிடவும்.';
+
+  @override
+  String get onboardingVerifyMobileSessionFailed =>
+      'உங்களை உள்நுழைய முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
 
   @override
   String get authEntrySignUp => 'பதிவு செய்யவும்';

@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/animations/app_animations.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/router/route_names.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/tokens/app_animation_tokens.dart';
 import '../../../../core/theme/tokens/app_radius.dart';
@@ -247,11 +246,18 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
   }
 }
 
-/// The gender control, in the exact form the app already uses for it — the
-/// `ChoiceChip` row from the Edit Profile wizard's Basic Info step, down to
-/// the `AppColors.primarySurface` selected fill. Deliberately not restyled
-/// into a `_ProfileForPill`: gender is a two-option question the member has
-/// met elsewhere in the app, and it should look the same everywhere.
+/// The gender control: the same [ProfileForChoicePill] the relation options
+/// above are built from, two across a row.
+///
+/// It was a `ChoiceChip` row, which read wrong in both states here. The chip
+/// theme pairs a plum `selectedColor` with a white `secondaryLabelStyle`,
+/// while this row overrode only the fill — with `AppColors.primarySurface`,
+/// the palest lavender in the set — so a *selected* chip drew white text on
+/// near-white and read as washed out, and an *unselected* one kept the chip
+/// theme's own lavender fill, close enough to the selected fill that Male and
+/// Female looked alike. Building both from the pill fixes the pair at once:
+/// one component, one state definition, and a filled radio saying which
+/// answer is live.
 class _GenderChoice extends StatelessWidget {
   final String label;
 
@@ -268,6 +274,15 @@ class _GenderChoice extends StatelessWidget {
     required this.onSelected,
   });
 
+  /// Both options come from here, so neither can drift into a state styling
+  /// the other does not have. Values stay English (stored and emitted); only
+  /// the label is localized.
+  Widget _pill(String value) => ProfileForChoicePill(
+        label: labelOf(value),
+        isSelected: selected == value,
+        onTap: () => onSelected(value),
+      );
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -276,21 +291,13 @@ class _GenderChoice extends StatelessWidget {
         Text(label, style: AppTypography.labelLarge),
         const SizedBox(height: AppSpacing.sm),
         Row(
-          // Values stay English (stored and emitted); only the label is
-          // localized.
-          children: ['Male', 'Female'].map((g) {
-            return Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-                child: ChoiceChip(
-                  label: Center(child: Text(labelOf(g))),
-                  selected: selected == g,
-                  selectedColor: AppColors.primarySurface,
-                  onSelected: (_) => onSelected(g),
-                ),
-              ),
-            );
-          }).toList(),
+          children: [
+            // Expanded, not width-capped: two options share the row evenly,
+            // where the seven relations wrap into a grid.
+            Expanded(child: _pill('Male')),
+            const SizedBox(width: _kPillGap),
+            Expanded(child: _pill('Female')),
+          ],
         ),
       ],
     );
@@ -353,7 +360,7 @@ class _ProfileForOptions extends StatelessWidget {
           runSpacing: AppSpacing.md,
           children: [
             for (final option in options)
-              _ProfileForPill(
+              ProfileForChoicePill(
                 label: labelOf(option),
                 isSelected: option == selected,
                 maxWidth: pillMaxWidth,
@@ -366,17 +373,28 @@ class _ProfileForOptions extends StatelessWidget {
   }
 }
 
-class _ProfileForPill extends StatelessWidget {
+/// One option of a single-choice group, in the two states this screen has:
+/// selected — plum fill, plum border, filled radio, bold label in the
+/// on-container ink — and unselected — surface fill, hairline outline, empty
+/// radio, regular label. Public because both groups on the screen use it, and
+/// they have to look identical in both states.
+class ProfileForChoicePill extends StatelessWidget {
   final String label;
   final bool isSelected;
-  final double maxWidth;
+
+  /// Cap on the pill's width, for the relation grid's two columns. Null in a
+  /// row that has already sized it — the gender pair, where each half is an
+  /// [Expanded].
+  final double? maxWidth;
+
   final VoidCallback onTap;
 
-  const _ProfileForPill({
+  const ProfileForChoicePill({
+    super.key,
     required this.label,
     required this.isSelected,
-    required this.maxWidth,
     required this.onTap,
+    this.maxWidth,
   });
 
   @override
@@ -391,7 +409,7 @@ class _ProfileForPill extends StatelessWidget {
       selected: isSelected,
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: maxWidth,
+          maxWidth: maxWidth ?? double.infinity,
           minHeight: AppTouchTarget.minSize,
         ),
         child: Material(

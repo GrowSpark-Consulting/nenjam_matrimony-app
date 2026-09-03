@@ -238,16 +238,26 @@ abstract final class AppSheets {
   }
 
   /// Date Sheet picker modal.
+  ///
+  /// [firstDate] and [lastDate] default to the age band every date-of-birth
+  /// field in the app has always used — 1950 to eighteen years ago — and are
+  /// overridable only so a caller that owns a stricter or more precise
+  /// statement of the same rule can hand it in rather than keep a second
+  /// picker of its own. Onboarding's Your Name step does exactly that: its
+  /// `OnboardingNameForm` allows up to eighteen years ago *to the day*, and
+  /// the picker must not disable a date the form would accept.
   static Future<DateTime?> showDate(
     BuildContext context, {
     DateTime? initialDate,
+    DateTime? firstDate,
+    DateTime? lastDate,
   }) async {
     final now = DateTime.now();
     return showDatePicker(
       context: context,
       initialDate: initialDate ?? DateTime(now.year - 25),
-      firstDate: DateTime(1950),
-      lastDate: DateTime(now.year - 18),
+      firstDate: firstDate ?? DateTime(1950),
+      lastDate: lastDate ?? DateTime(now.year - 18),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: Theme.of(context).colorScheme.copyWith(

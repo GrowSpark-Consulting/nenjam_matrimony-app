@@ -144,4 +144,16 @@ class FirebaseAuthService {
   ) {
     return _auth.signInWithCredential(credential);
   }
+
+  /// Signs in with a custom token minted by our own backend
+  /// (`POST /auth/dummy-otp/session`).
+  ///
+  /// The session this produces is an ordinary Firebase session: the same
+  /// `currentUser`, the same ID tokens, the same refresh behaviour. Nothing
+  /// downstream — the interceptor, the router guard, the backend guard — can
+  /// or should tell it apart from one minted by a real SMS, which is exactly
+  /// why the dummy-OTP flow can use it while real verification is off.
+  Future<UserCredential> signInWithCustomToken(String token) {
+    return _auth.signInWithCustomToken(token);
+  }
 }

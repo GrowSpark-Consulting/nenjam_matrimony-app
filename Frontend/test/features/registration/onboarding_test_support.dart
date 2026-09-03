@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:nenjam_matrimony/core/widgets/inputs/date_picker_field.dart';
 import 'package:nenjam_matrimony/features/authentication/data/services/firebase_auth_service.dart';
 import 'package:nenjam_matrimony/features/registration/data/repositories/registration_repository.dart';
 import 'package:nenjam_matrimony/features/registration/domain/models/profile_draft.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/pages/create_profile_for_page.dart';
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 
 /// Shared harness for the onboarding step tests. Each step screen persists
@@ -39,6 +41,15 @@ class RecordingRegistrationRepository implements RegistrationRepository {
   EducationDetails? savedEducation;
   LifestyleDetails? savedLifestyle;
 
+  /// How many times `POST /profiles/finalize` was asked for. Editing must
+  /// not need it — see edit_profile_save_test.dart.
+  int finalizeCalls = 0;
+
+  /// The `skipMaterialize` flag of each section save, in call order. A save
+  /// that skips materialization does not rewrite `user_profiles`, so which
+  /// call materializes (and that exactly one does) is part of the contract.
+  final List<bool> skipMaterializeFlags = <bool>[];
+
   /// Every section name this recorder was asked to save, in call order.
   /// The individual `saved*` fields answer "what was sent"; this answers
   /// "was it sent at all", which is what
@@ -55,6 +66,7 @@ class RecordingRegistrationRepository implements RegistrationRepository {
     BasicDetails details, {
     bool skipMaterialize = false,
   }) async {
+    skipMaterializeFlags.add(skipMaterialize);
     savedSections.add('basicDetails');
     savedBasic = details;
   }
@@ -64,6 +76,7 @@ class RecordingRegistrationRepository implements RegistrationRepository {
     LanguageDetails details, {
     bool skipMaterialize = false,
   }) async {
+    skipMaterializeFlags.add(skipMaterialize);
     savedSections.add('languageDetails');
     savedLanguage = details;
   }
@@ -74,6 +87,7 @@ class RecordingRegistrationRepository implements RegistrationRepository {
     bool skipMaterialize = false,
   }) async {
     if (failLocation) throw Exception('location save failed');
+    skipMaterializeFlags.add(skipMaterialize);
     savedSections.add('locationDetails');
     savedLocation = details;
   }
@@ -84,6 +98,7 @@ class RecordingRegistrationRepository implements RegistrationRepository {
     bool skipMaterialize = false,
   }) async {
     if (failReligion) throw Exception('religion save failed');
+    skipMaterializeFlags.add(skipMaterialize);
     savedSections.add('religionDetails');
     savedReligion = details;
   }
@@ -93,6 +108,7 @@ class RecordingRegistrationRepository implements RegistrationRepository {
     PartnerPreference details, {
     bool skipMaterialize = false,
   }) async {
+    skipMaterializeFlags.add(skipMaterialize);
     savedSections.add('partnerPreference');
     savedPartnerPreference = details;
   }
@@ -106,6 +122,7 @@ class RecordingRegistrationRepository implements RegistrationRepository {
     PhysicalDetails details, {
     bool skipMaterialize = false,
   }) async {
+    skipMaterializeFlags.add(skipMaterialize);
     savedSections.add('physicalDetails');
     savedPhysical = details;
   }
@@ -115,6 +132,7 @@ class RecordingRegistrationRepository implements RegistrationRepository {
     EducationDetails details, {
     bool skipMaterialize = false,
   }) async {
+    skipMaterializeFlags.add(skipMaterialize);
     savedSections.add('educationDetails');
     savedEducation = details;
   }
@@ -124,8 +142,15 @@ class RecordingRegistrationRepository implements RegistrationRepository {
     LifestyleDetails details, {
     bool skipMaterialize = false,
   }) async {
+    skipMaterializeFlags.add(skipMaterialize);
     savedSections.add('lifestyleDetails');
     savedLifestyle = details;
+  }
+
+  @override
+  Future<Map<String, dynamic>> finalizeProfile() async {
+    finalizeCalls++;
+    return <String, dynamic>{};
   }
 
   @override
@@ -185,11 +210,11 @@ Future<void> pickDropdown(
   await tester.pumpAndSettle();
 }
 
-/// Answers the gender chips on the Profile For step, which is where gender is
+/// Answers the gender pills on the Profile For step, which is where gender is
 /// asked now. `user_profiles.gender` is NOT NULL, so no screen after this one
 /// can make up for skipping it.
 Future<void> pickGender(WidgetTester tester, {String gender = 'Male'}) async {
-  await tester.tap(find.widgetWithText(ChoiceChip, gender));
+  await tester.tap(find.widgetWithText(ProfileForChoicePill, gender));
   await tester.pumpAndSettle();
 }
 
@@ -210,39 +235,43 @@ Future<void> fillBasics(
   }
 }
 
-/// Types a whole date of birth into the Your Name step's three boxes. The
-/// default is comfortably over 18 and comfortably after 1950, so a test that
-/// is not about date validation never trips either bound.
-Future<void> enterDob(
-  WidgetTester tester, {
-  String day = '05',
-  String month = '02',
-  String year = '1998',
-  int firstFieldIndex = 2,
-}) async {
-  await tester.enterText(find.byType(TextFormField).at(firstFieldIndex), day);
-  await tester.enterText(
-    find.byType(TextFormField).at(firstFieldIndex + 1),
-    month,
-  );
-  await tester.enterText(
-    find.byType(TextFormField).at(firstFieldIndex + 2),
-    year,
-  );
+/// The month the Your Name step's calendar opens on when the draft carries no
+/// date of birth: January of 25 years ago, from `AppSheets.showDate`'s
+/// `initialDate`. Tests pick a day out of that month, so the date they will
+/// get is known without having to drive the calendar's month navigation — and
+/// it is comfortably over 18 and comfortably after 1950, so a test that is not
+/// about the age band never trips either bound.
+DateTime defaultDobMonth() => DateTime(DateTime.now().year - 25);
+
+/// Opens the Your Name step's calendar by tapping the date field.
+Future<void> openDobPicker(WidgetTester tester) async {
+  await tester.tap(find.byType(NmDatePickerField));
   await tester.pumpAndSettle();
 }
 
-/// Fills the Your Name step end to end: both names and a valid date.
-Future<void> fillNameStep(
+/// Answers the date of birth by picking [day] out of the month the calendar
+/// opens on, and returns the date that produced. Only valid on a step with no
+/// date already answered — with one, the calendar opens on *that* date's
+/// month instead.
+Future<DateTime> pickDob(WidgetTester tester, {int day = 15}) async {
+  await openDobPicker(tester);
+  await tester.tap(find.text('$day'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('OK'));
+  await tester.pumpAndSettle();
+  final month = defaultDobMonth();
+  return DateTime(month.year, month.month, day);
+}
+
+/// Fills the Your Name step end to end: both names and a picked date.
+Future<DateTime> fillNameStep(
   WidgetTester tester, {
   String firstName = 'Arjun',
   String lastName = 'Krishnan',
-  String day = '05',
-  String month = '02',
-  String year = '1998',
+  int day = 15,
 }) async {
   await tester.enterText(find.byType(TextFormField).at(0), firstName);
   await tester.enterText(find.byType(TextFormField).at(1), lastName);
   await tester.pumpAndSettle();
-  await enterDob(tester, day: day, month: month, year: year);
+  return pickDob(tester, day: day);
 }

@@ -71,9 +71,12 @@ enum ProfileForField { profileCreatedFor, gender }
 /// by the same `PATCH /profiles/draft/basic-details`.
 ///
 /// The date is held as three strings rather than a [DateTime] because that is
-/// what the member types — a half-entered `05 / 02 / 200` is a real state the
-/// form has to be able to represent and reject. [dob] is the parsed value, and
-/// null whenever the three parts do not name a real, allowed date.
+/// still the shape a half-answered date has: a draft restored with no date at
+/// all is three empty strings, and [dob] is the parsed value — null whenever
+/// the parts do not name a real, allowed date. The screen no longer asks the
+/// member to *type* them (it opens a calendar and calls [withDob]), but the
+/// validation below is unchanged and is still what `PostAuthDestination`
+/// reconstructs to decide whether the step has been answered.
 class OnboardingNameForm {
   /// Draft: `BasicDetails.firstName`. Required — NOT NULL on `user_profiles`.
   final String firstName;
@@ -110,6 +113,18 @@ class OnboardingNameForm {
     );
   }
 
+  /// The same form with [date] as its date of birth — what the calendar
+  /// picker returns, written back into the three parts the form has always
+  /// held so that [dob] and [isComplete] are computed by exactly the rule
+  /// below and not by a second, picker-only path.
+  OnboardingNameForm withDob(DateTime date) {
+    return copyWith(
+      day: date.day.toString().padLeft(2, '0'),
+      month: date.month.toString().padLeft(2, '0'),
+      year: date.year.toString(),
+    );
+  }
+
   OnboardingNameForm copyWith({
     String? firstName,
     String? lastName,
@@ -133,6 +148,19 @@ class OnboardingNameForm {
   /// Oldest. Matches the wizard picker's `firstDate` of 1950 rather than
   /// inventing a second bound.
   static const int earliestBirthYear = 1950;
+
+  /// The most recent date of birth this form accepts: [minimumAgeYears] ago
+  /// to the day. Exposed because the step's calendar has to be bounded by the
+  /// same rule that validates the result — a picker that offered a date [dob]
+  /// then rejected would leave the member with no way to finish the step.
+  static DateTime latestAllowedDob([DateTime? asOf]) {
+    final now = asOf ?? DateTime.now();
+    return DateTime(now.year - minimumAgeYears, now.month, now.day);
+  }
+
+  /// The earliest date this form accepts, as a date rather than a year — the
+  /// calendar's `firstDate`.
+  static DateTime earliestAllowedDob() => DateTime(earliestBirthYear);
 
   /// The date the three boxes name, or null when they do not name one.
   ///
@@ -162,11 +190,7 @@ class OnboardingNameForm {
     if (!candidate.isBefore(DateTime(now.year, now.month, now.day))) {
       return null;
     }
-    if (candidate.isAfter(
-      DateTime(now.year - minimumAgeYears, now.month, now.day),
-    )) {
-      return null;
-    }
+    if (candidate.isAfter(latestAllowedDob(now))) return null;
     return candidate;
   }
 

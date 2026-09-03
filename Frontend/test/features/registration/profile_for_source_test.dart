@@ -177,11 +177,11 @@ void main() {
     await tester.pumpWidget(harness(container, buildRouter()));
     await tester.pumpAndSettle();
 
-    // Rendered with the same control the app uses for gender everywhere
-    // else — the ChoiceChip row, not a bespoke pill.
+    // Rendered with the same control as the relation options above it, so
+    // the two states read the same way in both groups.
     expect(find.text('Gender'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'Male'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'Female'), findsOneWidget);
+    expect(find.widgetWithText(ProfileForChoicePill, 'Male'), findsOneWidget);
+    expect(find.widgetWithText(ProfileForChoicePill, 'Female'), findsOneWidget);
 
     // Gender alone does not complete the step either — both are required.
     await pickGender(tester, gender: 'Female');
@@ -198,6 +198,147 @@ void main() {
 
     expect(container.read(registrationProvider).basicDetails.gender, 'Male');
     expect(find.text('name-reached'), findsOneWidget);
+  });
+
+  group('the gender selected state', () {
+    /// The pill widget behind a label, whichever group it belongs to.
+    ProfileForChoicePill pill(WidgetTester tester, String label) =>
+        tester.widget<ProfileForChoicePill>(
+          find.widgetWithText(ProfileForChoicePill, label),
+        );
+
+    /// The pill's fill and border — a `Material` with a
+    /// `RoundedRectangleBorder`, which is where selection is actually drawn.
+    Material fill(WidgetTester tester, String label) => tester.widget<Material>(
+          find
+              .descendant(
+                of: find.widgetWithText(ProfileForChoicePill, label),
+                matching: find.byType(Material),
+              )
+              .first,
+        );
+
+    TextStyle labelStyle(WidgetTester tester, String label) =>
+        tester.widget<Text>(find.text(label)).style!;
+
+    testWidgets('is drawn on the chosen option and on no other', (
+      tester,
+    ) async {
+      useTallSurface(tester);
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(harness(container, buildRouter()));
+      await tester.pumpAndSettle();
+
+      // Unanswered: neither is selected, which is what keeps an unanswered
+      // gender distinguishable from a defaulted one.
+      expect(pill(tester, 'Male').isSelected, isFalse);
+      expect(pill(tester, 'Female').isSelected, isFalse);
+
+      await pickGender(tester, gender: 'Male');
+      expect(pill(tester, 'Male').isSelected, isTrue);
+      expect(pill(tester, 'Female').isSelected, isFalse);
+
+      // Switching moves the selection rather than adding to it — only one
+      // gender can be live, because only one reaches `BasicDetails.gender`.
+      await pickGender(tester, gender: 'Female');
+      expect(pill(tester, 'Male').isSelected, isFalse);
+      expect(pill(tester, 'Female').isSelected, isTrue);
+
+      await pickGender(tester, gender: 'Male');
+      expect(pill(tester, 'Male').isSelected, isTrue);
+      expect(pill(tester, 'Female').isSelected, isFalse);
+    });
+
+    testWidgets('reads as selected: plum fill, on-container ink, bold', (
+      tester,
+    ) async {
+      useTallSurface(tester);
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(harness(container, buildRouter()));
+      await tester.pumpAndSettle();
+      await pickGender(tester, gender: 'Male');
+
+      final colors = Theme.of(tester.element(find.text('Gender'))).colorScheme;
+
+      // The regression this locks down: the chips this replaced drew white
+      // label ink on a near-white selected fill, so the selected answer read
+      // as the disabled one.
+      expect(fill(tester, 'Male').color, colors.primaryContainer);
+      expect(labelStyle(tester, 'Male').color, colors.onPrimaryContainer);
+      expect(labelStyle(tester, 'Male').fontWeight, FontWeight.w700);
+
+      // And unselected is plainly a different thing: surface fill, ordinary
+      // ink, ordinary weight.
+      expect(fill(tester, 'Female').color, colors.surface);
+      expect(labelStyle(tester, 'Female').color, colors.onSurface);
+      expect(labelStyle(tester, 'Female').fontWeight, FontWeight.w500);
+    });
+
+    testWidgets('is identical for Male and Female', (tester) async {
+      useTallSurface(tester);
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(harness(container, buildRouter()));
+      await tester.pumpAndSettle();
+
+      await pickGender(tester, gender: 'Male');
+      final selectedMale = fill(tester, 'Male');
+      final maleInk = labelStyle(tester, 'Male');
+
+      await pickGender(tester, gender: 'Female');
+      final selectedFemale = fill(tester, 'Female');
+      final femaleInk = labelStyle(tester, 'Female');
+
+      // One component, one state definition: the two options cannot drift
+      // into looking like different controls.
+      expect(selectedFemale.color, selectedMale.color);
+      expect(selectedFemale.shape, selectedMale.shape);
+      expect(femaleInk.color, maleInk.color);
+      expect(femaleInk.fontWeight, maleInk.fontWeight);
+    });
+
+    testWidgets('survives a rebuild of the screen', (tester) async {
+      useTallSurface(tester);
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(harness(container, buildRouter()));
+      await tester.pumpAndSettle();
+      await pickGender(tester, gender: 'Female');
+
+      // Another setState on the page — picking a relation — must not take
+      // the gender selection with it.
+      await tester.tap(find.text('My Sister'));
+      await tester.pumpAndSettle();
+      expect(pill(tester, 'Female').isSelected, isTrue);
+      expect(pill(tester, 'Male').isSelected, isFalse);
+
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(container.read(registrationProvider).basicDetails.gender, 'Female');
+    });
+
+    testWidgets('opens on the gender the draft already carries', (
+      tester,
+    ) async {
+      useTallSurface(tester);
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      container.read(registrationProvider.notifier).applyProfileFor(
+            const ProfileForForm(profileCreatedFor: 'Son', gender: 'Female'),
+          );
+
+      await tester.pumpWidget(harness(container, buildRouter()));
+      await tester.pumpAndSettle();
+
+      expect(pill(tester, 'Female').isSelected, isTrue);
+      expect(pill(tester, 'Male').isSelected, isFalse);
+    });
   });
 
   testWidgets('the screen reopens on the gender already in the draft', (
