@@ -109,7 +109,29 @@ class _OnboardingVerifyMobilePageState
     // Now that a session exists, the answers gathered along the way are sent
     // with a credential attached, so the backend can provision the internal
     // User row and materialize the profile.
-    await ref.read(registrationProvider.notifier).flushOnboardingToBackend();
+    final notifier = ref.read(registrationProvider.notifier);
+    await notifier.flushOnboardingToBackend();
+
+    // ...and then finalize, which is what marks the registration COMPLETE.
+    //
+    // Onboarding never called this. The per-step PATCHes already materialize
+    // `user_profiles` on their own (syncMatchableFromDraft runs on every save),
+    // so a profile did exist — but `registration_steps.is_complete` stayed
+    // false, `profile_complete_pct` stayed 0, and the welcome email never
+    // went out, for every member who signed up through this flow.
+    //
+    // It could not have been called before this commit: finalize's location
+    // contract demanded `area`, `pinCode` and `nativePlace`, which no
+    // onboarding screen collects, so it would have thrown BadRequestException
+    // for every member. That contract now asks for country/state/city, which
+    // is what the flow actually gathers.
+    //
+    // Deliberately non-fatal. The member has answered everything, their
+    // profile row already exists, and the OTP they just passed is the last
+    // thing standing between them and the app — a failed bookkeeping call
+    // must not strand them on this screen. finalize is idempotent, and
+    // PostAuthDestination re-runs the same check on the next launch.
+    await notifier.finalizeOnboardingQuietly();
 
     // Onboarding is finished. The number stops being "pending" the moment
     // it is verified.

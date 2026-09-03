@@ -125,6 +125,28 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     ref.invalidate(myProfileProvider);
   }
 
+  /// Finalizes the registration at the end of onboarding, swallowing any
+  /// failure.
+  ///
+  /// Same call as [finalizeToBackend]; the difference is who it is for. The
+  /// wizard's Review screen shows the member a spinner and can report an error
+  /// they can retry. The OTP step cannot: the member has answered every
+  /// question and passed verification, so the only useful thing left to do is
+  /// let them into the app. A profile row already exists by this point —
+  /// `syncMatchableFromDraft` writes it on the per-step PATCHes — so what a
+  /// failure here costs is the completion flag and percentage, not the
+  /// profile, and the next launch's PostAuthDestination check re-runs anyway.
+  ///
+  /// Returns whether it succeeded, so a caller that does want to react can.
+  Future<bool> finalizeOnboardingQuietly() async {
+    try {
+      await finalizeToBackend();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // ─── Flow Mode ───────────────────────────────────────────────────────
   //
   // CREATE and EDIT reuse this exact wizard/review UI — only the mode flag
