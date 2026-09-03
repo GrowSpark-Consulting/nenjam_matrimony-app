@@ -148,23 +148,18 @@ export function dummyAuthAllows(phoneE164: string): boolean {
   // so an unconfigured environment admits nobody.
   if (!isDevAuthEnabled() && !isDummyOtpEnabled()) return false;
 
-  // Outside production, either flag means "the dummy OTP is the verification
-  // mechanism here", and it admits ANY well-formed number. Requiring a
-  // whitelist off production made a developer register every test number by
-  // hand before they could sign up on their own machine — a list that can
-  // only ever be out of date, guarding data that is already throwaway.
-  //
-  // This leans on NODE_ENV being set on real deployments, which it is: the
-  // deployed start command is `start:prod`, and that sets
-  // NODE_ENV=production itself (see package.json / railway.toml). An
-  // environment that serves real members with NODE_ENV unset would fall into
-  // this branch, which is the one thing to keep true when changing how the
-  // API is started.
-  if (process.env.NODE_ENV !== 'production') return true;
+  // When DUMMY_OTP_ENABLED is on, any well-formed number is accepted
+  // regardless of NODE_ENV. This lets a deployed build demo the full signup
+  // flow before SMS billing is enabled without maintaining a phone whitelist.
+  // When DUMMY_OTP_PHONES is set it still narrows access, but an empty list
+  // no longer blocks everyone.
+  if (isDummyOtpEnabled()) {
+    const whitelist = dummyOtpPhones();
+    return whitelist.size === 0 || whitelist.has(phoneE164);
+  }
 
-  // In production, only the numbers the operator configured — unchanged, and
-  // an unset or empty list admits nobody, so the mode still fails closed.
-  return dummyOtpPhones().has(phoneE164);
+  // Dev-auth (non-production only) admits any well-formed number.
+  return true;
 }
 
 /**
