@@ -11,6 +11,7 @@ import '../../../../core/widgets/buttons/icon_button.dart';
 import '../../../../core/widgets/inputs/otp_input.dart';
 import '../../../../core/widgets/layout/responsive_layout.dart';
 import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
+import '../../../authentication/domain/services/local_auth_session.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/domain/services/otp_verifier.dart';
 import '../providers/registration_provider.dart';
@@ -81,25 +82,34 @@ class _OnboardingVerifyMobilePageState
       return;
     }
 
-    // Deliberately no Firebase call here. This step is the static
-    // development verifier: no SMS, no phone auth, and no anonymous
-    // sign-in either — that last one made finishing signup depend on
-    // Anonymous Auth being enabled in the Firebase console, and failed
-    // with "restricted to administrators only" when it was not.
+    // Reaching here means the verifier said yes. With real phone auth that is
+    // FirebasePhoneOtpVerifier, so a Firebase session already exists: the
+    // credential either signed the member in or was linked to the account
+    // they already had, and the router guard sees a genuine user from here.
     //
-    // Instead onboarding records that it finished. The router treats that
-    // as permission to enter the app while the mock verifier is in use —
-    // see RouteNames.publicRoutes / the guard in app_router.dart.
+    // With the dummy OTP there is no credential to exchange, so this opens a
+    // LocalAuthSession instead — the same thing the mobile login paths do
+    // (see LoginController), for the same reason. Without it a member finished
+    // onboarding in a state the app treated as signed out: the flush below
+    // sent nothing, no `user_profiles` row was ever written, and every screen
+    // afterwards answered 401. Opening it *before* the flush is what makes
+    // that flush authenticate.
+    final phone = storageService.pendingPhone;
+    if (phone != null && phone.isNotEmpty) {
+      await ref.read(localAuthSessionProvider).start(
+            identifier: phone,
+            method: LocalAuthMethod.mobileOtp,
+          );
+    }
+
+    // Still written for the router's own local-completion bridge, and cleared
+    // on sign-out along with everything else.
     await storageService.setOnboardingCompleted(true);
 
-    // Best-effort: if a session does happen to exist (Google sign-up), the
-    // answers gathered along the way are sent now. A no-op when signed out.
+    // Now that a session exists, the answers gathered along the way are sent
+    // with a credential attached, so the backend can provision the internal
+    // User row and materialize the profile.
     await ref.read(registrationProvider.notifier).flushOnboardingToBackend();
-
-    // Onboarding finished. The router treats this as permission to enter
-    // the app while the static verifier is in use — see
-    // StorageService.onboardingCompleted.
-    await storageService.setOnboardingCompleted(true);
 
     // Onboarding is finished. The number stops being "pending" the moment
     // it is verified.

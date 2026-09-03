@@ -20,6 +20,21 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
 
+  <!-- Google Sign-In, web only. google_sign_in_web reads the OAuth client id
+       from this tag; without it initialize() cannot run and the button fails
+       before the account picker ever opens. Android and iOS take theirs from
+       google-services.json / GoogleService-Info.plist instead, which is where
+       this value is copied from (the client_type 3 "web" entry) rather than
+       being a second source of truth.
+
+       Not a secret: an OAuth client id is public by design, ships in every web
+       bundle, and is already committed in android/app/google-services.json.
+       Security comes from the authorized JavaScript origins configured for
+       this client in the Google Cloud console — any origin serving the app
+       (including a local dev port) has to be listed there. -->
+  <meta name="google-signin-client_id"
+        content="1060875646049-lj6dfvsbb05o7jpi70jma08m5iv2nat3.apps.googleusercontent.com">
+
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">

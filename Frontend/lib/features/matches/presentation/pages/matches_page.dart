@@ -216,6 +216,17 @@ class _MatchesCategoryBarState extends ConsumerState<_MatchesCategoryBar> {
   }
 
   void _onCategorySelected(MatchCategory category) {
+    // Near Me is a navigation shortcut rather than a feed filter — the same
+    // exception the Search chip above already makes. It needs device location,
+    // and its permission / services-off / empty states have nowhere to render
+    // inside a swipeable reel, so it opens the dedicated screen. Selection
+    // state is deliberately not changed: the user comes back to whichever
+    // category they were actually on.
+    if (category == MatchCategory.nearMe) {
+      context.push(RouteNames.nearby);
+      return;
+    }
+
     ref.read(matchCategoryProvider.notifier).state = category;
     final chipContext = _chipKeys[category]?.currentContext;
     if (chipContext != null) {

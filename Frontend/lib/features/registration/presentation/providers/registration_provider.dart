@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/router/route_names.dart';
 import '../../../../core/services/storage_service.dart';
+import '../../../authentication/domain/services/local_auth_session.dart';
 import '../../../authentication/presentation/providers/auth_providers.dart';
 
 import '../../../../core/network/api_providers.dart';
@@ -200,6 +201,12 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   /// throws, and "cannot tell" must mean "persist locally", never a crash
   /// that strands the member on a completed screen.
   bool get _hasSession {
+    // A LocalAuthSession counts, because the requests it authorises now
+    // genuinely reach the backend (see api_providers' devAuthPhone wiring).
+    // Without this the dummy-OTP flow persisted every answer locally and sent
+    // none of them, which is why a member could finish onboarding and have no
+    // `user_profiles` row at all.
+    if (hasLocalAuthSession()) return true;
     try {
       return ref.read(firebaseAuthServiceProvider).currentUser != null;
     } catch (_) {
@@ -262,6 +269,21 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     try {
       await repo.updateBasicDetails(state.basicDetails);
       await repo.updateReligionDetails(state.religionDetails);
+      // `languageDetails` is not optional bookkeeping — `motherTongue` is a
+      // NOT NULL column on `user_profiles`, so the profile row cannot be
+      // written without it (see isMatchableFromDraft / writeProfileFromDraft).
+      //
+      // Omitting it here stranded every member who signed up by phone. That
+      // path has no session until step 10 mints one, so `_persist` no-ops for
+      // all nine earlier steps and this flush is the ONLY thing that ever
+      // reaches the backend — the mother tongue collected on the Religion
+      // step included. Confirmed against the live API with a fresh account:
+      // after the full flush, `draft_data` held basicDetails, religionDetails,
+      // locationDetails, physicalDetails, educationDetails and
+      // lifestyleDetails but no `languageDetails` at all, materialization was
+      // skipped, and `GET /profiles/me` answered 404 — the member landed on
+      // Discover with no profile of their own.
+      await repo.updateLanguageDetails(state.languageDetails);
       await repo.updateLocationDetails(state.locationDetails);
       await repo.updatePhysicalDetails(state.physicalDetails);
       await repo.updateEducationDetails(state.educationDetails);
@@ -292,7 +314,11 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     state = state.copyWith(
       religionDetails: state.religionDetails.copyWith(
         religion: form.religion,
+        caste: form.caste,
         community: form.community,
+      ),
+      languageDetails: state.languageDetails.copyWith(
+        motherTongue: form.motherTongue,
       ),
       locationDetails: state.locationDetails.copyWith(country: form.livingIn),
     );
@@ -300,6 +326,11 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     await _persist(() async {
       final repo = ref.read(registrationRepositoryProvider);
       await repo.updateReligionDetails(state.religionDetails);
+      // `caste` and `motherTongue` are NOT NULL on `user_profiles`, so this
+      // language PATCH is what lets the backend materialize the row at all —
+      // see isMatchableFromDraft. Without it onboarding produced a draft the
+      // profile write could never be built from.
+      await repo.updateLanguageDetails(state.languageDetails);
       await repo.updateLocationDetails(state.locationDetails);
     });
 
@@ -323,16 +354,27 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   /// Step 4 — "State & City".
   Future<void> applyProfileBasics(ProfileBasicsForm form) async {
     state = state.copyWith(
+      basicDetails: state.basicDetails.copyWith(
+        firstName: form.firstName,
+        lastName: form.lastName,
+        gender: form.gender,
+        dob: form.dob,
+      ),
       locationDetails: state.locationDetails.copyWith(
         state: form.state,
         city: form.city,
       ),
     );
-    await _persist(
-      () => ref
-          .read(registrationRepositoryProvider)
-          .updateLocationDetails(state.locationDetails),
-    );
+    // Two PATCHes because the fields live in two draft sections and the
+    // backend has no combined endpoint. The basic-details one carries the
+    // last of the NOT NULL columns, so this save is the point at which
+    // syncMatchableFromDraft can finally write `user_profiles` — a member who
+    // gets here now has a real profile rather than a 404.
+    await _persist(() async {
+      final repo = ref.read(registrationRepositoryProvider);
+      await repo.updateBasicDetails(state.basicDetails);
+      await repo.updateLocationDetails(state.locationDetails);
+    });
   }
 
   /// Step 5 — "Marital status", which also carries height and diet. Three

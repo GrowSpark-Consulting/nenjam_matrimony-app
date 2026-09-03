@@ -137,3 +137,26 @@ class DiscoveryProfileModel extends DiscoveryProfileEntity {
         'hobbies': hobbies,
       };
 }
+
+/// Normalizes the backend's lowercase `gender` (`"male"` / `"female"`) to the
+/// `'Male'` / `'Female'` casing the rest of the app uses — the gender-aware
+/// "no photo yet" placeholder keys off exactly those strings, and registration
+/// stores them that way too.
+///
+/// Lives here rather than inside `fromJson` because callers apply it to the
+/// raw JSON before constructing the model, and here rather than privately in
+/// one repository because every endpoint returning this card shape needs it —
+/// `/discover`, `/discover/search` and `/profiles/nearby` alike. An unknown
+/// value passes through untouched so a new backend gender never becomes the
+/// wrong one.
+String normalizeProfileGender(dynamic value) {
+  final gender = value is String ? value : '';
+  switch (gender.toLowerCase()) {
+    case 'male':
+      return 'Male';
+    case 'female':
+      return 'Female';
+    default:
+      return gender;
+  }
+}

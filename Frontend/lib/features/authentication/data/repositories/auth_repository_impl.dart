@@ -93,18 +93,31 @@ class FirebaseAuthRepository {
     await _linkOrIgnoreAlreadyLinked(credential);
   }
 
-  /// Links the credential; tolerates the "already linked" case so a retry
-  /// (auto-verify then manual entry) doesn't hard-fail the user.
+  /// Links the credential; tolerates only the genuinely idempotent case.
+  ///
+  /// `provider-already-linked` means THIS account already carries THIS number
+  /// — the desired end state, reached twice because auto-retrieval and manual
+  /// entry can both fire. Swallowing it is what stops that race hard-failing
+  /// a member who did nothing wrong.
+  ///
+  /// `credential-already-in-use` is the opposite and must NOT be swallowed:
+  /// the number belongs to a *different* Firebase account, so the link did not
+  /// happen. Treating it as success reported a verification that never
+  /// occurred — the caller advanced, `currentUser.phoneNumber` stayed null,
+  /// and PostAuthDestination's "no mobile number" gate sent the member
+  /// straight back to the Email + Mobile step, to try the same number and be
+  /// waved through again. A soft lock, with no way to find out why.
+  ///
+  /// Every caller already wraps this in a try/catch that renders
+  /// `AuthErrorMapper.message(e)`, which has said "already linked to another
+  /// account" all along — the message simply could not be reached.
   Future<void> _linkOrIgnoreAlreadyLinked(
     PhoneAuthCredential credential,
   ) async {
     try {
       await _auth.linkPhoneCredential(credential);
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'provider-already-linked' ||
-          e.code == 'credential-already-in-use') {
-        return;
-      }
+      if (e.code == 'provider-already-linked') return;
       rethrow;
     }
   }

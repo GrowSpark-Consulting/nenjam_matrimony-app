@@ -37,11 +37,18 @@ class AuthInterceptor extends Interceptor {
   final Future<String?> Function() refreshAccessToken;
   final Future<void> Function() onSessionExpired;
 
+  /// Supplies the dummy-OTP identifier when there is no Firebase session, for
+  /// builds that use the dummy OTP. Optional, and returns null on a build that
+  /// does not, so the header is never sent by an ordinary release. See
+  /// `local_auth_session.dart` and the backend's `dev-auth.ts`.
+  final String? Function()? devAuthPhone;
+
   AuthInterceptor({
     required this.dio,
     required this.getAccessToken,
     required this.refreshAccessToken,
     required this.onSessionExpired,
+    this.devAuthPhone,
   });
 
   @override
@@ -50,9 +57,22 @@ class AuthInterceptor extends Interceptor {
     RequestInterceptorHandler handler,
   ) async {
     final token = await _safeToken(getAccessToken);
-    StoryPerf.mark('Firebase token obtained (${options.path})');
+    // Marks that the token LOOKUP finished, which is not the same as having
+    // one — this fires with `token == null` too. Reading it as "a token was
+    // obtained" is what made a session-less 401 look like a server fault.
+    StoryPerf.mark('Firebase token lookup done (${options.path})');
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
+    } else {
+      // The dummy-OTP bridge, supplied from LocalAuthSession — null unless
+      // this build uses the dummy OTP, so a normal release sends nothing.
+      // Deliberately in the `else`: a real Firebase token always wins, and
+      // the two headers are never sent together, which is also the condition
+      // the backend guard requires before it will look at this header.
+      final devPhone = devAuthPhone?.call();
+      if (devPhone != null && devPhone.isNotEmpty) {
+        options.headers['X-Dev-Auth-Phone'] = devPhone;
+      }
     }
     handler.next(options);
   }
@@ -86,8 +106,19 @@ class AuthInterceptor extends Interceptor {
     return handler.next(err);
   }
 
-  bool _shouldAttemptRecovery(int? statusCode, RequestOptions options) =>
-      statusCode == 401 && options.extra[_authRetriedKey] != true;
+  bool _shouldAttemptRecovery(int? statusCode, RequestOptions options) {
+    if (statusCode != 401 || options.extra[_authRetriedKey] == true) {
+      return false;
+    }
+    // On a dummy-OTP session there is no Firebase token to refresh, so
+    // recovery would refresh nothing, get null, and call onSessionExpired ->
+    // logout -> the widgets refetch -> 401 again: a sign-out storm rather than
+    // one honest error. A 401 here means the backend is not running with dummy
+    // auth enabled, or the number is not whitelisted — a configuration answer,
+    // not an expired session.
+    if (devAuthPhone?.call() != null) return false;
+    return true;
+  }
 
   /// Force-refreshes the token and replays [options] exactly once.
   ///

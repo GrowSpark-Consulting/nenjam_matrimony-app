@@ -12,6 +12,7 @@ import { PrismaService } from '@app/database';
 import { RedisService } from '@app/cache';
 import type { AuthenticatedUser } from '../decorators/current-user.decorator';
 import { getCachedUserId, setCachedUserId } from '../auth/auth-user-cache';
+import { devAuthUid, readDevAuthPhone } from '../auth/dev-auth';
 
 interface RequestWithUser extends Request {
   user?: AuthenticatedUser;
@@ -39,6 +40,23 @@ export class FirebaseAuthGuard implements CanActivate {
 
     const authHeader = request.headers.authorization;
 
+    // LOCAL DEVELOPMENT ONLY — off unless BOTH NODE_ENV !== 'production' and
+    // DEV_AUTH_ENABLED=true (see dev-auth.ts, which owns that decision).
+    //
+    // Deliberately conditioned on there being no Authorization header at all:
+    // a request that presents a bearer token always goes down the real
+    // Firebase path below, so this can never override, weaken or pre-empt
+    // token verification — it only fills the gap where a dummy-OTP client has
+    // no token to send. In production `readDevAuthPhone` returns null before
+    // it even looks at the headers, and this block is dead code.
+    if (!authHeader) {
+      const devPhone = readDevAuthPhone(request.headers);
+      if (devPhone) {
+        request.user = await this.resolveDevUser(devPhone);
+        return true;
+      }
+    }
+
     if (!authHeader?.startsWith('Bearer ')) {
       throw new UnauthorizedException(
         'Missing "Authorization: Bearer <Firebase ID Token>" header.',
@@ -50,13 +68,13 @@ export class FirebaseAuthGuard implements CanActivate {
     }
 
     const decoded = await this.verify(idToken);
-    request.user = await this.resolveUser(decoded);
+    request.user = await this.resolveUser(decoded, idToken);
     return true;
   }
 
-  private async verify(idToken: string) {
+  private async verify(idToken: string, checkRevoked = false) {
     try {
-      return await this.firebaseService.verifyIdToken(idToken);
+      return await this.firebaseService.verifyIdToken(idToken, checkRevoked);
     } catch (error) {
       if (error instanceof InternalServerErrorException) {
         // Server misconfiguration (no Firebase Admin credentials) — not the
@@ -70,11 +88,55 @@ export class FirebaseAuthGuard implements CanActivate {
     }
   }
 
-  private async resolveUser(decoded: {
-    uid: string;
-    email?: string;
-    phone_number?: string;
-  }): Promise<AuthenticatedUser> {
+  /**
+   * LOCAL DEVELOPMENT ONLY — see dev-auth.ts.
+   *
+   * Resolves the internal User row for a dev-auth phone number, creating one
+   * on first use so the dummy-OTP flow behaves like a real first sign-in.
+   *
+   * Kept separate from [resolveUser] rather than folded into it: that method
+   * re-verifies the ID token against Firebase before creating an account, and
+   * there is no token here to verify. Sharing the path would have meant either
+   * making that verification optional — weakening the real signup — or
+   * synthesizing something token-shaped to satisfy it. Neither is acceptable,
+   * so this path stays short, separate and obviously non-production.
+   *
+   * The row is keyed by a namespaced uid (`devauth:+9198…`) so it can never
+   * collide with a Firebase uid, and by phone so a developer who reinstalls
+   * and re-enters the same number lands back on the same account instead of
+   * accumulating duplicates.
+   */
+  private async resolveDevUser(phoneE164: string): Promise<AuthenticatedUser> {
+    const uid = devAuthUid(phoneE164);
+
+    const user = await this.prisma.user.upsert({
+      where: { firebaseUid: uid },
+      update: {},
+      create: {
+        firebaseUid: uid,
+        // User.email is required and unique; a dev session has no address, so
+        // this mirrors resolveUser's placeholder for phone-only accounts.
+        email: `${uid}@devauth.invalid`,
+        phone: phoneE164,
+      },
+    });
+
+    this.logger.warn(
+      `DEV AUTH: request authenticated as ${phoneE164} (user ${user.id}) ` +
+        'without a Firebase token. This must never appear in production.',
+    );
+
+    return { id: user.id, uid, phone_number: phoneE164 };
+  }
+
+  private async resolveUser(
+    decoded: {
+      uid: string;
+      email?: string;
+      phone_number?: string;
+    },
+    idToken: string,
+  ): Promise<AuthenticatedUser> {
     // Fast path: the firebaseUid → internal user.id mapping is near-immutable,
     // so a cache hit lets us skip the DB round trip entirely (the only DB hop
     // on the hot path of every authenticated request). uid/email/phone_number
@@ -143,6 +205,28 @@ export class FirebaseAuthGuard implements CanActivate {
           data: { firebaseUid: decoded.uid },
         });
       }
+    }
+
+    // Nothing matched by uid, email or phone, so the next step CREATES an
+    // account. Before it does, re-verify the token against Firebase with
+    // revocation checking.
+    //
+    // Signature verification alone cannot tell a first-ever sign-in from a
+    // token belonging to an account that was just deleted: an ID token stays
+    // cryptographically valid for up to an hour afterwards. AccountDeletion
+    // deletes the Firebase user, then the row, then the cache — but a stale
+    // token arriving inside that hour would land here and the upsert would
+    // silently re-create the row the user asked to have erased, as a fresh
+    // account with no profile. `checkRevoked` asks Firebase whether the
+    // account still exists and the token still stands, which is the only
+    // thing that can distinguish the two cases.
+    //
+    // Deliberately only on this path. It costs an extra Admin SDK round trip,
+    // and every other path above already found a row — proof the account is
+    // real — so the hot path of authenticated requests is untouched. This
+    // runs once per genuinely new account.
+    if (!user) {
+      await this.verify(idToken, true);
     }
 
     user ??= await this.prisma.user.upsert({

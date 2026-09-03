@@ -5,6 +5,9 @@ import 'package:nenjam_matrimony/core/router/route_names.dart';
 import 'package:nenjam_matrimony/features/authentication/data/services/firebase_auth_service.dart';
 import 'package:nenjam_matrimony/features/authentication/presentation/providers/auth_providers.dart';
 import 'package:nenjam_matrimony/features/authentication/presentation/utils/post_auth_destination.dart';
+import 'package:nenjam_matrimony/features/profile/data/repositories/api_profile_repository.dart';
+import 'package:nenjam_matrimony/features/profile/domain/models/profile.dart';
+import 'package:nenjam_matrimony/features/profile/presentation/providers/profile_providers.dart';
 import 'package:nenjam_matrimony/features/registration/data/repositories/registration_repository.dart';
 import 'package:nenjam_matrimony/features/registration/domain/models/profile_draft.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/providers/registration_provider.dart';
@@ -98,9 +101,35 @@ class _FakeRegistrationRepository implements RegistrationRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// Stands in for `GET /profiles/me`. Throwing is how the real repository
+/// reports "this member has no finalized profile" — the endpoint 404s — so a
+/// thrower is the default and models a member still registering.
+class _FakeProfileRepository implements ApiProfileRepository {
+  _FakeProfileRepository({this.hasProfile = false});
+
+  final bool hasProfile;
+
+  @override
+  Future<Profile> getMyProfile() async {
+    if (!hasProfile) throw Exception('404 — no finalized profile');
+    // Field values are irrelevant: the resolver only asks whether the row
+    // exists at all. fromJson fills every gap, so a sparse map keeps this
+    // from restating the whole profile model.
+    return Profile.fromJson(const {
+      'firstName': 'Existing',
+      'currentState': 'Karnataka',
+      'currentCity': 'Bangalore',
+    });
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 ProviderContainer _container({
   required Future<Map<String, dynamic>> Function() draft,
   User? user,
+  bool hasFinalizedProfile = false,
 }) {
   final container = ProviderContainer(
     overrides: [
@@ -109,6 +138,9 @@ ProviderContainer _container({
       ),
       registrationRepositoryProvider.overrideWithValue(
         _FakeRegistrationRepository(draft),
+      ),
+      profileRepositoryProvider.overrideWithValue(
+        _FakeProfileRepository(hasProfile: hasFinalizedProfile),
       ),
     ],
   );
@@ -124,6 +156,7 @@ Map<String, dynamic> _draftBody({
   Map<String, dynamic>? basicDetails,
   Map<String, dynamic>? locationDetails,
   Map<String, dynamic>? religionDetails,
+  Map<String, dynamic>? languageDetails,
   Map<String, dynamic>? physicalDetails,
   Map<String, dynamic>? educationDetails,
   Map<String, dynamic>? lifestyleDetails,
@@ -136,6 +169,7 @@ Map<String, dynamic> _draftBody({
       if (basicDetails != null) 'basicDetails': basicDetails,
       if (locationDetails != null) 'locationDetails': locationDetails,
       if (religionDetails != null) 'religionDetails': religionDetails,
+      if (languageDetails != null) 'languageDetails': languageDetails,
       if (physicalDetails != null) 'physicalDetails': physicalDetails,
       if (educationDetails != null) 'educationDetails': educationDetails,
       if (lifestyleDetails != null) 'lifestyleDetails': lifestyleDetails,
@@ -148,18 +182,33 @@ Map<String, dynamic> _draftBody({
 /// below check one gate at a time.
 ///
 /// This covers every draft-backed step: Profile For (`relation`), Religion
-/// (`religion` + `community` + `livingIn`), Location (`state` + `city`),
+/// (`religion` + `caste` + `community` + `motherTongue` + `livingIn`),
+/// Location (`firstName` + `lastName` + `gender` + `dob` + `state` + `city`),
 /// Marital (`maritalStatus` + `height`), Education (`qualification`),
 /// Income (`annualIncome`) and About (`aboutMe`). Photos are not a gate —
 /// they are optional. The Email + Mobile step is deliberately absent: its
 /// answers reach neither the draft nor the account, which is why a draft
 /// in this shape marks an account that has *finished* onboarding and must
 /// never be asked for contact details again.
+///
+/// `caste`, `motherTongue`, `firstName`, `lastName`, `gender` and `dob` are
+/// here because every one of them is a NOT NULL column on `user_profiles`.
+/// Onboarding never asked for them, so `isMatchableFromDraft` could not pass
+/// and the backend wrote no profile row at all — a member finished onboarding
+/// and `GET /profiles/me` answered 404 for the life of the account. Removing
+/// any of them from this fixture must reopen its step, which is what the
+/// per-field cases below assert.
 Map<String, dynamic> _answeredDraft({
   bool isComplete = false,
   String relation = 'Myself',
+  String firstName = 'Arjun',
+  String lastName = 'Krishnan',
+  String gender = 'MALE',
+  String dob = '1994-06-18T00:00:00.000Z',
   String religion = 'Hindu',
+  String caste = 'Vellalar',
   String community = 'Vellalar',
+  String motherTongue = 'Tamil',
   String livingIn = 'India',
   String state = 'Tamil Nadu',
   String city = 'Chennai',
@@ -174,8 +223,17 @@ Map<String, dynamic> _answeredDraft({
       basicDetails: {
         'profileCreatedFor': relation,
         'maritalStatus': maritalStatus,
+        if (firstName.isNotEmpty) 'firstName': firstName,
+        if (lastName.isNotEmpty) 'lastName': lastName,
+        if (gender.isNotEmpty) 'gender': gender,
+        if (dob.isNotEmpty) 'dob': dob,
       },
-      religionDetails: {'religion': religion, 'community': community},
+      religionDetails: {
+        'religion': religion,
+        'caste': caste,
+        'community': community,
+      },
+      languageDetails: {'motherTongue': motherTongue},
       locationDetails: {
         'country': livingIn,
         'state': state,
@@ -485,6 +543,53 @@ void main() {
     });
   });
 
+  group('an existing member is never sent back through registration', () {
+    // The reported bug: logging in with a real account opened the signup
+    // Email + Mobile step, which then refused the member's own number with
+    // "Account already exists". Every onboarding gate below asks whether a
+    // SIGNUP step was answered, and a member who registered before those
+    // steps existed has answered none of them — so all of them failed.
+    test('a finalized profile goes straight to Discover', () async {
+      final c = _container(
+        // Deliberately the emptiest possible draft: every gate would fail.
+        draft: () async => _draftBody(),
+        hasFinalizedProfile: true,
+      );
+
+      expect(await _resolve(c), RouteNames.discover);
+    });
+
+    test('and is not held by the Email + Mobile gate', () async {
+      // The specific gate that trapped the member: it reads phoneNumber off
+      // the Firebase account, which an email/password signup never sets.
+      final c = _container(
+        draft: () async => _answeredDraft(),
+        user: _FakeUser(phoneNumber: ''),
+        hasFinalizedProfile: true,
+      );
+
+      expect(await _resolve(c), RouteNames.discover);
+    });
+
+    test('an unverified email still wins over the shortcut', () async {
+      // Verifying an address is a security gate, not an onboarding step, so
+      // having a profile must not skip it.
+      final c = _container(
+        draft: () async => _answeredDraft(),
+        user: _FakeUser(emailVerified: false),
+        hasFinalizedProfile: true,
+      );
+
+      expect(await _resolve(c), RouteNames.verifyEmail);
+    });
+
+    test('a member with no profile still walks onboarding', () async {
+      // The shortcut must not swallow genuine new users.
+      final c = _container(draft: () async => _draftBody());
+
+      expect(await _resolve(c), RouteNames.createProfileFor);
+    });
+  });
   // ─── The Email + Mobile step ────────────────────────────────────────
   //
   // Login and signup meet at this gate, and only one of them belongs here.
@@ -520,7 +625,12 @@ void main() {
       final container = _container(
         draft: () async => _draftBody(
           basicDetails: {'profileCreatedFor': 'Myself'},
-          religionDetails: {'religion': 'Hindu', 'community': 'Vellalar'},
+          religionDetails: {
+            'religion': 'Hindu',
+            'caste': 'Vellalar',
+            'community': 'Vellalar',
+          },
+          languageDetails: {'motherTongue': 'Tamil'},
           locationDetails: {'country': 'India'},
         ),
       );
@@ -533,7 +643,12 @@ void main() {
       final container = _container(
         draft: () async => _draftBody(
           basicDetails: {'profileCreatedFor': 'Myself'},
-          religionDetails: {'religion': 'Hindu', 'community': 'Vellalar'},
+          religionDetails: {
+            'religion': 'Hindu',
+            'caste': 'Vellalar',
+            'community': 'Vellalar',
+          },
+          languageDetails: {'motherTongue': 'Tamil'},
           locationDetails: {'country': 'India'},
         ),
       );

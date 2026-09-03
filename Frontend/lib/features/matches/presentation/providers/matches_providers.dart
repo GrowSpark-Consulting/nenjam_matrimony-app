@@ -39,6 +39,12 @@ final matchCategoryFeedProvider =
       case MatchCategory.myMatches:
         return feed.aiRecommended;
       case MatchCategory.nearMe:
+        // Unreachable in practice: the Near Me chip opens the dedicated
+        // location-based screen (features/nearby) instead of selecting this
+        // category, so this state is never entered from the UI. Kept as a
+        // defensive default rather than deleted, because removing the enum
+        // value would ripple through the chip bar, its GlobalKey map and the
+        // notification deep-link service for no behavioural gain.
         return feed.nearYou;
       case MatchCategory.moreMatches:
         return [...feed.verifiedProfiles, ...feed.premiumMembers];

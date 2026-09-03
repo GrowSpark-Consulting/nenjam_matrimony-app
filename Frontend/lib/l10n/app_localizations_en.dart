@@ -4555,4 +4555,109 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authOtpRequired => 'Enter the code we sent you';
+
+  @override
+  String get welcomeBackHeadline => 'Welcome back';
+
+  @override
+  String get welcomeBackSubtitle => 'Enter your details to continue';
+
+  @override
+  String get welcomeBackGetOtp => 'Get OTP';
+
+  @override
+  String get welcomeBackPassword => 'Login with Password';
+
+  @override
+  String get welcomeBackGoogle => 'Continue with Google';
+
+  @override
+  String get welcomeBackEmail => 'Continue with Email';
+
+  @override
+  String get welcomeBackNoAccount => 'Don\'t have an account?';
+
+  @override
+  String get welcomeBackSignUpFree => 'Sign Up Free';
+
+  @override
+  String get nearbyTitle => 'Near Me';
+
+  @override
+  String get drawerNearMe => 'Near Me';
+
+  @override
+  String get nearbyLoading => 'Finding people near you...';
+
+  @override
+  String nearbyDistanceAway(String distance) {
+    return '$distance km away';
+  }
+
+  @override
+  String get nearbyDistanceUnderOneKm => 'Less than 1 km away';
+
+  @override
+  String get nearbyApproximateNotice =>
+      'You shared an approximate location, so distances are rough.';
+
+  @override
+  String get nearbyEmptyTitle => 'No one nearby yet';
+
+  @override
+  String nearbyEmptyMessage(String radius) {
+    return 'No profiles found within $radius km of your location.';
+  }
+
+  @override
+  String get nearbyRefresh => 'Refresh';
+
+  @override
+  String get nearbyPermissionTitle => 'Location access needed';
+
+  @override
+  String get nearbyPermissionMessage =>
+      'Location access is required to discover people near you.';
+
+  @override
+  String get nearbyPermissionBlockedMessage =>
+      'Location access is blocked. Turn it on in Settings to discover people near you.';
+
+  @override
+  String get nearbyEnableLocation => 'Enable Location';
+
+  @override
+  String get nearbyOpenSettings => 'Open Settings';
+
+  @override
+  String get nearbyServicesOffTitle => 'Location is turned off';
+
+  @override
+  String get nearbyServicesOffMessage =>
+      'Turn on location services to discover people near you.';
+
+  @override
+  String get nearbyTurnOnLocation => 'Turn On Location';
+
+  @override
+  String get nearbyErrorTitle => 'Something went wrong';
+
+  @override
+  String get nearbyLocationErrorMessage =>
+      'Unable to get your location. Please try again.';
+
+  @override
+  String get nearbyFetchErrorMessage =>
+      'Unable to load profiles near you. Please try again.';
+
+  @override
+  String get nearbyRetry => 'Try Again';
+
+  @override
+  String get nearbyDiscoverPromptTitle => 'Find people near you';
+
+  @override
+  String nearbyDiscoverPromptMessage(String radius) {
+    return 'Enable location to discover compatible profiles within $radius km of you.';
+  }
 }

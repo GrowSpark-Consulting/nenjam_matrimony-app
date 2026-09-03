@@ -32,6 +32,32 @@ abstract final class OnboardingScaffold {
   static String restore(String value, List<String> options) =>
       options.contains(value) ? value : '';
 
+  /// The options a dropdown needs in order to be able to *display* [value].
+  ///
+  /// [restore] blanks a stored answer that is not one of [options], because
+  /// `DropdownButtonFormField` asserts when its `value` is absent from its
+  /// items. That is the right trade for a closed vocabulary, but the wrong
+  /// one for location: the state and city lists are a hand-curated subset,
+  /// and real profiles hold answers outside it — `Punjab`, `Goa`,
+  /// `Bengaluru`, `chennai` — none of which the list offers. Blanking them
+  /// meant a returning member opened the step with an empty required field,
+  /// and saving replaced a real stored value with whatever they picked
+  /// instead. Silent data loss, on a screen that was only meant to re-open.
+  ///
+  /// Appending the stored value keeps the widget's invariant satisfied while
+  /// the answer survives, so the member sees what they actually entered and
+  /// can keep it or change it deliberately.
+  ///
+  /// Deliberately append-only and non-destructive: no trimming of the stored
+  /// value into a different one, no case folding onto a similar entry, no
+  /// alias matching. Reconciling `Bengaluru` with `Bangalore` needs an
+  /// authoritative source, and guessing it here is exactly the silent
+  /// rewrite this exists to prevent.
+  static List<String> optionsWith(List<String> options, String value) {
+    if (value.isEmpty || options.contains(value)) return options;
+    return [...options, value];
+  }
+
   /// "Select your Religion to continue." / "…your Religion and Community…".
   ///
   /// [names] is the already-localized, screen-ordered list of unanswered

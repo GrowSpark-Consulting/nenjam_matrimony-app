@@ -42,6 +42,19 @@ abstract final class ApiEndpoints {
   static const String profileFinalize = '/profiles/finalize';
   static const String profileMe = '/profiles/me';
 
+  /// Real, implemented route (backend/apps/api/src/modules/matches/
+  /// controllers/nearby.controller.ts). Proximity search: pass `latitude`,
+  /// `longitude` and an optional `radiusKm` (max 100). Returns the shared
+  /// Discover card shape with `distanceKm` filled in, never other members'
+  /// coordinates. Mounted under `profiles` on the backend, hence its place
+  /// here rather than under Search & Discovery below.
+  static const String profilesNearby = '/profiles/nearby';
+
+  /// Stores the caller's own device coordinates so other members' Near Me
+  /// searches can find them (backend ProfileController.updateLocation). PUT —
+  /// one location per member, replaced wholesale.
+  static const String profileMeLocation = '/profiles/me/location';
+
   // ─── Relationship Intelligence (Prompts / Psychology / Horoscope Compat) ──
   static const String profilePromptsBank = '/profiles/prompts/bank';
   static const String profilePromptsMe = '/profiles/prompts/me';

@@ -8437,6 +8437,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter the code we sent you'**
   String get authOtpRequired;
+
+  /// No description provided for @welcomeBackHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back'**
+  String get welcomeBackHeadline;
+
+  /// No description provided for @welcomeBackSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your details to continue'**
+  String get welcomeBackSubtitle;
+
+  /// No description provided for @welcomeBackGetOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'Get OTP'**
+  String get welcomeBackGetOtp;
+
+  /// No description provided for @welcomeBackPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Login with Password'**
+  String get welcomeBackPassword;
+
+  /// No description provided for @welcomeBackGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get welcomeBackGoogle;
+
+  /// No description provided for @welcomeBackEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Email'**
+  String get welcomeBackEmail;
+
+  /// No description provided for @welcomeBackNoAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t have an account?'**
+  String get welcomeBackNoAccount;
+
+  /// No description provided for @welcomeBackSignUpFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Up Free'**
+  String get welcomeBackSignUpFree;
+
+  /// No description provided for @nearbyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Near Me'**
+  String get nearbyTitle;
+
+  /// No description provided for @drawerNearMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Near Me'**
+  String get drawerNearMe;
+
+  /// No description provided for @nearbyLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding people near you...'**
+  String get nearbyLoading;
+
+  /// No description provided for @nearbyDistanceAway.
+  ///
+  /// In en, this message translates to:
+  /// **'{distance} km away'**
+  String nearbyDistanceAway(String distance);
+
+  /// No description provided for @nearbyDistanceUnderOneKm.
+  ///
+  /// In en, this message translates to:
+  /// **'Less than 1 km away'**
+  String get nearbyDistanceUnderOneKm;
+
+  /// No description provided for @nearbyApproximateNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'You shared an approximate location, so distances are rough.'**
+  String get nearbyApproximateNotice;
+
+  /// No description provided for @nearbyEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No one nearby yet'**
+  String get nearbyEmptyTitle;
+
+  /// No description provided for @nearbyEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No profiles found within {radius} km of your location.'**
+  String nearbyEmptyMessage(String radius);
+
+  /// No description provided for @nearbyRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get nearbyRefresh;
+
+  /// No description provided for @nearbyPermissionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Location access needed'**
+  String get nearbyPermissionTitle;
+
+  /// No description provided for @nearbyPermissionMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Location access is required to discover people near you.'**
+  String get nearbyPermissionMessage;
+
+  /// No description provided for @nearbyPermissionBlockedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Location access is blocked. Turn it on in Settings to discover people near you.'**
+  String get nearbyPermissionBlockedMessage;
+
+  /// No description provided for @nearbyEnableLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Location'**
+  String get nearbyEnableLocation;
+
+  /// No description provided for @nearbyOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get nearbyOpenSettings;
+
+  /// No description provided for @nearbyServicesOffTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is turned off'**
+  String get nearbyServicesOffTitle;
+
+  /// No description provided for @nearbyServicesOffMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on location services to discover people near you.'**
+  String get nearbyServicesOffMessage;
+
+  /// No description provided for @nearbyTurnOnLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn On Location'**
+  String get nearbyTurnOnLocation;
+
+  /// No description provided for @nearbyErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get nearbyErrorTitle;
+
+  /// No description provided for @nearbyLocationErrorMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to get your location. Please try again.'**
+  String get nearbyLocationErrorMessage;
+
+  /// No description provided for @nearbyFetchErrorMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load profiles near you. Please try again.'**
+  String get nearbyFetchErrorMessage;
+
+  /// No description provided for @nearbyRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try Again'**
+  String get nearbyRetry;
+
+  /// No description provided for @nearbyDiscoverPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find people near you'**
+  String get nearbyDiscoverPromptTitle;
+
+  /// No description provided for @nearbyDiscoverPromptMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable location to discover compatible profiles within {radius} km of you.'**
+  String nearbyDiscoverPromptMessage(String radius);
 }
 
 class _AppLocalizationsDelegate

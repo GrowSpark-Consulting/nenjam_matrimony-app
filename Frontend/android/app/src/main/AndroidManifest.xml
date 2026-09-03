@@ -14,6 +14,15 @@
     <!-- Voice message recording (Chat composer's mic button). Requested only
          when the user actually taps to record, never at startup. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Device location for "Near Me" (proximity search). Both are declared
+         because Android 12+ shows the user a Precise/Approximate choice in one
+         dialog: granting only COARSE is a supported outcome the app handles
+         (the fix is just less accurate), not an error. Requested only when the
+         user opens Near Me, never at startup, and the app works without it. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Background location is deliberately NOT declared: Near Me reads a
+         position only while the user is looking at the screen. -->
     <!-- Gallery photo selection deliberately requests NO storage/media
          permission — image_picker uses the system Photo Picker, which needs
          none, so READ_MEDIA_IMAGES/READ_EXTERNAL_STORAGE are intentionally

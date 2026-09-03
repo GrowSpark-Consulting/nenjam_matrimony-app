@@ -5,6 +5,7 @@ import '../../data/repositories/discover_repository_impl.dart';
 import '../../domain/entities/discovery_profile_entity.dart';
 import '../../domain/entities/discover_feed_entity.dart';
 import '../../domain/repositories/discover_repository.dart';
+import '../../../nearby/presentation/providers/nearby_providers.dart';
 
 /// Real backend-backed repository — fetches `GET /discover` (the
 /// preference-filtered feed) via the shared authenticated [ApiClient].
@@ -34,7 +35,25 @@ final discoverProfilesProvider = Provider<AsyncValue<List<DiscoveryProfileEntity
   return feedAsync.whenData((feed) {
     switch (filter) {
       case DiscoverFilter.nearMe:
-        return feed.nearYou;
+        // Real proximity results from the device's location, not a slice of
+        // the generic feed — the same notifier the Discover "Near You" section
+        // and the Near Me screen read, so all three can never disagree about
+        // who is nearby.
+        //
+        // Watched inside this branch on purpose: reaching it is what
+        // subscribes. `discoverProfilesProvider` is also read by the Profile
+        // screen, and an unconditional watch here would make opening THAT
+        // screen create the nearby notifier. It would still take no location
+        // reading (the notifier starts idle and does nothing until asked), but
+        // the dependency would be a lie about what that screen needs.
+        //
+        // Empty until something resolves it. Nothing in the app currently
+        // selects this filter — DiscoverTopBar, which is the only widget that
+        // sets it, is not mounted anywhere — so this is the contract a future
+        // caller gets, not a live code path. Whoever mounts that bar must also
+        // render an idle/permission state, exactly as _NearYouSection does.
+        final nearby = ref.watch(nearbyNotifierProvider);
+        return nearby is NearbyLoaded ? nearby.profiles : const [];
       case DiscoverFilter.newProfiles:
         return feed.recentlyJoined;
       case DiscoverFilter.forYou:

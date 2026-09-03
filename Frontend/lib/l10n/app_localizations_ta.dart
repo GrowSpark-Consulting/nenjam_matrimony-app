@@ -4631,4 +4631,110 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get authOtpRequired => 'நாங்கள் அனுப்பிய குறியீட்டை உள்ளிடவும்';
+
+  @override
+  String get welcomeBackHeadline => 'மீண்டும் வருக';
+
+  @override
+  String get welcomeBackSubtitle => 'தொடர உங்கள் விவரங்களை உள்ளிடவும்';
+
+  @override
+  String get welcomeBackGetOtp => 'OTP பெறவும்';
+
+  @override
+  String get welcomeBackPassword => 'கடவுச்சொல்லுடன் உள்நுழைக';
+
+  @override
+  String get welcomeBackGoogle => 'Google மூலம் தொடரவும்';
+
+  @override
+  String get welcomeBackEmail => 'மின்னஞ்சல் மூலம் தொடரவும்';
+
+  @override
+  String get welcomeBackNoAccount => 'கணக்கு இல்லையா?';
+
+  @override
+  String get welcomeBackSignUpFree => 'இலவசமாகப் பதிவு செய்யவும்';
+
+  @override
+  String get nearbyTitle => 'என் அருகில்';
+
+  @override
+  String get drawerNearMe => 'என் அருகில்';
+
+  @override
+  String get nearbyLoading => 'உங்கள் அருகில் உள்ளவர்களைத் தேடுகிறோம்...';
+
+  @override
+  String nearbyDistanceAway(String distance) {
+    return '$distance கி.மீ தொலைவில்';
+  }
+
+  @override
+  String get nearbyDistanceUnderOneKm => '1 கி.மீ க்கும் குறைவான தொலைவில்';
+
+  @override
+  String get nearbyApproximateNotice =>
+      'நீங்கள் தோராயமான இருப்பிடத்தைப் பகிர்ந்துள்ளீர்கள், எனவே தூரங்கள் தோராயமானவை.';
+
+  @override
+  String get nearbyEmptyTitle => 'அருகில் யாரும் இல்லை';
+
+  @override
+  String nearbyEmptyMessage(String radius) {
+    return 'உங்கள் இருப்பிடத்திலிருந்து $radius கி.மீ சுற்றளவில் சுயவிவரங்கள் எதுவும் இல்லை.';
+  }
+
+  @override
+  String get nearbyRefresh => 'புதுப்பிக்கவும்';
+
+  @override
+  String get nearbyPermissionTitle => 'இருப்பிட அனுமதி தேவை';
+
+  @override
+  String get nearbyPermissionMessage =>
+      'உங்கள் அருகில் உள்ளவர்களைக் கண்டறிய இருப்பிட அனுமதி தேவை.';
+
+  @override
+  String get nearbyPermissionBlockedMessage =>
+      'இருப்பிட அனுமதி தடுக்கப்பட்டுள்ளது. அருகில் உள்ளவர்களைக் கண்டறிய அமைப்புகளில் அதை இயக்கவும்.';
+
+  @override
+  String get nearbyEnableLocation => 'இருப்பிடத்தை இயக்கு';
+
+  @override
+  String get nearbyOpenSettings => 'அமைப்புகளைத் திற';
+
+  @override
+  String get nearbyServicesOffTitle => 'இருப்பிடம் அணைக்கப்பட்டுள்ளது';
+
+  @override
+  String get nearbyServicesOffMessage =>
+      'உங்கள் அருகில் உள்ளவர்களைக் கண்டறிய இருப்பிடச் சேவைகளை இயக்கவும்.';
+
+  @override
+  String get nearbyTurnOnLocation => 'இருப்பிடத்தை இயக்கு';
+
+  @override
+  String get nearbyErrorTitle => 'ஏதோ தவறு நடந்துவிட்டது';
+
+  @override
+  String get nearbyLocationErrorMessage =>
+      'உங்கள் இருப்பிடத்தைப் பெற முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get nearbyFetchErrorMessage =>
+      'உங்கள் அருகில் உள்ள சுயவிவரங்களை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get nearbyRetry => 'மீண்டும் முயற்சி';
+
+  @override
+  String get nearbyDiscoverPromptTitle =>
+      'உங்கள் அருகில் உள்ளவர்களைக் கண்டறியுங்கள்';
+
+  @override
+  String nearbyDiscoverPromptMessage(String radius) {
+    return 'உங்களிடமிருந்து $radius கி.மீ சுற்றளவில் உள்ள பொருத்தமான சுயவிவரங்களைக் கண்டறிய இருப்பிடத்தை இயக்கவும்.';
+  }
 }
