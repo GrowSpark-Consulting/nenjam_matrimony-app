@@ -10,3 +10,4 @@ export * from './pipes/zod-validation.pipe';
 export * from './dto/pagination-query.dto';
 export * from './events/domain-event-names.const';
 export * from './auth/auth-user-cache';
+export * from './auth/dev-auth';

@@ -124,6 +124,29 @@ export function devAuthUid(phoneE164: string): string {
 }
 
 /**
+ * Whether the dummy-OTP arrangement may vouch for [phoneE164] at all — the
+ * two-mode policy above, stated once so that every entry point answers it
+ * identically.
+ *
+ * [readDevAuthPhone] applies it to the header a request carries.
+ * `POST /auth/dummy-otp/session` applies it to the number in a request body:
+ * that endpoint mints a REAL Firebase session for a number nobody has sent an
+ * SMS to, which is the same bypass this file already governs and must never be
+ * a wider one. Same flags, same whitelist, same fail-closed default.
+ */
+export function dummyAuthAllows(phoneE164: string): boolean {
+  const devMode = isDevAuthEnabled();
+  const dummyMode = isDummyOtpEnabled();
+  if (!devMode && !dummyMode) return false;
+  if (!E164.test(phoneE164)) return false;
+  // Development mode admits any well-formed number; production mode admits
+  // only what was configured. Checked in this order for the reason given in
+  // readDevAuthPhone.
+  if (devMode) return true;
+  return dummyOtpPhones().has(phoneE164);
+}
+
+/**
  * The phone number a dummy-auth request may be authenticated as, or null.
  *
  * Null whenever every mode is off, the header is absent or malformed, or the
@@ -134,21 +157,10 @@ export function devAuthUid(phoneE164: string): string {
 export function readDevAuthPhone(
   headers: Record<string, string | string[] | undefined>,
 ): string | null {
-  const devMode = isDevAuthEnabled();
-  const dummyMode = isDummyOtpEnabled();
-  if (!devMode && !dummyMode) return null;
-
   const raw = headers[DEV_AUTH_HEADER];
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (typeof value !== 'string') return null;
 
   const phone = value.trim();
-  if (!E164.test(phone)) return null;
-
-  // Development mode admits any well-formed number. Production mode admits
-  // only what was configured, and is checked second so that a machine running
-  // both (a developer testing the production config) gets the more permissive
-  // answer it already had.
-  if (devMode) return phone;
-  return dummyOtpPhones().has(phone) ? phone : null;
+  return dummyAuthAllows(phone) ? phone : null;
 }
