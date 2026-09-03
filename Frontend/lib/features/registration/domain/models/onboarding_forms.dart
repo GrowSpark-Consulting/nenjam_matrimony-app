@@ -1,9 +1,10 @@
 /// The answers each onboarding step collects, and the rule for when its
 /// Continue may be tapped.
 ///
-/// Onboarding is four screens — Profile For, Your Religion, Email + Mobile,
-/// State + City — and this file owns the *required-field* rule for the two
-/// that are plain forms. Stating it here rather than as a boolean inside a
+/// Onboarding is a chain of single-purpose screens — Profile For + Gender,
+/// Your Name, Your Religion, Email + Mobile, State + City, and the rest — and
+/// this file owns the *required-field* rule for the ones that are plain
+/// forms. Stating it here rather than as a boolean inside a
 /// widget's `build` is what lets `PostAuthDestination` gate on exactly the
 /// same condition the screen enforces: one definition, so a member can never
 /// be bounced to a step they have already satisfied, nor let past one they
@@ -11,35 +12,240 @@
 ///
 /// None of these introduce a second representation of profile data. Every
 /// value is a string the draft already stores, and the notifier
-/// (`RegistrationNotifier.applyOnboardingReligion` /
-/// `.applyProfileBasics`) maps them onto the sections that own them.
+/// (`RegistrationNotifier.applyProfileFor` / `.applyOnboardingName` /
+/// `.applyOnboardingReligion` / `.applyProfileBasics`) maps them onto the
+/// sections that own them.
 library;
 
-/// Step 2 — "Your religion": religion, caste, community, mother tongue, and
-/// the country the member lives in.
+/// Step 1 — "Profile For" and "Gender".
 ///
-/// Caste and mother tongue are asked here because `user_profiles.caste` and
-/// `user_profiles.mother_tongue` are both NOT NULL. Onboarding used to skip
-/// them, so `isMatchableFromDraft` could never pass and the backend never
-/// wrote a profile row at all — the member finished onboarding, landed on
-/// Discover, and `GET /profiles/me` answered 404 for the rest of the account's
-/// life. A step that collects them is the only fix that does not mean
-/// inventing a value into someone's profile.
+/// Gender moved here from the State & City step. It is one question, asked
+/// once, and it still lives on `BasicDetails.gender` — the same field the
+/// wizard's Basic Info step writes and the same one `BasicDetails.toJson`
+/// maps to the API's MALE / FEMALE. Nothing about where gender is stored,
+/// validated on the server, or written to `user_profiles` changed; only the
+/// screen that asks for it.
+///
+/// Asking it first is also what the rest of onboarding wants: gender decides
+/// who a member is matched against, and every screen after this one is about
+/// a profile that already has one.
+class ProfileForForm {
+  /// Draft: `BasicDetails.profileCreatedFor` ('Myself', 'Son', ...). Required.
+  /// Empty means the question has genuinely never been answered — see
+  /// [BasicDetails.profileCreatedFor] for why it has no default.
+  final String profileCreatedFor;
+
+  /// Draft: `BasicDetails.gender`. Required — NOT NULL on `user_profiles`.
+  /// Held in the draft's own representation ('Male' / 'Female'); the mapping
+  /// to MALE / FEMALE belongs to `BasicDetails.toJson`, so this must not
+  /// pre-convert.
+  final String gender;
+
+  const ProfileForForm({this.profileCreatedFor = '', this.gender = ''});
+
+  ProfileForForm copyWith({String? profileCreatedFor, String? gender}) {
+    return ProfileForForm(
+      profileCreatedFor: profileCreatedFor ?? this.profileCreatedFor,
+      gender: gender ?? this.gender,
+    );
+  }
+
+  List<ProfileForField> get missingFields => [
+        if (profileCreatedFor.trim().isEmpty) ProfileForField.profileCreatedFor,
+        if (gender.trim().isEmpty) ProfileForField.gender,
+      ];
+
+  bool get isComplete => missingFields.isEmpty;
+}
+
+/// The required fields of [ProfileForForm], for validation messages.
+enum ProfileForField { profileCreatedFor, gender }
+
+/// Step 2 — "Your name" and "Date of birth".
+///
+/// Its own screen rather than a block on the State + City step, because
+/// `first_name`, `last_name` and `dob` are what every later screen's copy and
+/// every Discover card lean on, and asking for them beside a location picker
+/// buried the one thing the member came to answer. Nothing about where the
+/// values *land* changed: all three are still `BasicDetails` fields written
+/// by the same `PATCH /profiles/draft/basic-details`.
+///
+/// The date is held as three strings rather than a [DateTime] because that is
+/// what the member types — a half-entered `05 / 02 / 200` is a real state the
+/// form has to be able to represent and reject. [dob] is the parsed value, and
+/// null whenever the three parts do not name a real, allowed date.
+class OnboardingNameForm {
+  /// Draft: `BasicDetails.firstName`. Required — NOT NULL on `user_profiles`.
+  final String firstName;
+
+  /// Draft: `BasicDetails.lastName`. Required — NOT NULL on `user_profiles`.
+  final String lastName;
+
+  /// The three date-of-birth boxes, exactly as typed.
+  final String day;
+  final String month;
+  final String year;
+
+  const OnboardingNameForm({
+    this.firstName = '',
+    this.lastName = '',
+    this.day = '',
+    this.month = '',
+    this.year = '',
+  });
+
+  /// Rebuilds the form from a stored date — reopening the step shows the
+  /// answer already given rather than three empty boxes.
+  factory OnboardingNameForm.fromDraft({
+    required String firstName,
+    required String lastName,
+    DateTime? dob,
+  }) {
+    return OnboardingNameForm(
+      firstName: firstName,
+      lastName: lastName,
+      day: dob == null ? '' : dob.day.toString().padLeft(2, '0'),
+      month: dob == null ? '' : dob.month.toString().padLeft(2, '0'),
+      year: dob == null ? '' : dob.year.toString(),
+    );
+  }
+
+  OnboardingNameForm copyWith({
+    String? firstName,
+    String? lastName,
+    String? day,
+    String? month,
+    String? year,
+  }) {
+    return OnboardingNameForm(
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      day: day ?? this.day,
+      month: month ?? this.month,
+      year: year ?? this.year,
+    );
+  }
+
+  /// Youngest date of birth a matrimony profile may carry — the same floor
+  /// the wizard's calendar enforces with its `lastDate`.
+  static const int minimumAgeYears = 18;
+
+  /// Oldest. Matches the wizard picker's `firstDate` of 1950 rather than
+  /// inventing a second bound.
+  static const int earliestBirthYear = 1950;
+
+  /// The date the three boxes name, or null when they do not name one.
+  ///
+  /// Rejects, in this order: a part that is not a number, a day/month outside
+  /// its range, a day that does not exist in that month (31 February,
+  /// 29 February of a common year — caught by round-tripping through
+  /// [DateTime], which silently rolls those over), a date in the future, and a
+  /// date outside the allowed age band. Every one of those is a date a member
+  /// can type, and none of them may reach `user_profiles.dob`.
+  DateTime? get dob {
+    final d = int.tryParse(day.trim());
+    final m = int.tryParse(month.trim());
+    final y = int.tryParse(year.trim());
+    if (d == null || m == null || y == null) return null;
+    if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+    if (y < earliestBirthYear) return null;
+
+    final candidate = DateTime(y, m, d);
+    // DateTime(2003, 2, 31) is 3 March — a rollover, not the date typed.
+    if (candidate.year != y || candidate.month != m || candidate.day != d) {
+      return null;
+    }
+
+    final now = DateTime.now();
+    // Future dates, today included: nobody is born into the profile they are
+    // filling in.
+    if (!candidate.isBefore(DateTime(now.year, now.month, now.day))) {
+      return null;
+    }
+    if (candidate.isAfter(
+      DateTime(now.year - minimumAgeYears, now.month, now.day),
+    )) {
+      return null;
+    }
+    return candidate;
+  }
+
+  /// Whether the member has typed anything at all into the date boxes. Lets
+  /// the screen stay quiet on a blank form and explain itself only once
+  /// there is something to explain.
+  bool get isDateTouched =>
+      day.trim().isNotEmpty || month.trim().isNotEmpty || year.trim().isNotEmpty;
+
+  /// Why [dob] is null, for the screen's inline message. Null when the date
+  /// is either fine or not yet worth complaining about.
+  OnboardingNameDateError? get dateError {
+    if (dob != null) return null;
+    if (!isDateTouched) return null;
+    if (day.trim().isEmpty || month.trim().isEmpty || year.trim().length < 4) {
+      return null;
+    }
+
+    final d = int.tryParse(day.trim());
+    final m = int.tryParse(month.trim());
+    final y = int.tryParse(year.trim());
+    if (d == null || m == null || y == null) {
+      return OnboardingNameDateError.invalid;
+    }
+    if (y < earliestBirthYear) return OnboardingNameDateError.tooOld;
+
+    // A real calendar date that is simply too recent — the age floor, or a
+    // date that has not happened yet. Told apart from "31 February" so the
+    // message can say which.
+    final valid = m >= 1 &&
+        m <= 12 &&
+        d >= 1 &&
+        d <= 31 &&
+        DateTime(y, m, d).month == m &&
+        DateTime(y, m, d).day == d;
+    return valid
+        ? OnboardingNameDateError.tooYoung
+        : OnboardingNameDateError.invalid;
+  }
+
+  List<OnboardingNameField> get missingFields => [
+        if (firstName.trim().isEmpty) OnboardingNameField.firstName,
+        if (lastName.trim().isEmpty) OnboardingNameField.lastName,
+        if (dob == null) OnboardingNameField.dob,
+      ];
+
+  bool get isComplete => missingFields.isEmpty;
+}
+
+/// The required fields of [OnboardingNameForm], for validation messages.
+enum OnboardingNameField { firstName, lastName, dob }
+
+/// Why a typed date of birth was rejected — see [OnboardingNameForm.dateError].
+enum OnboardingNameDateError {
+  /// Not a real calendar date (31 February, letters, month 13).
+  invalid,
+
+  /// A real date, but under [OnboardingNameForm.minimumAgeYears] or still to
+  /// come.
+  tooYoung,
+
+  /// Before [OnboardingNameForm.earliestBirthYear].
+  tooOld,
+}
+
+/// Step 3 — "Your religion": religion, community, and the country the member
+/// lives in.
+///
+/// Caste and mother tongue used to be asked here as well. They are no longer
+/// collected anywhere in onboarding — see [ProfileBasicsForm] for what that
+/// costs on the backend. Neither field was deleted: both remain on the draft,
+/// in the DTOs and as columns, and the Edit Profile wizard's Religion and
+/// Language steps still edit them.
 class OnboardingReligionForm {
   /// Draft: `ReligionDetails.religion`. Required.
   final String religion;
 
-  /// Draft: `ReligionDetails.caste`. Required — NOT NULL on `user_profiles`.
-  /// Free text, like the wizard's own caste field: there is no authoritative
-  /// caste list in this app and inventing one is not an option.
-  final String caste;
-
   /// Draft: `ReligionDetails.community`. Required.
   final String community;
-
-  /// Draft: `LanguageDetails.motherTongue`. Required — NOT NULL on
-  /// `user_profiles`.
-  final String motherTongue;
 
   /// "Living in" — draft: `LocationDetails.country`. Required. The country
   /// is asked here, a step before the state and city, because it decides
@@ -53,9 +259,7 @@ class OnboardingReligionForm {
 
   const OnboardingReligionForm({
     this.religion = '',
-    this.caste = '',
     this.community = '',
-    this.motherTongue = '',
     this.livingIn = '',
     this.casteNoBar = false,
   });
@@ -70,17 +274,13 @@ class OnboardingReligionForm {
 
   OnboardingReligionForm copyWith({
     String? religion,
-    String? caste,
     String? community,
-    String? motherTongue,
     String? livingIn,
     bool? casteNoBar,
   }) {
     return OnboardingReligionForm(
       religion: religion ?? this.religion,
-      caste: caste ?? this.caste,
       community: community ?? this.community,
-      motherTongue: motherTongue ?? this.motherTongue,
       livingIn: livingIn ?? this.livingIn,
       casteNoBar: casteNoBar ?? this.casteNoBar,
     );
@@ -91,9 +291,7 @@ class OnboardingReligionForm {
   /// them down the screen.
   List<OnboardingReligionField> get missingFields => [
         if (religion.trim().isEmpty) OnboardingReligionField.religion,
-        if (caste.trim().isEmpty) OnboardingReligionField.caste,
         if (community.trim().isEmpty) OnboardingReligionField.community,
-        if (motherTongue.trim().isEmpty) OnboardingReligionField.motherTongue,
         if (livingIn.trim().isEmpty) OnboardingReligionField.livingIn,
       ];
 
@@ -101,78 +299,57 @@ class OnboardingReligionForm {
 }
 
 /// The required fields of [OnboardingReligionForm], for validation messages.
-enum OnboardingReligionField {
-  religion,
-  caste,
-  community,
-  motherTongue,
-  livingIn,
-}
+enum OnboardingReligionField { religion, community, livingIn }
 
-/// Step 4 — "Now let's build your Profile": name, gender, date of birth,
-/// state and city. Sub-community is deliberately absent: it is not required
-/// to get a member into the app, and the draft keeps the field for Edit
-/// Profile to fill in later.
+/// Step 5 — "Now let's build your Profile": State, City and Sub-community.
 ///
-/// Name, gender and date of birth are asked here for the same reason caste
-/// and mother tongue moved onto the religion step: `first_name`, `last_name`,
-/// `gender` and `dob` are all NOT NULL on `user_profiles`, so without them the
-/// backend cannot write the row and the member's profile never exists. They
-/// also happen to be what Discover renders — a card has to show a name and an
-/// age — so this is the screen that owes them.
+/// Three questions, and only the first two required. Gender left this screen
+/// for [ProfileForForm], which asks it first.
+///
+/// Caste and mother tongue are NOT asked here, and are not asked anywhere
+/// else in onboarding either. That is a deliberate product decision, and it
+/// has a cost worth stating where the next person will read it:
+/// `user_profiles.caste` and `user_profiles.mother_tongue` are NOT NULL, and
+/// the backend's `isMatchableFromDraft` requires both before it will write
+/// the profile row — so an onboarding that collects neither cannot produce a
+/// `user_profiles` row at all. Nothing about the two fields was deleted:
+/// both are still on [ReligionDetails] / [LanguageDetails], still in the
+/// DTOs, still columns, still edited by the Edit Profile wizard's Religion
+/// and Language steps, and still rendered on Discover cards and profile
+/// detail. They are simply no longer collected during signup.
+///
+/// Sub-community is asked but optional — `sub_caste` is a NULLABLE column and
+/// the gate in [PostAuthDestination] does not test it, so requiring it would
+/// block a member on a field the router will happily wave them past.
 class ProfileBasicsForm {
-  /// Draft: `BasicDetails.firstName`. Required — NOT NULL.
-  final String firstName;
-
-  /// Draft: `BasicDetails.lastName`. Required — NOT NULL.
-  final String lastName;
-
-  /// Draft: `BasicDetails.gender`. Required — NOT NULL. Held in the draft's
-  /// own representation ('Male' / 'Female'); `BasicDetails.toJson` is what
-  /// maps it to the API's MALE / FEMALE, so this must not pre-convert.
-  final String gender;
-
-  /// Draft: `BasicDetails.dob`. Required — NOT NULL.
-  final DateTime? dob;
-
   /// Draft: `LocationDetails.state`. Required.
   final String state;
 
   /// Draft: `LocationDetails.city`. Required.
   final String city;
 
+  /// Draft: `ReligionDetails.subCaste`. Optional — see the class doc.
+  final String subCommunity;
+
   const ProfileBasicsForm({
-    this.firstName = '',
-    this.lastName = '',
-    this.gender = '',
-    this.dob,
     this.state = '',
     this.city = '',
+    this.subCommunity = '',
   });
 
   ProfileBasicsForm copyWith({
-    String? firstName,
-    String? lastName,
-    String? gender,
-    DateTime? dob,
     String? state,
     String? city,
+    String? subCommunity,
   }) {
     return ProfileBasicsForm(
-      firstName: firstName ?? this.firstName,
-      lastName: lastName ?? this.lastName,
-      gender: gender ?? this.gender,
-      dob: dob ?? this.dob,
       state: state ?? this.state,
       city: city ?? this.city,
+      subCommunity: subCommunity ?? this.subCommunity,
     );
   }
 
   List<ProfileBasicsField> get missingFields => [
-        if (firstName.trim().isEmpty) ProfileBasicsField.firstName,
-        if (lastName.trim().isEmpty) ProfileBasicsField.lastName,
-        if (gender.trim().isEmpty) ProfileBasicsField.gender,
-        if (dob == null) ProfileBasicsField.dob,
         if (state.trim().isEmpty) ProfileBasicsField.state,
         if (city.trim().isEmpty) ProfileBasicsField.city,
       ];
@@ -181,7 +358,8 @@ class ProfileBasicsForm {
 }
 
 /// The required fields of [ProfileBasicsForm], for validation messages.
-enum ProfileBasicsField { firstName, lastName, gender, dob, state, city }
+/// Sub-community is absent because it is optional.
+enum ProfileBasicsField { state, city }
 
 /// Step 5 — "Marital status". Height sits here too, as the reference screen
 /// asks the two together; diet is offered alongside but optional.

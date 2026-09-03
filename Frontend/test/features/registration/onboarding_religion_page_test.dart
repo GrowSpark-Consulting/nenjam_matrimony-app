@@ -12,8 +12,14 @@ import 'package:nenjam_matrimony/features/registration/presentation/providers/re
 
 import 'onboarding_test_support.dart';
 
-/// The second onboarding screen: **religion, community and "living in" are
+/// The third onboarding screen: **religion, community and "living in" are
 /// all required**, and answering them hands off to the Email + Mobile step.
+///
+/// Caste and mother tongue are deliberately NOT on this screen any more. They
+/// moved to the "Let's build your Profile" step, which is where they are now
+/// asked, validated and sent — see profile_basics_page_test.dart. Nothing was
+/// deleted: both remain NOT NULL on `user_profiles`, and the tests below pin
+/// that this screen neither displays nor clears them.
 void main() {
   GoRouter buildRouter() {
     return GoRouter(
@@ -92,23 +98,14 @@ void main() {
     await tester.pumpAndSettle();
 
     await pickDropdown(tester, 0, 'Hindu');
-    // Caste is free text, so it sits between the Religion and Community
-    // dropdowns without being one — hence Living in is now index 3.
-    // Deliberately not 'Iyer': a caste equal to the community would make
-    // pickDropdown's `find.text(...).last` ambiguous against this field.
-    await tester.enterText(find.byType(TextFormField).first, 'Iyengar');
-    await tester.pumpAndSettle();
     await pickDropdown(tester, 1, 'Iyer');
-    await pickDropdown(tester, 2, 'Tamil');
-    await pickDropdown(tester, 3, 'India');
+    await pickDropdown(tester, 2, 'India');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     final draft = container.read(registrationProvider);
     expect(draft.religionDetails.religion, 'Hindu');
-    expect(draft.religionDetails.caste, 'Iyengar');
     expect(draft.religionDetails.community, 'Iyer');
-    expect(draft.languageDetails.motherTongue, 'Tamil');
     // "Living in" is the country — the step before state and city, because
     // it decides whether those are the right questions at all.
     expect(draft.locationDetails.country, 'India');
@@ -116,15 +113,39 @@ void main() {
     expect(repository.savedReligion?.religion, 'Hindu');
     expect(repository.savedLocation?.country, 'India');
 
-    // The regression this step exists to prevent: `caste` and `mother_tongue`
-    // are NOT NULL on `user_profiles`, so if they never reach the backend
-    // isMatchableFromDraft cannot pass, no profile row is written, and the
-    // member finishes onboarding to a permanent 404 from GET /profiles/me.
-    expect(repository.savedReligion?.caste, 'Iyengar');
-    expect(repository.savedLanguage?.motherTongue, 'Tamil');
+    // This step no longer speaks for the language section at all — the
+    // "Let's build your Profile" step owns mother tongue now, and a PATCH
+    // from here would be this screen writing a field it never asked for.
+    expect(repository.savedSections, isNot(contains('languageDetails')));
 
     expect(find.text('contact-reached'), findsOneWidget);
     expect(find.text('wizard-reached'), findsNothing);
+  });
+
+  testWidgets('Caste and Mother tongue are not on this screen', (
+    tester,
+  ) async {
+    useTallSurface(tester);
+    final container = containerWith(RecordingRegistrationRepository());
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(harness(container, buildRouter()));
+    await tester.pumpAndSettle();
+
+    // Neither label appears anywhere on the page...
+    expect(find.text('Caste'), findsNothing);
+    expect(find.text('Caste *'), findsNothing);
+    expect(find.text('Mother Tongue'), findsNothing);
+    expect(find.text('Mother Tongue *'), findsNothing);
+
+    // ...and there is no free-text input left at all: religion, community
+    // and living-in are three dropdowns, and caste was the only text field.
+    expect(find.byType(TextFormField), findsNothing);
+    expect(find.byType(DropdownButtonFormField<String>), findsNWidgets(3));
+
+    // The partner-community opt-out is a different field — PartnerPreference
+    // .castePref, not the member's own caste — and deliberately stays.
+    expect(find.byType(Checkbox), findsOneWidget);
   });
 
   testWidgets('a failed save keeps the member here rather than advancing', (
@@ -139,15 +160,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await pickDropdown(tester, 0, 'Hindu');
-    // Caste is free text, so it sits between the Religion and Community
-    // dropdowns without being one — hence Living in is now index 3.
-    // Deliberately not 'Iyer': a caste equal to the community would make
-    // pickDropdown's `find.text(...).last` ambiguous against this field.
-    await tester.enterText(find.byType(TextFormField).first, 'Iyengar');
-    await tester.pumpAndSettle();
     await pickDropdown(tester, 1, 'Iyer');
-    await pickDropdown(tester, 2, 'Tamil');
-    await pickDropdown(tester, 3, 'India');
+    await pickDropdown(tester, 2, 'India');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
@@ -165,15 +179,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await pickDropdown(tester, 0, 'Hindu');
-    // Caste is free text, so it sits between the Religion and Community
-    // dropdowns without being one — hence Living in is now index 3.
-    // Deliberately not 'Iyer': a caste equal to the community would make
-    // pickDropdown's `find.text(...).last` ambiguous against this field.
-    await tester.enterText(find.byType(TextFormField).first, 'Iyengar');
-    await tester.pumpAndSettle();
     await pickDropdown(tester, 1, 'Iyer');
-    await pickDropdown(tester, 2, 'Tamil');
-    await pickDropdown(tester, 3, 'India');
+    await pickDropdown(tester, 2, 'India');
     await tester.tap(find.byType(Checkbox));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continue'));
@@ -201,15 +208,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await pickDropdown(tester, 0, 'Hindu');
-    // Caste is free text, so it sits between the Religion and Community
-    // dropdowns without being one — hence Living in is now index 3.
-    // Deliberately not 'Iyer': a caste equal to the community would make
-    // pickDropdown's `find.text(...).last` ambiguous against this field.
-    await tester.enterText(find.byType(TextFormField).first, 'Iyengar');
-    await tester.pumpAndSettle();
     await pickDropdown(tester, 1, 'Iyer');
-    await pickDropdown(tester, 2, 'Tamil');
-    await pickDropdown(tester, 3, 'India');
+    await pickDropdown(tester, 2, 'India');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
@@ -251,8 +251,12 @@ void main() {
     // Restored verbatim, so a resumed session carries the two NOT NULL
     // answers through rather than blanking them and stranding the member
     // without a profile row.
+    // Neither is asked here any more, and neither may be lost by saving
+    // here: the notifier copies the stored values through untouched, so a
+    // member who answered them before the move keeps them.
     expect(repository.savedReligion?.caste, 'Sunni');
-    expect(repository.savedLanguage?.motherTongue, 'Urdu');
+    expect(container.read(registrationProvider).languageDetails.motherTongue,
+        'Urdu');
     expect(find.text('contact-reached'), findsOneWidget);
   });
 }

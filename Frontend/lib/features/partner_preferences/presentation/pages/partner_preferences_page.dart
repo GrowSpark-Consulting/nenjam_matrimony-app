@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
 import '../../../../core/widgets/cards/expandable_section.dart';
 import '../../../../core/widgets/sheets/app_sheets.dart';
@@ -217,6 +219,17 @@ class _PartnerPreferencesPageState extends ConsumerState<PartnerPreferencesPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // What the preferences below actually DO, which the title alone
+            // does not say — the reference leads with this line, and without
+            // it the screen opens straight into nine collapsed accordions
+            // with no statement of purpose.
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.base),
+              child: Text(
+                l10n.partnerPrefIntro,
+                style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondaryLight, height: 1.45),
+              ),
+            ),
             NmExpandableSection(
               title: l10n.partnerPrefSectionBasic,
               initiallyExpanded: true,

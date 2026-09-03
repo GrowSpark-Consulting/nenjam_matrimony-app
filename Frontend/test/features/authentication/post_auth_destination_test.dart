@@ -191,8 +191,14 @@ Map<String, dynamic> _draftBody({
 /// in this shape marks an account that has *finished* onboarding and must
 /// never be asked for contact details again.
 ///
-/// `caste`, `motherTongue`, `firstName`, `lastName`, `gender` and `dob` are
-/// here because every one of them is a NOT NULL column on `user_profiles`.
+/// `firstName`, `lastName`, `gender` and `dob` are here because every one of
+/// them is a NOT NULL column on `user_profiles` that onboarding collects and
+/// gates on — gender on Profile For, the rest on Your Name.
+///
+/// `caste` and `motherTongue` are here for a different reason: they are NOT
+/// NULL columns that onboarding NO LONGER collects. The fixture carries them
+/// so that a draft in this shape is realistic for an account created before
+/// that change, and the group above pins that their absence gates nothing.
 /// Onboarding never asked for them, so `isMatchableFromDraft` could not pass
 /// and the backend wrote no profile row at all — a member finished onboarding
 /// and `GET /profiles/me` answered 404 for the life of the account. Removing
@@ -365,10 +371,14 @@ void main() {
       final container = _container(
         draft: () async => _draftBody(
           currentStep: 3,
-          basicDetails: {'profileCreatedFor': 'Myself'},
+          // Gender too: Profile For asks both, so a draft that answers only
+          // the relation has not finished the step and would reopen it.
+          basicDetails: {'profileCreatedFor': 'Myself', 'gender': 'MALE'},
         ),
       );
-      expect(await _resolve(container), RouteNames.onboardingReligion);
+      // Your Name is what follows Profile For — the relation was accepted,
+      // which is the point; what it opens is the next unanswered step.
+      expect(await _resolve(container), RouteNames.onboardingNameDob);
       // ...and the draft is rehydrated, which is what lets each onboarding
       // screen reopen on whatever the backend already had.
       expect(
@@ -381,12 +391,13 @@ void main() {
       for (final choice in ['Son', 'Daughter', 'Brother', 'Sister', 'Friend',
         'Relative']) {
         final container = _container(
-          draft: () async =>
-              _draftBody(basicDetails: {'profileCreatedFor': choice}),
+          draft: () async => _draftBody(
+            basicDetails: {'profileCreatedFor': choice, 'gender': 'FEMALE'},
+          ),
         );
         expect(
           await _resolve(container),
-          RouteNames.onboardingReligion,
+          RouteNames.onboardingNameDob,
           reason: '"$choice" is an explicit answer',
         );
       }
@@ -405,6 +416,22 @@ void main() {
       final cases = <String, (Map<String, dynamic>, String)>{
         'no relation': (
           _answeredDraft(relation: ''),
+          RouteNames.createProfileFor,
+        ),
+        'no first name': (
+          _answeredDraft(firstName: ''),
+          RouteNames.onboardingNameDob,
+        ),
+        'no last name': (
+          _answeredDraft(lastName: ''),
+          RouteNames.onboardingNameDob,
+        ),
+        'no date of birth': (
+          _answeredDraft(dob: ''),
+          RouteNames.onboardingNameDob,
+        ),
+        'no gender': (
+          _answeredDraft(gender: ''),
           RouteNames.createProfileFor,
         ),
         'no religion': (
@@ -507,16 +534,16 @@ void main() {
     test('`isComplete` alone is not a pass through the onboarding gates',
         () async {
       // Deliberate: `isComplete` is the pre-onboarding wizard's verdict and
-      // says nothing about whether these four steps were answered, so a
-      // profile finalized before this flow existed is still asked for what
-      // it never collected rather than waved straight through.
+      // says nothing about whether these steps were answered, so a profile
+      // finalized before this flow existed is still asked for what it never
+      // collected rather than waved straight through.
       final container = _container(
         draft: () async => _draftBody(
           isComplete: true,
-          basicDetails: {'profileCreatedFor': 'Myself'},
+          basicDetails: {'profileCreatedFor': 'Myself', 'gender': 'MALE'},
         ),
       );
-      expect(await _resolve(container), RouteNames.onboardingReligion);
+      expect(await _resolve(container), RouteNames.onboardingNameDob);
     });
 
     test('an unverified email still wins over everything else', () async {
@@ -590,7 +617,62 @@ void main() {
       expect(await _resolve(c), RouteNames.createProfileFor);
     });
   });
-  // ─── The Email + Mobile step ────────────────────────────────────────
+  // ─── Fields no step asks for ────────────────────────────────────────
+  //
+  // Gender moved to Profile For and is gated there. Caste and mother tongue
+  // moved off the Religion screen and were then dropped from onboarding
+  // altogether, so no screen collects them and no gate may test them: a gate
+  // on a field nothing asks for is one a member can never answer their way
+  // past, which is an infinite loop between two screens.
+  group('a gate only ever tests a field some step actually asks for', () {
+    test('gender reopens Profile For, which is where it is asked', () async {
+      final container = _container(
+        draft: () async => _answeredDraft(gender: ''),
+        user: _contactableUser(),
+      );
+      final route = await _resolve(container);
+      expect(route, RouteNames.createProfileFor);
+      expect(route, isNot(RouteNames.profileBasics));
+    });
+
+    test('a missing caste stops nobody', () async {
+      // Onboarding does not collect it, so it cannot be a reason to re-ask a
+      // step. NOTE: the backend still needs it — see the group below.
+      final container = _container(
+        draft: () async => _answeredDraft(caste: ''),
+        user: _contactableUser(),
+      );
+      final route = await _resolve(container);
+      expect(route, RouteNames.discover);
+      expect(route, isNot(RouteNames.onboardingReligion));
+      expect(route, isNot(RouteNames.profileBasics));
+    });
+
+    test('a missing mother tongue stops nobody', () async {
+      final container = _container(
+        draft: () async => _answeredDraft(motherTongue: ''),
+        user: _contactableUser(),
+      );
+      final route = await _resolve(container);
+      expect(route, RouteNames.discover);
+      expect(route, isNot(RouteNames.onboardingReligion));
+      expect(route, isNot(RouteNames.profileBasics));
+    });
+
+    test('a draft in the exact shape onboarding now produces reaches Discover',
+        () async {
+      // Every step answered, and neither of the two fields onboarding stopped
+      // collecting. This is what a completed signup actually looks like, and
+      // it must not loop.
+      final container = _container(
+        draft: () async => _answeredDraft(caste: '', motherTongue: ''),
+        user: _contactableUser(),
+      );
+      expect(await _resolve(container), RouteNames.discover);
+    });
+  });
+
+  // ─── The Email + Mobile step ────────────────────────────────────────  // ─── The Email + Mobile step ────────────────────────────────────────
   //
   // Login and signup meet at this gate, and only one of them belongs here.
   group('the Email + Mobile step is a signup gate, not a session gate', () {
@@ -624,13 +706,19 @@ void main() {
       // for. The draft-backed gates below it must not steal the step.
       final container = _container(
         draft: () async => _draftBody(
-          basicDetails: {'profileCreatedFor': 'Myself'},
+          basicDetails: {
+            'profileCreatedFor': 'Myself',
+            // Answered, so the Profile For and Your Name gates above let
+            // this reach the contact gate — which is the one under test.
+            'gender': 'MALE',
+            'firstName': 'Arjun',
+            'lastName': 'Krishnan',
+            'dob': '1994-06-18T00:00:00.000Z',
+          },
           religionDetails: {
             'religion': 'Hindu',
-            'caste': 'Vellalar',
             'community': 'Vellalar',
           },
-          languageDetails: {'motherTongue': 'Tamil'},
           locationDetails: {'country': 'India'},
         ),
       );
@@ -642,13 +730,19 @@ void main() {
       // religion but not basics owes contact first, not Profile Basics.
       final container = _container(
         draft: () async => _draftBody(
-          basicDetails: {'profileCreatedFor': 'Myself'},
+          basicDetails: {
+            'profileCreatedFor': 'Myself',
+            // Answered, so the Profile For and Your Name gates above let
+            // this reach the contact gate — which is the one under test.
+            'gender': 'MALE',
+            'firstName': 'Arjun',
+            'lastName': 'Krishnan',
+            'dob': '1994-06-18T00:00:00.000Z',
+          },
           religionDetails: {
             'religion': 'Hindu',
-            'caste': 'Vellalar',
             'community': 'Vellalar',
           },
-          languageDetails: {'motherTongue': 'Tamil'},
           locationDetails: {'country': 'India'},
         ),
       );

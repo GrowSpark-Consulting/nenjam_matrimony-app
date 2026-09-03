@@ -16,6 +16,7 @@ import 'package:nenjam_matrimony/features/registration/presentation/pages/onboar
 import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_income_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_marital_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_photos_page.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_name_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_religion_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/profile_basics_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/profile_wizard_page.dart';
@@ -301,6 +302,21 @@ void main() {
     );
   });
 
+  testWidgets('Onboarding name is responsive across phone sizes', (
+    tester,
+  ) async {
+    // Two full-width text fields, a second headline, and a row of three
+    // narrow date boxes — the row is the part at risk, because it is the one
+    // place onboarding puts fields side by side. Audited with the keyboard
+    // raised, since typing a date is what the screen is for.
+    await _audit(
+      tester,
+      'OnboardingNamePage',
+      () => const OnboardingNamePage(),
+      keyboard: true,
+    );
+  });
+
   testWidgets('Onboarding religion is responsive across phone sizes', (
     tester,
   ) async {
@@ -391,9 +407,9 @@ void main() {
   });
 
   testWidgets('Profile basics is responsive across phone sizes', (tester) async {
-    // Three dropdowns, a two-line checkbox label and a pinned CTA — the run
-    // most likely to overflow is the shortest landscape phone in Tamil,
-    // whose caste-no-bar label is the longest of the two locales.
+    // A gender chip row, two dropdowns, a sub-community text field and a
+    // pinned CTA — the run most likely to overflow is the shortest landscape
+    // phone in Tamil, whose labels are the longest of the two locales.
     await _audit(tester, 'ProfileBasicsPage', () => const ProfileBasicsPage());
   });
 

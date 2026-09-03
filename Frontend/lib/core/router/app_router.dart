@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/tokens/app_animation_tokens.dart';
 import '../../features/astro/presentation/pages/horoscope_matching_page.dart';
 import '../../features/authentication/presentation/pages/email_verify_screen.dart';
 import '../../features/authentication/presentation/pages/forgot_password_page.dart';
@@ -49,6 +47,7 @@ import '../../features/registration/presentation/pages/onboarding_education_page
 import '../../features/registration/presentation/pages/onboarding_income_page.dart';
 import '../../features/registration/presentation/pages/onboarding_marital_page.dart';
 import '../../features/registration/presentation/pages/onboarding_photos_page.dart';
+import '../../features/registration/presentation/pages/onboarding_name_page.dart';
 import '../../features/registration/presentation/pages/onboarding_religion_page.dart';
 import '../../features/registration/presentation/pages/onboarding_verify_mobile_page.dart';
 import '../../features/registration/presentation/pages/profile_basics_page.dart';
@@ -299,6 +298,11 @@ GoRouter createRouter(WidgetRef ref) {
         path: RouteNames.createProfileFor,
         name: RouteNames.createProfileForName,
         builder: (context, state) => const CreateProfileForPage(),
+      ),
+      GoRoute(
+        path: RouteNames.onboardingNameDob,
+        name: RouteNames.onboardingNameDobName,
+        builder: (context, state) => const OnboardingNamePage(),
       ),
       GoRoute(
         path: RouteNames.onboardingReligion,
@@ -572,37 +576,16 @@ GoRouter createRouter(WidgetRef ref) {
         name: RouteNames.profileName,
         builder: (context, state) => const ProfilePage(),
       ),
-      // The profile/account menu, presented as a LEFT SIDE PANEL.
-      //
-      // Still a root-navigator route rather than a Drawer on Discover's
-      // Scaffold: a Drawer belongs to one Scaffold, so it could never be
-      // opened from anywhere but Discover, it cannot outrank the shell's
-      // floating bottom-nav pill, and it gives Android's back button
-      // nothing to pop. A route keeps both the deep link and the back
-      // button, while `opaque: false` is what lets Discover keep painting
-      // beside/behind the panel, which is the one thing the old full-screen
-      // page could not do. (A CustomTransitionPage carries no Cupertino
-      // back-swipe — the panel's own swipe-left-to-dismiss replaces it, see
-      // ProfileMenuPage.)
-      //
-      // `barrierColor` paints (and animates) the scrim over the shell, and
-      // `barrierDismissible` makes a tap outside the panel pop the route —
-      // ProfileMenuPage's own scrim gesture is the belt to this braces, so
-      // the tap works whether or not the Scaffold swallows it first.
+      // The profile/account menu. A root-navigator route (not a Drawer on
+      // Discover's Scaffold, which is what it used to be) so it covers the
+      // whole StatefulShellRoute — no sliver of Discover beside it, and no
+      // floating bottom-nav pill over it, since both belong to the shell
+      // underneath. A plain `builder:` gives it the default platform page
+      // transition, which is what carries the iOS back-swipe.
       GoRoute(
         path: RouteNames.profileMenu,
         name: RouteNames.profileMenuName,
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          opaque: false,
-          barrierDismissible: true,
-          barrierColor: AppColors.scrim,
-          barrierLabel: RouteNames.profileMenuName,
-          transitionDuration: AppAnimationTokens.normal,
-          reverseTransitionDuration: AppAnimationTokens.fast,
-          child: const ProfileMenuPage(),
-          transitionsBuilder: _slideFromLeftTransition,
-        ),
+        builder: (context, state) => const ProfileMenuPage(),
       ),
 
       // ─── Bottom Navigation — StatefulShellRoute ────────────────
@@ -667,28 +650,6 @@ GoRouter createRouter(WidgetRef ref) {
 }
 
 // ─── Custom Transitions ────────────────────────────────────────────
-
-/// Slides a page in from the LEFT edge — the side-panel transition used by
-/// the profile menu. Paired with a non-opaque page so the screen underneath
-/// stays visible beside it for the whole animation.
-Widget _slideFromLeftTransition(
-  BuildContext context,
-  Animation<double> animation,
-  Animation<double> secondaryAnimation,
-  Widget child,
-) {
-  return SlideTransition(
-    position: Tween<Offset>(begin: const Offset(-1, 0), end: Offset.zero)
-        .animate(
-          CurvedAnimation(
-            parent: animation,
-            curve: AppAnimationTokens.luxuryCurve,
-            reverseCurve: Curves.easeInCubic,
-          ),
-        ),
-    child: child,
-  );
-}
 
 Widget _slideUpTransition(
   BuildContext context,

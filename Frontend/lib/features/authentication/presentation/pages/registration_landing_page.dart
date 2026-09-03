@@ -81,13 +81,26 @@ class _RegistrationLandingPageState
   /// place the two paths part.
   void _login() => context.push(RouteNames.loginForm);
 
+  /// SIGNUP intent.
+  ///
+  /// The signup-mode reset lives in [GoogleSignInController.signIn] rather
+  /// than here, so it happens for every signup entry point that ever calls
+  /// it — and, unlike before, it happens at all: this was the one sign-up
+  /// button of the three that never called `startCreateMode()`, so Google
+  /// signup began onboarding on whatever draft the previous session had left
+  /// in memory.
+  ///
+  /// Routing still goes through [PostAuthDestination], which is what keeps a
+  /// Google account that is *already registered* out of a second signup: it
+  /// answers Discover for a finalized profile and the outstanding step for a
+  /// half-finished one, so no duplicate profile can be created here.
   Future<void> _signUpWithGoogle() async {
     if (_resolvingDestination) return;
     final l10n = AppLocalizations.of(context);
 
     final result = await ref
         .read(googleSignInControllerProvider.notifier)
-        .signIn();
+        .signIn(intent: GoogleAuthIntent.signup);
     if (!mounted) return;
 
     // Dismissing the account picker is a decision, not a fault — return to
@@ -109,7 +122,8 @@ class _RegistrationLandingPageState
     ref.read(signupMethodProvider.notifier).state = SignUpFocus.email;
     // Google already carries an address, so the destination lookup can tell
     // a returning account from a new one and route accordingly — a brand-new
-    // one lands on Profile For like the other two buttons.
+    // one lands on Profile For like the other two buttons, and walks the
+    // same onboarding sequence from there. Google gets no shortened flow.
     final route = await ref.read(postAuthDestinationProvider).resolve();
     if (!mounted) return;
     setState(() => _resolvingDestination = false);

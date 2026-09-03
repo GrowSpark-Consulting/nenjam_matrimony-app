@@ -133,8 +133,18 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   /// Switches to CREATE mode with an empty draft — the normal first-time
   /// signup path. Also used to reset state after an EDIT session ends.
   void startCreateMode() {
-    ref.read(profileFlowModeProvider.notifier).state = ProfileFlowMode.create;
+    enterCreateMode();
     state = const ProfileDraft();
+  }
+
+  /// Switches to CREATE mode and keeps whatever the draft already holds.
+  ///
+  /// For a step that has to guarantee it is not running inside a stale EDIT
+  /// session but must not cost the member their answers — Profile For, which
+  /// is reachable by Back from the step after it. [startCreateMode] is what
+  /// a genuinely new signup calls.
+  void enterCreateMode() {
+    ref.read(profileFlowModeProvider.notifier).state = ProfileFlowMode.create;
   }
 
   /// Switches to EDIT mode and hydrates the draft from the logged-in
@@ -175,10 +185,29 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     }
   }
 
-  // ─── Profile Created For ───────────────────────────────────────────
-  void setProfileCreatedFor(String value) {
+  // ─── Step 1: Profile For + Gender ──────────────────────────────────
+
+  /// Step 1 — "Profile For" and "Gender".
+  ///
+  /// Both land on `BasicDetails`, which is where each of them already lived:
+  /// gender did not gain a second home when it moved off the State & City
+  /// step, it simply gained an earlier writer. There is exactly one gender
+  /// value in the app — `BasicDetails.gender` — and this is one of the two
+  /// screens that sets it (the other being the Edit Profile wizard's Basic
+  /// Info step).
+  ///
+  /// Deliberately synchronous and network-free, as this step has always been.
+  /// It runs before any credential exists on every signup path, so a PATCH
+  /// here would be a guaranteed 401; the values reach the backend through the
+  /// same `updateBasicDetails` call they always did — `applyProfileBasics`
+  /// mid-flow, and `flushOnboardingToBackend` at the end — both of which send
+  /// the whole of `state.basicDetails`, gender included.
+  void applyProfileFor(ProfileForForm form) {
     state = state.copyWith(
-      basicDetails: state.basicDetails.copyWith(profileCreatedFor: value),
+      basicDetails: state.basicDetails.copyWith(
+        profileCreatedFor: form.profileCreatedFor,
+        gender: form.gender,
+      ),
     );
   }
 
@@ -324,17 +353,20 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   // straight to Discover at the end, so anything left only in local state
   // would be lost on the next cold start.
 
-  /// Step 2 — "Your religion". Writes religion + community, the country the
+  /// Step 3 — "Your religion". Writes religion + community, the country the
   /// member lives in, and (when ticked) the partner-community preference.
+  ///
+  /// No longer writes `caste` or `motherTongue`: both moved to the
+  /// "Let's build your Profile" step and are written by [applyProfileBasics].
+  /// They are still collected, still NOT NULL on `user_profiles`, and still
+  /// reach the same two draft sections — only the screen that asks changed.
+  /// This method leaves whatever is already stored untouched, so a member
+  /// who answered them here before the move keeps their answers.
   Future<void> applyOnboardingReligion(OnboardingReligionForm form) async {
     state = state.copyWith(
       religionDetails: state.religionDetails.copyWith(
         religion: form.religion,
-        caste: form.caste,
         community: form.community,
-      ),
-      languageDetails: state.languageDetails.copyWith(
-        motherTongue: form.motherTongue,
       ),
       locationDetails: state.locationDetails.copyWith(country: form.livingIn),
     );
@@ -342,12 +374,6 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     await _persist(() async {
       final repo = ref.read(registrationRepositoryProvider);
       await repo.updateReligionDetails(state.religionDetails,
-          skipMaterialize: true);
-      // `caste` and `motherTongue` are NOT NULL on `user_profiles`, so this
-      // language PATCH is what lets the backend materialize the row at all —
-      // see isMatchableFromDraft. Without it onboarding produced a draft the
-      // profile write could never be built from.
-      await repo.updateLanguageDetails(state.languageDetails,
           skipMaterialize: true);
       await repo.updateLocationDetails(state.locationDetails,
           skipMaterialize: true);
@@ -370,34 +396,78 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     );
   }
 
-  /// Step 4 — "State & City".
-  Future<void> applyProfileBasics(ProfileBasicsForm form) async {
+  /// Step 2 — "Your name" + "Date of birth". All three land on
+  /// `BasicDetails`, so this is one PATCH to the section the wizard's Basic
+  /// Info step already owns — no new endpoint, no new draft section.
+  ///
+  /// `form.dob` is the *parsed* date and is non-null exactly when
+  /// [OnboardingNameForm.isComplete] is true, which is what gates the CTA
+  /// that calls this. Guarded anyway: writing a null over a stored date
+  /// because a caller skipped the gate would silently un-answer the step.
+  Future<void> applyOnboardingName(OnboardingNameForm form) async {
     state = state.copyWith(
       basicDetails: state.basicDetails.copyWith(
-        firstName: form.firstName,
-        lastName: form.lastName,
-        gender: form.gender,
-        dob: form.dob,
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        dob: form.dob ?? state.basicDetails.dob,
       ),
+    );
+    await _persist(
+      () => ref
+          .read(registrationRepositoryProvider)
+          .updateBasicDetails(state.basicDetails),
+    );
+  }
+
+  /// Step 5 — "Let's build your Profile": state, city and sub-community.
+  ///
+  /// Two draft sections, so up to two PATCHes: the backend has no combined
+  /// endpoint, and inventing one for onboarding would duplicate what already
+  /// works.
+  ///
+  /// `basicDetails` is PATCHed even though this step collects none of its
+  /// fields: it is what carries the gender answered on Profile For and the
+  /// name and date of birth answered on Your Name, neither of which sends
+  /// anything itself. Dropping it would strand all four.
+  Future<void> applyProfileBasics(ProfileBasicsForm form) async {
+    // Sub-community is optional, and blanking it is a real answer only when
+    // the member had something stored to begin with: an empty box on a step
+    // reopened from a draft that never carried the field must not be treated
+    // as "clear my sub-caste". Comparing before assigning also keeps the
+    // religion PATCH off the wire entirely when nothing about it changed —
+    // which matters more now that this step no longer writes `caste`, so a
+    // needless PATCH would be sending a section it has nothing to say about.
+    final subCommunity = form.subCommunity.trim();
+    final subCasteChanged = subCommunity != state.religionDetails.subCaste;
+
+    state = state.copyWith(
       locationDetails: state.locationDetails.copyWith(
         state: form.state,
         city: form.city,
       ),
+      religionDetails: subCasteChanged
+          ? state.religionDetails.copyWith(subCaste: subCommunity)
+          : state.religionDetails,
     );
-    // Two PATCHes because the fields live in two draft sections and the
-    // backend has no combined endpoint.
+    // Up to three PATCHes: the fields live in two draft sections, plus the
+    // religion section on the steps where sub-community actually changed, and
+    // the backend has no combined endpoint.
     //
-    // Both skip materialization even though this step supplies four of the
-    // NOT NULL columns, because it cannot yet satisfy isMatchableFromDraft:
-    // that also requires `maritalStatus`, which the NEXT step collects. A
-    // materialize pass here would run the whole write-and-recompute against a
-    // draft that must fail the check, and write nothing. See
-    // [applyOnboardingMarital], which is the first step that can.
+    // All of them skip materialization even though this step supplies several
+    // of the columns the profile write needs, because it cannot yet satisfy
+    // isMatchableFromDraft: that also requires `maritalStatus`, which the NEXT
+    // step collects. A materialize pass here would run the whole
+    // write-and-recompute against a draft that must fail the check, and write
+    // nothing. See [applyOnboardingMarital], which is the first step that can.
     await _persist(() async {
       final repo = ref.read(registrationRepositoryProvider);
       await repo.updateBasicDetails(state.basicDetails, skipMaterialize: true);
       await repo.updateLocationDetails(state.locationDetails,
           skipMaterialize: true);
+      if (subCasteChanged) {
+        await repo.updateReligionDetails(state.religionDetails,
+            skipMaterialize: true);
+      }
     });
   }
 

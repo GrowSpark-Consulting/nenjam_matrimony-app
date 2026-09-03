@@ -174,23 +174,56 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   // ─── Login: Google ─────────────────────────────────────────────────
+  //
+  // LOGIN intent. An established member goes to Discover and a member
+  // part-way through registration resumes their step — but a Google identity
+  // with no account behind it is NOT enrolled into signup here. That is what
+  // this button used to do: it ran exactly the same code as the Sign Up
+  // button, so tapping "Log In" with an unregistered Google account dropped
+  // the member into Profile For and a full onboarding they never chose.
   Future<void> _onLoginGoogle() async {
+    final l10n = AppLocalizations.of(context);
     final result = await ref
         .read(googleSignInControllerProvider.notifier)
-        .signIn();
+        .signIn(intent: GoogleAuthIntent.login);
     if (!mounted) return;
     // Dismissing the account picker is a decision, not a fault — return to
     // idle silently rather than accusing the user of an error.
     if (result.cancelled) return;
     if (!result.success) {
-      _snack(
-        result.errorMessage ?? AppLocalizations.of(context).authGenericError,
-      );
+      _snack(result.errorMessage ?? l10n.authGenericError);
       return;
     }
-    // Same routing as every other provider — including the best-effort
-    // backend sync that materializes the Postgres row for a brand-new user.
-    await _routeAfterLogin(result.needsVerification);
+
+    if (result.needsVerification) {
+      await _routeAfterLogin(true);
+      return;
+    }
+
+    // Best-effort: mirrors this Firebase session into the NestJS + Postgres
+    // backend. Awaited here, unlike the other login paths, because the very
+    // next thing this does is ask that backend whether the account exists —
+    // a row it may have learned of milliseconds ago. It never throws, so
+    // awaiting it cannot turn a successful sign-in into a failure.
+    await syncUserWithBackend(ref.read(apiClientProvider));
+    final route = await ref.read(postAuthDestinationProvider).resolve();
+    if (!mounted) return;
+
+    // `createProfileFor` is what the resolver returns when the account has
+    // answered *nothing* — no finalized profile, no draft. On the signup
+    // path that is a new member starting out; on the login path it means
+    // there is no Nenjam account behind this Google identity, and beginning
+    // a 13-step signup is not what "Log In" asked for. Say so, and leave the
+    // choice on the screen that owns it.
+    if (route == RouteNames.createProfileFor) {
+      _snack(l10n.authGoogleNoAccount);
+      context.go(RouteNames.registrationLanding);
+      return;
+    }
+
+    // Everything else is a real member: Discover when registration is
+    // finished, or the step they stopped on when it is not.
+    context.go(route);
   }
 
   Future<void> _routeAfterLogin(bool needsVerification) async {

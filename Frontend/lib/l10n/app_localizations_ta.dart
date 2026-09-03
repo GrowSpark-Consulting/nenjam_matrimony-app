@@ -193,6 +193,10 @@ class AppLocalizationsTa extends AppLocalizations {
   String get authComingSoon => 'விரைவில் வருகிறது';
 
   @override
+  String get authGoogleNoAccount =>
+      'அந்த Google கணக்கிற்கான Nenjam கணக்கு கிடைக்கவில்லை. ஒன்றை உருவாக்க பதிவு செய்யவும்.';
+
+  @override
   String get authGenericError => 'ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.';
 
   @override
@@ -2305,6 +2309,41 @@ class AppLocalizationsTa extends AppLocalizations {
   @override
   String get profileForNotice =>
       'உண்மையாகத் திருமணம் தேடுபவர்களுக்கான இடம் நெஞ்சம். தவறான தகவல்களுடன் உருவாக்கப்படும், அல்லது திருமணத் தரகு நிறுவனம் சார்பாக உருவாக்கப்படும் சுயவிவரங்கள் நீக்கப்படும்.';
+
+  @override
+  String get onboardingNameHeadline => 'à®à®à¯à®à®³à¯ à®ªà¯à®¯à®°à¯';
+
+  @override
+  String get onboardingNameDobSection => 'à®ªà®¿à®±à®¨à¯à®¤ à®¤à¯à®¤à®¿';
+
+  @override
+  String get onboardingNameDobDay => 'à®¨à®¾à®³à¯';
+
+  @override
+  String get onboardingNameDobMonth => 'à®®à®¾à®¤à®®à¯';
+
+  @override
+  String get onboardingNameDobYear => 'à®à®£à¯à®à¯';
+
+  @override
+  String get onboardingNameDobInvalid =>
+      'à®à®°à®¿à®¯à®¾à®© à®ªà®¿à®±à®¨à¯à®¤ à®¤à¯à®¤à®¿à®¯à¯ à®à®³à¯à®³à®¿à®à®µà¯à®®à¯.';
+
+  @override
+  String get onboardingNameDobTooYoung =>
+      'à®à¯à®¯à®µà®¿à®µà®°à®®à¯ à®à®°à¯à®µà®¾à®à¯à® à®à¯à®±à¯à®¨à¯à®¤à®¤à¯ 18 à®µà®¯à®¤à®¾à® à®à®°à¯à®à¯à® à®µà¯à®£à¯à®à¯à®®à¯.';
+
+  @override
+  String get onboardingNameDobTooOld =>
+      'à®ªà®¿à®±à®¨à¯à®¤ à®à®£à¯à®à¯à®à¯ à®à®°à®¿à®ªà®¾à®°à¯à®à¯à®à®µà¯à®®à¯.';
+
+  @override
+  String get profileBasicsSubCommunityLabel =>
+      'à®à®à¯-à®à®®à¯à®¤à®¾à®¯à®®à¯';
+
+  @override
+  String get profileBasicsSubCommunityHint =>
+      'à®à®à¯-à®à®®à¯à®¤à®¾à®¯à®¤à¯à®¤à¯ à®à®³à¯à®³à®¿à®à®µà¯à®®à¯ (à®µà®¿à®°à¯à®ªà¯à®ªà®®à¯)';
 
   @override
   String get profileBasicsHeadline =>
@@ -4631,6 +4670,35 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get authOtpRequired => 'நாங்கள் அனுப்பிய குறியீட்டை உள்ளிடவும்';
+
+  @override
+  String get drawerSectionMatchActivity => 'உங்கள் பொருத்த செயல்பாடு';
+
+  @override
+  String get drawerSectionSettings => 'விருப்பங்கள் மற்றும் அமைப்புகள்';
+
+  @override
+  String get drawerCopyIdSemanticLabel => 'சுயவிவர ஐடியை நகலெடு';
+
+  @override
+  String get drawerIdCopied => 'சுயவிவர ஐடி நகலெடுக்கப்பட்டது';
+
+  @override
+  String get drawerTerms => 'விதிமுறைகள் மற்றும் நிபாதனைகள்';
+
+  @override
+  String drawerCopyright(String year) {
+    return '© $year நெஞ்சம் மேட்ரிமோனி';
+  }
+
+  @override
+  String drawerVersion(String version) {
+    return 'பதிப்பு $version';
+  }
+
+  @override
+  String get partnerPrefIntro =>
+      'நீங்கள் அமைத்த விருப்பங்களின் அடிப்படையில் பொருத்தங்கள் காண்பிக்கப்படும்';
 
   @override
   String get welcomeBackHeadline => 'மீண்டும் வருக';

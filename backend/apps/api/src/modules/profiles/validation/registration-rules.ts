@@ -49,14 +49,33 @@ export function isBasicDetailsComplete(basic: Section): boolean {
   ]);
 }
 
+/**
+ * Religion and community only.
+ *
+ * `caste` and `subCaste` are no longer part of this contract: onboarding does
+ * not ask for either (sub-community is offered on the "Let's build your
+ * Profile" step but is optional), so requiring them here would make
+ * `finalize()` unsatisfiable for every profile the current flow can produce.
+ */
 export function isReligionDetailsComplete(religion: Section): boolean {
-  return allPresent(religion, ['religion', 'caste', 'subCaste', 'community']);
+  return allPresent(religion, ['religion', 'community']);
 }
 
-export function isLanguageDetailsComplete(language: Section): boolean {
-  return (
-    has(language.motherTongue) && hasNonEmptyArray(language.languagesKnown)
-  );
+/**
+ * Always satisfied.
+ *
+ * Onboarding collects neither `motherTongue` nor `languagesKnown` any more —
+ * the mother-tongue question was removed from the Religion step and the
+ * languages one has never been part of the signup flow. A section nothing
+ * fills cannot be a precondition for finalizing; the column is nullable and
+ * `languagesKnown` defaults to `[]`, so absence is storable.
+ *
+ * Kept as a function rather than deleted at the call site so the four
+ * finalize checks stay symmetrical, and so restoring the requirement later is
+ * one edit here rather than a re-plumbing of `missingRequiredFields`.
+ */
+export function isLanguageDetailsComplete(_language: Section): boolean {
+  return true;
 }
 
 export function isLocationDetailsComplete(location: Section): boolean {
@@ -98,9 +117,17 @@ export function isLocationDetailsComplete(location: Section): boolean {
  * nullable. `profileCreatedFor` is absent because it is not a profile column
  * at all.
  *
+ * `caste` and `motherTongue` were here until onboarding stopped asking for
+ * them. Keeping them would have been a gate on data the product no longer
+ * collects: every new signup would fail this check, no `user_profiles` row
+ * would ever be written, and members would finish registration to a permanent
+ * 404 from `GET /profiles/me`. Both columns are nullable as of migration
+ * 20260903120000, so their absence is now a storable fact rather than a
+ * blocked write.
+ *
  * Nothing here is invented to make a draft pass: a draft still missing a
- * genuinely NOT NULL value (`caste`, say) stays blocked, which is correct —
- * the alternative is writing a fabricated value into someone's profile.
+ * genuinely NOT NULL value (`firstName`, say) stays blocked, which is correct
+ * — the alternative is writing a fabricated value into someone's profile.
  */
 export function isMatchableFromDraft(
   data: Record<string, Section | undefined>,
@@ -112,8 +139,7 @@ export function isMatchableFromDraft(
 
   return (
     allPresent(basic, ['firstName', 'lastName', 'gender', 'maritalStatus', 'dob']) &&
-    allPresent(religion, ['religion', 'caste']) &&
-    has(language.motherTongue) &&
+    has(religion.religion) &&
     allPresent(location, ['state', 'city'])
   );
 }

@@ -192,6 +192,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authComingSoon => 'Coming soon';
 
   @override
+  String get authGoogleNoAccount =>
+      'We couldn\'t find a Nenjam account for that Google account. Sign up to create one.';
+
+  @override
   String get authGenericError => 'Something went wrong. Please try again.';
 
   @override
@@ -2286,6 +2290,37 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profileForNotice =>
       'Nenjam is a space for people genuinely looking to marry. Profiles created with false details, or on behalf of a marriage bureau or any business, are removed from the platform.';
+
+  @override
+  String get onboardingNameHeadline => 'Your name';
+
+  @override
+  String get onboardingNameDobSection => 'Date of birth';
+
+  @override
+  String get onboardingNameDobDay => 'Day';
+
+  @override
+  String get onboardingNameDobMonth => 'Month';
+
+  @override
+  String get onboardingNameDobYear => 'Year';
+
+  @override
+  String get onboardingNameDobInvalid => 'Enter a real date of birth.';
+
+  @override
+  String get onboardingNameDobTooYoung =>
+      'You must be at least 18 to create a profile.';
+
+  @override
+  String get onboardingNameDobTooOld => 'Please check the year of birth.';
+
+  @override
+  String get profileBasicsSubCommunityLabel => 'Sub-community';
+
+  @override
+  String get profileBasicsSubCommunityHint => 'Enter sub-community (optional)';
 
   @override
   String get profileBasicsHeadline => 'Now let\'s build your Profile';
@@ -4555,6 +4590,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authOtpRequired => 'Enter the code we sent you';
+
+  @override
+  String get drawerSectionMatchActivity => 'Your Match Activity';
+
+  @override
+  String get drawerSectionSettings => 'Options & Settings';
+
+  @override
+  String get drawerCopyIdSemanticLabel => 'Copy profile ID';
+
+  @override
+  String get drawerIdCopied => 'Profile ID copied';
+
+  @override
+  String get drawerTerms => 'Terms & Conditions';
+
+  @override
+  String drawerCopyright(String year) {
+    return '© $year Nenjam Matrimony';
+  }
+
+  @override
+  String drawerVersion(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get partnerPrefIntro =>
+      'You will see Matches based on the Preferences you have set';
 
   @override
   String get welcomeBackHeadline => 'Welcome back';

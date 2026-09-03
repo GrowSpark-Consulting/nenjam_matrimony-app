@@ -393,7 +393,11 @@ describe('ProfileService', () => {
       await expect(service.finalize('user-1')).resolves.toBeDefined();
     });
 
-    it('throws BadRequestException when Sub Caste is missing from Religion', async () => {
+    it('finalizes without Sub Caste — it is optional now', async () => {
+      // Sub-community is offered on the "Let's build your Profile" step but
+      // never required (`sub_caste` is a nullable column), so demanding it at
+      // finalize time would make the contract unsatisfiable for every profile
+      // the current signup flow produces.
       const service = buildService({
         getDraft: jest.fn().mockResolvedValue(
           buildValidDraft({
@@ -404,11 +408,29 @@ describe('ProfileService', () => {
             },
           }),
         ),
+        upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
       });
 
-      await expect(service.finalize('user-1')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.finalize('user-1')).resolves.toBeDefined();
+    });
+
+    it('finalizes with neither caste nor mother tongue', async () => {
+      // The shape onboarding actually produces now. Both columns are nullable
+      // as of migration 20260903120000; a finalize that rejected this would
+      // block every member the current flow can create.
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(
+          buildValidDraft({
+            religionDetails: { religion: 'Hindu', community: 'Brahmin' },
+            languageDetails: {},
+          }),
+        ),
+        upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+      });
+
+      await expect(service.finalize('user-1')).resolves.toBeDefined();
     });
 
     it('throws BadRequestException when Religion is the literal "Other" placeholder', async () => {

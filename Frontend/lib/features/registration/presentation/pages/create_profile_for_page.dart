@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/animations/app_animations.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/router/route_names.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/tokens/app_animation_tokens.dart';
 import '../../../../core/theme/tokens/app_radius.dart';
@@ -14,6 +15,7 @@ import '../../../../core/widgets/buttons/icon_button.dart';
 import '../../../../core/widgets/layout/responsive_layout.dart';
 import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/models/onboarding_forms.dart';
 import '../../domain/models/profile_for_relation.dart';
 import '../providers/registration_provider.dart';
 
@@ -51,6 +53,11 @@ class CreateProfileForPage extends ConsumerStatefulWidget {
 class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
   ProfileForRelation? _selected;
 
+  /// The draft's own representation, not a second gender state: this mirrors
+  /// `BasicDetails.gender` while the screen is open and is written straight
+  /// back to it on Continue. Empty until the member picks.
+  String _gender = '';
+
   @override
   void initState() {
     super.initState();
@@ -58,10 +65,23 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
     // default, so stepping back here from the wizard — or resuming a
     // registration on a new device — shows the choice the user made
     // instead of silently reverting it.
-    _selected = ProfileForRelation.fromStorage(
-      ref.read(registrationProvider).basicDetails.profileCreatedFor,
-    );
+    final basic = ref.read(registrationProvider).basicDetails;
+    _selected = ProfileForRelation.fromStorage(basic.profileCreatedFor);
+    // Gender is read from the one field that has always held it. Stepping
+    // back here from Your Name — or resuming after PostAuthDestination
+    // rehydrates the draft — reopens on the answer already given.
+    _gender = basic.gender;
   }
+
+  /// Localized display label for a stored gender value. The value itself
+  /// stays English ('Male' / 'Female'), exactly as the Edit Profile wizard's
+  /// Basic Info step stores it — `BasicDetails.toJson` is what maps it to the
+  /// API's MALE / FEMALE, so nothing here may pre-convert.
+  String _genderLabel(AppLocalizations l10n, String value) => switch (value) {
+        'Male' => l10n.genderMale,
+        'Female' => l10n.genderFemale,
+        _ => value,
+      };
 
   /// Localized label for a relation. [ProfileForRelation.storageValue] is
   /// never localized — only what the user reads is.
@@ -88,15 +108,36 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
     }
   }
 
+  /// Both answers are required, so Continue stays inert until both are
+  /// given — the same rule [ProfileForForm.isComplete] states and the same
+  /// one PostAuthDestination gates this step on.
+  bool get _isComplete => _selected != null && _gender.isNotEmpty;
+
   void _continue() {
     final selected = _selected;
-    if (selected == null) return;
-    // Always CREATE MODE here — guarantees no stale draft/mode leaks in
-    // from a previous session.
+    if (selected == null || !_isComplete) return;
+    // CREATE mode, but WITHOUT resetting the draft.
+    //
+    // This used to call startCreateMode(), which blanks the whole draft. That
+    // was harmless while this was the only way in, and destructive the moment
+    // Back existed: a member who reached Your Name, tapped Back to change
+    // "profile for", and continued again lost every answer they had given —
+    // name, date of birth, religion, the lot. The reset belongs where a
+    // genuinely new signup starts, and it is already there: the landing
+    // page's sign-up buttons call startCreateMode() before routing here (see
+    // RegistrationLandingPage._signUpWith), and the Google path arrives via
+    // PostAuthDestination, which restores the account's own draft in CREATE
+    // mode. Setting only the mode here keeps the stale-EDIT-session guard
+    // this call was really for.
     final notifier = ref.read(registrationProvider.notifier);
-    notifier.startCreateMode();
-    notifier.setProfileCreatedFor(selected.storageValue);
-    context.go(RouteNames.onboardingReligion);
+    notifier.enterCreateMode();
+    notifier.applyProfileFor(
+      ProfileForForm(
+        profileCreatedFor: selected.storageValue,
+        gender: _gender,
+      ),
+    );
+    context.go(RouteNames.onboardingNameDob);
   }
 
   @override
@@ -163,6 +204,13 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
                                 setState(() => _selected = relation),
                           ),
                           const SizedBox(height: AppSpacing.xl),
+                          _GenderChoice(
+                            label: l10n.registrationGenderLabel,
+                            selected: _gender,
+                            labelOf: (g) => _genderLabel(l10n, g),
+                            onSelected: (g) => setState(() => _gender = g),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
                           _ProfileForNotice(text: l10n.profileForNotice),
                         ],
                       ),
@@ -182,9 +230,10 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
                       NmGradientButton(
                         label: l10n.commonContinue,
                         icon: Icons.arrow_forward_rounded,
-                        // Null until a relation is picked — NmGradientButton
-                        // renders its own disabled state from that.
-                        onPressed: _selected == null ? null : _continue,
+                        // Null until both answers are given —
+                        // NmGradientButton renders its own disabled state
+                        // from that.
+                        onPressed: _isComplete ? _continue : null,
                       ),
                     ),
                   ),
@@ -194,6 +243,56 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The gender control, in the exact form the app already uses for it — the
+/// `ChoiceChip` row from the Edit Profile wizard's Basic Info step, down to
+/// the `AppColors.primarySurface` selected fill. Deliberately not restyled
+/// into a `_ProfileForPill`: gender is a two-option question the member has
+/// met elsewhere in the app, and it should look the same everywhere.
+class _GenderChoice extends StatelessWidget {
+  final String label;
+
+  /// The stored value ('Male' / 'Female'), or empty when unanswered.
+  final String selected;
+
+  final String Function(String) labelOf;
+  final ValueChanged<String> onSelected;
+
+  const _GenderChoice({
+    required this.label,
+    required this.selected,
+    required this.labelOf,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppTypography.labelLarge),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          // Values stay English (stored and emitted); only the label is
+          // localized.
+          children: ['Male', 'Female'].map((g) {
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                child: ChoiceChip(
+                  label: Center(child: Text(labelOf(g))),
+                  selected: selected == g,
+                  selectedColor: AppColors.primarySurface,
+                  onSelected: (_) => onSelected(g),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }

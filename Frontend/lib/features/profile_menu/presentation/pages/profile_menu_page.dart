@@ -1,10 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/widgets/indicators/nm_gradient_progress_bar.dart';
@@ -28,26 +34,34 @@ import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 // ProfileMenuPage
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// The profile / account menu, presented as a FULL-SCREEN page rather than the
-// partial-width side drawer it used to be. Reached by tapping the avatar in
-// the Discover app bar, which pushes RouteNames.profileMenu onto the ROOT
-// navigator — above the StatefulShellRoute — so nothing of Discover (nor the
-// floating bottom-nav pill, which belongs to the shell's own Scaffold) shows
-// behind or beside it, and the Android back button / iOS back-swipe pop it
-// like any other pushed page.
+// The profile / account menu, presented as a FULL-SCREEN page. Reached by
+// tapping the avatar in the TOP-LEFT of the Discover app bar, which pushes
+// RouteNames.profileMenu onto the ROOT navigator — above the
+// StatefulShellRoute — as an OPAQUE page (see app_router.dart), so nothing of
+// Discover, and none of the floating bottom-nav pill that belongs to the
+// shell's own Scaffold, shows behind or beside it.
 //
-// Surface:  warm blush white (AppColors.backgroundLight) — the same colour
-//           AppBarTheme paints, so the bar reads as part of the same sheet.
+// Why a route and not a Drawer: a Drawer belongs to exactly one Scaffold, so
+// it could only ever open from Discover, it is capped at part of the screen
+// width with the page underneath still showing beside it, it sits *under* the
+// shell's floating bottom-nav pill, and it gives the Android back button
+// nothing to pop. As an opaque route the page covers everything, keeps the
+// back button and the existing /profile-menu deep link, carries the iOS
+// back-swipe for free, and can be opened from any screen later without
+// re-parenting it.
+//
+// Surface:  warm blush white (AppColors.backgroundLight) edge to edge — the
+//           same token the menu has always used, in every theme mode.
 //
 // Layout (top → bottom):
-//   0. Bare AppBar             (back button only; owns the status-bar inset)
+//   0. AppBar                  (back arrow only; owns the status-bar inset)
 //   ┌ one scroll view ────────────────────────────────────────────────────┐
 //   │ 1. Profile header  (responsive 76–104dp avatar, name, subtitle, ID) │
 //   │ 2. Profile Strength bar   (backend %, plum→magenta fill)            │
-//   │ 3. Menu list      (section dividers, active plum accent, 52px rows) │
+//   │ 3. Menu list      (section dividers, active plum accent, 54px rows) │
 //   └─────────────────────────────────────────────────────────────────────┘
-//   4. Premium upgrade strip   (pinned; compact, magenta border)
-//   5. Fixed bottom footer     (pinned; version + Rate Us)
+//   4. Premium upgrade strip   (pinned; compact, cream hairline)
+//   5. Fixed bottom footer     (pinned; real app version + Rate Us)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ProfileMenuPage extends ConsumerStatefulWidget {
@@ -218,7 +232,9 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                             openEditProfile(context, ref, wizardStep: 12),
                       ),
 
-                      _MenuDivider(),
+                      _MenuSectionHeader(
+                        label: l10n.drawerSectionMatchActivity,
+                      ),
 
                       // Match Activity group
                       Consumer(
@@ -277,7 +293,7 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                         onTap: () => context.push(RouteNames.profileViewers),
                       ),
 
-                      _MenuDivider(),
+                      _MenuSectionHeader(label: l10n.drawerSectionSettings),
 
                       // Settings group
                       _DrawerItem(
@@ -412,13 +428,25 @@ class _IdentityError extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          TextButton(
-            onPressed: onRetry,
-            child: Text(
-              AppLocalizations.of(context).commonRetry,
-              style: AppTypography.labelMedium.copyWith(
-                color: AppColors.secondaryDark,
-                fontWeight: FontWeight.w700,
+          // Flexible, with a compact minimum: inside the panel there is
+          // roughly 280dp to share, and the Tamil "Retry" label at the
+          // button's default 64dp minimum + 16dp side padding pushed the row
+          // over. It now gives ground before the message does.
+          Flexible(
+            child: TextButton(
+              onPressed: onRetry,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, AppConstants.minTouchTarget),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+              ),
+              child: Text(
+                AppLocalizations.of(context).commonRetry,
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.secondaryDark,
+                  fontWeight: FontWeight.w700,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),
@@ -670,37 +698,119 @@ class _ProfileHeader extends StatelessWidget {
           ],
 
           // ── Profile ID pill ──────────────────────────────────────────────
+          //
+          // Tappable, because the ID is the one thing on this screen a
+          // member has to give to somebody else — support, or a match
+          // asking which profile is theirs. Reading a 10-character code off
+          // the screen to retype it is the alternative, so the pill copies
+          // itself and says so.
           if (profileId.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xs),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: 3,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.accentSoft.withValues(
-                  alpha: 1.0,
-                ),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                border: Border.all(
-                  color: AppColors.secondary.withValues(alpha: 0.4),
-                ),
-              ),
-              child: Text(
-                AppLocalizations.of(context).profileIdLabel(profileId),
-                style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.secondaryDark,
-                  fontWeight: FontWeight.w600,
-                  // 10 → 11
-                  fontSize: 11,
-                  letterSpacing: 0.5,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
+            _ProfileIdChip(profileId: profileId),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// The profile ID, in a pill that copies it to the clipboard when tapped.
+///
+/// Stateful only to hold the "copied" acknowledgement: the icon swaps to a
+/// tick for a moment so the tap has a visible result even when a snack bar
+/// is covered by something else, then returns to the copy glyph. Nothing
+/// about the ID itself changes.
+class _ProfileIdChip extends StatefulWidget {
+  final String profileId;
+
+  const _ProfileIdChip({required this.profileId});
+
+  @override
+  State<_ProfileIdChip> createState() => _ProfileIdChipState();
+}
+
+class _ProfileIdChipState extends State<_ProfileIdChip> {
+  static const Duration _ackDuration = Duration(seconds: 2);
+
+  bool _copied = false;
+  Timer? _ackTimer;
+
+  @override
+  void dispose() {
+    _ackTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _copy() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    // The bare ID, not the "ID: x" label around it - what a member pastes
+    // into a support chat should be the identifier alone.
+    await Clipboard.setData(ClipboardData(text: widget.profileId));
+    if (!mounted) return;
+
+    setState(() => _copied = true);
+    _ackTimer?.cancel();
+    _ackTimer = Timer(_ackDuration, () {
+      if (mounted) setState(() => _copied = false);
+    });
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l10n.drawerIdCopied)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Semantics(
+      button: true,
+      label: l10n.drawerCopyIdSemanticLabel,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _copy,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: 3,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.accentSoft,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+              border: Border.all(
+                color: AppColors.secondary.withValues(alpha: 0.4),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    l10n.profileIdLabel(widget.profileId),
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.secondaryDark,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                      letterSpacing: 0.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs2),
+                Icon(
+                  _copied ? Icons.check_rounded : Icons.copy_rounded,
+                  size: 13,
+                  color: AppColors.secondaryDark,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -821,6 +931,49 @@ class _ProfileStrengthBar extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Menu Section Header
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// The title that opens a group of menu rows.
+///
+/// Replaces the bare rule that used to separate the groups: the rows are
+/// grouped by what they are *for* (match activity, then options), and a
+/// hairline alone left the reader to infer that from adjacency. The first
+/// group has no header on purpose — it sits directly under the identity
+/// block, which is its heading.
+class _MenuSectionHeader extends StatelessWidget {
+  final String label;
+
+  const _MenuSectionHeader({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      // Generous above, tight below: the space belongs to the boundary with
+      // the group that ended, not between this title and the rows it heads.
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.base,
+        AppSpacing.base,
+        AppSpacing.base,
+        AppSpacing.xs,
+      ),
+      child: Semantics(
+        header: true,
+        child: Text(
+          label,
+          style: AppTypography.titleSmall.copyWith(
+            color: AppColors.textPrimaryLight,
+            fontWeight: FontWeight.w700,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Menu Divider
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -905,9 +1058,7 @@ class _DrawerItemState extends State<_DrawerItem>
       widget.iconColor ??
       (widget.isActive ? AppColors.primary : AppColors.secondary);
 
-  Color _effectiveLabelColor() =>
-      widget.labelColor ??
-      AppColors.primary;
+  Color _effectiveLabelColor() => widget.labelColor ?? AppColors.primary;
 
   @override
   Widget build(BuildContext context) {
@@ -938,9 +1089,7 @@ class _DrawerItemState extends State<_DrawerItem>
                 margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                 decoration: BoxDecoration(
                   color: widget.isActive
-                      ? AppColors.softLavender.withValues(
-                          alpha: 1.0,
-                        )
+                      ? AppColors.softLavender.withValues(alpha: 1.0)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   border: widget.isActive
@@ -1018,69 +1167,94 @@ class _PremiumStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(
-          AppSpacing.sm,
-          AppSpacing.xs,
-          AppSpacing.sm,
-          AppSpacing.xs,
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.base,
-          vertical: AppSpacing.sm,
-        ),
-        // Cream hairline rather than magenta: a magenta border on the plum
-        // fill sits at ~1.7:1 and left the strip with no edge at all.
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          border: Border.all(
-            color: AppColors.premiumCream.withValues(alpha: 0.30),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.workspace_premium_rounded,
-              size: 18,
-              color: AppColors.accentSoft,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.base,
+        AppSpacing.xs,
+        AppSpacing.base,
+        AppSpacing.xs,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Ink(
+            // Full-width and gradient-filled, where this used to be a
+            // compact bordered strip. It is the one commercial action on
+            // the panel and the only thing here that is not navigation, so
+            // it reads as a button rather than as another menu row - and
+            // sitting directly above the footer, a hairline box was easy to
+            // mistake for one.
+            decoration: BoxDecoration(
+              gradient: AppGradients.match,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
             ),
-            const SizedBox(width: AppSpacing.xs),
-            Expanded(
-              child: Text(
-                l10n.drawerPremiumTitle,
-                // Blush *surface* tone, not the mid-rose: this sits on a
-                // solid plum fill where #F58CB4 lands under 4:1.
-                style: AppTypography.labelLarge.copyWith(
-                  color: AppColors.accentSoft,
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Container(
+            child: Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: 4,
+                horizontal: AppSpacing.base,
+                vertical: AppSpacing.sm,
               ),
-              decoration: BoxDecoration(
-                color: AppColors.secondary,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-              ),
-              child: Text(
-                l10n.drawerUpgrade,
-                style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.textOnSecondary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 11,
-                ),
+              // Two parts, the way the reference lays this out: what the
+              // offer IS on the left, the action on the right. Centring a
+              // lone "Upgrade Now" dropped the product name entirely, so
+              // the row read as a button with no subject.
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.workspace_premium_rounded,
+                    size: 18,
+                    // White on the magenta gradient, not the blush tone the
+                    // bordered version used: that was chosen against a
+                    // solid plum fill and drops under 4:1 on this one.
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      l10n.drawerPremiumTitle,
+                      style: AppTypography.labelLarge.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  // The action itself, as a pill on the gradient. White
+                  // ground rather than another tint of magenta, so it reads
+                  // as the one tappable thing in a row that is already
+                  // entirely tappable.
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusFull,
+                        ),
+                      ),
+                      child: Text(
+                        l10n.drawerUpgrade,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.secondaryDark,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1096,48 +1270,143 @@ class _DrawerFooter extends StatelessWidget {
 
   const _DrawerFooter({required this.l10n});
 
+  /// Opens the app's store listing. `externalApplication` is what hands the
+  /// https link to the Play Store app on Android (rather than an in-app web
+  /// view); everywhere else it opens in the browser.
+  Future<void> _rateUs(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final label = l10n.safetyErrorGeneric;
+    var launched = false;
+    try {
+      launched = await launchUrl(
+        Uri.parse(AppConstants.storeListingUrl),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      launched = false;
+    }
+    if (!launched) {
+      messenger.showSnackBar(SnackBar(content: Text(label)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Rendered fresh each build rather than baked into a constant: a range
+    // ending in a year that has already passed is the classic dead-footer
+    // tell, and there is nothing here worth caching to avoid it.
+    final year = DateTime.now().year.toString();
+
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.base,
-        vertical: AppSpacing.xs,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.base,
+        AppSpacing.sm,
+        AppSpacing.base,
+        AppSpacing.sm,
       ),
       decoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: AppColors.dividerLight,
-          ),
-        ),
+        border: Border(top: BorderSide(color: AppColors.dividerLight)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Flexible(
-            child: Text(
-              '${l10n.drawerVersionLabel} v2.4',
-              // 10 → 11
-              style: AppTypography.labelSmall.copyWith(
-                color: AppColors.textTertiaryLight,
-                fontSize: 11,
+          // ── Legal + Rate Us ──────────────────────────────────────────
+          //
+          // One row, because both are actions; the two lines under it are
+          // facts about the build and are never tappable.
+          Row(
+            children: [
+              Flexible(
+                child: _FooterLink(
+                  label: l10n.drawerTerms,
+                  underline: true,
+                  // The screen the app already has for this. Not a new
+                  // page, and not an external URL - the content lives in
+                  // the app.
+                  onTap: () => context.push(RouteNames.privacy),
+                ),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+              const SizedBox(width: AppSpacing.sm),
+              // The label used to be inert - the old drawer's `onRateUsTap`
+              // hook was never wired by any caller. There is no in-app
+              // review flow in the project to reuse, so this opens the
+              // store listing with the url_launcher the Help screen already
+              // uses, rather than pulling in a review SDK.
+              Flexible(
+                child: _FooterLink(
+                  label: l10n.drawerRateUs,
+                  onTap: () => _rateUs(context),
+                ),
+              ),
+            ],
           ),
-          // No tap handler — the drawer's `onRateUsTap` hook was never wired
-          // by any caller, so this label has always been inert. Kept exactly
-          // as it renders today rather than inventing a store-review flow.
+          const SizedBox(height: 2),
           Text(
-            AppLocalizations.of(context).drawerRateUs,
-            // 10 → 11
+            l10n.drawerCopyright(year),
+            style: _footerTextStyle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            // The build's real version, from the single constant the rest
+            // of the app already reads - never a number typed in here.
+            l10n.drawerVersion(AppConstants.appVersion),
+            style: _footerTextStyle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shared by both footer text lines so they cannot drift apart. Off the
+/// project's type scale rather than a bare TextStyle, so it inherits the
+/// family and tracking every other label on this screen uses.
+final TextStyle _footerTextStyle = AppTypography.labelSmall.copyWith(
+  fontSize: 11,
+  height: 1.4,
+  color: AppColors.textTertiaryLight,
+);
+
+/// A tappable footer label. Flexible by design: the Tamil strings are
+/// roughly twice the width of the English ones, so both halves of the row
+/// shrink rather than overflow — on a 320dp phone there is no slack.
+class _FooterLink extends StatelessWidget {
+  final String label;
+  final bool underline;
+  final VoidCallback onTap;
+
+  const _FooterLink({
+    required this.label,
+    required this.onTap,
+    this.underline = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs2),
+          child: Text(
+            label,
             style: AppTypography.labelSmall.copyWith(
               color: AppColors.secondaryDark,
               fontWeight: FontWeight.w700,
               fontSize: 11,
+              decoration: underline ? TextDecoration.underline : null,
+              decorationColor: AppColors.secondaryDark,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-        ],
+        ),
       ),
     );
   }
