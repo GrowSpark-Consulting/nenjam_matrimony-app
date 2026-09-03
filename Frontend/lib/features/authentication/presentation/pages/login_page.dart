@@ -9,6 +9,7 @@ import '../../../../core/network/api_providers.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/utils/auth_trace.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/buttons/icon_button.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
@@ -111,6 +112,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   // ─── Login: Email + Password ───────────────────────────────────────
   Future<void> _onLoginEmail() async {
     if (!(_loginFormKey.currentState?.validate() ?? false)) return;
+    AuthTrace.intent(channel: 'email', intent: 'LOGIN');
     final result = await ref
         .read(loginControllerProvider.notifier)
         .loginWithEmail(
@@ -118,6 +120,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           password: _loginPasswordCtrl.text,
         );
     if (!mounted) return;
+    AuthTrace.firebaseAuth(channel: 'email', success: result.success);
     if (!result.success) {
       _snack(
         result.errorMessage ?? AppLocalizations.of(context).authGenericError,
@@ -135,6 +138,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   // points reach one implementation.
   Future<void> _onLoginMobile() async {
     if (!(_loginFormKey.currentState?.validate() ?? false)) return;
+    AuthTrace.intent(channel: 'mobile', intent: 'LOGIN');
     final phone = '+91${_loginPhoneCtrl.text.trim()}';
     await storageService.setPendingPhone(phone);
     await ref.read(otpVerifierProvider).send(phone);
@@ -149,6 +153,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   // collects the two fields.
   Future<void> _onLoginIdentifier() async {
     if (!(_loginFormKey.currentState?.validate() ?? false)) return;
+    AuthTrace.intent(channel: 'identifier', intent: 'LOGIN');
     final result = await ref
         .read(loginControllerProvider.notifier)
         .loginWithIdentifier(
@@ -167,6 +172,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // straight to Discover. An email login has one, and takes the same
     // route every other Firebase sign-in takes.
     if (result.user == null) {
+      AuthTrace.navigate(RouteNames.discover, reason: 'mobile + password login');
       context.go(RouteNames.discover);
       return;
     }
@@ -183,10 +189,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   // the member into Profile For and a full onboarding they never chose.
   Future<void> _onLoginGoogle() async {
     final l10n = AppLocalizations.of(context);
+    AuthTrace.intent(channel: 'google', intent: 'LOGIN');
     final result = await ref
         .read(googleSignInControllerProvider.notifier)
         .signIn(intent: GoogleAuthIntent.login);
     if (!mounted) return;
+    AuthTrace.firebaseAuth(channel: 'google', success: result.success);
     // Dismissing the account picker is a decision, not a fault — return to
     // idle silently rather than accusing the user of an error.
     if (result.cancelled) return;
@@ -217,12 +225,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // choice on the screen that owns it.
     if (route == RouteNames.createProfileFor) {
       _snack(l10n.authGoogleNoAccount);
+      AuthTrace.navigate(
+        RouteNames.registrationLanding,
+        reason: 'LOGIN intent, no Nenjam account',
+      );
       context.go(RouteNames.registrationLanding);
       return;
     }
 
     // Everything else is a real member: Discover when registration is
     // finished, or the step they stopped on when it is not.
+    AuthTrace.navigate(route, reason: 'PostAuthDestination');
     context.go(route);
   }
 
@@ -236,9 +249,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       final emailVerified =
           ref.read(firebaseAuthServiceProvider).currentUser?.emailVerified ??
           false;
-      context.go(
-        emailVerified ? RouteNames.verifyPhone : RouteNames.verifyEmail,
-      );
+      final verifyRoute =
+          emailVerified ? RouteNames.verifyPhone : RouteNames.verifyEmail;
+      AuthTrace.navigate(verifyRoute, reason: 'verification outstanding');
+      context.go(verifyRoute);
       return;
     }
 
@@ -248,6 +262,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // the single place that decision is made — see its doc comment.
     final route = await ref.read(postAuthDestinationProvider).resolve();
     if (!mounted) return;
+    AuthTrace.navigate(route, reason: 'PostAuthDestination');
     context.go(route);
   }
 
@@ -298,20 +313,27 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
             // Login is reached both as a flow root (via `go` after Splash/
             // OTP — nothing to pop to) and pushed from the landing screen
-            // (via `push`, where the user needs a way back) — only show a
-            // back affordance when there's actually something to pop.
+            // (via `push`). The arrow shows either way: as a flow root there
+            // was no way off this screen at all, which left a member who had
+            // opened Login by mistake with nowhere to go but the system back
+            // button. Where there is something to pop it pops; where there is
+            // not it goes to the landing screen — the screen that precedes
+            // signing in, and the same fallback CreateProfileForPage._back
+            // already uses for the same situation. Never a bare `pop()` on an
+            // empty stack.
             // White icon: this overlays NmCurvedHeader's plum background.
-            if (context.canPop())
-              Positioned(
-                top: MediaQuery.paddingOf(context).top,
-                left: 4,
-                child: NmIconButton(
-                  icon: Icons.arrow_back_rounded,
-                  onPressed: () => context.pop(),
-                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  color: Colors.white,
-                ),
+            Positioned(
+              top: MediaQuery.paddingOf(context).top,
+              left: 4,
+              child: NmIconButton(
+                icon: Icons.arrow_back_rounded,
+                onPressed: () => context.canPop()
+                    ? context.pop()
+                    : context.go(RouteNames.registrationLanding),
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                color: Colors.white,
               ),
+            ),
           ],
         ),
       ),

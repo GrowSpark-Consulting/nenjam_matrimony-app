@@ -52,9 +52,17 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
       return;
     }
 
+    // Guard against a second tap while the first is still in flight — the
+    // button is disabled below, but a fast double-tap can land before the
+    // rebuild does, and this save is not idempotent-cheap.
+    if (_isSaving) return;
     setState(() => _isSaving = true);
     try {
-      await ref.read(registrationProvider.notifier).finalizeToBackend();
+      // Republishes the whole draft rather than calling finalize: editing an
+      // existing profile is not completing a registration, and finalize's
+      // gate rejects optional sections onboarding half-filled on the member's
+      // behalf. See RegistrationNotifier.publishEditedProfile.
+      await ref.read(registrationProvider.notifier).publishEditedProfile();
     } on RegistrationApiException catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);

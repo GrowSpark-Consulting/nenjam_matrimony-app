@@ -8,6 +8,7 @@ import 'package:nenjam_matrimony/core/services/storage_service.dart';
 import 'package:nenjam_matrimony/features/authentication/data/models/auth_user.dart';
 import 'package:nenjam_matrimony/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:nenjam_matrimony/features/authentication/domain/services/account_availability.dart';
+import 'package:nenjam_matrimony/features/authentication/domain/services/dummy_otp_session.dart';
 import 'package:nenjam_matrimony/features/authentication/domain/services/local_auth_session.dart';
 import 'package:nenjam_matrimony/features/authentication/presentation/controllers/login_controller.dart';
 import 'package:nenjam_matrimony/features/authentication/presentation/providers/auth_providers.dart';
@@ -16,11 +17,19 @@ import 'package:nenjam_matrimony/features/splash/presentation/providers/splash_p
 /// Logging in must end in a session the rest of the app agrees with, and in
 /// Discover — never in onboarding.
 ///
-/// The two mobile routes are the ones with no Firebase session to point at
-/// (nothing mints a phone credential while the OTP is the development
-/// verifier), so they are the ones that can most easily end up "navigated
-/// but not authenticated". These tests pin that they actually open a
-/// session, that it survives a restart, and that logging out closes it.
+/// The two mobile routes are the ones with no phone credential to point at
+/// (nothing mints one while the OTP is the development verifier), so they are
+/// the ones that can most easily end up "navigated but not authenticated".
+///
+/// They no longer end the same way. Mobile + OTP now exchanges the passed code
+/// for a REAL Firebase session through the backend
+/// ([DummyOtpSessionStarter]) — a failed exchange is a failed login, because
+/// letting someone in with no account behind them is the bug that exchange
+/// exists to close. Mobile + password still records a [LocalAuthSession],
+/// which is the remaining path with nothing to sign in with.
+///
+/// These tests pin that each actually opens a session, that it survives a
+/// restart, and that logging out closes it.
 void main() {
   setUpAll(() async {
     SharedPreferences.setMockInitialValues({});
@@ -34,29 +43,50 @@ void main() {
   });
 
   group('mobile + OTP', () {
-    test('any non-empty code opens a session and reports success', () async {
-      final container = _container();
+    test('any non-empty code is exchanged for a real Firebase session',
+        () async {
+      final starter = _RecordingStarter();
+      final container = _container(starter: starter);
       final controller = container.read(loginControllerProvider.notifier);
 
       for (final code in ['123456', '000000', '111111', '999999', '1234']) {
-        await storageService.clearLocalSession();
-
         final result = await controller.loginWithMockOtp(
           phoneE164: '+919876543210',
           code: code,
         );
 
         expect(result.success, isTrue, reason: '"$code" must be accepted');
-        expect(
-          container.read(localAuthSessionProvider).isActive,
-          isTrue,
-          reason: 'the app must be authenticated, not merely navigated',
-        );
-        expect(
-          container.read(localAuthSessionProvider).identifier,
-          '+919876543210',
-        );
       }
+
+      // The point of the exchange: the number the member typed is what the
+      // backend is asked to provision, once per accepted code.
+      expect(starter.phones, everyElement('+919876543210'));
+      expect(starter.phones, hasLength(5));
+    });
+
+    test('a code the backend cannot turn into a session is a failed login',
+        () async {
+      // The dummy-OTP flags off, the number not whitelisted, Firebase Admin
+      // unconfigured — whatever the reason, there is no account behind this
+      // member, and reporting success would put them exactly where the old
+      // LocalAuthSession did: navigated, unauthenticated, saving nothing.
+      final container = _container(
+        starter: _RecordingStarter(
+          failure: DummyOtpSessionException('not enabled', statusCode: 403),
+        ),
+      );
+
+      final result = await container
+          .read(loginControllerProvider.notifier)
+          .loginWithMockOtp(phoneE164: '+919876543210', code: '1234');
+
+      expect(result.success, isFalse);
+      expect(result.errorMessage, 'not enabled');
+      expect(
+        container.read(localAuthSessionProvider).isActive,
+        isFalse,
+        reason: 'a failed exchange must not fall back to a local marker',
+      );
     });
 
     test('an empty code is refused and opens no session', () async {
@@ -199,16 +229,37 @@ class _FakeAuthRepository implements FirebaseAuthRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// Stands in for the backend exchange. Records what it was asked to
+/// provision so a test can assert the identity, and can be told to fail so the
+/// "no account behind this member" branch is exercised without a server.
+class _RecordingStarter implements DummyOtpSessionStarter {
+  _RecordingStarter({this.failure});
+
+  final DummyOtpSessionException? failure;
+  final List<String> phones = <String>[];
+
+  @override
+  Future<String> start({required String phoneE164, String? email}) async {
+    if (failure != null) throw failure!;
+    phones.add(phoneE164);
+    return 'firebase-uid-for-$phoneE164';
+  }
+}
+
 ProviderContainer _container({
   bool phoneExists = true,
   bool lookupFails = false,
   bool signedOut = false,
+  DummyOtpSessionStarter? starter,
 }) {
   final container = ProviderContainer(
     overrides: [
       authRepositoryProvider.overrideWithValue(_FakeAuthRepository()),
       accountAvailabilityProvider.overrideWithValue(
         _FakeAvailability(phoneExists: phoneExists, fails: lookupFails),
+      ),
+      dummyOtpSessionStarterProvider.overrideWithValue(
+        starter ?? _RecordingStarter(),
       ),
       if (signedOut)
         authStateChangesProvider.overrideWith((ref) => Stream.value(null)),

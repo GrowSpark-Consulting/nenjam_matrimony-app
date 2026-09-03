@@ -6,12 +6,13 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/services/storage_service.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/utils/auth_trace.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/buttons/icon_button.dart';
 import '../../../../core/widgets/inputs/otp_input.dart';
 import '../../../../core/widgets/layout/responsive_layout.dart';
 import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
-import '../../../authentication/domain/services/local_auth_session.dart';
+import '../../../authentication/domain/services/dummy_otp_session.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/domain/services/otp_verifier.dart';
 import '../providers/registration_provider.dart';
@@ -42,6 +43,12 @@ class _OnboardingVerifyMobilePageState
   bool _verifying = false;
   bool _wrongCode = false;
 
+  /// Why the correct code still did not produce a session. Rendered in the
+  /// same line the wrong-code message uses — a member who answered correctly
+  /// and got nothing is owed the reason, not a silent walk into an app where
+  /// nothing they do will persist.
+  String? _sessionError;
+
   @override
   void initState() {
     super.initState();
@@ -65,11 +72,13 @@ class _OnboardingVerifyMobilePageState
   void _edit() => context.go(RouteNames.onboardingContact);
 
   Future<void> _verify() async {
+    final l10n = AppLocalizations.of(context);
     final verifier = ref.read(otpVerifierProvider);
     if (_otp.length != verifier.codeLength || _verifying) return;
     setState(() {
       _verifying = true;
       _wrongCode = false;
+      _sessionError = null;
     });
 
     final ok = await verifier.verify(_otp);
@@ -87,20 +96,44 @@ class _OnboardingVerifyMobilePageState
     // credential either signed the member in or was linked to the account
     // they already had, and the router guard sees a genuine user from here.
     //
-    // With the dummy OTP there is no credential to exchange, so this opens a
-    // LocalAuthSession instead — the same thing the mobile login paths do
-    // (see LoginController), for the same reason. Without it a member finished
-    // onboarding in a state the app treated as signed out: the flush below
-    // sent nothing, no `user_profiles` row was ever written, and every screen
-    // afterwards answered 401. Opening it *before* the flush is what makes
-    // that flush authenticate.
+    // With the dummy OTP there is no credential to exchange, so the backend
+    // mints one: `POST /auth/dummy-otp/session` creates (or reuses) the real
+    // Firebase Auth account and the internal `users` row for this number, and
+    // returns a custom token this signs in with. That is what a pass has to
+    // produce. It used to open a LocalAuthSession instead — a device-local
+    // marker with an `X-Dev-Auth-Phone` header behind it — and a member could
+    // finish signup with no Firebase account and no `users` row at all: the
+    // flush below sent nothing, no `user_profiles` row was ever written, and
+    // every screen afterwards answered 401.
     final phone = storageService.pendingPhone;
-    if (phone != null && phone.isNotEmpty) {
-      await ref.read(localAuthSessionProvider).start(
-            identifier: phone,
-            method: LocalAuthMethod.mobileOtp,
-          );
+    if (phone == null || phone.isEmpty) {
+      setState(() {
+        _verifying = false;
+        _sessionError = l10n.onboardingVerifyMobileSessionFailed;
+      });
+      return;
     }
+    try {
+      await ref.read(dummyOtpSessionStarterProvider).start(
+            phoneE164: phone,
+            // Carried so an email signup lands on this same single account
+            // rather than a second one.
+            email: storageService.pendingEmail,
+          );
+    } on DummyOtpSessionException catch (error) {
+      if (!mounted) return;
+      // No session was opened, so there is nothing to flush and nothing to
+      // finalize. Staying here with the reason is the honest outcome — the
+      // alternative is the exact silent half-signup this replaced.
+      AuthTrace.firebaseAuth(channel: 'dummy-otp', success: false);
+      setState(() {
+        _verifying = false;
+        _sessionError = error.message;
+      });
+      return;
+    }
+    if (!mounted) return;
+    AuthTrace.firebaseAuth(channel: 'dummy-otp', success: true);
 
     // Still written for the router's own local-completion bridge, and cleared
     // on sign-out along with everything else.
@@ -137,6 +170,7 @@ class _OnboardingVerifyMobilePageState
     // it is verified.
     await storageService.clearPendingPhone();
     if (!mounted) return;
+    AuthTrace.navigate(RouteNames.discover, reason: 'onboarding finalized');
     context.go(RouteNames.discover);
   }
 
@@ -232,16 +266,18 @@ class _OnboardingVerifyMobilePageState
                             onChanged: (value) => setState(() {
                               _otp = value;
                               _wrongCode = false;
+                              _sessionError = null;
                             }),
                           ),
                           const SizedBox(height: AppSpacing.md),
                           Text(
-                            _wrongCode
-                                ? l10n.authInvalidOtp
-                                : l10n.onboardingVerifyMobileEnter,
+                            _sessionError ??
+                                (_wrongCode
+                                    ? l10n.authInvalidOtp
+                                    : l10n.onboardingVerifyMobileEnter),
                             textAlign: TextAlign.center,
                             style: AppTypography.labelSmall.copyWith(
-                              color: _wrongCode
+                              color: _wrongCode || _sessionError != null
                                   ? colors.error
                                   : colors.onSurfaceVariant,
                             ),

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
+import '../../../../core/widgets/inputs/date_picker_field.dart';
+import '../../../../core/widgets/sheets/app_sheets.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/onboarding_forms.dart';
 import '../providers/registration_provider.dart';
@@ -24,12 +26,14 @@ import '../widgets/onboarding_scaffold.dart';
 /// `PATCH /profiles/draft/basic-details`, that the wizard's Basic Info step
 /// has always used. See [RegistrationNotifier.applyOnboardingName].
 ///
-/// The date is three boxes rather than a calendar because that is what the
-/// reference shows and, on a matrimony profile, what a member actually knows:
-/// scrolling a picker back 25 years to reach their own birthday is worse than
-/// typing it. [OnboardingNameForm] owns the rule for which typed dates are
-/// real ones — 31 February, a year in the future and anyone under 18 are all
-/// rejected there, not here.
+/// The date is chosen from a calendar, not typed. It used to be three boxes —
+/// Day, Month, Year — which asked the member to get right a format a picker
+/// cannot get wrong: 31 February, a date in the future and anyone under 18
+/// are now unreachable rather than rejected after the fact.
+/// [OnboardingNameForm] still owns the rule for which dates are real ones,
+/// because `PostAuthDestination` reconstructs that same form to decide
+/// whether this step has been answered; the calendar is bounded by that rule
+/// rather than restating it.
 class OnboardingNamePage extends ConsumerStatefulWidget {
   const OnboardingNamePage({super.key});
 
@@ -42,12 +46,6 @@ class _OnboardingNamePageState extends ConsumerState<OnboardingNamePage> {
 
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
-  final _dayCtrl = TextEditingController();
-  final _monthCtrl = TextEditingController();
-  final _yearCtrl = TextEditingController();
-
-  final _monthFocus = FocusNode();
-  final _yearFocus = FocusNode();
 
   @override
   void initState() {
@@ -64,20 +62,12 @@ class _OnboardingNamePageState extends ConsumerState<OnboardingNamePage> {
     );
     _firstNameCtrl.text = _form.firstName;
     _lastNameCtrl.text = _form.lastName;
-    _dayCtrl.text = _form.day;
-    _monthCtrl.text = _form.month;
-    _yearCtrl.text = _form.year;
   }
 
   @override
   void dispose() {
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
-    _dayCtrl.dispose();
-    _monthCtrl.dispose();
-    _yearCtrl.dispose();
-    _monthFocus.dispose();
-    _yearFocus.dispose();
     super.dispose();
   }
 
@@ -88,9 +78,10 @@ class _OnboardingNamePageState extends ConsumerState<OnboardingNamePage> {
         OnboardingNameField.dob => l10n.registrationDobLabel,
       };
 
-  /// The inline line under the date row. Only ever shown for a date the
-  /// member has finished typing and that is genuinely wrong — a half-entered
-  /// `05 / 02 / 20` is not an error, it is someone still typing.
+  /// The inline line under the date field. A picked date can never trip this
+  /// — the calendar's own bounds see to that — but a draft restored from an
+  /// older profile can carry a date outside them, and the member is owed the
+  /// reason before being asked to pick again.
   String? _dateErrorText(AppLocalizations l10n) => switch (_form.dateError) {
         OnboardingNameDateError.invalid => l10n.onboardingNameDobInvalid,
         OnboardingNameDateError.tooYoung => l10n.onboardingNameDobTooYoung,
@@ -98,15 +89,40 @@ class _OnboardingNamePageState extends ConsumerState<OnboardingNamePage> {
         null => null,
       };
 
-  /// Moves to the next box once a part can hold no more digits, so the date
-  /// is typed straight through instead of tapped between three fields.
-  void _advance(String value, int width, FocusNode? next) {
-    if (value.length >= width && next != null) next.requestFocus();
+  /// Where the calendar opens when there is no answer yet: mid-twenties, the
+  /// same start [AppSheets.showDate] and the wizard's picker have always
+  /// used, so a member lands a flick from their own decade rather than
+  /// eighteen years away from it.
+  static DateTime _defaultInitialDate() => DateTime(DateTime.now().year - 25);
+
+  /// "23 February 2000" — the date as a person says it. Localized where intl
+  /// has symbols for the active locale and English where it does not, so the
+  /// Tamil build shows a date rather than throwing.
+  String _formattedDob(DateTime date, String localeName) {
+    final locale = DateFormat.localeExists(localeName) ? localeName : null;
+    return DateFormat('d MMMM y', locale).format(date);
+  }
+
+  Future<void> _pickDob() async {
+    // A name field above may still hold focus; the keyboard left up under
+    // the dialog would cover the calendar on a short phone.
+    FocusScope.of(context).unfocus();
+    final picked = await AppSheets.showDate(
+      context,
+      initialDate: _form.dob ?? _defaultInitialDate(),
+      // Bounded by the form's own rule, so the calendar can only return a
+      // date the form accepts — and offers every date it does.
+      firstDate: OnboardingNameForm.earliestAllowedDob(),
+      lastDate: OnboardingNameForm.latestAllowedDob(),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _form = _form.withDob(picked));
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final dob = _form.dob;
 
     return OnboardingStepScaffold(
       headline: l10n.onboardingNameHeadline,
@@ -133,56 +149,33 @@ class _OnboardingNamePageState extends ConsumerState<OnboardingNamePage> {
           onChanged: (v) => setState(() => _form = _form.copyWith(lastName: v)),
         ),
         _DateOfBirthSection(
-          dayController: _dayCtrl,
-          monthController: _monthCtrl,
-          yearController: _yearCtrl,
-          monthFocus: _monthFocus,
-          yearFocus: _yearFocus,
+          value: dob == null ? null : _formattedDob(dob, l10n.localeName),
+          hint: l10n.onboardingNameDobHint,
           errorText: _dateErrorText(l10n),
-          onDayChanged: (v) {
-            setState(() => _form = _form.copyWith(day: v));
-            _advance(v, 2, _monthFocus);
-          },
-          onMonthChanged: (v) {
-            setState(() => _form = _form.copyWith(month: v));
-            _advance(v, 2, _yearFocus);
-          },
-          onYearChanged: (v) => setState(() => _form = _form.copyWith(year: v)),
+          onTap: _pickDob,
         ),
       ],
     );
   }
 }
 
-/// "Date of birth" over three compact boxes on one row — the reference's
-/// layout, built from the same [NmTextField] the names above it use so the
-/// input styling is the theme's and not this screen's.
+/// "Date of birth" over one tappable field — the reference's heading and its
+/// band of space above, with a calendar behind the field instead of three
+/// boxes to type into. Built from [NmDatePickerField] so the input styling is
+/// the theme's and not this screen's, exactly as the boxes it replaces were.
 class _DateOfBirthSection extends StatelessWidget {
   const _DateOfBirthSection({
-    required this.dayController,
-    required this.monthController,
-    required this.yearController,
-    required this.monthFocus,
-    required this.yearFocus,
+    required this.value,
+    required this.hint,
     required this.errorText,
-    required this.onDayChanged,
-    required this.onMonthChanged,
-    required this.onYearChanged,
+    required this.onTap,
   });
 
-  final TextEditingController dayController;
-  final TextEditingController monthController;
-  final TextEditingController yearController;
-  final FocusNode monthFocus;
-  final FocusNode yearFocus;
+  /// The chosen date, already formatted. Null when unanswered.
+  final String? value;
+  final String hint;
   final String? errorText;
-  final ValueChanged<String> onDayChanged;
-  final ValueChanged<String> onMonthChanged;
-  final ValueChanged<String> onYearChanged;
-
-  /// Wide enough for four digits and their padding, narrow enough that the
-  /// row reads as three small boxes rather than three stretched fields.
-  static const double _rowMaxWidth = 320;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -203,46 +196,9 @@ class _DateOfBirthSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.base),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _rowMaxWidth),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 3,
-                child: _DatePart(
-                  label: l10n.onboardingNameDobDay,
-                  controller: dayController,
-                  maxLength: 2,
-                  onChanged: onDayChanged,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                flex: 3,
-                child: _DatePart(
-                  label: l10n.onboardingNameDobMonth,
-                  controller: monthController,
-                  maxLength: 2,
-                  focusNode: monthFocus,
-                  onChanged: onMonthChanged,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                flex: 4,
-                child: _DatePart(
-                  label: l10n.onboardingNameDobYear,
-                  controller: yearController,
-                  maxLength: 4,
-                  focusNode: yearFocus,
-                  textInputAction: TextInputAction.done,
-                  onChanged: onYearChanged,
-                ),
-              ),
-            ],
-          ),
-        ),
+        // No floating label: the heading above already says "Date of birth",
+        // and the field's job is to show the answer.
+        NmDatePickerField(value: value, hint: hint, onTap: onTap),
         if (errorText != null) ...[
           const SizedBox(height: AppSpacing.sm),
           Text(
@@ -251,42 +207,6 @@ class _DateOfBirthSection extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-/// One of the three date boxes. Digits only, capped at its own width, so a
-/// month can never be typed as `022` and the parse in [OnboardingNameForm]
-/// only ever has to reject dates a calendar disagrees with.
-class _DatePart extends StatelessWidget {
-  const _DatePart({
-    required this.label,
-    required this.controller,
-    required this.maxLength,
-    required this.onChanged,
-    this.focusNode,
-    this.textInputAction = TextInputAction.next,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final int maxLength;
-  final ValueChanged<String> onChanged;
-  final FocusNode? focusNode;
-  final TextInputAction textInputAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return NmTextField(
-      label: label,
-      controller: controller,
-      focusNode: focusNode,
-      keyboardType: TextInputType.number,
-      textInputAction: textInputAction,
-      textAlign: TextAlign.center,
-      maxLength: maxLength,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      onChanged: onChanged,
     );
   }
 }

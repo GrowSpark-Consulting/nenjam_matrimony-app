@@ -9,6 +9,11 @@ abstract final class ApiEndpoints {
   /// Unauthenticated: asked by the signup Email + Mobile step before an
   /// account exists, so it cannot carry a token.
   static const String accountExists = '/auth/account-exists';
+
+  /// Unauthenticated: exchanges a passed dummy OTP for a real Firebase custom
+  /// token. Called from the OTP screens, which run before the member has any
+  /// credential — see `DummyOtpSessionService` on the backend.
+  static const String dummyOtpSession = '/auth/dummy-otp/session';
   static const String verifyOtp = '/auth/verify-otp';
   static const String resendOtp = '/auth/resend-otp';
   static const String refreshToken = '/auth/refresh';

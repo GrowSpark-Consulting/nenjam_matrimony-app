@@ -8,6 +8,7 @@ import '../../../../core/router/route_names.dart';
 import '../../../../core/services/storage_service.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/tokens/app_radius.dart';
+import '../../../../core/utils/auth_trace.dart';
 import '../../../../core/widgets/buttons/outlined_button.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
@@ -173,6 +174,7 @@ class _OnboardingContactPageState extends ConsumerState<OnboardingContactPage> {
     } on AccountAvailabilityUnavailable {
       // Deliberately not treated as "available": letting signup through on a
       // failed lookup is exactly how a duplicate account gets created.
+      AuthTrace.accountCheckUnavailable();
       if (!mounted) return;
       setState(() {
         _submitting = false;
@@ -180,6 +182,10 @@ class _OnboardingContactPageState extends ConsumerState<OnboardingContactPage> {
       });
       return;
     }
+    AuthTrace.accountExists(
+      email: availability.emailExists,
+      phone: availability.phoneExists,
+    );
     if (!mounted) return;
 
     if (availability.anyExists) {
@@ -199,12 +205,26 @@ class _OnboardingContactPageState extends ConsumerState<OnboardingContactPage> {
         );
     if (!mounted) return;
     setState(() => _submitting = false);
+    AuthTrace.navigate(RouteNames.profileBasics, reason: 'signup continues');
     context.go(RouteNames.profileBasics);
   }
 
   /// Sends the member to the login they already have. The existing Welcome
   /// Back route — no second login screen, and never the removed chooser.
-  void _logIn() => context.go(RouteNames.login);
+  ///
+  /// **The only route from signup to Login in the whole flow, and it is
+  /// never automatic**: it runs when the member taps "Log In" inside
+  /// [_AccountExistsNotice], which appears only after
+  /// `POST /auth/account-exists` reported one of these identifiers as
+  /// already taken. A signup that reaches this screen with free identifiers
+  /// continues to [RouteNames.profileBasics] and never sees Login.
+  void _logIn() {
+    AuthTrace.navigate(
+      RouteNames.login,
+      reason: 'member tapped Log In on the account-exists notice',
+    );
+    context.go(RouteNames.login);
+  }
 
   @override
   Widget build(BuildContext context) {

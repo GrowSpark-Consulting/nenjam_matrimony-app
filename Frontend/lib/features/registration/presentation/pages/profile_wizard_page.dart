@@ -137,20 +137,18 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     }
   }
 
-  /// Persists the section currently open and re-finalizes the profile
-  /// (idempotent) so Discover/Matches reflect the change. Returns false and
-  /// shows an error snackbar on failure.
+  /// Persists the section currently open, materialized, so Discover/Matches
+  /// reflect the change. Returns false and shows an error snackbar on failure.
+  ///
+  /// No `POST /profiles/finalize` any more — see
+  /// [RegistrationNotifier.publishEditedSection] for why re-running the
+  /// end-of-registration gate made every edit report failure. The PATCH is
+  /// the save, and it materializes (no `skipMaterialize`) because nothing
+  /// follows it to do that work now.
   Future<bool> _saveAndFinalizeForEdit(RegistrationNotifier notifier) async {
     try {
-      // skipMaterialize: true — finalizeToBackend() runs unconditionally
-      // right below and redoes the same materialize+recompute work this
-      // step-save would otherwise trigger server-side, so doing it here too
-      // would just be duplicate work discarded a moment later.
-      await notifier.syncCurrentStepToBackend(skipMaterialize: true);
+      await notifier.publishEditedSection();
       StoryPerf.mark('PATCH response received');
-      StoryPerf.mark('finalize started');
-      await notifier.finalizeToBackend();
-      StoryPerf.mark('finalize response received');
       return true;
     } on RegistrationApiException catch (e) {
       if (!mounted) return false;

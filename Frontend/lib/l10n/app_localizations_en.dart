@@ -2298,6 +2298,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingNameDobSection => 'Date of birth';
 
   @override
+  String get onboardingNameDobHint => 'Select your date of birth';
+
+  @override
   String get onboardingNameDobDay => 'Day';
 
   @override
@@ -2582,6 +2585,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get onboardingVerifyMobileEnter =>
       'Enter any 4-digit code to continue.';
+
+  @override
+  String get onboardingVerifyMobileSessionFailed =>
+      'We could not finish signing you in. Please try again.';
 
   @override
   String get authEntrySignUp => 'Sign Up';

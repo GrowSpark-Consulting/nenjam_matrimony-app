@@ -432,8 +432,8 @@ void main() {
     await completeOnboarding(container);
     repository.savedSections.clear();
 
-    // What OnboardingVerifyMobilePage calls the moment the dummy OTP opens a
-    // LocalAuthSession.
+    // What OnboardingVerifyMobilePage calls the moment the dummy OTP has been
+    // exchanged for a real Firebase session.
     await container.read(registrationProvider.notifier)
         .flushOnboardingToBackend();
 

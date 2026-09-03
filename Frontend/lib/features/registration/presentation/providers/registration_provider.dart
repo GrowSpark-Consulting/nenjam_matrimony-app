@@ -114,6 +114,55 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   /// from the Profile Review screen's "Enter App" button. Idempotent on the
   /// backend, so this also doubles as the EDIT MODE "publish my changes"
   /// step — see [startEditMode].
+  /// EDIT MODE's save. Writes the sections the member changed and leaves
+  /// them materialized — without asking `POST /profiles/finalize` whether
+  /// the *registration* is complete.
+  ///
+  /// That question is why editing used to fail. finalize() re-runs the
+  /// end-of-signup gate, which rejects a half-filled optional section — and
+  /// onboarding half-fills three of them on the member's behalf: it stores
+  /// `height` but never `weight`, `eatingHabit` + `aboutMe` but never
+  /// smoking/drinking/fitness/hobbies, and every education field but
+  /// `workLocation`. So finalize answered 400 for every member who signed up
+  /// through onboarding, naming sections they had never opened, and Edit
+  /// Profile reported "could not save changes" — over edits the PATCH above
+  /// had in fact already written. The data was saved; only the verdict was
+  /// wrong.
+  ///
+  /// Editing an existing profile is not completing a registration, so it no
+  /// longer asks that question. The section PATCH is the save: it stores the
+  /// values and, with materialization on, rewrites `user_profiles` and
+  /// recomputes completion server-side — everything an edit needs. Nothing
+  /// about the finalize contract or its validation changed; CREATE mode still
+  /// calls it, unchanged, from the Completing screen.
+  Future<void> publishEditedSection() async {
+    await syncCurrentStepToBackend();
+    ref.invalidate(myProfileProvider);
+  }
+
+  /// EDIT MODE's "Save Changes" from the review summary, where there is no
+  /// single open section to save: republishes the whole draft, materializing
+  /// once at the end. The same order and the same one-materialization rule
+  /// [flushOnboardingToBackend] uses — but errors propagate, because this one
+  /// is a member pressing Save and being told whether it worked.
+  Future<void> publishEditedProfile() async {
+    final repo = ref.read(registrationRepositoryProvider);
+    await repo.updateBasicDetails(state.basicDetails, skipMaterialize: true);
+    await repo.updateReligionDetails(state.religionDetails,
+        skipMaterialize: true);
+    await repo.updateLanguageDetails(state.languageDetails,
+        skipMaterialize: true);
+    await repo.updateLocationDetails(state.locationDetails,
+        skipMaterialize: true);
+    await repo.updatePhysicalDetails(state.physicalDetails,
+        skipMaterialize: true);
+    await repo.updateEducationDetails(state.educationDetails,
+        skipMaterialize: true);
+    // Last, and the only one that materializes — see flushOnboardingToBackend.
+    await repo.updateLifestyleDetails(state.lifestyleDetails);
+    ref.invalidate(myProfileProvider);
+  }
+
   Future<void> finalizeToBackend() async {
     await ref.read(registrationRepositoryProvider).finalizeProfile();
     // finalize() recomputes completion and materializes photos/astrology

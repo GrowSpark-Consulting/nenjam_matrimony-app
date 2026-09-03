@@ -4,28 +4,31 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/animations/app_animations.dart';
 import '../../../../core/constants/app_spacing.dart';
-import '../../../../core/network/api_providers.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/utils/auth_trace.dart';
 import '../../../../core/widgets/buttons/icon_button.dart';
 import '../../../../core/widgets/buttons/outlined_button.dart';
 import '../../../../core/widgets/buttons/social_button.dart';
 import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../data/services/backend_sync_service.dart';
-import '../controllers/login_controller.dart';
 import '../../../registration/presentation/providers/registration_provider.dart';
-import '../utils/post_auth_destination.dart';
 
 /// Breakpoint above which the hero moves beside the actions rather than
 /// above them — the value the previous auth-selection screen used, so
 /// tablets and landscape phones keep the layout they already had.
 const double _kLandscapeBreakpoint = 600;
 
-/// Which sign-up field the Login page should focus when it opens. Passed
-/// through GoRouter `extra` as a name string — see [LoginPage].
+/// Which sign-up button the member pressed: email or mobile.
+///
+/// It does NOT select a login screen or a credential form. This screen once
+/// pushed [LoginPage] with the chosen field focused, and that is exactly the
+/// behaviour "Sign up with Email lands on Login" describes — it was replaced
+/// by [_signUpWith], which routes straight into onboarding. Nothing reads
+/// this value to decide a route; only the Email + Mobile step reads it, and
+/// only to prefill.
 enum SignUpFocus { email, mobile }
 
 /// Which sign-up button the member pressed, for the duration of onboarding.
@@ -38,11 +41,16 @@ final signupMethodProvider = StateProvider<SignUpFocus?>((ref) => null);
 
 /// The first screen a logged-out user sees after the splash.
 ///
-/// Three ways in (email, mobile, Google) plus a distinct Login affordance
-/// for people who already have an account. Every action routes into a flow
-/// that already exists — this screen owns no authentication logic of its
-/// own beyond running [GoogleSignInController], the same controller the
-/// Login page's Google button uses.
+/// Two ways in (email, mobile) plus a distinct Login affordance for people
+/// who already have an account. Every action routes into a flow that already
+/// exists, and this screen now owns no authentication logic at all — both
+/// sign-up buttons route straight into onboarding.
+///
+/// Signing up with Google was a third button here and has been withdrawn from
+/// the product. Only the sign-up entry point is gone: `GoogleSignInController`
+/// and `GoogleAuthIntent` are untouched and still drive "Continue with
+/// Google" on the Login screen, so restoring this button later is a matter of
+/// re-adding it, not of rebuilding the integration.
 class RegistrationLandingPage extends ConsumerStatefulWidget {
   const RegistrationLandingPage({super.key});
 
@@ -53,81 +61,29 @@ class RegistrationLandingPage extends ConsumerStatefulWidget {
 
 class _RegistrationLandingPageState
     extends ConsumerState<RegistrationLandingPage> {
-  /// Guards against a second tap while the destination is being resolved —
-  /// [GoogleSignInController]'s own loading bit covers only the account
-  /// picker, not the backend sync and draft lookup that follow it.
-  bool _resolvingDestination = false;
-
-  void _snack(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  /// All three sign-up buttons go straight to the first onboarding step.
+  /// Both sign-up buttons go straight to the first onboarding step.
   ///
   /// There is no credential form in front of onboarding: the member is asked
   /// for an email and a mobile part-way through (the Email + Mobile step),
   /// not before they have seen a single question. The chosen method is
   /// recorded so that step can prefill the identifier they picked.
   void _signUpWith(SignUpFocus focus) {
+    AuthTrace.intent(channel: focus.name, intent: 'SIGNUP');
+    AuthTrace.unauthenticated(focus.name);
     ref.read(signupMethodProvider.notifier).state = focus;
     ref.read(registrationProvider.notifier).startCreateMode();
+    AuthTrace.destination(RouteNames.createProfileFor);
+    AuthTrace.navigate(RouteNames.createProfileFor, reason: 'signup intent');
     context.go(RouteNames.createProfileFor);
   }
 
   /// Straight to the login form. There is no screen in between choosing
   /// login and being asked for a credential — this screen is already the
   /// place the two paths part.
-  void _login() => context.push(RouteNames.loginForm);
-
-  /// SIGNUP intent.
-  ///
-  /// The signup-mode reset lives in [GoogleSignInController.signIn] rather
-  /// than here, so it happens for every signup entry point that ever calls
-  /// it — and, unlike before, it happens at all: this was the one sign-up
-  /// button of the three that never called `startCreateMode()`, so Google
-  /// signup began onboarding on whatever draft the previous session had left
-  /// in memory.
-  ///
-  /// Routing still goes through [PostAuthDestination], which is what keeps a
-  /// Google account that is *already registered* out of a second signup: it
-  /// answers Discover for a finalized profile and the outstanding step for a
-  /// half-finished one, so no duplicate profile can be created here.
-  Future<void> _signUpWithGoogle() async {
-    if (_resolvingDestination) return;
-    final l10n = AppLocalizations.of(context);
-
-    final result = await ref
-        .read(googleSignInControllerProvider.notifier)
-        .signIn(intent: GoogleAuthIntent.signup);
-    if (!mounted) return;
-
-    // Dismissing the account picker is a decision, not a fault — return to
-    // idle silently rather than accusing the user of an error.
-    if (result.cancelled) return;
-    if (!result.success) {
-      _snack(result.errorMessage ?? l10n.authGenericError);
-      return;
-    }
-
-    // Best-effort: mirrors this Firebase session into the NestJS + Postgres
-    // backend so the draft lookup below has a row to read. Awaited (unlike
-    // every other call site, which fires it off) because this is the one
-    // path that immediately asks the backend about an account it may have
-    // learned of milliseconds ago — and it never throws, so awaiting it
-    // cannot turn a successful sign-in into a failure.
-    setState(() => _resolvingDestination = true);
-    await syncUserWithBackend(ref.read(apiClientProvider));
-    ref.read(signupMethodProvider.notifier).state = SignUpFocus.email;
-    // Google already carries an address, so the destination lookup can tell
-    // a returning account from a new one and route accordingly — a brand-new
-    // one lands on Profile For like the other two buttons, and walks the
-    // same onboarding sequence from there. Google gets no shortened flow.
-    final route = await ref.read(postAuthDestinationProvider).resolve();
-    if (!mounted) return;
-    setState(() => _resolvingDestination = false);
-    context.go(route);
+  void _login() {
+    AuthTrace.intent(channel: 'form', intent: 'LOGIN');
+    AuthTrace.navigate(RouteNames.loginForm, reason: 'Log In button');
+    context.push(RouteNames.loginForm);
   }
 
   /// Where Back goes, for both the arrow and the Android system gesture —
@@ -137,8 +93,6 @@ class _RegistrationLandingPageState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final googleBusy =
-        ref.watch(googleSignInControllerProvider) || _resolvingDestination;
 
     return NmPageStatusBar(
       background: AppGradients.splash.colors.first,
@@ -165,10 +119,8 @@ class _RegistrationLandingPageState
               final hero = _BrandHero(l10n: l10n, compact: isLandscape);
               final actions = _LandingActions(
                 l10n: l10n,
-                isGoogleBusy: googleBusy,
                 onSignUpEmail: () => _signUpWith(SignUpFocus.email),
                 onSignUpMobile: () => _signUpWith(SignUpFocus.mobile),
-                onSignUpGoogle: _signUpWithGoogle,
                 onLogin: _login,
               );
 
@@ -319,27 +271,23 @@ class _BrandHero extends StatelessWidget {
   }
 }
 
-/// "New to Nenjam?" plus the three sign-up routes, then the Login section.
+/// "New to Nenjam?" plus the two sign-up routes, then the Login section.
 ///
 /// Scrollable with a min-height floor rather than a fixed layout: at the
-/// largest system font sizes the four buttons and their labels genuinely do
-/// not fit a small phone, and scrolling is the only answer that neither
+/// largest system font sizes the buttons and their labels genuinely do not
+/// fit a small phone, and scrolling is the only answer that neither
 /// truncates the copy nor throws a RenderFlex overflow.
 class _LandingActions extends StatelessWidget {
   const _LandingActions({
     required this.l10n,
-    required this.isGoogleBusy,
     required this.onSignUpEmail,
     required this.onSignUpMobile,
-    required this.onSignUpGoogle,
     required this.onLogin,
   });
 
   final AppLocalizations l10n;
-  final bool isGoogleBusy;
   final VoidCallback onSignUpEmail;
   final VoidCallback onSignUpMobile;
-  final VoidCallback onSignUpGoogle;
   final VoidCallback onLogin;
 
   @override
@@ -364,10 +312,8 @@ class _LandingActions extends StatelessWidget {
                       children: [
                         _SignUpSection(
                           l10n: l10n,
-                          isGoogleBusy: isGoogleBusy,
                           onSignUpEmail: onSignUpEmail,
                           onSignUpMobile: onSignUpMobile,
-                          onSignUpGoogle: onSignUpGoogle,
                         ),
                         const SizedBox(height: AppSpacing.xl),
                         _LoginSection(l10n: l10n, onLogin: onLogin),
@@ -387,17 +333,13 @@ class _LandingActions extends StatelessWidget {
 class _SignUpSection extends StatelessWidget {
   const _SignUpSection({
     required this.l10n,
-    required this.isGoogleBusy,
     required this.onSignUpEmail,
     required this.onSignUpMobile,
-    required this.onSignUpGoogle,
   });
 
   final AppLocalizations l10n;
-  final bool isGoogleBusy;
   final VoidCallback onSignUpEmail;
   final VoidCallback onSignUpMobile;
-  final VoidCallback onSignUpGoogle;
 
   @override
   Widget build(BuildContext context) {
@@ -424,7 +366,7 @@ class _SignUpSection extends StatelessWidget {
                 size: 22,
                 color: AppColors.primary,
               ),
-              onPressed: isGoogleBusy ? null : onSignUpEmail,
+              onPressed: onSignUpEmail,
             ),
           ),
         ),
@@ -440,22 +382,7 @@ class _SignUpSection extends StatelessWidget {
                 size: 22,
                 color: AppColors.primary,
               ),
-              onPressed: isGoogleBusy ? null : onSignUpMobile,
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        AppAnimations.slide(
-          Semantics(
-            button: true,
-            label: l10n.registrationLandingSignUpGoogle,
-            child: NmSocialButton(
-              // No iconWidget: NmSocialButton's own default is the Google
-              // mark the Login page's Google button already shows. Nothing
-              // new is introduced here.
-              label: l10n.registrationLandingSignUpGoogle,
-              isLoading: isGoogleBusy,
-              onPressed: onSignUpGoogle,
+              onPressed: onSignUpMobile,
             ),
           ),
         ),

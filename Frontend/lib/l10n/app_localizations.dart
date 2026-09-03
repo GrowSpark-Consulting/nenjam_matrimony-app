@@ -4496,6 +4496,12 @@ abstract class AppLocalizations {
   /// **'Date of birth'**
   String get onboardingNameDobSection;
 
+  /// No description provided for @onboardingNameDobHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your date of birth'**
+  String get onboardingNameDobHint;
+
   /// No description provided for @onboardingNameDobDay.
   ///
   /// In en, this message translates to:
@@ -5023,6 +5029,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter any 4-digit code to continue.'**
   String get onboardingVerifyMobileEnter;
+
+  /// No description provided for @onboardingVerifyMobileSessionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not finish signing you in. Please try again.'**
+  String get onboardingVerifyMobileSessionFailed;
 
   /// No description provided for @authEntrySignUp.
   ///
