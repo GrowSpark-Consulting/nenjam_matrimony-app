@@ -204,12 +204,31 @@ class LoginController extends Notifier<bool> {
           errorMessage: l10n.authNoAccountForMobile,
         );
       }
-      await ref.read(localAuthSessionProvider).start(
-            identifier: phoneE164,
-            method: LocalAuthMethod.mobilePassword,
-          );
+      // Exchanged for a REAL Firebase session, the same way the two OTP paths
+      // above do, so every login method ends on the same kind of credential
+      // for the same uid.
+      //
+      // This used to open a [LocalAuthSession]: a device-local marker whose
+      // requests authenticated by sending the phone number in an
+      // `X-Dev-Auth-Phone` header. The backend no longer honours that header,
+      // and should never have on a deployed server — with DUMMY_OTP_ENABLED it
+      // accepted any well-formed number with no credential at all, and
+      // resolved to a different identity than this endpoint returns, so one
+      // number could end up owning two accounts.
+      //
+      // The user-facing flow is unchanged: same screen, same field, same
+      // account check before it, same LoginResult out.
+      await ref
+          .read(dummyOtpSessionStarterProvider)
+          .start(phoneE164: phoneE164);
       state = false;
       return const LoginResult(success: true);
+    } on DummyOtpSessionException catch (error) {
+      // A failed exchange is a failed login. Reporting success without a
+      // session would restore exactly what this replaced: signed in as far as
+      // the app is concerned, unauthenticated as far as the API is.
+      state = false;
+      return LoginResult(success: false, errorMessage: error.message);
     } on AccountAvailabilityUnavailable {
       // "Could not tell" is not "available" — refuse rather than sign in.
       state = false;

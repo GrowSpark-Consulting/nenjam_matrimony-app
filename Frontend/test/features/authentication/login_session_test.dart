@@ -21,12 +21,17 @@ import 'package:nenjam_matrimony/features/splash/presentation/providers/splash_p
 /// (nothing mints one while the OTP is the development verifier), so they are
 /// the ones that can most easily end up "navigated but not authenticated".
 ///
-/// They no longer end the same way. Mobile + OTP now exchanges the passed code
-/// for a REAL Firebase session through the backend
-/// ([DummyOtpSessionStarter]) — a failed exchange is a failed login, because
+/// Both now end the same way: the passed code (OTP) or the confirmed account
+/// (password) is exchanged for a REAL Firebase session through the backend
+/// ([DummyOtpSessionStarter]), and a failed exchange is a failed login —
 /// letting someone in with no account behind them is the bug that exchange
-/// exists to close. Mobile + password still records a [LocalAuthSession],
-/// which is the remaining path with nothing to sign in with.
+/// exists to close.
+///
+/// Mobile + password used to record a [LocalAuthSession] instead. That marker
+/// authenticated its requests by sending the phone number in an
+/// `X-Dev-Auth-Phone` header, which the backend no longer honours: with
+/// DUMMY_OTP_ENABLED it accepted any well-formed number with no credential,
+/// and resolved to a different identity than the exchange returns.
 ///
 /// These tests pin that each actually opens a session, that it survives a
 /// restart, and that logging out closes it.
@@ -103,20 +108,44 @@ void main() {
   });
 
   group('mobile + password', () {
-    test('a number the backend knows opens a session', () async {
-      final container = _container(phoneExists: true);
+    test('a number the backend knows opens a real Firebase session', () async {
+      final starter = _RecordingStarter();
+      final container = _container(phoneExists: true, starter: starter);
 
       final result = await container
           .read(loginControllerProvider.notifier)
           .loginWithIdentifier(identifier: '9876543210', password: 'hunter22');
 
       expect(result.success, isTrue);
-      expect(container.read(localAuthSessionProvider).isActive, isTrue);
       expect(
-        container.read(localAuthSessionProvider).identifier,
-        '+919876543210',
-        reason: 'the number is normalised to E.164 before it is stored',
+        starter.phones,
+        ['+919876543210'],
+        reason: 'the number is normalised to E.164 before it is exchanged, '
+            'and the exchange is what authenticates the session',
       );
+      expect(
+        container.read(localAuthSessionProvider).isActive,
+        isFalse,
+        reason: 'no device-local marker: the header it backed is not an '
+            'authentication mechanism any more',
+      );
+    });
+
+    test('a failed exchange is a failed login', () async {
+      // Succeeding here would put the member back in the state this replaced:
+      // navigated into the app, unauthenticated against every API.
+      final starter = _RecordingStarter(
+        failure: DummyOtpSessionException('backend refused'),
+      );
+      final container = _container(phoneExists: true, starter: starter);
+
+      final result = await container
+          .read(loginControllerProvider.notifier)
+          .loginWithIdentifier(identifier: '9876543210', password: 'hunter22');
+
+      expect(result.success, isFalse);
+      expect(result.errorMessage, isNotNull);
+      expect(container.read(localAuthSessionProvider).isActive, isFalse);
     });
 
     test('a number with no account is refused, never signed in', () async {

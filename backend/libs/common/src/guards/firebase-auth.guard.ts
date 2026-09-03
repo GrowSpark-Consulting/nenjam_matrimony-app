@@ -12,7 +12,6 @@ import { PrismaService } from '@app/database';
 import { RedisService } from '@app/cache';
 import type { AuthenticatedUser } from '../decorators/current-user.decorator';
 import { getCachedUserId, setCachedUserId } from '../auth/auth-user-cache';
-import { devAuthUid, readDevAuthPhone } from '../auth/dev-auth';
 
 interface RequestWithUser extends Request {
   user?: AuthenticatedUser;
@@ -40,23 +39,28 @@ export class FirebaseAuthGuard implements CanActivate {
 
     const authHeader = request.headers.authorization;
 
-    // LOCAL DEVELOPMENT ONLY — off unless BOTH NODE_ENV !== 'production' and
-    // DEV_AUTH_ENABLED=true (see dev-auth.ts, which owns that decision).
+    // A verified Firebase ID token is the ONLY thing that authenticates a
+    // request. There is deliberately no second mechanism.
     //
-    // Deliberately conditioned on there being no Authorization header at all:
-    // a request that presents a bearer token always goes down the real
-    // Firebase path below, so this can never override, weaken or pre-empt
-    // token verification — it only fills the gap where a dummy-OTP client has
-    // no token to send. In production `readDevAuthPhone` returns null before
-    // it even looks at the headers, and this block is dead code.
-    if (!authHeader) {
-      const devPhone = readDevAuthPhone(request.headers);
-      if (devPhone) {
-        request.user = await this.resolveDevUser(devPhone);
-        return true;
-      }
-    }
-
+    // There used to be one: an `X-Dev-Auth-Phone` header, honoured whenever
+    // `dummyAuthAllows()` passed. The comment here used to claim it was
+    // "local development only" and dead in production. It was not.
+    // `DUMMY_OTP_ENABLED=true` makes that helper accept any well-formed E.164
+    // number with NO NODE_ENV restriction, so on a deployed server the header
+    // alone authenticated the caller as any member — no token, no OTP, no
+    // Firebase. Measured against a backend running NODE_ENV=production with
+    // that single flag: `curl -H 'X-Dev-Auth-Phone: +91…' /profiles/me`
+    // returned 404 ("no profile yet"), i.e. it had already authenticated.
+    //
+    // It also resolved to a SECOND identity — `devauth:<phone>` — distinct
+    // from the real Firebase uid the same person gets from
+    // `POST /auth/dummy-otp/session`, so one number could own two accounts and
+    // split its data between them.
+    //
+    // Every client path now ends in a real Firebase session: signup and
+    // mobile+OTP login exchange the dummy code for a custom token, and
+    // mobile+password login does the same after its account check. Nothing is
+    // left for a header to fill in.
     if (!authHeader?.startsWith('Bearer ')) {
       throw new UnauthorizedException(
         'Missing "Authorization: Bearer <Firebase ID Token>" header.',
@@ -86,47 +90,6 @@ export class FirebaseAuthGuard implements CanActivate {
       );
       throw new UnauthorizedException('Invalid or expired Firebase ID token.');
     }
-  }
-
-  /**
-   * LOCAL DEVELOPMENT ONLY — see dev-auth.ts.
-   *
-   * Resolves the internal User row for a dev-auth phone number, creating one
-   * on first use so the dummy-OTP flow behaves like a real first sign-in.
-   *
-   * Kept separate from [resolveUser] rather than folded into it: that method
-   * re-verifies the ID token against Firebase before creating an account, and
-   * there is no token here to verify. Sharing the path would have meant either
-   * making that verification optional — weakening the real signup — or
-   * synthesizing something token-shaped to satisfy it. Neither is acceptable,
-   * so this path stays short, separate and obviously non-production.
-   *
-   * The row is keyed by a namespaced uid (`devauth:+9198…`) so it can never
-   * collide with a Firebase uid, and by phone so a developer who reinstalls
-   * and re-enters the same number lands back on the same account instead of
-   * accumulating duplicates.
-   */
-  private async resolveDevUser(phoneE164: string): Promise<AuthenticatedUser> {
-    const uid = devAuthUid(phoneE164);
-
-    const user = await this.prisma.user.upsert({
-      where: { firebaseUid: uid },
-      update: {},
-      create: {
-        firebaseUid: uid,
-        // User.email is required and unique; a dev session has no address, so
-        // this mirrors resolveUser's placeholder for phone-only accounts.
-        email: `${uid}@devauth.invalid`,
-        phone: phoneE164,
-      },
-    });
-
-    this.logger.warn(
-      `DEV AUTH: request authenticated as ${phoneE164} (user ${user.id}) ` +
-        'without a Firebase token. This must never appear in production.',
-    );
-
-    return { id: user.id, uid, phone_number: phoneE164 };
   }
 
   private async resolveUser(
