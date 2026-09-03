@@ -148,14 +148,13 @@ export function dummyAuthAllows(phoneE164: string): boolean {
   // so an unconfigured environment admits nobody.
   if (!isDevAuthEnabled() && !isDummyOtpEnabled()) return false;
 
-  // When DUMMY_OTP_ENABLED is on, any well-formed number is accepted
-  // regardless of NODE_ENV. This lets a deployed build demo the full signup
-  // flow before SMS billing is enabled without maintaining a phone whitelist.
-  // When DUMMY_OTP_PHONES is set it still narrows access, but an empty list
-  // no longer blocks everyone.
+  // DUMMY_OTP_ENABLED has two deliberately different behaviours:
+  // - off production: any well-formed number (no whitelist friction);
+  // - production: only explicitly listed numbers (fail closed on empty list).
   if (isDummyOtpEnabled()) {
+    if (process.env.NODE_ENV !== 'production') return true;
     const whitelist = dummyOtpPhones();
-    return whitelist.size === 0 || whitelist.has(phoneE164);
+    return whitelist.has(phoneE164);
   }
 
   // Dev-auth (non-production only) admits any well-formed number.
