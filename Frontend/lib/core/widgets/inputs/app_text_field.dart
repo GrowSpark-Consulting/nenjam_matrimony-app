@@ -24,6 +24,15 @@ class NmTextField extends StatelessWidget {
   final List<TextInputFormatter>? inputFormatters;
   final AutovalidateMode autovalidateMode;
 
+  /// Horizontal alignment of the typed text. Left by default; centred for a
+  /// short fixed-width entry such as the onboarding date-of-birth boxes,
+  /// where left-aligned digits sit off-centre in the box.
+  final TextAlign textAlign;
+
+  /// Auto-capitalisation for the soft keyboard — words for a name field, so
+  /// the member is not fighting the keyboard to enter their own.
+  final TextCapitalization textCapitalization;
+
   const NmTextField({
     super.key,
     this.label,
@@ -46,6 +55,8 @@ class NmTextField extends StatelessWidget {
     this.focusNode,
     this.inputFormatters,
     this.autovalidateMode = AutovalidateMode.onUserInteraction,
+    this.textAlign = TextAlign.start,
+    this.textCapitalization = TextCapitalization.none,
   });
 
   @override
@@ -66,6 +77,8 @@ class NmTextField extends StatelessWidget {
       onFieldSubmitted: onSubmitted,
       inputFormatters: inputFormatters,
       autovalidateMode: autovalidateMode,
+      textAlign: textAlign,
+      textCapitalization: textCapitalization,
       style: Theme.of(context).textTheme.bodyLarge,
       decoration: InputDecoration(
         labelText: label,

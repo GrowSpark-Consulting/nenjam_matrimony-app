@@ -45,10 +45,11 @@ class RecordingRegistrationRepository implements RegistrationRepository {
   /// [RegistrationNotifier.flushOnboardingToBackend] regressed on.
   final List<String> savedSections = <String>[];
 
-  /// Onboarding writes these two now: `caste`/`motherTongue` from the
-  /// Religion step and `firstName`/`lastName`/`gender`/`dob` from Profile
-  /// Basics. Every one of them is a NOT NULL column on `user_profiles`, so
-  /// without these calls the backend never materializes a profile row at all.
+  /// The sections onboarding writes: `gender` and `profileCreatedFor` from
+  /// Profile For, the name and date of birth from Your Name, religion and
+  /// country from Your Religion, and location from "Let's build your
+  /// Profile". `caste` and `motherTongue` are NOT among them — onboarding no
+  /// longer collects either, which is why no step here sends them.
   @override
   Future<void> updateBasicDetails(
     BasicDetails details, {
@@ -184,41 +185,64 @@ Future<void> pickDropdown(
   await tester.pumpAndSettle();
 }
 
-/// Opens the date-of-birth calendar and accepts the date it opens on.
-///
-/// The field is a read-only [TextFormField] behind an [AbsorbPointer], so the
-/// tap is aimed at the enclosing [GestureDetector] rather than the icon —
-/// tapping the icon lands, but only by falling through the absorber, which
-/// makes the test framework warn about a missed hit test. The picker's
-/// `initialDate` is already a valid answer (25 years ago), so confirming is
-/// all a test needs.
-Future<void> pickDob(WidgetTester tester) async {
-  await tester.tap(
-    find
-        .ancestor(
-          of: find.byIcon(Icons.calendar_today_rounded),
-          matching: find.byType(GestureDetector),
-        )
-        .first,
-  );
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('OK'));
+/// Answers the gender chips on the Profile For step, which is where gender is
+/// asked now. `user_profiles.gender` is NOT NULL, so no screen after this one
+/// can make up for skipping it.
+Future<void> pickGender(WidgetTester tester, {String gender = 'Male'}) async {
+  await tester.tap(find.widgetWithText(ChoiceChip, gender));
   await tester.pumpAndSettle();
 }
 
-/// Answers the identity half of the Profile Basics step: the name, gender and
-/// date of birth backing `user_profiles`' NOT NULL `first_name`, `last_name`,
-/// `gender` and `dob` columns. State and city are left to the caller, since
-/// several tests vary them.
-Future<void> fillIdentity(
+/// Answers the "Let's build your Profile" step: its two required fields, and
+/// the optional sub-community alongside them.
+Future<void> fillBasics(
+  WidgetTester tester, {
+  String state = 'Tamil Nadu',
+  String city = 'Chennai',
+  String subCommunity = 'Iyer',
+}) async {
+  await pickDropdown(tester, 0, state);
+  await pickDropdown(tester, 1, city);
+  // Sub-community is the only text field on the step.
+  if (subCommunity.isNotEmpty) {
+    await tester.enterText(find.byType(TextFormField).first, subCommunity);
+    await tester.pumpAndSettle();
+  }
+}
+
+/// Types a whole date of birth into the Your Name step's three boxes. The
+/// default is comfortably over 18 and comfortably after 1950, so a test that
+/// is not about date validation never trips either bound.
+Future<void> enterDob(
+  WidgetTester tester, {
+  String day = '05',
+  String month = '02',
+  String year = '1998',
+  int firstFieldIndex = 2,
+}) async {
+  await tester.enterText(find.byType(TextFormField).at(firstFieldIndex), day);
+  await tester.enterText(
+    find.byType(TextFormField).at(firstFieldIndex + 1),
+    month,
+  );
+  await tester.enterText(
+    find.byType(TextFormField).at(firstFieldIndex + 2),
+    year,
+  );
+  await tester.pumpAndSettle();
+}
+
+/// Fills the Your Name step end to end: both names and a valid date.
+Future<void> fillNameStep(
   WidgetTester tester, {
   String firstName = 'Arjun',
   String lastName = 'Krishnan',
+  String day = '05',
+  String month = '02',
+  String year = '1998',
 }) async {
   await tester.enterText(find.byType(TextFormField).at(0), firstName);
   await tester.enterText(find.byType(TextFormField).at(1), lastName);
   await tester.pumpAndSettle();
-  await tester.tap(find.widgetWithText(ChoiceChip, 'Male'));
-  await tester.pumpAndSettle();
-  await pickDob(tester);
+  await enterDob(tester, day: day, month: month, year: year);
 }

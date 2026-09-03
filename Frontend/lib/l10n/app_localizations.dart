@@ -452,6 +452,12 @@ abstract class AppLocalizations {
   /// **'Coming soon'**
   String get authComingSoon;
 
+  /// No description provided for @authGoogleNoAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t find a Nenjam account for that Google account. Sign up to create one.'**
+  String get authGoogleNoAccount;
+
   /// No description provided for @authGenericError.
   ///
   /// In en, this message translates to:
@@ -4477,6 +4483,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nenjam is a space for people genuinely looking to marry. Profiles created with false details, or on behalf of a marriage bureau or any business, are removed from the platform.'**
   String get profileForNotice;
+
+  /// No description provided for @onboardingNameHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Your name'**
+  String get onboardingNameHeadline;
+
+  /// No description provided for @onboardingNameDobSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth'**
+  String get onboardingNameDobSection;
+
+  /// No description provided for @onboardingNameDobDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get onboardingNameDobDay;
+
+  /// No description provided for @onboardingNameDobMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get onboardingNameDobMonth;
+
+  /// No description provided for @onboardingNameDobYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get onboardingNameDobYear;
+
+  /// No description provided for @onboardingNameDobInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a real date of birth.'**
+  String get onboardingNameDobInvalid;
+
+  /// No description provided for @onboardingNameDobTooYoung.
+  ///
+  /// In en, this message translates to:
+  /// **'You must be at least 18 to create a profile.'**
+  String get onboardingNameDobTooYoung;
+
+  /// No description provided for @onboardingNameDobTooOld.
+  ///
+  /// In en, this message translates to:
+  /// **'Please check the year of birth.'**
+  String get onboardingNameDobTooOld;
+
+  /// No description provided for @profileBasicsSubCommunityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-community'**
+  String get profileBasicsSubCommunityLabel;
+
+  /// No description provided for @profileBasicsSubCommunityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter sub-community (optional)'**
+  String get profileBasicsSubCommunityHint;
 
   /// No description provided for @profileBasicsHeadline.
   ///

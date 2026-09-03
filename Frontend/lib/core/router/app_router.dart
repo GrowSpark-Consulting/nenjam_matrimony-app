@@ -47,6 +47,7 @@ import '../../features/registration/presentation/pages/onboarding_education_page
 import '../../features/registration/presentation/pages/onboarding_income_page.dart';
 import '../../features/registration/presentation/pages/onboarding_marital_page.dart';
 import '../../features/registration/presentation/pages/onboarding_photos_page.dart';
+import '../../features/registration/presentation/pages/onboarding_name_page.dart';
 import '../../features/registration/presentation/pages/onboarding_religion_page.dart';
 import '../../features/registration/presentation/pages/onboarding_verify_mobile_page.dart';
 import '../../features/registration/presentation/pages/profile_basics_page.dart';
@@ -297,6 +298,11 @@ GoRouter createRouter(WidgetRef ref) {
         path: RouteNames.createProfileFor,
         name: RouteNames.createProfileForName,
         builder: (context, state) => const CreateProfileForPage(),
+      ),
+      GoRoute(
+        path: RouteNames.onboardingNameDob,
+        name: RouteNames.onboardingNameDobName,
+        builder: (context, state) => const OnboardingNamePage(),
       ),
       GoRoute(
         path: RouteNames.onboardingReligion,

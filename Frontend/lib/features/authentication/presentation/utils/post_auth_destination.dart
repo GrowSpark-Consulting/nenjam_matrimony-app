@@ -30,28 +30,34 @@ const Duration _brandNewAccountWindow = Duration(minutes: 2);
 /// half-registered user could land in Discover with no profile and a
 /// brand-new Google user never saw the registration flow at all.
 ///
-/// Onboarding is four screens, and this resolves to the **first** of them
-/// the member has not finished — so a session killed halfway resumes exactly
+/// Onboarding is a chain of screens, and this resolves to the **first** of
+/// them the member has not finished — so a session killed halfway resumes exactly
 /// where it stopped, and a finished one never sees any of them again:
 ///
 /// 1. Not signed in → the sign-up landing screen.
 /// 2. Has an email address that isn't verified yet → the verify-email step.
-/// 3. No "profile is for" choice → [RouteNames.createProfileFor].
-/// 4. Religion, community or "living in" missing →
-///    [RouteNames.onboardingReligion].
-/// 5. An unfinished signup with no email or mobile on record →
+/// 3. No "profile is for" choice, or no gender →
+///    [RouteNames.createProfileFor]. Those two are one screen.
+/// 4. Name or date of birth missing → [RouteNames.onboardingNameDob].
+/// 5. Religion, community or "living in" missing →
+///    [RouteNames.onboardingReligion]. Caste and mother tongue are
+///    deliberately absent — onboarding does not collect them at all.
+/// 6. An unfinished signup with no email or mobile on record →
 ///    [RouteNames.onboardingContact]. Only an unfinished signup: this
 ///    step's answers are stored nowhere the backend can see, so asking
 ///    it of an established account is unanswerable, and doing so was
 ///    the bug that sent every login into onboarding. The gate itself
 ///    carries the full account.
-/// 6. State or city missing → [RouteNames.profileBasics].
-/// 7. Otherwise → Discover.
+/// 7. State or city missing → [RouteNames.profileBasics].
+/// 8. Otherwise → the remaining steps in order, then Discover.
 ///
 /// Each gate tests exactly the fields its screen writes — the same
 /// `isComplete` rules the screens enforce, from
 /// `registration/domain/models/onboarding_forms.dart` — so answering a step
-/// is always what gets a member past it, and no gate can loop. The
+/// is always what gets a member past it, and no gate can loop. Optional
+/// fields (sub-community, photos) are deliberately ungated for the same
+/// reason: a gate on a field its screen does not require is a gate a member
+/// cannot answer their way past. The
 /// Email + Mobile step is the one whose answers the backend never sees,
 /// which is why it alone is scoped to an unfinished signup rather than
 /// asked of every session.
@@ -137,30 +143,42 @@ class PostAuthDestination {
         .read(registrationProvider.notifier)
         .restore(restored, ProfileFlowMode.create);
 
-    // Step 1. An empty value means the question has genuinely never been
-    // answered — BasicDetails documents why the field has no default.
-    if (restored.basicDetails.profileCreatedFor.trim().isEmpty) {
-      return RouteNames.createProfileFor;
-    }
+    // Step 1 — "Profile For" and Gender, which that screen now asks together.
+    // An empty value means the question has genuinely never been answered —
+    // BasicDetails documents why neither field has a default.
+    final profileForStep = ProfileForForm(
+      profileCreatedFor: restored.basicDetails.profileCreatedFor,
+      gender: restored.basicDetails.gender,
+    );
+    if (!profileForStep.isComplete) return RouteNames.createProfileFor;
 
-    // Step 2 — the same fields OnboardingReligionForm.isComplete requires,
+    // Step 2 — name and date of birth. Reconstructed through
+    // OnboardingNameForm.fromDraft so the gate applies the screen's own rule
+    // (a stored date that is somehow not a real one re-asks the step) rather
+    // than a second, looser "is it non-null" test written out here.
+    final nameStep = OnboardingNameForm.fromDraft(
+      firstName: restored.basicDetails.firstName,
+      lastName: restored.basicDetails.lastName,
+      dob: restored.basicDetails.dob,
+    );
+    if (!nameStep.isComplete) return RouteNames.onboardingNameDob;
+
+    // Step 3 — the same fields OnboardingReligionForm.isComplete requires,
     // read back from the sections applyOnboardingReligion writes them to.
     final religionStep = OnboardingReligionForm(
       religion: restored.religionDetails.religion,
-      caste: restored.religionDetails.caste,
       community: restored.religionDetails.community,
-      motherTongue: restored.languageDetails.motherTongue,
       livingIn: restored.locationDetails.country,
     );
     if (!religionStep.isComplete) return RouteNames.onboardingReligion;
 
-    // Steps 4-9, evaluated up front because step 3 has to consult them —
-    // see below. Each still tests exactly the fields its own screen writes.
+    // Steps 5-10, evaluated up front because step 4 has to consult them —
+    // see below. Each tests exactly the fields its own screen requires, which
+    // is why caste and mother tongue appear in no gate at all: onboarding no
+    // longer collects them, and a gate on a field no screen asks for is a
+    // gate a member cannot answer their way past. Sub-community is absent for
+    // the same reason — asked, but not required.
     final basicsStep = ProfileBasicsForm(
-      firstName: restored.basicDetails.firstName,
-      lastName: restored.basicDetails.lastName,
-      gender: restored.basicDetails.gender,
-      dob: restored.basicDetails.dob,
       state: restored.locationDetails.state,
       city: restored.locationDetails.city,
     );
@@ -197,7 +215,9 @@ class PostAuthDestination {
     // by construction — a login is not the place to re-collect them. What
     // stays gated is exactly the case the step exists for: a half-finished
     // signup, on the device it was started on, that never reached the end.
-    final onboardingAnswered = basicsStep.isComplete &&
+    final onboardingAnswered = profileForStep.isComplete &&
+        nameStep.isComplete &&
+        basicsStep.isComplete &&
         maritalStep.isComplete &&
         educationStep.isComplete &&
         incomeStep.isComplete &&
@@ -214,21 +234,21 @@ class PostAuthDestination {
       if (!hasEmail || !hasMobile) return RouteNames.onboardingContact;
     }
 
-    // Step 4.
+    // Step 5.
     if (!basicsStep.isComplete) return RouteNames.profileBasics;
 
-    // Step 5 — marital status and height.
+    // Step 6 — marital status and height.
     if (!maritalStep.isComplete) return RouteNames.onboardingMarital;
 
-    // Step 6 — highest qualification.
+    // Step 7 — highest qualification.
     if (!educationStep.isComplete) return RouteNames.onboardingEducation;
 
-    // Step 7 — annual income.
+    // Step 8 — annual income.
     if (!incomeStep.isComplete) return RouteNames.onboardingIncome;
 
-    // Step 8 (photos) is deliberately not a gate — it is optional, and a
+    // Step 9 (photos) is deliberately not a gate — it is optional, and a
     // member who chose "Add Photos Later" must not be sent back to it every
-    // launch. Step 9 is, since a description is part of a usable profile.
+    // launch. Step 10 is, since a description is part of a usable profile.
     if (!hasAbout) return RouteNames.onboardingAbout;
 
     // Every step that leaves a durable answer has one. Onboarding is done.
@@ -265,24 +285,27 @@ class PostAuthDestination {
         .read(registrationProvider.notifier)
         .restore(restored, ProfileFlowMode.create);
 
-    if (restored.basicDetails.profileCreatedFor.trim().isEmpty) {
-      return RouteNames.createProfileFor;
-    }
+    final profileForStep = ProfileForForm(
+      profileCreatedFor: restored.basicDetails.profileCreatedFor,
+      gender: restored.basicDetails.gender,
+    );
+    if (!profileForStep.isComplete) return RouteNames.createProfileFor;
+
+    final nameStep = OnboardingNameForm.fromDraft(
+      firstName: restored.basicDetails.firstName,
+      lastName: restored.basicDetails.lastName,
+      dob: restored.basicDetails.dob,
+    );
+    if (!nameStep.isComplete) return RouteNames.onboardingNameDob;
 
     final religionStep = OnboardingReligionForm(
       religion: restored.religionDetails.religion,
-      caste: restored.religionDetails.caste,
       community: restored.religionDetails.community,
-      motherTongue: restored.languageDetails.motherTongue,
       livingIn: restored.locationDetails.country,
     );
     if (!religionStep.isComplete) return RouteNames.onboardingReligion;
 
     final basicsStep = ProfileBasicsForm(
-      firstName: restored.basicDetails.firstName,
-      lastName: restored.basicDetails.lastName,
-      gender: restored.basicDetails.gender,
-      dob: restored.basicDetails.dob,
       state: restored.locationDetails.state,
       city: restored.locationDetails.city,
     );

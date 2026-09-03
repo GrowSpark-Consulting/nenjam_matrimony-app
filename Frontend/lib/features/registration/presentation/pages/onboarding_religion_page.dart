@@ -6,18 +6,25 @@ import '../../../../core/constants/profile_options.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/tokens/app_radius.dart';
-import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/onboarding_forms.dart';
 import '../providers/registration_provider.dart';
 import '../widgets/onboarding_scaffold.dart';
 
-/// Step 2 — "Your religion": religion, community, and the country the member
+/// Step 3 — "Your religion": religion, community, and the country the member
 /// lives in. All three required.
 ///
 /// The country is asked here rather than on the State & City step because it
 /// decides whether "state" and "city" are even the right questions to ask
 /// later; the two location steps together fill `LocationDetails`.
+///
+/// Caste and mother tongue used to sit on this screen. They now belong to the
+/// "Let's build your Profile" step, which is where [ProfileBasicsForm] asks
+/// and validates them — this page neither displays nor writes them. Nothing
+/// about them was deleted: both are still NOT NULL on `user_profiles`, still
+/// required by `isMatchableFromDraft`, still edited by the wizard's Religion
+/// and Language steps, and still rendered on Discover cards and profile
+/// detail. Only the onboarding screen that collects them changed.
 class OnboardingReligionPage extends ConsumerStatefulWidget {
   const OnboardingReligionPage({super.key});
 
@@ -30,32 +37,6 @@ class _OnboardingReligionPageState
     extends ConsumerState<OnboardingReligionPage> {
   OnboardingReligionForm _form = const OnboardingReligionForm();
 
-  /// Caste is free text (there is no authoritative caste list to offer), so
-  /// it needs a controller the dropdown fields do not.
-  final _casteCtrl = TextEditingController();
-
-  /// The same list the wizard's Language step offers, so a member who fills
-  /// this in onboarding and later opens Edit Profile sees their own answer
-  /// already selected rather than a blank chip row.
-  static const _tongues = [
-    'Tamil',
-    'Telugu',
-    'Malayalam',
-    'Kannada',
-    'Hindi',
-    'English',
-    'Marathi',
-    'Bengali',
-    'Gujarati',
-    'Urdu',
-  ];
-
-  @override
-  void dispose() {
-    _casteCtrl.dispose();
-    super.dispose();
-  }
-
   @override
   void initState() {
     super.initState();
@@ -65,21 +46,15 @@ class _OnboardingReligionPageState
     // restored, so a custom religion typed in Edit Profile does not select a
     // stale dropdown entry.
     final draft = ref.read(registrationProvider);
-    _casteCtrl.text = draft.religionDetails.caste;
     _form = OnboardingReligionForm(
       religion: OnboardingScaffold.restore(
         draft.religionDetails.religion,
         ProfileOptions.religions,
       ),
-      // Verbatim: free text, so there is no list to filter against.
-      caste: draft.religionDetails.caste,
       community: OnboardingScaffold.restore(
         draft.religionDetails.community,
         ProfileOptions.communitiesFor(draft.religionDetails.religion),
       ),
-      // Widened rather than filtered, like livingIn below — a mother tongue
-      // saved from the wizard can sit outside this step's shorter list.
-      motherTongue: draft.languageDetails.motherTongue,
       // Verbatim, unlike religion/community above: this is a location answer,
       // and the country list is a curated subset that a stored value can fall
       // outside of. Filtering it blanked the answer and let the next save
@@ -94,10 +69,7 @@ class _OnboardingReligionPageState
   String _label(AppLocalizations l10n, OnboardingReligionField field) =>
       switch (field) {
         OnboardingReligionField.religion => l10n.onboardingReligionLabel,
-        OnboardingReligionField.caste => l10n.registrationCasteLabel,
         OnboardingReligionField.community => l10n.onboardingCommunityLabel,
-        OnboardingReligionField.motherTongue =>
-          l10n.registrationMotherTongueLabel,
         OnboardingReligionField.livingIn => l10n.onboardingLivingInLabel,
       };
 
@@ -124,7 +96,7 @@ class _OnboardingReligionPageState
     return OnboardingStepScaffold(
       headline: l10n.onboardingReligionHeadline,
       crestIcon: Icons.groups_rounded,
-      backRoute: RouteNames.createProfileFor,
+      backRoute: RouteNames.onboardingNameDob,
       nextRoute: RouteNames.onboardingContact,
       isComplete: _form.isComplete,
       validationNames:
@@ -142,12 +114,6 @@ class _OnboardingReligionPageState
           isRequired: true,
           onChanged: (v) => _onReligionChanged(v ?? ''),
         ),
-        NmTextField(
-          label: l10n.registrationCasteLabel,
-          hint: l10n.registrationCasteHint,
-          controller: _casteCtrl,
-          onChanged: (v) => setState(() => _form = _form.copyWith(caste: v)),
-        ),
         OnboardingDropdownField(
           label: l10n.onboardingCommunityLabel,
           hint: l10n.onboardingCommunityHint,
@@ -157,18 +123,6 @@ class _OnboardingReligionPageState
           helpText: l10n.onboardingCommunityHelp,
           onChanged: (v) =>
               setState(() => _form = _form.copyWith(community: v ?? '')),
-        ),
-        OnboardingDropdownField(
-          label: l10n.registrationMotherTongueLabel,
-          hint: l10n.registrationMotherTongueLabel,
-          value: _form.motherTongue,
-          options: OnboardingScaffold.optionsWith(
-            _tongues,
-            _form.motherTongue,
-          ),
-          isRequired: true,
-          onChanged: (v) =>
-              setState(() => _form = _form.copyWith(motherTongue: v ?? '')),
         ),
         OnboardingDropdownField(
           label: l10n.onboardingLivingInLabel,

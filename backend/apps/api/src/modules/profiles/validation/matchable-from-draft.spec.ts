@@ -96,12 +96,16 @@ describe('the draft the onboarding flow produces', () => {
     expect(isMatchableFromDraft(currentOnboardingDraft)).toBe(true);
   });
 
-  // Each of these is a NOT NULL column. Dropping one must block the write
-  // rather than let a half-built profile through — and the screen that owns
-  // it must therefore keep asking for it.
+  // Each of these is a NOT NULL column that onboarding still collects.
+  // Dropping one must block the write rather than let a half-built profile
+  // through — and the screen that owns it must therefore keep asking for it.
+  //
+  // `caste` and `motherTongue` are deliberately NOT in this list any more:
+  // migration 20260903120000 made both columns nullable because onboarding
+  // stopped asking for them, so their absence is now a storable fact rather
+  // than an impossible write. Blocking on them would mean no member who
+  // signs up today could ever get a profile row at all.
   it.each([
-    ['caste', 'religionDetails', 'caste'],
-    ['motherTongue', 'languageDetails', 'motherTongue'],
     ['firstName', 'basicDetails', 'firstName'],
     ['lastName', 'basicDetails', 'lastName'],
     ['gender', 'basicDetails', 'gender'],
@@ -119,6 +123,43 @@ describe('the draft the onboarding flow produces', () => {
 
     expect(isMatchableFromDraft(stripped)).toBe(false);
   });
+
+  // The inverse of the two cases removed above, stated positively so the
+  // change is pinned rather than merely un-tested.
+  it.each([
+    ['caste', 'religionDetails', 'caste'],
+    ['motherTongue', 'languageDetails', 'motherTongue'],
+  ])('is NOT blocked without %s — the column is nullable now',
+    (_label, section, field) => {
+      const stripped = {
+        ...currentOnboardingDraft,
+        [section]: {
+          ...(currentOnboardingDraft as Record<
+            string,
+            Record<string, unknown>
+          >)[section],
+          [field]: undefined,
+        },
+      };
+
+      expect(isMatchableFromDraft(stripped)).toBe(true);
+    },
+  );
+
+  it('is not blocked when BOTH are absent — the shape signup now produces',
+    () => {
+      // Exactly what the current onboarding flow writes: no caste, no
+      // language section at all. Verified against a real Postgres in
+      // profile-write-without-caste.integration.spec.ts.
+      const draft = {
+        basicDetails: currentOnboardingDraft.basicDetails,
+        religionDetails: { religion: 'Hindu', community: 'Tamil' },
+        locationDetails: { state: 'Gujarat', city: 'Bhavnagar' },
+      };
+
+      expect(isMatchableFromDraft(draft)).toBe(true);
+    },
+  );
 
   it('was blocked before the screens asked for those six', () => {
     // The exact pre-fix shape: onboarding's own sections, minus the fields no
@@ -143,8 +184,12 @@ describe('isMatchableFromDraft', () => {
     // the member's city never reached user_profiles.
     expect(isMatchableFromDraft(onboardingDraft)).toBe(true);
 
+    // The two questions still differ, and location is where they differ now:
+    // finalize wants area/pinCode/nativePlace, all nullable columns that
+    // onboarding never collects. Religion is no longer a point of difference
+    // — that rule dropped caste and subCaste when the screens stopped asking.
     expect(isReligionDetailsComplete(onboardingDraft.religionDetails)).toBe(
-      false,
+      true,
     );
     expect(isLocationDetailsComplete(onboardingDraft.locationDetails)).toBe(
       false,
@@ -178,12 +223,12 @@ describe('isMatchableFromDraft', () => {
 
   describe('still refuses a draft missing a NOT NULL value', () => {
     // Writing these would mean inventing a value into someone's profile, so
-    // staying blocked is the correct outcome — one live draft has religion and
-    // community but no caste, and it must remain blocked.
+    // staying blocked is the correct outcome. Caste and mother tongue left
+    // this list when their columns became nullable: absent is now a value the
+    // database can hold, so blocking would invent a requirement instead of
+    // preventing an invented value.
     it.each([
-      ['caste', { religionDetails: { religion: 'Hindu', community: 'Tamil' } }],
       ['religion', { religionDetails: { caste: 'Iyer' } }],
-      ['motherTongue', { languageDetails: {} }],
       ['state', { locationDetails: { country: 'India', city: 'Mysore' } }],
       ['city', { locationDetails: { country: 'India', state: 'Karnataka' } }],
       ['firstName', { basicDetails: { ...onboardingDraft.basicDetails, firstName: '' } }],

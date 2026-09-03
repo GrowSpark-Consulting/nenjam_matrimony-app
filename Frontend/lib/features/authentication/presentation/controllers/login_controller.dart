@@ -9,6 +9,7 @@ import '../../domain/services/account_availability.dart';
 import '../../domain/services/local_auth_session.dart';
 import '../../domain/services/login_identifier.dart';
 import '../../domain/services/otp_verifier.dart';
+import '../../../registration/presentation/providers/registration_provider.dart';
 import '../providers/auth_providers.dart';
 
 /// Result of a login attempt, describing where the user should go next.
@@ -241,6 +242,36 @@ class LoginController extends Notifier<bool> {
 final loginControllerProvider =
     NotifierProvider<LoginController, bool>(LoginController.new);
 
+/// Which button the member tapped: "Continue with Google" on the Login
+/// screen, or on the Sign Up screen.
+///
+/// Google authentication itself is identical for both — one credential, one
+/// Firebase session — so the provider cannot tell them apart, and nothing
+/// downstream could either. That is the whole defect this enum fixes: with no
+/// intent recorded, both buttons ran the same code and the app decided what
+/// the member had *meant* purely from whatever state their account happened
+/// to be in. Someone tapping Log In with a Google account that had never
+/// registered was silently enrolled into a 13-step signup they never asked
+/// for, and someone tapping Sign Up began onboarding on whatever stale draft
+/// the previous session had left behind — because the Google path, alone
+/// among the three sign-up buttons, never called `startCreateMode()`.
+///
+/// The intent is the member's; the account state is the backend's. Both are
+/// needed, and they answer different questions.
+enum GoogleAuthIntent {
+  /// "I already have an account." An established member goes to Discover; a
+  /// member part-way through registration resumes their step. A Google
+  /// identity with no account behind it is NOT quietly turned into a signup
+  /// — see LoginPage's handling.
+  login,
+
+  /// "I am creating an account." Starts CREATE mode before routing, exactly
+  /// as the mobile and email sign-up buttons do, so onboarding never begins
+  /// on a leftover draft. An account that turns out to be already registered
+  /// is still sent to Discover rather than made to register twice.
+  signup,
+}
+
 /// Handles "Continue with Google".
 ///
 /// Kept separate from [LoginController] rather than added as another method
@@ -250,10 +281,29 @@ class GoogleSignInController extends Notifier<bool> {
   @override
   bool build() => false; // isLoading
 
-  Future<LoginResult> signIn() async {
+  /// Authenticates with Google on behalf of [intent].
+  ///
+  /// One implementation for both buttons — there is only one Google
+  /// credential exchange and duplicating it would be two things to keep
+  /// right. What [intent] changes is what happens *around* it: a signup
+  /// resets the draft first, so the flow that follows starts clean.
+  Future<LoginResult> signIn({
+    required GoogleAuthIntent intent,
+  }) async {
     state = true;
     try {
       final user = await ref.read(authRepositoryProvider).loginWithGoogle();
+
+      // Parity with the mobile and email sign-up buttons, which have always
+      // done this (see RegistrationLandingPage._signUpWith). Safe for a
+      // returning member mid-registration: this clears only the *local*
+      // draft, and PostAuthDestination immediately rehydrates the backend's
+      // copy — so a resumed signup keeps every answer, while a stale draft
+      // from an unrelated session cannot leak into a new one.
+      if (intent == GoogleAuthIntent.signup) {
+        ref.read(registrationProvider.notifier).startCreateMode();
+      }
+
       state = false;
       // Google asserts the address, so `emailVerified` is already true and
       // this evaluates false — the same rule email/password login uses,

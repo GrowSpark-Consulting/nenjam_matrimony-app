@@ -6,6 +6,9 @@ import 'package:nenjam_matrimony/features/authentication/data/repositories/auth_
 import 'package:nenjam_matrimony/features/authentication/data/services/google_auth_service.dart';
 import 'package:nenjam_matrimony/features/authentication/presentation/controllers/login_controller.dart';
 import 'package:nenjam_matrimony/features/authentication/presentation/providers/auth_providers.dart';
+import 'package:nenjam_matrimony/features/registration/domain/models/onboarding_forms.dart';
+import 'package:nenjam_matrimony/features/registration/domain/models/profile_flow_mode.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/providers/registration_provider.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 /// Stands in for the real repository. `noSuchMethod` forwarding lets this
@@ -49,7 +52,7 @@ void main() {
 
       final result = await container
           .read(googleSignInControllerProvider.notifier)
-          .signIn();
+          .signIn(intent: GoogleAuthIntent.login);
 
       expect(result.success, isTrue);
       expect(result.cancelled, isFalse);
@@ -67,7 +70,7 @@ void main() {
 
       final result = await container
           .read(googleSignInControllerProvider.notifier)
-          .signIn();
+          .signIn(intent: GoogleAuthIntent.login);
 
       expect(result.success, isTrue);
       expect(result.needsVerification, isTrue);
@@ -80,7 +83,7 @@ void main() {
 
       final result = await container
           .read(googleSignInControllerProvider.notifier)
-          .signIn();
+          .signIn(intent: GoogleAuthIntent.login);
 
       expect(result.cancelled, isTrue);
       expect(result.success, isFalse);
@@ -99,7 +102,7 @@ void main() {
 
       final result = await container
           .read(googleSignInControllerProvider.notifier)
-          .signIn();
+          .signIn(intent: GoogleAuthIntent.login);
 
       expect(result.success, isFalse);
       expect(result.cancelled, isFalse);
@@ -126,7 +129,7 @@ void main() {
 
       final result = await container
           .read(googleSignInControllerProvider.notifier)
-          .signIn();
+          .signIn(intent: GoogleAuthIntent.login);
 
       expect(result.cancelled, isFalse,
           reason: 'a bracketed play-services status is a failure, not a '
@@ -143,7 +146,7 @@ void main() {
 
       final result = await container
           .read(googleSignInControllerProvider.notifier)
-          .signIn();
+          .signIn(intent: GoogleAuthIntent.login);
 
       expect(result.success, isFalse);
       expect(result.errorMessage, isNotNull);
@@ -160,7 +163,7 @@ void main() {
       });
 
       expect(container.read(googleSignInControllerProvider), isFalse);
-      await container.read(googleSignInControllerProvider.notifier).signIn();
+      await container.read(googleSignInControllerProvider.notifier).signIn(intent: GoogleAuthIntent.login);
 
       expect(loadingDuringCall, isTrue);
       expect(container.read(googleSignInControllerProvider), isFalse);
@@ -171,9 +174,108 @@ void main() {
         () async => throw StateError('boom'),
       );
 
-      await container.read(googleSignInControllerProvider.notifier).signIn();
+      await container.read(googleSignInControllerProvider.notifier).signIn(intent: GoogleAuthIntent.login);
 
       expect(container.read(googleSignInControllerProvider), isFalse);
+    });
+  });
+
+  // ─── Intent ──────────────────────────────────────────────────────────
+  //
+  // The Google credential exchange is one implementation for both buttons —
+  // there is only one, and duplicating it would be two things to keep right.
+  // What the intent changes is what happens around it.
+  group('GoogleAuthIntent', () {
+    /// A draft carrying answers, as a previous session would have left it.
+    void seedStaleDraft(ProviderContainer container) {
+      final notifier = container.read(registrationProvider.notifier);
+      notifier.applyProfileFor(
+        const ProfileForForm(profileCreatedFor: 'Son', gender: 'Female'),
+      );
+    }
+
+    test('signup starts CREATE mode, so onboarding never begins on a stale '
+        'draft', () async {
+      final container = _containerReturning(() async => _googleUser);
+      seedStaleDraft(container);
+      expect(
+        container.read(registrationProvider).basicDetails.profileCreatedFor,
+        'Son',
+      );
+
+      await container
+          .read(googleSignInControllerProvider.notifier)
+          .signIn(intent: GoogleAuthIntent.signup);
+
+      // The regression this fixes: Google was the one sign-up button of the
+      // three that never called startCreateMode(), so a member who abandoned
+      // a signup and started a new one carried the old answers forward.
+      final draft = container.read(registrationProvider);
+      expect(draft.basicDetails.profileCreatedFor, isEmpty);
+      expect(draft.basicDetails.gender, isEmpty);
+      expect(
+        container.read(profileFlowModeProvider),
+        ProfileFlowMode.create,
+        reason: 'a Google signup is a CREATE-mode session, like the other two',
+      );
+    });
+
+    test('login leaves the draft alone', () async {
+      final container = _containerReturning(() async => _googleUser);
+      seedStaleDraft(container);
+
+      await container
+          .read(googleSignInControllerProvider.notifier)
+          .signIn(intent: GoogleAuthIntent.login);
+
+      // A login must not clear a registration in progress: a member part-way
+      // through signup who signs in again resumes, and PostAuthDestination
+      // rehydrates from the backend on top of whatever is here.
+      final draft = container.read(registrationProvider);
+      expect(draft.basicDetails.profileCreatedFor, 'Son');
+      expect(draft.basicDetails.gender, 'Female');
+    });
+
+    test('both intents authenticate through the same single Google call',
+        () async {
+      // No second authentication path — the defect was that the two buttons
+      // were indistinguishable, not that they shared an implementation.
+      var calls = 0;
+      final container = _containerReturning(() async {
+        calls++;
+        return _googleUser;
+      });
+
+      final login = await container
+          .read(googleSignInControllerProvider.notifier)
+          .signIn(intent: GoogleAuthIntent.login);
+      final signup = await container
+          .read(googleSignInControllerProvider.notifier)
+          .signIn(intent: GoogleAuthIntent.signup);
+
+      expect(calls, 2);
+      expect(login.success, isTrue);
+      expect(signup.success, isTrue);
+      expect(login.user?.uid, signup.user?.uid);
+    });
+
+    test('a cancelled signup does not reset the draft', () async {
+      final container = _containerReturning(
+        () async => throw const GoogleSignInCancelled(),
+      );
+      seedStaleDraft(container);
+
+      final result = await container
+          .read(googleSignInControllerProvider.notifier)
+          .signIn(intent: GoogleAuthIntent.signup);
+
+      // Backing out of the account picker is not the start of a signup, so
+      // it must not cost a member the answers they already gave.
+      expect(result.cancelled, isTrue);
+      expect(
+        container.read(registrationProvider).basicDetails.profileCreatedFor,
+        'Son',
+      );
     });
   });
 }

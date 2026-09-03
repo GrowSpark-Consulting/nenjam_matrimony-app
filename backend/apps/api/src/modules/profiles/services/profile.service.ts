@@ -435,11 +435,16 @@ export class ProfileService {
           'NEVER_MARRIED' | 'DIVORCED' | 'WIDOWED' | 'AWAITING_DIVORCE') ??
         'NEVER_MARRIED',
       religion: religion.religion as string,
-      caste: religion.caste as string,
+      // `|| null` for the same reason every optional column below has it:
+      // onboarding no longer collects caste or mother tongue, so the value is
+      // genuinely absent and must be stored as NULL rather than as `undefined`
+      // (which Prisma rejects) or as a fabricated placeholder. Both columns
+      // were made nullable in migration 20260903120000.
+      caste: (religion.caste as string) || null,
       subCaste: (religion.subCaste as string) || null,
       community: (religion.community as string) || null,
       denomination: (religion.denomination as string) || null,
-      motherTongue: language.motherTongue as string,
+      motherTongue: (language.motherTongue as string) || null,
       languagesKnown: toArray(language.languagesKnown),
       // heightCm/highestEducation/profession are null, never a placeholder,
       // when Steps 5/6 are skipped — both are nullable columns precisely so
@@ -663,8 +668,10 @@ export class ProfileService {
       );
     }
     if (!isReligionDetailsComplete(religion)) {
-      missing.push('religionDetails (religion, caste, subCaste, community)');
+      missing.push('religionDetails (religion, community)');
     }
+    // Always passes — onboarding collects neither field. Kept so the four
+    // section checks stay symmetrical; see isLanguageDetailsComplete.
     if (!isLanguageDetailsComplete(language)) {
       missing.push('languageDetails (motherTongue, languagesKnown)');
     }

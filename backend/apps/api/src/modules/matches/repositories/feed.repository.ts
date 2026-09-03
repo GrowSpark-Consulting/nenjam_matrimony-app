@@ -88,10 +88,15 @@ export type FeedProfileRow = Record<string, unknown>;
 // matching, and caste/city/state/tongue to resolve relative "Same X" prefs.
 export interface SelfProfile {
   gender: Gender;
-  caste: string;
+  /// Nullable since onboarding stopped collecting caste — a seeker may
+  /// genuinely have none. Both consumers already handle that: the WHERE
+  /// builder's SelfAttributes turns a missing value into a no-op "Same X"
+  /// rather than an error, and compatibility.service takes `string | null`.
+  caste: string | null;
   currentCity: string;
   currentState: string;
-  motherTongue: string;
+  /// Nullable for the same reason as caste.
+  motherTongue: string | null;
   // ── scoring inputs ───────────────────────────────────────────────────────
   // The mutual half of the compatibility score runs the CANDIDATE's saved
   // preference against the SEEKER, so the seeker's own attributes are needed

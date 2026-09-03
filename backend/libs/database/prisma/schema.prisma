@@ -108,11 +108,18 @@ model UserProfile {
   gender             Gender
   maritalStatus      MaritalStatus @default(NEVER_MARRIED) @map("marital_status")
   religion           String
-  caste              String
+  /// Nullable: onboarding stopped asking for caste. Was NOT NULL, which left
+  /// the profile write with only bad options — fabricate a placeholder, or
+  /// omit the field and have Postgres reject the row. Same reasoning as
+  /// heightCm below. Existing values are untouched, and Edit Profile's
+  /// Religion step still writes this.
+  caste              String?
   subCaste           String?       @map("sub_caste")
   community          String?
   denomination       String?
-  motherTongue       String        @map("mother_tongue")
+  /// Nullable for the same reason as caste — onboarding no longer asks. Read
+  /// null-tolerantly by matching (SelfAttributes) and the feed mapper.
+  motherTongue       String?       @map("mother_tongue")
   languagesKnown     Json          @default("[]") @map("languages_known")
   /// Nullable: Step 6 (Physical Details) is skippable. Was NOT NULL with a
   /// fake `0` written when skipped (see git blame) — that both violated the

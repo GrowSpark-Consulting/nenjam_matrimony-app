@@ -21,7 +21,8 @@ abstract final class RouteNames {
   static const String forgotPassword = '/forgot-password';
   static const String registration = '/registration';
   static const String createProfileFor = '/create-profile-for';
-  // ─── Onboarding (the four screens between signup and Discover) ────
+  // ─── Onboarding (the screens between signup and Discover) ─────────
+  static const String onboardingNameDob = '/registration/name';
   static const String onboardingReligion = '/registration/religion';
   static const String onboardingContact = '/registration/contact';
   static const String profileBasics = '/registration/profile-basics';
@@ -83,6 +84,7 @@ abstract final class RouteNames {
   static const String forgotPasswordName = 'forgotPassword';
   static const String registrationName = 'registration';
   static const String createProfileForName = 'createProfileFor';
+  static const String onboardingNameDobName = 'onboardingNameDob';
   static const String onboardingReligionName = 'onboardingReligion';
   static const String onboardingContactName = 'onboardingContact';
   static const String profileBasicsName = 'profileBasics';
@@ -151,6 +153,7 @@ abstract final class RouteNames {
     login,
     loginForm,
     createProfileFor,
+    onboardingNameDob,
     onboardingReligion,
     onboardingContact,
     profileBasics,

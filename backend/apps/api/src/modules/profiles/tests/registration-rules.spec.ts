@@ -22,14 +22,17 @@ describe('isReligionDetailsComplete', () => {
     ).toBe(false);
   });
 
-  it('is false when caste is missing', () => {
-    expect(isReligionDetailsComplete({ ...complete, caste: '' })).toBe(false);
+  // Caste and sub-caste left this contract when onboarding stopped asking for
+  // them. Requiring either would make finalize() unsatisfiable for every
+  // profile the current signup flow can produce — sub-community is offered on
+  // the "Let's build your Profile" step but is optional, and caste is not
+  // collected at all.
+  it('is true when caste is missing — onboarding no longer collects it', () => {
+    expect(isReligionDetailsComplete({ ...complete, caste: '' })).toBe(true);
   });
 
-  it('is false when subCaste is missing', () => {
-    expect(isReligionDetailsComplete({ ...complete, subCaste: '' })).toBe(
-      false,
-    );
+  it('is true when subCaste is missing — it is optional', () => {
+    expect(isReligionDetailsComplete({ ...complete, subCaste: '' })).toBe(true);
   });
 
   it('is false when community is missing', () => {
