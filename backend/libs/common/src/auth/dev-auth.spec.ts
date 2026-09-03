@@ -187,7 +187,12 @@ describe('dummy-OTP authentication', () => {
       expect(readDevAuthPhone(header(LISTED))).toBeNull();
     });
 
-    it('admits nobody when the whitelist is unset or empty', () => {
+    it('admits ANY well-formed number when the list is unset or empty', () => {
+      // The list is an optional narrowing, not a precondition: with none
+      // configured the mode admits anything well-formed, production included.
+      // This is the deliberate inversion of the old fail-closed default — the
+      // app cannot send an SMS, so a signup has to be completable with
+      // whatever number the member typed, on whatever server they reach.
       for (const list of [undefined, '', '   ', ',,']) {
         env({
           NODE_ENV: 'production',
@@ -195,7 +200,9 @@ describe('dummy-OTP authentication', () => {
           DUMMY_OTP_PHONES: list,
         });
         expect(dummyOtpPhones().size).toBe(0);
-        expect(readDevAuthPhone(header(LISTED))).toBeNull();
+        expect(dummyAuthAllows(LISTED)).toBe(true);
+        expect(dummyAuthAllows(UNLISTED)).toBe(true);
+        expect(readDevAuthPhone(header(UNLISTED))).toBe(UNLISTED);
       }
     });
 
@@ -208,6 +215,90 @@ describe('dummy-OTP authentication', () => {
       const phones = dummyOtpPhones();
       expect(phones.has(LISTED)).toBe(true);
       expect(phones.size).toBe(1);
+    });
+  });
+
+  // ── the policy as a table ──────────────────────────────────────────────
+  //
+  // The rule DUMMY_OTP_ENABLED now states, in the order it is evaluated.
+  // Written against `dummyAuthAllows` directly because it is the one function
+  // both entry points consult — the header and the session endpoint — so a
+  // divergence between them is impossible by construction.
+
+  describe('DUMMY_OTP_ENABLED accepts any valid E.164, in any NODE_ENV', () => {
+    it('admits an arbitrary number in production', () => {
+      env({ NODE_ENV: 'production', DUMMY_OTP_ENABLED: 'true' });
+
+      for (const phone of [
+        '+919876543212',
+        '+916358494664',
+        '+14155550123',
+        '+447911123456',
+      ]) {
+        expect(dummyAuthAllows(phone)).toBe(true);
+      }
+    });
+
+    it('admits an arbitrary number in production with an empty list', () => {
+      env({
+        NODE_ENV: 'production',
+        DUMMY_OTP_ENABLED: 'true',
+        DUMMY_OTP_PHONES: '',
+      });
+
+      expect(dummyAuthAllows(UNLISTED)).toBe(true);
+    });
+
+    it('narrows to the listed numbers once the list is populated', () => {
+      env({
+        NODE_ENV: 'production',
+        DUMMY_OTP_ENABLED: 'true',
+        DUMMY_OTP_PHONES: LISTED,
+      });
+
+      // The list tightens; it never enables. This is the one lever that
+      // closes the mode down without turning it off.
+      expect(dummyAuthAllows(LISTED)).toBe(true);
+      expect(dummyAuthAllows(UNLISTED)).toBe(false);
+    });
+
+    it('rejects a malformed number however the flags are set', () => {
+      env({ NODE_ENV: 'production', DUMMY_OTP_ENABLED: 'true' });
+
+      for (const bad of [
+        '919876543210', // no +
+        '+0123456789', // leading zero after +
+        '+91 98765 43210', // spaces
+        '+91-9876543210', // punctuation
+        'not-a-number',
+        '',
+        '+91', // too short
+        `+9198765432100000`, // too long
+      ]) {
+        expect(dummyAuthAllows(bad)).toBe(false);
+      }
+    });
+
+    it('is off entirely once USE_REAL_OTP is set', () => {
+      env({
+        NODE_ENV: 'production',
+        DUMMY_OTP_ENABLED: 'true',
+        DEV_AUTH_ENABLED: 'true',
+        USE_REAL_OTP: 'true',
+      });
+
+      expect(dummyAuthAllows(LISTED)).toBe(false);
+      expect(dummyAuthAllows(UNLISTED)).toBe(false);
+      expect(readDevAuthPhone(header(LISTED))).toBeNull();
+    });
+
+    it('is off when neither flag is set', () => {
+      for (const nodeEnv of ['production', 'development', undefined]) {
+        env({ NODE_ENV: nodeEnv });
+
+        expect(dummyAuthAllows(LISTED)).toBe(false);
+        expect(dummyAuthAllows(UNLISTED)).toBe(false);
+      }
     });
   });
 

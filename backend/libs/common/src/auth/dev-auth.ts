@@ -12,34 +12,40 @@
  * becomes that phone number — so the whole file is about bounding where it
  * applies and to whom.
  *
- * ## Two modes, deliberately different in strictness
+ * ## One switch, and an optional narrowing
  *
- * **Development** (`NODE_ENV !== 'production'` AND either
- * `DEV_AUTH_ENABLED=true` or `DUMMY_OTP_ENABLED=true`): any well-formed
- * number. A developer's own machine, throwaway data, and a flag that has to
- * be set by hand. No whitelist — off production it only ever meant a
- * developer registering each of their own test numbers by hand before they
- * could sign up, against data that is disposable anyway.
+ * `DUMMY_OTP_ENABLED=true` admits **any well-formed E.164 number, in every
+ * environment, `NODE_ENV=production` included**. `DEV_AUTH_ENABLED=true` does
+ * the same off production. That is the point of the mode: the app cannot send
+ * an SMS yet, so signup has to be completable with whatever number a member
+ * types, on whatever server the build is pointed at. A per-number list instead
+ * meant "this number is not enabled for dummy OTP" on a server the operator
+ * controls, for a number they had just invented.
  *
- * **Production** (`DUMMY_OTP_ENABLED=true` AND the number is listed in
- * `DUMMY_OTP_PHONES`): only the numbers the operator explicitly configured.
- * This is what lets a deployed build demo the flow before billing is on, and
- * it is why the production mode is a whitelist rather than the development
- * rule with its environment check removed. An unset or empty whitelist admits
- * nobody, so the mode fails closed.
+ * `DUMMY_OTP_PHONES` is an OPTIONAL narrowing, not a precondition: non-empty,
+ * it restricts sign-in to exactly the listed numbers; empty or unset, any
+ * well-formed number is accepted. Setting it can only ever tighten.
  *
- * Every account reachable this way can be signed into by anyone who knows the
- * number, with no credential of any kind. Whitelist only throwaway test
- * numbers — never a real member's.
+ * ## What this costs, stated plainly
  *
- * ## What stays true in both modes
+ * With this enabled and no list, ANYONE who can reach the API can sign in as
+ * ANY phone number, with no credential of any kind, and can create unlimited
+ * accounts. The endpoint's name is not obscurity and the rate limit is not
+ * protection. This is acceptable only while every account in the database is
+ * disposable.
+ *
+ * Two ways to close it, both one variable and no code change:
+ * `USE_REAL_OTP=true` (which also restores real Firebase Phone Auth — the
+ * actual fix, once SMS billing is on), or a populated `DUMMY_OTP_PHONES`.
+ * Do one of them before real members sign up.
+ *
+ * ## What stays true in every mode
  *
  * `USE_REAL_OTP=true` switches everything here off, which is the one-flag path
  * back to real Firebase Phone Auth when billing is enabled — no auth refactor.
  *
- * `NODE_ENV=production` + `DEV_AUTH_ENABLED=true` still grants nothing. That
- * protection is unchanged: production access requires the separate
- * `DUMMY_OTP_ENABLED` flag *and* a listed number.
+ * Both flags default to absent, so an environment that configures neither
+ * admits nobody. A malformed number is never an identity.
  *
  * Nothing here forges a Firebase ID token, and `verifyIdToken` is never called
  * with anything this module produced. FirebaseAuthGuard consults it only when
@@ -92,12 +98,13 @@ export function isDevAuthEnabled(): boolean {
 }
 
 /**
- * Production mode: explicitly enabled, and only for listed numbers.
+ * The dummy OTP is the verification mechanism on this server — for any
+ * well-formed number, in any environment.
  *
- * Independent of NODE_ENV on purpose. Gating it on "is production" would mean
+ * Independent of NODE_ENV on purpose: gating it on "is production" would mean
  * the same deployment behaves differently depending on a variable that is
- * routinely unset, and a whitelist is safe to evaluate anywhere — the
- * restriction that matters is the list itself, not the environment name.
+ * routinely unset. What bounds this mode is the flag itself and the optional
+ * [dummyOtpPhones] narrowing, not the environment name.
  */
 export function isDummyOtpEnabled(): boolean {
   if (isRealOtpForced()) return false;
@@ -105,11 +112,13 @@ export function isDummyOtpEnabled(): boolean {
 }
 
 /**
- * The configured test numbers, or an empty set.
+ * The numbers dummy sign-in has been narrowed to, or an empty set meaning
+ * "not narrowed" — any well-formed number is then accepted. See
+ * [dummyAuthAllows]; this list can only ever tighten, never enable.
  *
  * Read on every call rather than cached so a deployment can change the list
  * without a restart-shaped surprise, and so tests can vary it. Malformed
- * entries are dropped rather than tolerated: a typo must shrink the whitelist,
+ * entries are dropped rather than tolerated: a typo must shrink the list,
  * never widen it.
  */
 export function dummyOtpPhones(): ReadonlySet<string> {
@@ -128,14 +137,21 @@ export function devAuthUid(phoneE164: string): string {
 
 /**
  * Whether the dummy-OTP arrangement may vouch for [phoneE164] at all — the
- * two-mode policy above, stated once so that every entry point answers it
- * identically.
+ * policy above, stated once so that every entry point answers it identically.
  *
  * [readDevAuthPhone] applies it to the header a request carries.
  * `POST /auth/dummy-otp/session` applies it to the number in a request body:
  * that endpoint mints a REAL Firebase session for a number nobody has sent an
  * SMS to, which is the same bypass this file already governs and must never be
- * a wider one. Same flags, same whitelist, same fail-closed default.
+ * a wider one. Same flags, same optional narrowing.
+ *
+ * In order:
+ *   USE_REAL_OTP=true                  -> false, whatever else is set
+ *   malformed number                   -> false, in every mode
+ *   neither flag set                   -> false (both default to absent)
+ *   DUMMY_OTP_ENABLED + empty list     -> true, any NODE_ENV
+ *   DUMMY_OTP_ENABLED + non-empty list -> only the listed numbers
+ *   DEV_AUTH_ENABLED off production    -> true
  */
 export function dummyAuthAllows(phoneE164: string): boolean {
   // The master switch first: with real phone auth on, nothing below applies.
@@ -148,13 +164,14 @@ export function dummyAuthAllows(phoneE164: string): boolean {
   // so an unconfigured environment admits nobody.
   if (!isDevAuthEnabled() && !isDummyOtpEnabled()) return false;
 
-  // DUMMY_OTP_ENABLED has two deliberately different behaviours:
-  // - off production: any well-formed number (no whitelist friction);
-  // - production: only explicitly listed numbers (fail closed on empty list).
+  // When DUMMY_OTP_ENABLED is on, any well-formed number is accepted
+  // regardless of NODE_ENV. This lets a deployed build demo the full signup
+  // flow before SMS billing is enabled without maintaining a phone whitelist.
+  // When DUMMY_OTP_PHONES is set it still narrows access, but an empty list
+  // no longer blocks everyone.
   if (isDummyOtpEnabled()) {
-    if (process.env.NODE_ENV !== 'production') return true;
     const whitelist = dummyOtpPhones();
-    return whitelist.has(phoneE164);
+    return whitelist.size === 0 || whitelist.has(phoneE164);
   }
 
   // Dev-auth (non-production only) admits any well-formed number.
