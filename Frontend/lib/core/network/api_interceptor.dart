@@ -37,9 +37,10 @@ class AuthInterceptor extends Interceptor {
   final Future<String?> Function() refreshAccessToken;
   final Future<void> Function() onSessionExpired;
 
-  /// DEBUG ONLY — supplies the dev-auth phone number when there is no Firebase
-  /// session. Optional and null in production wiring, so the release build has
-  /// no path to this header at all. See dev_auth_session.dart.
+  /// Supplies the dummy-OTP identifier when there is no Firebase session, for
+  /// builds that use the dummy OTP. Optional, and returns null on a build that
+  /// does not, so the header is never sent by an ordinary release. See
+  /// `local_auth_session.dart` and the backend's `dev-auth.ts`.
   final String? Function()? devAuthPhone;
 
   AuthInterceptor({
@@ -63,12 +64,11 @@ class AuthInterceptor extends Interceptor {
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     } else {
-      // DEBUG ONLY. Never reached in release: DevAuthSession.isEnabled folds
-      // to a constant false there, so `devAuthPhone` is always null and this
-      // adds nothing. Deliberately in the `else` — a real Firebase token
-      // always wins, and the two headers are never sent together, which is
-      // also the condition the backend guard requires before it will look at
-      // this header at all.
+      // The dummy-OTP bridge, supplied from LocalAuthSession — null unless
+      // this build uses the dummy OTP, so a normal release sends nothing.
+      // Deliberately in the `else`: a real Firebase token always wins, and
+      // the two headers are never sent together, which is also the condition
+      // the backend guard requires before it will look at this header.
       final devPhone = devAuthPhone?.call();
       if (devPhone != null && devPhone.isNotEmpty) {
         options.headers['X-Dev-Auth-Phone'] = devPhone;
@@ -110,11 +110,12 @@ class AuthInterceptor extends Interceptor {
     if (statusCode != 401 || options.extra[_authRetriedKey] == true) {
       return false;
     }
-    // DEBUG ONLY. On a dev session there is no Firebase token to refresh, so
+    // On a dummy-OTP session there is no Firebase token to refresh, so
     // recovery would refresh nothing, get null, and call onSessionExpired ->
     // logout -> the widgets refetch -> 401 again: a sign-out storm rather than
-    // one honest error. A 401 here means the backend is not running with dev
-    // auth enabled, which is a configuration answer, not an expired session.
+    // one honest error. A 401 here means the backend is not running with dummy
+    // auth enabled, or the number is not whitelisted — a configuration answer,
+    // not an expired session.
     if (devAuthPhone?.call() != null) return false;
     return true;
   }

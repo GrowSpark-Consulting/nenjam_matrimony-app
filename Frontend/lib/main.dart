@@ -24,6 +24,7 @@ import 'core/router/route_names.dart';
 import 'core/services/storage_service.dart';
 import 'core/utils/story_perf.dart';
 import 'core/theme/app_theme.dart';
+import 'features/authentication/domain/services/local_auth_session.dart';
 import 'features/authentication/presentation/providers/auth_providers.dart';
 import 'features/registration/presentation/providers/registration_provider.dart';
 import 'l10n/app_localizations.dart';
@@ -238,7 +239,12 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
   /// landing screen if that happened — the same destination the router's
   /// own redirect uses, so the two can't disagree.
   void _checkSessionOnResume() {
-    final signedIn = ref.read(authRepositoryProvider).currentUser != null;
+    // `hasLocalAuthSession` is the same allowance the router's guard makes
+    // for a mobile login that could not mint a Firebase session — without
+    // it, resuming the app would bounce that member to the landing screen
+    // from a screen the router itself considers theirs.
+    final signedIn = ref.read(authRepositoryProvider).currentUser != null ||
+        hasLocalAuthSession();
     final location = _currentLocation;
     final willRedirect =
         !signedIn && !RouteNames.publicRoutes.contains(location);

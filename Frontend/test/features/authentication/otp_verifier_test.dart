@@ -1,26 +1,27 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nenjam_matrimony/features/authentication/domain/services/otp_verifier.dart';
 
-/// Pins the development OTP contract: **any numeric code of the expected
-/// length is accepted, and nothing is sent.**
+/// Pins the development OTP contract: **any non-empty code is accepted, and
+/// nothing is sent.**
 ///
-/// This is what keeps a real SMS out of the onboarding flow. Firebase Phone
-/// Auth needs SMS billing enabled; calling it from onboarding failed with
-/// BILLING_NOT_ENABLED and blocked the last step entirely. The seam stays so
-/// real verification can be restored by swapping the provider override.
+/// This is what keeps a real SMS out of the login and onboarding flows.
+/// Firebase Phone Auth needs SMS billing enabled; calling it from onboarding
+/// failed with BILLING_NOT_ENABLED and blocked the last step entirely. The
+/// seam stays so real verification can be restored by swapping the provider
+/// override.
 void main() {
-  final verifier = MockOtpVerifier();
+  const verifier = MockOtpVerifier();
 
   test('sending a code contacts nothing and cannot fail', () async {
     await verifier.send('+919876543210');
   });
 
-  test('any numeric code of the right length is accepted', () async {
-    for (final code in ['1234', '0000', '5678', '1111', '9999', '4321']) {
+  test('any non-empty code is accepted, whatever its length', () async {
+    for (final code in ['123456', '000000', '111111', '9999', '1234', '7']) {
       expect(
         await verifier.verify(code),
         isTrue,
-        reason: '"$code" is four digits and must be accepted',
+        reason: '"$code" is non-empty and must be accepted',
       );
     }
   });
@@ -29,20 +30,22 @@ void main() {
     expect(await verifier.verify(' 1234 '), isTrue);
   });
 
-  test('a wrong length or a non-numeric code is rejected', () async {
-    for (final code in ['', '12', '123', '12345', 'abcd', '12a4', '１２３４']) {
+  test('only an empty code is rejected', () async {
+    for (final code in ['', '   ', '\t']) {
       expect(
         await verifier.verify(code),
         isFalse,
-        reason: '"$code" is not four digits and must be rejected',
+        reason: 'an empty code is the user not having answered',
       );
     }
   });
 
-  test('the code length the UI asks for is configurable', () async {
-    final six = MockOtpVerifier(codeLength: 6);
+  test('codeLength is a UI hint, not a rule verify enforces', () async {
+    const six = MockOtpVerifier(codeLength: 6);
     expect(six.codeLength, 6);
     expect(await six.verify('123456'), isTrue);
-    expect(await six.verify('1234'), isFalse);
+    // Shorter than the boxes drawn, and still accepted — nothing is being
+    // sent, so no length is more real than another.
+    expect(await six.verify('1234'), isTrue);
   });
 }

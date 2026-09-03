@@ -76,7 +76,10 @@ class _RegistrationLandingPageState
     context.go(RouteNames.createProfileFor);
   }
 
-  void _login() => context.push(RouteNames.login);
+  /// Straight to the login form. There is no screen in between choosing
+  /// login and being asked for a credential — this screen is already the
+  /// place the two paths part.
+  void _login() => context.push(RouteNames.loginForm);
 
   Future<void> _signUpWithGoogle() async {
     if (_resolvingDestination) return;

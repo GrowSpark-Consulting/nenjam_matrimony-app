@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/router/route_names.dart';
 import '../../../../core/services/storage_service.dart';
-import '../../../authentication/data/services/dev_auth_session.dart';
+import '../../../authentication/domain/services/local_auth_session.dart';
 import '../../../authentication/presentation/providers/auth_providers.dart';
 
 import '../../../../core/network/api_providers.dart';
@@ -201,12 +201,12 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   /// throws, and "cannot tell" must mean "persist locally", never a crash
   /// that strands the member on a completed screen.
   bool get _hasSession {
-    // DEBUG ONLY — a dev session counts, because the requests it authorises
-    // genuinely reach the backend. Without this the dummy-OTP flow persisted
-    // every answer locally and sent none of them, which is why a member could
-    // finish onboarding and have no `user_profiles` row at all. Constant
-    // `false` in release, where DevAuthSession is compiled out.
-    if (devAuthSession.isActive) return true;
+    // A LocalAuthSession counts, because the requests it authorises now
+    // genuinely reach the backend (see api_providers' devAuthPhone wiring).
+    // Without this the dummy-OTP flow persisted every answer locally and sent
+    // none of them, which is why a member could finish onboarding and have no
+    // `user_profiles` row at all.
+    if (hasLocalAuthSession()) return true;
     try {
       return ref.read(firebaseAuthServiceProvider).currentUser != null;
     } catch (_) {

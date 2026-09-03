@@ -2583,30 +2583,6 @@ class AppLocalizationsTa extends AppLocalizations {
   String get authEntryLogin => 'உள்நுழையவும்';
 
   @override
-  String get welcomeBackHeadline => 'மீண்டும் வருக';
-
-  @override
-  String get welcomeBackSubtitle => 'தொடர உங்கள் விவரங்களை உள்ளிடவும்';
-
-  @override
-  String get welcomeBackGetOtp => 'OTP பெறவும்';
-
-  @override
-  String get welcomeBackPassword => 'கடவுச்சொல்லுடன் உள்நுழைக';
-
-  @override
-  String get welcomeBackGoogle => 'Google மூலம் தொடரவும்';
-
-  @override
-  String get welcomeBackEmail => 'மின்னஞ்சல் மூலம் தொடரவும்';
-
-  @override
-  String get welcomeBackNoAccount => 'கணக்கு இல்லையா?';
-
-  @override
-  String get welcomeBackSignUpFree => 'இலவசமாகப் பதிவு செய்யவும்';
-
-  @override
   String profileBasicsMissing(String fields) {
     return 'தொடர $fields தேர்ந்தெடுக்கவும்.';
   }
@@ -4630,6 +4606,55 @@ class AppLocalizationsTa extends AppLocalizations {
   String profileIdLabel(String id) {
     return 'அடையாள எண்: $id';
   }
+
+  @override
+  String get authIdentifierLabel => 'மின்னஞ்சல் அல்லது கைபேசி எண்';
+
+  @override
+  String get authIdentifierHint => 'name@example.com அல்லது 9876543210';
+
+  @override
+  String get authIdentifierRequired =>
+      'உங்கள் மின்னஞ்சல் அல்லது கைபேசி எண்ணை உள்ளிடவும்';
+
+  @override
+  String get authIdentifierInvalid =>
+      'சரியான மின்னஞ்சல் முகவரி அல்லது 10 இலக்க கைபேசி எண்ணை உள்ளிடவும்';
+
+  @override
+  String get authNoAccountForMobile =>
+      'இந்த கைபேசி எண்ணுக்கு கணக்கு எதுவும் இல்லை.';
+
+  @override
+  String get authAccountCheckUnavailable =>
+      'சேவையகத்தை அணுக முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get authOtpRequired => 'நாங்கள் அனுப்பிய குறியீட்டை உள்ளிடவும்';
+
+  @override
+  String get welcomeBackHeadline => 'மீண்டும் வருக';
+
+  @override
+  String get welcomeBackSubtitle => 'தொடர உங்கள் விவரங்களை உள்ளிடவும்';
+
+  @override
+  String get welcomeBackGetOtp => 'OTP பெறவும்';
+
+  @override
+  String get welcomeBackPassword => 'கடவுச்சொல்லுடன் உள்நுழைக';
+
+  @override
+  String get welcomeBackGoogle => 'Google மூலம் தொடரவும்';
+
+  @override
+  String get welcomeBackEmail => 'மின்னஞ்சல் மூலம் தொடரவும்';
+
+  @override
+  String get welcomeBackNoAccount => 'கணக்கு இல்லையா?';
+
+  @override
+  String get welcomeBackSignUpFree => 'இலவசமாகப் பதிவு செய்யவும்';
 
   @override
   String get nearbyTitle => 'என் அருகில்';

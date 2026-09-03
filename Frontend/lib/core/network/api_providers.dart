@@ -1,7 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/authentication/data/services/dev_auth_session.dart';
+import '../../features/authentication/domain/services/local_auth_session.dart';
+import '../../features/authentication/domain/services/otp_verifier.dart';
 import '../../features/authentication/presentation/providers/auth_providers.dart';
 import '../constants/app_constants.dart';
 import 'api_client.dart';
@@ -32,9 +33,17 @@ final apiClientProvider = Provider<ApiClient>((ref) {
       refreshAccessToken: () =>
           tokenService.getFirebaseToken(forceRefresh: true),
       onSessionExpired: () => ref.read(authRepositoryProvider).logout(),
-      // DEBUG ONLY — null in release, where DevAuthSession.isEnabled is a
-      // compile-time false and this returns null on every call.
-      devAuthPhone: () => devAuthSession.phone,
+      // The dummy-OTP bridge. LocalAuthSession is the app's single
+      // representation of "signed in without a Firebase credential"; this is
+      // what finally makes the requests it authorises actually authenticate,
+      // rather than looking signed in while every call goes out bare.
+      //
+      // Null unless this build uses the dummy OTP, so a normal release never
+      // sends the header. The backend accepts it only under its own flags,
+      // and in production only for whitelisted numbers — see dev-auth.ts.
+      devAuthPhone: () => dummyOtpEnabled
+          ? ref.read(localAuthSessionProvider).identifier
+          : null,
     ),
   );
 

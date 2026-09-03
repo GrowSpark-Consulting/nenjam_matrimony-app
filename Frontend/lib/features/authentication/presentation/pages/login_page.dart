@@ -18,106 +18,87 @@ import '../../../../core/widgets/inputs/password_field.dart';
 import '../../../../core/widgets/layout/curved_header.dart';
 import '../../../../core/widgets/layout/or_divider.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../core/services/storage_service.dart';
 import '../../data/services/backend_sync_service.dart';
+import '../../domain/services/login_identifier.dart';
+import '../../domain/services/otp_verifier.dart';
 import '../controllers/login_controller.dart';
-import '../controllers/phone_auth_controller.dart';
-import '../controllers/signup_controller.dart';
 import '../providers/auth_providers.dart';
 import '../utils/post_auth_destination.dart';
-import 'registration_landing_page.dart' show SignUpFocus;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Login Page (Root)
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Authentication entry point — Login and Sign Up tabs, backed by Firebase.
-class LoginPage extends ConsumerStatefulWidget {
-  final int initialTab;
+/// Which credential the Login tab opens on.
+///
+/// The three login entry points on "Welcome back" all land on this one
+/// form; this is what makes them arrive somewhere different.
+enum LoginFormMode {
+  /// Mobile number → OTP. The tab's own default.
+  mobileOtp,
 
-  /// Which Sign Up field to focus when the page opens on tab 1. Set by the
-  /// landing screen's "Sign Up with Email" / "Sign Up with Mobile" CTAs —
-  /// both open this same form, and this is what makes them lead somewhere
-  /// visibly different. Null (the default) focuses nothing.
-  final SignUpFocus? initialSignUpFocus;
+  /// Email address + password ("Continue with Email").
+  email,
+
+  /// A single field taking **either** an email address or a mobile number,
+  /// plus a password. The Mobile / Email segmented control is hidden here —
+  /// the field itself covers both, so choosing a channel first would only
+  /// be a question the form can answer for the user.
+  ///
+  /// **No button opens this today, by decision, not by oversight.** It was
+  /// reached from the "Login with Password" link on the Welcome Back
+  /// screen, and login is the two channels above now; the mode is entered
+  /// only by routing to [RouteNames.loginForm] with
+  /// `extra: {'mode': 'identifier'}`. It is kept whole — with
+  /// [LoginController.loginWithIdentifier] and its tests — because it is
+  /// the only mobile + password implementation there is, and nothing
+  /// selects it by accident. Adding a CTA is the one line that brings it
+  /// back.
+  identifier,
+}
+
+/// The login screen — login only, backed by Firebase.
+///
+/// Sign-up is not offered here and has no CTA on this screen: it starts from
+/// the landing screen ([RegistrationLandingPage]), which owns all three
+/// sign-up buttons and leads into onboarding. Keeping the two apart is what
+/// lets this screen ask one question — "which credential?" — instead of two.
+///
+/// Mobile hands off to the OTP screen, Email and the identifier mode
+/// authenticate here, and Google runs [GoogleSignInController]. Every route
+/// out ends at Discover, or at [PostAuthDestination] when a Firebase
+/// session makes a resumable onboarding step knowable.
+class LoginPage extends ConsumerStatefulWidget {
+  /// Which credential the form opens on. Defaults to the mobile-OTP channel
+  /// it has always opened on.
+  final LoginFormMode mode;
 
   const LoginPage({
     super.key,
-    this.initialTab = 0,
-    this.initialSignUpFocus,
+    this.mode = LoginFormMode.mobileOtp,
   });
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage>
-    with TickerProviderStateMixin {
-  late final TabController _tabController;
-
-  // Login form
+class _LoginPageState extends ConsumerState<LoginPage> {
   final _loginFormKey = GlobalKey<FormState>();
   final _loginPhoneCtrl = TextEditingController();
   final _loginEmailCtrl = TextEditingController();
   final _loginPasswordCtrl = TextEditingController();
 
-  // Sign Up form
-  final _signUpFormKey = GlobalKey<FormState>();
-  final _usernameCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-
-  // Owned here rather than inside _SignUpForm because that widget rebuilds
-  // with the TabBarView and would otherwise discard the node mid-focus.
-  final _signUpEmailFocus = FocusNode();
-  final _signUpPhoneFocus = FocusNode();
-
-  int _currentTab = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentTab = widget.initialTab;
-    _tabController = TabController(
-      length: 2,
-      vsync: this,
-      initialIndex: _currentTab,
-    );
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        setState(() => _currentTab = _tabController.index);
-      }
-    });
-
-    // After the first frame: the TabBarView's Sign Up page has no layout
-    // yet (so the field has no render object to scroll into view) until
-    // then, and focusing it early raises the keyboard over a blank tab.
-    final focus = widget.initialSignUpFocus;
-    if (focus != null && _currentTab == 1) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        switch (focus) {
-          case SignUpFocus.email:
-            _signUpEmailFocus.requestFocus();
-          case SignUpFocus.mobile:
-            _signUpPhoneFocus.requestFocus();
-        }
-      });
-    }
-  }
+  /// The single "email or mobile number" field used by
+  /// [LoginFormMode.identifier].
+  final _loginIdentifierCtrl = TextEditingController();
 
   @override
   void dispose() {
-    _tabController.dispose();
     _loginPhoneCtrl.dispose();
     _loginEmailCtrl.dispose();
     _loginPasswordCtrl.dispose();
-    _usernameCtrl.dispose();
-    _phoneCtrl.dispose();
-    _emailCtrl.dispose();
-    _passwordCtrl.dispose();
-    _signUpEmailFocus.dispose();
-    _signUpPhoneFocus.dispose();
+    _loginIdentifierCtrl.dispose();
     super.dispose();
   }
 
@@ -147,12 +128,49 @@ class _LoginPageState extends ConsumerState<LoginPage>
   }
 
   // ─── Login: Mobile OTP ─────────────────────────────────────────────
+  //
+  // Requests the code through [OtpVerifier] — currently [MockOtpVerifier],
+  // so nothing is sent and no provider is contacted — and hands the number
+  // to the OTP screen the same way "Welcome back" does, so both entry
+  // points reach one implementation.
   Future<void> _onLoginMobile() async {
     if (!(_loginFormKey.currentState?.validate() ?? false)) return;
     final phone = '+91${_loginPhoneCtrl.text.trim()}';
-    await ref.read(phoneAuthControllerProvider.notifier).sendCode(phone);
+    await storageService.setPendingPhone(phone);
+    await ref.read(otpVerifierProvider).send(phone);
     if (!mounted) return;
     context.push(RouteNames.loginOtp, extra: {'phone': phone});
+  }
+
+  // ─── Login: Email or Mobile + Password ─────────────────────────────
+  //
+  // Which of the two it is, and which credential check that implies, is
+  // [LoginController.loginWithIdentifier]'s decision — this screen only
+  // collects the two fields.
+  Future<void> _onLoginIdentifier() async {
+    if (!(_loginFormKey.currentState?.validate() ?? false)) return;
+    final result = await ref
+        .read(loginControllerProvider.notifier)
+        .loginWithIdentifier(
+          identifier: _loginIdentifierCtrl.text,
+          password: _loginPasswordCtrl.text,
+        );
+    if (!mounted) return;
+    if (!result.success) {
+      _snack(
+        result.errorMessage ?? AppLocalizations.of(context).authGenericError,
+      );
+      return;
+    }
+    // A mobile + password login has no Firebase user to resolve a
+    // destination from — it opened a LocalAuthSession instead — so it goes
+    // straight to Discover. An email login has one, and takes the same
+    // route every other Firebase sign-in takes.
+    if (result.user == null) {
+      context.go(RouteNames.discover);
+      return;
+    }
+    await _routeAfterLogin(result.needsVerification);
   }
 
   // ─── Login: Google ─────────────────────────────────────────────────
@@ -200,44 +218,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
     context.go(route);
   }
 
-  // ─── Sign Up ───────────────────────────────────────────────────────
-  Future<void> _onCreateAccount() async {
-    if (!(_signUpFormKey.currentState?.validate() ?? false)) return;
-
-    final notifier = ref.read(signupControllerProvider.notifier);
-    notifier
-      ..setUsername(_usernameCtrl.text.trim())
-      ..setEmail(_emailCtrl.text.trim())
-      ..setPassword(_passwordCtrl.text)
-      ..setPhone(_phoneCtrl.text.trim());
-
-    // Deliberately seeds no registration state. "Who is this profile
-    // for?" is asked once, on CreateProfileForPage, *after* the account
-    // exists — this form is account creation only. The draft itself is
-    // started by that screen's startCreateMode().
-    final ok = await notifier.submit();
-    if (!mounted) return;
-    if (!ok) {
-      _snack(
-        ref.read(signupControllerProvider).errorMessage ??
-            AppLocalizations.of(context).authGenericError,
-      );
-      return;
-    }
-    // Best-effort: mirrors this new Firebase account into the NestJS +
-    // Postgres backend. Never awaited — must not block or fail navigation.
-    unawaited(syncUserWithBackend(ref.read(apiClientProvider)));
-
-    // Account created + verification email sent → verify email.
-    context.go(RouteNames.verifyEmail);
-  }
 
   @override
   Widget build(BuildContext context) {
-    final isSignUp = _currentTab == 1;
     final loginLoading = ref.watch(loginControllerProvider);
     final googleLoading = ref.watch(googleSignInControllerProvider);
-    final signupLoading = ref.watch(signupControllerProvider).isSubmitting;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -245,74 +230,44 @@ class _LoginPageState extends ConsumerState<LoginPage>
         backgroundColor: AppColors.backgroundLight,
         body: Stack(
           children: [
-            NestedScrollView(
-              headerSliverBuilder: (context, innerBoxIsScrolled) {
-                return [
-                  SliverToBoxAdapter(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 320),
-                      transitionBuilder: (child, anim) => FadeTransition(
-                        opacity: anim,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0, 0.08),
-                            end: Offset.zero,
-                          ).animate(anim),
-                          child: child,
-                        ),
-                      ),
-                      child: isSignUp
-                          ? const _SignUpHeader(key: ValueKey('signup'))
-                          : const _LoginHeader(key: ValueKey('login')),
-                    ),
-                  ),
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _StickyTabBarDelegate(
-                      tabController: _tabController,
-                    ),
-                  ),
-                ];
-              },
-              body: TabBarView(
-                controller: _tabController,
+            // One scroll view for the whole screen. The tabbed version
+            // needed a NestedScrollView so the pinned tab bar could sit
+            // between the header and two independently scrolling forms;
+            // with one form and no tab bar there is nothing left to nest,
+            // and a single scroll view is also what keeps the keyboard from
+            // fighting an inner scrollable for the focused field.
+            SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: Column(
                 children: [
-                  _TabFormCard(
+                  const _LoginHeader(),
+                  _FormCard(
                     child: _LoginForm(
                       formKey: _loginFormKey,
+                      mode: widget.mode,
                       phoneCtrl: _loginPhoneCtrl,
                       emailCtrl: _loginEmailCtrl,
+                      identifierCtrl: _loginIdentifierCtrl,
                       passwordCtrl: _loginPasswordCtrl,
                       isLoading: loginLoading,
                       isGoogleLoading: googleLoading,
                       onLoginEmail: _onLoginEmail,
                       onLoginMobile: _onLoginMobile,
+                      onLoginIdentifier: _onLoginIdentifier,
                       onLoginGoogle: _onLoginGoogle,
-                      onSignUpTap: () => _tabController.animateTo(1),
                     ),
                   ),
-                  _TabFormCard(
-                    child: _SignUpForm(
-                      formKey: _signUpFormKey,
-                      usernameCtrl: _usernameCtrl,
-                      phoneCtrl: _phoneCtrl,
-                      emailCtrl: _emailCtrl,
-                      passwordCtrl: _passwordCtrl,
-                      emailFocus: _signUpEmailFocus,
-                      phoneFocus: _signUpPhoneFocus,
-                      isLoading: signupLoading,
-                      onCreateAccount: _onCreateAccount,
-                      onLoginTap: () => _tabController.animateTo(0),
-                    ),
-                  ),
+                  const SizedBox(height: 16),
+                  const _TrustBadges(),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
             // Login is reached both as a flow root (via `go` after Splash/
-            // OTP — nothing to pop to) and pushed from Auth Selection (via
-            // `push`, where the user needs a way back) — only show a back
-            // affordance when there's actually something to pop. White
-            // icon: this overlays NmCurvedHeader's plum background.
+            // OTP — nothing to pop to) and pushed from the landing screen
+            // (via `push`, where the user needs a way back) — only show a
+            // back affordance when there's actually something to pop.
+            // White icon: this overlays NmCurvedHeader's plum background.
             if (context.canPop())
               Positioned(
                 top: MediaQuery.paddingOf(context).top,
@@ -336,7 +291,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
 // ═══════════════════════════════════════════════════════════════════════════
 
 class _LoginHeader extends StatelessWidget {
-  const _LoginHeader({super.key});
+  const _LoginHeader();
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -348,154 +303,41 @@ class _LoginHeader extends StatelessWidget {
   }
 }
 
-class _SignUpHeader extends StatelessWidget {
-  const _SignUpHeader({super.key});
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return NmCurvedHeader(
-      title: l10n.authCreateAccount,
-      subtitle: l10n.authJoinCommunity,
-      badgeChild: const Text(
-        '∞',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 26,
-          fontWeight: FontWeight.w400,
-          height: 1,
-        ),
-      ),
-    );
-  }
-}
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Sticky Tab Bar Delegate & Card Content
+// Card Content
 // ═══════════════════════════════════════════════════════════════════════════
 
-class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabController tabController;
 
-  _StickyTabBarDelegate({required this.tabController});
-
-  @override
-  double get minExtent => 62.0;
-  @override
-  double get maxExtent => 62.0;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    final isPinned = shrinkOffset > 0;
-    const cardBg = Colors.white;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      margin: EdgeInsets.symmetric(horizontal: isPinned ? 0 : 16),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: isPinned
-            ? BorderRadius.zero
-            : const BorderRadius.vertical(top: Radius.circular(28)),
-        boxShadow: [
-          if (isPinned)
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            )
-          else
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              blurRadius: 24,
-              offset: const Offset(0, -4),
-            ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: TabBar(
-              controller: tabController,
-              labelColor: AppColors.primary,
-              unselectedLabelColor: AppColors.textTertiaryLight,
-              labelStyle: AppTypography.titleSmall.copyWith(
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
-              unselectedLabelStyle: AppTypography.titleSmall.copyWith(
-                fontWeight: FontWeight.w400,
-              ),
-              indicator: UnderlineTabIndicator(
-                borderSide: const BorderSide(
-                  color: AppColors.secondary,
-                  width: 2.5,
-                ),
-                borderRadius: BorderRadius.circular(2),
-              ),
-              indicatorSize: TabBarIndicatorSize.label,
-              dividerColor: Colors.transparent,
-              splashFactory: NoSplash.splashFactory,
-              overlayColor: WidgetStateProperty.all(Colors.transparent),
-              tabs: [
-                Tab(text: AppLocalizations.of(context).authLogin),
-                Tab(text: AppLocalizations.of(context).authSignUp),
-              ],
-            ),
-          ),
-          const Divider(
-            height: 1,
-            thickness: 1,
-            color: AppColors.dividerLight,
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(_StickyTabBarDelegate oldDelegate) {
-    return tabController != oldDelegate.tabController;
-  }
-}
-
-class _TabFormCard extends StatelessWidget {
+/// The white card the form sits on.
+///
+/// Rounded on all four corners, where it used to be rounded only at the
+/// bottom: the tab bar drew the top edge and the top two corners, sitting
+/// flush between the curved header and this card. With the tab bar gone a
+/// bottom-only radius would read as a card whose top had been cut off, so
+/// the shape is completed here — same margin, same fill, same shadow, one
+/// rounded rectangle instead of two halves. The 62px the tab strip occupied
+/// is simply gone; the form starts that much closer to the header.
+class _FormCard extends StatelessWidget {
   final Widget child;
-  const _TabFormCard({required this.child});
+  const _FormCard({required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      physics: const ClampingScrollPhysics(),
-      child: Column(
-        children: [
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(28),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  blurRadius: 24,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
-            child: child,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.12),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
           ),
-          const SizedBox(height: 16),
-          const _TrustBadges(),
-          const SizedBox(height: 32),
         ],
       ),
+      child: child,
     );
   }
 }
@@ -506,8 +348,10 @@ class _TabFormCard extends StatelessWidget {
 
 class _LoginForm extends StatefulWidget {
   final GlobalKey<FormState> formKey;
+  final LoginFormMode mode;
   final TextEditingController phoneCtrl;
   final TextEditingController emailCtrl;
+  final TextEditingController identifierCtrl;
   final TextEditingController passwordCtrl;
   final bool isLoading;
 
@@ -516,20 +360,22 @@ class _LoginForm extends StatefulWidget {
   final bool isGoogleLoading;
   final VoidCallback onLoginEmail;
   final VoidCallback onLoginMobile;
+  final VoidCallback onLoginIdentifier;
   final VoidCallback onLoginGoogle;
-  final VoidCallback onSignUpTap;
 
   const _LoginForm({
     required this.formKey,
+    required this.mode,
     required this.phoneCtrl,
     required this.emailCtrl,
+    required this.identifierCtrl,
     required this.passwordCtrl,
     required this.isLoading,
     required this.isGoogleLoading,
     required this.onLoginEmail,
     required this.onLoginMobile,
+    required this.onLoginIdentifier,
     required this.onLoginGoogle,
-    required this.onSignUpTap,
   });
 
   @override
@@ -537,7 +383,29 @@ class _LoginForm extends StatefulWidget {
 }
 
 class _LoginFormState extends State<_LoginForm> {
-  String _channel = 'Mobile';
+  late String _channel =
+      widget.mode == LoginFormMode.email ? 'Email' : 'Mobile';
+
+  /// Identifier mode is one field for both channels, so the Mobile / Email
+  /// control has nothing left to switch between.
+  bool get _isIdentifierMode => widget.mode == LoginFormMode.identifier;
+
+  /// Accepts either credential. Delegates to [Validators.email] once the
+  /// value looks like an address so a typo'd email gets the email message
+  /// rather than being told it is a bad phone number.
+  String? _validateIdentifier(String? value) {
+    final l10n = AppLocalizations.of(context);
+    final raw = value?.trim() ?? '';
+    if (raw.isEmpty) return l10n.authIdentifierRequired;
+    switch (LoginIdentifier.classify(raw)) {
+      case LoginIdentifierKind.email:
+        return Validators.email(raw);
+      case LoginIdentifierKind.mobile:
+        return null;
+      case LoginIdentifierKind.unknown:
+        return l10n.authIdentifierInvalid;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -546,36 +414,81 @@ class _LoginFormState extends State<_LoginForm> {
 
     return Form(
       key: widget.formKey,
-      child: SingleChildScrollView(
+      child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Segmented Control
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceVariantLight,
-                borderRadius: BorderRadius.circular(16),
+            if (!_isIdentifierMode) ...[
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariantLight,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    _SegmentTab(
+                      label: l10n.authChannelMobile,
+                      selected: isMobile,
+                      onTap: () => setState(() => _channel = 'Mobile'),
+                    ),
+                    _SegmentTab(
+                      label: l10n.authChannelEmail,
+                      selected: !isMobile,
+                      onTap: () => setState(() => _channel = 'Email'),
+                    ),
+                  ],
+                ),
               ),
-              child: Row(
-                children: [
-                  _SegmentTab(
-                    label: l10n.authChannelMobile,
-                    selected: isMobile,
-                    onTap: () => setState(() => _channel = 'Mobile'),
-                  ),
-                  _SegmentTab(
-                    label: l10n.authChannelEmail,
-                    selected: !isMobile,
-                    onTap: () => setState(() => _channel = 'Email'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
+            ],
 
-            if (isMobile) ...[
+            if (_isIdentifierMode) ...[
+              // One field, either credential — the same styling the email
+              // and mobile branches below use, so this reads as the same
+              // form rather than a second login screen.
+              Text(l10n.authIdentifierLabel, style: AppTypography.labelLarge),
+              const SizedBox(height: 8),
+              NmTextField(
+                controller: widget.identifierCtrl,
+                hint: l10n.authIdentifierHint,
+                keyboardType: TextInputType.emailAddress,
+                validator: _validateIdentifier,
+              ),
+              const SizedBox(height: 20),
+              NmPasswordField(
+                controller: widget.passwordCtrl,
+                label: l10n.authPassword,
+                hint: '••••••••',
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? l10n.authPasswordRequired : null,
+              ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: () => context.push(
+                    RouteNames.forgotPassword,
+                    extra: {'email': widget.identifierCtrl.text.trim()},
+                  ),
+                  child: Text(
+                    l10n.authForgotPassword,
+                    style: AppTypography.labelMedium.copyWith(
+                      color: AppColors.secondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              NmPrimaryButton(
+                label: l10n.commonContinue,
+                isLoading: widget.isLoading,
+                onPressed: widget.isLoading ? null : widget.onLoginIdentifier,
+              ),
+            ] else if (isMobile) ...[
               Text(l10n.authPhoneNumber, style: AppTypography.labelLarge),
               const SizedBox(height: 8),
               _Fixed91PhoneField(
@@ -586,7 +499,7 @@ class _LoginFormState extends State<_LoginForm> {
               NmPrimaryButton(
                 label: l10n.authLoginWithOtp,
                 isLoading: widget.isLoading,
-                onPressed: widget.onLoginMobile,
+                onPressed: widget.isLoading ? null : widget.onLoginMobile,
               ),
             ] else ...[
               Text(l10n.authEmailAddress, style: AppTypography.labelLarge),
@@ -626,7 +539,7 @@ class _LoginFormState extends State<_LoginForm> {
               NmPrimaryButton(
                 label: l10n.authLogin,
                 isLoading: widget.isLoading,
-                onPressed: widget.onLoginEmail,
+                onPressed: widget.isLoading ? null : widget.onLoginEmail,
               ),
             ],
 
@@ -635,32 +548,9 @@ class _LoginFormState extends State<_LoginForm> {
             NmSocialButton(
               label: l10n.authSignInWithGoogle,
               isLoading: widget.isGoogleLoading,
-              onPressed: widget.onLoginGoogle,
-            ),
-            const SizedBox(height: 24),
-
-            Center(
-              child: Wrap(
-                alignment: WrapAlignment.center,
-                children: [
-                  Text(
-                    l10n.authNewHere,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textSecondaryLight,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: widget.onSignUpTap,
-                    child: Text(
-                      l10n.authCreateAccount,
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.secondary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              onPressed: widget.isGoogleLoading || widget.isLoading
+                  ? null
+                  : widget.onLoginGoogle,
             ),
           ],
         ),
@@ -704,148 +594,7 @@ class _SegmentTab extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Sign Up Form
-// ═══════════════════════════════════════════════════════════════════════════
 
-class _SignUpForm extends StatelessWidget {
-  final GlobalKey<FormState> formKey;
-  final TextEditingController usernameCtrl;
-  final TextEditingController phoneCtrl;
-  final TextEditingController emailCtrl;
-  final TextEditingController passwordCtrl;
-  final FocusNode emailFocus;
-  final FocusNode phoneFocus;
-  final bool isLoading;
-  final VoidCallback onCreateAccount;
-  final VoidCallback onLoginTap;
-
-  const _SignUpForm({
-    required this.formKey,
-    required this.usernameCtrl,
-    required this.phoneCtrl,
-    required this.emailCtrl,
-    required this.passwordCtrl,
-    required this.emailFocus,
-    required this.phoneFocus,
-    required this.isLoading,
-    required this.onCreateAccount,
-    required this.onLoginTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    const labelColor = AppColors.textSecondaryLight;
-
-    return Form(
-      key: formKey,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ─── Username ───────────────────────────────────────
-            _FieldLabel(l10n.authUsername, color: labelColor),
-            const SizedBox(height: 8),
-            NmTextField(
-              controller: usernameCtrl,
-              hint: l10n.authUsernameHint,
-              keyboardType: TextInputType.text,
-              validator: Validators.username,
-            ),
-            const SizedBox(height: 16),
-
-            // ─── Email ──────────────────────────────────────────
-            _FieldLabel(l10n.authEmailAddress, color: labelColor),
-            const SizedBox(height: 8),
-            NmTextField(
-              controller: emailCtrl,
-              focusNode: emailFocus,
-              hint: 'name@example.com',
-              keyboardType: TextInputType.emailAddress,
-              validator: Validators.email,
-            ),
-            const SizedBox(height: 16),
-
-            // ─── Password ───────────────────────────────────────
-            _FieldLabel(l10n.authPassword, color: labelColor),
-            const SizedBox(height: 8),
-            NmPasswordField(
-              controller: passwordCtrl,
-              label: '',
-              hint: '••••••••',
-              validator: Validators.password,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              l10n.authPasswordHint,
-              style: AppTypography.labelSmall.copyWith(
-                color: AppColors.textTertiaryLight,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // ─── Mobile Number ──────────────────────────────────
-            _FieldLabel(l10n.authMobileNumber, color: labelColor),
-            const SizedBox(height: 8),
-            _Fixed91PhoneField(
-              controller: phoneCtrl,
-              focusNode: phoneFocus,
-              validator: Validators.phone,
-            ),
-            const SizedBox(height: 24),
-
-            _PrimaryButton(
-              label: l10n.authCreateAccount,
-              isLoading: isLoading,
-              onPressed: onCreateAccount,
-            ),
-            const SizedBox(height: 20),
-
-            Center(
-              child: Wrap(
-                alignment: WrapAlignment.center,
-                children: [
-                  Text(
-                    l10n.authAlreadyHaveAccount,
-                    style: AppTypography.bodyMedium.copyWith(color: labelColor),
-                  ),
-                  GestureDetector(
-                    onTap: onLoginTap,
-                    child: Text(
-                      l10n.authLogin,
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FieldLabel extends StatelessWidget {
-  final String text;
-  final Color color;
-  const _FieldLabel(this.text, {required this.color});
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: AppTypography.labelSmall.copyWith(
-        color: color,
-        fontWeight: FontWeight.w600,
-      ),
-    );
-  }
-}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Reusable Sub-Widgets
@@ -854,12 +603,10 @@ class _FieldLabel extends StatelessWidget {
 /// Phone field with a fixed +91 (India) prefix and 10-digit limit.
 class _Fixed91PhoneField extends StatelessWidget {
   final TextEditingController controller;
-  final FocusNode? focusNode;
   final String? Function(String?)? validator;
 
   const _Fixed91PhoneField({
     required this.controller,
-    this.focusNode,
     this.validator,
   });
 
@@ -900,7 +647,6 @@ class _Fixed91PhoneField extends StatelessWidget {
           Expanded(
             child: TextFormField(
               controller: controller,
-              focusNode: focusNode,
               validator: validator,
               keyboardType: TextInputType.phone,
               inputFormatters: [
@@ -928,54 +674,6 @@ class _Fixed91PhoneField extends StatelessWidget {
 }
 
 /// Full-width plum primary button with loading state.
-class _PrimaryButton extends StatelessWidget {
-  final String label;
-  final bool isLoading;
-  final VoidCallback? onPressed;
-
-  const _PrimaryButton({
-    required this.label,
-    required this.isLoading,
-    this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-        child: isLoading
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(
-                label,
-                style: AppTypography.labelLarge.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.3,
-                ),
-              ),
-      ),
-    );
-  }
-}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Trust Badges Footer

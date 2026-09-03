@@ -1,9 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/auth_error_mapper.dart';
-import '../../../../core/services/storage_service.dart';
-import '../../data/services/dev_auth_session.dart';
 import '../../presentation/controllers/phone_auth_controller.dart';
 import '../../presentation/providers/auth_providers.dart';
 
@@ -22,75 +21,41 @@ abstract interface class OtpVerifier {
   /// code is an answer, not a failure.
   Future<bool> verify(String code);
 
-  /// Digits the UI should ask for.
+  /// Digits the UI should ask for. A presentation hint — how many boxes to
+  /// draw — not a rule [verify] is required to enforce.
   int get codeLength;
 }
 
-/// Development verifier: accepts **any** numeric code of the expected
-/// length and contacts nothing.
+/// Development verifier: accepts **any non-empty** code and contacts
+/// nothing.
 ///
 /// Deliberately permissive rather than a single magic value — nobody should
 /// have to memorise a code to walk the flow, and a fixed one invites being
-/// hardcoded into a screen. Screens ask [OtpVerifier.verify] instead of
-/// comparing strings themselves, so turning real verification back on is a
-/// one-line change in [otpVerifierProvider] with no screen changes at all.
+/// hardcoded into a screen. `123456`, `000000`, `999999` and `1234` are all
+/// accepted, because none of them is more real than any other while no SMS
+/// is being sent. Screens ask [OtpVerifier.verify] instead of comparing
+/// strings themselves, so turning real verification back on is a one-line
+/// change in [otpVerifierProvider] with no screen changes at all.
 ///
 /// While this is wired up: no SMS is sent, `verifyPhoneNumber` is never
 /// called, no OTP provider is contacted, and no Firebase billing is needed.
 class MockOtpVerifier implements OtpVerifier {
-  MockOtpVerifier({this.codeLength = 4});
+  const MockOtpVerifier({this.codeLength = 4});
 
   @override
   final int codeLength;
 
-  /// The number [send] was called with, so [verify] knows who it just let in.
-  /// Held on the instance rather than read back from storage because the
-  /// login and onboarding screens stash the pending phone under different
-  /// keys, and this verifier is handed it directly either way.
-  String? _phoneE164;
-
   @override
   Future<void> send(String phoneE164) async {
-    // No SMS, no provider call, no network at all — only remember who is
-    // being "verified", for the dev session established in `verify`.
-    _phoneE164 = phoneE164;
+    // Intentionally nothing: no SMS, no provider call, no network at all.
   }
 
-  /// True for any string of exactly [codeLength] digits. Anything shorter,
-  /// longer, or non-numeric is rejected, so the screen's error path stays
-  /// exercised.
+  /// True for any non-empty code. Only an empty one is rejected — that is
+  /// the user not having answered, which is a validation error the screens
+  /// still surface, so their error path stays exercised.
   @override
-  Future<bool> verify(String code) async {
-    final trimmed = code.trim();
-    final accepted = trimmed.length == codeLength &&
-        trimmed.runes.every((r) => r >= 0x30 && r <= 0x39);
-    if (!accepted) return false;
-
-    // Establish the dev session this mock previously left missing.
-    //
-    // Returning `true` without one was the whole defect: the caller took it as
-    // "authenticated", walked into the app, and every request went out with no
-    // credential — so onboarding saved nothing and Discover answered 401 in a
-    // loop. A verifier that reports success owes the app a session, and in a
-    // debug build this is the session it can honestly give.
-    // Guarded: local storage may not be initialised (a widget test, a very
-    // early call), and a verifier that already accepted the code must not
-    // turn that into a thrown error. No number simply means no dev session.
-    String? phone = _phoneE164;
-    if (phone == null) {
-      try {
-        phone = storageService.pendingPhone;
-      } catch (_) {
-        phone = null;
-      }
-    }
-    if (phone != null && phone.isNotEmpty) {
-      await devAuthSession.establish(phone);
-    }
-    return true;
-  }
+  Future<bool> verify(String code) async => code.trim().isNotEmpty;
 }
-
 /// Real verification, over the same Firebase phone-auth stack the login
 /// screens already use.
 ///
@@ -191,29 +156,27 @@ class FirebasePhoneOtpVerifier implements OtpVerifier {
 ///
 /// Release builds get [FirebasePhoneOtpVerifier] unless
 /// `--dart-define=DUMMY_OTP=true` is passed. That opt-in is the *temporary*
-/// production configuration for demoing signup before billing is enabled, and
-/// it is only half of it: the backend must also run with `DUMMY_OTP_ENABLED`
-/// and list the number in `DUMMY_OTP_PHONES`, so a release built with the flag
-/// still authenticates nobody the operator did not configure. A release built
-/// without it has no path to the mock at all.
+
+/// Whether this build uses the dummy OTP instead of real Firebase phone
+/// verification.
+///
+/// Debug builds do by default; release builds only when
+/// `--dart-define=DUMMY_OTP=true` is passed, which is the temporary
+/// production configuration for demoing signup before SMS billing is on. That
+/// flag is only half of it — the backend must also run with
+/// `DUMMY_OTP_ENABLED` and list the number in `DUMMY_OTP_PHONES`, so a build
+/// carrying it still authenticates nobody the operator did not configure.
 ///
 /// `--dart-define=USE_REAL_OTP=true` overrides both and restores real Firebase
-/// Phone Auth — the same switch CI or a device test can flip, so "does real
-/// verification work?" is answerable without cutting a special build, and the
-/// one flag to set when billing goes live.
-///
-/// The condition itself lives on [DevAuthSession.isEnabled]; see
-/// `dev_auth_session.dart` for why it is defined in exactly one place.
+/// Phone Auth. It is the single switch to flip when billing is enabled, on
+/// both sides: the backend reads an environment variable of the same name.
+const bool _useRealOtp = bool.fromEnvironment('USE_REAL_OTP');
+const bool _dummyOtpInRelease = bool.fromEnvironment('DUMMY_OTP');
 
+bool get dummyOtpEnabled => !_useRealOtp && (kDebugMode || _dummyOtpInRelease);
+
+/// The verifier the onboarding OTP step uses.
 final otpVerifierProvider = Provider<OtpVerifier>((ref) {
-  // One predicate, owned by DevAuthSession, rather than a second copy of the
-  // same condition here: a verifier that accepts a dummy code must always be
-  // paired with the session that makes the resulting requests authenticate,
-  // and two separately-maintained booleans is exactly how those drift apart.
-  //
-  // No longer const: the mock remembers the number `send` was given so
-  // `verify` can establish a session for it. Provider caches one instance per
-  // container, so the send and the verify are the same object.
-  if (DevAuthSession.isEnabled) return MockOtpVerifier();
+  if (dummyOtpEnabled) return const MockOtpVerifier();
   return FirebasePhoneOtpVerifier(ref);
 });

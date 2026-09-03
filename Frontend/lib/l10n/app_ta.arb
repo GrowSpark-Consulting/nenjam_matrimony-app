@@ -1,16 +1,12 @@
 {
   "@@locale": "ta",
-
   "appName": "நெஞ்சம் மேட்ரிமனி",
   "commonContinue": "தொடரவும்",
-
   "splashTagline": "இதயங்கள் சந்திக்கும் இடம்",
-
   "languageChooseTitle": "உங்கள் மொழியைத் தேர்ந்தெடுங்கள்",
   "languageChooseSubtitle": "பொருத்தத்திற்கான உங்கள் விருப்ப மொழியைத் தேர்ந்தெடுக்கவும்",
   "languageEnglish": "ஆங்கிலம்",
   "languageTamil": "தமிழ்",
-
   "authTagline": "உங்கள் வாழ்க்கைத் துணையைக் கண்டறியுங்கள்",
   "authWelcomeTitle": "நெஞ்சம் மேட்ரிமனிக்கு வரவேற்கிறோம்",
   "authWelcomeSubtitle": "வாழ்நாள் துணையைத் தேடும் நேர்த்தியான நபர்களுக்காகப் பிரத்தியேகமாக வடிவமைக்கப்பட்ட ஒரு முதன்மையான திருமணப் பயணத்தை அனுபவியுங்கள்.",
@@ -56,12 +52,15 @@
   "authEnterVerificationCode": "சரிபார்ப்புக் குறியீட்டை உள்ளிடவும்",
   "authOtpSentTo": "{target} க்கு 6 இலக்கக் குறியீட்டை அனுப்பியுள்ளோம்",
   "@authOtpSentTo": {
-    "placeholders": { "target": { "type": "String" } }
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
   },
   "authVerifyAndContinue": "சரிபார்த்துத் தொடரவும்",
   "authResendOtpIn": "OTP ஐ மீண்டும் அனுப்ப",
   "authResendOtp": "OTP ஐ மீண்டும் அனுப்பு",
-
   "authUsername": "பயனர்பெயர்",
   "authUsernameHint": "எ.கா. arun_kumar",
   "authPasswordHint": "குறைந்தது 8 எழுத்துகள் — பெரிய, சிறிய எழுத்து, எண் மற்றும் சிறப்பு எழுத்துடன்",
@@ -70,49 +69,55 @@
   "authGenericError": "ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.",
   "authLogoutConfirm": "நிச்சயமாக வெளியேற விரும்புகிறீர்களா?",
   "commonCancel": "ரத்து செய்",
-
   "authVerifyEmailTitle": "உங்கள் மின்னஞ்சலைச் சரிபார்க்கவும்",
   "authVerifyEmailSentTo": "{email} க்கு சரிபார்ப்பு இணைப்பை அனுப்பியுள்ளோம்",
   "@authVerifyEmailSentTo": {
-    "placeholders": { "email": { "type": "String" } }
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
   },
   "authVerifyEmailInstruction": "உங்கள் மின்னஞ்சலில் உள்ள இணைப்பைத் திறந்து சரிபார்த்த பிறகு இங்கு திரும்பவும்.",
   "authIveVerified": "நான் சரிபார்த்துவிட்டேன்",
   "authResendEmail": "மின்னஞ்சலை மீண்டும் அனுப்பு",
   "authResendEmailIn": "{seconds}வி இல் மீண்டும் அனுப்பு",
   "@authResendEmailIn": {
-    "placeholders": { "seconds": { "type": "String" } }
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
   },
   "authEmailNotVerifiedYet": "மின்னஞ்சல் இன்னும் சரிபார்க்கப்படவில்லை. உங்கள் மின்னஞ்சலில் உள்ள இணைப்பைத் தட்டவும்.",
   "authEmailVerifiedSuccess": "மின்னஞ்சல் சரிபார்க்கப்பட்டது!",
   "authVerificationEmailSent": "சரிபார்ப்பு மின்னஞ்சல் அனுப்பப்பட்டது.",
-
   "authVerifyPhoneTitle": "உங்கள் தொலைபேசியைச் சரிபார்க்கவும்",
   "authSendingOtp": "OTP அனுப்பப்படுகிறது…",
   "authPhoneVerifiedSuccess": "தொலைபேசி சரிபார்க்கப்பட்டது!",
-
   "authForgotPasswordTitle": "கடவுச்சொல்லை மறந்தீர்களா",
   "authForgotPasswordSubtitle": "உங்கள் பதிவு செய்யப்பட்ட மின்னஞ்சலை உள்ளிடவும், கடவுச்சொல்லை மீட்டமைக்க இணைப்பை அனுப்புவோம்.",
   "authSendResetLink": "மீட்டமைப்பு இணைப்பை அனுப்பு",
   "authBackToLogin": "உள்நுழைவுக்குத் திரும்பு",
   "authResetEmailSentTitle": "உங்கள் மின்னஞ்சலைச் சரிபார்க்கவும்",
   "authResetEmailSent": "கடவுச்சொல் மீட்டமைப்பு இணைப்பு உங்கள் மின்னஞ்சலுக்கு அனுப்பப்பட்டது",
-
   "navHome": "முகப்பு",
   "navSearch": "தேடல்",
   "navMatches": "பொருத்தங்கள்",
   "navChat": "அரட்டை",
   "navProfile": "சுயவிவரம்",
-
   "homeCompleteProfileTitle": "உங்கள் சுயவிவரத்தை முழுமையாக்குங்கள்",
   "homeProfileNextStep": "அடுத்து: {step}",
   "@homeProfileNextStep": {
-    "placeholders": { "step": { "type": "String" } }
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
   },
   "homeStepAddPhoto": "சுயவிவரப் புகைப்படத்தைச் சேர்க்கவும்",
   "homeAiPickBadge": "AI தேர்வு",
   "discoverAiMatchLabel": "பொருத்தம்",
-
   "discoverNewTodayLabel": "இன்று புதியவர்கள்",
   "discoverSearchingMoreLabel": "மேலும் இதயங்களைத் தேடுகிறோம்…",
   "discoverFallbackBannerLabel": "மேலும் பொருத்தங்களைக் காட்ட உங்கள் விருப்பங்களை சற்று விரிவுபடுத்தினோம்.",
@@ -137,16 +142,13 @@
   "actionMessage": "செய்தி",
   "discoverFilterLabel": "வடிகட்டி",
   "homeProfileDetailsLabel": "விவரங்கள்",
-
   "navDiscover": "கண்டறி",
   "navMessages": "இன்பாக்ஸ்",
   "navPremium": "பிரீமியம்",
   "navUnreadMessagesSemanticLabel": "{count,plural, =1{1 படிக்காத செய்தி} other{{count} படிக்காத செய்திகள்}}",
-
   "discoverForYouTab": "உங்களுக்காக",
   "discoverNearMeTab": "என் அருகில்",
   "discoverNewTab": "புதியவை",
-
   "appNameShort": "நெஞ்சம்",
   "discoverSearchTooltip": "தேடல்",
   "discoverAiRecommendedTitle": "AI பரிந்துரை",
@@ -162,20 +164,16 @@
   "discoverConnectButton": "இணை",
   "matchesEmptyTitle": "இன்னும் பொருத்தங்கள் இல்லை",
   "matchesEmptySubtitle": "புதிய சுயவிவரங்களுக்கு விரைவில் மீண்டும் பார்க்கவும்",
-
   "matchesCategorySearch": "தேடல்",
   "matchesCategoryNew": "புதியவை",
   "matchesCategoryDaily": "தினசரி",
   "matchesCategoryMyMatches": "எனது பொருத்தங்கள்",
   "matchesCategoryNearMe": "என் அருகில்",
   "matchesCategoryMoreMatches": "மேலும் பொருத்தங்கள்",
-
   "discoverKmAwaySuffix": "கி.மீ தொலைவில்",
-
   "premiumBannerTitle": "பிரீமியத்திற்கு மேம்படுத்தவும்",
   "premiumBannerSubtitle": "சுயவிவரங்கள் மற்றும் AI பொருத்தத்திற்கு வரம்பற்ற அணுகல் பெறுங்கள்",
   "premiumBannerCta": "திட்டங்களை ஆராயுங்கள்",
-
   "searchTitle": "சுயவிவரங்களைக் கண்டறியுங்கள்",
   "searchFilterVerifiedOnly": "சரிபார்க்கப்பட்டவை மட்டும்",
   "searchFilterNearMe": "என் அருகில்",
@@ -183,10 +181,13 @@
   "searchFilterEngineer": "பொறியாளர்",
   "searchShowingMatches": "{count} பொருத்தங்கள் காட்டப்படுகின்றன",
   "@searchShowingMatches": {
-    "placeholders": { "count": { "type": "String" } }
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
   },
   "searchSortButton": "வரிசைப்படுத்து",
-
   "searchHint": "பெயர், திருமண அடையாள எண், நகரம், தொழில்...",
   "searchRecentTitle": "சமீபத்திய தேடல்கள்",
   "searchPopularTitle": "பிரபலமான தேடல்கள்",
@@ -194,7 +195,6 @@
   "searchEmptyResultsTitle": "பொருந்தும் சுயவிவரங்கள் இல்லை.",
   "searchEmptyResultsSubtitle": "உங்கள் வடிகட்டிகளை மாற்றி முயற்சிக்கவும்.",
   "searchResetFiltersButton": "வடிகட்டிகளை மீட்டமை",
-
   "searchFilterSheetTitle": "வடிகட்டிகள்",
   "searchFilterReset": "மீட்டமை",
   "searchFilterApply": "வடிகட்டிகளைப் பயன்படுத்து",
@@ -232,17 +232,19 @@
   "searchFilterOptionYes": "ஆம்",
   "searchFilterOptionNo": "இல்லை",
   "searchFilterOptionOccasionally": "எப்போதாவது",
-
   "matchesTitle": "என் பொருத்தங்கள்",
   "matchesTabNew": "புதியவை ({count})",
   "@matchesTabNew": {
-    "placeholders": { "count": { "type": "String" } }
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
   },
   "matchesTabShortlisted": "தேர்வுப்பட்டியல்",
   "matchesTabMutual": "பரஸ்பரம்",
   "matchesShortlistedEmpty": "தேர்வுப்பட்டியல் சுயவிவரங்கள்",
   "matchesMutualEmpty": "பரஸ்பர விருப்பங்கள்",
-
   "inboxTitle": "இன்பாக்ஸ்",
   "inboxNotificationsTooltip": "அறிவிப்புகள்",
   "inboxFilterTooltip": "வடிகட்டிகள்",
@@ -269,7 +271,11 @@
   "inboxSmartAiSuggested": "AI பரிந்துரை",
   "inboxCompatibilityLabel": "{percent}% பொருத்தம்",
   "@inboxCompatibilityLabel": {
-    "placeholders": { "percent": { "type": "int" } }
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
   },
   "inboxActionViewProfile": "சுயவிவரத்தைக் காண்க",
   "inboxActionMute": "ஒலி நிறுத்து",
@@ -299,18 +305,30 @@
   "inboxComposerVoice": "குரல் செய்தி",
   "inboxBlockConfirmTitle": "{name} ஐத் தடுக்கவா?",
   "@inboxBlockConfirmTitle": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "inboxBlockConfirmMessage": "அவர்களால் உங்களுக்கு செய்தி அனுப்ப முடியாது, மேலும் டிஸ்கவரில் ஒருவரையொருவர் காண முடியாது.",
   "inboxUnblockConfirmTitle": "{name} இன் தடையை நீக்கவா?",
   "@inboxUnblockConfirmTitle": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "inboxUnblockConfirmMessage": "நீங்கள் மீண்டும் ஒருவருக்கொருவர் செய்தி அனுப்பலாம்.",
   "inboxUnblockLoading": "தடையை நீக்குகிறது…",
   "inboxUnblockSuccess": "{name} இன் தடை நீக்கப்பட்டது.",
   "@inboxUnblockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "inboxDeleteConfirmTitle": "உரையாடலை நீக்கவா?",
   "inboxDeleteConfirmMessage": "இது உங்கள் இன்பாக்ஸிலிருந்து உரையாடலை அகற்றும். இதை மீட்டெடுக்க முடியாது.",
@@ -325,7 +343,6 @@
   "messageGateDeclined": "இந்த ஆர்வம் நிராகரிக்கப்பட்டது.",
   "messageGateBlocked": "இந்த உரையாடலுக்கு உங்களால் செய்தி அனுப்ப முடியாது.",
   "messageGateError": "அரட்டையைத் திறக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
-
   "notificationsTitle": "அறிவிப்புகள்",
   "notificationsMarkAllRead": "அனைத்தையும் படித்ததாகக் குறி",
   "notificationsSectionToday": "இன்று",
@@ -334,31 +351,40 @@
   "notificationsJustNow": "இப்போதுதான்",
   "notificationsMinutesAgo": "{count} நிமிடங்களுக்கு முன்",
   "@notificationsMinutesAgo": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "notificationsHoursAgo": "{count} மணி நேரத்திற்கு முன்",
   "@notificationsHoursAgo": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "notificationsDaysAgo": "{count} நாட்களுக்கு முன்",
   "@notificationsDaysAgo": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "notificationsEmptyTitle": "நீங்கள் முழுவதுமாகப் பார்த்துவிட்டீர்கள்!",
   "notificationsEmptyMessage": "புதிய ஆர்வங்கள், பொருத்தங்கள், செய்திகள் மற்றும் புதுப்பிப்புகள் இங்கே தோன்றும்.",
   "notificationsComingSoon": "இது விரைவில் கிடைக்கும்.",
-
   "profileTitle": "என் சுயவிவரம்",
   "profileAboutMeTitle": "என்னைப் பற்றி",
   "profileBasicDetailsTitle": "அடிப்படை விவரங்கள்",
   "profileCardShortlist": "தேர்வுப்பட்டியலில் சேர்",
   "profileCardLike": "விருப்பம்",
-
   "premiumTitle": "சொகுசு பிரீமியத்திற்கு மேம்படுத்தவும்",
   "premiumHeroTitle": "வரம்பற்ற பொருத்தங்களைத் திறக்கவும்",
   "premiumHeroSubtitle": "சரிபார்க்கப்பட்ட தொடர்புகள், AI பொருத்தம் மற்றும் ஜாதக விவரங்களை அணுகுங்கள்.",
   "premiumProceedToPayment": "கட்டணத்திற்குத் தொடரவும்",
-
   "settingsTitle": "அமைப்புகள்",
   "settingsAccountSecuritySection": "கணக்கு & பாதுகாப்பு",
   "settingsIdVerificationTitle": "அடையாள சரிபார்ப்பு",
@@ -374,17 +400,24 @@
   "settingsDeleteAccountConfirmMessage": "இது உங்கள் சுயவிவரம், புகைப்படங்கள் மற்றும் அனைத்து தரவையும் நிரந்தரமாக நீக்கும். இச்செயலை மீட்க முடியாது.",
   "settingsDeleteAccountProgressMessage": "உங்கள் கணக்கு நீக்கப்படுகிறது…",
   "settingsDeleteAccountErrorMessage": "உங்கள் கணக்கை நீக்க முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
-
   "registrationStepIndicator": "படி {current} / {total}",
   "@registrationStepIndicator": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "registrationPercentCompleted": "{percent}% முடிந்தது",
   "@registrationPercentCompleted": {
-    "placeholders": { "percent": { "type": "int" } }
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
   },
   "registrationBack": "பின்",
   "registrationSkipStep": "இந்த படியைத் தவிர்",
@@ -402,7 +435,6 @@
   "registrationStepPreferences": "விருப்பங்கள்",
   "registrationStepPhotos": "புகைப்படங்கள்",
   "registrationStepVerification": "சரிபார்ப்பு",
-
   "registrationBasicInfoTitle": "அடிப்படை தகவல்",
   "registrationBasicInfoSubtitle": "உங்களைப் பற்றி எங்களிடம் கூறுங்கள்",
   "registrationFirstNameLabel": "முதல் பெயர்",
@@ -415,7 +447,11 @@
   "registrationDobError": "பிறந்த தேதியைத் தேர்ந்தெடுக்கவும்",
   "registrationAgeYears": "வயது: {age} ஆண்டுகள்",
   "@registrationAgeYears": {
-    "placeholders": { "age": { "type": "int" } }
+    "placeholders": {
+      "age": {
+        "type": "int"
+      }
+    }
   },
   "registrationMaritalStatusLabel": "திருமண நிலை",
   "genderMale": "ஆண்",
@@ -424,7 +460,6 @@
   "maritalDivorced": "விவாகரத்து",
   "maritalWidowed": "விதவை/விதவர்",
   "maritalAwaitingDivorce": "விவாகரத்து எதிர்பார்க்கிறார்",
-
   "registrationReligionTitle": "மதம் & சமூகம்",
   "registrationReligionSubtitle": "உங்கள் மதப் பின்னணி",
   "registrationReligionLabel": "மதம்",
@@ -448,7 +483,6 @@
   "religionBuddhist": "பௌத்தர்",
   "religionInterReligion": "இடை-மதம்",
   "religionOther": "மற்றவை",
-
   "registrationLanguagesTitle": "மொழிகள்",
   "registrationLanguagesSubtitle": "உங்கள் மொழி விருப்பங்கள்",
   "registrationMotherTongueLabel": "தாய்மொழி",
@@ -466,7 +500,6 @@
   "langFrench": "பிரெஞ்சு",
   "langGerman": "ஜெர்மன்",
   "langArabic": "அரபு",
-
   "registrationLocationTitle": "இடம்",
   "registrationLocationSubtitle": "நீங்கள் எங்கு வசிக்கிறீர்கள்?",
   "registrationCountryLabel": "நாடு",
@@ -500,7 +533,6 @@
   "stateRajasthan": "ராஜஸ்தான்",
   "stateUp": "உ.பி.",
   "stateOther": "மற்றவை",
-
   "registrationEducationTitle": "கல்வி & தொழில்",
   "registrationEducationSubtitle": "உங்கள் தொழில்முறை பின்னணி",
   "registrationQualificationLabel": "உயர்ந்த தகுதி",
@@ -542,7 +574,6 @@
   "income50to100": "50 லட்சம் - 1 கோடி",
   "income100Plus": "1 கோடிக்கு மேல்",
   "incomeOther": "மற்றவை",
-
   "registrationPhysicalTitle": "உடல் விவரங்கள்",
   "registrationPhysicalSubtitle": "உங்கள் தோற்றத்தை விவரியுங்கள்",
   "registrationHeightLabel": "உயரம்",
@@ -557,7 +588,6 @@
   "disabilityVisual": "பார்வை",
   "disabilitySpeech": "பேச்சு",
   "disabilityOther": "மற்றவை",
-
   "registrationLifestyleTitle": "வாழ்க்கை முறை",
   "registrationLifestyleSubtitle": "உங்கள் பழக்கங்கள் மற்றும் ஆர்வங்கள்",
   "registrationEatingHabitLabel": "உணவுப் பழக்கம்",
@@ -589,12 +619,10 @@
   "hobbyYoga": "யோகா",
   "hobbyMovies": "திரைப்படங்கள்",
   "hobbyGardening": "தோட்டக்கலை",
-
   "commonDontKnow": "தெரியாது",
   "commonPleaseSpecifyLabel": "தயவுசெய்து குறிப்பிடவும்",
   "commonPleaseSpecifyHint": "உங்கள் பதிலை உள்ளிடவும்",
   "commonRequiredFieldLabel": "தேவையான புலம்",
-
   "registrationFamilyTitle": "குடும்ப விவரங்கள்",
   "registrationFamilySubtitle": "உங்கள் குடும்பத்தைப் பற்றி கூறுங்கள்",
   "registrationFatherSectionLabel": "தந்தை",
@@ -634,7 +662,6 @@
   "famUpperMiddleClass": "உயர் நடுத்தர வர்க்கம்",
   "famRich": "செல்வந்தர்",
   "famAffluent": "வளமான",
-
   "registrationHoroscopeTitle": "ஜாதகம்",
   "registrationHoroscopeSubtitle": "ஜோதிட தகவல் (விருப்பம்)",
   "registrationHoroscopeAvailable": "ஜாதகம் உள்ளதா?",
@@ -659,7 +686,6 @@
   "rashiMakara": "மகரம்",
   "rashiKumbha": "கும்பம்",
   "rashiMeena": "மீனம்",
-
   "commonAny": "எதுவும்",
   "registrationPartnerTitle": "வாழ்க்கைத் துணை விருப்பங்கள்",
   "registrationPartnerSubtitle": "உங்கள் வாழ்க்கைத் துணையிடம் நீங்கள் எதை எதிர்பார்க்கிறீர்கள்?",
@@ -688,7 +714,6 @@
   "prefLocNri": "என்.ஆர்.ஐ. சரி",
   "prefTongueSame": "அதே தாய்மொழி",
   "prefMaritalDoesntMatter": "பொருட்டல்ல",
-
   "partnerPrefPageTitle": "துணை விருப்பத்தேர்வுகள்",
   "partnerPrefSaveButton": "விருப்பத்தேர்வுகளை சேமி",
   "partnerPrefSavedSnackbar": "துணை விருப்பத்தேர்வுகள் சேமிக்கப்பட்டன",
@@ -768,7 +793,6 @@
   "partnerPrefRequirementRequired": "அவசியம்",
   "partnerPrefRequirementOptional": "விருப்பமானது",
   "drawerPartnerPreferences": "துணை விருப்பத்தேர்வுகள்",
-
   "registrationPhotosTitle": "புகைப்படங்கள்",
   "registrationPhotosSubtitle": "10 மடங்கு அதிக பதில்களைப் பெற புகைப்படங்களைச் சேர்க்கவும்",
   "registrationPrimaryPhoto": "முதன்மைப் புகைப்படம்",
@@ -779,7 +803,6 @@
   "registrationCameraSubtitle": "புதிய புகைப்படம் எடுக்கவும்",
   "registrationGallery": "கேலரி",
   "registrationGallerySubtitle": "கேலரியில் இருந்து தேர்ந்தெடுக்கவும்",
-
   "registrationVerificationTitle": "சரிபார்ப்பு & நம்பிக்கை",
   "registrationVerificationSubtitle": "பொருத்தங்களுடன் நம்பிக்கையை உருவாக்க சரிபார்க்கப்பட்ட பேட்ஜ்களைப் பெறுங்கள்",
   "registrationVerifyMobileTitle": "மொபைல் எண் சரிபார்ப்பு",
@@ -804,7 +827,6 @@
   "registrationVerificationRejectedLabel": "சரிபார்ப்பு நிராகரிக்கப்பட்டது",
   "registrationVerificationFailedLabel": "பதிவேற்றம் தோல்வியடைந்தது",
   "registrationVerifyMobileRequiredHint": "பதிவை முடிக்க உங்கள் மொபைல் எண்ணை சரிபார்க்கவும்.",
-
   "registrationProfileForTitle": "இந்தச் சுயவிவரம் யாருக்காக",
   "registrationProfileForSubtitle": "உறவைத் தேர்ந்தெடுக்கவும்",
   "profileForRelative": "உறவினர்",
@@ -815,7 +837,6 @@
   "profileForSisterSub": "என் சகோதரிக்கு ஒரு பொருத்தம் தேடுகிறேன்",
   "profileForRelativeSub": "ஒரு உறவினருக்கு பொருத்தம் தேடுகிறேன்",
   "profileForFriendSub": "ஒரு நண்பருக்கு பொருத்தம் தேடுகிறேன்",
-
   "profileForOptionMyself": "எனக்காக",
   "profileForOptionSon": "என் மகனுக்காக",
   "profileForOptionDaughter": "என் மகளுக்காக",
@@ -824,12 +845,10 @@
   "profileForOptionFriend": "என் நண்பருக்காக",
   "profileForOptionRelative": "என் உறவினருக்காக",
   "profileForNotice": "உண்மையாகத் திருமணம் தேடுபவர்களுக்கான இடம் நெஞ்சம். தவறான தகவல்களுடன் உருவாக்கப்படும், அல்லது திருமணத் தரகு நிறுவனம் சார்பாக உருவாக்கப்படும் சுயவிவரங்கள் நீக்கப்படும்.",
-
   "profileBasicsHeadline": "இப்போது உங்கள் சுயவிவரத்தை உருவாக்குவோம்",
   "profileBasicsStateHint": "நீங்கள் வசிக்கும் மாநிலம்",
   "profileBasicsCityHint": "நீங்கள் வசிக்கும் நகரம்",
   "profileBasicsCasteNoBar": "என் துணையின் சமூகம் குறித்து எனக்கு நிபந்தனை இல்லை (சாதி தடை இல்லை)",
-
   "onboardingReligionHeadline": "உங்கள் மதம்",
   "onboardingReligionLabel": "மதம்",
   "onboardingReligionHint": "உங்கள் மதத்தைத் தேர்ந்தெடுக்கவும்",
@@ -838,7 +857,6 @@
   "onboardingCommunityHelp": "நீங்கள் அடையாளம் காணும் குழுவே உங்கள் சமூகம் — சில குடும்பங்களுக்கு அது சாதி, சிலருக்கு மொழி அல்லது பகுதி.",
   "onboardingLivingInLabel": "வசிக்கும் இடம்",
   "onboardingLivingInHint": "நீங்கள் வசிக்கும் நாடு",
-
   "onboardingContactHeadline": "உங்கள் சுயவிவரத்தைப் பாதுகாக்க செயலில் உள்ள மின்னஞ்சல் மற்றும் தொலைபேசி எண் தேவை",
   "onboardingContactEmailLabel": "மின்னஞ்சல் முகவரி",
   "onboardingContactEmailHint": "your.name@example.com",
@@ -851,7 +869,6 @@
   "onboardingContactEmailLocked": "ஏற்கனவே உங்கள் கணக்குடன் இணைக்கப்பட்டுள்ளது.",
   "onboardingContactMobileLocked": "ஏற்கனவே உங்கள் கணக்குடன் இணைக்கப்பட்டுள்ளது.",
   "onboardingContactEmailLinkFailed": "அந்த முகவரிக்கு உறுதிப்படுத்தலை அனுப்ப முடியவில்லை. மீண்டும் முயற்சிக்கவும் அல்லது வேறு முகவரியைப் பயன்படுத்தவும்.",
-
   "onboardingMaritalHeadline": "திருமண நிலை",
   "onboardingMaritalLabel": "உங்கள் திருமண நிலை",
   "onboardingMaritalHint": "உங்கள் திருமண நிலையைத் தேர்ந்தெடுக்கவும்",
@@ -861,7 +878,6 @@
   "onboardingDietLabel": "உணவுப் பழக்கம்",
   "onboardingDietFieldLabel": "உங்கள் உணவுப் பழக்கம்",
   "onboardingDietHint": "உங்கள் உணவுப் பழக்கத்தைத் தேர்ந்தெடுக்கவும்",
-
   "onboardingEducationEyebrow": "அருமை! இன்னும் சில விவரங்கள்",
   "onboardingEducationHeadline": "உயர்கல்வித் தகுதி",
   "onboardingQualificationLabel": "உங்கள் உயர்கல்வித் தகுதி",
@@ -869,7 +885,6 @@
   "onboardingCollegeLabel": "கல்லூரி",
   "onboardingCollegeFieldLabel": "நீங்கள் படித்த கல்லூரி",
   "onboardingCollegeHint": "நீங்கள் படித்த கல்லூரி",
-
   "onboardingIncomeEyebrow": "கிட்டத்தட்ட முடிந்துவிட்டது!",
   "onboardingIncomeHeadline": "ஆண்டு வருமானம்",
   "onboardingIncomeLabel": "உங்கள் ஆண்டு வருமானம்",
@@ -884,7 +899,6 @@
   "onboardingCompanyLabel": "தற்போதைய நிறுவனத்தின் பெயர்",
   "onboardingCompanyHint": "தற்போதைய நிறுவனத்தைக் குறிப்பிடவும்",
   "onboardingIncomeCta": "சுயவிவரத்தை உருவாக்கு",
-
   "onboardingPhotosHeadline": "உங்கள் சுயவிவரத்தை முழுமையாக்க புகைப்படங்களைச் சேர்க்கவும்",
   "onboardingPhotosSubtitle": "புகைப்படத் தனியுரிமைக் கட்டுப்பாடுகள் அமைப்புகளில் உள்ளன.",
   "onboardingPhotosGallery": "கேலரியிலிருந்து சேர்க்கவும்",
@@ -893,12 +907,10 @@
   "onboardingPhotosFailed": "அந்தப் புகைப்படத்தைப் பதிவேற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
   "onboardingPhotosAddedOne": "1 புகைப்படம் சேர்க்கப்பட்டது.",
   "onboardingPhotosAddedMany": "{count} புகைப்படங்கள் சேர்க்கப்பட்டன.",
-
   "onboardingAboutEyebrow": "உங்களைப் பற்றி ஒரு சிறு விளக்கத்தைச் சேர்த்துள்ளோம்",
   "onboardingAboutHeadline": "உங்களைப் பற்றி",
   "onboardingAboutHelper": "மேலே உள்ள உரையைத் திருத்தி இன்னும் தனிப்பட்டதாக்குங்கள்.",
   "onboardingAboutRequired": "தொடர உங்களைப் பற்றி சிறிது எழுதவும்.",
-
   "accountExistsTitle": "கணக்கு ஏற்கனவே உள்ளது",
   "accountExistsBoth": "இந்த மின்னஞ்சல் அல்லது கைபேசி எண் ஏற்கனவே பதிவு செய்யப்பட்டுள்ளது. தொடர உள்நுழையவும்.",
   "accountExistsEmail": "இந்த மின்னஞ்சலுடன் ஒரு கணக்கு ஏற்கனவே உள்ளது. தொடர உள்நுழையவும்.",
@@ -907,34 +919,22 @@
   "accountExistsEdit": "விவரங்களைத் திருத்து",
   "accountCheckFailed": "இப்போது உங்கள் கணக்கைச் சரிபார்க்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
   "accountCheckRetry": "மீண்டும் முயற்சி",
-
   "onboardingVerifyMobileHeadline": "கைபேசி எண்ணைச் சரிபார்க்கவும்",
   "onboardingVerifyMobileSentTo": "உங்களைத் தொடர்பு கொள்ள வேண்டிய எண் இதுவா என உறுதிப்படுத்தவும்",
   "onboardingVerifyMobileEdit": "திருத்து",
   "onboardingVerifyMobileVerified": "எண் வெற்றிகரமாகச் சரிபார்க்கப்பட்டது",
   "authInvalidOtp": "அந்தக் குறியீடு சரியல்ல. சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
   "onboardingVerifyMobileEnter": "தொடர ஏதேனும் 4 இலக்கக் குறியீட்டை உள்ளிடவும்.",
-
   "authEntrySignUp": "பதிவு செய்யவும்",
   "authEntryLogin": "உள்நுழையவும்",
-  "welcomeBackHeadline": "மீண்டும் வருக",
-  "welcomeBackSubtitle": "தொடர உங்கள் விவரங்களை உள்ளிடவும்",
-  "welcomeBackGetOtp": "OTP பெறவும்",
-  "welcomeBackPassword": "கடவுச்சொல்லுடன் உள்நுழைக",
-  "welcomeBackGoogle": "Google மூலம் தொடரவும்",
-  "welcomeBackEmail": "மின்னஞ்சல் மூலம் தொடரவும்",
-  "welcomeBackNoAccount": "கணக்கு இல்லையா?",
-  "welcomeBackSignUpFree": "இலவசமாகப் பதிவு செய்யவும்",
   "profileBasicsMissing": "தொடர {fields} தேர்ந்தெடுக்கவும்.",
   "profileBasicsFieldJoin": "{first} மற்றும் {second}",
   "profileBasicsPartnerPrefSaveFailed": "உங்கள் விவரங்கள் சேமிக்கப்பட்டன, ஆனால் சமூக விருப்பத்தை பதிவு செய்ய முடியவில்லை. துணை விருப்பங்களில் பின்னர் அதை அமைக்கலாம்.",
-
   "registrationProfileCreatedForLabel": "யாருக்காக உருவாக்கப்பட்டது",
   "relationSelf": "எனக்காக",
   "registrationFullNameLabel": "முழுப் பெயர்",
   "registrationFullNameHint": "முழுப் பெயரை உள்ளிடவும்",
   "registrationRegisterContinue": "பதிவுசெய்து தொடரவும்",
-
   "registrationReviewTitle": "உங்கள் சுயவிவரத்தை மதிப்பாய்வு செய்யுங்கள்",
   "registrationProfileSummary": "சுயவிவர சுருக்கம்",
   "registrationEnterApp": "நெஞ்சம் மேட்ரிமனிக்குள் நுழையுங்கள்",
@@ -942,27 +942,26 @@
   "registrationNoInfoYet": "இன்னும் எந்தத் தகவலும் சேர்க்கப்படவில்லை.",
   "registrationProfileCompletePct": "சுயவிவரம் {percent}% முடிந்தது",
   "@registrationProfileCompletePct": {
-    "placeholders": { "percent": { "type": "int" } }
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
   },
   "registrationCompleteExcellent": "அருமை! உங்கள் சுயவிவரம் பொருத்தங்களைக் கண்டறியத் தயாராக உள்ளது.",
   "registrationCompleteMore": "சிறந்த பொருத்தங்களை ஈர்க்க மேலும் பிரிவுகளை நிரப்புங்கள்.",
-
   "registrationWelcomeHeadline": "உங்கள் கதையைச் சொல்வோம் ❤️",
   "registrationWelcomeSubtitle": "உங்களுக்கு மிகவும் பொருத்தமான ஒருவரை அறிமுகப்படுத்த, உங்களைப் பற்றி இன்னும் கொஞ்சம் தெரிந்துகொள்கிறோம்.",
   "registrationWelcomeCta": "என் பயணத்தைத் தொடங்குங்கள்",
-
   "registrationMilestoneGettingStarted": "தொடக்கம்",
   "registrationMilestoneAboutYou": "உங்களைப் பற்றி",
   "registrationMilestoneYourWorld": "உங்கள் உலகம்",
   "registrationMilestoneLifestyle": "வாழ்க்கை முறை",
   "registrationMilestoneCompatibility": "பொருத்தம்",
   "registrationMilestoneReady": "தயார்",
-
   "registrationTimeRemainingMinutes": "சுமார் {minutes} நிமிடங்கள் மீதம்",
   "registrationTimeRemainingLessThanMinute": "ஒரு நிமிடத்திற்கும் குறைவாக மீதம்",
-
   "registrationContinueYourStory": "உங்கள் கதையைத் தொடருங்கள்",
-
   "registrationMotivationStep1": "நீங்கள் மிகச் சிறப்பாகச் செய்கிறீர்கள்.",
   "registrationMotivationStep2": "உங்களை இன்னும் அறிந்து கொள்கிறோம்.",
   "registrationMotivationStep3": "இது சிறந்த பொருத்தங்களை பரிந்துரைக்க உதவுகிறது.",
@@ -976,7 +975,6 @@
   "registrationMotivationStep10": "உங்கள் கதையின் பெரும்பகுதியை ஏற்கனவே முடித்துவிட்டீர்கள்.",
   "registrationMotivationStep11": "உங்கள் பொருத்தங்களைச் சந்திக்க இன்னும் கொஞ்சம் தான்.",
   "registrationMotivationStep12": "உங்கள் கதையை முடிக்க கடைசி படி.",
-
   "registrationTipBasicInfo": "உங்கள் வயது பொருத்தத்தை மேம்படுத்தவே பயன்படுத்தப்படுகிறது.",
   "registrationTipReligion": "இது உங்கள் சமூக விருப்பங்களுக்குள் பொருத்தமானவர்களை கண்டறிய உதவுகிறது.",
   "registrationTipLanguage": "பொதுவான மொழிகள் முதல் நாளிலிருந்தே உரையாடலை எளிதாக்குகின்றன.",
@@ -990,7 +988,6 @@
   "registrationTipPartnerPref": "இவற்றை நீங்கள் எப்போது வேண்டுமானாலும் புதுப்பிக்கலாம்.",
   "registrationTipPhotos": "இயல்பான, புன்னகையுடன் கூடிய புகைப்படங்கள் அதிக ஆர்வத்தைப் பெறுகின்றன.",
   "registrationTipVerification": "சரிபார்க்கப்பட்ட சுயவிவரங்கள் அதிக நம்பிக்கையையும் பதில்களையும் பெறுகின்றன.",
-
   "registrationWizardBasicInfoHeadline": "உங்களைப் பற்றி சொல்லுங்கள் ❤️",
   "registrationWizardBasicInfoHook": "ஒவ்வொரு சிறந்த உறவும் ஒரு எளிய அறிமுகத்துடன் தொடங்குகிறது.",
   "registrationWizardReligionHeadline": "உங்கள் வேர்களும் நம்பிக்கைகளும்",
@@ -1017,7 +1014,6 @@
   "registrationWizardPhotosHook": "மக்கள் உண்மையான புகைப்படங்களுடன் இணைகிறார்கள்.",
   "registrationWizardVerificationHeadline": "நம்பிக்கையை ஒன்றாகக் கட்டுவோம்",
   "registrationWizardVerificationHook": "அனைவரின் கதையையும் பாதுகாப்பாக வைக்க சில விரைவான சரிபார்ப்புகள்.",
-
   "registrationCompletingHeadline": "உங்கள் பொருத்த சுயவிவரத்தை உருவாக்குகிறோம்...",
   "registrationCompletingSubtitle": "இது ஒரு நிமிடம் மட்டுமே எடுக்கும்.",
   "registrationCompletingStage1": "உங்கள் சுயவிவரத்தை சேமிக்கிறோம்",
@@ -1027,7 +1023,6 @@
   "registrationCompletingErrorTitle": "ஏதோ தவறு நடந்தது",
   "registrationCompletingErrorMessage": "உங்கள் சுயவிவரத்தை சேமிக்க முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
   "registrationCompletingRetryCta": "மதிப்பாய்வுக்குத் திரும்பு",
-
   "registrationSuccessHeadline": "நெஞ்சம் இற்கு வரவேற்கிறோம் ❤️",
   "registrationSuccessSubtitle": "உங்கள் கதை தயார். உங்களுக்காக அர்த்தமுள்ள தொடர்புகளை ஏற்கனவே தேடத் தொடங்கிவிட்டோம்.",
   "registrationSuccessCompletionCard": "சுயவிவரம் {percent}% முடிந்தது",
@@ -1037,7 +1032,6 @@
   "registrationSuccessHoroscopeSkipped": "ஜாதகம் தவிர்க்கப்பட்டது",
   "registrationSuccessPartnerPrefSaved": "துணை விருப்பங்கள் சேமிக்கப்பட்டன",
   "registrationSuccessCta": "உங்கள் முதல் பொருத்தத்தை சந்திக்கவும்",
-
   "profileCompletionScreenTitle": "சுயவிவர வலிமை",
   "profileCompletionScreenSubtitle": "உங்கள் கதை எவ்வளவு முழுமையானது என்று பாருங்கள் — அடுத்து என்ன செய்யலாம் என்பதையும்.",
   "profileCompletionTierBuilding": "தொடங்குகிறது",
@@ -1068,7 +1062,6 @@
   "profileCompletionGrowthPromptsSubtitle": "உங்களைப் போல் தோன்றும் சில வார்த்தைகளைச் சேர்க்கவும்.",
   "profileCompletionGrowthPremium": "நெஞ்சம் பிரீமியம்",
   "profileCompletionGrowthPremiumSubtitle": "5 மடங்கு அதிக காட்சிப்புலனாகுங்கள்.",
-
   "onboardingSkip": "தவிர்",
   "onboardingNext": "அடுத்து",
   "onboardingGetStarted": "தொடங்குங்கள்",
@@ -1117,7 +1110,11 @@
   "privacyBlockedStatusLabel": "தடுக்கப்பட்டது",
   "privacyBlockedOnLabel": "{date} அன்று தடுக்கப்பட்டது",
   "@privacyBlockedOnLabel": {
-    "placeholders": { "date": { "type": "String" } }
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   },
   "drawerLanguage": "மொழி",
   "drawerSettings": "கணக்கு அமைப்புகள்",
@@ -1151,14 +1148,12 @@
   "drawerVersionLabel": "நெஞ்சம் மேட்ரிமோனி",
   "drawerManagePhotosTitle": "புகைப்படங்களை நிர்வகி",
   "drawerChangePhotoSemanticLabel": "சுயவிவரப் புகைப்படத்தை மாற்று",
-
   "profileDetailSendInterest": "விருப்பம் அனுப்பு",
   "profileDetailInterestSent": "விருப்பம் அனுப்பப்பட்டது",
   "profileDetailStartConversation": "உரையாடலைத் தொடங்கு",
   "profileDetailVideoCall": "வீடியோ அழைப்பு",
   "profileDetailVideoComingSoon": "வீடியோ அழைப்பு விரைவில் வருகிறது",
   "profileDetailShareComingSoon": "பகிர்வு விரைவில் வருகிறது",
-
   "interestStatusPending": "நிலுவையில்",
   "interestStatusAccepted": "ஏற்றுக்கொள்ளப்பட்டது",
   "interestStatusDeclined": "நிராகரிக்கப்பட்டது",
@@ -1177,11 +1172,16 @@
   "profileDetailTabVerification": "சரிபார்ப்பு",
   "profileDetailTabCompatibility": "பொருத்தம்",
   "profileDetailAgeYears": "{age} வயது",
-  "@profileDetailAgeYears": { "placeholders": { "age": { "type": "int" } } },
+  "@profileDetailAgeYears": {
+    "placeholders": {
+      "age": {
+        "type": "int"
+      }
+    }
+  },
   "profileDetailNoMorePhotos": "வேறு புகைப்படங்கள் இதுவரை பகிரப்படவில்லை",
   "profileDetailTabTimeline": "காலவரிசை",
   "profileDetailProfileNotAvailable": "சுயவிவரம் கிடைக்கவில்லை",
-
   "profileDetailActionBlock": "பயனரைத் தடு",
   "profileDetailActionUnblock": "தடையை நீக்கு",
   "profileDetailActionReport": "பயனரைப் புகாரளி",
@@ -1191,7 +1191,11 @@
   "profileDetailUnblockLoading": "உறுப்பினரின் தடையை நீக்குகிறது…",
   "profileDetailUnblockSuccess": "{name} இன் தடை நீக்கப்பட்டது.",
   "@profileDetailUnblockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "profileDetailBlockConfirmTitle": "இந்த உறுப்பினரைத் தடுக்கவா?",
   "profileDetailBlockConfirmMessage": "இவர்கள் டிஸ்கவர், மேட்சஸ் மற்றும் தேடலில் இருந்து மறைந்துவிடுவார்கள். ஏற்கனவே உள்ள உரையாடல் 'தடுக்கப்பட்டது' என்ற பட்டையுடன் தொடரும். சாட்டிலிருந்து பின்னர் தடையை நீக்கலாம்.",
@@ -1199,11 +1203,19 @@
   "profileDetailBlockLoading": "உறுப்பினரைத் தடுக்கிறது…",
   "profileDetailBlockSuccess": "{name} தடுக்கப்பட்டுள்ளார்.",
   "@profileDetailBlockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "profileDetailReportReasonTitle": "{name} ஐ ஏன் புகாரளிக்கிறீர்கள்?",
   "@profileDetailReportReasonTitle": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "profileDetailReportReasonFakeProfile": "போலி சுயவிவரம்",
   "profileDetailReportReasonSpam": "ஸ்பேம்",
@@ -1217,14 +1229,12 @@
   "profileDetailReportLoading": "உங்கள் புகார் சமர்ப்பிக்கப்படுகிறது…",
   "profileDetailReportSuccess": "நன்றி — உங்கள் புகார் சமர்ப்பிக்கப்பட்டது.",
   "profileDetailMoreLabel": "மேலும்",
-
   "safetyErrorNetwork": "இணைய இணைப்பு இல்லை. உங்கள் நெட்வொர்க்கைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
   "safetyErrorUnauthorized": "உங்கள் அமர்வு காலாவதியானது. மீண்டும் உள்நுழையவும்.",
   "safetyErrorValidation": "இந்தக் கோரிக்கையில் ஏதோ தவறு உள்ளது. மீண்டும் முயற்சிக்கவும்.",
   "safetyErrorNotFound": "இந்த உறுப்பினர் இனி கிடைக்கவில்லை.",
   "safetyErrorConflict": "இது ஏற்கனவே இந்த உறுப்பினருக்குச் செய்யப்பட்டது.",
   "safetyErrorGeneric": "ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.",
-
   "commonRetry": "மீண்டும் முயற்சிக்க",
   "commonTryAgain": "மீண்டும் முயற்சிக்க",
   "commonDone": "முடிந்தது",
@@ -1447,7 +1457,6 @@
   "permissionCameraNeeded": "புகைப்படம் எடுக்க கேமரா அணுகல் தேவை.",
   "photoCropAdjustProfileTitle": "சுயவிவரப் புகைப்படத்தைச் சரிசெய்",
   "photoCropAdjustTitle": "புகைப்படத்தைச் சரிசெய்",
-
   "inboxLastSeenTodayAt": "இன்று {time} மணிக்குக் கடைசியாகப் பார்த்தது",
   "inboxLastSeenYesterdayAt": "நேற்று {time} மணிக்குக் கடைசியாகப் பார்த்தது",
   "inboxLastSeenDaysAgo": "{count,plural, =1{1 நாளுக்கு முன்} other{{count} நாட்களுக்கு முன்}} கடைசியாகப் பார்த்தது",
@@ -1531,6 +1540,21 @@
   "inboxEditedSuffix": " (திருத்தப்பட்டது)",
   "astroExcellentMatch": "சிறந்த பொருத்தம்",
   "profileIdLabel": "அடையாள எண்: {id}",
+  "authIdentifierLabel": "மின்னஞ்சல் அல்லது கைபேசி எண்",
+  "authIdentifierHint": "name@example.com அல்லது 9876543210",
+  "authIdentifierRequired": "உங்கள் மின்னஞ்சல் அல்லது கைபேசி எண்ணை உள்ளிடவும்",
+  "authIdentifierInvalid": "சரியான மின்னஞ்சல் முகவரி அல்லது 10 இலக்க கைபேசி எண்ணை உள்ளிடவும்",
+  "authNoAccountForMobile": "இந்த கைபேசி எண்ணுக்கு கணக்கு எதுவும் இல்லை.",
+  "authAccountCheckUnavailable": "சேவையகத்தை அணுக முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
+  "authOtpRequired": "நாங்கள் அனுப்பிய குறியீட்டை உள்ளிடவும்",
+  "welcomeBackHeadline": "மீண்டும் வருக",
+  "welcomeBackSubtitle": "தொடர உங்கள் விவரங்களை உள்ளிடவும்",
+  "welcomeBackGetOtp": "OTP பெறவும்",
+  "welcomeBackPassword": "கடவுச்சொல்லுடன் உள்நுழைக",
+  "welcomeBackGoogle": "Google மூலம் தொடரவும்",
+  "welcomeBackEmail": "மின்னஞ்சல் மூலம் தொடரவும்",
+  "welcomeBackNoAccount": "கணக்கு இல்லையா?",
+  "welcomeBackSignUpFree": "இலவசமாகப் பதிவு செய்யவும்",
   "nearbyTitle": "என் அருகில்",
   "drawerNearMe": "என் அருகில்",
   "nearbyLoading": "உங்கள் அருகில் உள்ளவர்களைத் தேடுகிறோம்...",

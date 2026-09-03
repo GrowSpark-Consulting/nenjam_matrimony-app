@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/services/storage_service.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
-import '../../data/services/dev_auth_session.dart';
+import '../../domain/services/local_auth_session.dart';
 import '../../../registration/domain/models/onboarding_forms.dart';
 import '../../../registration/domain/models/profile_draft.dart';
 import '../../../registration/domain/models/profile_flow_mode.dart';
@@ -39,15 +39,22 @@ const Duration _brandNewAccountWindow = Duration(minutes: 2);
 /// 3. No "profile is for" choice → [RouteNames.createProfileFor].
 /// 4. Religion, community or "living in" missing →
 ///    [RouteNames.onboardingReligion].
-/// 5. The account lacks an email or a mobile number →
-///    [RouteNames.onboardingContact].
+/// 5. An unfinished signup with no email or mobile on record →
+///    [RouteNames.onboardingContact]. Only an unfinished signup: this
+///    step's answers are stored nowhere the backend can see, so asking
+///    it of an established account is unanswerable, and doing so was
+///    the bug that sent every login into onboarding. The gate itself
+///    carries the full account.
 /// 6. State or city missing → [RouteNames.profileBasics].
 /// 7. Otherwise → Discover.
 ///
 /// Each gate tests exactly the fields its screen writes — the same
 /// `isComplete` rules the screens enforce, from
 /// `registration/domain/models/onboarding_forms.dart` — so answering a step
-/// is always what gets a member past it, and no gate can loop.
+/// is always what gets a member past it, and no gate can loop. The
+/// Email + Mobile step is the one whose answers the backend never sees,
+/// which is why it alone is scoped to an unfinished signup rather than
+/// asked of every session.
 ///
 /// There is deliberately no branch into [RouteNames.registrationWizard].
 /// That screen belongs to Edit Profile now: a member whose profile is merely
@@ -76,7 +83,7 @@ class PostAuthDestination {
     // verified phone from, so the two account-derived gates below cannot be
     // asked; the draft-derived ones still apply in full, and the finalized
     // profile check does the rest. Compiled out of release.
-    if (user == null && devAuthSession.isActive) {
+    if (user == null && hasLocalAuthSession()) {
       return _resolveFromDraftOnly();
     }
 
@@ -147,17 +154,8 @@ class PostAuthDestination {
     );
     if (!religionStep.isComplete) return RouteNames.onboardingReligion;
 
-    // Step 3. Both channels live on the Firebase account, not the draft.
-    // `pendingEmail` covers the window in which a member has been sent a
-    // confirmation link but has not opened it: Firebase does not attach the
-    // address until they do, and without the marker they would be sent
-    // round to this step again every launch until then.
-    final hasEmail =
-        (user.email ?? '').isNotEmpty || _pendingEmail().isNotEmpty;
-    final hasMobile = (user.phoneNumber ?? '').isNotEmpty;
-    if (!hasEmail || !hasMobile) return RouteNames.onboardingContact;
-
-    // Step 4.
+    // Steps 4-9, evaluated up front because step 3 has to consult them —
+    // see below. Each still tests exactly the fields its own screen writes.
     final basicsStep = ProfileBasicsForm(
       firstName: restored.basicDetails.firstName,
       lastName: restored.basicDetails.lastName,
@@ -166,37 +164,74 @@ class PostAuthDestination {
       state: restored.locationDetails.state,
       city: restored.locationDetails.city,
     );
-    if (!basicsStep.isComplete) return RouteNames.profileBasics;
-
-    // Step 5 — marital status and height.
     final maritalStep = OnboardingMaritalForm(
       maritalStatus: restored.basicDetails.maritalStatus,
       height: restored.physicalDetails.height,
     );
-    if (!maritalStep.isComplete) return RouteNames.onboardingMarital;
-
-    // Step 6 — highest qualification.
     final educationStep = OnboardingEducationForm(
       qualification: restored.educationDetails.qualification,
     );
-    if (!educationStep.isComplete) return RouteNames.onboardingEducation;
-
-    // Step 7 — annual income.
     final incomeStep = OnboardingIncomeForm(
       annualIncome: restored.educationDetails.annualIncome,
     );
+    final hasAbout = restored.lifestyleDetails.aboutMe.trim().isNotEmpty;
+
+    // Step 3 — Email + Mobile. **A signup gate, not a session gate.**
+    //
+    // Every other step is answered into the draft, which the backend keeps,
+    // so any device can read back whether it was done. This one is not:
+    // OnboardingContactPage stores `pendingEmail`/`pendingPhone` in local
+    // storage and — as its own doc comment says — makes no Firebase Phone
+    // Auth call, and the verify-mobile step that follows makes none either.
+    // Nothing in the app has linked a phone credential since the mock OTP
+    // replaced real phone auth, so `user.phoneNumber` is empty for *every*
+    // account this app can create.
+    //
+    // Gating a session on it therefore sent every signed-in member here on
+    // every login and every cold start, with no way out: submitting the
+    // screen cannot set the field the gate read. That was the login bug.
+    //
+    // So it is asked only of a signup that is still unfinished. A member
+    // whose draft already answers the later steps has been through this one
+    // (the flow is linear), and an established account has contact details
+    // by construction — a login is not the place to re-collect them. What
+    // stays gated is exactly the case the step exists for: a half-finished
+    // signup, on the device it was started on, that never reached the end.
+    final onboardingAnswered = basicsStep.isComplete &&
+        maritalStep.isComplete &&
+        educationStep.isComplete &&
+        incomeStep.isComplete &&
+        hasAbout;
+    if (!onboardingAnswered && !_onboardingCompleted()) {
+      // `pendingEmail`/`pendingPhone` cover the window between answering
+      // this step and the account carrying the values: Firebase attaches an
+      // address only once the member opens the link, and never attaches the
+      // number at all.
+      final hasEmail =
+          (user.email ?? '').isNotEmpty || _pendingEmail().isNotEmpty;
+      final hasMobile =
+          (user.phoneNumber ?? '').isNotEmpty || _pendingPhone().isNotEmpty;
+      if (!hasEmail || !hasMobile) return RouteNames.onboardingContact;
+    }
+
+    // Step 4.
+    if (!basicsStep.isComplete) return RouteNames.profileBasics;
+
+    // Step 5 — marital status and height.
+    if (!maritalStep.isComplete) return RouteNames.onboardingMarital;
+
+    // Step 6 — highest qualification.
+    if (!educationStep.isComplete) return RouteNames.onboardingEducation;
+
+    // Step 7 — annual income.
     if (!incomeStep.isComplete) return RouteNames.onboardingIncome;
 
     // Step 8 (photos) is deliberately not a gate — it is optional, and a
     // member who chose "Add Photos Later" must not be sent back to it every
     // launch. Step 9 is, since a description is part of a usable profile.
-    if (restored.lifestyleDetails.aboutMe.trim().isEmpty) {
-      return RouteNames.onboardingAbout;
-    }
+    if (!hasAbout) return RouteNames.onboardingAbout;
 
-    // Step 10 — the number must actually be verified, which for Firebase
-    // means linked to the account. `hasMobile` above already establishes
-    // that, so reaching here means onboarding is genuinely finished.
+    // Every step that leaves a durable answer has one. Onboarding is done.
     return RouteNames.discover;
   }
 
@@ -311,6 +346,31 @@ class PostAuthDestination {
       return storageService.pendingEmail ?? '';
     } catch (_) {
       return '';
+    }
+  }
+
+  /// The number that step stored, or empty. Unlike the address this one is
+  /// never promoted onto the Firebase account — nothing links a phone
+  /// credential while the OTP is the development verifier — so it is the
+  /// only record that the step was answered on this device. Guarded for the
+  /// same reason as [_pendingEmail].
+  String _pendingPhone() {
+    try {
+      return storageService.pendingPhone ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /// Whether onboarding finished on this device. The verify-mobile step
+  /// clears the pending number when it sets this, so without it a member who
+  /// completed signup would fall back through the Email + Mobile gate the
+  /// moment they reached it. Guarded for the same reason as [_pendingEmail].
+  bool _onboardingCompleted() {
+    try {
+      return storageService.onboardingCompleted;
+    } catch (_) {
+      return false;
     }
   }
 

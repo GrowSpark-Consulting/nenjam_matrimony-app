@@ -66,8 +66,9 @@ class _FakeUser implements User {
   @override
   final bool emailVerified;
 
-  /// Empty by default, which is what leaves the Email + Mobile step
-  /// outstanding — the gate reads this off the account, not the draft.
+  /// Empty by default, and empty is the realistic case: nothing in the app
+  /// links a phone credential while the OTP is the development verifier,
+  /// so no account this app creates ever carries one.
   @override
   final String? phoneNumber;
 
@@ -185,9 +186,10 @@ Map<String, dynamic> _draftBody({
 /// Location (`firstName` + `lastName` + `gender` + `dob` + `state` + `city`),
 /// Marital (`maritalStatus` + `height`), Education (`qualification`),
 /// Income (`annualIncome`) and About (`aboutMe`). Photos are not a gate —
-/// they are optional. The Email + Mobile step is deliberately absent: both
-/// of its answers live on the Firebase account, not the draft — see
-/// [_FakeUser.phoneNumber].
+/// they are optional. The Email + Mobile step is deliberately absent: its
+/// answers reach neither the draft nor the account, which is why a draft
+/// in this shape marks an account that has *finished* onboarding and must
+/// never be asked for contact details again.
 ///
 /// `caste`, `motherTongue`, `firstName`, `lastName`, `gender` and `dob` are
 /// here because every one of them is a NOT NULL column on `user_profiles`.
@@ -245,8 +247,8 @@ Map<String, dynamic> _answeredDraft({
       lifestyleDetails: {'aboutMe': aboutMe},
     );
 
-/// An account that has cleared the Email + Mobile step, so the gates under
-/// test are the draft-backed ones.
+/// An account that does carry a linked number — what a real phone-auth
+/// signup would produce once the mock verifier is replaced.
 _FakeUser _contactableUser() => _FakeUser(phoneNumber: '+919876543210');
 
 Future<String> _resolve(ProviderContainer c) =>
@@ -458,13 +460,16 @@ void main() {
       }
     });
 
-    test('an account with no mobile number owes the Email + Mobile step',
-        () async {
-      // The one gate that reads the account rather than the draft: every
-      // draft answer is present, and it is the missing phone number alone
-      // that holds the member here.
+    test('an answered draft goes to Discover even with no number on the '
+        'account', () async {
+      // The regression this file now guards. `user.phoneNumber` is empty for
+      // every account the app can create (nothing links a phone credential
+      // while the OTP is the development verifier), so gating on it sent
+      // every logged-in member to the Email + Mobile step forever. An
+      // answered draft means onboarding is done; contact details are not
+      // re-collected at login.
       final container = _container(draft: () async => _answeredDraft());
-      expect(await _resolve(container), RouteNames.onboardingContact);
+      expect(await _resolve(container), RouteNames.discover);
     });
 
     test('the removed 13-step wizard is never a destination', () async {
@@ -585,4 +590,72 @@ void main() {
       expect(await _resolve(c), RouteNames.createProfileFor);
     });
   });
+  // ─── The Email + Mobile step ────────────────────────────────────────
+  //
+  // Login and signup meet at this gate, and only one of them belongs here.
+  group('the Email + Mobile step is a signup gate, not a session gate', () {
+    test('an established account never reaches it, on any login method',
+        () async {
+      // Email/password and Google both land here through _routeAfterLogin,
+      // and a mobile login resolves no destination at all — so this one
+      // assertion covers every Firebase-backed login the app offers.
+      final container = _container(draft: () async => _answeredDraft());
+      final route = await _resolve(container);
+
+      expect(route, RouteNames.discover);
+      expect(route, isNot(RouteNames.onboardingContact));
+      expect(route, isNot(RouteNames.registrationLanding));
+    });
+
+    test('an account carrying a linked number also goes to Discover',
+        () async {
+      // The same answer once real phone auth is restored and the number is
+      // on the account: the gate must not start firing again either way.
+      final container = _container(
+        draft: () async => _answeredDraft(),
+        user: _contactableUser(),
+      );
+      expect(await _resolve(container), RouteNames.discover);
+    });
+
+    test('an unfinished signup still owes the step', () async {
+      // Signup is untouched: religion answered, nothing after it, and no
+      // contact details on record — exactly the member the screen exists
+      // for. The draft-backed gates below it must not steal the step.
+      final container = _container(
+        draft: () async => _draftBody(
+          basicDetails: {'profileCreatedFor': 'Myself'},
+          religionDetails: {
+            'religion': 'Hindu',
+            'caste': 'Vellalar',
+            'community': 'Vellalar',
+          },
+          languageDetails: {'motherTongue': 'Tamil'},
+          locationDetails: {'country': 'India'},
+        ),
+      );
+      expect(await _resolve(container), RouteNames.onboardingContact);
+    });
+
+    test('the step still comes before the ones that follow it', () async {
+      // Ordering is what makes signup linear. A member who has answered
+      // religion but not basics owes contact first, not Profile Basics.
+      final container = _container(
+        draft: () async => _draftBody(
+          basicDetails: {'profileCreatedFor': 'Myself'},
+          religionDetails: {
+            'religion': 'Hindu',
+            'caste': 'Vellalar',
+            'community': 'Vellalar',
+          },
+          languageDetails: {'motherTongue': 'Tamil'},
+          locationDetails: {'country': 'India'},
+        ),
+      );
+      final route = await _resolve(container);
+      expect(route, RouteNames.onboardingContact);
+      expect(route, isNot(RouteNames.profileBasics));
+    });
+  });
+
 }
