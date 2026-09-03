@@ -267,8 +267,14 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     if (!_hasSession) return;
     final repo = ref.read(registrationRepositoryProvider);
     try {
-      await repo.updateBasicDetails(state.basicDetails);
-      await repo.updateReligionDetails(state.religionDetails);
+      // Every section but the last is sent with `skipMaterialize: true`.
+      // They are all stored either way; what is skipped is the server-side
+      // profile write and completion recompute, which only the final call
+      // needs to run because only it sees the whole draft. See the comment
+      // on that call below.
+      await repo.updateBasicDetails(state.basicDetails, skipMaterialize: true);
+      await repo.updateReligionDetails(state.religionDetails,
+          skipMaterialize: true);
       // `languageDetails` is not optional bookkeeping — `motherTongue` is a
       // NOT NULL column on `user_profiles`, so the profile row cannot be
       // written without it (see isMatchableFromDraft / writeProfileFromDraft).
@@ -283,10 +289,20 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
       // lifestyleDetails but no `languageDetails` at all, materialization was
       // skipped, and `GET /profiles/me` answered 404 — the member landed on
       // Discover with no profile of their own.
-      await repo.updateLanguageDetails(state.languageDetails);
-      await repo.updateLocationDetails(state.locationDetails);
-      await repo.updatePhysicalDetails(state.physicalDetails);
-      await repo.updateEducationDetails(state.educationDetails);
+      await repo.updateLanguageDetails(state.languageDetails,
+          skipMaterialize: true);
+      await repo.updateLocationDetails(state.locationDetails,
+          skipMaterialize: true);
+      await repo.updatePhysicalDetails(state.physicalDetails,
+          skipMaterialize: true);
+      await repo.updateEducationDetails(state.educationDetails,
+          skipMaterialize: true);
+      // The LAST call deliberately materializes, and it has to be the last:
+      // every section above is already stored by the time it runs, so this
+      // one pass sees the complete draft. Letting all seven materialize did
+      // the same writeProfileFromDraft + recalculateAndPersistCompletion work
+      // seven times over — measured at ~416ms apiece against the Singapore
+      // database — to reach a result only the final one could produce.
       await repo.updateLifestyleDetails(state.lifestyleDetails);
     } catch (_) {
       // Left for the next successful save to carry.
@@ -325,13 +341,16 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
 
     await _persist(() async {
       final repo = ref.read(registrationRepositoryProvider);
-      await repo.updateReligionDetails(state.religionDetails);
+      await repo.updateReligionDetails(state.religionDetails,
+          skipMaterialize: true);
       // `caste` and `motherTongue` are NOT NULL on `user_profiles`, so this
       // language PATCH is what lets the backend materialize the row at all —
       // see isMatchableFromDraft. Without it onboarding produced a draft the
       // profile write could never be built from.
-      await repo.updateLanguageDetails(state.languageDetails);
-      await repo.updateLocationDetails(state.locationDetails);
+      await repo.updateLanguageDetails(state.languageDetails,
+          skipMaterialize: true);
+      await repo.updateLocationDetails(state.locationDetails,
+          skipMaterialize: true);
     });
 
     // Partner preference has no per-section sync of its own during
@@ -366,14 +385,19 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
       ),
     );
     // Two PATCHes because the fields live in two draft sections and the
-    // backend has no combined endpoint. The basic-details one carries the
-    // last of the NOT NULL columns, so this save is the point at which
-    // syncMatchableFromDraft can finally write `user_profiles` — a member who
-    // gets here now has a real profile rather than a 404.
+    // backend has no combined endpoint.
+    //
+    // Both skip materialization even though this step supplies four of the
+    // NOT NULL columns, because it cannot yet satisfy isMatchableFromDraft:
+    // that also requires `maritalStatus`, which the NEXT step collects. A
+    // materialize pass here would run the whole write-and-recompute against a
+    // draft that must fail the check, and write nothing. See
+    // [applyOnboardingMarital], which is the first step that can.
     await _persist(() async {
       final repo = ref.read(registrationRepositoryProvider);
-      await repo.updateBasicDetails(state.basicDetails);
-      await repo.updateLocationDetails(state.locationDetails);
+      await repo.updateBasicDetails(state.basicDetails, skipMaterialize: true);
+      await repo.updateLocationDetails(state.locationDetails,
+          skipMaterialize: true);
     });
   }
 
@@ -388,12 +412,25 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
       lifestyleDetails:
           state.lifestyleDetails.copyWith(eatingHabit: form.diet),
     );
+    // The one step in onboarding that still materializes, and deliberately.
+    // `maritalStatus` is the last value isMatchableFromDraft is waiting for,
+    // so this is the earliest point a `user_profiles` row can be written at
+    // all. Every other step skips the pass and leaves it to the
+    // end-of-onboarding flush — but that alone would leave a member who
+    // abandons signup partway through with no profile row, where before they
+    // had one. One materialize here preserves that, and pays for it once.
+    //
+    // It runs on the PHYSICAL call, not the basic-details one that carries
+    // maritalStatus: the profile write needs every section, so it has to come
+    // after the value is stored, and physical-details is the last call that
+    // always runs — the lifestyle one below is conditional on diet.
     await _persist(() async {
       final repo = ref.read(registrationRepositoryProvider);
-      await repo.updateBasicDetails(state.basicDetails);
+      await repo.updateBasicDetails(state.basicDetails, skipMaterialize: true);
       await repo.updatePhysicalDetails(state.physicalDetails);
       if (form.diet.trim().isNotEmpty) {
-        await repo.updateLifestyleDetails(state.lifestyleDetails);
+        await repo.updateLifestyleDetails(state.lifestyleDetails,
+            skipMaterialize: true);
       }
     });
   }
@@ -409,7 +446,8 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     await _persist(
       () => ref
           .read(registrationRepositoryProvider)
-          .updateEducationDetails(state.educationDetails),
+          .updateEducationDetails(state.educationDetails,
+              skipMaterialize: true),
     );
   }
 
@@ -427,7 +465,8 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     await _persist(
       () => ref
           .read(registrationRepositoryProvider)
-          .updateEducationDetails(state.educationDetails),
+          .updateEducationDetails(state.educationDetails,
+              skipMaterialize: true),
     );
   }
 
@@ -439,7 +478,8 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     await _persist(
       () => ref
           .read(registrationRepositoryProvider)
-          .updateLifestyleDetails(state.lifestyleDetails),
+          .updateLifestyleDetails(state.lifestyleDetails,
+              skipMaterialize: true),
     );
   }
 
