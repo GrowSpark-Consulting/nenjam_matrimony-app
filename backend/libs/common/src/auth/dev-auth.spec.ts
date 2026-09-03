@@ -187,7 +187,7 @@ describe('dummy-OTP authentication', () => {
       expect(readDevAuthPhone(header(LISTED))).toBeNull();
     });
 
-    it('admits nobody when the whitelist is unset or empty', () => {
+    it('admits any well-formed number when the whitelist is unset or empty', () => {
       for (const list of [undefined, '', '   ', ',,']) {
         env({
           NODE_ENV: 'production',
@@ -195,7 +195,7 @@ describe('dummy-OTP authentication', () => {
           DUMMY_OTP_PHONES: list,
         });
         expect(dummyOtpPhones().size).toBe(0);
-        expect(readDevAuthPhone(header(LISTED))).toBeNull();
+        expect(readDevAuthPhone(header(LISTED))).toBe(LISTED);
       }
     });
 
