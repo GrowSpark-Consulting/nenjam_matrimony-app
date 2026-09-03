@@ -180,4 +180,70 @@ describe('FirebaseAuthGuard', () => {
       expect(request.user?.id).toBe('internal-1');
     });
   });
+  // The bypass this guard used to carry, and must never carry again.
+  //
+  // `X-Dev-Auth-Phone` was honoured whenever `dummyAuthAllows()` passed, and
+  // `DUMMY_OTP_ENABLED=true` makes that accept any well-formed E.164 number
+  // with no NODE_ENV restriction. Measured against a backend running
+  // NODE_ENV=production with that single flag, the header alone reached an
+  // authenticated 404 rather than a 401 — it had already established identity.
+  //
+  // These deliberately run with the flags at their most permissive: that is
+  // the configuration in which honouring the header would be dangerous, so it
+  // is the configuration worth pinning.
+  describe('the X-Dev-Auth-Phone bypass is closed', () => {
+    const original = { ...process.env };
+
+    beforeEach(() => {
+      process.env.NODE_ENV = 'production';
+      process.env.DUMMY_OTP_ENABLED = 'true';
+      process.env.DEV_AUTH_ENABLED = 'true';
+      delete process.env.DUMMY_OTP_PHONES;
+      delete process.env.USE_REAL_OTP;
+    });
+
+    afterEach(() => {
+      process.env = { ...original };
+    });
+
+    it('refuses the header alone', async () => {
+      const verifyIdToken = jest.fn();
+      const { guard, upsert } = buildGuard({ verifyIdToken });
+      const { ctx, request } = contextFor(undefined);
+      request.headers['x-dev-auth-phone'] = '+919876543210';
+
+      await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+      // No identity, and no account quietly provisioned for one either.
+      expect(request.user).toBeUndefined();
+      expect(upsert).not.toHaveBeenCalled();
+      expect(verifyIdToken).not.toHaveBeenCalled();
+    });
+
+    it('does not let the header rescue an unverifiable token', async () => {
+      const verifyIdToken = jest.fn(() => Promise.reject(new Error('bad sig')));
+      const { guard, upsert } = buildGuard({ verifyIdToken });
+      const { ctx, request } = contextFor(`Bearer ${TOKEN}`);
+      request.headers['x-dev-auth-phone'] = '+919876543210';
+
+      await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+      expect(request.user).toBeUndefined();
+      expect(upsert).not.toHaveBeenCalled();
+    });
+
+    it('still authenticates a valid token when the header is present', async () => {
+      // The header must be inert, not poisonous: a genuine session alongside
+      // it is unaffected, and identity comes from the token.
+      const verifyIdToken = jest.fn(() => Promise.resolve({ uid: 'uid-1' }));
+      const { guard } = buildGuard({ verifyIdToken });
+      const { ctx, request } = contextFor(`Bearer ${TOKEN}`);
+      request.headers['x-dev-auth-phone'] = '+919999999999';
+
+      await expect(guard.canActivate(ctx)).resolves.toBe(true);
+      expect(request.user?.uid).toBe('uid-1');
+    });
+  });
 });
