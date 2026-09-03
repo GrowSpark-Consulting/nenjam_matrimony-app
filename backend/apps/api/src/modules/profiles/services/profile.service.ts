@@ -676,9 +676,7 @@ export class ProfileService {
       missing.push('languageDetails (motherTongue, languagesKnown)');
     }
     if (!isLocationDetailsComplete(location)) {
-      missing.push(
-        'locationDetails (country, state, city, area, pinCode, nativePlace)',
-      );
+      missing.push('locationDetails (country, state, city)');
     }
 
     return missing;

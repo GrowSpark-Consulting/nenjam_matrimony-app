@@ -78,15 +78,22 @@ export function isLanguageDetailsComplete(_language: Section): boolean {
   return true;
 }
 
+/**
+ * Country, state and city — the three the flow actually asks for.
+ *
+ * `area`, `pinCode` and `nativePlace` were required here and are collected by
+ * no screen in the signup flow, so this returned false for every profile
+ * onboarding can produce and `finalize()` threw BadRequestException for all of
+ * them. That is why nothing in onboarding called finalize at all: it could not
+ * have succeeded. All three are NULLABLE columns that `writeProfileFromDraft`
+ * already coerces with `|| null`, so requiring them was asking for data the
+ * schema is happy to omit — the same mistake caste and mother tongue were.
+ *
+ * The wizard's Location step still writes all six; a member who fills them in
+ * keeps them. This only stops absence from being treated as an error.
+ */
 export function isLocationDetailsComplete(location: Section): boolean {
-  return allPresent(location, [
-    'country',
-    'state',
-    'city',
-    'area',
-    'pinCode',
-    'nativePlace',
-  ]);
+  return allPresent(location, ['country', 'state', 'city']);
 }
 
 // ---- Matchable: the narrower "can this draft become a UserProfile row?" ----

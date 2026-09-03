@@ -184,15 +184,16 @@ describe('isMatchableFromDraft', () => {
     // the member's city never reached user_profiles.
     expect(isMatchableFromDraft(onboardingDraft)).toBe(true);
 
-    // The two questions still differ, and location is where they differ now:
-    // finalize wants area/pinCode/nativePlace, all nullable columns that
-    // onboarding never collects. Religion is no longer a point of difference
-    // — that rule dropped caste and subCaste when the screens stopped asking.
+    // The two questions no longer disagree for an onboarding draft, and that
+    // is the point: finalize used to demand area/pinCode/nativePlace — three
+    // nullable columns no screen collects — so it threw for every member the
+    // flow could produce, which is why onboarding never called it at all.
+    // Both rules now describe what the product actually asks for.
     expect(isReligionDetailsComplete(onboardingDraft.religionDetails)).toBe(
       true,
     );
     expect(isLocationDetailsComplete(onboardingDraft.locationDetails)).toBe(
-      false,
+      true,
     );
   });
 
@@ -254,14 +255,26 @@ describe('isMatchableFromDraft', () => {
     });
   });
 
-  it('leaves the finalize contract untouched', () => {
-    // finalize() must keep demanding the full set — this change widens what
-    // can be materialized, never what can be published.
-    expect(isBasicDetailsComplete(onboardingDraft.basicDetails)).toBe(true);
-    expect(isReligionDetailsComplete(wizardDraft.religionDetails)).toBe(true);
-    expect(isLocationDetailsComplete(wizardDraft.locationDetails)).toBe(true);
-    expect(isLocationDetailsComplete(onboardingDraft.locationDetails)).toBe(
-      false,
-    );
-  });
+  it('finalize accepts an onboarding draft, which is what lets it be called',
+    () => {
+      // finalize() is now reachable from onboarding. It was not: its location
+      // contract demanded area, pinCode and nativePlace, none of which any
+      // signup screen collects and all three of which are nullable columns.
+      // A wizard draft that fills them in still passes, so nothing the old
+      // contract accepted is rejected now — this only stops absence from
+      // being treated as an error.
+      expect(isBasicDetailsComplete(onboardingDraft.basicDetails)).toBe(true);
+      expect(isReligionDetailsComplete(wizardDraft.religionDetails)).toBe(true);
+      expect(isLocationDetailsComplete(wizardDraft.locationDetails)).toBe(true);
+      expect(isLocationDetailsComplete(onboardingDraft.locationDetails)).toBe(
+        true,
+      );
+
+      // Still a real gate: country/state/city are required, and a draft
+      // missing the city is still incomplete.
+      expect(
+        isLocationDetailsComplete({ country: 'India', state: 'Karnataka' }),
+      ).toBe(false);
+    },
+  );
 });
