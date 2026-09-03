@@ -137,6 +137,30 @@ model UserProfile {
   country            String?
   area               String?
   pinCode            String?       @map("pin_code")
+  /// Device-reported coordinates backing the "Near Me" proximity search.
+  /// Nullable throughout, and every geo query filters `latitude IS NOT NULL`
+  /// rather than leaning on a default: sharing location is opt-in (the member
+  /// must grant OS location permission), and a default of 0 would not mean
+  /// "unknown" — 0,0 is a real point in the Gulf of Guinea that would place
+  /// every un-located member a few metres from every other one.
+  ///
+  /// Double precision, not a PostGIS geography type: PostGIS is not installed
+  /// on this database and `CREATE EXTENSION` needs superuser rights the deploy
+  /// role does not have. The bounding-box + Haversine query in
+  /// NearbyRepository is exact at the radii this feature uses and needs no
+  /// extension — see modules/matches/geo/haversine.ts. Moving to PostGIS later
+  /// changes that one repository and nothing else.
+  latitude           Float?        @map("latitude")
+  longitude          Float?        @map("longitude")
+  /// Accuracy radius in metres as the device reported it. Android's
+  /// "Approximate" permission yields ~1-3 km here where "Precise" yields tens
+  /// of metres; iOS reduced accuracy behaves the same way. Stored so the
+  /// client can describe a coarse fix honestly instead of implying a
+  /// precision it does not have.
+  locationAccuracyM  Int?          @map("location_accuracy_m")
+  /// When the coordinates above were last written. Read by the client to
+  /// decide whether a stored fix is still fresh enough to reuse.
+  locationUpdatedAt  DateTime?     @map("location_updated_at")
   bio                String?
   dietaryHabits      String?       @map("dietary_habits")
   smokingHabits      String?       @map("smoking_habits")
@@ -171,6 +195,13 @@ model UserProfile {
   @@index([annualIncomeLakhs])
   @@index([currentCity])
   @@index([currentState])
+  // Serves the Near Me bounding-box prefilter (`latitude BETWEEN ? AND ?` /
+  // `longitude BETWEEN ? AND ?`). Latitude leads because it is the more
+  // selective of the two here: one degree of latitude is a constant ~111km,
+  // while at Indian latitudes one degree of longitude is only ~101km, so an
+  // equal-distance box is narrower in degrees north-south than east-west and
+  // the planner discards more rows on the leading range scan.
+  @@index([latitude, longitude])
   @@index([gender, religion, caste, annualIncomeLakhs])
   // Serves the Discover/Search feed, which is always "opposite gender, newest
   // first, paginated". Without the createdAt column here the planner filters on

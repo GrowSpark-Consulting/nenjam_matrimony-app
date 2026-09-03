@@ -15,14 +15,31 @@
 /// `.applyProfileBasics`) maps them onto the sections that own them.
 library;
 
-/// Step 2 — "Your religion": religion, community, and the country the
-/// member lives in.
+/// Step 2 — "Your religion": religion, caste, community, mother tongue, and
+/// the country the member lives in.
+///
+/// Caste and mother tongue are asked here because `user_profiles.caste` and
+/// `user_profiles.mother_tongue` are both NOT NULL. Onboarding used to skip
+/// them, so `isMatchableFromDraft` could never pass and the backend never
+/// wrote a profile row at all — the member finished onboarding, landed on
+/// Discover, and `GET /profiles/me` answered 404 for the rest of the account's
+/// life. A step that collects them is the only fix that does not mean
+/// inventing a value into someone's profile.
 class OnboardingReligionForm {
   /// Draft: `ReligionDetails.religion`. Required.
   final String religion;
 
+  /// Draft: `ReligionDetails.caste`. Required — NOT NULL on `user_profiles`.
+  /// Free text, like the wizard's own caste field: there is no authoritative
+  /// caste list in this app and inventing one is not an option.
+  final String caste;
+
   /// Draft: `ReligionDetails.community`. Required.
   final String community;
+
+  /// Draft: `LanguageDetails.motherTongue`. Required — NOT NULL on
+  /// `user_profiles`.
+  final String motherTongue;
 
   /// "Living in" — draft: `LocationDetails.country`. Required. The country
   /// is asked here, a step before the state and city, because it decides
@@ -36,7 +53,9 @@ class OnboardingReligionForm {
 
   const OnboardingReligionForm({
     this.religion = '',
+    this.caste = '',
     this.community = '',
+    this.motherTongue = '',
     this.livingIn = '',
     this.casteNoBar = false,
   });
@@ -51,13 +70,17 @@ class OnboardingReligionForm {
 
   OnboardingReligionForm copyWith({
     String? religion,
+    String? caste,
     String? community,
+    String? motherTongue,
     String? livingIn,
     bool? casteNoBar,
   }) {
     return OnboardingReligionForm(
       religion: religion ?? this.religion,
+      caste: caste ?? this.caste,
       community: community ?? this.community,
+      motherTongue: motherTongue ?? this.motherTongue,
       livingIn: livingIn ?? this.livingIn,
       casteNoBar: casteNoBar ?? this.casteNoBar,
     );
@@ -68,7 +91,9 @@ class OnboardingReligionForm {
   /// them down the screen.
   List<OnboardingReligionField> get missingFields => [
         if (religion.trim().isEmpty) OnboardingReligionField.religion,
+        if (caste.trim().isEmpty) OnboardingReligionField.caste,
         if (community.trim().isEmpty) OnboardingReligionField.community,
+        if (motherTongue.trim().isEmpty) OnboardingReligionField.motherTongue,
         if (livingIn.trim().isEmpty) OnboardingReligionField.livingIn,
       ];
 
@@ -76,28 +101,78 @@ class OnboardingReligionForm {
 }
 
 /// The required fields of [OnboardingReligionForm], for validation messages.
-enum OnboardingReligionField { religion, community, livingIn }
+enum OnboardingReligionField {
+  religion,
+  caste,
+  community,
+  motherTongue,
+  livingIn,
+}
 
-/// Step 4 — "State & City". Sub-community is deliberately absent: it is not
-/// required to get a member into the app, and the draft keeps the field for
-/// Edit Profile to fill in later.
+/// Step 4 — "Now let's build your Profile": name, gender, date of birth,
+/// state and city. Sub-community is deliberately absent: it is not required
+/// to get a member into the app, and the draft keeps the field for Edit
+/// Profile to fill in later.
+///
+/// Name, gender and date of birth are asked here for the same reason caste
+/// and mother tongue moved onto the religion step: `first_name`, `last_name`,
+/// `gender` and `dob` are all NOT NULL on `user_profiles`, so without them the
+/// backend cannot write the row and the member's profile never exists. They
+/// also happen to be what Discover renders — a card has to show a name and an
+/// age — so this is the screen that owes them.
 class ProfileBasicsForm {
+  /// Draft: `BasicDetails.firstName`. Required — NOT NULL.
+  final String firstName;
+
+  /// Draft: `BasicDetails.lastName`. Required — NOT NULL.
+  final String lastName;
+
+  /// Draft: `BasicDetails.gender`. Required — NOT NULL. Held in the draft's
+  /// own representation ('Male' / 'Female'); `BasicDetails.toJson` is what
+  /// maps it to the API's MALE / FEMALE, so this must not pre-convert.
+  final String gender;
+
+  /// Draft: `BasicDetails.dob`. Required — NOT NULL.
+  final DateTime? dob;
+
   /// Draft: `LocationDetails.state`. Required.
   final String state;
 
   /// Draft: `LocationDetails.city`. Required.
   final String city;
 
-  const ProfileBasicsForm({this.state = '', this.city = ''});
+  const ProfileBasicsForm({
+    this.firstName = '',
+    this.lastName = '',
+    this.gender = '',
+    this.dob,
+    this.state = '',
+    this.city = '',
+  });
 
-  ProfileBasicsForm copyWith({String? state, String? city}) {
+  ProfileBasicsForm copyWith({
+    String? firstName,
+    String? lastName,
+    String? gender,
+    DateTime? dob,
+    String? state,
+    String? city,
+  }) {
     return ProfileBasicsForm(
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      gender: gender ?? this.gender,
+      dob: dob ?? this.dob,
       state: state ?? this.state,
       city: city ?? this.city,
     );
   }
 
   List<ProfileBasicsField> get missingFields => [
+        if (firstName.trim().isEmpty) ProfileBasicsField.firstName,
+        if (lastName.trim().isEmpty) ProfileBasicsField.lastName,
+        if (gender.trim().isEmpty) ProfileBasicsField.gender,
+        if (dob == null) ProfileBasicsField.dob,
         if (state.trim().isEmpty) ProfileBasicsField.state,
         if (city.trim().isEmpty) ProfileBasicsField.city,
       ];
@@ -106,7 +181,7 @@ class ProfileBasicsForm {
 }
 
 /// The required fields of [ProfileBasicsForm], for validation messages.
-enum ProfileBasicsField { state, city }
+enum ProfileBasicsField { firstName, lastName, gender, dob, state, city }
 
 /// Step 5 — "Marital status". Height sits here too, as the reference screen
 /// asks the two together; diet is offered alongside but optional.

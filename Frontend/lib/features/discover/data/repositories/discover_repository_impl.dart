@@ -12,7 +12,7 @@ import '../models/story_model.dart';
 /// real profiles across the screen's sections.
 ///
 /// The Discover screen renders several sections (New Today, AI Recommended,
-/// Recently Joined, Verified, Near You, Premium) — a presentation concept the
+/// Recently Joined, Verified, Premium) — a presentation concept the
 /// backend doesn't model as separate lists yet. So the one flat feed is
 /// *partitioned*, round-robin, into those buckets: every profile lands in
 /// exactly one section. That fills each section with real people and — because
@@ -31,7 +31,13 @@ class DiscoverRepositoryImpl implements DiscoverRepository {
 
   /// Sections the feed is partitioned into, in priority order: the scarce
   /// first profiles fill the most prominent sections first.
-  static const _sectionCount = 6;
+  ///
+  /// Five, not six, since "Near You" stopped being one of them: that section
+  /// now renders real device-location results from `/profiles/nearby` (see
+  /// `_NearYouSection`) instead of an arbitrary slice of this feed. Had the
+  /// count stayed at six, the sixth bucket would still be filled here and then
+  /// rendered nowhere — quietly dropping a sixth of every page off the screen.
+  static const _sectionCount = 5;
 
   @override
   Future<DiscoverFeedEntity> getDiscoverFeed() async {
@@ -57,9 +63,21 @@ class DiscoverRepositoryImpl implements DiscoverRepository {
       aiRecommended: buckets[0],
       recentlyJoined: buckets[1],
       verifiedProfiles: buckets[2],
-      nearYou: buckets[3],
-      premiumMembers: buckets[4],
-      stories: buckets[5].map(_toStory).toList(),
+      premiumMembers: buckets[3],
+      stories: buckets[4].map(_toStory).toList(),
+      // Always empty, and deliberately so: "near you" is a claim about
+      // physical distance, and this endpoint knows nothing about where anyone
+      // is. Real proximity comes from `/profiles/nearby` via
+      // `nearbyNotifierProvider`, which needs the device's location and the
+      // user's permission — neither of which exists here. Filling this with
+      // arbitrary feed profiles is exactly the thing that made the old Near
+      // You section a lie.
+      //
+      // The field stays on the entity because several screens still fold it
+      // into a lookup pool of "every profile the feed returned"; contributing
+      // nothing to those pools is correct, since the same profiles are now
+      // distributed across the four buckets above.
+      nearYou: const [],
       // Not surfaced by the feed screen — the drawer/Profile read the real
       // backend completion via its own provider. Kept 0 rather than invented.
       profileCompletionPercent: 0,
@@ -95,7 +113,7 @@ class DiscoverRepositoryImpl implements DiscoverRepository {
     final profiles = <DiscoveryProfileModel>[];
     for (final raw in (data['items'] as List<dynamic>? ?? const [])) {
       final json = Map<String, dynamic>.from(raw as Map);
-      json['gender'] = _normalizeGender(json['gender']);
+      json['gender'] = normalizeProfileGender(json['gender']);
       final profile = DiscoveryProfileModel.fromJson(json);
       if (seen.add(profile.id)) profiles.add(profile);
     }
@@ -112,16 +130,4 @@ class DiscoverRepositoryImpl implements DiscoverRepository {
         gender: p.gender,
         profile: p,
       );
-
-  static String _normalizeGender(dynamic value) {
-    final gender = value is String ? value : '';
-    switch (gender.toLowerCase()) {
-      case 'male':
-        return 'Male';
-      case 'female':
-        return 'Female';
-      default:
-        return gender;
-    }
-  }
 }

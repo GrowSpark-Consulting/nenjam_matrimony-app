@@ -275,6 +275,13 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                         ),
                       ),
                       _DrawerItem(
+                        // Same near_me arrow the distance pill on each Near Me
+                        // card uses, so the icon means one thing app-wide.
+                        icon: Icons.near_me_outlined,
+                        label: l10n.drawerNearMe,
+                        onTap: () => context.push(RouteNames.nearby),
+                      ),
+                      _DrawerItem(
                         // Same eye used by the Profile Viewers empty state and
                         // by the PROFILE_VIEW notification icon.
                         icon: Icons.visibility_outlined,

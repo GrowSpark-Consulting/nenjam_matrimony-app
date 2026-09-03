@@ -86,22 +86,44 @@ class GoogleAuthService {
   final FirebaseAuth _auth;
   final GoogleSignIn _googleSignIn;
 
-  bool _initialized = false;
+  /// Guards a PROCESS-WIDE resource, so the guard is process-wide too.
+  ///
+  /// `GoogleSignIn.instance` is a singleton and its `initialize()` throws
+  /// `StateError: init() has already been called` on a second call. This flag
+  /// used to be a plain instance field, which only matched that lifetime for
+  /// as long as one [GoogleAuthService] existed: build a second one — a hot
+  /// restart, a rebuilt provider container, a test harness — and the flag
+  /// started false while the singleton behind it was already initialised, so
+  /// the next sign-in threw before reaching the account picker.
+  ///
+  /// Holding the Future rather than a bool also collapses concurrent callers
+  /// onto one initialisation instead of racing two.
+  static Future<void>? _initialization;
 
-  /// v7 requires `initialize()` to complete before any other call. It is
-  /// idempotent from our side but does platform work, so it runs once.
-  Future<void> _ensureInitialized() async {
-    if (_initialized) return;
+  /// v7 requires `initialize()` to complete before any other call. It does
+  /// real platform work, so it runs exactly once per process.
+  Future<void> _ensureInitialized() =>
+      _initialization ??= _initializeOnce();
+
+  Future<void> _initializeOnce() async {
     try {
       await _googleSignIn.initialize();
       _diag('initialize() OK');
+    } on StateError catch (e) {
+      // Already initialised by an earlier instance of this service. That is
+      // the state the caller wants, so it is a no-op rather than a failure —
+      // the alternative is a sign-in button that is permanently broken after
+      // a hot restart.
+      _diag('initialize() already done, continuing — $e');
     } catch (e) {
-      // "serverClientId must be provided on Android" surfaces here when
-      // google-services.json has no client_type 3 entry.
+      // A real failure: "serverClientId must be provided on Android" surfaces
+      // here when google-services.json has no client_type 3 entry. Clear the
+      // cached Future so a later attempt can retry rather than replaying this
+      // error forever.
+      _initialization = null;
       _diag('initialize() FAILED: ${e.runtimeType} — $e');
       rethrow;
     }
-    _initialized = true;
   }
 
   /// Signs in with Google and returns the resulting Firebase credential.
@@ -111,6 +133,8 @@ class GoogleAuthService {
   /// `account-exists-with-different-credential` when the same address
   /// already has a password account).
   Future<UserCredential> signIn() async {
+    if (kIsWeb) return _signInOnWeb();
+
     await _ensureInitialized();
 
     final GoogleSignInAccount account;
@@ -185,9 +209,56 @@ class GoogleAuthService {
     }
   }
 
+  /// Google sign-in for the web, which cannot use the path above.
+  ///
+  /// `google_sign_in` 7.x has no `authenticate()` on web — it throws
+  /// `UnimplementedError: authenticate is not supported on the web. Instead,
+  /// use renderButton…`, because the web plugin only offers Google's own
+  /// pre-rendered button widget. Honouring that would mean putting a
+  /// Google-drawn button into the sign-in screen on web only, which is a UI
+  /// change to a design that already has its own button.
+  ///
+  /// `signInWithPopup` is the Firebase-native route and needs neither: it is
+  /// part of `firebase_auth` (already a dependency), it drives the same
+  /// GoogleAuthProvider, and it returns the same [UserCredential] the mobile
+  /// path returns — so everything downstream, including PostAuthDestination,
+  /// is identical on both platforms.
+  ///
+  /// Requires the app's origin to be listed under Firebase Console →
+  /// Authentication → Settings → Authorized domains (`localhost` is there by
+  /// default).
+  Future<UserCredential> _signInOnWeb() async {
+    _diag('web: signInWithPopup(GoogleAuthProvider)…');
+    try {
+      final provider = GoogleAuthProvider()..addScope('email');
+      final cred = await _auth.signInWithPopup(provider);
+      _diag('web: signInWithPopup OK — uid=${cred.user?.uid}, '
+          'isNewUser=${cred.additionalUserInfo?.isNewUser}');
+      return cred;
+    } on FirebaseAuthException catch (e) {
+      // Closing the popup, or a second popup superseding the first, is the
+      // user changing their mind — the same silent outcome the mobile path
+      // gives for a dismissed picker, not an error worth a red banner.
+      if (e.code == 'popup-closed-by-user' ||
+          e.code == 'cancelled-popup-request' ||
+          e.code == 'user-cancelled') {
+        _diag('web: popup dismissed — treated as cancellation');
+        throw const GoogleSignInCancelled();
+      }
+      _diag('web: signInWithPopup FirebaseAuthException'
+          '\n    code:    ${e.code}'
+          '\n    message: ${e.message}');
+      rethrow;
+    }
+  }
+
   /// Drops the cached Google account so the next sign-in shows the picker
   /// again rather than silently reusing the last account.
   Future<void> signOut() async {
+    // Nothing to clear on web: the popup flow keeps no account cache of its
+    // own, and `initialize()`/`signOut()` on the web plugin would only be
+    // work the sign-in path never did.
+    if (kIsWeb) return;
     await _ensureInitialized();
     await _googleSignIn.signOut();
   }

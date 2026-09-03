@@ -4,4 +4,16 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Debug builds only. This manifest is not merged into release or
+         profile builds, so shipped APKs keep Android's default of blocking
+         cleartext.
+
+         Android 9+ (API 28) rejects plain HTTP, with no exemption for
+         localhost. Testing against a backend on the developer's machine means
+         forwarding a port with "adb reverse tcp:3000 tcp:3000" and building
+         with an API_BASE_URL dart-define of http://localhost:3000; without
+         this flag every such request fails before it leaves the phone.
+    -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>

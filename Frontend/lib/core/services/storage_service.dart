@@ -260,8 +260,25 @@ class StorageService {
   }
 
   /// Clears user-specific data while preserving app settings.
+  /// Everything that identifies the signed-out user, dropped together.
+  ///
+  /// [onboardingCompleted] belongs here and not only in the signup flow that
+  /// sets it: while it is set, the router lets a session-less device into
+  /// every protected route (debug builds — see `_onboardingCompletedLocally`).
+  /// Leaving it behind on sign-out meant logging out cleared the session but
+  /// not the thing standing in for one, so protected routes stayed reachable
+  /// and a relaunch resumed straight back into the app. Sign-out has to
+  /// revoke the substitute as well as the real credential.
   Future<void> clearUserData() async {
-    await Future.wait([clearTokens(), _prefs.remove(AppConstants.keyUserId)]);
+    await Future.wait([
+      clearTokens(),
+      _prefs.remove(AppConstants.keyUserId),
+      _prefs.remove(AppConstants.keyOnboardingCompleted),
+      // A local session is a session: signing out has to end it too, or the
+      // next launch would still send its identifier as the dev-auth header
+      // and silently resume the account the member just left.
+      clearLocalSession(),
+    ]);
   }
 }
 

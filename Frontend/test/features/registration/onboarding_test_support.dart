@@ -32,7 +32,40 @@ class RecordingRegistrationRepository implements RegistrationRepository {
 
   LocationDetails? savedLocation;
   ReligionDetails? savedReligion;
+  LanguageDetails? savedLanguage;
+  BasicDetails? savedBasic;
   PartnerPreference? savedPartnerPreference;
+  PhysicalDetails? savedPhysical;
+  EducationDetails? savedEducation;
+  LifestyleDetails? savedLifestyle;
+
+  /// Every section name this recorder was asked to save, in call order.
+  /// The individual `saved*` fields answer "what was sent"; this answers
+  /// "was it sent at all", which is what
+  /// [RegistrationNotifier.flushOnboardingToBackend] regressed on.
+  final List<String> savedSections = <String>[];
+
+  /// Onboarding writes these two now: `caste`/`motherTongue` from the
+  /// Religion step and `firstName`/`lastName`/`gender`/`dob` from Profile
+  /// Basics. Every one of them is a NOT NULL column on `user_profiles`, so
+  /// without these calls the backend never materializes a profile row at all.
+  @override
+  Future<void> updateBasicDetails(
+    BasicDetails details, {
+    bool skipMaterialize = false,
+  }) async {
+    savedSections.add('basicDetails');
+    savedBasic = details;
+  }
+
+  @override
+  Future<void> updateLanguageDetails(
+    LanguageDetails details, {
+    bool skipMaterialize = false,
+  }) async {
+    savedSections.add('languageDetails');
+    savedLanguage = details;
+  }
 
   @override
   Future<void> updateLocationDetails(
@@ -40,6 +73,7 @@ class RecordingRegistrationRepository implements RegistrationRepository {
     bool skipMaterialize = false,
   }) async {
     if (failLocation) throw Exception('location save failed');
+    savedSections.add('locationDetails');
     savedLocation = details;
   }
 
@@ -49,6 +83,7 @@ class RecordingRegistrationRepository implements RegistrationRepository {
     bool skipMaterialize = false,
   }) async {
     if (failReligion) throw Exception('religion save failed');
+    savedSections.add('religionDetails');
     savedReligion = details;
   }
 
@@ -57,7 +92,39 @@ class RecordingRegistrationRepository implements RegistrationRepository {
     PartnerPreference details, {
     bool skipMaterialize = false,
   }) async {
+    savedSections.add('partnerPreference');
     savedPartnerPreference = details;
+  }
+
+  // The remaining three sections the end-of-onboarding flush sends. Stubbed
+  // so that flush can be exercised end to end: it swallows its own errors, so
+  // an unstubbed call would abort the run through `noSuchMethod` and be
+  // silently discarded, hiding whichever sections came after it.
+  @override
+  Future<void> updatePhysicalDetails(
+    PhysicalDetails details, {
+    bool skipMaterialize = false,
+  }) async {
+    savedSections.add('physicalDetails');
+    savedPhysical = details;
+  }
+
+  @override
+  Future<void> updateEducationDetails(
+    EducationDetails details, {
+    bool skipMaterialize = false,
+  }) async {
+    savedSections.add('educationDetails');
+    savedEducation = details;
+  }
+
+  @override
+  Future<void> updateLifestyleDetails(
+    LifestyleDetails details, {
+    bool skipMaterialize = false,
+  }) async {
+    savedSections.add('lifestyleDetails');
+    savedLifestyle = details;
   }
 
   @override
@@ -115,4 +182,43 @@ Future<void> pickDropdown(
   await tester.pumpAndSettle();
   await tester.tap(find.text(option).last);
   await tester.pumpAndSettle();
+}
+
+/// Opens the date-of-birth calendar and accepts the date it opens on.
+///
+/// The field is a read-only [TextFormField] behind an [AbsorbPointer], so the
+/// tap is aimed at the enclosing [GestureDetector] rather than the icon —
+/// tapping the icon lands, but only by falling through the absorber, which
+/// makes the test framework warn about a missed hit test. The picker's
+/// `initialDate` is already a valid answer (25 years ago), so confirming is
+/// all a test needs.
+Future<void> pickDob(WidgetTester tester) async {
+  await tester.tap(
+    find
+        .ancestor(
+          of: find.byIcon(Icons.calendar_today_rounded),
+          matching: find.byType(GestureDetector),
+        )
+        .first,
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('OK'));
+  await tester.pumpAndSettle();
+}
+
+/// Answers the identity half of the Profile Basics step: the name, gender and
+/// date of birth backing `user_profiles`' NOT NULL `first_name`, `last_name`,
+/// `gender` and `dob` columns. State and city are left to the caller, since
+/// several tests vary them.
+Future<void> fillIdentity(
+  WidgetTester tester, {
+  String firstName = 'Arjun',
+  String lastName = 'Krishnan',
+}) async {
+  await tester.enterText(find.byType(TextFormField).at(0), firstName);
+  await tester.enterText(find.byType(TextFormField).at(1), lastName);
+  await tester.pumpAndSettle();
+  await tester.tap(find.widgetWithText(ChoiceChip, 'Male'));
+  await tester.pumpAndSettle();
+  await pickDob(tester);
 }

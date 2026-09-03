@@ -1,26 +1,30 @@
 {
   "@@locale": "en",
-
   "appName": "Nenjam Matrimony",
-  "@appName": { "description": "Application brand name" },
+  "@appName": {
+    "description": "Application brand name"
+  },
   "commonContinue": "Continue",
-  "@commonContinue": { "description": "Generic continue / proceed action" },
-
+  "@commonContinue": {
+    "description": "Generic continue / proceed action"
+  },
   "splashTagline": "Where Hearts Meet",
-  "@splashTagline": { "description": "Splash screen tagline" },
-
+  "@splashTagline": {
+    "description": "Splash screen tagline"
+  },
   "languageChooseTitle": "Choose your Language",
   "languageChooseSubtitle": "Select your preferred language for matchmaking",
   "languageEnglish": "English",
   "languageTamil": "Tamil",
-
   "authTagline": "FIND YOUR FOREVER",
   "authWelcomeTitle": "Welcome to Nenjam Matrimony",
   "authWelcomeSubtitle": "Experience a premier matrimonial journey curated exclusively for discerning individuals seeking lifelong companionship.",
   "authLogin": "Login",
   "authCreateAccount": "Create Account",
   "registrationLandingHeadline": "Your story starts here",
-  "@registrationLandingHeadline": { "description": "Headline on the sign-up landing screen shown to logged-out users" },
+  "@registrationLandingHeadline": {
+    "description": "Headline on the sign-up landing screen shown to logged-out users"
+  },
   "registrationLandingNewTo": "New to Nenjam?",
   "registrationLandingSignUpEmail": "Sign Up with Email",
   "registrationLandingSignUpMobile": "Sign Up with Mobile",
@@ -60,12 +64,15 @@
   "authEnterVerificationCode": "Enter Verification Code",
   "authOtpSentTo": "We sent a 6-digit code to {target}",
   "@authOtpSentTo": {
-    "placeholders": { "target": { "type": "String" } }
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
   },
   "authVerifyAndContinue": "Verify & Continue",
   "authResendOtpIn": "Resend OTP in",
   "authResendOtp": "Resend OTP",
-
   "authUsername": "Username",
   "authUsernameHint": "e.g. arun_kumar",
   "authPasswordHint": "Min 8 chars with upper, lower, number & symbol",
@@ -74,49 +81,55 @@
   "authGenericError": "Something went wrong. Please try again.",
   "authLogoutConfirm": "Are you sure you want to log out?",
   "commonCancel": "Cancel",
-
   "authVerifyEmailTitle": "Verify your email",
   "authVerifyEmailSentTo": "We sent a verification link to {email}",
   "@authVerifyEmailSentTo": {
-    "placeholders": { "email": { "type": "String" } }
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
   },
   "authVerifyEmailInstruction": "Open the link in your inbox to verify your email, then come back here.",
   "authIveVerified": "I've verified",
   "authResendEmail": "Resend email",
   "authResendEmailIn": "Resend email in {seconds}s",
   "@authResendEmailIn": {
-    "placeholders": { "seconds": { "type": "String" } }
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
   },
   "authEmailNotVerifiedYet": "Email not verified yet. Please tap the link in your inbox.",
   "authEmailVerifiedSuccess": "Email verified!",
   "authVerificationEmailSent": "Verification email sent.",
-
   "authVerifyPhoneTitle": "Verify your phone",
   "authSendingOtp": "Sending OTP…",
   "authPhoneVerifiedSuccess": "Phone verified!",
-
   "authForgotPasswordTitle": "Forgot Password",
   "authForgotPasswordSubtitle": "Enter your registered email and we'll send you a link to reset your password.",
   "authSendResetLink": "Send Reset Link",
   "authBackToLogin": "Back to login",
   "authResetEmailSentTitle": "Check your email",
   "authResetEmailSent": "Password reset link has been sent to your email",
-
   "navHome": "Home",
   "navSearch": "Search",
   "navMatches": "Matches",
   "navChat": "Chat",
   "navProfile": "Profile",
-
   "homeCompleteProfileTitle": "Complete Your Profile",
   "homeProfileNextStep": "Next: {step}",
   "@homeProfileNextStep": {
-    "placeholders": { "step": { "type": "String" } }
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
   },
   "homeStepAddPhoto": "Add profile photo",
   "homeAiPickBadge": "AI Pick",
   "discoverAiMatchLabel": "match",
-
   "discoverNewTodayLabel": "New Today",
   "discoverSearchingMoreLabel": "Searching for more souls…",
   "discoverFallbackBannerLabel": "We widened your preferences slightly to show more matches.",
@@ -141,20 +154,21 @@
   "actionMessage": "Message",
   "discoverFilterLabel": "Filter",
   "homeProfileDetailsLabel": "Details",
-
   "navDiscover": "Discover",
   "navMessages": "Inbox",
   "navPremium": "Premium",
   "navUnreadMessagesSemanticLabel": "{count,plural, =1{1 unread message} other{{count} unread messages}}",
   "@navUnreadMessagesSemanticLabel": {
     "description": "Screen-reader announcement for the unread badge on the bottom nav Inbox icon. Appended to the tab label, e.g. 'Inbox, 3 unread messages'.",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-
   "discoverForYouTab": "For You",
   "discoverNearMeTab": "Near Me",
   "discoverNewTab": "New",
-
   "appNameShort": "Nenjam",
   "discoverSearchTooltip": "Search",
   "discoverAiRecommendedTitle": "AI Recommended",
@@ -170,20 +184,16 @@
   "discoverConnectButton": "Connect",
   "matchesEmptyTitle": "No matches yet",
   "matchesEmptySubtitle": "Check back soon for new profiles",
-
   "matchesCategorySearch": "Search",
   "matchesCategoryNew": "New",
   "matchesCategoryDaily": "Daily",
   "matchesCategoryMyMatches": "My Matches",
   "matchesCategoryNearMe": "Near Me",
   "matchesCategoryMoreMatches": "More Matches",
-
   "discoverKmAwaySuffix": "km away",
-
   "premiumBannerTitle": "Upgrade to Premium",
   "premiumBannerSubtitle": "Get unlimited access to profiles & AI matching",
   "premiumBannerCta": "Explore Plans",
-
   "searchTitle": "Discover Profiles",
   "searchFilterVerifiedOnly": "Verified Only",
   "searchFilterNearMe": "Near Me",
@@ -191,10 +201,13 @@
   "searchFilterEngineer": "Engineer",
   "searchShowingMatches": "Showing {count} Matches",
   "@searchShowingMatches": {
-    "placeholders": { "count": { "type": "String" } }
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
   },
   "searchSortButton": "Sort",
-
   "searchHint": "Name, Matrimony ID, City, Profession...",
   "searchRecentTitle": "Recent Searches",
   "searchPopularTitle": "Popular Searches",
@@ -202,7 +215,6 @@
   "searchEmptyResultsTitle": "No matching profiles found.",
   "searchEmptyResultsSubtitle": "Try changing your filters.",
   "searchResetFiltersButton": "Reset Filters",
-
   "searchFilterSheetTitle": "Filters",
   "searchFilterReset": "Reset",
   "searchFilterApply": "Apply Filters",
@@ -240,17 +252,19 @@
   "searchFilterOptionYes": "Yes",
   "searchFilterOptionNo": "No",
   "searchFilterOptionOccasionally": "Occasionally",
-
   "matchesTitle": "My Matches",
   "matchesTabNew": "New ({count})",
   "@matchesTabNew": {
-    "placeholders": { "count": { "type": "String" } }
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
   },
   "matchesTabShortlisted": "Shortlisted",
   "matchesTabMutual": "Mutual",
   "matchesShortlistedEmpty": "Shortlisted Profiles",
   "matchesMutualEmpty": "Mutual Likes",
-
   "inboxTitle": "Inbox",
   "inboxNotificationsTooltip": "Notifications",
   "inboxFilterTooltip": "Filters",
@@ -277,7 +291,11 @@
   "inboxSmartAiSuggested": "AI Suggested",
   "inboxCompatibilityLabel": "{percent}% Match",
   "@inboxCompatibilityLabel": {
-    "placeholders": { "percent": { "type": "int" } }
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
   },
   "inboxActionViewProfile": "View Profile",
   "inboxActionMute": "Mute",
@@ -307,18 +325,30 @@
   "inboxComposerVoice": "Voice message",
   "inboxBlockConfirmTitle": "Block {name}?",
   "@inboxBlockConfirmTitle": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "inboxBlockConfirmMessage": "They won't be able to message you, and you won't see each other in Discover anymore.",
   "inboxUnblockConfirmTitle": "Unblock {name}?",
   "@inboxUnblockConfirmTitle": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "inboxUnblockConfirmMessage": "You'll be able to message each other again.",
   "inboxUnblockLoading": "Unblocking…",
   "inboxUnblockSuccess": "{name} has been unblocked.",
   "@inboxUnblockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "inboxDeleteConfirmTitle": "Delete conversation?",
   "inboxDeleteConfirmMessage": "This removes the conversation from your inbox. This can't be undone.",
@@ -333,7 +363,6 @@
   "messageGateDeclined": "This interest was declined.",
   "messageGateBlocked": "You can't message this conversation.",
   "messageGateError": "Unable to open chat. Please try again.",
-
   "notificationsTitle": "Notifications",
   "notificationsMarkAllRead": "Mark all as read",
   "notificationsSectionToday": "Today",
@@ -342,31 +371,40 @@
   "notificationsJustNow": "Just now",
   "notificationsMinutesAgo": "{count} min ago",
   "@notificationsMinutesAgo": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "notificationsHoursAgo": "{count} hr ago",
   "@notificationsHoursAgo": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "notificationsDaysAgo": "{count} d ago",
   "@notificationsDaysAgo": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "notificationsEmptyTitle": "You're all caught up!",
   "notificationsEmptyMessage": "New interests, matches, messages and updates will appear here.",
   "notificationsComingSoon": "This will be available soon.",
-
   "profileTitle": "My Profile",
   "profileAboutMeTitle": "About Me",
   "profileBasicDetailsTitle": "Basic Details",
   "profileCardShortlist": "Shortlist",
   "profileCardLike": "Like",
-
   "premiumTitle": "Upgrade to Luxury Premium",
   "premiumHeroTitle": "Unlock Unlimited Matches",
   "premiumHeroSubtitle": "Get access to verified contacts, AI matchmaking & horoscope details.",
   "premiumProceedToPayment": "Proceed to Payment",
-
   "settingsTitle": "Settings",
   "settingsAccountSecuritySection": "Account & Security",
   "settingsIdVerificationTitle": "ID Verification",
@@ -382,17 +420,24 @@
   "settingsDeleteAccountConfirmMessage": "This permanently deletes your profile, photos, and all data. This action cannot be undone.",
   "settingsDeleteAccountProgressMessage": "Deleting your account…",
   "settingsDeleteAccountErrorMessage": "Couldn't delete your account. Please check your connection and try again.",
-
   "registrationStepIndicator": "Step {current} of {total}",
   "@registrationStepIndicator": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "registrationPercentCompleted": "{percent}% Completed",
   "@registrationPercentCompleted": {
-    "placeholders": { "percent": { "type": "int" } }
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
   },
   "registrationBack": "Back",
   "registrationSkipStep": "Skip this step",
@@ -410,7 +455,6 @@
   "registrationStepPreferences": "Preferences",
   "registrationStepPhotos": "Photos",
   "registrationStepVerification": "Verification",
-
   "registrationBasicInfoTitle": "Basic Information",
   "registrationBasicInfoSubtitle": "Tell us about yourself",
   "registrationFirstNameLabel": "First Name",
@@ -423,7 +467,11 @@
   "registrationDobError": "Please select date of birth",
   "registrationAgeYears": "Age: {age} years",
   "@registrationAgeYears": {
-    "placeholders": { "age": { "type": "int" } }
+    "placeholders": {
+      "age": {
+        "type": "int"
+      }
+    }
   },
   "registrationMaritalStatusLabel": "Marital Status",
   "genderMale": "Male",
@@ -432,7 +480,6 @@
   "maritalDivorced": "Divorced",
   "maritalWidowed": "Widowed",
   "maritalAwaitingDivorce": "Awaiting Divorce",
-
   "registrationReligionTitle": "Religion & Community",
   "registrationReligionSubtitle": "Your religious background",
   "registrationReligionLabel": "Religion",
@@ -456,7 +503,6 @@
   "religionBuddhist": "Buddhist",
   "religionInterReligion": "Inter-Religion",
   "religionOther": "Other",
-
   "registrationLanguagesTitle": "Languages",
   "registrationLanguagesSubtitle": "Your language preferences",
   "registrationMotherTongueLabel": "Mother Tongue",
@@ -474,7 +520,6 @@
   "langFrench": "French",
   "langGerman": "German",
   "langArabic": "Arabic",
-
   "registrationLocationTitle": "Location",
   "registrationLocationSubtitle": "Where do you live?",
   "registrationCountryLabel": "Country",
@@ -508,7 +553,6 @@
   "stateRajasthan": "Rajasthan",
   "stateUp": "UP",
   "stateOther": "Other",
-
   "registrationEducationTitle": "Education & Career",
   "registrationEducationSubtitle": "Your professional background",
   "registrationQualificationLabel": "Highest Qualification",
@@ -550,7 +594,6 @@
   "income50to100": "50 Lakhs - 1 Crore",
   "income100Plus": "1 Crore+",
   "incomeOther": "Other",
-
   "registrationPhysicalTitle": "Physical Details",
   "registrationPhysicalSubtitle": "Describe your appearance",
   "registrationHeightLabel": "Height",
@@ -565,7 +608,6 @@
   "disabilityVisual": "Visual",
   "disabilitySpeech": "Speech",
   "disabilityOther": "Other",
-
   "registrationLifestyleTitle": "Lifestyle",
   "registrationLifestyleSubtitle": "Your habits and interests",
   "registrationEatingHabitLabel": "Eating Habit",
@@ -597,12 +639,10 @@
   "hobbyYoga": "Yoga",
   "hobbyMovies": "Movies",
   "hobbyGardening": "Gardening",
-
   "commonDontKnow": "Don't Know",
   "commonPleaseSpecifyLabel": "Please specify",
   "commonPleaseSpecifyHint": "Type your answer",
   "commonRequiredFieldLabel": "Required field",
-
   "registrationFamilyTitle": "Family Details",
   "registrationFamilySubtitle": "Tell us about your family",
   "registrationFatherSectionLabel": "Father",
@@ -642,7 +682,6 @@
   "famUpperMiddleClass": "Upper Middle Class",
   "famRich": "Rich",
   "famAffluent": "Affluent",
-
   "registrationHoroscopeTitle": "Horoscope",
   "registrationHoroscopeSubtitle": "Astrological information (optional)",
   "registrationHoroscopeAvailable": "Horoscope Available?",
@@ -667,7 +706,6 @@
   "rashiMakara": "Makara",
   "rashiKumbha": "Kumbha",
   "rashiMeena": "Meena",
-
   "commonAny": "Any",
   "registrationPartnerTitle": "Partner Preferences",
   "registrationPartnerSubtitle": "What are you looking for in a partner?",
@@ -696,7 +734,6 @@
   "prefLocNri": "NRI OK",
   "prefTongueSame": "Same Mother Tongue",
   "prefMaritalDoesntMatter": "Doesn't Matter",
-
   "partnerPrefPageTitle": "Partner Preferences",
   "partnerPrefSaveButton": "Save Preferences",
   "partnerPrefSavedSnackbar": "Partner preferences saved",
@@ -776,7 +813,6 @@
   "partnerPrefRequirementRequired": "Required",
   "partnerPrefRequirementOptional": "Optional",
   "drawerPartnerPreferences": "Partner Preferences",
-
   "registrationPhotosTitle": "Photos",
   "registrationPhotosSubtitle": "Add photos to get 10x more responses",
   "registrationPrimaryPhoto": "Primary Photo",
@@ -787,7 +823,6 @@
   "registrationCameraSubtitle": "Take a new photo",
   "registrationGallery": "Gallery",
   "registrationGallerySubtitle": "Choose from gallery",
-
   "registrationVerificationTitle": "Verification & Trust",
   "registrationVerificationSubtitle": "Get verified badges to build trust with matches",
   "registrationVerifyMobileTitle": "Mobile Number Verification",
@@ -812,7 +847,6 @@
   "registrationVerificationRejectedLabel": "Verification Rejected",
   "registrationVerificationFailedLabel": "Upload Failed",
   "registrationVerifyMobileRequiredHint": "Verify your mobile number to finish registration.",
-
   "registrationProfileForTitle": "This Profile is for",
   "registrationProfileForSubtitle": "Select the relationship",
   "profileForRelative": "Relative",
@@ -823,7 +857,6 @@
   "profileForSisterSub": "Finding a match for my sister",
   "profileForRelativeSub": "Finding a match for a relative",
   "profileForFriendSub": "Finding a match for a friend",
-
   "profileForOptionMyself": "Myself",
   "profileForOptionSon": "My Son",
   "profileForOptionDaughter": "My Daughter",
@@ -832,12 +865,10 @@
   "profileForOptionFriend": "My Friend",
   "profileForOptionRelative": "My Relative",
   "profileForNotice": "Nenjam is a space for people genuinely looking to marry. Profiles created with false details, or on behalf of a marriage bureau or any business, are removed from the platform.",
-
   "profileBasicsHeadline": "Now let's build your Profile",
   "profileBasicsStateHint": "State you live in",
   "profileBasicsCityHint": "City you live in",
   "profileBasicsCasteNoBar": "Not particular about my partner's community (caste no bar)",
-
   "onboardingReligionHeadline": "Your religion",
   "onboardingReligionLabel": "Religion",
   "onboardingReligionHint": "Select your religion",
@@ -846,7 +877,6 @@
   "onboardingCommunityHelp": "Your community is the group you identify with — for some families that is a caste, for others a language or region.",
   "onboardingLivingInLabel": "Living in",
   "onboardingLivingInHint": "Country you live in",
-
   "onboardingContactHeadline": "An active email ID & phone no. are required to secure your profile",
   "onboardingContactEmailLabel": "Email ID",
   "onboardingContactEmailHint": "your.name@example.com",
@@ -859,7 +889,6 @@
   "onboardingContactEmailLocked": "Already linked to your account.",
   "onboardingContactMobileLocked": "Already linked to your account.",
   "onboardingContactEmailLinkFailed": "We couldn't send a confirmation to that address. Try again, or use a different one.",
-
   "onboardingMaritalHeadline": "Marital status",
   "onboardingMaritalLabel": "Your marital status",
   "onboardingMaritalHint": "Select your marital status",
@@ -869,7 +898,6 @@
   "onboardingDietLabel": "Diet",
   "onboardingDietFieldLabel": "Your diet",
   "onboardingDietHint": "Select your diet",
-
   "onboardingEducationEyebrow": "Great! Few more details",
   "onboardingEducationHeadline": "Highest qualification",
   "onboardingQualificationLabel": "Your highest qualification",
@@ -877,7 +905,6 @@
   "onboardingCollegeLabel": "College",
   "onboardingCollegeFieldLabel": "College you attended",
   "onboardingCollegeHint": "College you attended",
-
   "onboardingIncomeEyebrow": "You are almost done!",
   "onboardingIncomeHeadline": "Annual income",
   "onboardingIncomeLabel": "Your annual income",
@@ -892,7 +919,6 @@
   "onboardingCompanyLabel": "Your current company name",
   "onboardingCompanyHint": "Specify current organization",
   "onboardingIncomeCta": "Create Profile",
-
   "onboardingPhotosHeadline": "Add Photos to complete your Profile",
   "onboardingPhotosSubtitle": "Photo privacy controls are available in Settings.",
   "onboardingPhotosGallery": "Add from Gallery",
@@ -903,14 +929,16 @@
   "onboardingPhotosAddedMany": "{count} photos added.",
   "@onboardingPhotosAddedMany": {
     "description": "Confirms how many photos the member has uploaded so far",
-    "placeholders": { "count": { "type": "String" } }
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
   },
-
   "onboardingAboutEyebrow": "We've added a short description about you",
   "onboardingAboutHeadline": "About yourself",
   "onboardingAboutHelper": "Edit the text above to make it more personal.",
   "onboardingAboutRequired": "Tell us a little about yourself to continue.",
-
   "accountExistsTitle": "Account already exists",
   "accountExistsBoth": "This email or mobile number is already registered. Please log in to continue.",
   "accountExistsEmail": "An account with this email is already registered. Please log in to continue.",
@@ -919,34 +947,41 @@
   "accountExistsEdit": "Edit details",
   "accountCheckFailed": "Unable to check your account right now. Please try again.",
   "accountCheckRetry": "Try Again",
-
   "onboardingVerifyMobileHeadline": "Verify Mobile Number",
   "onboardingVerifyMobileSentTo": "Confirm this is the number to reach you on",
   "onboardingVerifyMobileEdit": "Edit",
   "onboardingVerifyMobileVerified": "Number verified successfully",
   "authInvalidOtp": "That code isn't right. Check it and try again.",
   "onboardingVerifyMobileEnter": "Enter any 4-digit code to continue.",
-
   "authEntrySignUp": "Sign Up",
   "authEntryLogin": "Login",
   "profileBasicsMissing": "Select your {fields} to continue.",
   "@profileBasicsMissing": {
     "description": "Says which required fields on the Location & Sub-community step are still unanswered; {fields} is an already-joined list such as \"state and city\"",
-    "placeholders": { "fields": { "type": "String" } }
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
   },
   "profileBasicsFieldJoin": "{first} and {second}",
   "@profileBasicsFieldJoin": {
     "description": "Joins the last two entries of the missing-field list",
-    "placeholders": { "first": { "type": "String" }, "second": { "type": "String" } }
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "second": {
+        "type": "String"
+      }
+    }
   },
   "profileBasicsPartnerPrefSaveFailed": "Saved your details, but we couldn't record the community preference. You can set it later in Partner Preferences.",
-
   "registrationProfileCreatedForLabel": "Profile Created For",
   "relationSelf": "Self",
   "registrationFullNameLabel": "Full Name",
   "registrationFullNameHint": "Enter full name",
   "registrationRegisterContinue": "Register & Continue",
-
   "registrationReviewTitle": "Review Your Profile",
   "registrationProfileSummary": "Profile Summary",
   "registrationEnterApp": "Enter Nenjam Matrimony",
@@ -954,30 +989,33 @@
   "registrationNoInfoYet": "No information added yet.",
   "registrationProfileCompletePct": "Profile {percent}% Complete",
   "@registrationProfileCompletePct": {
-    "placeholders": { "percent": { "type": "int" } }
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
   },
   "registrationCompleteExcellent": "Excellent! Your profile is ready to find matches.",
   "registrationCompleteMore": "Complete more sections to attract better matches.",
-
   "registrationWelcomeHeadline": "Let's build your story ❤️",
   "registrationWelcomeSubtitle": "We'll get to know you a little better so we can introduce you to someone truly compatible.",
   "registrationWelcomeCta": "Begin My Journey",
-
   "registrationMilestoneGettingStarted": "Getting Started",
   "registrationMilestoneAboutYou": "About You",
   "registrationMilestoneYourWorld": "Your World",
   "registrationMilestoneLifestyle": "Lifestyle",
   "registrationMilestoneCompatibility": "Compatibility",
   "registrationMilestoneReady": "Ready",
-
   "registrationTimeRemainingMinutes": "About {minutes} min left",
   "@registrationTimeRemainingMinutes": {
-    "placeholders": { "minutes": { "type": "int" } }
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
   },
   "registrationTimeRemainingLessThanMinute": "Less than a minute remaining",
-
   "registrationContinueYourStory": "Continue Your Story",
-
   "registrationMotivationStep1": "You're doing great.",
   "registrationMotivationStep2": "We're getting to know you.",
   "registrationMotivationStep3": "This helps us recommend better matches.",
@@ -991,7 +1029,6 @@
   "registrationMotivationStep10": "You've already completed most of your story.",
   "registrationMotivationStep11": "So close to meeting your matches.",
   "registrationMotivationStep12": "One last step to complete your story.",
-
   "registrationTipBasicInfo": "Your age is only used to improve compatibility.",
   "registrationTipReligion": "This helps us match you within your community preferences.",
   "registrationTipLanguage": "Shared languages make conversations easier from day one.",
@@ -1005,7 +1042,6 @@
   "registrationTipPartnerPref": "You can always update these later.",
   "registrationTipPhotos": "Natural, smiling photos receive more interest.",
   "registrationTipVerification": "Verified profiles earn more trust and better responses.",
-
   "registrationWizardBasicInfoHeadline": "Tell us about yourself ❤️",
   "registrationWizardBasicInfoHook": "Every great relationship starts with a simple introduction.",
   "registrationWizardReligionHeadline": "Your roots & beliefs",
@@ -1032,7 +1068,6 @@
   "registrationWizardPhotosHook": "People connect with genuine photos.",
   "registrationWizardVerificationHeadline": "Building trust, together",
   "registrationWizardVerificationHook": "A few quick checks to keep everyone's story safe.",
-
   "registrationCompletingHeadline": "Creating your compatibility profile...",
   "registrationCompletingSubtitle": "This will only take a moment.",
   "registrationCompletingStage1": "Saving your profile",
@@ -1042,12 +1077,15 @@
   "registrationCompletingErrorTitle": "Something went wrong",
   "registrationCompletingErrorMessage": "We couldn't save your profile. Please check your connection and try again.",
   "registrationCompletingRetryCta": "Back to Review",
-
   "registrationSuccessHeadline": "Welcome to Nenjam ❤️",
   "registrationSuccessSubtitle": "Your story is ready. We've already started finding meaningful connections for you.",
   "registrationSuccessCompletionCard": "Profile {percent}% Complete",
   "@registrationSuccessCompletionCard": {
-    "placeholders": { "percent": { "type": "int" } }
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
   },
   "registrationSuccessPhotosAdded": "Photos Added",
   "registrationSuccessPhotosSkipped": "Photos Skipped",
@@ -1055,7 +1093,6 @@
   "registrationSuccessHoroscopeSkipped": "Horoscope Skipped",
   "registrationSuccessPartnerPrefSaved": "Partner Preferences Saved",
   "registrationSuccessCta": "Meet Your First Match",
-
   "profileCompletionScreenTitle": "Profile Strength",
   "profileCompletionScreenSubtitle": "See how complete your story is — and what to do next.",
   "profileCompletionTierBuilding": "Building",
@@ -1086,7 +1123,6 @@
   "profileCompletionGrowthPromptsSubtitle": "Add a few words that sound like you.",
   "profileCompletionGrowthPremium": "Nenjam Premium",
   "profileCompletionGrowthPremiumSubtitle": "Get 5x more visibility.",
-
   "onboardingSkip": "Skip",
   "onboardingNext": "Next",
   "onboardingGetStarted": "Get Started",
@@ -1120,15 +1156,27 @@
   "profileViewersViewedJustNow": "Viewed just now",
   "profileViewersViewedMinutesAgo": "Viewed {count,plural, =1{1 minute ago} other{{count} minutes ago}}",
   "@profileViewersViewedMinutesAgo": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "profileViewersViewedHoursAgo": "Viewed {count,plural, =1{1 hour ago} other{{count} hours ago}}",
   "@profileViewersViewedHoursAgo": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "profileViewersViewedDaysAgo": "Viewed {count,plural, =1{1 day ago} other{{count} days ago}}",
   "@profileViewersViewedDaysAgo": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "privacyVisibilitySection": "Profile Visibility",
   "privacyPremiumOnlyTitle": "Show Profile to Premium Members Only",
@@ -1144,7 +1192,11 @@
   "privacyBlockedStatusLabel": "Blocked",
   "privacyBlockedOnLabel": "Blocked on {date}",
   "@privacyBlockedOnLabel": {
-    "placeholders": { "date": { "type": "String" } }
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   },
   "drawerLanguage": "Language",
   "drawerSettings": "Account Settings",
@@ -1178,14 +1230,12 @@
   "drawerVersionLabel": "Nenjam Matrimony",
   "drawerManagePhotosTitle": "Manage Photos",
   "drawerChangePhotoSemanticLabel": "Change profile photo",
-
   "profileDetailSendInterest": "Send Interest",
   "profileDetailInterestSent": "Interest Sent",
   "profileDetailStartConversation": "Start Conversation",
   "profileDetailVideoCall": "Video Call",
   "profileDetailVideoComingSoon": "Video calling is coming soon",
   "profileDetailShareComingSoon": "Share coming soon",
-
   "interestStatusPending": "Pending",
   "interestStatusAccepted": "Accepted",
   "interestStatusDeclined": "Declined",
@@ -1204,11 +1254,16 @@
   "profileDetailTabVerification": "Verification",
   "profileDetailTabCompatibility": "Compatibility",
   "profileDetailAgeYears": "{age} yrs",
-  "@profileDetailAgeYears": { "placeholders": { "age": { "type": "int" } } },
+  "@profileDetailAgeYears": {
+    "placeholders": {
+      "age": {
+        "type": "int"
+      }
+    }
+  },
   "profileDetailNoMorePhotos": "No other photos shared yet",
   "profileDetailTabTimeline": "Timeline",
   "profileDetailProfileNotAvailable": "Profile not available",
-
   "profileDetailActionBlock": "Block User",
   "profileDetailActionUnblock": "Unblock User",
   "profileDetailActionReport": "Report User",
@@ -1218,7 +1273,11 @@
   "profileDetailUnblockLoading": "Unblocking member…",
   "profileDetailUnblockSuccess": "{name} has been unblocked.",
   "@profileDetailUnblockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "profileDetailBlockConfirmTitle": "Block this member?",
   "profileDetailBlockConfirmMessage": "They will disappear from Discover, Matches and Search. Existing chat remains available with a blocked banner. You can unblock later from Chat.",
@@ -1226,11 +1285,19 @@
   "profileDetailBlockLoading": "Blocking member…",
   "profileDetailBlockSuccess": "{name} has been blocked.",
   "@profileDetailBlockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "profileDetailReportReasonTitle": "Why are you reporting {name}?",
   "@profileDetailReportReasonTitle": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "profileDetailReportReasonFakeProfile": "Fake Profile",
   "profileDetailReportReasonSpam": "Spam",
@@ -1244,14 +1311,12 @@
   "profileDetailReportLoading": "Submitting your report…",
   "profileDetailReportSuccess": "Thanks — your report has been submitted.",
   "profileDetailMoreLabel": "More",
-
   "safetyErrorNetwork": "No internet connection. Please check your network and try again.",
   "safetyErrorUnauthorized": "Your session has expired. Please sign in again.",
   "safetyErrorValidation": "Something about this request wasn't valid. Please try again.",
   "safetyErrorNotFound": "This member is no longer available.",
   "safetyErrorConflict": "This was already done for this member.",
   "safetyErrorGeneric": "Something went wrong. Please try again.",
-
   "commonRetry": "Retry",
   "commonTryAgain": "Try Again",
   "commonDone": "Done",
@@ -1364,7 +1429,13 @@
   "cardGetVerifiedMessage": "Profiles with verified ID get 3x more match responses.",
   "cardHoroscopeMatch": "Horoscope Match",
   "cardGunaMilanWith": "Guna Milan with {partnerName}",
-  "@cardGunaMilanWith": { "placeholders": { "partnerName": { "type": "String" } } },
+  "@cardGunaMilanWith": {
+    "placeholders": {
+      "partnerName": {
+        "type": "String"
+      }
+    }
+  },
   "otpPasteCode": "Paste Code",
   "riYourHoroscope": "Your Horoscope",
   "riHoroscopeEmpty": "Add your horoscope details to enable compatibility matching.",
@@ -1377,11 +1448,29 @@
   "astroLoadError": "Could not load your horoscope.",
   "astroYourDetailsTitle": "Your Horoscope Details",
   "astroRasiLabel": "Rasi: {value}",
-  "@astroRasiLabel": { "placeholders": { "value": { "type": "String" } } },
+  "@astroRasiLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "astroNakshatraLabel": "Nakshatra: {value}",
-  "@astroNakshatraLabel": { "placeholders": { "value": { "type": "String" } } },
+  "@astroNakshatraLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "astroDoshamLabel": "Dosham: {value}",
-  "@astroDoshamLabel": { "placeholders": { "value": { "type": "String" } } },
+  "@astroDoshamLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "astroAllowCompareTitle": "Allow matches to compare horoscope",
   "astroAllowCompareSubtitle": "Show a compatibility score on your profile.",
   "astroPreviewTitle": "Compatibility Preview",
@@ -1416,7 +1505,13 @@
   "profileDiscoverOpportunities": "Discover Opportunities",
   "profileNoRecommendations": "No matches yet. Complete your profile to see recommendations.",
   "profileCompatiblePercent": "{percent}% Compatible",
-  "@profileCompatiblePercent": { "placeholders": { "percent": { "type": "int" } } },
+  "@profileCompatiblePercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "profileCompletionLabel": "Profile Completion",
   "profileMatchJourney": "Match Journey",
   "profileJourneyAccountCreated": "Account\nCreated",
@@ -1455,28 +1550,67 @@
   "psychologyStartQuiz": "Start Quiz",
   "psychologyNoQuiz": "No quiz is available right now.",
   "psychologyQuestionProgress": "Question {current} of {total}",
-  "@psychologyQuestionProgress": { "placeholders": { "current": { "type": "int" }, "total": { "type": "int" } } },
+  "@psychologyQuestionProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "psychologyYourProfile": "Your Personality Profile",
   "psychologyOceanTitle": "OCEAN Personality Profile",
   "psychologyOceanDescription": "A short assessment based on the Big Five personality model. Results help us find more compatible matches for you.",
   "registrationSaveStepError": "Could not save this step. Check your connection.",
   "registrationSaveStepErrorDetail": "Could not save this step: {message}",
-  "@registrationSaveStepErrorDetail": { "placeholders": { "message": { "type": "String" } } },
+  "@registrationSaveStepErrorDetail": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
   "registrationSaveChangesError": "Could not save your changes. Check your connection.",
   "registrationSaveChangesErrorDetail": "Could not save your changes: {message}",
-  "@registrationSaveChangesErrorDetail": { "placeholders": { "message": { "type": "String" } } },
+  "@registrationSaveChangesErrorDetail": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
   "registrationSaveProfileError": "Could not save your profile. Check your connection.",
   "registrationSaveProfileErrorDetail": "Could not save your profile: {message}",
-  "@registrationSaveProfileErrorDetail": { "placeholders": { "message": { "type": "String" } } },
+  "@registrationSaveProfileErrorDetail": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
   "registrationProfileUpdated": "Profile updated successfully",
   "registrationPreviewDocument": "Preview document",
   "registrationChooseAgain": "Choose again",
   "registrationConfirmUpload": "Confirm upload",
   "registrationWeightKg": "{weight} kg",
-  "@registrationWeightKg": { "placeholders": { "weight": { "type": "String" } } },
+  "@registrationWeightKg": {
+    "placeholders": {
+      "weight": {
+        "type": "String"
+      }
+    }
+  },
   "drawerRateUs": "Rate Us ⭐",
   "drawerProfileIdLabel": "ID: {id}",
-  "@drawerProfileIdLabel": { "placeholders": { "id": { "type": "String" } } },
+  "@drawerProfileIdLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
   "authNoSignedInUserToLink": "No signed-in user to link the phone number to.",
   "commonConfirm": "Confirm",
   "commonPleaseWait": "Please wait...",
@@ -1485,22 +1619,63 @@
   "permissionCameraNeeded": "Camera access is needed to take a photo.",
   "photoCropAdjustProfileTitle": "Adjust Profile Photo",
   "photoCropAdjustTitle": "Adjust Photo",
-
   "inboxLastSeenTodayAt": "Last seen today at {time}",
-  "@inboxLastSeenTodayAt": { "placeholders": { "time": { "type": "String" } } },
+  "@inboxLastSeenTodayAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "inboxLastSeenYesterdayAt": "Last seen yesterday at {time}",
-  "@inboxLastSeenYesterdayAt": { "placeholders": { "time": { "type": "String" } } },
+  "@inboxLastSeenYesterdayAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "inboxLastSeenDaysAgo": "Last seen {count,plural, =1{1 day ago} other{{count} days ago}}",
-  "@inboxLastSeenDaysAgo": { "placeholders": { "count": { "type": "int" } } },
+  "@inboxLastSeenDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "inboxLastSeenOn": "Last seen {date}",
-  "@inboxLastSeenOn": { "placeholders": { "date": { "type": "String" } } },
+  "@inboxLastSeenOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "inboxLastSeenJustNow": "Last seen just now",
   "inboxLastSeenMinutesAgo": "Last seen {count}m ago",
-  "@inboxLastSeenMinutesAgo": { "placeholders": { "count": { "type": "int" } } },
+  "@inboxLastSeenMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "inboxLastSeenHoursAgo": "Last seen {count}h ago",
-  "@inboxLastSeenHoursAgo": { "placeholders": { "count": { "type": "int" } } },
+  "@inboxLastSeenHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "inboxDaysAgo": "{count,plural, =1{1 day ago} other{{count} days ago}}",
-  "@inboxDaysAgo": { "placeholders": { "count": { "type": "int" } } },
+  "@inboxDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "validatorNameRequired": "Please enter your name",
   "validatorNameTooShort": "Name must be at least 2 characters",
   "validatorNameTooLong": "Name must be less than 50 characters",
@@ -1515,7 +1690,13 @@
   "validatorPhoneInvalid": "Please enter a valid 10-digit mobile number",
   "validatorOtpRequired": "Please enter the OTP",
   "validatorOtpLength": "OTP must be {length} digits",
-  "@validatorOtpLength": { "placeholders": { "length": { "type": "int" } } },
+  "@validatorOtpLength": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
   "validatorOtpDigitsOnly": "OTP must contain only digits",
   "validatorPasswordRequired": "Please enter a password",
   "validatorPasswordTooShort": "Password must be at least 8 characters",
@@ -1532,9 +1713,21 @@
   "validatorHeightInvalid": "Please enter a valid height",
   "validatorHeightRange": "Please enter height between 100 and 250 cm",
   "validatorFieldRequired": "{fieldName} is required",
-  "@validatorFieldRequired": { "placeholders": { "fieldName": { "type": "String" } } },
+  "@validatorFieldRequired": {
+    "placeholders": {
+      "fieldName": {
+        "type": "String"
+      }
+    }
+  },
   "validatorBioTooLong": "Bio must be less than {maxLength} characters",
-  "@validatorBioTooLong": { "placeholders": { "maxLength": { "type": "int" } } },
+  "@validatorBioTooLong": {
+    "placeholders": {
+      "maxLength": {
+        "type": "int"
+      }
+    }
+  },
   "authErrorUsernameTaken": "That username is already taken. Please choose another.",
   "authErrorEmailInUse": "An account already exists for this email. Try logging in.",
   "authErrorEmailInvalid": "That email address looks invalid. Please check it.",
@@ -1568,11 +1761,32 @@
   "profilePriorityCompletionImpact": "+12% Profile Complete Score",
   "profilePriorityVisibilityImpact": "Boost Visibility by 40%",
   "profileDetailSiblingsBrothers": "{count, plural, =1{1 Brother} other{{count} Brothers}}",
-  "@profileDetailSiblingsBrothers": { "placeholders": { "count": { "type": "int" } } },
+  "@profileDetailSiblingsBrothers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileDetailSiblingsSisters": "{count, plural, =1{1 Sister} other{{count} Sisters}}",
-  "@profileDetailSiblingsSisters": { "placeholders": { "count": { "type": "int" } } },
+  "@profileDetailSiblingsSisters": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileDetailSiblingsLine": "Siblings: {brothers}, {sisters}",
-  "@profileDetailSiblingsLine": { "placeholders": { "brothers": { "type": "String" }, "sisters": { "type": "String" } } },
+  "@profileDetailSiblingsLine": {
+    "placeholders": {
+      "brothers": {
+        "type": "String"
+      },
+      "sisters": {
+        "type": "String"
+      }
+    }
+  },
   "profileDetailTimeAgoMonths8": "8 months ago",
   "profileDetailTimeAgoWeeks2": "2 weeks ago",
   "profileDetailTimeAgoMonth1": "1 month ago",
@@ -1582,7 +1796,13 @@
   "inboxEditedSuffix": " (edited)",
   "astroExcellentMatch": "Excellent Match",
   "profileIdLabel": "ID: {id}",
-  "@profileIdLabel": { "placeholders": { "id": { "type": "String" } } },
+  "@profileIdLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
   "authIdentifierLabel": "Email or Mobile Number",
   "authIdentifierHint": "name@example.com or 9876543210",
   "authIdentifierRequired": "Enter your email or mobile number",
@@ -1599,5 +1819,57 @@
   "@drawerCopyright": {"placeholders": {"year": {"type": "String"}}},
   "drawerVersion": "Version {version}",
   "@drawerVersion": {"placeholders": {"version": {"type": "String"}}},
-  "partnerPrefIntro": "You will see Matches based on the Preferences you have set"
+  "partnerPrefIntro": "You will see Matches based on the Preferences you have set",
+  "welcomeBackHeadline": "Welcome back",
+  "welcomeBackSubtitle": "Enter your details to continue",
+  "welcomeBackGetOtp": "Get OTP",
+  "welcomeBackPassword": "Login with Password",
+  "welcomeBackGoogle": "Continue with Google",
+  "welcomeBackEmail": "Continue with Email",
+  "welcomeBackNoAccount": "Don't have an account?",
+  "welcomeBackSignUpFree": "Sign Up Free",
+  "nearbyTitle": "Near Me",
+  "drawerNearMe": "Near Me",
+  "nearbyLoading": "Finding people near you...",
+  "nearbyDistanceAway": "{distance} km away",
+  "@nearbyDistanceAway": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "nearbyDistanceUnderOneKm": "Less than 1 km away",
+  "nearbyApproximateNotice": "You shared an approximate location, so distances are rough.",
+  "nearbyEmptyTitle": "No one nearby yet",
+  "nearbyEmptyMessage": "No profiles found within {radius} km of your location.",
+  "@nearbyEmptyMessage": {
+    "placeholders": {
+      "radius": {
+        "type": "String"
+      }
+    }
+  },
+  "nearbyRefresh": "Refresh",
+  "nearbyPermissionTitle": "Location access needed",
+  "nearbyPermissionMessage": "Location access is required to discover people near you.",
+  "nearbyPermissionBlockedMessage": "Location access is blocked. Turn it on in Settings to discover people near you.",
+  "nearbyEnableLocation": "Enable Location",
+  "nearbyOpenSettings": "Open Settings",
+  "nearbyServicesOffTitle": "Location is turned off",
+  "nearbyServicesOffMessage": "Turn on location services to discover people near you.",
+  "nearbyTurnOnLocation": "Turn On Location",
+  "nearbyErrorTitle": "Something went wrong",
+  "nearbyLocationErrorMessage": "Unable to get your location. Please try again.",
+  "nearbyFetchErrorMessage": "Unable to load profiles near you. Please try again.",
+  "nearbyRetry": "Try Again",
+  "nearbyDiscoverPromptTitle": "Find people near you",
+  "nearbyDiscoverPromptMessage": "Enable location to discover compatible profiles within {radius} km of you.",
+  "@nearbyDiscoverPromptMessage": {
+    "placeholders": {
+      "radius": {
+        "type": "String"
+      }
+    }
+  }
 }

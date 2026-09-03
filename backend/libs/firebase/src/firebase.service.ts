@@ -66,14 +66,27 @@ export class FirebaseService implements OnModuleInit {
   // hangs forever with no error — every request behind FirebaseAuthGuard
   // stalls silently. The explicit timeout below turns that into a fast,
   // diagnosable error instead.
-  async verifyIdToken(idToken: string): Promise<DecodedIdToken> {
+  /**
+   * @param checkRevoked also confirm the account still exists and its tokens
+   * have not been revoked since issue. This costs an extra Admin SDK lookup
+   * per call, so it is opt-in rather than the default: the guard turns it on
+   * only where the answer changes an outcome (see FirebaseAuthGuard), not on
+   * the hot path of every authenticated request.
+   *
+   * Signature verification alone cannot see a deleted or revoked account — an
+   * ID token stays cryptographically valid for up to an hour after either.
+   */
+  async verifyIdToken(
+    idToken: string,
+    checkRevoked = false,
+  ): Promise<DecodedIdToken> {
     if (!this.app) {
       throw new InternalServerErrorException(
         'Firebase Admin SDK is not configured on this server.',
       );
     }
     return this.withTimeout(
-      getAuth(this.app).verifyIdToken(idToken),
+      getAuth(this.app).verifyIdToken(idToken, checkRevoked),
       10_000,
       'Firebase token verification timed out — check outbound network ' +
         'connectivity to Google (securetoken.google.com / googleapis.com).',

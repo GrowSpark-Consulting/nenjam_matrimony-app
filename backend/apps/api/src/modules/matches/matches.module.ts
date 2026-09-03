@@ -4,14 +4,17 @@ import { StorageModule } from '@app/storage';
 import { InterestsModule } from '../interests/interests.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { DiscoverController } from './controllers/discover.controller';
+import { NearbyController } from './controllers/nearby.controller';
 import { MatchesController } from './controllers/matches.controller';
 import { FeedService } from './services/feed.service';
+import { NearbyService } from './services/nearby.service';
 import { SearchService } from './services/search.service';
 import { PreferencesService } from './services/preferences.service';
 import { ShortlistService } from './services/shortlist.service';
 import { ProfileViewService } from './services/profile-view.service';
 import { ProfileFeedMapper } from './mappers/profile-feed.mapper';
 import { FeedRepository } from './repositories/feed.repository';
+import { NearbyRepository } from './repositories/nearby.repository';
 import { PreferenceRepository } from './repositories/preference.repository';
 import { ShortlistRepository } from './repositories/shortlist.repository';
 import { ProfileViewRepository } from './repositories/profile-view.repository';
@@ -42,19 +45,21 @@ import { PostgresSearchStrategy } from './search/postgres-search.strategy';
     InterestsModule,
     NotificationsModule,
   ],
-  controllers: [DiscoverController, MatchesController],
+  controllers: [DiscoverController, MatchesController, NearbyController],
   providers: [
     CompatibilityService,
     FeedContextService,
     FeedSeenService,
     RankingService,
     FeedService,
+    NearbyService,
     SearchService,
     PreferencesService,
     ShortlistService,
     ProfileViewService,
     ProfileFeedMapper,
     FeedRepository,
+    NearbyRepository,
     PreferenceRepository,
     ShortlistRepository,
     ProfileViewRepository,

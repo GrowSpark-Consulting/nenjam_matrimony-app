@@ -70,6 +70,54 @@ export function isLocationDetailsComplete(location: Section): boolean {
   ]);
 }
 
+// ---- Matchable: the narrower "can this draft become a UserProfile row?" ----
+
+/**
+ * Whether a draft carries enough to WRITE a `user_profiles` row.
+ *
+ * Deliberately weaker than the four rules above, and for a different
+ * question. Those answer "may this profile be finalized?" — a product
+ * contract, enforced by `finalize()`, which is unchanged. This one answers
+ * "can the row physically be written?", and the honest answer is: every
+ * NOT NULL column the write fills, and nothing more.
+ *
+ * The distinction had teeth. `syncMatchableFromDraft` reused the finalize
+ * rules, so it silently returned for any draft missing `subCaste`, `area`,
+ * `pinCode` or `nativePlace` — all four of which are NULLABLE columns the
+ * write already coerces with `|| null`. The onboarding flow collects none of
+ * them, so a member who changed their city there had it saved to
+ * `draft_data` and never propagated to `user_profiles`; Discover, matching
+ * and Near Me all read the stale row. Confirmed against live data: a draft
+ * reading `Karnataka/Mysore` against a profile still reading
+ * `Karnataka/hcufi`, plus 3 more blocked drafts.
+ *
+ * Fields listed here are exactly those the profile write passes without a
+ * null fallback — see `ProfileService.writeProfileFromDraft`. `languagesKnown`
+ * is absent on purpose (the column has a `[]` default), as are `community`,
+ * `subCaste`, `country`, `area`, `pinCode` and `nativeCity`, which are all
+ * nullable. `profileCreatedFor` is absent because it is not a profile column
+ * at all.
+ *
+ * Nothing here is invented to make a draft pass: a draft still missing a
+ * genuinely NOT NULL value (`caste`, say) stays blocked, which is correct —
+ * the alternative is writing a fabricated value into someone's profile.
+ */
+export function isMatchableFromDraft(
+  data: Record<string, Section | undefined>,
+): boolean {
+  const basic = data.basicDetails ?? {};
+  const religion = data.religionDetails ?? {};
+  const language = data.languageDetails ?? {};
+  const location = data.locationDetails ?? {};
+
+  return (
+    allPresent(basic, ['firstName', 'lastName', 'gender', 'maritalStatus', 'dob']) &&
+    allPresent(religion, ['religion', 'caste']) &&
+    has(language.motherTongue) &&
+    allPresent(location, ['state', 'city'])
+  );
+}
+
 // ---- Steps 5, 6, 7: skippable, all-required-if-touched ----
 
 const EDUCATION_FIELDS = [
