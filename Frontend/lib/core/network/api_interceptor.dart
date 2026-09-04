@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import '../utils/photo_trace.dart';
 import '../utils/story_perf.dart';
 import 'network_error_mapper.dart';
 
@@ -61,6 +62,14 @@ class AuthInterceptor extends Interceptor {
     // one — this fires with `token == null` too. Reading it as "a token was
     // obtained" is what made a session-less 401 look like a server fault.
     StoryPerf.mark('Firebase token lookup done (${options.path})');
+    // TEMPORARY (PhotoTrace) — the photo routes are the ones under
+    // investigation; this says whether the request actually left with
+    // credentials, never what they were.
+    if (options.path.contains('photos')) {
+      PhotoTrace.step('auth header for ${options.method} ${options.path}', {
+        'hasToken': token != null && token.isNotEmpty,
+      });
+    }
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     } else {
@@ -110,6 +119,16 @@ class AuthInterceptor extends Interceptor {
     if (statusCode != 401 || options.extra[_authRetriedKey] == true) {
       return false;
     }
+    // A FormData body is single-use: Dio consumes it by calling finalize(),
+    // which returns a stream that can only be read once. Replaying the same
+    // RequestOptions therefore does not re-send the file — it throws inside
+    // dio.fetch, _recover() swallows that as "recovery failed", and a photo
+    // upload/replace that only needed a fresh token instead ended as an
+    // opaque failure the member could not retry into. Hand the caller the
+    // honest 401 (PhotoRepository turns it into a PhotoApiException the UI
+    // already shows) rather than corrupting the retry. Deliberately not a
+    // rebuild-the-FormData path: the bytes are the caller's, not ours.
+    if (options.data is FormData) return false;
     // On a dummy-OTP session there is no Firebase token to refresh, so
     // recovery would refresh nothing, get null, and call onSessionExpired ->
     // logout -> the widgets refetch -> 401 again: a sign-out storm rather than
@@ -125,9 +144,25 @@ class AuthInterceptor extends Interceptor {
   /// Returns the replayed response, or null when the session could not be
   /// recovered — in which case [onSessionExpired] has already run.
   Future<Response<dynamic>?> _recover(RequestOptions options) async {
+    // Whether this request actually carried a token. onRequest sets the
+    // header only when it got one, so its absence means the request was
+    // never authenticated to begin with.
+    final wasAuthenticated = options.headers.containsKey('Authorization');
+
     final refreshedToken = await _safeToken(refreshAccessToken);
     if (refreshedToken == null || refreshedToken.isEmpty) {
-      await _safeSessionExpired();
+      // No session to refresh.
+      //
+      // Only a request that WAS authenticated and can no longer be is a
+      // genuine expiry. Signing out unconditionally here is what turned a
+      // startup race into a logout: a request issued before Firebase had
+      // restored `currentUser` went out bare, took the backend's expected
+      // 401, found no token to refresh, and tore down a session that was
+      // about to become valid — killing any upload in flight and leaving the
+      // member signed out with no explanation. AuthTokenService now waits for
+      // the restore, and this is the second half of that fix: an
+      // unauthenticated 401 is a "not signed in yet", not a "signed out".
+      if (wasAuthenticated) await _safeSessionExpired();
       return null;
     }
 

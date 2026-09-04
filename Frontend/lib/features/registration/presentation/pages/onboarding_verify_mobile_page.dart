@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,7 @@ import '../../../../core/router/route_names.dart';
 import '../../../../core/services/storage_service.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/utils/auth_trace.dart';
+import '../../../../core/utils/photo_trace.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../core/widgets/buttons/icon_button.dart';
 import '../../../../core/widgets/inputs/otp_input.dart';
@@ -15,6 +17,9 @@ import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
 import '../../../authentication/domain/services/dummy_otp_session.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/domain/services/otp_verifier.dart';
+import '../../../profile_photos/presentation/providers/photo_providers.dart';
+import '../../data/services/pending_photo_store.dart';
+import '../../domain/services/pending_photo_uploader.dart';
 import '../providers/registration_provider.dart';
 import '../widgets/onboarding_scaffold.dart';
 
@@ -70,6 +75,85 @@ class _OnboardingVerifyMobilePageState
   /// Mobile step already owns — so Edit returns there rather than growing a
   /// second number field here.
   void _edit() => context.go(RouteNames.onboardingContact);
+
+  /// Uploads the photos onboarding held back, oldest first, so the primary
+  /// one lands first and becomes the avatar.
+  ///
+  /// Still non-fatal, for the same reason finalize is: the member has passed
+  /// OTP and is one step from the app, so a photo that fails here must not
+  /// strand them on this screen. What changed is that it is no longer
+  /// *silent*. This used to clear the whole queue unconditionally and skip a
+  /// missing file without a word, so a member who added a photo could finish
+  /// signup with none and never be told — the photo was simply gone.
+  ///
+  /// Now the queue keeps whatever did not upload (see [drainPendingPhotos]),
+  /// so a later pass retries it, and each outcome gets one message.
+  Future<void> _uploadPendingPhotos() async {
+    final gallery = ref.read(registrationProvider).photoGallery;
+    if (gallery.pendingPaths.isEmpty) return;
+
+    PhotoTrace.begin(
+      'onboarding pending upload count=${gallery.pendingPaths.length}',
+    );
+    final photos = ref.read(myPhotosProvider.notifier);
+
+    final result = await drainPendingPhotos(
+      gallery: gallery,
+      store: ref.read(pendingPhotoStoreProvider),
+      upload: (file, {required bool isPrimary}) async {
+        // PhotosController reports failure through the provider's state
+        // rather than by throwing — AsyncValue.guard absorbs the error — so
+        // the published state is what says whether this worked.
+        PhotoTrace.step('upload started', {
+          'bytes': await file.length(),
+          'isPrimary': isPrimary,
+        });
+        await photos.upload(file, isPrimary: isPrimary ? true : null);
+        final state = ref.read(myPhotosProvider);
+        if (state.hasError) {
+          PhotoTrace.fail('pending upload', state.error ?? 'unknown');
+          return false;
+        }
+        // PhotosController re-reads GET /profiles/me/photos after the POST, so
+        // this count is the backend's own answer, not the POST body's.
+        PhotoTrace.step('upload completed', {
+          'fetchedPhotos': state.valueOrNull?.length,
+        });
+        return true;
+      },
+    );
+
+    // Retain exactly what still needs doing. Anything that uploaded is gone
+    // from here; anything missing is dropped because retrying a file that no
+    // longer exists can only fail again.
+    ref
+        .read(registrationProvider.notifier)
+        .updatePhotoGallery(result.remaining);
+    PhotoTrace.step('pending upload outcome', {
+      'queuedBefore': gallery.pendingPaths.length,
+      'uploaded': result.uploaded,
+      'failed': result.failed,
+      'missing': result.missing,
+      'stillQueued': result.remaining.pendingPaths.length,
+    });
+    PhotoTrace.end('onboarding pending upload');
+
+    if (!mounted) return;
+    // One message, not one per photo — the member is mid-signup and a stack
+    // of snackbars would bury the step they are on. A failure is the more
+    // actionable of the two, so it wins when both happened.
+    final l10n = AppLocalizations.of(context);
+    final String? message = result.hasFailures
+        ? l10n.onboardingPhotosPendingFailed
+        : result.hasMissing
+            ? l10n.onboardingPhotosPendingMissing
+            : null;
+    if (message != null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
 
   Future<void> _verify() async {
     final l10n = AppLocalizations.of(context);
@@ -144,6 +228,13 @@ class _OnboardingVerifyMobilePageState
     // User row and materialize the profile.
     final notifier = ref.read(registrationProvider.notifier);
     await notifier.flushOnboardingToBackend();
+
+    // ...including any photo picked on the Add Photos step, which could not
+    // be uploaded when it was chosen: that screen runs before this one, so
+    // there was no credential to attach and the POST came back 401. Same
+    // controller, same repository, same endpoint Edit Profile uses — only
+    // now, with a session.
+    await _uploadPendingPhotos();
 
     // ...and then finalize, which is what marks the registration COMPLETE.
     //

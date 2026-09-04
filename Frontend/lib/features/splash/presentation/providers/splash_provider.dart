@@ -26,7 +26,7 @@ import '../../../registration/presentation/providers/registration_provider.dart'
 /// [PostAuthDestination], which is authoritative and cannot be outvoted by
 /// a stale local snapshot.
 const _restorableRegistrationRoutes = {
-  RouteNames.registrationWizard,
+  RouteNames.profileEdit,
   RouteNames.profileReview,
 };
 const _restorableTabRoutes = {

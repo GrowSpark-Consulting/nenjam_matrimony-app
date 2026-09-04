@@ -114,6 +114,14 @@ void main() {
           'locationDetails',
           'physicalDetails',
           'educationDetails',
+          // Family and horoscope were absent from publishEditedProfile()
+          // until Edit Profile became a single editable page. It never
+          // showed, because the only way to reach those two sections was the
+          // per-section wizard, which saved through publishEditedSection()
+          // instead. Now that one Save covers every section at once, leaving
+          // them out would silently drop the member's edits.
+          'familyDetails',
+          'horoscopeDetails',
           'lifestyleDetails',
         ]),
       );

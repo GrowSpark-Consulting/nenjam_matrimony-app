@@ -63,7 +63,7 @@ const Duration _brandNewAccountWindow = Duration(minutes: 2);
 /// which is why it alone is scoped to an unfinished signup rather than
 /// asked of every session.
 ///
-/// There is deliberately no branch into [RouteNames.registrationWizard].
+/// There is deliberately no branch into [RouteNames.profileEdit].
 /// That screen belongs to Edit Profile now: a member whose profile is merely
 /// *unfinished* belongs in the app, where Profile Strength invites them to
 /// fill in the rest, not back at the start of a 13-step form. For the same

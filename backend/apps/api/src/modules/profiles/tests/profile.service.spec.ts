@@ -4,6 +4,7 @@ import type { PrismaService } from '@app/database';
 import { ProfileRepository } from '../repositories/profile.repository';
 import { PhotoRepository } from '../repositories/photo.repository';
 import { ProfileDraftService } from '../services/profile-draft.service';
+import { S3Service } from '@app/storage';
 import { ProfileService } from '../services/profile.service';
 import { ProfileCompletionService } from '../services/profile-completion.service';
 import { ProfileEntity } from '../entities/profile.entity';
@@ -137,6 +138,7 @@ describe('ProfileService', () => {
     getDraft?: jest.Mock;
     calculate?: jest.Mock;
     sendWelcome?: jest.Mock;
+    s3?: Partial<S3Service>;
   }) {
     const profileRepository = {
       findProfileByUserId: overrides?.findProfileByUserId ?? jest.fn(),
@@ -186,6 +188,13 @@ describe('ProfileService', () => {
       // Feed invalidation is fire-and-forget bookkeeping after a successful
       // write; these tests assert the write, not the cache signalling.
       { invalidate: jest.fn(), invalidatePair: jest.fn() } as unknown as FeedInvalidationService,
+      // S3 stub reporting "not configured", so getOwn()'s presigning step
+      // is a no-op and photo `cdnUrl`s reach these assertions exactly as the
+      // repository returned them — these tests are about profile assembly,
+      // not URL signing (see photo.service.spec.ts for that).
+      (overrides?.s3 ?? {
+        isConfigured: () => false,
+      }) as unknown as S3Service,
     );
   }
 
@@ -238,6 +247,65 @@ describe('ProfileService', () => {
       await service.getOwn('user-1', undefined, undefined, draftData);
 
       expect(calculate).toHaveBeenCalledWith('user-1', draftData);
+    });
+
+    // Regression: the stored `cdn_url` column holds S3Service.getObjectUrl()
+    // — a durable reference to an object in a PRIVATE bucket, which answers
+    // 403 when a client actually fetches it. GET /profiles/me read the rows
+    // straight from PhotoRepository and returned those URLs verbatim, so
+    // every photo on the profile response was unloadable, while
+    // GET /profiles/me/photos (PhotoService.list) presigned correctly.
+    it('presigns photo URLs rather than returning the stored private-bucket URL', async () => {
+      const getPresignedGetUrl = jest
+        .fn()
+        .mockResolvedValue('https://s3.example.com/signed?sig=abc');
+      const service = buildService({
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+        findAllForUser: jest.fn().mockResolvedValue([buildPhoto()]),
+        s3: { isConfigured: () => true, getPresignedGetUrl },
+      });
+
+      const result = await service.getOwn('user-1');
+
+      expect(getPresignedGetUrl).toHaveBeenCalledWith('users/user-1/photo-1.jpg');
+      expect(result.photos[0].cdnUrl).toBe('https://s3.example.com/signed?sig=abc');
+    });
+
+    // getOwn() also answers the client's "do I have a finalized profile?"
+    // routing check, so a storage outage must not turn it into a 500 that
+    // strands the member outside the app.
+    it('falls back to the stored rows when presigning fails', async () => {
+      const service = buildService({
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+        findAllForUser: jest.fn().mockResolvedValue([buildPhoto()]),
+        s3: {
+          isConfigured: () => true,
+          getPresignedGetUrl: jest.fn().mockRejectedValue(new Error('s3 down')),
+        },
+      });
+
+      const result = await service.getOwn('user-1');
+
+      expect(result.photos).toHaveLength(1);
+      expect(result.photos[0].cdnUrl).toBe(
+        'https://cdn.example.com/users/user-1/photo-1.jpg',
+      );
+    });
+
+    // finalize() hands its already-fetched rows in to save a re-SELECT; those
+    // are raw repository rows too, so they need the same treatment.
+    it('presigns prefetched photos as well', async () => {
+      const service = buildService({
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+        s3: {
+          isConfigured: () => true,
+          getPresignedGetUrl: jest.fn().mockResolvedValue('https://signed/1'),
+        },
+      });
+
+      const result = await service.getOwn('user-1', undefined, [buildPhoto()]);
+
+      expect(result.photos[0].cdnUrl).toBe('https://signed/1');
     });
   });
 
@@ -886,6 +954,11 @@ describe('ProfileService', () => {
       // Feed invalidation is fire-and-forget bookkeeping after a successful
       // write; these tests assert the write, not the cache signalling.
       { invalidate: jest.fn(), invalidatePair: jest.fn() } as unknown as FeedInvalidationService,
+      // S3 stub reporting "not configured", so getOwn()'s presigning step
+      // is a no-op and photo `cdnUrl`s reach these assertions exactly as the
+      // repository returned them — these tests are about profile assembly,
+      // not URL signing (see photo.service.spec.ts for that).
+      { isConfigured: () => false } as unknown as S3Service,
     );
         return { service, updateProfileCompletePct };
       }

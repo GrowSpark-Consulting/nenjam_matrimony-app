@@ -2515,6 +2515,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'That photo couldn\'t be uploaded. Try again.';
 
   @override
+  String get onboardingPhotosPendingFailed =>
+      'Your photo couldn\'t be uploaded. It\'s been kept — you can add it from Edit Profile.';
+
+  @override
+  String get onboardingPhotosPendingMissing =>
+      'A photo you added is no longer available on this device. Please select it again in Edit Profile.';
+
+  @override
   String get onboardingPhotosAddedOne => '1 photo added.';
 
   @override

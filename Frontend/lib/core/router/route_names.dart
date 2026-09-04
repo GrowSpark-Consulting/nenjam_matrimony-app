@@ -33,7 +33,7 @@ abstract final class RouteNames {
   static const String onboardingAbout = '/registration/about';
   static const String onboardingVerifyMobile = '/registration/verify-mobile';
   static const String registrationWelcome = '/registration/welcome';
-  static const String registrationWizard = '/registration/wizard';
+  static const String profileEdit = '/profile-edit';
   static const String psychologyQuiz = '/registration/psychology-quiz';
   static const String profileReview = '/profile-review';
   static const String registrationCompleting = '/registration/completing';
@@ -95,7 +95,7 @@ abstract final class RouteNames {
   static const String onboardingAboutName = 'onboardingAbout';
   static const String onboardingVerifyMobileName = 'onboardingVerifyMobile';
   static const String registrationWelcomeName = 'registrationWelcome';
-  static const String registrationWizardName = 'registrationWizard';
+  static const String profileEditName = 'profileEdit';
   static const String psychologyQuizName = 'psychologyQuiz';
   static const String profileReviewName = 'profileReview';
   static const String registrationCompletingName = 'registrationCompleting';

@@ -5,14 +5,14 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 
-/// Floating action card pinned to the bottom of [ProfileWizardPage]: a
+/// Floating action card pinned to the bottom of [ProfileEditPage]: a
 /// Back control, the primary action, and — when the open section is
 /// incomplete — a line saying why the primary action is disabled.
 ///
 /// It used to carry the signup wizard's progress chrome as well (a
 /// milestone label, an estimated-time-remaining string and a Skip action).
 /// That 13-step flow no longer exists — this bar now serves only Edit
-/// Profile's single-section save — so those went with it rather than
+/// Profile's save — so those went with it rather than
 /// lingering as always-null parameters.
 ///
 /// Composes the existing [NmGradientButton]/[AppAnimations.buttonPress] —
@@ -41,7 +41,7 @@ class RegistrationStickyBottomBar extends StatelessWidget {
   /// silently greying it out with no explanation.
   final String? validationHint;
 
-  /// Collapses the bar to a single action row. Set by the wizard when the
+  /// Collapses the bar to a single action row. Set by the edit page when
   /// usable body height cannot fit the full bar — a landscape phone with the
   /// keyboard raised leaves ~98dp, against ~164dp for the full layout. The
   /// validation line is dropped and the controls shrink from 56dp to 48dp;

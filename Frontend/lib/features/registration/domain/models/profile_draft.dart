@@ -882,15 +882,38 @@ class PhotoGallery {
     this.galleryPaths = const [],
   });
 
+  /// Sentinel meaning "argument not supplied", so a caller can pass an
+  /// explicit `null` and have it stick.
+  ///
+  /// With the usual `primaryPhotoPath ?? this.primaryPhotoPath`, null is
+  /// indistinguishable from omitted, so there is no way to clear the primary
+  /// slot — `copyWith(primaryPhotoPath: null)` silently keeps the old path.
+  /// That matters now the queue is drained one entry at a time: a primary
+  /// that uploaded successfully has to be removable while the rest stay.
+  static const Object _unset = Object();
+
   PhotoGallery copyWith({
-    String? primaryPhotoPath,
+    Object? primaryPhotoPath = _unset,
     List<String>? galleryPaths,
   }) {
     return PhotoGallery(
-      primaryPhotoPath: primaryPhotoPath ?? this.primaryPhotoPath,
+      primaryPhotoPath: identical(primaryPhotoPath, _unset)
+          ? this.primaryPhotoPath
+          : primaryPhotoPath as String?,
       galleryPaths: galleryPaths ?? this.galleryPaths,
     );
   }
+
+  /// Local file paths waiting to be uploaded, primary first.
+  ///
+  /// Onboarding's Add Photos step runs before the member has a credential, so
+  /// a photo picked there is held here until OTP mints a session and
+  /// OnboardingVerifyMobilePage uploads it through PhotosController. Order
+  /// matters: the first one becomes the avatar.
+  List<String> get pendingPaths => [
+        if (primaryPhotoPath != null) primaryPhotoPath!,
+        ...galleryPaths,
+      ];
 
   // Not part of the /profiles/draft response (photos are handled by
   // PhotoController) — kept for forward-compatibility with ProfileDraft.

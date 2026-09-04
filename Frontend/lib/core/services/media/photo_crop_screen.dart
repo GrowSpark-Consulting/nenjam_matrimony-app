@@ -11,6 +11,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/buttons/primary_button.dart';
 import 'image_compressor.dart';
+import '../../utils/photo_trace.dart';
 
 /// Which overlay/export shape the crop screen presents.
 ///
@@ -245,10 +246,17 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
       }
 
       final Uint8List pngBytes = byteData.buffer.asUint8List();
+      PhotoTrace.step('compression started', {
+        'rawPngBytes': pngBytes.lengthInBytes,
+        'quality': widget.jpegQuality,
+      });
       final jpegBytes = await ImageCompressor.compressToJpeg(
         pngBytes,
         quality: widget.jpegQuality,
       );
+      PhotoTrace.step('compression completed', {
+        'jpegBytes': jpegBytes.lengthInBytes,
+      });
       if (!mounted) return;
       Navigator.of(context).pop(
         XFile.fromData(
@@ -260,7 +268,8 @@ class _PhotoCropScreenState extends State<PhotoCropScreen>
           length: jpegBytes.lengthInBytes,
         ),
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      PhotoTrace.fail('crop/compress', error, stackTrace);
       if (!mounted) return;
       setState(() => _isProcessing = false);
       ScaffoldMessenger.of(context).showSnackBar(

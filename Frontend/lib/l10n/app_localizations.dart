@@ -4910,6 +4910,18 @@ abstract class AppLocalizations {
   /// **'That photo couldn\'t be uploaded. Try again.'**
   String get onboardingPhotosFailed;
 
+  /// No description provided for @onboardingPhotosPendingFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your photo couldn\'t be uploaded. It\'s been kept — you can add it from Edit Profile.'**
+  String get onboardingPhotosPendingFailed;
+
+  /// No description provided for @onboardingPhotosPendingMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'A photo you added is no longer available on this device. Please select it again in Edit Profile.'**
+  String get onboardingPhotosPendingMissing;
+
   /// No description provided for @onboardingPhotosAddedOne.
   ///
   /// In en, this message translates to:

@@ -5,7 +5,7 @@ import '../../../../core/utils/story_perf.dart';
 import '../../domain/models/profile_draft.dart';
 
 /// Kept as the name the wizard UI already catches (`on
-/// RegistrationApiException catch (e)` in profile_wizard_page.dart,
+/// RegistrationApiException catch (e)` in profile_edit_page.dart,
 /// profile_review_page.dart, registration_completing_page.dart) — same
 /// shape as the shared [ApiException], just aliased so those call sites
 /// didn't need to change when this repository moved onto the shared helper.

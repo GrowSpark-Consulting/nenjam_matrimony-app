@@ -22,7 +22,7 @@ import '../../../registration/presentation/providers/registration_provider.dart'
 ///
 /// Freshness does not depend on that teardown: every path that actually
 /// changes the draft invalidates this provider explicitly — ProfilePage's
-/// initState, ProfileReviewPage, ProfileWizardPage's edit-mode save, and the
+/// initState, ProfileReviewPage, ProfileEditPage's save, and the
 /// profile menu's own pull-to-refresh/retry.
 final profileDraftResponseProvider =
     FutureProvider<Map<String, dynamic>>((ref) async {

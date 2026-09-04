@@ -16,13 +16,51 @@ class AuthTokenService {
 
   final FirebaseAuth _auth;
 
+  /// How long to wait for Firebase to restore a persisted session before
+  /// concluding there isn't one.
+  ///
+  /// Restoring reads the credential off disk and is normally near-instant;
+  /// this only has to be longer than that, not long enough to cover a slow
+  /// network. It is a readiness wait, not a request timeout.
+  static const Duration _sessionRestoreTimeout = Duration(seconds: 5);
+
   /// Returns the current user's Firebase ID token (JWT), or `null` if signed
   /// out. Firebase auto-refreshes tokens; pass [forceRefresh] to mint a fresh
   /// one (e.g. after custom claims change).
+  ///
+  /// `currentUser` is populated asynchronously at startup: for a short window
+  /// after launch it is null even for a member with a perfectly good
+  /// persisted session. Reading it synchronously (which is what this used to
+  /// do) meant any request issued in that window went out with NO
+  /// Authorization header, took a 401, and — because the retry's refresh read
+  /// the same still-null `currentUser` — was reported to AuthInterceptor as
+  /// "this session cannot be recovered", which signs the member out. A cold
+  /// start that raced the restore therefore ended in a spurious logout rather
+  /// than a request.
+  ///
+  /// So when there is no user yet, wait for `authStateChanges` to emit.
+  /// Firebase replays the current value to a new subscriber, so this returns
+  /// immediately once restore has finished, and immediately with `null` for a
+  /// genuinely signed-out member — the wait only materialises during the
+  /// startup window it exists to cover. Bounded, so a Firebase that never
+  /// reports readiness degrades to "no token" instead of hanging the caller.
   Future<String?> getFirebaseToken({bool forceRefresh = false}) async {
-    final user = _auth.currentUser;
+    final user = _auth.currentUser ?? await _awaitRestoredUser();
     if (user == null) return null;
     return user.getIdToken(forceRefresh);
+  }
+
+  Future<User?> _awaitRestoredUser() async {
+    try {
+      return await _auth
+          .authStateChanges()
+          .firstWhere((user) => user != null)
+          .timeout(_sessionRestoreTimeout);
+    } catch (_) {
+      // Timed out, or the stream closed without ever producing a user —
+      // both mean "no session", which is exactly what null already says.
+      return null;
+    }
   }
 
   /// Convenience for the `Authorization` header value, or `null` if signed out.

@@ -8,16 +8,20 @@ import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 import 'registration_helper_tip.dart';
+import 'step_body.dart';
 
 /// Step 1 — Basic Information
 class StepBasicInfo extends StatefulWidget {
   final BasicDetails details;
   final void Function(BasicDetails) onChanged;
+  /// See [StepBody.scrollable].
+  final bool scrollable;
 
   const StepBasicInfo({
     super.key,
     required this.details,
     required this.onChanged,
+    this.scrollable = true,
   });
 
   @override
@@ -123,8 +127,8 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return StepBody(
+      scrollable: widget.scrollable,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

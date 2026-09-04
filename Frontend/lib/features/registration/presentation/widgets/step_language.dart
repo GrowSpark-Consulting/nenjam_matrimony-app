@@ -5,13 +5,21 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 import 'registration_helper_tip.dart';
+import 'step_body.dart';
 
 /// Step 3 — Language Details
 class StepLanguage extends StatefulWidget {
   final LanguageDetails details;
   final void Function(LanguageDetails) onChanged;
+  /// See [StepBody.scrollable].
+  final bool scrollable;
 
-  const StepLanguage({super.key, required this.details, required this.onChanged});
+  const StepLanguage({
+    super.key,
+    required this.details,
+    required this.onChanged,
+    this.scrollable = true,
+  });
 
   @override
   State<StepLanguage> createState() => _StepLanguageState();
@@ -57,8 +65,8 @@ class _StepLanguageState extends State<StepLanguage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return StepBody(
+      scrollable: widget.scrollable,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

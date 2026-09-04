@@ -86,14 +86,6 @@ abstract final class ApiEndpoints {
   static const String profileVerification = '/profile/verification';
   static const String profileHoroscope = '/profile/horoscope';
 
-  // Real, implemented route (backend/apps/api/src/modules/profiles/
-  // controllers/photo.controller.ts) — metadata registration only, the
-  // client must already have `s3Key`/`cdnUrl` from somewhere else (no
-  // presigned-URL/upload-transport endpoint exists yet). Distinct from the
-  // aspirational `profilePhotos` constant above, which no backend route
-  // matches.
-  static const String profileMePhotos = '/profiles/me/photos';
-
   // ─── Search & Discovery ──────────────────────────────────────────
   static const String search = '/search';
   static const String searchFilters = '/search/filters';
