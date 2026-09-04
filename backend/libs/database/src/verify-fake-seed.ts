@@ -116,10 +116,18 @@ async function main(): Promise<void> {
     });
     checks.push(check('Orphaned seed photos', strayPhotos, 0));
 
-    // Gender balance — both feed directions need a populated result set.
+    // The dataset is deliberately female-only: one profile per supplied photo,
+    // and every photo is of a woman. That means only the male-seeker feed
+    // direction is populated by seed data — a female seeker sees real members
+    // or an empty feed, which is the correct behaviour, not a seeding fault.
     const female = users.filter((u) => u.profile?.gender === 'FEMALE').length;
     const male = users.filter((u) => u.profile?.gender === 'MALE').length;
-    checks.push({ label: 'Gender split (F/M)', got: `${female}/${male}`, want: '15/15', ok: female === 15 && male === 15 });
+    checks.push({
+      label: 'Gender split (F/M)',
+      got: `${female}/${male}`,
+      want: `${FAKE_PEOPLE.length}/0`,
+      ok: female === FAKE_PEOPLE.length && male === 0,
+    });
 
     // Real members must be untouched.
     const realUsers = await prisma.user.count({

@@ -228,7 +228,7 @@ async function seedRelationships(
   const interestPairs: Array<[number, number, 'ACCEPTED' | 'PENDING' | 'DECLINED']> = [
     [2, 1, 'ACCEPTED'],
     [4, 3, 'PENDING'],
-    [20, 21, 'DECLINED'],
+    [13, 14, 'DECLINED'],
   ];
   let interests = 0;
   for (const [from, to, status] of interestPairs) {
@@ -240,7 +240,7 @@ async function seedRelationships(
     interests++;
   }
 
-  const shortlistPairs: Array<[number, number]> = [[1, 6], [3, 22], [9, 10], [5, 16]];
+  const shortlistPairs: Array<[number, number]> = [[1, 6], [3, 12], [9, 10], [5, 15]];
   let shortlists = 0;
   for (const [owner, target] of shortlistPairs) {
     await prisma.shortlist.upsert({
@@ -253,21 +253,21 @@ async function seedRelationships(
 
   // A block, so you can confirm blocked members vanish from Discover.
   await prisma.userBlock.upsert({
-    where: { blockerId_blockedUserId: { blockerId: id(7), blockedUserId: id(18) } },
-    create: { blockerId: id(7), blockedUserId: id(18) },
+    where: { blockerId_blockedUserId: { blockerId: id(7), blockedUserId: id(8) } },
+    create: { blockerId: id(7), blockedUserId: id(8) },
     update: {},
   });
 
   // A report. No natural key, so guard on an existing row.
   const existingReport = await prisma.userReport.findFirst({
-    where: { reporterId: id(11), reportedUserId: id(26) },
+    where: { reporterId: id(11), reportedUserId: id(4) },
     select: { id: true },
   });
   if (!existingReport) {
     await prisma.userReport.create({
       data: {
         reporterId: id(11),
-        reportedUserId: id(26),
+        reportedUserId: id(4),
         reason: 'FAKE_PROFILE',
         description: 'Seeded test report.',
         status: 'OPEN',

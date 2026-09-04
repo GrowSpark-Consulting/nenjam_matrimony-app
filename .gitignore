@@ -123,3 +123,15 @@ tmp/
 
 # ─── UI prototypes / design assets (not part of the shipped app) ──
 nenjam ui/
+
+# ─── Seed photo ORIGINALS (local only) ───────────────────────────
+#
+# The seeder reads photos/profile_NN.jpg — those ARE committed, because the
+# fake-profile seeder needs them to exist on any machine that runs it.
+#
+# The unprocessed originals they were cropped from are deliberately not.
+# They are full-resolution photographs of real people; committing them would
+# put those images into git history permanently, distributed to every clone
+# and fork, and removing them later would need a history rewrite. The
+# processed 1080x1080 crops are all the seeder needs.
+photos/WhatsApp*
