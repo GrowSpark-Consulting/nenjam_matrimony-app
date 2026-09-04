@@ -21,6 +21,7 @@ import '../widgets/horoscope_section.dart';
 import '../widgets/lifestyle_section.dart';
 import '../widgets/profile_detail_hero_app_bar.dart';
 import '../widgets/profile_detail_section_tab_bar.dart';
+import '../widgets/profile_detail_bottom_action_bar.dart';
 import '../widgets/profile_photo_gallery_section.dart';
 import '../widgets/similar_profiles_section.dart';
 import '../widgets/verification_section.dart';
@@ -72,10 +73,11 @@ class _ProfileDetailPageState extends ConsumerState<ProfileDetailPage> {
     final heroTag = widget.heroTag;
     final detailAsync = ref.watch(profileDetailProvider(profile));
 
-    // No `bottomNavigationBar:` — this page shows no fixed action bar at all
-    // any more. Send Interest and Chat live on the feeds this page is opened
-    // from; here the photograph gets the whole first screen, and the body
-    // runs edge to edge because nothing is reserving space below it.
+    // Still no `bottomNavigationBar:`. Send Interest and Message are back on
+    // this page, but as a bar that floats over the content and only appears
+    // once the hero has scrolled away (see _syncActionBar) — so the
+    // photograph still gets the whole first screen, and the body still runs
+    // edge to edge because nothing permanently reserves space below it.
     return Scaffold(
       body: detailAsync.when(
         data: (detail) => _ProfileDetailScrollView(
@@ -151,17 +153,41 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
 
   bool _showScrollCue = true;
 
+  /// How far down the first viewport the reader must be before the bottom
+  /// action bar appears, as a fraction of that viewport.
+  ///
+  /// The hero is a full-viewport photo with the member's name, age and
+  /// profession overlaid across its lower edge. A bar pinned there from the
+  /// start would sit on top of exactly that — which is why this page carried
+  /// no fixed bar at all. Holding it back until the hero has largely scrolled
+  /// away keeps the first screen purely photographic and still puts Interest
+  /// and Message within reach the moment the reader is actually reading.
+  static const double _actionBarRevealFraction = 0.6;
+
+  /// Dead zone below the reveal point, so a scroll that comes to rest right
+  /// on the threshold cannot flicker the bar in and out.
+  static const double _actionBarHideMargin = 40.0;
+
+  bool _showActionBar = false;
+
+  /// The current viewport height, published by the [LayoutBuilder] in
+  /// [build]. The scroll listener runs outside any build, so it cannot read
+  /// constraints itself.
+  double _viewportHeight = 0;
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_syncActiveTabWithScroll);
     _scrollController.addListener(_syncScrollCue);
+    _scrollController.addListener(_syncActionBar);
   }
 
   @override
   void dispose() {
     _scrollController.removeListener(_syncActiveTabWithScroll);
     _scrollController.removeListener(_syncScrollCue);
+    _scrollController.removeListener(_syncActionBar);
     _scrollController.dispose();
     _tabBarScrollController.dispose();
     super.dispose();
@@ -180,6 +206,27 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
         _scrollController.position.pixels <= _scrollCueDismissThreshold;
     if (shouldShow != _showScrollCue) {
       setState(() => _showScrollCue = shouldShow);
+    }
+  }
+
+  // Reveals the Interest/Message bar once the hero has scrolled away, and
+  // hides it again on the way back up to the photo.
+  //
+  // A third listener on the same controller, for the same reason _syncScrollCue
+  // is a second one: this must also run while a tab tap is driving a
+  // programmatic scroll, which _syncActiveTabWithScroll deliberately suppresses
+  // itself during.
+  void _syncActionBar() {
+    if (!mounted || !_scrollController.hasClients || _viewportHeight <= 0) {
+      return;
+    }
+    final pixels = _scrollController.position.pixels;
+    final revealAt = _viewportHeight * _actionBarRevealFraction;
+    final shouldShow = _showActionBar
+        ? pixels > revealAt - _actionBarHideMargin
+        : pixels > revealAt;
+    if (shouldShow != _showActionBar) {
+      setState(() => _showActionBar = shouldShow);
     }
   }
 
@@ -338,10 +385,44 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
     // own box, so the hero can be exactly the first screenful of *content*
     // on every phone size rather than the raw screen height.
     return LayoutBuilder(
-      builder: (context, constraints) => _buildScrollView(
-        context,
-        viewportHeight: constraints.maxHeight,
-      ),
+      builder: (context, constraints) {
+        // Published for _syncActionBar, which runs outside build and so has
+        // no constraints of its own to measure the hero against.
+        _viewportHeight = constraints.maxHeight;
+
+        return Stack(
+          children: [
+            _buildScrollView(context, viewportHeight: constraints.maxHeight),
+
+            // Floats over the content rather than taking a
+            // Scaffold.bottomNavigationBar slot: the hero is meant to run
+            // full-bleed to the bottom of the first viewport, which a real
+            // bottom-nav slot would permanently shorten. The scroll view
+            // reserves matching padding at its end so the last card still
+            // clears the bar — see the final SliverPadding.
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                // Off-screen but still in the tree during the slide, so it
+                // must not swallow taps aimed at the content behind it.
+                ignoring: !_showActionBar,
+                child: AnimatedSlide(
+                  offset: _showActionBar ? Offset.zero : const Offset(0, 1),
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  child: AnimatedOpacity(
+                    opacity: _showActionBar ? 1 : 0,
+                    duration: const Duration(milliseconds: 160),
+                    child: ProfileDetailBottomActionBar(detail: widget.detail),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -403,13 +484,15 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
 
         // ── The deeper sections ──────────────────────────────────────
         SliverPadding(
-          // The page reserves no bottom bar, so the only thing the list has
-          // to clear at its end is the device's own bottom inset.
+          // Room for the floating action bar at the end of the list, so the
+          // last card is never left underneath it once it appears.
+          // `reservedHeight` already folds in the device's bottom inset.
           padding: EdgeInsets.fromLTRB(
             AppSpacing.base,
             AppSpacing.md,
             AppSpacing.base,
-            AppSpacing.base + MediaQuery.paddingOf(context).bottom,
+            AppSpacing.base +
+                ProfileDetailBottomActionBar.reservedHeight(context),
           ),
           sliver: SliverList(
             delegate: SliverChildListDelegate([

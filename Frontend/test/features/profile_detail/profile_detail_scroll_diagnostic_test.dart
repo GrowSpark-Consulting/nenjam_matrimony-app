@@ -1126,30 +1126,54 @@ void main() {
     });
   });
 
-  group('No fixed action bar', () {
+  group('Bottom action bar reveal', () {
     final photos = [
       for (var i = 0; i < 9; i++) 'https://example.invalid/photo-$i.jpg',
     ];
 
-    testWidgets('is absent at rest and stays absent through a full scroll',
+    testWidgets('is hidden over the hero, then revealed once scrolled past it',
         (tester) async {
       await _pumpPage(tester, const Size(375, 812), photoUrls: photos);
       await _settle(tester);
 
+      // The hero is a full-viewport photo with the member's name and
+      // profession overlaid across its lower edge — precisely where the bar
+      // sits. Nothing may cover that on the first screen.
       expect(
-        find.byType(ProfileDetailBottomActionBar),
-        findsNothing,
+        isVisible(tester, find.byType(ProfileDetailBottomActionBar)),
+        isFalse,
         reason: 'nothing should cover the hero photo in the first viewport',
       );
 
       await _scrollToBottom(tester);
       await _settle(tester);
 
+      // Delayed, not removed: Interest and Message are reachable as soon as
+      // the reader is actually reading.
       expect(
-        find.byType(ProfileDetailBottomActionBar),
-        findsNothing,
-        reason: 'the action bar was removed from this page entirely, not '
-            'merely delayed',
+        isVisible(tester, find.byType(ProfileDetailBottomActionBar)),
+        isTrue,
+        reason: 'the action bar should be on screen once the hero is gone',
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('hides again on the way back up to the hero', (tester) async {
+      await _pumpPage(tester, const Size(375, 812), photoUrls: photos);
+      await _scrollToBottom(tester);
+      await _settle(tester);
+      expect(
+        isVisible(tester, find.byType(ProfileDetailBottomActionBar)),
+        isTrue,
+      );
+
+      // Back to the top, where the photograph owns the screen again.
+      _mainScrollable(tester).position.jumpTo(0);
+      await _settle(tester);
+
+      expect(
+        isVisible(tester, find.byType(ProfileDetailBottomActionBar)),
+        isFalse,
       );
       expect(tester.takeException(), isNull);
     });
@@ -1166,6 +1190,16 @@ void main() {
         tester.getRect(find.byType(SimilarProfilesSection)).bottom,
         lessThanOrEqualTo(812.0),
         reason: 'the last section must still fit inside the viewport',
+      );
+      // ...and clear of the action bar, which floats over the content rather
+      // than occupying a bottom-nav slot. The scroll view reserves the bar's
+      // height at its end precisely so this holds.
+      expect(
+        tester.getRect(find.byType(SimilarProfilesSection)).bottom,
+        lessThanOrEqualTo(
+          812.0 - ProfileDetailBottomActionBar.contentHeight,
+        ),
+        reason: 'the last section must not end up underneath the action bar',
       );
       expect(tester.takeException(), isNull);
     });
