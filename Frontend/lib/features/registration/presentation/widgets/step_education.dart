@@ -9,13 +9,21 @@ import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 import 'other_option_field.dart';
 import 'registration_helper_tip.dart';
+import 'step_body.dart';
 
 /// Step 5 — Education & Career
 class StepEducation extends StatefulWidget {
   final EducationDetails details;
   final void Function(EducationDetails) onChanged;
+  /// See [StepBody.scrollable].
+  final bool scrollable;
 
-  const StepEducation({super.key, required this.details, required this.onChanged});
+  const StepEducation({
+    super.key,
+    required this.details,
+    required this.onChanged,
+    this.scrollable = true,
+  });
 
   @override
   State<StepEducation> createState() => _StepEducationState();
@@ -105,8 +113,8 @@ class _StepEducationState extends State<StepEducation> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return StepBody(
+      scrollable: widget.scrollable,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

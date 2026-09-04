@@ -6,20 +6,24 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../profile_photos/presentation/widgets/photo_manager_section.dart';
 import 'registration_helper_tip.dart';
+import 'step_body.dart';
 
 /// Step 11 — Photo Upload. Backed by the real PhotoController: photos are
 /// uploaded to S3 and attached to the signed-in user immediately (they're an
 /// independent resource, not part of the wizard draft), so they persist and
 /// show up on the profile dashboard and edit-profile screens right away.
 class StepPhotos extends ConsumerWidget {
-  const StepPhotos({super.key});
+  /// See [StepBody.scrollable].
+  final bool scrollable;
+
+  const StepPhotos({super.key, this.scrollable = true});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return StepBody(
+      scrollable: scrollable,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

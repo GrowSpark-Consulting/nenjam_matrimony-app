@@ -7,6 +7,7 @@ import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 import 'registration_helper_tip.dart';
+import 'step_body.dart';
 
 /// A single dynamic sibling row's editing state — owns its own controllers
 /// so add/remove doesn't disturb sibling rows above/below it.
@@ -45,8 +46,15 @@ class _SiblingRow {
 class StepFamily extends StatefulWidget {
   final FamilyDetails details;
   final void Function(FamilyDetails) onChanged;
+  /// See [StepBody.scrollable].
+  final bool scrollable;
 
-  const StepFamily({super.key, required this.details, required this.onChanged});
+  const StepFamily({
+    super.key,
+    required this.details,
+    required this.onChanged,
+    this.scrollable = true,
+  });
 
   @override
   State<StepFamily> createState() => _StepFamilyState();
@@ -231,8 +239,8 @@ class _StepFamilyState extends State<StepFamily> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return StepBody(
+      scrollable: widget.scrollable,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

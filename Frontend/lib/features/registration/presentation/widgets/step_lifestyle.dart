@@ -6,13 +6,21 @@ import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 import 'registration_helper_tip.dart';
+import 'step_body.dart';
 
 /// Step 7 — Lifestyle
 class StepLifestyle extends StatefulWidget {
   final LifestyleDetails details;
   final void Function(LifestyleDetails) onChanged;
+  /// See [StepBody.scrollable].
+  final bool scrollable;
 
-  const StepLifestyle({super.key, required this.details, required this.onChanged});
+  const StepLifestyle({
+    super.key,
+    required this.details,
+    required this.onChanged,
+    this.scrollable = true,
+  });
 
   @override
   State<StepLifestyle> createState() => _StepLifestyleState();
@@ -106,8 +114,8 @@ class _StepLifestyleState extends State<StepLifestyle> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return StepBody(
+      scrollable: widget.scrollable,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

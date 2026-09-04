@@ -40,6 +40,8 @@ class RecordingRegistrationRepository implements RegistrationRepository {
   PhysicalDetails? savedPhysical;
   EducationDetails? savedEducation;
   LifestyleDetails? savedLifestyle;
+  FamilyDetails? savedFamily;
+  HoroscopeDetails? savedHoroscope;
 
   /// How many times `POST /profiles/finalize` was asked for. Editing must
   /// not need it — see edit_profile_save_test.dart.
@@ -145,6 +147,26 @@ class RecordingRegistrationRepository implements RegistrationRepository {
     skipMaterializeFlags.add(skipMaterialize);
     savedSections.add('lifestyleDetails');
     savedLifestyle = details;
+  }
+
+  @override
+  Future<void> updateFamilyDetails(
+    FamilyDetails details, {
+    bool skipMaterialize = false,
+  }) async {
+    skipMaterializeFlags.add(skipMaterialize);
+    savedSections.add('familyDetails');
+    savedFamily = details;
+  }
+
+  @override
+  Future<void> updateHoroscopeDetails(
+    HoroscopeDetails details, {
+    bool skipMaterialize = false,
+  }) async {
+    skipMaterializeFlags.add(skipMaterialize);
+    savedSections.add('horoscopeDetails');
+    savedHoroscope = details;
   }
 
   @override

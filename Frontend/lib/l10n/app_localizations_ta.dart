@@ -2548,6 +2548,14 @@ class AppLocalizationsTa extends AppLocalizations {
       'அந்தப் புகைப்படத்தைப் பதிவேற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
 
   @override
+  String get onboardingPhotosPendingFailed =>
+      'உங்கள் புகைப்படத்தைப் பதிவேற்ற முடியவில்லை. அது சேமிக்கப்பட்டுள்ளது — தகவல் திருத்தத்தில் சேர்க்கலாம்.';
+
+  @override
+  String get onboardingPhotosPendingMissing =>
+      'நீங்கள் சேர்த்த புகைப்படம் இந்தச் சாதனத்தில் இல்லை. தகவல் திருத்தத்தில் மீண்டும் தேர்ந்தெடுக்கவும்.';
+
+  @override
   String get onboardingPhotosAddedOne => '1 புகைப்படம் சேர்க்கப்பட்டது.';
 
   @override

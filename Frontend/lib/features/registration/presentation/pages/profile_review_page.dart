@@ -26,6 +26,7 @@ import '../../data/repositories/registration_repository.dart';
 import '../../domain/models/profile_draft.dart';
 import '../../domain/models/profile_flow_mode.dart';
 import '../providers/registration_provider.dart';
+import '../utils/open_edit_profile.dart';
 
 /// Summary review screen displaying all 13 wizard sections before entering Home.
 ///
@@ -120,7 +121,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final draft = ref.watch(registrationProvider);
-    final notifier = ref.read(registrationProvider.notifier);
     final mode = ref.watch(profileFlowModeProvider);
     final isEditMode = mode == ProfileFlowMode.edit;
     // Photos are a backend resource (PhotoController), not part of the draft —
@@ -136,9 +136,11 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
     final completion =
         ref.watch(backendProfileCompletionProvider).valueOrNull ?? 0;
 
+    // Every section's Edit button opens the one editable page, scrolled to
+    // that section — except the three that are separate features with pages
+    // of their own, which are linked directly. See profileSectionRoute().
     void editStep(int step) {
-      notifier.goToStep(step);
-      context.push(RouteNames.registrationWizard);
+      context.push(profileSectionRoute(step));
     }
 
     return Scaffold(

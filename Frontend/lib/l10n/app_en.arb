@@ -937,6 +937,8 @@
   "onboardingPhotosCamera": "Use Camera",
   "onboardingPhotosLater": "Add Photos Later",
   "onboardingPhotosFailed": "That photo couldn't be uploaded. Try again.",
+  "onboardingPhotosPendingFailed": "Your photo couldn't be uploaded. It's been kept — you can add it from Edit Profile.",
+  "onboardingPhotosPendingMissing": "A photo you added is no longer available on this device. Please select it again in Edit Profile.",
   "onboardingPhotosAddedOne": "1 photo added.",
   "onboardingPhotosAddedMany": "{count} photos added.",
   "@onboardingPhotosAddedMany": {

@@ -53,7 +53,7 @@ import '../../features/registration/presentation/pages/onboarding_religion_page.
 import '../../features/registration/presentation/pages/onboarding_verify_mobile_page.dart';
 import '../../features/registration/presentation/pages/profile_basics_page.dart';
 import '../../features/registration/presentation/pages/profile_review_page.dart';
-import '../../features/registration/presentation/pages/profile_wizard_page.dart';
+import '../../features/registration/presentation/pages/profile_edit_page.dart';
 import '../../features/registration/presentation/pages/registration_completing_page.dart';
 import '../../features/registration/presentation/pages/registration_page.dart';
 import '../../features/registration/presentation/pages/registration_success_page.dart';
@@ -356,9 +356,16 @@ GoRouter createRouter(WidgetRef ref) {
         builder: (context, state) => const RegistrationWelcomePage(),
       ),
       GoRoute(
-        path: RouteNames.registrationWizard,
-        name: RouteNames.registrationWizardName,
-        builder: (context, state) => const ProfileWizardPage(),
+        path: RouteNames.profileEdit,
+        name: RouteNames.profileEditName,
+        // `?section=<draft step index>` scrolls the page to one section on
+        // open — see profileSectionRoute(). Absent or unparseable, the page
+        // opens at the top.
+        builder: (context, state) => ProfileEditPage(
+          initialSection: int.tryParse(
+            state.uri.queryParameters['section'] ?? '',
+          ),
+        ),
       ),
       GoRoute(
         path: RouteNames.registrationCompleting,

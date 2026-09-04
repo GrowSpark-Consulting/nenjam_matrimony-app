@@ -6,6 +6,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 import 'other_option_field.dart';
 import 'registration_helper_tip.dart';
+import 'step_body.dart';
 
 /// Step 6 — Physical Details. Skippable: if the user drags either slider,
 /// Height/Weight/Disability all become required (Blood Group stays
@@ -14,11 +15,14 @@ import 'registration_helper_tip.dart';
 class StepPhysical extends StatefulWidget {
   final PhysicalDetails details;
   final void Function(PhysicalDetails) onChanged;
+  /// See [StepBody.scrollable].
+  final bool scrollable;
 
   const StepPhysical({
     super.key,
     required this.details,
     required this.onChanged,
+    this.scrollable = true,
   });
 
   @override
@@ -162,8 +166,8 @@ class _StepPhysicalState extends State<StepPhysical> {
     final l10n = AppLocalizations.of(context);
     const secondaryColor = AppColors.textSecondaryLight;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return StepBody(
+      scrollable: widget.scrollable,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

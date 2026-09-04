@@ -6,16 +6,20 @@ import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 import 'registration_helper_tip.dart';
+import 'step_body.dart';
 
 /// Step 9 — Horoscope Details
 class StepHoroscope extends StatefulWidget {
   final HoroscopeDetails details;
   final void Function(HoroscopeDetails) onChanged;
+  /// See [StepBody.scrollable].
+  final bool scrollable;
 
   const StepHoroscope({
     super.key,
     required this.details,
     required this.onChanged,
+    this.scrollable = true,
   });
 
   @override
@@ -222,8 +226,8 @@ class _StepHoroscopeState extends State<StepHoroscope> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return StepBody(
+      scrollable: widget.scrollable,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

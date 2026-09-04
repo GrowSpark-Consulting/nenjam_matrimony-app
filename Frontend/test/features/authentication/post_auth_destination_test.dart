@@ -19,8 +19,8 @@ import 'package:nenjam_matrimony/features/registration/presentation/providers/re
 /// Onboarding is two screens: Profile For, then Location & Sub-community.
 /// [PostAuthDestination] is the only thing that decides which of them (if
 /// either) a returning user still owes, and it must never send anyone to
-/// [RouteNames.registrationWizard] — that screen belongs to Edit Profile
-/// now, and the 13-step signup flow it used to host no longer exists.
+/// [RouteNames.profileEdit] — that screen belongs to Edit Profile
+/// now, and the 13-step signup flow it once hosted no longer exists.
 ///
 /// This used to be impossible to guarantee, because `BasicDetails` defaulted
 /// `profileCreatedFor` to 'Myself'. An untouched draft was therefore
@@ -516,7 +516,7 @@ void main() {
           final container = _container(draft: draft, user: user);
           expect(
             await _resolve(container),
-            isNot(RouteNames.registrationWizard),
+            isNot(RouteNames.profileEdit),
           );
         }
       }

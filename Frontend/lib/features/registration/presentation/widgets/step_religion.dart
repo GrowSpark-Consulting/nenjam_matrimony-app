@@ -8,13 +8,21 @@ import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 import 'other_option_field.dart';
 import 'registration_helper_tip.dart';
+import 'step_body.dart';
 
 /// Step 2 — Religion Details
 class StepReligion extends StatefulWidget {
   final ReligionDetails details;
   final void Function(ReligionDetails) onChanged;
+  /// See [StepBody.scrollable].
+  final bool scrollable;
 
-  const StepReligion({super.key, required this.details, required this.onChanged});
+  const StepReligion({
+    super.key,
+    required this.details,
+    required this.onChanged,
+    this.scrollable = true,
+  });
 
   @override
   State<StepReligion> createState() => _StepReligionState();
@@ -79,8 +87,8 @@ class _StepReligionState extends State<StepReligion> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return StepBody(
+      scrollable: widget.scrollable,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

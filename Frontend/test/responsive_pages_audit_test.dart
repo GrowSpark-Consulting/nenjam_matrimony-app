@@ -19,7 +19,7 @@ import 'package:nenjam_matrimony/features/registration/presentation/pages/onboar
 import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_name_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_religion_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/profile_basics_page.dart';
-import 'package:nenjam_matrimony/features/registration/presentation/pages/profile_wizard_page.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/pages/profile_edit_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/registration_page.dart';
 import 'package:nenjam_matrimony/features/profile_photos/data/repositories/photo_repository.dart';
 import 'package:nenjam_matrimony/features/profile_photos/domain/models/user_photo.dart';
@@ -413,11 +413,17 @@ void main() {
     await _audit(tester, 'ProfileBasicsPage', () => const ProfileBasicsPage());
   });
 
-  testWidgets('Profile wizard is responsive across phone sizes', (tester) async {
+  testWidgets('Profile edit is responsive across phone sizes', (tester) async {
+    // Edit Profile's single editable page: every field section stacked in
+    // one viewport. The longest page in the app, and the one most exposed to
+    // a raised keyboard.
     await _audit(
       tester,
-      'ProfileWizardPage',
-      () => const ProfileWizardPage(),
+      'ProfileEditPage',
+      () => const ProfileEditPage(),
+      overrides: [
+        photoRepositoryProvider.overrideWithValue(_EmptyPhotoRepository()),
+      ],
       keyboard: true,
     );
   });

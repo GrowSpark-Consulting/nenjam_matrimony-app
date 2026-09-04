@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/services/media/attachment_picker.dart';
+import '../../../../core/utils/photo_trace.dart';
 import '../../../../core/services/media/crop_service.dart';
 import '../../../../core/services/media/photo_crop_screen.dart' show CropShape;
 import '../../../../core/theme/app_colors.dart';
@@ -167,6 +168,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
   }) async {
     final source = await _chooseSource();
     if (source == null || !mounted) return;
+    PhotoTrace.begin('pick source=${source.name} replaceId=$replaceId');
 
     // Fetch a generously high-res source — the crop screen now owns final
     // downscale/compression post-crop (see CropService/ImageCompressor), so
@@ -177,7 +179,17 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
       maxWidth: 2048,
       imageQuality: 95,
     );
-    if (file == null || !mounted) return; // cancelled, denied, or failed
+    if (file == null) {
+      PhotoTrace.step('picker returned null (cancelled/denied/failed)');
+      return;
+    }
+    PhotoTrace.step('image selected', {
+      'name': file.name,
+      'path': file.path,
+      'mime': file.mimeType,
+      'bytes': await file.length(),
+    });
+    if (!mounted) return;
 
     final currentCount = ref.read(myPhotosProvider).valueOrNull?.length ?? 0;
     final willBePrimary = replaceId != null
@@ -189,7 +201,17 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
       sourceFile: file,
       shape: willBePrimary ? CropShape.circle : CropShape.square,
     );
-    if (cropped == null || !mounted) return; // cancelled crop
+    if (cropped == null) {
+      PhotoTrace.step('crop cancelled');
+      return;
+    }
+    PhotoTrace.step('crop+compress done', {
+      'name': cropped.name,
+      'path': cropped.path,
+      'mime': cropped.mimeType,
+      'bytes': await cropped.length(),
+    });
+    if (!mounted) return;
 
     // The uncropped source is no longer explicitly deleted. It is an XFile
     // now, which has no cross-platform delete: on web there is no file to

@@ -917,6 +917,8 @@
   "onboardingPhotosCamera": "கேமராவைப் பயன்படுத்து",
   "onboardingPhotosLater": "பின்னர் சேர்க்கிறேன்",
   "onboardingPhotosFailed": "அந்தப் புகைப்படத்தைப் பதிவேற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
+  "onboardingPhotosPendingFailed": "உங்கள் புகைப்படத்தைப் பதிவேற்ற முடியவில்லை. அது சேமிக்கப்பட்டுள்ளது — தகவல் திருத்தத்தில் சேர்க்கலாம்.",
+  "onboardingPhotosPendingMissing": "நீங்கள் சேர்த்த புகைப்படம் இந்தச் சாதனத்தில் இல்லை. தகவல் திருத்தத்தில் மீண்டும் தேர்ந்தெடுக்கவும்.",
   "onboardingPhotosAddedOne": "1 புகைப்படம் சேர்க்கப்பட்டது.",
   "onboardingPhotosAddedMany": "{count} புகைப்படங்கள் சேர்க்கப்பட்டன.",
   "onboardingAboutEyebrow": "உங்களைப் பற்றி ஒரு சிறு விளக்கத்தைச் சேர்த்துள்ளோம்",

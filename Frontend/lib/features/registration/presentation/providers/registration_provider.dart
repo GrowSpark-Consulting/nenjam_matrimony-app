@@ -44,26 +44,24 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
 
   // ─── Backend sync ────────────────────────────────────────────────────
   //
-  // Called from ProfileWizardPage's "Continue" button — sends whichever
-  // step's data was just filled in. Step 9 (psychological quiz) is synced
+  // Sends whichever single section [ProfileDraft.currentStep] names, via
+  // [publishEditedSection]. Step 9 (psychological quiz) is synced
   // independently by the psychology feature's own repository the moment
   // the quiz is submitted, not through this draft. Step 10 (partner
-  // preference) is a CTA card that pushes the standalone Partner
-  // Preferences page, which already persists immediately via
-  // [savePartnerPreference] when the user saves there — nothing left to
-  // sync here. Steps 11 (photos) and 12 (verification) aren't sent here
-  // either: photos persist immediately via PhotoController on upload, and
-  // verification status is read-only, reflecting other modules.
-  // [skipMaterialize] — set by ProfileWizardPage's edit-mode save
-  // (_saveAndFinalizeForEdit), which always calls finalizeToBackend()
-  // immediately after this. finalize() unconditionally redoes the same
-  // materialize-and-recompute work this step-save would otherwise trigger
-  // server-side (see ProfileDraftController.save's skipMaterialize doc), so
-  // without this flag every edit-mode "Continue" tap paid for that work
-  // twice — measured ~1.8s of pure duplication on top of finalize()'s own
-  // ~3s. CREATE mode never sets this; it never calls finalize per step, so
-  // this auto-materialize is the only thing that makes a user matchable
-  // before they reach Profile Review.
+  // preference) is handled by the standalone Partner Preferences page,
+  // which already persists immediately via [savePartnerPreference] when
+  // the user saves there — nothing left to sync here. Steps 11 (photos)
+  // and 12 (verification) aren't sent here either: photos persist
+  // immediately via PhotoController on upload, and verification status is
+  // read-only, reflecting other modules.
+  //
+  // [skipMaterialize] suppresses the server-side materialize-and-recompute
+  // pass this save would otherwise trigger (see
+  // ProfileDraftController.save's skipMaterialize doc) — for a caller that
+  // writes several sections in a row and materializes once at the end
+  // instead of paying for that work on every one. [publishEditedProfile]
+  // is the shape that needs it; a lone section save leaves it off, because
+  // nothing follows it to do that work.
   Future<void> syncCurrentStepToBackend({bool skipMaterialize = false}) async {
     final repo = ref.read(registrationRepositoryProvider);
     switch (state.currentStep) {
@@ -157,6 +155,14 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     await repo.updatePhysicalDetails(state.physicalDetails,
         skipMaterialize: true);
     await repo.updateEducationDetails(state.educationDetails,
+        skipMaterialize: true);
+    // Family and horoscope were missing here until Edit Profile became a
+    // single editable page. It never showed, because the only way to reach
+    // those two sections was the per-section wizard, which saved through
+    // publishEditedSection() instead. Now that one Save covers every section
+    // at once, leaving them out would silently drop the member's edits.
+    await repo.updateFamilyDetails(state.familyDetails, skipMaterialize: true);
+    await repo.updateHoroscopeDetails(state.horoscopeDetails,
         skipMaterialize: true);
     // Last, and the only one that materializes — see flushOnboardingToBackend.
     await repo.updateLifestyleDetails(state.lifestyleDetails);

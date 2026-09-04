@@ -8,13 +8,21 @@ import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 import 'other_option_field.dart';
 import 'registration_helper_tip.dart';
+import 'step_body.dart';
 
 /// Step 4 — Location Details
 class StepLocation extends StatefulWidget {
   final LocationDetails details;
   final void Function(LocationDetails) onChanged;
+  /// See [StepBody.scrollable].
+  final bool scrollable;
 
-  const StepLocation({super.key, required this.details, required this.onChanged});
+  const StepLocation({
+    super.key,
+    required this.details,
+    required this.onChanged,
+    this.scrollable = true,
+  });
 
   @override
   State<StepLocation> createState() => _StepLocationState();
@@ -93,8 +101,8 @@ class _StepLocationState extends State<StepLocation> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return StepBody(
+      scrollable: widget.scrollable,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

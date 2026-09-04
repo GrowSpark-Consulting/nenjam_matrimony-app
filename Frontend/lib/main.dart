@@ -21,11 +21,15 @@ import 'features/notifications/data/services/push_notification_service.dart';
 import 'features/notifications/presentation/providers/notification_providers.dart';
 import 'core/router/app_router.dart';
 import 'core/router/route_names.dart';
+import 'core/utils/photo_trace.dart';
 import 'core/services/storage_service.dart';
 import 'core/utils/story_perf.dart';
 import 'core/theme/app_theme.dart';
 import 'features/authentication/domain/services/local_auth_session.dart';
 import 'features/authentication/presentation/providers/auth_providers.dart';
+import 'features/profile/presentation/providers/profile_dashboard_providers.dart';
+import 'features/profile/presentation/providers/profile_providers.dart';
+import 'features/profile_photos/presentation/providers/photo_providers.dart';
 import 'features/registration/presentation/providers/registration_provider.dart';
 import 'l10n/app_localizations.dart';
 export 'core/services/storage_service.dart' show storageService;
@@ -100,7 +104,7 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
   /// see StorageService.saveNavState. Anything else (splash, auth/OTP
   /// screens, ...) depends on ephemeral state that can't be resumed.
   static const _registrationRoutes = {
-    RouteNames.registrationWizard,
+    RouteNames.profileEdit,
     RouteNames.profileReview,
   };
   static const _tabRoutes = {
@@ -264,6 +268,10 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
       final wasSignedIn = previous?.value != null;
       final isNowSignedOut = !next.isLoading && next.value == null;
       if (wasSignedIn && isNowSignedOut) {
+        // TEMPORARY (PhotoTrace) — a sign-out landing in the middle of a
+        // photo trace is exactly the failure being investigated: it is what
+        // clears the providers below out from under an in-flight upload.
+        PhotoTrace.step('!! SESSION TEARDOWN (signed out) !!');
         // Full local session teardown — the one place this runs, regardless
         // of which entry point (Settings, nav drawer, background 401
         // recovery) triggered the Firebase sign-out that landed here.
@@ -271,6 +279,41 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
         unawaited(storageService.clearNavState());
         unawaited(storageService.clearUserData());
         unawaited(storageService.clearPendingPhone());
+        // The signed-in user's server-backed state lives in root-scoped,
+        // non-autoDispose providers, so it survives for the whole process
+        // unless it is dropped here: the next member to sign in on this
+        // device would otherwise open the photo step on the PREVIOUS
+        // member's photos (and their avatar in the drawer/Discover bar).
+        //
+        // It also unsticks a latched failure. These are AsyncNotifier/
+        // FutureProviders that are built once; a fetch that failed while the
+        // session was going away leaves an AsyncError no later sign-in ever
+        // rebuilds, which is what made PhotoManagerSection show its retry
+        // state instead of the add-photo tile for the rest of the run.
+        ref.invalidate(myPhotosProvider);
+        ref.invalidate(myProfileProvider);
+        ref.invalidate(profileDraftResponseProvider);
+      }
+
+      // The other half: rebuild that same server-backed state whenever a
+      // session BEGINS (a fresh login, an account switch, or the persisted
+      // session finishing its restore after launch).
+      //
+      // These providers are built the first time something watches them,
+      // which can be before Firebase has restored `currentUser`. That fetch
+      // goes out unauthenticated and fails, and because nothing rebuilt them
+      // afterwards the AsyncError stuck for the rest of the process — the
+      // photo step then showed its retry state, and the member's photos were
+      // "missing" until the app was restarted into a luckier ordering.
+      // Keying on the uid rather than a bare non-null covers an account
+      // switch too, where the stale data belongs to a different person.
+      final previousUid = previous?.valueOrNull?.uid;
+      final nextUid = next.valueOrNull?.uid;
+      if (nextUid != null && nextUid != previousUid) {
+        PhotoTrace.step('session ready — rebuilding profile/photo providers');
+        ref.invalidate(myPhotosProvider);
+        ref.invalidate(myProfileProvider);
+        ref.invalidate(profileDraftResponseProvider);
       }
     });
 

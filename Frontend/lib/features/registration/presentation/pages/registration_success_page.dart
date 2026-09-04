@@ -11,6 +11,7 @@ import '../../../../core/widgets/buttons/gradient_button.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../profile/domain/models/profile.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
+import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../domain/models/profile_draft.dart';
 import '../providers/registration_provider.dart';
 
@@ -44,6 +45,25 @@ class _SuccessSummary {
     hasPartnerPreference: _profileHasPartnerPreference(
       profile.partnerPreference,
     ),
+  );
+
+  /// Same summary with [hasPhotos] re-answered from the live photo provider.
+  ///
+  /// The two factories below read two different sources for this one fact,
+  /// and both can be wrong here. [fromDraft] reads `photoGallery`, which is
+  /// now onboarding's *pending upload queue* — emptied the moment those
+  /// photos upload successfully, so the member who just added one is told
+  /// "photos skipped". [fromProfile] reads the embedded `Profile.photos`,
+  /// which is a snapshot from whenever `GET /profiles/me` last ran.
+  ///
+  /// [myPhotosProvider] is what every other surface that shows the member's
+  /// photos already reads — the profile dashboard, Edit Profile, the review
+  /// screen — so deferring to it here makes this screen agree with them.
+  _SuccessSummary withHasPhotos(bool value) => _SuccessSummary(
+    completionPercent: completionPercent,
+    hasPhotos: value,
+    hasHoroscope: hasHoroscope,
+    hasPartnerPreference: hasPartnerPreference,
   );
 
   static _SuccessSummary fromDraft(ProfileDraft draft) {
@@ -121,10 +141,17 @@ class RegistrationSuccessPage extends ConsumerWidget {
     // the screen. This is the "local first, refresh in background" path —
     // there is no second call, just one request whose result upgrades what
     // is already on screen.
-    final summary = profileAsync.maybeWhen(
+    final resolved = profileAsync.maybeWhen(
       data: _SuccessSummary.fromProfile,
       orElse: () => draftSummary,
     );
+
+    // Union rather than replacement: the provider not having loaded yet must
+    // never downgrade a "photos added" the profile response already proved.
+    final livePhotos =
+        ref.watch(myPhotosProvider).valueOrNull?.isNotEmpty ?? false;
+    final summary =
+        resolved?.withHasPhotos(resolved.hasPhotos || livePhotos);
 
     if (summary == null) {
       return _Shell(
