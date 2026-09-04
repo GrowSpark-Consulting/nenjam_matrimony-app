@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Prisma } from '../../../../../../libs/database/generated/client';
+import { S3Service } from '@app/storage';
 import { ProfileRepository } from '../repositories/profile.repository';
 import { PhotoRepository } from '../repositories/photo.repository';
 import { ProfileDraftService } from './profile-draft.service';
@@ -150,6 +151,7 @@ export class ProfileService {
     private readonly completionService: ProfileCompletionService,
     private readonly emailDispatch: EmailDispatchService,
     private readonly feedInvalidation: FeedInvalidationService,
+    private readonly s3: S3Service,
   ) {}
 
   // Assembles the full response: the finalized UserProfile plus everything
@@ -188,11 +190,48 @@ export class ProfileService {
       throw new NotFoundException('Profile has not been finalized yet.');
     }
 
-    profile.photos = photos;
+    profile.photos = await this.withPresignedUrls(photos);
     profile.partnerPreference = partnerPreference;
     profile.astrology = astrology;
     profile.completion = completion;
     return profile;
+  }
+
+  /**
+   * Swaps each photo's stored `cdnUrl` for a short-lived presigned GET URL.
+   *
+   * The column holds `S3Service.getObjectUrl()` — a durable record-keeping
+   * reference that is NOT fetchable while the bucket is private, so handing
+   * it to a client produced a 403 on every profile photo. `PhotoService.list`
+   * has always presigned for `GET /profiles/me/photos`; this is the same
+   * step for `GET /profiles/me`, which read the rows straight from
+   * PhotoRepository and so returned the unusable URLs.
+   *
+   * Presigns via S3Service directly rather than calling PhotoService:
+   * PhotoService already depends on this service (for completion recalc), so
+   * injecting it back here would be a circular dependency. ProfileFeedMapper
+   * presigns the same way for the Discover feed.
+   *
+   * Best-effort, exactly like ProfileFeedMapper.presignPhotos: an
+   * unconfigured or failing S3 falls back to the stored rows rather than
+   * throwing, because getOwn() also answers the client's "do I have a
+   * finalized profile?" routing check — that must not turn into a 500.
+   */
+  private async withPresignedUrls(photos: PhotoEntity[]): Promise<PhotoEntity[]> {
+    if (photos.length === 0 || !this.s3.isConfigured()) return photos;
+    try {
+      return await Promise.all(
+        photos.map(async (photo) => {
+          photo.cdnUrl = await this.s3.getPresignedGetUrl(photo.s3Key);
+          return photo;
+        }),
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to presign profile photos: ${(error as Error).message}`,
+      );
+      return photos;
+    }
   }
 
   /**

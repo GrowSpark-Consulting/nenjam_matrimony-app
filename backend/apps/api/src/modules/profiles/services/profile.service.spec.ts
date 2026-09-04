@@ -1,4 +1,5 @@
 import type { FeedInvalidationService } from '../../matches/cache/feed-invalidation.service';
+import { S3Service } from '@app/storage';
 import { ProfileService } from './profile.service';
 import type { ProfileRepository } from '../repositories/profile.repository';
 import type { PhotoRepository } from '../repositories/photo.repository';
@@ -91,6 +92,11 @@ function buildService(draftData: Record<string, unknown>) {
       // Feed invalidation is fire-and-forget bookkeeping after a successful
       // write; these tests assert the write, not the cache signalling.
       { invalidate: jest.fn(), invalidatePair: jest.fn() } as unknown as FeedInvalidationService,
+      // S3 stub reporting "not configured", so getOwn()'s presigning step
+      // is a no-op and photo `cdnUrl`s reach these assertions exactly as the
+      // repository returned them — these tests are about profile assembly,
+      // not URL signing (see photo.service.spec.ts for that).
+      { isConfigured: () => false } as unknown as S3Service,
     );
   return { service, upsertProfile, emailDispatch };
 }
