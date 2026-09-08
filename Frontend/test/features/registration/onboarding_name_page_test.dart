@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nenjam_matrimony/core/router/route_names.dart';
+import 'package:nenjam_matrimony/core/utils/birth_date.dart';
+import 'package:nenjam_matrimony/core/widgets/inputs/birth_date_field.dart';
 import 'package:nenjam_matrimony/features/authentication/presentation/providers/auth_providers.dart';
 import 'package:nenjam_matrimony/features/registration/domain/models/onboarding_forms.dart';
 import 'package:nenjam_matrimony/features/registration/domain/models/profile_draft.dart';
@@ -13,7 +15,7 @@ import 'package:nenjam_matrimony/features/registration/presentation/providers/re
 import 'onboarding_test_support.dart';
 
 /// The second onboarding screen: **first name, last name and a date of birth
-/// picked from the calendar are all required, and answering them opens the
+/// typed as DD / MM / YYYY are all required, and answering them opens the
 /// Religion step.**
 ///
 /// All three are NOT NULL columns on `user_profiles` and all three land on
@@ -21,8 +23,8 @@ import 'onboarding_test_support.dart';
 /// the backend write a profile row at all. They used to be asked on Profile
 /// Basics, beside the state and city pickers; nothing about where they are
 /// stored changed when they moved here, and nothing changed again when the
-/// three Day/Month/Year boxes became one calendar — `BasicDetails.dob` is the
-/// same `DateTime`, serialized by the same `toIso8601String`.
+/// calendar became three typed boxes — `BasicDetails.dob` is the same
+/// `DateTime`, now serialized as the date-only `YYYY-MM-DD` the API takes.
 void main() {
   GoRouter buildRouter() {
     return GoRouter(
@@ -58,6 +60,12 @@ void main() {
     );
   }
 
+  /// The three date boxes, in the order they read across the row.
+  Finder dobBoxes() => find.descendant(
+        of: find.byType(NmBirthDateField),
+        matching: find.byType(TextFormField),
+      );
+
   // ─── Continue gating ────────────────────────────────────────────────
 
   testWidgets('Continue stays inert until all three answers are given', (
@@ -85,12 +93,12 @@ void main() {
 
     // Nor is a date of birth without a last name.
     await tester.enterText(find.byType(TextFormField).at(1), '');
-    await pickDob(tester);
+    await enterDob(tester);
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(find.text('religion-reached'), findsNothing);
 
-    // Both names plus the date the member already picked: now it opens.
+    // Both names plus the date already typed: now it opens.
     await tester.enterText(find.byType(TextFormField).at(1), 'Krishnan');
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continue'));
@@ -108,14 +116,14 @@ void main() {
     await tester.pumpWidget(harness(container, buildRouter()));
     await tester.pumpAndSettle();
 
-    final picked = await fillNameStep(tester);
+    final typed = await fillNameStep(tester);
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     final basic = container.read(registrationProvider).basicDetails;
     expect(basic.firstName, 'Arjun');
     expect(basic.lastName, 'Krishnan');
-    expect(basic.dob, picked);
+    expect(basic.dob, typed);
 
     // Onboarding has no later step that syncs this section for it, so the
     // answers must reach the backend here — otherwise the gate in
@@ -123,14 +131,12 @@ void main() {
     expect(repository.savedSections, contains('basicDetails'));
     expect(repository.savedBasic?.firstName, 'Arjun');
     expect(repository.savedBasic?.lastName, 'Krishnan');
-    expect(repository.savedBasic?.dob, picked);
-    // And in the shape the API has always been sent: an ISO-8601 string on
-    // `basicDetails.dob`. The calendar changed how the date is asked for,
-    // not what is stored or transmitted.
-    expect(
-      repository.savedBasic?.toJson()['dob'],
-      picked.toIso8601String(),
-    );
+    expect(repository.savedBasic?.dob, typed);
+    // And in the shape the API takes: a date-only `YYYY-MM-DD` on
+    // `basicDetails.dob`. A birthdate is a calendar date, and sending it as a
+    // timestamp is what let the stored value drift a day either side of
+    // midnight.
+    expect(repository.savedBasic?.toJson()['dob'], '1998-08-15');
 
     expect(find.text('religion-reached'), findsOneWidget);
   });
@@ -154,16 +160,16 @@ void main() {
     expect(repository.savedBasic?.lastName, 'Krishnan');
   });
 
-  // ─── The date of birth, picked rather than typed ────────────────────
+  // ─── The date of birth, typed ───────────────────────────────────────
   //
-  // The step used to ask for Day, Month and Year in three boxes and reject
-  // what came back. The calendar is the same rule stated as an affordance:
-  // what it cannot offer, the member cannot answer wrongly.
+  // The step used to open a calendar. A member who knows their own date of
+  // birth types it faster than they can scroll to it, and someone creating a
+  // profile for a son or a sister has to scroll further still — so the boxes
+  // take keystrokes and the rule, which the calendar used to enforce by
+  // omission, is stated and enforced instead.
 
-  group('the date of birth calendar', () {
-    testWidgets('opens from the field and writes the date back in words', (
-      tester,
-    ) async {
+  group('the date of birth boxes', () {
+    testWidgets('accept a typed DD / MM / YYYY', (tester) async {
       useTallSurface(tester);
       final container = containerWith(RecordingRegistrationRepository());
       addTearDown(container.dispose);
@@ -171,69 +177,148 @@ void main() {
       await tester.pumpWidget(harness(container, buildRouter()));
       await tester.pumpAndSettle();
 
-      // Nothing typed: the field is a prompt to tap.
-      expect(find.text('Select your date of birth'), findsOneWidget);
+      expect(find.text('Day'), findsOneWidget);
+      expect(find.text('Month'), findsOneWidget);
+      expect(find.text('Year'), findsOneWidget);
+      // The format is said once, above the row, rather than left to be
+      // discovered by getting it wrong.
+      expect(find.text('Enter it as DD / MM / YYYY.'), findsOneWidget);
 
-      await openDobPicker(tester);
-      expect(find.byType(DatePickerDialog), findsOneWidget);
+      await enterDob(tester, DateTime(1998, 8, 15));
 
-      await tester.tap(find.text('15'));
+      await tester.enterText(find.byType(TextFormField).at(0), 'Arjun');
+      await tester.enterText(find.byType(TextFormField).at(1), 'Krishnan');
       await tester.pumpAndSettle();
-      await tester.tap(find.text('OK'));
-      await tester.pumpAndSettle();
-
-      // Read back as a person says it, not as DD/MM/YYYY.
-      final year = defaultDobMonth().year;
-      expect(find.text('15 January $year'), findsOneWidget);
-      // (The hint stays in the tree behind the value, faded out by
-      // InputDecorator, so it is the value that is asserted on.)
-    });
-
-    testWidgets('opens from a tap on the calendar icon as well', (
-      tester,
-    ) async {
-      useTallSurface(tester);
-      final container = containerWith(RecordingRegistrationRepository());
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(harness(container, buildRouter()));
+      await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 
-      // The icon is a hint, not a button — the whole field is the target,
-      // which is what a member's thumb assumes.
-      await tester.tap(find.byIcon(Icons.calendar_today_rounded));
-      await tester.pumpAndSettle();
-      expect(find.byType(DatePickerDialog), findsOneWidget);
-    });
-
-    testWidgets('cannot offer a future date, or one under 18, or one before '
-        '1950', (tester) async {
-      useTallSurface(tester);
-      final container = containerWith(RecordingRegistrationRepository());
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(harness(container, buildRouter()));
-      await tester.pumpAndSettle();
-      await openDobPicker(tester);
-
-      final dialog = tester.widget<DatePickerDialog>(
-        find.byType(DatePickerDialog),
-      );
-      // Bounded by the form's own rule rather than a second copy of it, so
-      // every date the calendar offers is one `OnboardingNameForm` accepts —
-      // and every date it rejects is unreachable.
-      expect(dialog.firstDate, OnboardingNameForm.earliestAllowedDob());
-      expect(dialog.lastDate, OnboardingNameForm.latestAllowedDob());
-      // Which puts today, and everything after it, out of reach.
-      expect(dialog.lastDate.isBefore(DateTime.now()), isTrue);
       expect(
-        const OnboardingNameForm().withDob(dialog.lastDate).dob,
-        dialog.lastDate,
-        reason: 'the newest date the calendar offers must still validate',
+        container.read(registrationProvider).basicDetails.dob,
+        DateTime(1998, 8, 15),
       );
     });
 
-    testWidgets('opens on the date already answered', (tester) async {
+    testWidgets('take digits only, and no more than the box holds', (
+      tester,
+    ) async {
+      useTallSurface(tester);
+      final container = containerWith(RecordingRegistrationRepository());
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(harness(container, buildRouter()));
+      await tester.pumpAndSettle();
+
+      // A pasted "15/08" and a mistyped letter never reach the rule as
+      // something it has to explain.
+      await tester.enterText(dobBoxes().at(0), '1a5/');
+      await tester.enterText(dobBoxes().at(2), '19988');
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<TextFormField>(dobBoxes().at(0)).controller?.text,
+          '15');
+      expect(tester.widget<TextFormField>(dobBoxes().at(2)).controller?.text,
+          '1998');
+    });
+
+    testWidgets('say what is wrong, and Continue stays shut', (tester) async {
+      useTallSurface(tester);
+      final container = containerWith(RecordingRegistrationRepository());
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(harness(container, buildRouter()));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).at(0), 'Arjun');
+      await tester.enterText(find.byType(TextFormField).at(1), 'Krishnan');
+
+      // 31 February is three plausible numbers that name no day.
+      await enterDob(tester, null);
+      await tester.enterText(dobBoxes().at(0), '31');
+      await tester.enterText(dobBoxes().at(1), '02');
+      await tester.pumpAndSettle();
+      expect(find.text('Please enter a valid date of birth.'), findsOneWidget);
+
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(find.text('religion-reached'), findsNothing);
+
+      // Month 13.
+      await tester.enterText(dobBoxes().at(1), '13');
+      await tester.pumpAndSettle();
+      expect(find.text('Please enter a valid month.'), findsOneWidget);
+
+      // Day 00.
+      await tester.enterText(dobBoxes().at(0), '00');
+      await tester.pumpAndSettle();
+      expect(find.text('Please enter a valid date.'), findsOneWidget);
+
+      // Under 21.
+      await enterDob(tester, DateTime(DateTime.now().year - 10, 8, 15));
+      expect(
+        find.text('You must be at least 21 years old to register.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(find.text('religion-reached'), findsNothing);
+
+      // And a real, allowed date clears it.
+      await enterDob(tester, DateTime(1998, 8, 15));
+      expect(find.textContaining('Please enter'), findsNothing);
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(find.text('religion-reached'), findsOneWidget);
+    });
+
+    testWidgets('stay quiet while a box is still being typed', (tester) async {
+      useTallSurface(tester);
+      final container = containerWith(RecordingRegistrationRepository());
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(harness(container, buildRouter()));
+      await tester.pumpAndSettle();
+
+      // "1" on its way to "15", "199" on its way to "1998" — nothing wrong
+      // yet, so nothing said yet.
+      await tester.enterText(dobBoxes().at(0), '1');
+      await tester.enterText(dobBoxes().at(1), '0');
+      await tester.enterText(dobBoxes().at(2), '199');
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Please enter'), findsNothing);
+    });
+
+    testWidgets('hand focus on as each box fills', (tester) async {
+      useTallSurface(tester);
+      final container = containerWith(RecordingRegistrationRepository());
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(harness(container, buildRouter()));
+      await tester.pumpAndSettle();
+
+      bool hasFocus(int box) => tester
+          .widget<EditableText>(
+            find.descendant(
+              of: dobBoxes().at(box),
+              matching: find.byType(EditableText),
+            ),
+          )
+          .focusNode
+          .hasFocus;
+
+      await tester.tap(dobBoxes().at(0));
+      await tester.pumpAndSettle();
+      await tester.enterText(dobBoxes().at(0), '15');
+      await tester.pumpAndSettle();
+
+      // Two digits is a whole day, so the member's next keystroke belongs to
+      // the month without them reaching for it.
+      expect(hasFocus(1), isTrue);
+
+      await tester.enterText(dobBoxes().at(1), '08');
+      await tester.pumpAndSettle();
+      expect(hasFocus(2), isTrue);
+    });
+
+    testWidgets('reopen on the date already answered', (tester) async {
       useTallSurface(tester);
       final container = containerWith(RecordingRegistrationRepository());
       addTearDown(container.dispose);
@@ -250,40 +335,11 @@ void main() {
 
       await tester.pumpWidget(harness(container, buildRouter()));
       await tester.pumpAndSettle();
-      await openDobPicker(tester);
 
-      // Changing a stored date starts from that date, not from a default
-      // twenty-five years ago — the member is correcting an answer.
-      final dialog = tester.widget<DatePickerDialog>(
-        find.byType(DatePickerDialog),
-      );
-      expect(dialog.initialDate, DateTime(1995, 3, 21));
-    });
-
-    testWidgets('dismissing the calendar leaves the answer alone', (
-      tester,
-    ) async {
-      useTallSurface(tester);
-      final container = containerWith(RecordingRegistrationRepository());
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(harness(container, buildRouter()));
-      await tester.pumpAndSettle();
-
-      final picked = await pickDob(tester);
-      await openDobPicker(tester);
-      await tester.tap(find.text('Cancel'));
-      await tester.pumpAndSettle();
-
-      final year = defaultDobMonth().year;
-      expect(find.text('15 January $year'), findsOneWidget);
-
-      await tester.enterText(find.byType(TextFormField).at(0), 'Arjun');
-      await tester.enterText(find.byType(TextFormField).at(1), 'Krishnan');
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Continue'));
-      await tester.pumpAndSettle();
-      expect(container.read(registrationProvider).basicDetails.dob, picked);
+      // Zero-padded, the way the member would have typed it.
+      expect(find.text('21'), findsOneWidget);
+      expect(find.text('03'), findsOneWidget);
+      expect(find.text('1995'), findsOneWidget);
     });
   });
 
@@ -313,7 +369,6 @@ void main() {
 
     expect(find.text('Meera'), findsOneWidget);
     expect(find.text('Rajan'), findsOneWidget);
-    expect(find.text('21 March 1995'), findsOneWidget);
 
     // All restored, so Continue is live on arrival and carries the stored
     // values through unchanged.
@@ -354,102 +409,111 @@ void main() {
     // retry is one tap rather than a re-entry.
     expect(find.text('Arjun'), findsOneWidget);
     expect(find.text('Krishnan'), findsOneWidget);
-    expect(find.text('15 January ${defaultDobMonth().year}'), findsOneWidget);
+    expect(find.text('15'), findsOneWidget);
+    expect(find.text('08'), findsOneWidget);
+    expect(find.text('1998'), findsOneWidget);
   });
 
   // ─── The rule itself ────────────────────────────────────────────────
   //
   // PostAuthDestination reconstructs this same form to decide whether to
   // re-ask the step, so the rule is asserted directly and not only through
-  // the screen. The calendar cannot produce most of these any more; the form
-  // still has to reject them, because a draft restored from the backend can.
+  // the screen. `BirthDateInput` owns it — see birth_date_test.dart for the
+  // full table of dates; these are the cases the form has to carry through.
 
   group('OnboardingNameForm', () {
     test('parses a real date', () {
       const form = OnboardingNameForm(
         firstName: 'Arjun',
         lastName: 'Krishnan',
-        day: '5',
-        month: '2',
-        year: '1998',
+        birthDate: BirthDateInput(day: '05', month: '02', year: '1998'),
       );
       expect(form.dob, DateTime(1998, 2, 5));
       expect(form.isComplete, isTrue);
     });
 
     test('rejects a rolled-over date rather than accepting the rollover', () {
-      const form = OnboardingNameForm(day: '31', month: '02', year: '2003');
+      const form = OnboardingNameForm(
+        birthDate: BirthDateInput(day: '31', month: '02', year: '2003'),
+      );
       expect(form.dob, isNull);
-      expect(form.dateError, OnboardingNameDateError.invalid);
+      expect(form.dateError, BirthDateError.invalidDate);
     });
 
-    test('rejects a year before 1950', () {
-      const form = OnboardingNameForm(day: '05', month: '02', year: '1900');
-      expect(form.dob, isNull);
-      expect(form.dateError, OnboardingNameDateError.tooOld);
+    test('applies no upper bound on age', () {
+      const form = OnboardingNameForm(
+        firstName: 'Arjun',
+        lastName: 'Krishnan',
+        birthDate: BirthDateInput(day: '05', month: '02', year: '1900'),
+      );
+      expect(form.dob, DateTime(1900, 2, 5));
+      expect(form.dateError, isNull);
+      expect(form.isComplete, isTrue);
     });
 
     test('rejects a date in the future', () {
       final form = OnboardingNameForm(
-        day: '05',
-        month: '02',
-        year: '${DateTime.now().year + 1}',
+        birthDate: BirthDateInput(
+          day: '05',
+          month: '02',
+          year: '${DateTime.now().year + 1}',
+        ),
       );
       expect(form.dob, isNull);
-      expect(form.dateError, OnboardingNameDateError.tooYoung);
+      expect(form.dateError, BirthDateError.future);
     });
 
-    test('rejects anyone under 18', () {
+    test('rejects anyone under 21', () {
       final form = OnboardingNameForm(
-        day: '05',
-        month: '02',
-        year: '${DateTime.now().year - 10}',
+        birthDate: BirthDateInput(
+          day: '05',
+          month: '02',
+          year: '${DateTime.now().year - 10}',
+        ),
       );
       expect(form.dob, isNull);
-      expect(form.dateError, OnboardingNameDateError.tooYoung);
+      expect(form.dateError, BirthDateError.tooYoung);
     });
 
-    test('withDob round-trips the date the calendar returned', () {
-      final form = const OnboardingNameForm(
-        firstName: 'Arjun',
-        lastName: 'Krishnan',
-      ).withDob(DateTime(1998, 2, 5));
-      // Zero-padded, because that is how `fromDraft` writes a stored date —
-      // the two have to agree or a resumed step would look edited.
-      expect(form.day, '05');
-      expect(form.month, '02');
-      expect(form.year, '1998');
-      expect(form.dob, DateTime(1998, 2, 5));
-      expect(form.isComplete, isTrue);
-    });
-
-    test('the calendar bounds are the form bounds', () {
-      final latest = OnboardingNameForm.latestAllowedDob();
-      expect(const OnboardingNameForm().withDob(latest).dob, latest);
-      // A day past the bound is exactly what the calendar disables.
-      expect(
-        const OnboardingNameForm()
-            .withDob(latest.add(const Duration(days: 1)))
-            .dob,
-        isNull,
-      );
-      expect(
-        OnboardingNameForm.earliestAllowedDob().year,
-        OnboardingNameForm.earliestBirthYear,
-      );
-    });
-
-    test('fromDraft round-trips a stored date into the three parts', () {
+    test('fromDraft round-trips a stored date into the three boxes', () {
       final form = OnboardingNameForm.fromDraft(
         firstName: 'Meera',
         lastName: 'Rajan',
         dob: DateTime(1995, 3, 21),
       );
-      expect(form.day, '21');
-      expect(form.month, '03');
-      expect(form.year, '1995');
+      // Zero-padded, because that is how the member typed it — the two have
+      // to agree or a resumed step would look edited.
+      expect(form.birthDate.day, '21');
+      expect(form.birthDate.month, '03');
+      expect(form.birthDate.year, '1995');
       expect(form.dob, DateTime(1995, 3, 21));
       expect(form.isComplete, isTrue);
+    });
+
+    test('is answered, but not complete, for a member under the new floor',
+        () {
+      // What routing asks of an existing member who registered when the floor
+      // was 18. `isComplete` still refuses — the screen cannot let them save a
+      // date the server would reject — but `isAnswered` is what
+      // PostAuthDestination gates on, so they are not sent back to a step no
+      // answer of theirs can satisfy.
+      final form = OnboardingNameForm.fromDraft(
+        firstName: 'Meera',
+        lastName: 'Rajan',
+        dob: DateTime(DateTime.now().year - 19, 3, 21),
+      );
+      expect(form.isAnswered, isTrue);
+      expect(form.isComplete, isFalse);
+      expect(form.dateError, BirthDateError.tooYoung);
+    });
+
+    test('is neither answered nor complete without a date', () {
+      final form = OnboardingNameForm.fromDraft(
+        firstName: 'Meera',
+        lastName: 'Rajan',
+      );
+      expect(form.isAnswered, isFalse);
+      expect(form.isComplete, isFalse);
     });
 
     test('fromDraft on an unanswered draft is incomplete, not crashing', () {

@@ -2114,11 +2114,77 @@ abstract class AppLocalizations {
   /// **'Date of Birth'**
   String get registrationDobLabel;
 
-  /// No description provided for @registrationDobHint.
+  /// No description provided for @birthDateDayLabel.
   ///
   /// In en, this message translates to:
-  /// **'DD / MM / YYYY'**
-  String get registrationDobHint;
+  /// **'Day'**
+  String get birthDateDayLabel;
+
+  /// No description provided for @birthDateMonthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get birthDateMonthLabel;
+
+  /// No description provided for @birthDateYearLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get birthDateYearLabel;
+
+  /// No description provided for @birthDateDayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'DD'**
+  String get birthDateDayHint;
+
+  /// No description provided for @birthDateMonthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'MM'**
+  String get birthDateMonthHint;
+
+  /// No description provided for @birthDateYearHint.
+  ///
+  /// In en, this message translates to:
+  /// **'YYYY'**
+  String get birthDateYearHint;
+
+  /// No description provided for @birthDateErrorDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid date.'**
+  String get birthDateErrorDay;
+
+  /// No description provided for @birthDateErrorMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid month.'**
+  String get birthDateErrorMonth;
+
+  /// No description provided for @birthDateErrorYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid year.'**
+  String get birthDateErrorYear;
+
+  /// No description provided for @birthDateErrorInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid date of birth.'**
+  String get birthDateErrorInvalid;
+
+  /// No description provided for @birthDateErrorFuture.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth cannot be in the future.'**
+  String get birthDateErrorFuture;
+
+  /// No description provided for @birthDateErrorTooYoung.
+  ///
+  /// In en, this message translates to:
+  /// **'You must be at least {age} years old to register.'**
+  String birthDateErrorTooYoung(int age);
 
   /// No description provided for @registrationDobError.
   ///
@@ -4496,47 +4562,11 @@ abstract class AppLocalizations {
   /// **'Date of birth'**
   String get onboardingNameDobSection;
 
-  /// No description provided for @onboardingNameDobHint.
+  /// No description provided for @onboardingNameDobHelp.
   ///
   /// In en, this message translates to:
-  /// **'Select your date of birth'**
-  String get onboardingNameDobHint;
-
-  /// No description provided for @onboardingNameDobDay.
-  ///
-  /// In en, this message translates to:
-  /// **'Day'**
-  String get onboardingNameDobDay;
-
-  /// No description provided for @onboardingNameDobMonth.
-  ///
-  /// In en, this message translates to:
-  /// **'Month'**
-  String get onboardingNameDobMonth;
-
-  /// No description provided for @onboardingNameDobYear.
-  ///
-  /// In en, this message translates to:
-  /// **'Year'**
-  String get onboardingNameDobYear;
-
-  /// No description provided for @onboardingNameDobInvalid.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter a real date of birth.'**
-  String get onboardingNameDobInvalid;
-
-  /// No description provided for @onboardingNameDobTooYoung.
-  ///
-  /// In en, this message translates to:
-  /// **'You must be at least 18 to create a profile.'**
-  String get onboardingNameDobTooYoung;
-
-  /// No description provided for @onboardingNameDobTooOld.
-  ///
-  /// In en, this message translates to:
-  /// **'Please check the year of birth.'**
-  String get onboardingNameDobTooOld;
+  /// **'Enter it as DD / MM / YYYY.'**
+  String get onboardingNameDobHelp;
 
   /// No description provided for @profileBasicsSubCommunityLabel.
   ///

@@ -17,6 +17,8 @@
 /// sections that own them.
 library;
 
+import '../../../../core/utils/birth_date.dart';
+
 /// Step 1 — "Profile For" and "Gender".
 ///
 /// Gender moved here from the State & City step. It is one question, asked
@@ -70,13 +72,13 @@ enum ProfileForField { profileCreatedFor, gender }
 /// values *land* changed: all three are still `BasicDetails` fields written
 /// by the same `PATCH /profiles/draft/basic-details`.
 ///
-/// The date is held as three strings rather than a [DateTime] because that is
-/// still the shape a half-answered date has: a draft restored with no date at
-/// all is three empty strings, and [dob] is the parsed value — null whenever
-/// the parts do not name a real, allowed date. The screen no longer asks the
-/// member to *type* them (it opens a calendar and calls [withDob]), but the
-/// validation below is unchanged and is still what `PostAuthDestination`
-/// reconstructs to decide whether the step has been answered.
+/// The date is held as a [BirthDateInput] — the three boxes as typed —
+/// because that is still the shape a half-answered date has: a draft restored
+/// with no date at all is three empty strings, and [BirthDateInput.date] is
+/// the parsed value, null whenever the parts do not name a real, allowed
+/// date. The rule itself lives in `core/utils/birth_date.dart` and is shared
+/// with the Edit Profile wizard and with the server, so this class states no
+/// date rule of its own; it only says that the step needs one.
 class OnboardingNameForm {
   /// Draft: `BasicDetails.firstName`. Required — NOT NULL on `user_profiles`.
   final String firstName;
@@ -85,16 +87,12 @@ class OnboardingNameForm {
   final String lastName;
 
   /// The three date-of-birth boxes, exactly as typed.
-  final String day;
-  final String month;
-  final String year;
+  final BirthDateInput birthDate;
 
   const OnboardingNameForm({
     this.firstName = '',
     this.lastName = '',
-    this.day = '',
-    this.month = '',
-    this.year = '',
+    this.birthDate = const BirthDateInput(),
   });
 
   /// Rebuilds the form from a stored date — reopening the step shows the
@@ -107,129 +105,29 @@ class OnboardingNameForm {
     return OnboardingNameForm(
       firstName: firstName,
       lastName: lastName,
-      day: dob == null ? '' : dob.day.toString().padLeft(2, '0'),
-      month: dob == null ? '' : dob.month.toString().padLeft(2, '0'),
-      year: dob == null ? '' : dob.year.toString(),
-    );
-  }
-
-  /// The same form with [date] as its date of birth — what the calendar
-  /// picker returns, written back into the three parts the form has always
-  /// held so that [dob] and [isComplete] are computed by exactly the rule
-  /// below and not by a second, picker-only path.
-  OnboardingNameForm withDob(DateTime date) {
-    return copyWith(
-      day: date.day.toString().padLeft(2, '0'),
-      month: date.month.toString().padLeft(2, '0'),
-      year: date.year.toString(),
+      birthDate: BirthDateInput.fromDate(dob),
     );
   }
 
   OnboardingNameForm copyWith({
     String? firstName,
     String? lastName,
-    String? day,
-    String? month,
-    String? year,
+    BirthDateInput? birthDate,
   }) {
     return OnboardingNameForm(
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
-      day: day ?? this.day,
-      month: month ?? this.month,
-      year: year ?? this.year,
+      birthDate: birthDate ?? this.birthDate,
     );
   }
 
-  /// Youngest date of birth a matrimony profile may carry — the same floor
-  /// the wizard's calendar enforces with its `lastDate`.
-  static const int minimumAgeYears = 18;
-
-  /// Oldest. Matches the wizard picker's `firstDate` of 1950 rather than
-  /// inventing a second bound.
-  static const int earliestBirthYear = 1950;
-
-  /// The most recent date of birth this form accepts: [minimumAgeYears] ago
-  /// to the day. Exposed because the step's calendar has to be bounded by the
-  /// same rule that validates the result — a picker that offered a date [dob]
-  /// then rejected would leave the member with no way to finish the step.
-  static DateTime latestAllowedDob([DateTime? asOf]) {
-    final now = asOf ?? DateTime.now();
-    return DateTime(now.year - minimumAgeYears, now.month, now.day);
-  }
-
-  /// The earliest date this form accepts, as a date rather than a year — the
-  /// calendar's `firstDate`.
-  static DateTime earliestAllowedDob() => DateTime(earliestBirthYear);
-
-  /// The date the three boxes name, or null when they do not name one.
-  ///
-  /// Rejects, in this order: a part that is not a number, a day/month outside
-  /// its range, a day that does not exist in that month (31 February,
-  /// 29 February of a common year — caught by round-tripping through
-  /// [DateTime], which silently rolls those over), a date in the future, and a
-  /// date outside the allowed age band. Every one of those is a date a member
-  /// can type, and none of them may reach `user_profiles.dob`.
-  DateTime? get dob {
-    final d = int.tryParse(day.trim());
-    final m = int.tryParse(month.trim());
-    final y = int.tryParse(year.trim());
-    if (d == null || m == null || y == null) return null;
-    if (m < 1 || m > 12 || d < 1 || d > 31) return null;
-    if (y < earliestBirthYear) return null;
-
-    final candidate = DateTime(y, m, d);
-    // DateTime(2003, 2, 31) is 3 March — a rollover, not the date typed.
-    if (candidate.year != y || candidate.month != m || candidate.day != d) {
-      return null;
-    }
-
-    final now = DateTime.now();
-    // Future dates, today included: nobody is born into the profile they are
-    // filling in.
-    if (!candidate.isBefore(DateTime(now.year, now.month, now.day))) {
-      return null;
-    }
-    if (candidate.isAfter(latestAllowedDob(now))) return null;
-    return candidate;
-  }
-
-  /// Whether the member has typed anything at all into the date boxes. Lets
-  /// the screen stay quiet on a blank form and explain itself only once
-  /// there is something to explain.
-  bool get isDateTouched =>
-      day.trim().isNotEmpty || month.trim().isNotEmpty || year.trim().isNotEmpty;
+  /// The date the three boxes name, or null when they do not name one the
+  /// rule allows — see [BirthDateInput.date] for which dates those are.
+  DateTime? get dob => birthDate.date;
 
   /// Why [dob] is null, for the screen's inline message. Null when the date
   /// is either fine or not yet worth complaining about.
-  OnboardingNameDateError? get dateError {
-    if (dob != null) return null;
-    if (!isDateTouched) return null;
-    if (day.trim().isEmpty || month.trim().isEmpty || year.trim().length < 4) {
-      return null;
-    }
-
-    final d = int.tryParse(day.trim());
-    final m = int.tryParse(month.trim());
-    final y = int.tryParse(year.trim());
-    if (d == null || m == null || y == null) {
-      return OnboardingNameDateError.invalid;
-    }
-    if (y < earliestBirthYear) return OnboardingNameDateError.tooOld;
-
-    // A real calendar date that is simply too recent — the age floor, or a
-    // date that has not happened yet. Told apart from "31 February" so the
-    // message can say which.
-    final valid = m >= 1 &&
-        m <= 12 &&
-        d >= 1 &&
-        d <= 31 &&
-        DateTime(y, m, d).month == m &&
-        DateTime(y, m, d).day == d;
-    return valid
-        ? OnboardingNameDateError.tooYoung
-        : OnboardingNameDateError.invalid;
-  }
+  BirthDateError? get dateError => birthDate.liveError;
 
   List<OnboardingNameField> get missingFields => [
         if (firstName.trim().isEmpty) OnboardingNameField.firstName,
@@ -237,24 +135,26 @@ class OnboardingNameForm {
         if (dob == null) OnboardingNameField.dob,
       ];
 
+  /// Whether the step may be submitted — the screen's Continue gate.
   bool get isComplete => missingFields.isEmpty;
+
+  /// Whether the step has been *answered* — what `PostAuthDestination` asks
+  /// before deciding to re-ask it.
+  ///
+  /// Differs from [isComplete] in exactly one way: it does not apply the age
+  /// floor. The floor governs what a member may enter now; a member who
+  /// registered when it was 18 has a real date of birth and no way to change
+  /// it, so routing on [isComplete] would send them back to this step on
+  /// every launch, to a screen no honest answer of theirs can satisfy. See
+  /// [BirthDateInput.calendarDate].
+  bool get isAnswered =>
+      firstName.trim().isNotEmpty &&
+      lastName.trim().isNotEmpty &&
+      birthDate.calendarDate != null;
 }
 
 /// The required fields of [OnboardingNameForm], for validation messages.
 enum OnboardingNameField { firstName, lastName, dob }
-
-/// Why a typed date of birth was rejected — see [OnboardingNameForm.dateError].
-enum OnboardingNameDateError {
-  /// Not a real calendar date (31 February, letters, month 13).
-  invalid,
-
-  /// A real date, but under [OnboardingNameForm.minimumAgeYears] or still to
-  /// come.
-  tooYoung,
-
-  /// Before [OnboardingNameForm.earliestBirthYear].
-  tooOld,
-}
 
 /// Step 3 — "Your religion": religion, community, and the country the member
 /// lives in.

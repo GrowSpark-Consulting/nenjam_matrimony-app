@@ -245,6 +245,42 @@ describe('isMatchableFromDraft', () => {
       expect(isMatchableFromDraft({})).toBe(false);
     });
 
+    // `dob` is the one field checked by parsing rather than by presence: the
+    // column is NOT NULL and the write has to turn the stored string into a
+    // Date, so a draft holding a non-date is a row that cannot be written.
+    it.each([
+      ['a day that month does not have', '1997-02-31'],
+      ['29 February of a common year', '2003-02-29'],
+      ['a date in the wrong format', '12/04/1998'],
+      ['something that is not a date at all', 'sometime in 1998'],
+    ])('a date of birth that is %s', (_label, dob) => {
+      expect(
+        isMatchableFromDraft({
+          ...onboardingDraft,
+          basicDetails: { ...onboardingDraft.basicDetails, dob },
+        }),
+      ).toBe(false);
+    });
+
+    it('but still writes a member who registered under the old floor of 18', () => {
+      // The 21 rule is enforced on the way in, at BasicDetailsDto. Applying
+      // it here as well would block the profile write for members who signed
+      // up when the floor was 18 — stranding a real profile over a date they
+      // cannot change.
+      const justUnder21 = new Date();
+      justUnder21.setUTCFullYear(justUnder21.getUTCFullYear() - 19);
+
+      expect(
+        isMatchableFromDraft({
+          ...onboardingDraft,
+          basicDetails: {
+            ...onboardingDraft.basicDetails,
+            dob: justUnder21.toISOString().slice(0, 10),
+          },
+        }),
+      ).toBe(true);
+    });
+
     it('the literal "Other" placeholder, which is not an answer', () => {
       const draft = {
         ...onboardingDraft,

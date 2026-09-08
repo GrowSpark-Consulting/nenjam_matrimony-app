@@ -549,6 +549,66 @@ describe('ProfileService', () => {
       expect(result.profileCompletePct).toBe(result.completion.percentage);
     });
 
+    it('stores the date of birth as the calendar date it names', async () => {
+      const upsertProfile = jest.fn().mockResolvedValue(buildProfile());
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(buildValidDraft()),
+        upsertProfile,
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+      });
+
+      await service.finalize('user-1');
+
+      // UTC midnight of 1 January 1997 — not local midnight, which is what
+      // `new Date('1997-01-01T00:00:00.000')` used to produce and which an
+      // API server east of UTC stored as 31 December 1996.
+      expect(upsertProfile).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({
+          dob: new Date('1997-01-01T00:00:00.000Z'),
+        }),
+      );
+    });
+
+    it('reads a legacy zone-less draft timestamp for the day it names', async () => {
+      // What builds of the app before the date-only wire format wrote into
+      // `draft_data`, and what is therefore still sitting in stored drafts.
+      const draft = buildValidDraft();
+      (draft.data.basicDetails as Record<string, unknown>).dob =
+        '1997-01-01T00:00:00.000';
+      const upsertProfile = jest.fn().mockResolvedValue(buildProfile());
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(draft),
+        upsertProfile,
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+      });
+
+      await service.finalize('user-1');
+
+      expect(upsertProfile).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({
+          dob: new Date('1997-01-01T00:00:00.000Z'),
+        }),
+      );
+    });
+
+    it('refuses a draft whose stored date of birth names no calendar date', async () => {
+      // Unreachable through the DTO, which rejects it on the way in — but a
+      // draft written before that check existed can still hold one, and a
+      // clear 400 beats Prisma rejecting an `Invalid Date` later.
+      const draft = buildValidDraft();
+      (draft.data.basicDetails as Record<string, unknown>).dob = '1997-02-31';
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(draft),
+        upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+      });
+
+      await expect(service.finalize('user-1')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
     it('does not upsert astrology when no horoscope fields were provided', async () => {
       const upsertAstrologyProfile = jest.fn();
       const service = buildService({

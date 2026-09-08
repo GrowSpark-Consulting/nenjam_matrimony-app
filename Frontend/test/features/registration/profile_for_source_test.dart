@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nenjam_matrimony/core/router/route_names.dart';
 import 'package:nenjam_matrimony/features/authentication/presentation/controllers/signup_controller.dart';
+import 'package:nenjam_matrimony/core/utils/birth_date.dart';
 import 'package:nenjam_matrimony/features/registration/domain/models/onboarding_forms.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/create_profile_for_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/providers/registration_provider.dart';
@@ -383,9 +384,7 @@ void main() {
       const OnboardingNameForm(
         firstName: 'Arjun',
         lastName: 'Krishnan',
-        day: '05',
-        month: '02',
-        year: '1998',
+        birthDate: BirthDateInput(day: '05', month: '02', year: '1998'),
       ),
     );
 

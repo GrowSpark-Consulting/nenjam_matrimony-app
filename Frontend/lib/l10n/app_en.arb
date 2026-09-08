@@ -464,7 +464,25 @@
   "registrationLastNameHint": "Enter last name",
   "registrationGenderLabel": "Gender",
   "registrationDobLabel": "Date of Birth",
-  "registrationDobHint": "DD / MM / YYYY",
+  "birthDateDayLabel": "Day",
+  "birthDateMonthLabel": "Month",
+  "birthDateYearLabel": "Year",
+  "birthDateDayHint": "DD",
+  "birthDateMonthHint": "MM",
+  "birthDateYearHint": "YYYY",
+  "birthDateErrorDay": "Please enter a valid date.",
+  "birthDateErrorMonth": "Please enter a valid month.",
+  "birthDateErrorYear": "Please enter a valid year.",
+  "birthDateErrorInvalid": "Please enter a valid date of birth.",
+  "birthDateErrorFuture": "Date of birth cannot be in the future.",
+  "birthDateErrorTooYoung": "You must be at least {age} years old to register.",
+  "@birthDateErrorTooYoung": {
+    "placeholders": {
+      "age": {
+        "type": "int"
+      }
+    }
+  },
   "registrationDobError": "Please select date of birth",
   "registrationAgeYears": "Age: {age} years",
   "@registrationAgeYears": {
@@ -868,13 +886,7 @@
   "profileForNotice": "Nenjam is a space for people genuinely looking to marry. Profiles created with false details, or on behalf of a marriage bureau or any business, are removed from the platform.",
   "onboardingNameHeadline": "Your name",
   "onboardingNameDobSection": "Date of birth",
-  "onboardingNameDobHint": "Select your date of birth",
-  "onboardingNameDobDay": "Day",
-  "onboardingNameDobMonth": "Month",
-  "onboardingNameDobYear": "Year",
-  "onboardingNameDobInvalid": "Enter a real date of birth.",
-  "onboardingNameDobTooYoung": "You must be at least 18 to create a profile.",
-  "onboardingNameDobTooOld": "Please check the year of birth.",
+  "onboardingNameDobHelp": "Enter it as DD / MM / YYYY.",
   "profileBasicsSubCommunityLabel": "Sub-community",
   "profileBasicsSubCommunityHint": "Enter sub-community (optional)",
   "profileBasicsHeadline": "Now let's build your Profile",

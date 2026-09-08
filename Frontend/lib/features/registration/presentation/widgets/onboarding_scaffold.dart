@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/network/api_exception.dart';
+
 import '../../../../core/animations/app_animations.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -158,9 +160,22 @@ class _OnboardingStepScaffoldState extends State<OnboardingStepScaffold> {
   Future<void> _continue() async {
     if (!widget.isComplete || _saving) return;
     setState(() => _saving = true);
+    // The server's own words when it has any, so a step the client thought
+    // was valid but the API refused says *why*. Every catch used to collapse
+    // to "please try again", which is the right thing for a dropped
+    // connection and useless for a rejected answer: a member whose date of
+    // birth the API declined — an older build, a value typed either side of
+    // the UTC day boundary — was told nothing they could act on and had no
+    // way out of the step.
     var failed = false;
+    String? reason;
     try {
       await widget.onSave();
+    } on ApiException catch (e) {
+      failed = true;
+      // 4xx only. A 5xx or a transport failure carries a message written for
+      // an operator, not a member, so those keep the generic line.
+      reason = (e.statusCode ?? 500) < 500 ? e.message : null;
     } catch (_) {
       failed = true;
     }
@@ -170,7 +185,9 @@ class _OnboardingStepScaffoldState extends State<OnboardingStepScaffold> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).commonTryAgain)),
+          SnackBar(
+            content: Text(reason ?? AppLocalizations.of(context).commonTryAgain),
+          ),
         );
       return;
     }

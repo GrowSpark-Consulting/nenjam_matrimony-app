@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/profile_options.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/utils/birth_date.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
+import '../../../../core/widgets/inputs/birth_date_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
 import 'registration_helper_tip.dart';
@@ -33,7 +35,7 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
   late final TextEditingController _lastNameCtrl;
   late String _gender;
   late String _maritalStatus;
-  DateTime? _dob;
+  late BirthDateInput _dob;
 
   @override
   void initState() {
@@ -42,7 +44,7 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
     _lastNameCtrl = TextEditingController(text: widget.details.lastName);
     _gender = widget.details.gender;
     _maritalStatus = widget.details.maritalStatus;
-    _dob = widget.details.dob;
+    _dob = BirthDateInput.fromDate(widget.details.dob);
   }
 
   @override
@@ -58,34 +60,11 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
         firstName: _firstNameCtrl.text.trim(),
         lastName: _lastNameCtrl.text.trim(),
         gender: _gender,
-        dob: _dob,
+        dob: _dob.date,
         maritalStatus: _maritalStatus,
         profileCreatedFor: widget.details.profileCreatedFor,
       ),
     );
-  }
-
-  Future<void> _pickDob() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _dob ?? DateTime(now.year - 25),
-      firstDate: DateTime(1950),
-      lastDate: DateTime(now.year - 18),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: Theme.of(context).colorScheme.copyWith(
-            primary: AppColors.primary,
-            onPrimary: Colors.white,
-          ),
-        ),
-        child: child!,
-      ),
-    );
-    if (picked != null) {
-      setState(() => _dob = picked);
-      _emit();
-    }
   }
 
   /// Every registration field is optional — this only enforces name format
@@ -96,15 +75,11 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
     return Validators.name(value);
   }
 
+  /// The age the entered date works out to, or null while it is not yet a
+  /// date the rule accepts. Uses the app's one age calculation.
   int? get _age {
-    if (_dob == null) return null;
-    final now = DateTime.now();
-    int years = now.year - _dob!.year;
-    if (now.month < _dob!.month ||
-        (now.month == _dob!.month && now.day < _dob!.day)) {
-      years--;
-    }
-    return years;
+    final date = _dob.date;
+    return date == null ? null : ageInYears(date);
   }
 
   /// Localized display label for a stored gender value (value stays English).
@@ -187,21 +162,19 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
             }).toList(),
           ),
           const SizedBox(height: 20),
-          GestureDetector(
-            onTap: _pickDob,
-            child: AbsorbPointer(
-              child: NmTextField(
-                label: l10n.registrationDobLabel,
-                hint: l10n.registrationDobHint,
-                readOnly: true,
-                controller: TextEditingController(
-                  text: _dob != null
-                      ? '${_dob!.day.toString().padLeft(2, '0')} / ${_dob!.month.toString().padLeft(2, '0')} / ${_dob!.year}'
-                      : '',
-                ),
-                suffix: const Icon(Icons.calendar_today_rounded, size: 20),
-              ),
-            ),
+          Text(l10n.registrationDobLabel, style: AppTypography.labelLarge),
+          const SizedBox(height: 8),
+          // The same typed DD / MM / YYYY field onboarding uses, so a member
+          // editing their profile meets the input they filled in at signup
+          // and the same rule decides what it accepts. The calendar this
+          // replaced enforced a floor of its own (18) that had drifted from
+          // the one the server applies.
+          NmBirthDateField(
+            value: _dob,
+            onChanged: (v) {
+              setState(() => _dob = v);
+              _emit();
+            },
           ),
           if (_age != null) ...[
             const SizedBox(height: 8),

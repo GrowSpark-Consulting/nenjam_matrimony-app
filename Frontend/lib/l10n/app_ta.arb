@@ -444,7 +444,25 @@
   "registrationLastNameHint": "கடைசி பெயரை உள்ளிடவும்",
   "registrationGenderLabel": "பாலினம்",
   "registrationDobLabel": "பிறந்த தேதி",
-  "registrationDobHint": "நாள் / மாதம் / ஆண்டு",
+  "birthDateDayLabel": "நாள்",
+  "birthDateMonthLabel": "மாதம்",
+  "birthDateYearLabel": "ஆண்டு",
+  "birthDateDayHint": "DD",
+  "birthDateMonthHint": "MM",
+  "birthDateYearHint": "YYYY",
+  "birthDateErrorDay": "சரியான நாளை உள்ளிடவும்.",
+  "birthDateErrorMonth": "சரியான மாதத்தை உள்ளிடவும்.",
+  "birthDateErrorYear": "சரியான ஆண்டை உள்ளிடவும்.",
+  "birthDateErrorInvalid": "சரியான பிறந்த தேதியை உள்ளிடவும்.",
+  "birthDateErrorFuture": "பிறந்த தேதி எதிர்காலத்தில் இருக்க முடியாது.",
+  "birthDateErrorTooYoung": "பதிவு செய்ய குறைந்தது {age} வயதாக இருக்க வேண்டும்.",
+  "@birthDateErrorTooYoung": {
+    "placeholders": {
+      "age": {
+        "type": "int"
+      }
+    }
+  },
   "registrationDobError": "பிறந்த தேதியைத் தேர்ந்தெடுக்கவும்",
   "registrationAgeYears": "வயது: {age} ஆண்டுகள்",
   "@registrationAgeYears": {
@@ -848,13 +866,7 @@
   "profileForNotice": "உண்மையாகத் திருமணம் தேடுபவர்களுக்கான இடம் நெஞ்சம். தவறான தகவல்களுடன் உருவாக்கப்படும், அல்லது திருமணத் தரகு நிறுவனம் சார்பாக உருவாக்கப்படும் சுயவிவரங்கள் நீக்கப்படும்.",
   "onboardingNameHeadline": "à®à®à¯à®à®³à¯ à®ªà¯à®¯à®°à¯",
   "onboardingNameDobSection": "à®ªà®¿à®±à®¨à¯à®¤ à®¤à¯à®¤à®¿",
-  "onboardingNameDobHint": "உங்கள் பிறந்த தேதியைத் தேர்ந்தெடுக்கவும்",
-  "onboardingNameDobDay": "à®¨à®¾à®³à¯",
-  "onboardingNameDobMonth": "à®®à®¾à®¤à®®à¯",
-  "onboardingNameDobYear": "à®à®£à¯à®à¯",
-  "onboardingNameDobInvalid": "à®à®°à®¿à®¯à®¾à®© à®ªà®¿à®±à®¨à¯à®¤ à®¤à¯à®¤à®¿à®¯à¯ à®à®³à¯à®³à®¿à®à®µà¯à®®à¯.",
-  "onboardingNameDobTooYoung": "à®à¯à®¯à®µà®¿à®µà®°à®®à¯ à®à®°à¯à®µà®¾à®à¯à® à®à¯à®±à¯à®¨à¯à®¤à®¤à¯ 18 à®µà®¯à®¤à®¾à® à®à®°à¯à®à¯à® à®µà¯à®£à¯à®à¯à®®à¯.",
-  "onboardingNameDobTooOld": "à®ªà®¿à®±à®¨à¯à®¤ à®à®£à¯à®à¯à®à¯ à®à®°à®¿à®ªà®¾à®°à¯à®à¯à®à®µà¯à®®à¯.",
+  "onboardingNameDobHelp": "நாள் / மாதம் / ஆண்டு என உள்ளிடவும்.",
   "profileBasicsSubCommunityLabel": "à®à®à¯-à®à®®à¯à®¤à®¾à®¯à®®à¯",
   "profileBasicsSubCommunityHint": "à®à®à¯-à®à®®à¯à®¤à®¾à®¯à®¤à¯à®¤à¯ à®à®³à¯à®³à®¿à®à®µà¯à®®à¯ (à®µà®¿à®°à¯à®ªà¯à®ªà®®à¯)",
   "profileBasicsHeadline": "இப்போது உங்கள் சுயவிவரத்தை உருவாக்குவோம்",
