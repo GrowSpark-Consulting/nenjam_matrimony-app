@@ -1080,7 +1080,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registrationDobLabel => 'Date of Birth';
 
   @override
-  String get registrationDobHint => 'DD / MM / YYYY';
+  String get birthDateDayLabel => 'Day';
+
+  @override
+  String get birthDateMonthLabel => 'Month';
+
+  @override
+  String get birthDateYearLabel => 'Year';
+
+  @override
+  String get birthDateDayHint => 'DD';
+
+  @override
+  String get birthDateMonthHint => 'MM';
+
+  @override
+  String get birthDateYearHint => 'YYYY';
+
+  @override
+  String get birthDateErrorDay => 'Please enter a valid date.';
+
+  @override
+  String get birthDateErrorMonth => 'Please enter a valid month.';
+
+  @override
+  String get birthDateErrorYear => 'Please enter a valid year.';
+
+  @override
+  String get birthDateErrorInvalid => 'Please enter a valid date of birth.';
+
+  @override
+  String get birthDateErrorFuture => 'Date of birth cannot be in the future.';
+
+  @override
+  String birthDateErrorTooYoung(int age) {
+    return 'You must be at least $age years old to register.';
+  }
 
   @override
   String get registrationDobError => 'Please select date of birth';
@@ -2298,26 +2333,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingNameDobSection => 'Date of birth';
 
   @override
-  String get onboardingNameDobHint => 'Select your date of birth';
-
-  @override
-  String get onboardingNameDobDay => 'Day';
-
-  @override
-  String get onboardingNameDobMonth => 'Month';
-
-  @override
-  String get onboardingNameDobYear => 'Year';
-
-  @override
-  String get onboardingNameDobInvalid => 'Enter a real date of birth.';
-
-  @override
-  String get onboardingNameDobTooYoung =>
-      'You must be at least 18 to create a profile.';
-
-  @override
-  String get onboardingNameDobTooOld => 'Please check the year of birth.';
+  String get onboardingNameDobHelp => 'Enter it as DD / MM / YYYY.';
 
   @override
   String get profileBasicsSubCommunityLabel => 'Sub-community';

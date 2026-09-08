@@ -55,7 +55,7 @@ export '../widgets/feedback/shimmer_widget.dart';
 export '../widgets/inputs/app_dropdown.dart';
 export '../widgets/inputs/app_text_field.dart';
 export '../widgets/inputs/bio_textarea.dart';
-export '../widgets/inputs/date_picker_field.dart';
+export '../widgets/inputs/birth_date_field.dart';
 export '../widgets/inputs/matrimony_selectors.dart';
 export '../widgets/inputs/otp_input.dart';
 export '../widgets/inputs/password_field.dart';

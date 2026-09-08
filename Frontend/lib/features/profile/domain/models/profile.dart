@@ -6,6 +6,8 @@
 /// registration wizard's field names (see profile_draft.dart for that side).
 library;
 
+import '../../../../core/utils/birth_date.dart';
+
 List<String> _stringList(dynamic value) =>
     value is List ? value.map((e) => e.toString()).toList() : const [];
 
@@ -209,14 +211,9 @@ class Profile {
 
   String get fullName => '$firstName $lastName'.trim();
 
-  int get age {
-    final now = DateTime.now();
-    int years = now.year - dob.year;
-    if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) {
-      years--;
-    }
-    return years;
-  }
+  /// Whole years old today, by complete date — the app's one age
+  /// calculation rather than a fourth copy of the same arithmetic.
+  int get age => ageInYears(dob);
 
   ProfilePhotoInfo? get primaryPhoto {
     if (photos.isEmpty) return null;
@@ -229,7 +226,10 @@ class Profile {
   factory Profile.fromJson(Map<String, dynamic> json) => Profile(
         firstName: json['firstName'] as String? ?? '',
         lastName: json['lastName'] as String? ?? '',
-        dob: DateTime.tryParse(json['dob'] as String? ?? '') ?? DateTime(2000),
+        // A calendar date, read for the day it names. `GET /profiles/me`
+        // serializes the date-only `dob` column as UTC midnight, and
+        // converting that to local time is how a birthdate loses a day.
+        dob: birthDateFromWire(json['dob']) ?? DateTime(2000),
         gender: json['gender'] as String? ?? '',
         maritalStatus: json['maritalStatus'] as String? ?? '',
         religion: json['religion'] as String? ?? '',

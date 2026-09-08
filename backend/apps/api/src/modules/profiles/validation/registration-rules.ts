@@ -12,6 +12,8 @@
 // This needs no persisted "skipped" flag; it's purely a function of the
 // draft data itself.
 
+import { parseBirthDate } from './birth-date';
+
 type Section = Record<string, unknown>;
 
 // The literal string "Other" is never a valid, complete answer — it's the
@@ -141,11 +143,19 @@ export function isMatchableFromDraft(
 ): boolean {
   const basic = data.basicDetails ?? {};
   const religion = data.religionDetails ?? {};
-  const language = data.languageDetails ?? {};
   const location = data.locationDetails ?? {};
 
   return (
-    allPresent(basic, ['firstName', 'lastName', 'gender', 'maritalStatus', 'dob']) &&
+    allPresent(basic, ['firstName', 'lastName', 'gender', 'maritalStatus']) &&
+    // `dob` is checked by parsing, not by presence: the column is NOT NULL and
+    // the write has to turn the stored string into a Date, so a draft holding
+    // something that names no calendar date cannot physically be written.
+    // Deliberately only the calendar-date check and not the age floor — a
+    // member who registered under the previous floor of 18 still has a real
+    // date of birth, and refusing to write their row would strand an existing
+    // profile with no way for them to fix it. New and edited submissions meet
+    // the 21 rule at the DTO; see BasicDetailsDto.dob.
+    parseBirthDate(basic.dob) !== null &&
     has(religion.religion) &&
     allPresent(location, ['state', 'city'])
   );

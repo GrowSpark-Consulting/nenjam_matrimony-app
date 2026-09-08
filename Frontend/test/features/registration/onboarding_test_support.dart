@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:nenjam_matrimony/core/widgets/inputs/date_picker_field.dart';
+import 'package:nenjam_matrimony/core/widgets/inputs/birth_date_field.dart';
 import 'package:nenjam_matrimony/features/authentication/data/services/firebase_auth_service.dart';
 import 'package:nenjam_matrimony/features/registration/data/repositories/registration_repository.dart';
 import 'package:nenjam_matrimony/features/registration/domain/models/profile_draft.dart';
@@ -257,43 +257,37 @@ Future<void> fillBasics(
   }
 }
 
-/// The month the Your Name step's calendar opens on when the draft carries no
-/// date of birth: January of 25 years ago, from `AppSheets.showDate`'s
-/// `initialDate`. Tests pick a day out of that month, so the date they will
-/// get is known without having to drive the calendar's month navigation — and
-/// it is comfortably over 18 and comfortably after 1950, so a test that is not
-/// about the age band never trips either bound.
-DateTime defaultDobMonth() => DateTime(DateTime.now().year - 25);
+/// A date of birth comfortably past the age floor, used wherever a step test
+/// just needs the date answered rather than a particular one.
+DateTime defaultDob() => DateTime(1998, 8, 15);
 
-/// Opens the Your Name step's calendar by tapping the date field.
-Future<void> openDobPicker(WidgetTester tester) async {
-  await tester.tap(find.byType(NmDatePickerField));
+/// Types [date] into the Your Name step's three Day / Month / Year boxes.
+///
+/// The boxes are the last three text fields on the step, after first and last
+/// name — the field is [NmBirthDateField], not a calendar, so a test answers
+/// it the way a member does.
+Future<DateTime> enterDob(WidgetTester tester, [DateTime? date]) async {
+  final dob = date ?? defaultDob();
+  final boxes = find.descendant(
+    of: find.byType(NmBirthDateField),
+    matching: find.byType(TextFormField),
+  );
+  await tester.enterText(boxes.at(0), dob.day.toString().padLeft(2, '0'));
+  await tester.enterText(boxes.at(1), dob.month.toString().padLeft(2, '0'));
+  await tester.enterText(boxes.at(2), dob.year.toString());
   await tester.pumpAndSettle();
+  return dob;
 }
 
-/// Answers the date of birth by picking [day] out of the month the calendar
-/// opens on, and returns the date that produced. Only valid on a step with no
-/// date already answered — with one, the calendar opens on *that* date's
-/// month instead.
-Future<DateTime> pickDob(WidgetTester tester, {int day = 15}) async {
-  await openDobPicker(tester);
-  await tester.tap(find.text('$day'));
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('OK'));
-  await tester.pumpAndSettle();
-  final month = defaultDobMonth();
-  return DateTime(month.year, month.month, day);
-}
-
-/// Fills the Your Name step end to end: both names and a picked date.
+/// Fills the Your Name step end to end: both names and a typed date.
 Future<DateTime> fillNameStep(
   WidgetTester tester, {
   String firstName = 'Arjun',
   String lastName = 'Krishnan',
-  int day = 15,
+  DateTime? dob,
 }) async {
   await tester.enterText(find.byType(TextFormField).at(0), firstName);
   await tester.enterText(find.byType(TextFormField).at(1), lastName);
   await tester.pumpAndSettle();
-  return pickDob(tester, day: day);
+  return enterDob(tester, dob);
 }

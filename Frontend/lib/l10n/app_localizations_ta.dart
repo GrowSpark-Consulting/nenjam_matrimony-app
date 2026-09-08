@@ -1091,7 +1091,43 @@ class AppLocalizationsTa extends AppLocalizations {
   String get registrationDobLabel => 'பிறந்த தேதி';
 
   @override
-  String get registrationDobHint => 'நாள் / மாதம் / ஆண்டு';
+  String get birthDateDayLabel => 'நாள்';
+
+  @override
+  String get birthDateMonthLabel => 'மாதம்';
+
+  @override
+  String get birthDateYearLabel => 'ஆண்டு';
+
+  @override
+  String get birthDateDayHint => 'DD';
+
+  @override
+  String get birthDateMonthHint => 'MM';
+
+  @override
+  String get birthDateYearHint => 'YYYY';
+
+  @override
+  String get birthDateErrorDay => 'சரியான நாளை உள்ளிடவும்.';
+
+  @override
+  String get birthDateErrorMonth => 'சரியான மாதத்தை உள்ளிடவும்.';
+
+  @override
+  String get birthDateErrorYear => 'சரியான ஆண்டை உள்ளிடவும்.';
+
+  @override
+  String get birthDateErrorInvalid => 'சரியான பிறந்த தேதியை உள்ளிடவும்.';
+
+  @override
+  String get birthDateErrorFuture =>
+      'பிறந்த தேதி எதிர்காலத்தில் இருக்க முடியாது.';
+
+  @override
+  String birthDateErrorTooYoung(int age) {
+    return 'பதிவு செய்ய குறைந்தது $age வயதாக இருக்க வேண்டும்.';
+  }
 
   @override
   String get registrationDobError => 'பிறந்த தேதியைத் தேர்ந்தெடுக்கவும்';
@@ -2317,29 +2353,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get onboardingNameDobSection => 'à®ªà®¿à®±à®¨à¯à®¤ à®¤à¯à®¤à®¿';
 
   @override
-  String get onboardingNameDobHint =>
-      'உங்கள் பிறந்த தேதியைத் தேர்ந்தெடுக்கவும்';
-
-  @override
-  String get onboardingNameDobDay => 'à®¨à®¾à®³à¯';
-
-  @override
-  String get onboardingNameDobMonth => 'à®®à®¾à®¤à®®à¯';
-
-  @override
-  String get onboardingNameDobYear => 'à®à®£à¯à®à¯';
-
-  @override
-  String get onboardingNameDobInvalid =>
-      'à®à®°à®¿à®¯à®¾à®© à®ªà®¿à®±à®¨à¯à®¤ à®¤à¯à®¤à®¿à®¯à¯ à®à®³à¯à®³à®¿à®à®µà¯à®®à¯.';
-
-  @override
-  String get onboardingNameDobTooYoung =>
-      'à®à¯à®¯à®µà®¿à®µà®°à®®à¯ à®à®°à¯à®µà®¾à®à¯à® à®à¯à®±à¯à®¨à¯à®¤à®¤à¯ 18 à®µà®¯à®¤à®¾à® à®à®°à¯à®à¯à® à®µà¯à®£à¯à®à¯à®®à¯.';
-
-  @override
-  String get onboardingNameDobTooOld =>
-      'à®ªà®¿à®±à®¨à¯à®¤ à®à®£à¯à®à¯à®à¯ à®à®°à®¿à®ªà®¾à®°à¯à®à¯à®à®µà¯à®®à¯.';
+  String get onboardingNameDobHelp => 'நாள் / மாதம் / ஆண்டு என உள்ளிடவும்.';
 
   @override
   String get profileBasicsSubCommunityLabel =>

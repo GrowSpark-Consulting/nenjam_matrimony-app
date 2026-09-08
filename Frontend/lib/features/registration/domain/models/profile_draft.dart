@@ -10,6 +10,7 @@
 /// shared state instead of duplicating it into the draft.
 library;
 
+import '../../../../core/utils/birth_date.dart';
 import '../../../partner_preferences/domain/models/partner_preference_extended.dart';
 
 /// Reads a nested JSON object safely — the draft endpoint omits keys for
@@ -68,15 +69,10 @@ class BasicDetails {
     this.profileCreatedFor = '',
   });
 
-  int? get age {
-    if (dob == null) return null;
-    final now = DateTime.now();
-    int years = now.year - dob!.year;
-    if (now.month < dob!.month || (now.month == dob!.month && now.day < dob!.day)) {
-      years--;
-    }
-    return years;
-  }
+  /// Whole years old today, or null with no date of birth. Delegates to the
+  /// one age calculation in the app rather than restating the
+  /// birthday-not-yet-reached decrement a fourth time.
+  int? get age => dob == null ? null : ageInYears(dob!);
 
   BasicDetails copyWith({
     String? firstName,
@@ -114,9 +110,10 @@ class BasicDetails {
         firstName: json['firstName'] as String? ?? '',
         lastName: json['lastName'] as String? ?? '',
         gender: _fromEnumValue(json['gender'] as String?, _genderReverseMap),
-        dob: json['dob'] != null
-            ? DateTime.tryParse(json['dob'] as String)
-            : null,
+        // A calendar date, read for the date it names — never converted to
+        // local time, which is how a birthdate loses a day either side of
+        // midnight. Tolerates the ISO-8601 timestamps older builds wrote.
+        dob: birthDateFromWire(json['dob']),
         maritalStatus: _fromEnumValue(
             json['maritalStatus'] as String?, _maritalStatusReverseMap),
         // Absent means the backend has never been told a choice — keep it
@@ -128,7 +125,10 @@ class BasicDetails {
         if (firstName.isNotEmpty) 'firstName': firstName,
         if (lastName.isNotEmpty) 'lastName': lastName,
         if (gender.isNotEmpty) 'gender': _toEnumValue(gender),
-        if (dob != null) 'dob': dob!.toIso8601String(),
+        // `YYYY-MM-DD`: a date of birth has no time of day and no zone, and
+        // sending one as a timestamp is what let the stored date drift by a
+        // day. Matches BasicDetailsDto.dob on the server.
+        if (dob != null) 'dob': birthDateToWire(dob!),
         if (maritalStatus.isNotEmpty)
           'maritalStatus': _toEnumValue(maritalStatus),
         if (profileCreatedFor.isNotEmpty)

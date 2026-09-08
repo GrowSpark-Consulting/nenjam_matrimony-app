@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nenjam_matrimony/core/router/route_names.dart';
 import 'package:nenjam_matrimony/features/authentication/presentation/providers/auth_providers.dart';
+import 'package:nenjam_matrimony/core/utils/birth_date.dart';
 import 'package:nenjam_matrimony/features/registration/domain/models/onboarding_forms.dart';
 import 'package:nenjam_matrimony/features/registration/domain/models/profile_draft.dart';
 import 'package:nenjam_matrimony/features/registration/domain/models/profile_flow_mode.dart';
@@ -45,9 +46,7 @@ void main() {
       const OnboardingNameForm(
         firstName: 'Arjun',
         lastName: 'Krishnan',
-        day: '05',
-        month: '02',
-        year: '1998',
+        birthDate: BirthDateInput(day: '05', month: '02', year: '1998'),
       ),
     );
 

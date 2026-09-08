@@ -26,6 +26,7 @@ import {
   isMatchableFromDraft,
   isReligionDetailsComplete,
 } from '../validation/registration-rules';
+import { parseBirthDate } from '../validation/birth-date';
 
 // Best-effort parsers for the free-text range/string fields the Flutter
 // wizard collects. These assume the wizard's dropdown/picker values look
@@ -453,6 +454,16 @@ export class ProfileService {
     const horoscope = data.horoscopeDetails ?? {};
     const partnerPref = data.partnerPreference ?? {};
 
+    // The one place the stored draft's date of birth becomes a Date. Null
+    // here means the draft holds something no calendar date can be read out
+    // of, which `isMatchableFromDraft` already refuses — so reaching this is
+    // a caller that skipped that check, and a clear 400 beats Prisma
+    // rejecting an `Invalid Date` several frames later.
+    const dob = parseBirthDate(basic.dob);
+    if (!dob) {
+      throw new BadRequestException('Please enter a valid date of birth.');
+    }
+
     const heightCm = parseHeightToCm(physical.height as string | undefined);
     const weightKg = parseLeadingNumber(physical.weight as string | undefined);
     const annualIncomeLakhs = parseLeadingNumber(
@@ -467,7 +478,12 @@ export class ProfileService {
     const profileWrite = this.profileRepository.upsertProfile(userId, {
       firstName: basic.firstName as string,
       lastName: basic.lastName as string,
-      dob: new Date(basic.dob as string),
+      // `new Date(basic.dob)` stood here and read a zone-less
+      // `1998-08-15T00:00:00.000` — the shape older clients send — as *local*
+      // midnight, which on a server an hour east of UTC stores the 14th.
+      // parseBirthDate reads the calendar date as written and returns UTC
+      // midnight, so what goes in is the day the member typed.
+      dob,
       gender: basic.gender as 'MALE' | 'FEMALE',
       maritalStatus:
         (basic.maritalStatus as
@@ -545,7 +561,9 @@ export class ProfileService {
     );
     const astrologyWrite: Promise<unknown> = hasHoroscopeData
       ? this.profileRepository.upsertAstrologyProfile(userId, {
-          birthDate: new Date(basic.dob as string),
+          // The same date, same parse — the horoscope's birth date is the
+          // profile's date of birth, not a second answer.
+          birthDate: dob,
           birthTime: (horoscope.birthTime as string) || null,
           birthPlace: (horoscope.birthPlace as string) || null,
           rasi: (horoscope.rashi as string) || null,

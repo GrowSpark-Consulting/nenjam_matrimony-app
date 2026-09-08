@@ -104,6 +104,14 @@ model UserProfile {
   userId             String        @unique @map("user_id")
   firstName          String        @map("first_name")
   lastName           String        @map("last_name")
+  /// A calendar date, stored as UTC midnight of the day it names — never a
+  /// local-midnight timestamp, which drifts a day on any server east of UTC.
+  /// Every write goes through `parseBirthDate` (profiles/validation/
+  /// birth-date.ts); migration 20260908120000 normalised the rows that
+  /// predate it. Left as TIMESTAMP rather than DATE because the feed's age
+  /// mapper, the partner-preference age window, the compatibility scorer and
+  /// the weekly digest all read it as one. No age is stored anywhere — the
+  /// date of birth is the source of truth and age is computed from it.
   dob                DateTime
   gender             Gender
   maritalStatus      MaritalStatus @default(NEVER_MARRIED) @map("marital_status")
@@ -291,6 +299,9 @@ model RegistrationStep {
 model AstrologyProfile {
   id                 String     @id @default(uuid())
   userId             String     @unique @map("user_id")
+  /// The member's `UserProfile.dob`, not a second answer — same value, same
+  /// UTC-midnight calendar-date invariant. `birthTime` below holds the time
+  /// of birth, which is why this one never carries one.
   birthDate          DateTime   @map("birth_date")
   birthTime          String?    @map("birth_time")
   birthPlace         String?    @map("birth_place")

@@ -174,12 +174,17 @@ class PostAuthDestination {
     // OnboardingNameForm.fromDraft so the gate applies the screen's own rule
     // (a stored date that is somehow not a real one re-asks the step) rather
     // than a second, looser "is it non-null" test written out here.
+    //
+    // `isAnswered`, not `isComplete`: the age floor is a rule for what may be
+    // entered now, and a member who registered under the previous floor of 18
+    // would otherwise be sent back here on every launch, to a step no answer
+    // of theirs can satisfy.
     final nameStep = OnboardingNameForm.fromDraft(
       firstName: restored.basicDetails.firstName,
       lastName: restored.basicDetails.lastName,
       dob: restored.basicDetails.dob,
     );
-    if (!nameStep.isComplete) {
+    if (!nameStep.isAnswered) {
       AuthTrace.destination(RouteNames.onboardingNameDob);
       return RouteNames.onboardingNameDob;
     }
@@ -340,7 +345,7 @@ class PostAuthDestination {
       lastName: restored.basicDetails.lastName,
       dob: restored.basicDetails.dob,
     );
-    if (!nameStep.isComplete) return RouteNames.onboardingNameDob;
+    if (!nameStep.isAnswered) return RouteNames.onboardingNameDob;
 
     final religionStep = OnboardingReligionForm(
       religion: restored.religionDetails.religion,
