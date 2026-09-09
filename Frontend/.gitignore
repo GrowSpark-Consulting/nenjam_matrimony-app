@@ -84,3 +84,6 @@ app.*.map.json
 .env.*.local
 .env.*
 !.env.example
+
+# JVM heap dumps from an OOMing Gradle/Kotlin daemon (can be 1 GB+)
+*.hprof
