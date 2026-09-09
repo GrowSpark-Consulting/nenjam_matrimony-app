@@ -76,6 +76,9 @@ function buildService(draftData: Record<string, unknown>) {
         missingSections: [],
         breakdown: [],
         verificationBreakdown: [],
+        requiredFields: [],
+        registrationComplete: false,
+        recommendations: [],
       }),
     ),
   } as unknown as ProfileCompletionService;

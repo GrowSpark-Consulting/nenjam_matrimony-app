@@ -23,6 +23,9 @@ function buildCompletion(
     missingSections: ['photos'],
     breakdown: [],
     verificationBreakdown: [],
+    requiredFields: [],
+    registrationComplete: false,
+    recommendations: [],
     ...overrides,
   });
 }
@@ -364,6 +367,7 @@ describe('ProfileService', () => {
         verificationBreakdown: [],
         requiredFields: [],
         registrationComplete: false,
+        recommendations: [],
         data: {
           basicDetails: {
             firstName: 'Arjun',
