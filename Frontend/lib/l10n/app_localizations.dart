@@ -2324,6 +2324,18 @@ abstract class AppLocalizations {
   /// **'Community'**
   String get registrationCommunityLabel;
 
+  /// No description provided for @registrationSpecifySubCommunityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Specify Sub-community'**
+  String get registrationSpecifySubCommunityLabel;
+
+  /// No description provided for @registrationSpecifyCommunityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Specify Community'**
+  String get registrationSpecifyCommunityLabel;
+
   /// No description provided for @registrationCommunityHint.
   ///
   /// In en, this message translates to:
@@ -2753,8 +2765,38 @@ abstract class AppLocalizations {
   /// No description provided for @registrationEmploymentTypeLabel.
   ///
   /// In en, this message translates to:
-  /// **'Employment Type'**
+  /// **'You work with'**
   String get registrationEmploymentTypeLabel;
+
+  /// No description provided for @registrationSpecifyEmploymentTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Specify what you work with'**
+  String get registrationSpecifyEmploymentTypeLabel;
+
+  /// No description provided for @registrationSpecifyEmploymentTypeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. NGO, Cooperative'**
+  String get registrationSpecifyEmploymentTypeHint;
+
+  /// No description provided for @registrationIndustryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Industry'**
+  String get registrationIndustryLabel;
+
+  /// No description provided for @registrationSpecifyIndustryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Specify Industry'**
+  String get registrationSpecifyIndustryLabel;
+
+  /// No description provided for @registrationSpecifyIndustryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Logistics, Agriculture'**
+  String get registrationSpecifyIndustryHint;
 
   /// No description provided for @registrationAnnualIncomeLabel.
   ///
@@ -4454,6 +4496,12 @@ abstract class AppLocalizations {
   /// **'Select the relationship'**
   String get registrationProfileForSubtitle;
 
+  /// No description provided for @registrationProfileForLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile for'**
+  String get registrationProfileForLabel;
+
   /// No description provided for @profileForRelative.
   ///
   /// In en, this message translates to:
@@ -5719,6 +5767,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your Story So Far'**
   String get profileCompletionCompletedSectionsTitle;
+
+  /// No description provided for @profileCompletionRegistrationGroupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration information'**
+  String get profileCompletionRegistrationGroupTitle;
 
   /// No description provided for @profileCompletionMissingSectionsTitle.
   ///

@@ -1201,6 +1201,13 @@ class AppLocalizationsTa extends AppLocalizations {
   String get registrationCommunityLabel => 'சமூகம்';
 
   @override
+  String get registrationSpecifySubCommunityLabel =>
+      'உட்பிரிவைக் குறிப்பிடவும்';
+
+  @override
+  String get registrationSpecifyCommunityLabel => 'சமூகத்தைக் குறிப்பிடவும்';
+
+  @override
   String get registrationCommunityHint => 'எ.கா., தமிழ், தெலுங்கு, கன்னடம்';
 
   @override
@@ -1415,7 +1422,24 @@ class AppLocalizationsTa extends AppLocalizations {
   String get registrationCompanyHint => 'எ.கா., Google';
 
   @override
-  String get registrationEmploymentTypeLabel => 'வேலை வகை';
+  String get registrationEmploymentTypeLabel => 'நீங்கள் பணிபுரிவது';
+
+  @override
+  String get registrationSpecifyEmploymentTypeLabel =>
+      'பணி வகையைக் குறிப்பிடவும்';
+
+  @override
+  String get registrationSpecifyEmploymentTypeHint => 'எ.கா. NGO, கூட்டுறவு';
+
+  @override
+  String get registrationIndustryLabel => 'தொழில் துறை';
+
+  @override
+  String get registrationSpecifyIndustryLabel =>
+      'தொழில் துறையைக் குறிப்பிடவும்';
+
+  @override
+  String get registrationSpecifyIndustryHint => 'எ.கா. தளவாடம், விவசாயம்';
 
   @override
   String get registrationAnnualIncomeLabel => 'ஆண்டு வருமானம்';
@@ -2298,6 +2322,9 @@ class AppLocalizationsTa extends AppLocalizations {
   String get registrationProfileForSubtitle => 'உறவைத் தேர்ந்தெடுக்கவும்';
 
   @override
+  String get registrationProfileForLabel => 'சுயவிவரம் யாருக்கு';
+
+  @override
   String get profileForRelative => 'உறவினர்';
 
   @override
@@ -3037,6 +3064,9 @@ class AppLocalizationsTa extends AppLocalizations {
   @override
   String get profileCompletionCompletedSectionsTitle =>
       'இதுவரையிலான உங்கள் கதை';
+
+  @override
+  String get profileCompletionRegistrationGroupTitle => 'பதிவு தகவல்';
 
   @override
   String get profileCompletionMissingSectionsTitle => 'இன்னும் வளர்கிறது';

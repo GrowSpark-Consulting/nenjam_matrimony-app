@@ -141,6 +141,17 @@ model UserProfile {
   /// Nullable: Step 5 (Education & Career) is skippable — see heightCm's
   /// comment for why this must not be NOT NULL.
   highestEducation   String?       @map("highest_education")
+  /// The college/university named on the Education step.
+  ///
+  /// Its own column since Task 2. It was previously folded into
+  /// `educationDetails` below by `joinNonEmpty(college, employmentType,
+  /// workLocation)`, which made it unrecoverable from the profile row — the
+  /// draft kept it, the profile could not show it. `educationDetails` is
+  /// left exactly as it is so nothing already stored there is lost.
+  college            String?
+  /// "Industry" — the sector the member works in, between employment type
+  /// and role. Added by Task 2; nullable because no existing profile has one.
+  workIndustry       String?       @map("work_industry")
   educationDetails   String?       @map("education_details")
   /// Nullable: Step 5 (Education & Career) is skippable — see heightCm's
   /// comment for why this must not be NOT NULL.

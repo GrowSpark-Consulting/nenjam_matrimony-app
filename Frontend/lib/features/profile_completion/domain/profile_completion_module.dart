@@ -21,3 +21,47 @@ class ModuleStatus {
 
   const ModuleStatus({required this.isComplete, this.wizardStep});
 }
+
+/// One registration answer, as reported by the backend's `requiredFields`.
+///
+/// The registration slice is scored over 21 items — the 20 counted draft
+/// fields plus at least one profile photo — so this is what lets the screen
+/// say *which* answers are missing instead of only that the slice is
+/// incomplete, and open the step that fixes each.
+///
+/// Sub-community is the one [optional] entry: it is listed so it can be shown
+/// in place, but it never counts toward the score in either direction.
+class RequiredFieldStatus {
+  /// Stable id: 'firstName', 'workIndustry', 'photo', ...
+  final String id;
+
+  /// Draft section it belongs to, or 'photos' for the profile photo.
+  final String section;
+
+  /// Wizard step page that edits it.
+  final int wizardStep;
+
+  final bool isComplete;
+  final bool optional;
+
+  const RequiredFieldStatus({
+    required this.id,
+    required this.section,
+    required this.wizardStep,
+    required this.isComplete,
+    required this.optional,
+  });
+
+  /// Tolerant of a response that predates this field list: anything missing
+  /// or mistyped yields a complete, non-optional entry rather than throwing,
+  /// so an old server can never crash the completion screen.
+  factory RequiredFieldStatus.fromJson(Map<String, dynamic> json) {
+    return RequiredFieldStatus(
+      id: json['id'] as String? ?? '',
+      section: json['section'] as String? ?? '',
+      wizardStep: (json['wizardStep'] as num?)?.toInt() ?? 0,
+      isComplete: json['isComplete'] as bool? ?? true,
+      optional: json['optional'] as bool? ?? false,
+    );
+  }
+}

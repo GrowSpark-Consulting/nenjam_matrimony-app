@@ -35,6 +35,7 @@ class _StepEducationState extends State<StepEducation> {
   late String _occupation;
   late final TextEditingController _companyCtrl;
   late String _employmentType;
+  late String _workIndustry;
   late String _annualIncome;
   late final TextEditingController _workLocationCtrl;
 
@@ -42,7 +43,11 @@ class _StepEducationState extends State<StepEducation> {
   // pairs with a free-text field so the literal 'Other' is never persisted.
   static const _qualifications = [...ProfileOptions.qualifications, 'Other'];
   static const _occupations = [...ProfileOptions.occupations, 'Other'];
-  static const _employmentTypes = ProfileOptions.employmentTypes;
+  // Wrapped in OtherOptionField like every other dropdown on this step, so
+  // the escape persists what the member types rather than the literal
+  // placeholder — which the backend counts as unanswered.
+  static const _employmentTypes = [...ProfileOptions.employmentTypes, 'Other'];
+  static const _industries = [...ProfileOptions.industries, 'Other'];
   static const _incomeRanges = [...ProfileOptions.incomeRanges, 'Other'];
 
   @override
@@ -53,6 +58,7 @@ class _StepEducationState extends State<StepEducation> {
     _occupation = widget.details.occupation;
     _companyCtrl = TextEditingController(text: widget.details.company);
     _employmentType = widget.details.employmentType;
+    _workIndustry = widget.details.workIndustry;
     _annualIncome = widget.details.annualIncome;
     _workLocationCtrl = TextEditingController(text: widget.details.workLocation);
   }
@@ -66,7 +72,7 @@ class _StepEducationState extends State<StepEducation> {
   }
 
   void _emit() {
-    widget.onChanged(EducationDetails(qualification: _qualification, college: _collegeCtrl.text.trim(), occupation: _occupation, company: _companyCtrl.text.trim(), employmentType: _employmentType, annualIncome: _annualIncome, workLocation: _workLocationCtrl.text.trim()));
+    widget.onChanged(EducationDetails(qualification: _qualification, college: _collegeCtrl.text.trim(), occupation: _occupation, company: _companyCtrl.text.trim(), employmentType: _employmentType, workIndustry: _workIndustry, annualIncome: _annualIncome, workLocation: _workLocationCtrl.text.trim()));
   }
 
   /// Localized display label for a stored occupation value (value stays English).
@@ -137,22 +143,6 @@ class _StepEducationState extends State<StepEducation> {
           NmTextField(label: l10n.registrationCollegeLabel, hint: l10n.registrationCollegeHint, controller: _collegeCtrl, onChanged: (_) => _emit()),
           const SizedBox(height: 20),
           OtherOptionField(
-            title: l10n.registrationOccupationLabel,
-            options: _occupations,
-            value: _occupation,
-            labelOf: (v) => _occupationLabel(l10n, v),
-            customFieldLabel: l10n.registrationSpecifyOccupationLabel,
-            customFieldHint: l10n.registrationSpecifyOccupationHint,
-            onChanged: (v) { setState(() => _occupation = v); _emit(); },
-          ),
-          const SizedBox(height: 16),
-          NmTextField(label: l10n.registrationCompanyLabel, hint: l10n.registrationCompanyHint, controller: _companyCtrl, onChanged: (_) => _emit()),
-          const SizedBox(height: 20),
-          Text(l10n.registrationEmploymentTypeLabel, style: AppTypography.labelLarge),
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: _employmentTypes.map((e) { final sel = _employmentType == e; return ChoiceChip(label: Text(_employmentLabel(l10n, e)), selected: sel, selectedColor: AppColors.primarySurface, onSelected: (_) { setState(() => _employmentType = e); _emit(); }); }).toList()),
-          const SizedBox(height: 20),
-          OtherOptionField(
             title: l10n.registrationAnnualIncomeLabel,
             options: _incomeRanges,
             value: _annualIncome,
@@ -163,6 +153,41 @@ class _StepEducationState extends State<StepEducation> {
             customFieldInputFormatters: [FilteringTextInputFormatter.digitsOnly],
             onChanged: (v) { setState(() => _annualIncome = v); _emit(); },
           ),
+          const SizedBox(height: 20),
+          // "You work with" — the existing employmentType field, now a real
+          // dropdown instead of a chip row. Same field, same stored strings,
+          // same column: every value a live profile already holds is still
+          // offered (see ProfileOptions.employmentTypes).
+          OtherOptionField(
+            title: l10n.registrationEmploymentTypeLabel,
+            options: _employmentTypes,
+            value: _employmentType,
+            labelOf: (v) => _employmentLabel(l10n, v),
+            customFieldLabel: l10n.registrationSpecifyEmploymentTypeLabel,
+            customFieldHint: l10n.registrationSpecifyEmploymentTypeHint,
+            onChanged: (v) { setState(() => _employmentType = v); _emit(); },
+          ),
+          const SizedBox(height: 20),
+          OtherOptionField(
+            title: l10n.registrationIndustryLabel,
+            options: _industries,
+            value: _workIndustry,
+            customFieldLabel: l10n.registrationSpecifyIndustryLabel,
+            customFieldHint: l10n.registrationSpecifyIndustryHint,
+            onChanged: (v) { setState(() => _workIndustry = v); _emit(); },
+          ),
+          const SizedBox(height: 20),
+          OtherOptionField(
+            title: l10n.registrationOccupationLabel,
+            options: _occupations,
+            value: _occupation,
+            labelOf: (v) => _occupationLabel(l10n, v),
+            customFieldLabel: l10n.registrationSpecifyOccupationLabel,
+            customFieldHint: l10n.registrationSpecifyOccupationHint,
+            onChanged: (v) { setState(() => _occupation = v); _emit(); },
+          ),
+          const SizedBox(height: 16),
+          NmTextField(label: l10n.registrationCompanyLabel, hint: l10n.registrationCompanyHint, controller: _companyCtrl, onChanged: (_) => _emit()),
           const SizedBox(height: 16),
           NmTextField(label: l10n.registrationWorkLocationLabel, hint: l10n.registrationWorkLocationHint, controller: _workLocationCtrl, onChanged: (_) => _emit()),
           const SizedBox(height: 32),

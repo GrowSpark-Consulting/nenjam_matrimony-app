@@ -1,0 +1,26 @@
+-- Two columns the Education/Work section needs, and nothing else.
+--
+-- Purely additive and nullable. No existing row is read, updated or deleted;
+-- no column is dropped, renamed or retyped; no default backfills anything.
+-- Every existing profile keeps exactly the values it has, and both columns
+-- start NULL, which is the honest statement that the question was never asked
+-- of those members.
+--
+-- work_industry
+--   Genuinely new. "Industry" is asked between "You work with"
+--   (employment_type, already collected in draft_data) and "You work as"
+--   (profession). Nothing in the schema could hold it before.
+--
+-- college
+--   Not new as an *answer* — the Education step has always collected it and
+--   the draft has always stored it — but it had no column. The profile write
+--   folded it into `education_details` via
+--   `joinNonEmpty(college, employmentType, workLocation)`, so once written it
+--   could not be read back out on its own and the profile could not display
+--   it. This gives it a column of its own.
+--
+--   `education_details` is deliberately NOT dropped or rewritten: it still
+--   holds the joined string for every profile written before this, and the
+--   write keeps populating it. Nothing depends on the two agreeing.
+ALTER TABLE "user_profiles" ADD COLUMN "college" TEXT;
+ALTER TABLE "user_profiles" ADD COLUMN "work_industry" TEXT;

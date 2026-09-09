@@ -4,6 +4,7 @@ import { ProfileRepository } from '../repositories/profile.repository';
 import { ProfileCompletionService } from './profile-completion.service';
 import {
   ProfileCompletionModuleEntity,
+  RequiredFieldStatusEntity,
   VerificationSubStatusEntity,
 } from '../entities/profile-completion.entity';
 
@@ -33,6 +34,12 @@ export interface DraftResponse {
   completionPercentage: number;
   completionBreakdown: ProfileCompletionModuleEntity[];
   verificationBreakdown: VerificationSubStatusEntity[];
+  // The 21 registration fields plus the profile photo, each with its
+  // answered state and the step that fixes it. Populated even when
+  // everything is answered; `registrationComplete` is what the client checks
+  // before deciding to render the group at all.
+  requiredFields: RequiredFieldStatusEntity[];
+  registrationComplete: boolean;
   data: Record<string, unknown>;
 }
 
@@ -93,6 +100,8 @@ export class ProfileDraftService {
       completionPercentage: completion.percentage,
       completionBreakdown: completion.breakdown,
       verificationBreakdown: completion.verificationBreakdown,
+      requiredFields: completion.requiredFields,
+      registrationComplete: completion.registrationComplete,
       data: draftData,
     };
   }

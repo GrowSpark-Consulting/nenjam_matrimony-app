@@ -22,6 +22,14 @@ export class EducationDetailsDto {
   @IsString()
   employmentType?: string;
 
+  /**
+   * "Industry" — the sector the member works in. New in Task 2; persisted to
+   * the `work_industry` column added by the same change.
+   */
+  @IsOptional()
+  @IsString()
+  workIndustry?: string;
+
   // Kept as a string to match the Flutter form field; parsed to a Decimal
   // (annualIncomeLakhs) only at finalize() time.
   @IsOptional()

@@ -209,11 +209,12 @@ void main() {
       );
 
       expect(find.text('Your Story So Far'), findsOneWidget);
-      expect(find.text('Your Story'), findsOneWidget);
-      expect(
-        find.text('Every detail helps us find your best match.'),
-        findsOneWidget,
-      );
+      expect(find.text('Education'), findsOneWidget);
+      // 'Your Story' was the generic `registration` card. That module is now
+      // rendered as its own field-by-field "Registration information" group,
+      // so a card here would say the same thing twice and less usefully —
+      // see _isCompletionSection.
+      expect(find.text('Your Story'), findsNothing);
     });
 
     testWidgets(

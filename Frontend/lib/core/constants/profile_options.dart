@@ -44,6 +44,82 @@ abstract final class ProfileOptions {
     'Canada',
   ];
 
+  /// The states/provinces offered for a given country.
+  ///
+  /// Same reasoning as [communitiesFor] and [citiesFor]: no backend lookup
+  /// exists, so the scoping lives here, in one place. A country with no entry
+  /// falls back to [states] rather than an empty dropdown — a member abroad
+  /// must never be blocked because our table stops at the countries we know.
+  ///
+  /// India's list is [states] verbatim: it is what the wizard has always
+  /// offered and what every stored profile was chosen from.
+  static const Map<String, List<String>> _statesByCountry = {
+    'India': states,
+    'United States': [
+      'California',
+      'New Jersey',
+      'New York',
+      'Texas',
+      'Illinois',
+      'Washington',
+      'Georgia',
+      'Massachusetts',
+    ],
+    'United Kingdom': ['England', 'Scotland', 'Wales', 'Northern Ireland'],
+    'Singapore': ['Singapore'],
+    'UAE': ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman'],
+    'Malaysia': ['Kuala Lumpur', 'Selangor', 'Penang', 'Johor'],
+    'Australia': [
+      'New South Wales',
+      'Victoria',
+      'Queensland',
+      'Western Australia',
+      'South Australia',
+    ],
+    'Canada': ['Ontario', 'British Columbia', 'Alberta', 'Quebec'],
+  };
+
+  /// States/provinces for [country], or India's list when the country is
+  /// unknown or not yet chosen.
+  static List<String> statesFor(String country) =>
+      _statesByCountry[country.trim()] ?? states;
+
+  /// Whether [state] is offered for [country] — the test the Location step's
+  /// cascade uses to decide whether a stored state survives a country change.
+  /// An empty value is "not yet answered", never "invalid".
+  static bool isStateInCountry(String country, String state) =>
+      state.trim().isEmpty || statesFor(country).contains(state.trim());
+
+  /// Whether [city] is offered for [state].
+  static bool isCityInState(String state, String city) =>
+      city.trim().isEmpty || citiesFor(state).contains(city.trim());
+
+  /// Whether [community] is offered for [religion].
+  static bool isCommunityInReligion(String religion, String community) =>
+      community.trim().isEmpty ||
+      communitiesFor(religion).contains(community.trim());
+
+  /// "Industry" — the sector a member works in, asked between "You work with"
+  /// and "You work as".
+  ///
+  /// Promoted from the private `_industryOptions` that lived inside
+  /// partner_preferences_page.dart, so the sector a member states about
+  /// themselves and the sector they filter partners by come from one list
+  /// rather than two that can drift. Every value that page offered is still
+  /// here, so no stored preference is orphaned.
+  static const List<String> industries = [
+    'IT / Software',
+    'Healthcare',
+    'Finance',
+    'Government',
+    'Education',
+    'Business / Self-Employed',
+    'Engineering / Manufacturing',
+    'Legal',
+    'Media / Creative',
+    'Hospitality',
+  ];
+
   /// Religions, in the order every screen has always listed them.
   static const List<String> religions = [
     'Hindu',
@@ -199,8 +275,19 @@ abstract final class ProfileOptions {
     'Architect',
   ];
 
-  /// "You work with" — employment types. No "Other" entry is needed: the
-  /// list already covers every case, including not working and studying.
+  /// "You work with" — employment types.
+  ///
+  /// `Business` and `Self-Employed` stay two entries rather than the single
+  /// "Business / Self-employed" the spec sketched: both strings are already
+  /// stored on live profiles, and collapsing them would orphan every member
+  /// holding one (the dropdown blanks a value it cannot offer — see
+  /// `OnboardingScaffold.optionsWith` for the data loss that causes).
+  /// `Retired` was genuinely missing and is added.
+  ///
+  /// No literal "Other" entry here. The step wraps this list in
+  /// [OtherOptionField], which appends its own escape and persists the text
+  /// the member types — never the placeholder string, which the backend's
+  /// `has()` treats as an unanswered field.
   static const List<String> employmentTypes = [
     'Private',
     'Government',
@@ -208,6 +295,7 @@ abstract final class ProfileOptions {
     'Self-Employed',
     'Not Working',
     'Student',
+    'Retired',
   ];
 
   /// Annual income bands, matching the wizard's Education step.

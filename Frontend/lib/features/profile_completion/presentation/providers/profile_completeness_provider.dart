@@ -18,5 +18,17 @@ final profileCompletenessSnapshotProvider =
       (json['completionBreakdown'] as List?)
           ?.cast<Map<String, dynamic>>() ??
       const <Map<String, dynamic>>[];
-  return profileCompletenessFromBackend(percentage, breakdown);
+  // Both are absent from a response predating the field-level breakdown; the
+  // aggregator treats that as "nothing to ask for" rather than nagging.
+  final requiredFields =
+      (json['requiredFields'] as List?)?.cast<Map<String, dynamic>>() ??
+          const <Map<String, dynamic>>[];
+  final registrationComplete = json['registrationComplete'] as bool?;
+
+  return profileCompletenessFromBackend(
+    percentage,
+    breakdown,
+    requiredFieldsJson: requiredFields,
+    registrationComplete: registrationComplete,
+  );
 });

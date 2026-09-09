@@ -508,6 +508,12 @@ export class ProfileService {
       weightKg,
       annualIncomeLakhs: annualIncomeLakhs?.toString() ?? null,
       highestEducation: (education.qualification as string) || null,
+      // Its own column since Task 2. `educationDetails` below still gets the
+      // joined string it always did — nothing already stored there is lost —
+      // but the college is now readable on its own, which the joined form
+      // never allowed.
+      college: (education.college as string) || null,
+      workIndustry: (education.workIndustry as string) || null,
       educationDetails:
         joinNonEmpty(
           education.college as string,

@@ -1189,6 +1189,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registrationCommunityLabel => 'Community';
 
   @override
+  String get registrationSpecifySubCommunityLabel => 'Specify Sub-community';
+
+  @override
+  String get registrationSpecifyCommunityLabel => 'Specify Community';
+
+  @override
   String get registrationCommunityHint => 'e.g., Tamil, Telugu, Kannada';
 
   @override
@@ -1402,7 +1408,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registrationCompanyHint => 'e.g., Google';
 
   @override
-  String get registrationEmploymentTypeLabel => 'Employment Type';
+  String get registrationEmploymentTypeLabel => 'You work with';
+
+  @override
+  String get registrationSpecifyEmploymentTypeLabel =>
+      'Specify what you work with';
+
+  @override
+  String get registrationSpecifyEmploymentTypeHint => 'e.g. NGO, Cooperative';
+
+  @override
+  String get registrationIndustryLabel => 'Industry';
+
+  @override
+  String get registrationSpecifyIndustryLabel => 'Specify Industry';
+
+  @override
+  String get registrationSpecifyIndustryHint => 'e.g. Logistics, Agriculture';
 
   @override
   String get registrationAnnualIncomeLabel => 'Annual Income';
@@ -2278,6 +2300,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registrationProfileForSubtitle => 'Select the relationship';
 
   @override
+  String get registrationProfileForLabel => 'Profile for';
+
+  @override
   String get profileForRelative => 'Relative';
 
   @override
@@ -2993,6 +3018,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileCompletionCompletedSectionsTitle => 'Your Story So Far';
+
+  @override
+  String get profileCompletionRegistrationGroupTitle =>
+      'Registration information';
 
   @override
   String get profileCompletionMissingSectionsTitle => 'Still Growing';

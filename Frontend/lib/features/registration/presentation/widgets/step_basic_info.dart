@@ -9,6 +9,9 @@ import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../core/widgets/inputs/birth_date_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/profile_draft.dart';
+import '../../domain/models/profile_for_relation.dart';
+import 'onboarding_scaffold.dart';
+import 'other_option_field.dart';
 import 'registration_helper_tip.dart';
 import 'step_body.dart';
 
@@ -35,6 +38,7 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
   late final TextEditingController _lastNameCtrl;
   late String _gender;
   late String _maritalStatus;
+  late String _profileCreatedFor;
   late BirthDateInput _dob;
 
   @override
@@ -44,6 +48,7 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
     _lastNameCtrl = TextEditingController(text: widget.details.lastName);
     _gender = widget.details.gender;
     _maritalStatus = widget.details.maritalStatus;
+    _profileCreatedFor = widget.details.profileCreatedFor;
     _dob = BirthDateInput.fromDate(widget.details.dob);
   }
 
@@ -62,7 +67,7 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
         gender: _gender,
         dob: _dob.date,
         maritalStatus: _maritalStatus,
-        profileCreatedFor: widget.details.profileCreatedFor,
+        profileCreatedFor: _profileCreatedFor,
       ),
     );
   }
@@ -81,6 +86,20 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
     final date = _dob.date;
     return date == null ? null : ageInYears(date);
   }
+
+  /// Localized display label for a stored "profile for" value. Values stay
+  /// English on the draft; only the label is translated.
+  String _profileForLabel(AppLocalizations l10n, String value) =>
+      switch (value) {
+        'Myself' => l10n.profileForOptionMyself,
+        'Son' => l10n.profileForOptionSon,
+        'Daughter' => l10n.profileForOptionDaughter,
+        'Brother' => l10n.profileForOptionBrother,
+        'Sister' => l10n.profileForOptionSister,
+        'Friend' => l10n.profileForOptionFriend,
+        'Relative' => l10n.profileForOptionRelative,
+        _ => value,
+      };
 
   /// Localized display label for a stored gender value (value stays English).
   String _genderLabel(AppLocalizations l10n, String value) => switch (value) {
@@ -123,6 +142,25 @@ class _StepBasicInfoState extends State<StepBasicInfo> {
           const SizedBox(height: 16),
           RegistrationHelperTip(text: l10n.registrationTipBasicInfo),
           const SizedBox(height: 24),
+          // Field 1. The same seven relations CreateProfileForPage offers,
+          // written with the same `storageValue` strings, so an edit and a
+          // signup are indistinguishable to the draft and the backend.
+          // `optionsWith` keeps a stored value the enum no longer lists
+          // rather than blanking it on open.
+          OtherOptionField(
+            title: l10n.registrationProfileForLabel,
+            options: OnboardingScaffold.optionsWith(
+              ProfileForRelation.values.map((r) => r.storageValue).toList(),
+              _profileCreatedFor,
+            ),
+            value: _profileCreatedFor,
+            labelOf: (v) => _profileForLabel(l10n, v),
+            onChanged: (v) {
+              setState(() => _profileCreatedFor = v);
+              _emit();
+            },
+          ),
+          const SizedBox(height: 20),
           NmTextField(
             label: l10n.registrationFirstNameLabel,
             hint: l10n.registrationFirstNameHint,

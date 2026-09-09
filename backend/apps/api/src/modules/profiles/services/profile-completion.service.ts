@@ -8,22 +8,39 @@ import {
   VerificationSubStatusEntity,
 } from '../entities/profile-completion.entity';
 import {
-  isBasicDetailsComplete,
-  isEducationDetailsValid,
-  isEducationSectionTouched,
   isFamilyDetailsComplete,
   isFamilySectionTouched,
   isHoroscopeDetailsValid,
   isHoroscopeSectionTouched,
-  isLanguageDetailsComplete,
-  isLifestyleDetailsValid,
-  isLifestyleSectionTouched,
-  isLocationDetailsComplete,
-  isPartnerPreferenceComplete,
-  isPhysicalDetailsValid,
-  isPhysicalSectionTouched,
-  isReligionDetailsComplete,
 } from '../validation/registration-rules';
+import {
+  registrationItemStatuses,
+  registrationScore,
+} from '../validation/required-fields';
+
+/**
+ * The four slices of the 100-point score.
+ *
+ * `registration` absorbs the seven modules whose content the registration flow
+ * already collects — the old registration 20, education 10, physical 5,
+ * lifestyle 5, psychology 3, partnerPreference 5 and photos 12 — because a
+ * member who answered every registration question was scoring 20% and being
+ * docked for fields nobody asked them for. Those modules each demanded MORE
+ * than registration does (work location; weight and disability;
+ * smoking/drinking/fitness/hobbies/about-me; a quiz; partner filters), so they
+ * sat at zero for a complete new profile.
+ *
+ * Family, horoscope and verification keep their exact previous weights and
+ * their exact previous rules: they are the sections that genuinely remain
+ * after registration, and they are what the completion screen now asks for.
+ *
+ * The fields those absorbed modules wanted beyond registration are not scored
+ * at all any more. They remain collectable and optional.
+ */
+const REGISTRATION_WEIGHT = 60;
+const FAMILY_WEIGHT = 10;
+const HOROSCOPE_WEIGHT = 5;
+const VERIFICATION_WEIGHT = 25;
 
 type Section = Record<string, unknown>;
 
@@ -73,63 +90,53 @@ export class ProfileCompletionService {
     userId: string,
     prefetchedDraftData?: Record<string, unknown>,
   ): Promise<ProfileCompletionEntity> {
-    const [draftData, photoCount, user, kycRows, quizResponseCount] =
-      await Promise.all([
-        prefetchedDraftData
-          ? Promise.resolve(prefetchedDraftData)
-          : this.profileRepository
-              .getOrCreateRegistrationStep(userId)
-              .then((step) => step.draftData as Record<string, unknown>),
-        this.photoRepository.countForUser(userId),
-        this.prisma.user.findUnique({
-          where: { id: userId },
-          select: { phone: true },
-        }),
-        this.prisma.kycVerification.findMany({
-          where: { userId, status: 'APPROVED' },
-          select: { docType: true },
-        }),
-        this.prisma.userQuizResponse.count({ where: { userId } }),
-      ]);
+    const [draftData, photoCount, user, kycRows] = await Promise.all([
+      prefetchedDraftData
+        ? Promise.resolve(prefetchedDraftData)
+        : this.profileRepository
+            .getOrCreateRegistrationStep(userId)
+            .then((step) => step.draftData as Record<string, unknown>),
+      this.photoRepository.countForUser(userId),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { phone: true },
+      }),
+      this.prisma.kycVerification.findMany({
+        where: { userId, status: 'APPROVED' },
+        select: { docType: true },
+      }),
+    ]);
 
     const data = (draftData ?? {}) as Record<string, Section>;
     const section = (name: string): Section => data[name] ?? {};
 
     const approvedDocTypes = new Set(kycRows.map((row) => row.docType));
 
-    const basic = section('basicDetails');
-    const religion = section('religionDetails');
-    const language = section('languageDetails');
-    const location = section('locationDetails');
-    const education = section('educationDetails');
-    const physical = section('physicalDetails');
-    const lifestyle = section('lifestyleDetails');
     const family = section('familyDetails');
     const horoscope = section('horoscopeDetails');
-    const partnerPref = section('partnerPreference');
 
-    const mandatoryComplete =
-      isBasicDetailsComplete(basic) &&
-      isReligionDetailsComplete(religion) &&
-      isLanguageDetailsComplete(language) &&
-      isLocationDetailsComplete(location);
+    // The 'registration' slice is scored field by field rather than as one
+    // all-or-nothing block. Before this it could only say "incomplete", which
+    // told a member with nineteen of twenty answers exactly what it told a
+    // member with none — and gave them nothing to act on. It is now scored
+    // over its 21 items (the 20 counted draft fields plus at least one photo),
+    // so partial answers earn partial credit and the client can name the gaps.
+    const photosComplete = photoCount > 0;
+    const fieldStatuses = registrationItemStatuses(data, photosComplete);
+    const { completed: itemsAnswered, total: itemsCounted } = registrationScore(
+      data,
+      photosComplete,
+    );
+    const registrationComplete = itemsAnswered === itemsCounted;
+    const registrationEarned = Math.round(
+      (REGISTRATION_WEIGHT * itemsAnswered) / itemsCounted,
+    );
 
-    const educationComplete =
-      isEducationSectionTouched(education) &&
-      isEducationDetailsValid(education);
-    const physicalComplete =
-      isPhysicalSectionTouched(physical) && isPhysicalDetailsValid(physical);
-    const lifestyleComplete =
-      isLifestyleSectionTouched(lifestyle) &&
-      isLifestyleDetailsValid(lifestyle);
     const familyComplete =
       isFamilySectionTouched(family) && isFamilyDetailsComplete(family);
     const horoscopeComplete =
       isHoroscopeSectionTouched(horoscope) &&
       isHoroscopeDetailsValid(horoscope);
-    const psychologyComplete = quizResponseCount > 0;
-    const partnerPreferenceComplete = isPartnerPreferenceComplete(partnerPref);
-    const photosComplete = photoCount > 0;
 
     // Each flag here is real, backend-verified evidence — never a
     // client-submitted or "pending" state:
@@ -154,69 +161,29 @@ export class ProfileCompletionService {
       (aadhaarVerified ? 5 : 0) +
       (nriVerified ? 5 : 0);
 
+    // Four slices, and only four. Family, horoscope and verification are
+    // unchanged in weight and in rule; registration is the rest.
     const binaryModules: ProfileCompletionModuleEntity[] = [
       {
         id: 'registration',
-        weight: 20,
-        earned: mandatoryComplete ? 20 : 0,
-        isComplete: mandatoryComplete,
+        weight: REGISTRATION_WEIGHT,
+        earned: registrationEarned,
+        isComplete: registrationComplete,
         wizardStep: 0,
       },
       {
-        id: 'education',
-        weight: 10,
-        earned: educationComplete ? 10 : 0,
-        isComplete: educationComplete,
-        wizardStep: 4,
-      },
-      {
-        id: 'physical',
-        weight: 5,
-        earned: physicalComplete ? 5 : 0,
-        isComplete: physicalComplete,
-        wizardStep: 5,
-      },
-      {
-        id: 'lifestyle',
-        weight: 5,
-        earned: lifestyleComplete ? 5 : 0,
-        isComplete: lifestyleComplete,
-        wizardStep: 6,
-      },
-      {
         id: 'family',
-        weight: 10,
-        earned: familyComplete ? 10 : 0,
+        weight: FAMILY_WEIGHT,
+        earned: familyComplete ? FAMILY_WEIGHT : 0,
         isComplete: familyComplete,
         wizardStep: 7,
       },
       {
         id: 'horoscope',
-        weight: 5,
-        earned: horoscopeComplete ? 5 : 0,
+        weight: HOROSCOPE_WEIGHT,
+        earned: horoscopeComplete ? HOROSCOPE_WEIGHT : 0,
         isComplete: horoscopeComplete,
         wizardStep: 8,
-      },
-      {
-        id: 'psychology',
-        weight: 3,
-        earned: psychologyComplete ? 3 : 0,
-        isComplete: psychologyComplete,
-        wizardStep: 9,
-      },
-      {
-        id: 'partnerPreference',
-        weight: 5,
-        earned: partnerPreferenceComplete ? 5 : 0,
-        isComplete: partnerPreferenceComplete,
-        wizardStep: 10,
-      },
-      {
-        id: 'photos',
-        weight: 12,
-        earned: photosComplete ? 12 : 0,
-        isComplete: photosComplete,
-        wizardStep: 11,
       },
     ];
 
@@ -233,9 +200,9 @@ export class ProfileCompletionService {
       ...binaryModules,
       {
         id: 'verification',
-        weight: 25,
+        weight: VERIFICATION_WEIGHT,
         earned: verificationEarned,
-        isComplete: verificationEarned >= 25,
+        isComplete: verificationEarned >= VERIFICATION_WEIGHT,
         wizardStep: 12,
       },
     ];
@@ -261,6 +228,8 @@ export class ProfileCompletionService {
     completion.missingSections = missingSections;
     completion.breakdown = modules;
     completion.verificationBreakdown = verificationBreakdown;
+    completion.requiredFields = fieldStatuses;
+    completion.registrationComplete = registrationComplete;
     return completion;
   }
 }
