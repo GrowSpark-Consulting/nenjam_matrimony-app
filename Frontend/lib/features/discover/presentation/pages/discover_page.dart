@@ -27,6 +27,7 @@ import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../../partner_preferences/presentation/utils/open_partner_preferences.dart';
 import '../../../registration/presentation/utils/open_edit_profile.dart';
+import '../../../profile_completion/presentation/widgets/complete_profile_section.dart';
 import '../../../nearby/data/repositories/nearby_repository_impl.dart';
 import '../../../nearby/presentation/providers/nearby_providers.dart';
 import '../../domain/entities/discovery_profile_entity.dart';
@@ -146,6 +147,15 @@ class _DiscoverFeedView extends ConsumerWidget {
         slivers: [
           // ── 1. Sticky App Bar ──────────────────────────────────────
           const _DiscoverAppBar(),
+
+          // ── "Complete Your Profile" ────────────────────────────────
+          //
+          // Above the empty/non-empty branch deliberately: the member most
+          // likely to see an empty feed is the one whose own profile isn't
+          // finished, and that is exactly who these cards are for. Renders
+          // nothing once there is nothing left to recommend, so a finished
+          // profile loses no feed space to it.
+          const SliverToBoxAdapter(child: CompleteProfileSection()),
 
           // An empty preference-filtered feed no longer takes the whole page.
           // `SliverFillRemaining(hasScrollBody: false)` used to, which meant a

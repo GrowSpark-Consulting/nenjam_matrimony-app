@@ -44,6 +44,30 @@ export class RequiredFieldStatusEntity {
   optional!: boolean;
 }
 
+/**
+ * One "Complete Your Profile" recommendation card, as Home and Edit Profile
+ * render it.
+ *
+ * The server decides visibility, never the client: a card the member has
+ * finished ([isComplete]) or dismissed ([isDismissed]) is still listed, with
+ * the flags set, so a client can reason about it — but both screens hide
+ * anything with either flag, and they hide the same things because they read
+ * this same list.
+ *
+ * [affectsScore] is false only for `psychology`, which is offered as an
+ * optional card and is deliberately absent from `breakdown` — it carries no
+ * weight and contributes nothing to `percentage`.
+ */
+export class ProfileRecommendationEntity {
+  key!: string;
+  isComplete!: boolean;
+  isDismissed!: boolean;
+  affectsScore!: boolean;
+  // Same 0-indexed wizard-step numbering as the modules above, so the client
+  // opens a card through the one route table it already has.
+  wizardStep!: number;
+}
+
 export class ProfileCompletionEntity {
   percentage!: number;
   completedSections!: string[];
@@ -60,4 +84,15 @@ export class ProfileCompletionEntity {
   // requiredFields itself — a newly registered member must not be asked for
   // what they just gave.
   registrationComplete!: boolean;
+  /**
+   * The recommendation cards, in display order — see
+   * profiles/domain/recommendation-cards.ts.
+   *
+   * Purely derived: every entry's `isComplete` reads the very same signal
+   * that scored its module above, so a card can never disagree with the
+   * percentage next to it. Dismissals come from
+   * `profile_recommendation_dismissals` and hide the suggestion only — no
+   * profile data is touched either way.
+   */
+  recommendations!: ProfileRecommendationEntity[];
 }

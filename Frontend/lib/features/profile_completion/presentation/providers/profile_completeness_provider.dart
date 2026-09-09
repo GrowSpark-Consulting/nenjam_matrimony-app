@@ -24,11 +24,18 @@ final profileCompletenessSnapshotProvider =
       (json['requiredFields'] as List?)?.cast<Map<String, dynamic>>() ??
           const <Map<String, dynamic>>[];
   final registrationComplete = json['registrationComplete'] as bool?;
+  // The "Complete Your Profile" cards. Read off this same response rather
+  // than fetched separately, which is precisely why Home and Edit Profile
+  // cannot end up disagreeing about which sections are still open.
+  final recommendations =
+      (json['recommendations'] as List?)?.cast<Map<String, dynamic>>() ??
+          const <Map<String, dynamic>>[];
 
   return profileCompletenessFromBackend(
     percentage,
     breakdown,
     requiredFieldsJson: requiredFields,
+    recommendationsJson: recommendations,
     registrationComplete: registrationComplete,
   );
 });

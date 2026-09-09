@@ -4,6 +4,7 @@ import { ProfileRepository } from '../repositories/profile.repository';
 import { ProfileCompletionService } from './profile-completion.service';
 import {
   ProfileCompletionModuleEntity,
+  ProfileRecommendationEntity,
   RequiredFieldStatusEntity,
   VerificationSubStatusEntity,
 } from '../entities/profile-completion.entity';
@@ -40,6 +41,11 @@ export interface DraftResponse {
   // before deciding to render the group at all.
   requiredFields: RequiredFieldStatusEntity[];
   registrationComplete: boolean;
+  // The "Complete Your Profile" cards, in display order. Carried on this
+  // response — the one both Home and Edit Profile already fetch — rather than
+  // on an endpoint of their own, so the two screens cannot end up rendering
+  // cards computed from different snapshots of the same profile.
+  recommendations: ProfileRecommendationEntity[];
   data: Record<string, unknown>;
 }
 
@@ -102,6 +108,7 @@ export class ProfileDraftService {
       verificationBreakdown: completion.verificationBreakdown,
       requiredFields: completion.requiredFields,
       registrationComplete: completion.registrationComplete,
+      recommendations: completion.recommendations,
       data: draftData,
     };
   }

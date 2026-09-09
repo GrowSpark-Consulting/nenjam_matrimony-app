@@ -1001,6 +1001,9 @@ describe('ProfileService', () => {
           prisma,
           profileRepository,
           photoRepository,
+          {
+            findKeysForUser: jest.fn().mockResolvedValue([]),
+          } as never,
         );
 
         const draftService = {

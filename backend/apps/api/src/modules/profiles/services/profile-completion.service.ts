@@ -2,11 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/database';
 import { ProfileRepository } from '../repositories/profile.repository';
 import { PhotoRepository } from '../repositories/photo.repository';
+import { RecommendationDismissalRepository } from '../repositories/recommendation-dismissal.repository';
 import {
   ProfileCompletionEntity,
   ProfileCompletionModuleEntity,
+  ProfileRecommendationEntity,
   VerificationSubStatusEntity,
 } from '../entities/profile-completion.entity';
+import { RECOMMENDATION_CARDS } from '../domain/recommendation-cards';
 import {
   isFamilyDetailsComplete,
   isFamilySectionTouched,
@@ -77,6 +80,7 @@ export class ProfileCompletionService {
     private readonly prisma: PrismaService,
     private readonly profileRepository: ProfileRepository,
     private readonly photoRepository: PhotoRepository,
+    private readonly dismissalRepository: RecommendationDismissalRepository,
   ) {}
 
   // [prefetchedDraftData] lets a caller that just fetched/merged the
@@ -90,22 +94,31 @@ export class ProfileCompletionService {
     userId: string,
     prefetchedDraftData?: Record<string, unknown>,
   ): Promise<ProfileCompletionEntity> {
-    const [draftData, photoCount, user, kycRows] = await Promise.all([
-      prefetchedDraftData
-        ? Promise.resolve(prefetchedDraftData)
-        : this.profileRepository
-            .getOrCreateRegistrationStep(userId)
-            .then((step) => step.draftData as Record<string, unknown>),
-      this.photoRepository.countForUser(userId),
-      this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { phone: true },
-      }),
-      this.prisma.kycVerification.findMany({
-        where: { userId, status: 'APPROVED' },
-        select: { docType: true },
-      }),
-    ]);
+    const [draftData, photoCount, user, kycRows, dismissedKeys, quizCount] =
+      await Promise.all([
+        prefetchedDraftData
+          ? Promise.resolve(prefetchedDraftData)
+          : this.profileRepository
+              .getOrCreateRegistrationStep(userId)
+              .then((step) => step.draftData as Record<string, unknown>),
+        this.photoRepository.countForUser(userId),
+        this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { phone: true },
+        }),
+        this.prisma.kycVerification.findMany({
+          where: { userId, status: 'APPROVED' },
+          select: { docType: true },
+        }),
+        // Two extra reads on this hot path (every wizard "Continue" recomputes
+        // completion), both single-column and index-covered on user_id. They
+        // are here rather than on a second endpoint precisely so Home and Edit
+        // Profile cannot drift: one response carries the percentage AND the
+        // cards, so the two screens physically cannot be looking at different
+        // states of the same profile.
+        this.dismissalRepository.findKeysForUser(userId),
+        this.prisma.userQuizResponse.count({ where: { userId } }),
+      ]);
 
     const data = (draftData ?? {}) as Record<string, Section>;
     const section = (name: string): Section => data[name] ?? {};
@@ -222,6 +235,43 @@ export class ProfileCompletionService {
       .filter((m) => !m.isComplete)
       .map((m) => m.id);
 
+    // The psychology quiz is a completion SIGNAL only. It has no module, no
+    // weight, and no term in `percentage` above — finishing it (or not)
+    // cannot move the figure until its scoring is explicitly approved. It
+    // appears here so the optional card can show the right state.
+    const psychologyComplete = quizCount > 0;
+
+    // Registration splits into two cards: the answers, and the photo. A
+    // member missing only a photo is asked for a photo, not told to "complete
+    // registration" — and both stand in for the whole group, which is why the
+    // client shows these INSTEAD of the section cards while registration is
+    // unfinished (see `registrationGroup`).
+    // Excludes the photo item deliberately — it is the `photo` card's whole
+    // subject, and counting it here would make the two cards say the same
+    // thing to a member who has answered everything but uploaded nothing.
+    const registrationFieldsComplete = fieldStatuses
+      .filter((field) => field.section !== 'photos')
+      .every((field) => field.isComplete || field.optional);
+
+    const cardComplete: Record<string, boolean> = {
+      registration: registrationFieldsComplete,
+      photo: photosComplete,
+      about_family: familyComplete,
+      horoscope: horoscopeComplete,
+      verification: verificationEarned >= VERIFICATION_WEIGHT,
+      psychology: psychologyComplete,
+    };
+
+    const dismissed = new Set(dismissedKeys);
+    const recommendations: ProfileRecommendationEntity[] =
+      RECOMMENDATION_CARDS.map((card) => ({
+        key: card.key,
+        isComplete: cardComplete[card.key] ?? false,
+        isDismissed: dismissed.has(card.key),
+        affectsScore: card.affectsScore,
+        wizardStep: card.wizardStep,
+      }));
+
     const completion = new ProfileCompletionEntity();
     completion.percentage = percentage;
     completion.completedSections = completedSections;
@@ -230,6 +280,7 @@ export class ProfileCompletionService {
     completion.verificationBreakdown = verificationBreakdown;
     completion.requiredFields = fieldStatuses;
     completion.registrationComplete = registrationComplete;
+    completion.recommendations = recommendations;
     return completion;
   }
 }

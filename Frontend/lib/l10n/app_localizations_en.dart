@@ -4784,4 +4784,64 @@ class AppLocalizationsEn extends AppLocalizations {
   String nearbyDiscoverPromptMessage(String radius) {
     return 'Enable location to discover compatible profiles within $radius km of you.';
   }
+
+  @override
+  String get completionCardTitleRegistration => 'Finish Registration';
+
+  @override
+  String get completionCardBodyRegistration =>
+      'A few answers are still missing.';
+
+  @override
+  String get completionCardTitlePhoto => 'Add photo(s)';
+
+  @override
+  String get completionCardBodyPhoto =>
+      'Profiles with photos get far more interest.';
+
+  @override
+  String get completionCardTitleFamily => 'Family Details';
+
+  @override
+  String get completionCardBodyFamily => 'Share your family background.';
+
+  @override
+  String get completionCardTitleHoroscope => 'Horoscope';
+
+  @override
+  String get completionCardBodyHoroscope =>
+      'Add birth details for astrology matching.';
+
+  @override
+  String get completionCardTitleVerification => 'Verification';
+
+  @override
+  String get completionCardBodyVerification =>
+      'Get verified to earn more trust.';
+
+  @override
+  String get completionCardTitlePsychology => 'Psychology Test';
+
+  @override
+  String get completionCardBodyPsychology =>
+      'Discover your personality profile.';
+
+  @override
+  String get completionCardStatusOptional => 'Optional';
+
+  @override
+  String get completionCardDismissTooltip => 'Hide this suggestion';
+
+  @override
+  String get completionCardDismissed =>
+      'Hidden. Your saved details are untouched.';
+
+  @override
+  String get completionCardDismissFailed =>
+      'Could not hide that just now. Please try again.';
+
+  @override
+  String completionCardsScoreLabel(int percent) {
+    return 'Profile completeness score $percent%';
+  }
 }

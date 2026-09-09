@@ -8845,6 +8845,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enable location to discover compatible profiles within {radius} km of you.'**
   String nearbyDiscoverPromptMessage(String radius);
+
+  /// No description provided for @completionCardTitleRegistration.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish Registration'**
+  String get completionCardTitleRegistration;
+
+  /// No description provided for @completionCardBodyRegistration.
+  ///
+  /// In en, this message translates to:
+  /// **'A few answers are still missing.'**
+  String get completionCardBodyRegistration;
+
+  /// No description provided for @completionCardTitlePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Add photo(s)'**
+  String get completionCardTitlePhoto;
+
+  /// No description provided for @completionCardBodyPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Profiles with photos get far more interest.'**
+  String get completionCardBodyPhoto;
+
+  /// No description provided for @completionCardTitleFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Family Details'**
+  String get completionCardTitleFamily;
+
+  /// No description provided for @completionCardBodyFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your family background.'**
+  String get completionCardBodyFamily;
+
+  /// No description provided for @completionCardTitleHoroscope.
+  ///
+  /// In en, this message translates to:
+  /// **'Horoscope'**
+  String get completionCardTitleHoroscope;
+
+  /// No description provided for @completionCardBodyHoroscope.
+  ///
+  /// In en, this message translates to:
+  /// **'Add birth details for astrology matching.'**
+  String get completionCardBodyHoroscope;
+
+  /// No description provided for @completionCardTitleVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification'**
+  String get completionCardTitleVerification;
+
+  /// No description provided for @completionCardBodyVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Get verified to earn more trust.'**
+  String get completionCardBodyVerification;
+
+  /// No description provided for @completionCardTitlePsychology.
+  ///
+  /// In en, this message translates to:
+  /// **'Psychology Test'**
+  String get completionCardTitlePsychology;
+
+  /// No description provided for @completionCardBodyPsychology.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover your personality profile.'**
+  String get completionCardBodyPsychology;
+
+  /// No description provided for @completionCardStatusOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get completionCardStatusOptional;
+
+  /// No description provided for @completionCardDismissTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide this suggestion'**
+  String get completionCardDismissTooltip;
+
+  /// No description provided for @completionCardDismissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden. Your saved details are untouched.'**
+  String get completionCardDismissed;
+
+  /// No description provided for @completionCardDismissFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not hide that just now. Please try again.'**
+  String get completionCardDismissFailed;
+
+  /// No description provided for @completionCardsScoreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile completeness score {percent}%'**
+  String completionCardsScoreLabel(int percent);
 }
 
 class _AppLocalizationsDelegate

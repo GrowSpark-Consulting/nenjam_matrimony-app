@@ -1852,9 +1852,21 @@
   "drawerIdCopied": "Profile ID copied",
   "drawerTerms": "Terms & Conditions",
   "drawerCopyright": "© {year} Nenjam Matrimony",
-  "@drawerCopyright": {"placeholders": {"year": {"type": "String"}}},
+  "@drawerCopyright": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
   "drawerVersion": "Version {version}",
-  "@drawerVersion": {"placeholders": {"version": {"type": "String"}}},
+  "@drawerVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "partnerPrefIntro": "You will see Matches based on the Preferences you have set",
   "welcomeBackHeadline": "Welcome back",
   "welcomeBackSubtitle": "Enter your details to continue",
@@ -1905,6 +1917,30 @@
     "placeholders": {
       "radius": {
         "type": "String"
+      }
+    }
+  },
+  "completionCardTitleRegistration": "Finish Registration",
+  "completionCardBodyRegistration": "A few answers are still missing.",
+  "completionCardTitlePhoto": "Add photo(s)",
+  "completionCardBodyPhoto": "Profiles with photos get far more interest.",
+  "completionCardTitleFamily": "Family Details",
+  "completionCardBodyFamily": "Share your family background.",
+  "completionCardTitleHoroscope": "Horoscope",
+  "completionCardBodyHoroscope": "Add birth details for astrology matching.",
+  "completionCardTitleVerification": "Verification",
+  "completionCardBodyVerification": "Get verified to earn more trust.",
+  "completionCardTitlePsychology": "Psychology Test",
+  "completionCardBodyPsychology": "Discover your personality profile.",
+  "completionCardStatusOptional": "Optional",
+  "completionCardDismissTooltip": "Hide this suggestion",
+  "completionCardDismissed": "Hidden. Your saved details are untouched.",
+  "completionCardDismissFailed": "Could not hide that just now. Please try again.",
+  "completionCardsScoreLabel": "Profile completeness score {percent}%",
+  "@completionCardsScoreLabel": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
       }
     }
   }

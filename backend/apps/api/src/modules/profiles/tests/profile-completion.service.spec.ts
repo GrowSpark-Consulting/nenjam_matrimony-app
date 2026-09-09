@@ -1,6 +1,7 @@
 import { ProfileCompletionService } from '../services/profile-completion.service';
 import type { ProfileRepository } from '../repositories/profile.repository';
 import type { PhotoRepository } from '../repositories/photo.repository';
+import type { RecommendationDismissalRepository } from '../repositories/recommendation-dismissal.repository';
 import type { PrismaService } from '@app/database';
 
 /**
@@ -107,6 +108,7 @@ type Overrides = {
   phone?: string | null;
   approvedDocTypes?: string[];
   quizResponseCount?: number;
+  dismissedCardKeys?: string[];
 };
 
 function buildService(overrides: Overrides = {}) {
@@ -140,10 +142,19 @@ function buildService(overrides: Overrides = {}) {
     },
   } as unknown as PrismaService;
 
+  const dismissalRepository = {
+    findKeysForUser: jest
+      .fn()
+      .mockResolvedValue(overrides.dismissedCardKeys ?? []),
+    dismiss: jest.fn(),
+    restore: jest.fn(),
+  } as unknown as RecommendationDismissalRepository;
+
   const service = new ProfileCompletionService(
     prisma,
     profileRepository,
     photoRepository,
+    dismissalRepository,
   );
 
   return {

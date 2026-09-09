@@ -1621,5 +1621,22 @@
   "nearbyFetchErrorMessage": "உங்கள் அருகில் உள்ள சுயவிவரங்களை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
   "nearbyRetry": "மீண்டும் முயற்சி",
   "nearbyDiscoverPromptTitle": "உங்கள் அருகில் உள்ளவர்களைக் கண்டறியுங்கள்",
-  "nearbyDiscoverPromptMessage": "உங்களிடமிருந்து {radius} கி.மீ சுற்றளவில் உள்ள பொருத்தமான சுயவிவரங்களைக் கண்டறிய இருப்பிடத்தை இயக்கவும்."
+  "nearbyDiscoverPromptMessage": "உங்களிடமிருந்து {radius} கி.மீ சுற்றளவில் உள்ள பொருத்தமான சுயவிவரங்களைக் கண்டறிய இருப்பிடத்தை இயக்கவும்.",
+  "completionCardTitleRegistration": "பதிவை நிறைவு செய்யவும்",
+  "completionCardBodyRegistration": "சில பதில்கள் இன்னும் இல்லை.",
+  "completionCardTitlePhoto": "புகைப்படம்(கள்)",
+  "completionCardBodyPhoto": "புகைப்படங்கள் உள்ள சுயவிவரங்கள் அதிகம் கவனிக்கப்படுகின்றன.",
+  "completionCardTitleFamily": "குடும்ப விவரங்கள்",
+  "completionCardBodyFamily": "உங்கள் குடும்ப பின்னணியைப் பகிருங்கள்.",
+  "completionCardTitleHoroscope": "ஜாதகம்",
+  "completionCardBodyHoroscope": "ஜாதகப் பொருத்தத்திற்கு பிறப்பு விவரங்கள்.",
+  "completionCardTitleVerification": "சரிபார்ப்பு",
+  "completionCardBodyVerification": "சரிபார்க்கப்பட்ட சுயவிவரங்கள் அதிக நம்பிக்கையைப் பெறுகின்றன.",
+  "completionCardTitlePsychology": "உளவியல் தேர்வு",
+  "completionCardBodyPsychology": "உங்கள் ஆள்மையைக் கண்டறியுங்கள்.",
+  "completionCardStatusOptional": "விருப்பம்",
+  "completionCardDismissTooltip": "இந்த பரிந்துரையை மறை",
+  "completionCardDismissed": "மறைக்கப்பட்டது. உங்கள் விவரங்கள் அப்படியே உள்ளன.",
+  "completionCardDismissFailed": "இப்போது மறைக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
+  "completionCardsScoreLabel": "சுயவிவர நிறைவு மதிப்பெண் {percent}%"
 }
