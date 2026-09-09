@@ -10,6 +10,37 @@
 /// Location & Sub-community step both offer states, and both
 /// [NmLocationSelector] and the onboarding step offer cities. Before this,
 /// every screen carried its own copy and they had already drifted.
+///
+/// **This is frontend-owned reference data, not backend master data.**
+/// Nothing here is fetched from an API — there is no options/lookup endpoint
+/// — and with two exceptions the backend does not check what it is sent:
+/// every religion, community, country, state, city, qualification,
+/// occupation, industry, income band, diet and sub-community field is
+/// `@IsOptional() @IsString()` on its DTO and a plain `String` column, so any
+/// value would be accepted and stored verbatim. Only `gender` and
+/// `maritalStatus` are whitelisted server-side (`@IsIn`, backed by Postgres
+/// enums), which is why they are sent as enum values rather than the display
+/// text below.
+///
+/// The same is true of the cascades: [statesFor], [citiesFor] and
+/// [communitiesFor] — and the [isStateInCountry] / [isCityInState] /
+/// [isCommunityInReligion] checks the Location and Religion steps use to drop
+/// a stale answer — are enforced **only here**. NestJS stores country, state,
+/// city, religion and community independently and never asks whether they
+/// agree, so a request made outside this app can persist a city that is not
+/// in its state.
+///
+/// That is the accepted arrangement for now: frontend-owned lists, backend
+/// persistence. Editing a list here changes what new profiles can be given
+/// without any backend change — and equally, without any backend guarantee.
+/// Values already stored are never re-validated, so removing an entry
+/// silently orphans the profiles holding it — prefer adding over removing.
+///
+/// Moving these to backend master data (reference tables, a
+/// `GET /reference-data/profile-options` endpoint, stable ids, server-side
+/// validation of the values and both cascades) is recorded as deferred work
+/// in `docs/registration/profile-options-reference-data.md`. It is not
+/// approved; do not start it here.
 abstract final class ProfileOptions {
   /// Indian states, in the order the wizard has always listed them.
   ///
