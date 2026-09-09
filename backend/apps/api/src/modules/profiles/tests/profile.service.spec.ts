@@ -362,6 +362,8 @@ describe('ProfileService', () => {
         completionPercentage: 100,
         completionBreakdown: [],
         verificationBreakdown: [],
+        requiredFields: [],
+        registrationComplete: false,
         data: {
           basicDetails: {
             firstName: 'Arjun',
@@ -999,6 +1001,9 @@ describe('ProfileService', () => {
           prisma,
           profileRepository,
           photoRepository,
+          {
+            findKeysForUser: jest.fn().mockResolvedValue([]),
+          } as never,
         );
 
         const draftService = {
@@ -1048,11 +1053,25 @@ describe('ProfileService', () => {
 
         const result = await service.finalize('user-1');
 
-        expect(result.completion.percentage).toBe(32);
-        expect(result.completion.missingSections).toContain('education');
+        // 12 of the 21 registration items: the eleven Steps 1-4 answer (six
+        // basic, religion, community, country, state, city) plus the photo.
+        // round(60 * 12/21) = 34. Skipping Step 5 costs the education answers
+        // themselves now, not a separate module.
+        expect(result.completion.percentage).toBe(34);
+        // There is no separate 'education' module any more — its answers are
+        // registration fields. Their absence shows as an incomplete
+        // registration slice, named field by field.
+        expect(result.completion.registrationComplete).toBe(false);
+        expect(
+          result.completion.requiredFields
+            .filter((f) => !f.isComplete)
+            .map((f) => f.id),
+        ).toEqual(
+          expect.arrayContaining(['qualification', 'college', 'company']),
+        );
       });
 
-      it("(A') Steps 1-4 complete, Steps 5-13 all skipped, no photo, mobile unverified -> finalize succeeds at exactly 20%", async () => {
+      it("(A') Steps 1-4 complete, Steps 5-13 all skipped, no photo, mobile unverified -> finalize succeeds", async () => {
         // The exact scenario from the final access rule: only Steps 1-4
         // are mandatory. Nothing else — not a photo, not any verification
         // — may block finalize() or keep the user off Discover.
@@ -1070,8 +1089,12 @@ describe('ProfileService', () => {
 
         const result = await service.finalize('user-1');
 
-        expect(result.completion.percentage).toBe(20);
-        expect(result.completion.completedSections).toEqual(['registration']);
+        // 11 of 21 items — no photo either. round(60 * 11/21) = 31. What
+        // this regression guards is unchanged: finalize SUCCEEDS and the
+        // member is marked complete regardless of the number.
+        expect(result.completion.percentage).toBe(31);
+        expect(result.completion.completedSections).toEqual([]);
+        expect(result.completion.registrationComplete).toBe(false);
         expect(upsertProfile).toHaveBeenCalledWith(
           'user-1',
           expect.objectContaining({ isProfileComplete: true }),
@@ -1140,7 +1163,11 @@ describe('ProfileService', () => {
             profession: null,
           }),
         );
-        expect(updateProfileCompletePct).toHaveBeenCalledWith('user-1', 20);
+        // 12 of 21: the eleven from Steps 1-4 plus `qualification`, which
+        // this partial draft does supply. round(60 * 12/21) = 34. The other
+        // six work answers are still missing, which is what a partially
+        // entered Step 5 means.
+        expect(updateProfileCompletePct).toHaveBeenCalledWith('user-1', 34);
       });
 
       it('(C) Steps 1-4 complete + valid Step 5 -> finalize succeeds (education contributing its 10%)', async () => {
@@ -1159,11 +1186,20 @@ describe('ProfileService', () => {
 
         const result = await service.finalize('user-1');
 
-        expect(result.completion.percentage).toBe(42);
-        expect(result.completion.completedSections).toContain('education');
+        // 18 of 21 items: Steps 1-4's eleven, the six education answers, and
+        // the photo. Height, diet and workIndustry are still blank.
+        // round(60 * 18/21) = 51.
+        expect(result.completion.percentage).toBe(51);
+        // Supplying Step 5 completes those registration fields rather than a
+        // module of their own.
+        expect(
+          result.completion.requiredFields
+            .filter((f) => !f.isComplete)
+            .map((f) => f.id),
+        ).toEqual(['height', 'diet', 'workIndustry']);
       });
 
-      it("(C') Steps 1-4 complete + valid Step 5, no photo yet -> completion is exactly 30%", async () => {
+      it("(C') Steps 1-4 complete + valid Step 5, no photo yet -> education earns its 10%", async () => {
         const upsertProfile = jest.fn().mockResolvedValue(buildProfile());
         const { service, updateProfileCompletePct } =
           buildServiceWithRealCompletion({
@@ -1212,7 +1248,9 @@ describe('ProfileService', () => {
 
         await service.syncMatchableFromDraft('user-1', draftWithValidEducation);
 
-        expect(updateProfileCompletePct).toHaveBeenCalledWith('user-1', 30);
+        // 17 of 21 items — the same seventeen answers, no photo.
+        // round(60 * 17/21) = 49.
+        expect(updateProfileCompletePct).toHaveBeenCalledWith('user-1', 49);
       });
 
       it('(D) no fake/default education or height values are ever persisted when skipped', async () => {

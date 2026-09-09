@@ -102,6 +102,40 @@ class _ProfileCompletionBody extends ConsumerWidget {
                 ),
               ),
           ],
+          // Registration information. Shown ONLY when the backend says the
+          // slice is incomplete: a member who just finished signing up has
+          // answered all of it, and re-listing what they have already given
+          // is the nagging this whole change exists to stop. A legacy profile
+          // that genuinely lacks answers still sees exactly those, named and
+          // deep-linked to the step that fixes each. The optional
+          // sub-community never appears — missingRequiredFields excludes it.
+          if (!completeness.registrationComplete &&
+              completeness.missingRequiredFields.isNotEmpty) ...[
+            const SizedBox(height: 32),
+            Text(
+              l10n.profileCompletionRegistrationGroupTitle,
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (final field in completeness.missingRequiredFields)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: NmChecklistItemCard(
+                  icon: moduleIcon('registration'),
+                  title: requiredFieldTitle(l10n, field.id),
+                  subtitle: '',
+                  actionLabel: moduleAction(l10n, 'registration'),
+                  isDone: false,
+                  onAction: () => openEditProfile(
+                    context,
+                    ref,
+                    wizardStep: field.wizardStep,
+                  ),
+                ),
+              ),
+          ],
           if (stillGrowing.isNotEmpty) ...[
             const SizedBox(height: 32),
             Text(
@@ -186,7 +220,12 @@ class _ProfileCompletionBody extends ConsumerWidget {
 /// profiles earn better responses…"), which is a different concept from "how
 /// complete is my profile". So it is filtered out of this screen's cards
 /// while still being counted in the headline percentage above.
-bool _isCompletionSection(EvaluatedModule e) => e.module.id != 'verification';
+///
+/// `registration` is excluded too, but for a different reason: it is rendered
+/// as its own field-by-field group above, so a generic "Registration" card
+/// here would say the same thing twice and less usefully.
+bool _isCompletionSection(EvaluatedModule e) =>
+    e.module.id != 'verification' && e.module.id != 'registration';
 
 // ─── Module → display copy (small switch, not business logic) ────────────
 

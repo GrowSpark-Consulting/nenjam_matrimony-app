@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/constants/profile_options.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -21,7 +22,12 @@ import '../widgets/requirement_toggle.dart';
 // on-screen label is localized via the *Map() functions below) ───────────
 const List<String> _minEducationOptions = ['High School', 'Bachelors', 'Masters', 'Doctorate', 'Any'];
 const List<String> _educationLevelOptions = ['High School', 'Bachelors', 'Masters', 'Doctorate', 'Professional Degree'];
-const List<String> _industryOptions = ['IT / Software', 'Healthcare', 'Finance', 'Government', 'Education', 'Business / Self-Employed', 'Other'];
+// Promoted to ProfileOptions.industries so the sector a member states about
+// themselves and the sector they filter partners by come from one list. Every
+// value this page used to offer is still in it, so no stored preference is
+// orphaned; 'Other' stays appended here because a filter may legitimately be
+// left broad.
+const List<String> _industryOptions = [...ProfileOptions.industries, 'Other'];
 const List<String> _employmentTypeOptions = ['Salaried', 'Self-Employed', 'Business Owner', 'Not Working'];
 const List<String> _countryOptions = ['India', 'USA', 'UK', 'Canada', 'Australia', 'UAE', 'Singapore', 'Other'];
 const List<String> _stateOptions = ['Tamil Nadu', 'Kerala', 'Karnataka', 'Andhra Pradesh', 'Telangana', 'Maharashtra', 'Delhi', 'Other'];

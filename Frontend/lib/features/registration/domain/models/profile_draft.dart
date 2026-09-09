@@ -318,6 +318,11 @@ class EducationDetails {
   final String occupation;
   final String company;
   final String employmentType;
+
+  /// "Industry" — the sector the member works in, asked between "You work
+  /// with" and "You work as". New in Task 2; every other field on this class
+  /// predates it and is untouched.
+  final String workIndustry;
   final String annualIncome;
   final String workLocation;
 
@@ -327,6 +332,7 @@ class EducationDetails {
     this.occupation = '',
     this.company = '',
     this.employmentType = '',
+    this.workIndustry = '',
     this.annualIncome = '',
     this.workLocation = '',
   });
@@ -337,6 +343,7 @@ class EducationDetails {
     String? occupation,
     String? company,
     String? employmentType,
+    String? workIndustry,
     String? annualIncome,
     String? workLocation,
   }) {
@@ -346,6 +353,7 @@ class EducationDetails {
       occupation: occupation ?? this.occupation,
       company: company ?? this.company,
       employmentType: employmentType ?? this.employmentType,
+      workIndustry: workIndustry ?? this.workIndustry,
       annualIncome: annualIncome ?? this.annualIncome,
       workLocation: workLocation ?? this.workLocation,
     );
@@ -358,6 +366,7 @@ class EducationDetails {
         occupation: json['occupation'] as String? ?? '',
         company: json['company'] as String? ?? '',
         employmentType: json['employmentType'] as String? ?? '',
+        workIndustry: json['workIndustry'] as String? ?? '',
         annualIncome: json['annualIncome'] as String? ?? '',
         workLocation: json['workLocation'] as String? ?? '',
       );
@@ -368,6 +377,7 @@ class EducationDetails {
         if (occupation.isNotEmpty) 'occupation': occupation,
         if (company.isNotEmpty) 'company': company,
         if (employmentType.isNotEmpty) 'employmentType': employmentType,
+        if (workIndustry.isNotEmpty) 'workIndustry': workIndustry,
         if (annualIncome.isNotEmpty) 'annualIncome': annualIncome,
         if (workLocation.isNotEmpty) 'workLocation': workLocation,
       };

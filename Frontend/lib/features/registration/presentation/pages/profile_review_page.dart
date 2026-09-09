@@ -16,6 +16,7 @@ import '../../../astro/presentation/providers/compatibility_provider.dart';
 import '../../../discover/presentation/providers/discover_providers.dart';
 import '../../../profile/presentation/providers/profile_dashboard_providers.dart';
 import '../../../profile_completion/presentation/providers/profile_completeness_provider.dart';
+import '../../../profile_completion/presentation/widgets/complete_profile_section.dart';
 import '../../../profile_photos/domain/models/user_photo.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../../profile_prompts/domain/models/prompt_bank_item.dart';
@@ -164,6 +165,18 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                     // ─── Completion progress bar ───────────────────
                     NmGradientProgressBar(value: completion / 100, height: 6),
                     const SizedBox(height: 24),
+
+                    // ─── Complete Profile ──────────────────────────
+                    //
+                    // The same widget, the same cards and the same
+                    // navigation as Home — one component reading one backend
+                    // response, so a section finished (or a card hidden) on
+                    // either screen is reflected on the other rather than
+                    // the two keeping separate lists in step by hand.
+                    //
+                    // Padding is 0 because this page already pads its scroll
+                    // view by 24; the cards still scroll edge to edge.
+                    const CompleteProfileSection(horizontalPadding: 0),
 
                     Text(
                       l10n.registrationProfileSummary,

@@ -45,6 +45,16 @@ abstract final class ApiEndpoints {
   static const String profileDraftPartnerPreference =
       '/profiles/draft/partner-preference';
   static const String profileFinalize = '/profiles/finalize';
+
+  /// "Complete Your Profile" recommendation dismissals — hides a card from
+  /// Home and Edit Profile without touching the data behind it. POST a
+  /// `{ cardKey }` to hide, DELETE the keyed route to bring it back. The
+  /// cards themselves ride on [profileDraft]'s `recommendations`, so no
+  /// screen needs a second fetch to draw them.
+  static const String profileCompletionDismissals =
+      '/profiles/completion/dismissals';
+  static String profileCompletionDismissal(String cardKey) =>
+      '/profiles/completion/dismissals/$cardKey';
   static const String profileMe = '/profiles/me';
 
   /// Real, implemented route (backend/apps/api/src/modules/matches/

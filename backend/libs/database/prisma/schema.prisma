@@ -58,6 +58,7 @@ model User {
   profilePrompts    UserProfilePrompt[]
   emailLogs         EmailLog[]
   settings          UserSettings?
+  recommendationDismissals ProfileRecommendationDismissal[]
 
   @@index([firebaseUid])
   @@index([email])
@@ -141,6 +142,17 @@ model UserProfile {
   /// Nullable: Step 5 (Education & Career) is skippable — see heightCm's
   /// comment for why this must not be NOT NULL.
   highestEducation   String?       @map("highest_education")
+  /// The college/university named on the Education step.
+  ///
+  /// Its own column since Task 2. It was previously folded into
+  /// `educationDetails` below by `joinNonEmpty(college, employmentType,
+  /// workLocation)`, which made it unrecoverable from the profile row — the
+  /// draft kept it, the profile could not show it. `educationDetails` is
+  /// left exactly as it is so nothing already stored there is lost.
+  college            String?
+  /// "Industry" — the sector the member works in, between employment type
+  /// and role. Added by Task 2; nullable because no existing profile has one.
+  workIndustry       String?       @map("work_industry")
   educationDetails   String?       @map("education_details")
   /// Nullable: Step 5 (Education & Career) is skippable — see heightCm's
   /// comment for why this must not be NOT NULL.
@@ -293,6 +305,34 @@ model RegistrationStep {
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("registration_steps")
+}
+
+/// One profile-completion recommendation card the member has dismissed from
+/// Home / Edit Profile.
+///
+/// A dismissal hides the *suggestion*, never the data behind it: there is no
+/// column here that any profile section reads, and deleting a row simply
+/// makes the card eligible to be shown again. That separation is the whole
+/// point — "I don't want to be asked about my horoscope" and "I have no
+/// horoscope details" are different statements, and the old client-only
+/// dismissal could not tell them apart across a reinstall or a re-login.
+///
+/// [cardKey] is the stable recommendation id shared with the Flutter client
+/// (`about_family`, `horoscope`, `verification`, `psychology`,
+/// `registration`, `photo` — see profiles/domain/recommendation-cards.ts and
+/// Frontend .../domain/completion_recommendation.dart). Deliberately a String
+/// rather than an enum: adding a card must not require a migration, and an
+/// unknown key read back is ignored by both sides rather than throwing.
+model ProfileRecommendationDismissal {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  cardKey     String   @map("card_key")
+  dismissedAt DateTime @default(now()) @map("dismissed_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cardKey])
+  @@index([userId])
+  @@map("profile_recommendation_dismissals")
 }
 
 /// Horoscope details for traditional Porutham / Koota matching.
