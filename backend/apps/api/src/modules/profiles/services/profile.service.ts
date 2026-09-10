@@ -12,6 +12,7 @@ import { ProfileDraftService } from './profile-draft.service';
 import { ProfileCompletionService } from './profile-completion.service';
 import { FeedInvalidationService } from '../../matches/cache/feed-invalidation.service';
 import { EmailDispatchService } from '../../notifications/services/email-dispatch.service';
+import { LocationService } from '../../reference-data/services/location.service';
 import { ProfileEntity } from '../entities/profile.entity';
 import { PhotoEntity } from '../entities/photo.entity';
 import type { LocationResponseDto } from '../dto/update-location.dto';
@@ -153,6 +154,7 @@ export class ProfileService {
     private readonly emailDispatch: EmailDispatchService,
     private readonly feedInvalidation: FeedInvalidationService,
     private readonly s3: S3Service,
+    private readonly locations: LocationService,
   ) {}
 
   // Assembles the full response: the finalized UserProfile plus everything
@@ -464,6 +466,20 @@ export class ProfileService {
       throw new BadRequestException('Please enter a valid date of birth.');
     }
 
+    // Structured location, if the client sent any. The server re-checks the
+    // hierarchy rather than trusting what arrived: a request claiming Chennai
+    // is in Singapore is rejected here, not stored.
+    //
+    // `resolve` returns null when the draft carries no codes at all, which is
+    // every profile written before this feature shipped and every client that
+    // has not been updated yet. The free-text fields below remain the source
+    // of truth in that case, so nothing regresses.
+    const resolved = await this.locations.resolve({
+      countryCode: location.countryCode as string | undefined,
+      stateCode: location.stateCode as string | undefined,
+      cityCode: location.cityCode as string | undefined,
+    });
+
     const heightCm = parseHeightToCm(physical.height as string | undefined);
     const weightKg = parseLeadingNumber(physical.weight as string | undefined);
     const annualIncomeLakhs = parseLeadingNumber(
@@ -522,10 +538,22 @@ export class ProfileService {
         ) ?? null,
       profession: (education.occupation as string) || null,
       employerName: (education.company as string) || null,
-      currentCity: location.city as string,
-      currentState: location.state as string,
+      // Both forms are written, not one or the other. The free-text columns
+      // stay authoritative for everything that already reads them (search,
+      // feed cards, emails), and the codes are added alongside. Where the
+      // client sent codes, the labels come from the master data so the text
+      // and the code cannot disagree; otherwise the member's own text stands.
+      currentCity: resolved?.cityLabel ?? (location.city as string),
+      currentState: resolved?.stateLabel ?? (location.state as string),
       nativeCity: (location.nativePlace as string) || null,
-      country: (location.country as string) || null,
+      country: resolved?.countryLabel ?? ((location.country as string) || null),
+      // Spread, not three plain properties: when the client sent no codes
+      // these keys are absent entirely rather than null, so an existing
+      // profile that already has codes keeps them instead of having them
+      // wiped by a save from an older client.
+      ...(resolved?.countryCode ? { countryRef: { connect: { code: resolved.countryCode } } } : {}),
+      ...(resolved?.stateCode ? { stateRef: { connect: { code: resolved.stateCode } } } : {}),
+      ...(resolved?.cityCode ? { cityRef: { connect: { code: resolved.cityCode } } } : {}),
       area: (location.area as string) || null,
       pinCode: (location.pinCode as string) || null,
       bio: (lifestyle.aboutMe as string) || null,

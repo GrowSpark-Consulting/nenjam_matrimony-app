@@ -527,6 +527,8 @@
   "registrationStateLabel": "மாநிலம்",
   "registrationCityLabel": "நகரம்",
   "registrationCityHint": "எ.கா., சென்னை",
+  "registrationCountryHint": "உங்கள் நாட்டைத் தேர்ந்தெடுக்கவும்",
+  "registrationStateHint": "உங்கள் மாநிலத்தைத் தேர்ந்தெடுக்கவும்",
   "registrationAreaLabel": "பகுதி",
   "registrationAreaHint": "எ.கா., டி. நகர்",
   "registrationPinLabel": "அஞ்சல் குறியீடு",

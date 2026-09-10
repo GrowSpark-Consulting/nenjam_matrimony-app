@@ -21,6 +21,7 @@ import { SupportModule } from './modules/support/support.module';
 import { BlocksModule } from './modules/blocks/blocks.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { FeedCacheModule } from './modules/matches/cache/feed-cache.module';
+import { ReferenceDataModule } from './modules/reference-data/reference-data.module';
 import { throttlerConfig } from './throttling';
 
 @Module({
@@ -48,6 +49,9 @@ import { throttlerConfig } from './throttling';
     RealtimeModule,
     // Feed invalidation (version + feed.invalidate). @Global — see the module.
     FeedCacheModule,
+    // Location master data. @Global, and listed before ProfilesModule because
+    // profile writes validate their location against it.
+    ReferenceDataModule,
     ProfilesModule,
     MatchesModule,
     InterestsModule,

@@ -1,0 +1,2690 @@
+[
+  {
+    "code": "AE-AJ",
+    "countryCode": "AE",
+    "label": "'Ajmān",
+    "type": "Emirate",
+    "isActive": true
+  },
+  {
+    "code": "AE-AZ",
+    "countryCode": "AE",
+    "label": "Abū Z̧aby",
+    "type": "Emirate",
+    "isActive": true
+  },
+  {
+    "code": "AE-FU",
+    "countryCode": "AE",
+    "label": "Al Fujayrah",
+    "type": "Emirate",
+    "isActive": true
+  },
+  {
+    "code": "AE-SH",
+    "countryCode": "AE",
+    "label": "Ash Shāriqah",
+    "type": "Emirate",
+    "isActive": true
+  },
+  {
+    "code": "AE-DU",
+    "countryCode": "AE",
+    "label": "Dubayy",
+    "type": "Emirate",
+    "isActive": true
+  },
+  {
+    "code": "AE-RK",
+    "countryCode": "AE",
+    "label": "Ra's al Khaymah",
+    "type": "Emirate",
+    "isActive": true
+  },
+  {
+    "code": "AE-UQ",
+    "countryCode": "AE",
+    "label": "Umm al Qaywayn",
+    "type": "Emirate",
+    "isActive": true
+  },
+  {
+    "code": "AU-ACT",
+    "countryCode": "AU",
+    "label": "Australian Capital Territory",
+    "type": "Territory",
+    "isActive": true
+  },
+  {
+    "code": "AU-NSW",
+    "countryCode": "AU",
+    "label": "New South Wales",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "AU-NT",
+    "countryCode": "AU",
+    "label": "Northern Territory",
+    "type": "Territory",
+    "isActive": true
+  },
+  {
+    "code": "AU-QLD",
+    "countryCode": "AU",
+    "label": "Queensland",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "AU-SA",
+    "countryCode": "AU",
+    "label": "South Australia",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "AU-TAS",
+    "countryCode": "AU",
+    "label": "Tasmania",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "AU-VIC",
+    "countryCode": "AU",
+    "label": "Victoria",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "AU-WA",
+    "countryCode": "AU",
+    "label": "Western Australia",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "CA-AB",
+    "countryCode": "CA",
+    "label": "Alberta",
+    "type": "Province",
+    "isActive": true
+  },
+  {
+    "code": "CA-BC",
+    "countryCode": "CA",
+    "label": "British Columbia",
+    "type": "Province",
+    "isActive": true
+  },
+  {
+    "code": "CA-MB",
+    "countryCode": "CA",
+    "label": "Manitoba",
+    "type": "Province",
+    "isActive": true
+  },
+  {
+    "code": "CA-NB",
+    "countryCode": "CA",
+    "label": "New Brunswick",
+    "type": "Province",
+    "isActive": true
+  },
+  {
+    "code": "CA-NL",
+    "countryCode": "CA",
+    "label": "Newfoundland and Labrador",
+    "type": "Province",
+    "isActive": true
+  },
+  {
+    "code": "CA-NT",
+    "countryCode": "CA",
+    "label": "Northwest Territories",
+    "type": "Territory",
+    "isActive": true
+  },
+  {
+    "code": "CA-NS",
+    "countryCode": "CA",
+    "label": "Nova Scotia",
+    "type": "Province",
+    "isActive": true
+  },
+  {
+    "code": "CA-NU",
+    "countryCode": "CA",
+    "label": "Nunavut",
+    "type": "Territory",
+    "isActive": false
+  },
+  {
+    "code": "CA-ON",
+    "countryCode": "CA",
+    "label": "Ontario",
+    "type": "Province",
+    "isActive": true
+  },
+  {
+    "code": "CA-PE",
+    "countryCode": "CA",
+    "label": "Prince Edward Island",
+    "type": "Province",
+    "isActive": true
+  },
+  {
+    "code": "CA-QC",
+    "countryCode": "CA",
+    "label": "Quebec",
+    "type": "Province",
+    "isActive": true
+  },
+  {
+    "code": "CA-SK",
+    "countryCode": "CA",
+    "label": "Saskatchewan",
+    "type": "Province",
+    "isActive": true
+  },
+  {
+    "code": "CA-YT",
+    "countryCode": "CA",
+    "label": "Yukon",
+    "type": "Territory",
+    "isActive": true
+  },
+  {
+    "code": "GB-ABE",
+    "countryCode": "GB",
+    "label": "Aberdeen City",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-ABD",
+    "countryCode": "GB",
+    "label": "Aberdeenshire",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-ANS",
+    "countryCode": "GB",
+    "label": "Angus",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-ANT",
+    "countryCode": "GB",
+    "label": "Antrim",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-ARD",
+    "countryCode": "GB",
+    "label": "Ards",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-AGB",
+    "countryCode": "GB",
+    "label": "Argyll and Bute",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-ARM",
+    "countryCode": "GB",
+    "label": "Armagh",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-BLA",
+    "countryCode": "GB",
+    "label": "Ballymena",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-BLY",
+    "countryCode": "GB",
+    "label": "Ballymoney",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-BNB",
+    "countryCode": "GB",
+    "label": "Banbridge",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-BDG",
+    "countryCode": "GB",
+    "label": "Barking and Dagenham",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-BNE",
+    "countryCode": "GB",
+    "label": "Barnet",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-BNS",
+    "countryCode": "GB",
+    "label": "Barnsley",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-BAS",
+    "countryCode": "GB",
+    "label": "Bath and North East Somerset",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-BDF",
+    "countryCode": "GB",
+    "label": "Bedford",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-BFS",
+    "countryCode": "GB",
+    "label": "Belfast",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-BEX",
+    "countryCode": "GB",
+    "label": "Bexley",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-BIR",
+    "countryCode": "GB",
+    "label": "Birmingham",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-BBD",
+    "countryCode": "GB",
+    "label": "Blackburn with Darwen",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-BPL",
+    "countryCode": "GB",
+    "label": "Blackpool",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-BGW",
+    "countryCode": "GB",
+    "label": "Blaenau Gwent",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-BOL",
+    "countryCode": "GB",
+    "label": "Bolton",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-BMH",
+    "countryCode": "GB",
+    "label": "Bournemouth",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-BRC",
+    "countryCode": "GB",
+    "label": "Bracknell Forest",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-BRD",
+    "countryCode": "GB",
+    "label": "Bradford",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-BEN",
+    "countryCode": "GB",
+    "label": "Brent",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-BGE",
+    "countryCode": "GB",
+    "label": "Bridgend",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-BNH",
+    "countryCode": "GB",
+    "label": "Brighton and Hove",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-BST",
+    "countryCode": "GB",
+    "label": "Bristol, City of",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-BRY",
+    "countryCode": "GB",
+    "label": "Bromley",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-BKM",
+    "countryCode": "GB",
+    "label": "Buckinghamshire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-BUR",
+    "countryCode": "GB",
+    "label": "Bury",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-CAY",
+    "countryCode": "GB",
+    "label": "Caerphilly",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-CLD",
+    "countryCode": "GB",
+    "label": "Calderdale",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-CAM",
+    "countryCode": "GB",
+    "label": "Cambridgeshire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-CMD",
+    "countryCode": "GB",
+    "label": "Camden",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-CRF",
+    "countryCode": "GB",
+    "label": "Cardiff",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-CMN",
+    "countryCode": "GB",
+    "label": "Carmarthenshire",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-CKF",
+    "countryCode": "GB",
+    "label": "Carrickfergus",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-CSR",
+    "countryCode": "GB",
+    "label": "Castlereagh",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-CBF",
+    "countryCode": "GB",
+    "label": "Central Bedfordshire",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-CGN",
+    "countryCode": "GB",
+    "label": "Ceredigion",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-CHE",
+    "countryCode": "GB",
+    "label": "Cheshire East",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-CHW",
+    "countryCode": "GB",
+    "label": "Cheshire West and Chester",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-CLK",
+    "countryCode": "GB",
+    "label": "Clackmannanshire",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-CLR",
+    "countryCode": "GB",
+    "label": "Coleraine",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-CWY",
+    "countryCode": "GB",
+    "label": "Conwy",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-CKT",
+    "countryCode": "GB",
+    "label": "Cookstown",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-CON",
+    "countryCode": "GB",
+    "label": "Cornwall",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-COV",
+    "countryCode": "GB",
+    "label": "Coventry",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-CGV",
+    "countryCode": "GB",
+    "label": "Craigavon",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-CRY",
+    "countryCode": "GB",
+    "label": "Croydon",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-CMA",
+    "countryCode": "GB",
+    "label": "Cumbria",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-DAL",
+    "countryCode": "GB",
+    "label": "Darlington",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-DEN",
+    "countryCode": "GB",
+    "label": "Denbighshire",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-DER",
+    "countryCode": "GB",
+    "label": "Derby",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-DBY",
+    "countryCode": "GB",
+    "label": "Derbyshire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-DRY",
+    "countryCode": "GB",
+    "label": "Derry",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-DEV",
+    "countryCode": "GB",
+    "label": "Devon",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-DNC",
+    "countryCode": "GB",
+    "label": "Doncaster",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-DOR",
+    "countryCode": "GB",
+    "label": "Dorset",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-DOW",
+    "countryCode": "GB",
+    "label": "Down",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-DUD",
+    "countryCode": "GB",
+    "label": "Dudley",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-DGY",
+    "countryCode": "GB",
+    "label": "Dumfries and Galloway",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-DND",
+    "countryCode": "GB",
+    "label": "Dundee City",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-DGN",
+    "countryCode": "GB",
+    "label": "Dungannon and South Tyrone",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-DUR",
+    "countryCode": "GB",
+    "label": "Durham County",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-EAL",
+    "countryCode": "GB",
+    "label": "Ealing",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-EAY",
+    "countryCode": "GB",
+    "label": "East Ayrshire",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-EDU",
+    "countryCode": "GB",
+    "label": "East Dunbartonshire",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-ELN",
+    "countryCode": "GB",
+    "label": "East Lothian",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-ERW",
+    "countryCode": "GB",
+    "label": "East Renfrewshire",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-ERY",
+    "countryCode": "GB",
+    "label": "East Riding of Yorkshire",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-ESX",
+    "countryCode": "GB",
+    "label": "East Sussex",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-EDH",
+    "countryCode": "GB",
+    "label": "Edinburgh, City of",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-ELS",
+    "countryCode": "GB",
+    "label": "Eilean Siar",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-ENF",
+    "countryCode": "GB",
+    "label": "Enfield",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-ENG",
+    "countryCode": "GB",
+    "label": "England",
+    "type": "Country",
+    "isActive": true
+  },
+  {
+    "code": "GB-EAW",
+    "countryCode": "GB",
+    "label": "England and Wales",
+    "type": "Nation",
+    "isActive": false
+  },
+  {
+    "code": "GB-ESS",
+    "countryCode": "GB",
+    "label": "Essex",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-FAL",
+    "countryCode": "GB",
+    "label": "Falkirk",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-FER",
+    "countryCode": "GB",
+    "label": "Fermanagh",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-FIF",
+    "countryCode": "GB",
+    "label": "Fife",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-FLN",
+    "countryCode": "GB",
+    "label": "Flintshire",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-GAT",
+    "countryCode": "GB",
+    "label": "Gateshead",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-GLG",
+    "countryCode": "GB",
+    "label": "Glasgow City",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-GLS",
+    "countryCode": "GB",
+    "label": "Gloucestershire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-GBN",
+    "countryCode": "GB",
+    "label": "Great Britain",
+    "type": "Nation",
+    "isActive": false
+  },
+  {
+    "code": "GB-GRE",
+    "countryCode": "GB",
+    "label": "Greenwich",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-GWN",
+    "countryCode": "GB",
+    "label": "Gwynedd",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-HCK",
+    "countryCode": "GB",
+    "label": "Hackney",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-HAL",
+    "countryCode": "GB",
+    "label": "Halton",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-HMF",
+    "countryCode": "GB",
+    "label": "Hammersmith and Fulham",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-HAM",
+    "countryCode": "GB",
+    "label": "Hampshire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-HRY",
+    "countryCode": "GB",
+    "label": "Haringey",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-HRW",
+    "countryCode": "GB",
+    "label": "Harrow",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-HPL",
+    "countryCode": "GB",
+    "label": "Hartlepool",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-HAV",
+    "countryCode": "GB",
+    "label": "Havering",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-HEF",
+    "countryCode": "GB",
+    "label": "Herefordshire",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-HRT",
+    "countryCode": "GB",
+    "label": "Hertfordshire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-HLD",
+    "countryCode": "GB",
+    "label": "Highland",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-HIL",
+    "countryCode": "GB",
+    "label": "Hillingdon",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-HNS",
+    "countryCode": "GB",
+    "label": "Hounslow",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-IVC",
+    "countryCode": "GB",
+    "label": "Inverclyde",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-AGY",
+    "countryCode": "GB",
+    "label": "Isle of Anglesey",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-IOW",
+    "countryCode": "GB",
+    "label": "Isle of Wight",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-IOS",
+    "countryCode": "GB",
+    "label": "Isles of Scilly",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-ISL",
+    "countryCode": "GB",
+    "label": "Islington",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-KEC",
+    "countryCode": "GB",
+    "label": "Kensington and Chelsea",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-KEN",
+    "countryCode": "GB",
+    "label": "Kent",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-KHL",
+    "countryCode": "GB",
+    "label": "Kingston upon Hull",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-KTT",
+    "countryCode": "GB",
+    "label": "Kingston upon Thames",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-KIR",
+    "countryCode": "GB",
+    "label": "Kirklees",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-KWL",
+    "countryCode": "GB",
+    "label": "Knowsley",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-LBH",
+    "countryCode": "GB",
+    "label": "Lambeth",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-LAN",
+    "countryCode": "GB",
+    "label": "Lancashire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-LRN",
+    "countryCode": "GB",
+    "label": "Larne",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-LDS",
+    "countryCode": "GB",
+    "label": "Leeds",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-LCE",
+    "countryCode": "GB",
+    "label": "Leicester",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-LEC",
+    "countryCode": "GB",
+    "label": "Leicestershire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-LEW",
+    "countryCode": "GB",
+    "label": "Lewisham",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-LMV",
+    "countryCode": "GB",
+    "label": "Limavady",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-LIN",
+    "countryCode": "GB",
+    "label": "Lincolnshire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-LSB",
+    "countryCode": "GB",
+    "label": "Lisburn",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-LIV",
+    "countryCode": "GB",
+    "label": "Liverpool",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-LND",
+    "countryCode": "GB",
+    "label": "London, City of",
+    "type": "City corporation",
+    "isActive": false
+  },
+  {
+    "code": "GB-LUT",
+    "countryCode": "GB",
+    "label": "Luton",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-MFT",
+    "countryCode": "GB",
+    "label": "Magherafelt",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-MAN",
+    "countryCode": "GB",
+    "label": "Manchester",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-MDW",
+    "countryCode": "GB",
+    "label": "Medway",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-MTY",
+    "countryCode": "GB",
+    "label": "Merthyr Tydfil",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-MRT",
+    "countryCode": "GB",
+    "label": "Merton",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-MDB",
+    "countryCode": "GB",
+    "label": "Middlesbrough",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-MLN",
+    "countryCode": "GB",
+    "label": "Midlothian",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-MIK",
+    "countryCode": "GB",
+    "label": "Milton Keynes",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-MON",
+    "countryCode": "GB",
+    "label": "Monmouthshire",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-MRY",
+    "countryCode": "GB",
+    "label": "Moray",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-MYL",
+    "countryCode": "GB",
+    "label": "Moyle",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-NTL",
+    "countryCode": "GB",
+    "label": "Neath Port Talbot",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-NET",
+    "countryCode": "GB",
+    "label": "Newcastle upon Tyne",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-NWM",
+    "countryCode": "GB",
+    "label": "Newham",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-NWP",
+    "countryCode": "GB",
+    "label": "Newport",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-NYM",
+    "countryCode": "GB",
+    "label": "Newry and Mourne",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-NTA",
+    "countryCode": "GB",
+    "label": "Newtownabbey",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-NFK",
+    "countryCode": "GB",
+    "label": "Norfolk",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-NAY",
+    "countryCode": "GB",
+    "label": "North Ayrshire",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-NDN",
+    "countryCode": "GB",
+    "label": "North Down",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-NEL",
+    "countryCode": "GB",
+    "label": "North East Lincolnshire",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-NLK",
+    "countryCode": "GB",
+    "label": "North Lanarkshire",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-NLN",
+    "countryCode": "GB",
+    "label": "North Lincolnshire",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-NSM",
+    "countryCode": "GB",
+    "label": "North Somerset",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-NTY",
+    "countryCode": "GB",
+    "label": "North Tyneside",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-NYK",
+    "countryCode": "GB",
+    "label": "North Yorkshire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-NTH",
+    "countryCode": "GB",
+    "label": "Northamptonshire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-NIR",
+    "countryCode": "GB",
+    "label": "Northern Ireland",
+    "type": "Province",
+    "isActive": true
+  },
+  {
+    "code": "GB-NBL",
+    "countryCode": "GB",
+    "label": "Northumberland",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-NGM",
+    "countryCode": "GB",
+    "label": "Nottingham",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-NTT",
+    "countryCode": "GB",
+    "label": "Nottinghamshire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-OLD",
+    "countryCode": "GB",
+    "label": "Oldham",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-OMH",
+    "countryCode": "GB",
+    "label": "Omagh",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-ORK",
+    "countryCode": "GB",
+    "label": "Orkney Islands",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-OXF",
+    "countryCode": "GB",
+    "label": "Oxfordshire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-PEM",
+    "countryCode": "GB",
+    "label": "Pembrokeshire",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-PKN",
+    "countryCode": "GB",
+    "label": "Perth and Kinross",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-PTE",
+    "countryCode": "GB",
+    "label": "Peterborough",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-PLY",
+    "countryCode": "GB",
+    "label": "Plymouth",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-POL",
+    "countryCode": "GB",
+    "label": "Poole",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-POR",
+    "countryCode": "GB",
+    "label": "Portsmouth",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-POW",
+    "countryCode": "GB",
+    "label": "Powys",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-RDG",
+    "countryCode": "GB",
+    "label": "Reading",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-RDB",
+    "countryCode": "GB",
+    "label": "Redbridge",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-RCC",
+    "countryCode": "GB",
+    "label": "Redcar and Cleveland",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-RFW",
+    "countryCode": "GB",
+    "label": "Renfrewshire",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-RCT",
+    "countryCode": "GB",
+    "label": "Rhondda, Cynon, Taff",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-RIC",
+    "countryCode": "GB",
+    "label": "Richmond upon Thames",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-RCH",
+    "countryCode": "GB",
+    "label": "Rochdale",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-ROT",
+    "countryCode": "GB",
+    "label": "Rotherham",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-RUT",
+    "countryCode": "GB",
+    "label": "Rutland",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-SLF",
+    "countryCode": "GB",
+    "label": "Salford",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-SAW",
+    "countryCode": "GB",
+    "label": "Sandwell",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-SCT",
+    "countryCode": "GB",
+    "label": "Scotland",
+    "type": "Country",
+    "isActive": true
+  },
+  {
+    "code": "GB-SCB",
+    "countryCode": "GB",
+    "label": "Scottish Borders, The",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-SFT",
+    "countryCode": "GB",
+    "label": "Sefton",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-SHF",
+    "countryCode": "GB",
+    "label": "Sheffield",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-ZET",
+    "countryCode": "GB",
+    "label": "Shetland Islands",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-SHR",
+    "countryCode": "GB",
+    "label": "Shropshire",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-SLG",
+    "countryCode": "GB",
+    "label": "Slough",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-SOL",
+    "countryCode": "GB",
+    "label": "Solihull",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-SOM",
+    "countryCode": "GB",
+    "label": "Somerset",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-SAY",
+    "countryCode": "GB",
+    "label": "South Ayrshire",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-SGC",
+    "countryCode": "GB",
+    "label": "South Gloucestershire",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-SLK",
+    "countryCode": "GB",
+    "label": "South Lanarkshire",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-STY",
+    "countryCode": "GB",
+    "label": "South Tyneside",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-STH",
+    "countryCode": "GB",
+    "label": "Southampton",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-SOS",
+    "countryCode": "GB",
+    "label": "Southend-on-Sea",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-SWK",
+    "countryCode": "GB",
+    "label": "Southwark",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-SHN",
+    "countryCode": "GB",
+    "label": "St. Helens",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-STS",
+    "countryCode": "GB",
+    "label": "Staffordshire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-STG",
+    "countryCode": "GB",
+    "label": "Stirling",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-SKP",
+    "countryCode": "GB",
+    "label": "Stockport",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-STT",
+    "countryCode": "GB",
+    "label": "Stockton-on-Tees",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-STE",
+    "countryCode": "GB",
+    "label": "Stoke-on-Trent",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-STB",
+    "countryCode": "GB",
+    "label": "Strabane",
+    "type": "District council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-SFK",
+    "countryCode": "GB",
+    "label": "Suffolk",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-SND",
+    "countryCode": "GB",
+    "label": "Sunderland",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-SRY",
+    "countryCode": "GB",
+    "label": "Surrey",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-STN",
+    "countryCode": "GB",
+    "label": "Sutton",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-SWA",
+    "countryCode": "GB",
+    "label": "Swansea",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-SWD",
+    "countryCode": "GB",
+    "label": "Swindon",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-TAM",
+    "countryCode": "GB",
+    "label": "Tameside",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-TFW",
+    "countryCode": "GB",
+    "label": "Telford and Wrekin",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-THR",
+    "countryCode": "GB",
+    "label": "Thurrock",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-TOB",
+    "countryCode": "GB",
+    "label": "Torbay",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-TOF",
+    "countryCode": "GB",
+    "label": "Torfaen",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-TWH",
+    "countryCode": "GB",
+    "label": "Tower Hamlets",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-TRF",
+    "countryCode": "GB",
+    "label": "Trafford",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-UKM",
+    "countryCode": "GB",
+    "label": "United Kingdom",
+    "type": "Nation",
+    "isActive": false
+  },
+  {
+    "code": "GB-VGL",
+    "countryCode": "GB",
+    "label": "Vale of Glamorgan, The",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-WKF",
+    "countryCode": "GB",
+    "label": "Wakefield",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-WLS",
+    "countryCode": "GB",
+    "label": "Wales",
+    "type": "Country",
+    "isActive": true
+  },
+  {
+    "code": "GB-WLL",
+    "countryCode": "GB",
+    "label": "Walsall",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-WFT",
+    "countryCode": "GB",
+    "label": "Waltham Forest",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-WND",
+    "countryCode": "GB",
+    "label": "Wandsworth",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-WRT",
+    "countryCode": "GB",
+    "label": "Warrington",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-WAR",
+    "countryCode": "GB",
+    "label": "Warwickshire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-WBK",
+    "countryCode": "GB",
+    "label": "West Berkshire",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-WDU",
+    "countryCode": "GB",
+    "label": "West Dunbartonshire",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-WLN",
+    "countryCode": "GB",
+    "label": "West Lothian",
+    "type": "Council area",
+    "isActive": false
+  },
+  {
+    "code": "GB-WSX",
+    "countryCode": "GB",
+    "label": "West Sussex",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-WSM",
+    "countryCode": "GB",
+    "label": "Westminster",
+    "type": "London borough",
+    "isActive": false
+  },
+  {
+    "code": "GB-WGN",
+    "countryCode": "GB",
+    "label": "Wigan",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-WIL",
+    "countryCode": "GB",
+    "label": "Wiltshire",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-WNM",
+    "countryCode": "GB",
+    "label": "Windsor and Maidenhead",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-WRL",
+    "countryCode": "GB",
+    "label": "Wirral",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-WOK",
+    "countryCode": "GB",
+    "label": "Wokingham",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-WLV",
+    "countryCode": "GB",
+    "label": "Wolverhampton",
+    "type": "Metropolitan district",
+    "isActive": false
+  },
+  {
+    "code": "GB-WOR",
+    "countryCode": "GB",
+    "label": "Worcestershire",
+    "type": "Two-tier county",
+    "isActive": false
+  },
+  {
+    "code": "GB-WRX",
+    "countryCode": "GB",
+    "label": "Wrexham",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "GB-YOR",
+    "countryCode": "GB",
+    "label": "York",
+    "type": "Unitary authority",
+    "isActive": false
+  },
+  {
+    "code": "IN-AN",
+    "countryCode": "IN",
+    "label": "Andaman and Nicobar Islands",
+    "type": "Union territory",
+    "isActive": true
+  },
+  {
+    "code": "IN-AP",
+    "countryCode": "IN",
+    "label": "Andhra Pradesh",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-AR",
+    "countryCode": "IN",
+    "label": "Arunachal Pradesh",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-AS",
+    "countryCode": "IN",
+    "label": "Assam",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-BR",
+    "countryCode": "IN",
+    "label": "Bihar",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-CH",
+    "countryCode": "IN",
+    "label": "Chandigarh",
+    "type": "Union territory",
+    "isActive": true
+  },
+  {
+    "code": "IN-CT",
+    "countryCode": "IN",
+    "label": "Chhattisgarh",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-DN",
+    "countryCode": "IN",
+    "label": "Dadra and Nagar Haveli",
+    "type": "Union territory",
+    "isActive": false
+  },
+  {
+    "code": "IN-DH",
+    "countryCode": "IN",
+    "label": "Dadra and Nagar Haveli and Daman and Diu",
+    "type": "Union territory",
+    "isActive": true
+  },
+  {
+    "code": "IN-DD",
+    "countryCode": "IN",
+    "label": "Daman and Diu",
+    "type": "Union territory",
+    "isActive": false
+  },
+  {
+    "code": "IN-DL",
+    "countryCode": "IN",
+    "label": "Delhi",
+    "type": "Union territory",
+    "isActive": true
+  },
+  {
+    "code": "IN-GA",
+    "countryCode": "IN",
+    "label": "Goa",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-GJ",
+    "countryCode": "IN",
+    "label": "Gujarat",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-HR",
+    "countryCode": "IN",
+    "label": "Haryana",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-HP",
+    "countryCode": "IN",
+    "label": "Himachal Pradesh",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-JK",
+    "countryCode": "IN",
+    "label": "Jammu and Kashmir",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-JH",
+    "countryCode": "IN",
+    "label": "Jharkhand",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-KA",
+    "countryCode": "IN",
+    "label": "Karnataka",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-KL",
+    "countryCode": "IN",
+    "label": "Kerala",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-LA",
+    "countryCode": "IN",
+    "label": "Ladakh",
+    "type": "Union territory",
+    "isActive": true
+  },
+  {
+    "code": "IN-LD",
+    "countryCode": "IN",
+    "label": "Lakshadweep",
+    "type": "Union territory",
+    "isActive": false
+  },
+  {
+    "code": "IN-MP",
+    "countryCode": "IN",
+    "label": "Madhya Pradesh",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-MH",
+    "countryCode": "IN",
+    "label": "Maharashtra",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-MN",
+    "countryCode": "IN",
+    "label": "Manipur",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-ML",
+    "countryCode": "IN",
+    "label": "Meghalaya",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-MZ",
+    "countryCode": "IN",
+    "label": "Mizoram",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-NL",
+    "countryCode": "IN",
+    "label": "Nagaland",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-OR",
+    "countryCode": "IN",
+    "label": "Odisha",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-PY",
+    "countryCode": "IN",
+    "label": "Puducherry",
+    "type": "Union territory",
+    "isActive": true
+  },
+  {
+    "code": "IN-PB",
+    "countryCode": "IN",
+    "label": "Punjab",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-RJ",
+    "countryCode": "IN",
+    "label": "Rajasthan",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-SK",
+    "countryCode": "IN",
+    "label": "Sikkim",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-TN",
+    "countryCode": "IN",
+    "label": "Tamil Nadu",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-TG",
+    "countryCode": "IN",
+    "label": "Telangana",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-TR",
+    "countryCode": "IN",
+    "label": "Tripura",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-UP",
+    "countryCode": "IN",
+    "label": "Uttar Pradesh",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-UT",
+    "countryCode": "IN",
+    "label": "Uttarakhand",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "IN-WB",
+    "countryCode": "IN",
+    "label": "West Bengal",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "MY-01",
+    "countryCode": "MY",
+    "label": "Johor",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "MY-02",
+    "countryCode": "MY",
+    "label": "Kedah",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "MY-03",
+    "countryCode": "MY",
+    "label": "Kelantan",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "MY-04",
+    "countryCode": "MY",
+    "label": "Melaka",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "MY-05",
+    "countryCode": "MY",
+    "label": "Negeri Sembilan",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "MY-06",
+    "countryCode": "MY",
+    "label": "Pahang",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "MY-08",
+    "countryCode": "MY",
+    "label": "Perak",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "MY-09",
+    "countryCode": "MY",
+    "label": "Perlis",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "MY-07",
+    "countryCode": "MY",
+    "label": "Pulau Pinang",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "MY-12",
+    "countryCode": "MY",
+    "label": "Sabah",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "MY-13",
+    "countryCode": "MY",
+    "label": "Sarawak",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "MY-10",
+    "countryCode": "MY",
+    "label": "Selangor",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "MY-11",
+    "countryCode": "MY",
+    "label": "Terengganu",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "MY-14",
+    "countryCode": "MY",
+    "label": "Wilayah Persekutuan Kuala Lumpur",
+    "type": "Federal territory",
+    "isActive": true
+  },
+  {
+    "code": "MY-15",
+    "countryCode": "MY",
+    "label": "Wilayah Persekutuan Labuan",
+    "type": "Federal territory",
+    "isActive": true
+  },
+  {
+    "code": "MY-16",
+    "countryCode": "MY",
+    "label": "Wilayah Persekutuan Putrajaya",
+    "type": "Federal territory",
+    "isActive": true
+  },
+  {
+    "code": "SG-01",
+    "countryCode": "SG",
+    "label": "Central Singapore",
+    "type": "District",
+    "isActive": false
+  },
+  {
+    "code": "SG-02",
+    "countryCode": "SG",
+    "label": "North East",
+    "type": "District",
+    "isActive": false
+  },
+  {
+    "code": "SG-03",
+    "countryCode": "SG",
+    "label": "North West",
+    "type": "District",
+    "isActive": false
+  },
+  {
+    "code": "SG-SG",
+    "countryCode": "SG",
+    "label": "Singapore",
+    "type": "City-state",
+    "isActive": true
+  },
+  {
+    "code": "SG-04",
+    "countryCode": "SG",
+    "label": "South East",
+    "type": "District",
+    "isActive": false
+  },
+  {
+    "code": "SG-05",
+    "countryCode": "SG",
+    "label": "South West",
+    "type": "District",
+    "isActive": false
+  },
+  {
+    "code": "US-AL",
+    "countryCode": "US",
+    "label": "Alabama",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-AK",
+    "countryCode": "US",
+    "label": "Alaska",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-AS",
+    "countryCode": "US",
+    "label": "American Samoa",
+    "type": "Outlying area",
+    "isActive": false
+  },
+  {
+    "code": "US-AZ",
+    "countryCode": "US",
+    "label": "Arizona",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-AR",
+    "countryCode": "US",
+    "label": "Arkansas",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-CA",
+    "countryCode": "US",
+    "label": "California",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-CO",
+    "countryCode": "US",
+    "label": "Colorado",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-CT",
+    "countryCode": "US",
+    "label": "Connecticut",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-DE",
+    "countryCode": "US",
+    "label": "Delaware",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-DC",
+    "countryCode": "US",
+    "label": "District of Columbia",
+    "type": "District",
+    "isActive": true
+  },
+  {
+    "code": "US-FL",
+    "countryCode": "US",
+    "label": "Florida",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-GA",
+    "countryCode": "US",
+    "label": "Georgia",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-GU",
+    "countryCode": "US",
+    "label": "Guam",
+    "type": "Outlying area",
+    "isActive": false
+  },
+  {
+    "code": "US-HI",
+    "countryCode": "US",
+    "label": "Hawaii",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-ID",
+    "countryCode": "US",
+    "label": "Idaho",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-IL",
+    "countryCode": "US",
+    "label": "Illinois",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-IN",
+    "countryCode": "US",
+    "label": "Indiana",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-IA",
+    "countryCode": "US",
+    "label": "Iowa",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-KS",
+    "countryCode": "US",
+    "label": "Kansas",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-KY",
+    "countryCode": "US",
+    "label": "Kentucky",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-LA",
+    "countryCode": "US",
+    "label": "Louisiana",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-ME",
+    "countryCode": "US",
+    "label": "Maine",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-MD",
+    "countryCode": "US",
+    "label": "Maryland",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-MA",
+    "countryCode": "US",
+    "label": "Massachusetts",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-MI",
+    "countryCode": "US",
+    "label": "Michigan",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-MN",
+    "countryCode": "US",
+    "label": "Minnesota",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-MS",
+    "countryCode": "US",
+    "label": "Mississippi",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-MO",
+    "countryCode": "US",
+    "label": "Missouri",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-MT",
+    "countryCode": "US",
+    "label": "Montana",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-NE",
+    "countryCode": "US",
+    "label": "Nebraska",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-NV",
+    "countryCode": "US",
+    "label": "Nevada",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-NH",
+    "countryCode": "US",
+    "label": "New Hampshire",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-NJ",
+    "countryCode": "US",
+    "label": "New Jersey",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-NM",
+    "countryCode": "US",
+    "label": "New Mexico",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-NY",
+    "countryCode": "US",
+    "label": "New York",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-NC",
+    "countryCode": "US",
+    "label": "North Carolina",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-ND",
+    "countryCode": "US",
+    "label": "North Dakota",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-MP",
+    "countryCode": "US",
+    "label": "Northern Mariana Islands",
+    "type": "Outlying area",
+    "isActive": false
+  },
+  {
+    "code": "US-OH",
+    "countryCode": "US",
+    "label": "Ohio",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-OK",
+    "countryCode": "US",
+    "label": "Oklahoma",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-OR",
+    "countryCode": "US",
+    "label": "Oregon",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-PA",
+    "countryCode": "US",
+    "label": "Pennsylvania",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-PR",
+    "countryCode": "US",
+    "label": "Puerto Rico",
+    "type": "Outlying area",
+    "isActive": false
+  },
+  {
+    "code": "US-RI",
+    "countryCode": "US",
+    "label": "Rhode Island",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-SC",
+    "countryCode": "US",
+    "label": "South Carolina",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-SD",
+    "countryCode": "US",
+    "label": "South Dakota",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-TN",
+    "countryCode": "US",
+    "label": "Tennessee",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-TX",
+    "countryCode": "US",
+    "label": "Texas",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-UM",
+    "countryCode": "US",
+    "label": "United States Minor Outlying Islands",
+    "type": "Outlying area",
+    "isActive": false
+  },
+  {
+    "code": "US-UT",
+    "countryCode": "US",
+    "label": "Utah",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-VT",
+    "countryCode": "US",
+    "label": "Vermont",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-VI",
+    "countryCode": "US",
+    "label": "Virgin Islands, U.S.",
+    "type": "Outlying area",
+    "isActive": false
+  },
+  {
+    "code": "US-VA",
+    "countryCode": "US",
+    "label": "Virginia",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-WA",
+    "countryCode": "US",
+    "label": "Washington",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-WV",
+    "countryCode": "US",
+    "label": "West Virginia",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-WI",
+    "countryCode": "US",
+    "label": "Wisconsin",
+    "type": "State",
+    "isActive": true
+  },
+  {
+    "code": "US-WY",
+    "countryCode": "US",
+    "label": "Wyoming",
+    "type": "State",
+    "isActive": true
+  }
+]

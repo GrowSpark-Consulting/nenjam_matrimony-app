@@ -547,6 +547,8 @@
   "registrationStateLabel": "State",
   "registrationCityLabel": "City",
   "registrationCityHint": "e.g., Chennai",
+  "registrationCountryHint": "Select your country",
+  "registrationStateHint": "Select your state",
   "registrationAreaLabel": "Area",
   "registrationAreaHint": "e.g., T. Nagar",
   "registrationPinLabel": "PIN Code",

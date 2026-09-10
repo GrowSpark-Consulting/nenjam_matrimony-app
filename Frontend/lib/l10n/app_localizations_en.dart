@@ -1291,6 +1291,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registrationCityHint => 'e.g., Chennai';
 
   @override
+  String get registrationCountryHint => 'Select your country';
+
+  @override
+  String get registrationStateHint => 'Select your state';
+
+  @override
   String get registrationAreaLabel => 'Area';
 
   @override

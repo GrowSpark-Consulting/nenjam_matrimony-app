@@ -1304,6 +1304,12 @@ class AppLocalizationsTa extends AppLocalizations {
   String get registrationCityHint => 'எ.கா., சென்னை';
 
   @override
+  String get registrationCountryHint => 'உங்கள் நாட்டைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get registrationStateHint => 'உங்கள் மாநிலத்தைத் தேர்ந்தெடுக்கவும்';
+
+  @override
   String get registrationAreaLabel => 'பகுதி';
 
   @override

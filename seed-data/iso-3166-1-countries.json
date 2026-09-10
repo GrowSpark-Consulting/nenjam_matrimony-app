@@ -1,0 +1,42 @@
+[
+  {
+    "code": "AU",
+    "label": "Australia",
+    "isActive": true
+  },
+  {
+    "code": "CA",
+    "label": "Canada",
+    "isActive": true
+  },
+  {
+    "code": "IN",
+    "label": "India",
+    "isActive": true
+  },
+  {
+    "code": "MY",
+    "label": "Malaysia",
+    "isActive": true
+  },
+  {
+    "code": "SG",
+    "label": "Singapore",
+    "isActive": true
+  },
+  {
+    "code": "AE",
+    "label": "United Arab Emirates",
+    "isActive": true
+  },
+  {
+    "code": "GB",
+    "label": "United Kingdom",
+    "isActive": true
+  },
+  {
+    "code": "US",
+    "label": "United States",
+    "isActive": true
+  }
+]
