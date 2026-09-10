@@ -255,6 +255,18 @@ class LocationDetails {
   final String pinCode;
   final String nativePlace;
 
+  /// ISO 3166 codes from the location master data, carried alongside the
+  /// text above rather than replacing it.
+  ///
+  /// Empty for a draft saved before this existed, and for the free-text
+  /// "Other" escape — which is exactly why the text fields stay: a member
+  /// living somewhere the dataset does not list must still be able to say so.
+  /// The backend treats absent codes as "no structured location" and keeps
+  /// using the text, so an older draft still finalizes correctly.
+  final String countryCode;
+  final String stateCode;
+  final String cityCode;
+
   const LocationDetails({
     this.country = 'India',
     this.state = '',
@@ -262,6 +274,9 @@ class LocationDetails {
     this.area = '',
     this.pinCode = '',
     this.nativePlace = '',
+    this.countryCode = '',
+    this.stateCode = '',
+    this.cityCode = '',
   });
 
   LocationDetails copyWith({
@@ -271,6 +286,9 @@ class LocationDetails {
     String? area,
     String? pinCode,
     String? nativePlace,
+    String? countryCode,
+    String? stateCode,
+    String? cityCode,
   }) {
     return LocationDetails(
       country: country ?? this.country,
@@ -279,6 +297,9 @@ class LocationDetails {
       area: area ?? this.area,
       pinCode: pinCode ?? this.pinCode,
       nativePlace: nativePlace ?? this.nativePlace,
+      countryCode: countryCode ?? this.countryCode,
+      stateCode: stateCode ?? this.stateCode,
+      cityCode: cityCode ?? this.cityCode,
     );
   }
 
@@ -290,6 +311,9 @@ class LocationDetails {
         area: json['area'] as String? ?? '',
         pinCode: json['pinCode'] as String? ?? '',
         nativePlace: json['nativePlace'] as String? ?? '',
+        countryCode: json['countryCode'] as String? ?? '',
+        stateCode: json['stateCode'] as String? ?? '',
+        cityCode: json['cityCode'] as String? ?? '',
       );
 
   Map<String, dynamic> toJson() => {
@@ -299,6 +323,9 @@ class LocationDetails {
         if (area.isNotEmpty) 'area': area,
         if (pinCode.isNotEmpty) 'pinCode': pinCode,
         if (nativePlace.isNotEmpty) 'nativePlace': nativePlace,
+        if (countryCode.isNotEmpty) 'countryCode': countryCode,
+        if (stateCode.isNotEmpty) 'stateCode': stateCode,
+        if (cityCode.isNotEmpty) 'cityCode': cityCode,
       };
 
   /// Step 4 is not skippable — every field is required.

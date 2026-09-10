@@ -2528,6 +2528,18 @@ abstract class AppLocalizations {
   /// **'e.g., Chennai'**
   String get registrationCityHint;
 
+  /// No description provided for @registrationCountryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your country'**
+  String get registrationCountryHint;
+
+  /// No description provided for @registrationStateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your state'**
+  String get registrationStateHint;
+
   /// No description provided for @registrationAreaLabel.
   ///
   /// In en, this message translates to:

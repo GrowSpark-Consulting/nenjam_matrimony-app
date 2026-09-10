@@ -96,6 +96,14 @@ abstract final class ApiEndpoints {
   static const String profileVerification = '/profile/verification';
   static const String profileHoroscope = '/profile/horoscope';
 
+  // ─── Reference data (location master data) ───────────────────────
+  /// Unauthenticated by design: the location step runs during registration,
+  /// before a session necessarily exists. These return ISO 3166 codes and
+  /// city names — identical for every caller, nothing user-specific.
+  static const String referenceCountries = '/reference-data/countries';
+  static const String referenceStates = '/reference-data/states';
+  static const String referenceCities = '/reference-data/cities';
+
   // ─── Search & Discovery ──────────────────────────────────────────
   static const String search = '/search';
   static const String searchFilters = '/search/filters';
