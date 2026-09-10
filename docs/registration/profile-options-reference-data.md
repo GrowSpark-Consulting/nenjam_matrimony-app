@@ -1,6 +1,6 @@
 # Profile Option Lists — Current State & Deferred Master-Data Work
 
-**Status date:** 2026-09-09
+**Status date:** 2026-09-10 (location master data built; superseding 2026-09-09)
 **Scope:** the dropdown/selector reference data behind registration, Edit Profile
 and partner preferences.
 
@@ -12,11 +12,18 @@ and partner preferences.
 | --- | --- |
 | Frontend dropdowns and cascades | **Complete** |
 | Backend persistence of selected values | **Complete** |
-| Backend master data (reference tables / options endpoint) | **Pending** — deferred, see §4 |
-| Backend validation of selected values and dependencies | **Pending** — deferred, see §4 |
+| Backend master data — **location** (country/state/city) | **Complete** — see [location-master-data.md](../architecture/location-master-data.md) |
+| Backend master data — religion, occupation, education, income | **Pending** — deferred, see §4 |
+| Backend validation — **location** hierarchy | **Complete** |
+| Backend validation — religion → community → sub-community | **Pending** — deferred, see §4 |
 
-Nothing in §4 is approved or in progress. It is recorded here so the gap is
-known rather than discovered.
+Location was signed off and built on 2026-09-10; §4 records what that covered
+and what it did not. The remaining items in §4 are not approved or in progress,
+and are recorded here so the gap is known rather than discovered.
+
+> §2 and §3 below describe the **frontend-owned lists**, which are still how
+> religion, community, occupation, education and income work. They no longer
+> describe country/state/city — those now come from the backend.
 
 ---
 
@@ -114,21 +121,44 @@ class doc, and header comments on `LocationDetailsDto` and
 
 ## 4. Deferred: backend master data (separate future task)
 
-**Not approved. Do not build any of this without explicit sign-off.**
+**The location slice of this list has since been built and signed off** —
+see [`docs/architecture/location-master-data.md`](../architecture/location-master-data.md).
+Everything else below is still **not approved. Do not build it without explicit
+sign-off.**
 
-1. Backend reference-data tables / controlled master data.
-2. `GET /reference-data/profile-options` endpoint.
-3. Stable IDs for countries, states, cities, religions, communities,
-   sub-communities, industries, occupations, qualifications, employment types
-   and income ranges.
-4. Flutter API-based option loading, with caching.
-5. Backend validation of all selected values against that master data.
-6. Backend validation of the country → state → city dependency.
-7. Backend validation of the religion → community → sub-community dependency.
-8. A migration strategy that preserves existing string values and does not
-   orphan current profiles.
+| # | Item | Status |
+| --- | --- | --- |
+| 1 | Backend reference-data tables / controlled master data | **Done for location.** Deferred for the rest |
+| 2 | `GET /reference-data/profile-options` endpoint | **Done for location** as `/reference-data/countries \| states \| cities`. The single combined `profile-options` route was not built |
+| 3 | Stable IDs for countries, states, cities, religions, communities, sub-communities, industries, occupations, qualifications, employment types and income ranges | **Done for countries/states/cities** (ISO 3166 codes, not surrogate IDs). Deferred for the rest |
+| 4 | Flutter API-based option loading, with caching | **Done for location** (`features/location`). Deferred for the rest |
+| 5 | Backend validation of all selected values against master data | **Done for location.** Deferred for the rest |
+| 6 | Backend validation of the country → state → city dependency | **Done** — `LocationService.resolve()` |
+| 7 | Backend validation of the religion → community → sub-community dependency | Deferred — no religion taxonomy change was made |
+| 8 | A migration strategy that preserves existing string values and does not orphan current profiles | **Done for location** |
 
-Item 8 is the one that decides whether the rest is safe. Today's columns hold
-free text written over the life of the app, including values no current list
-offers; any move to IDs has to keep those readable and keep the profiles
-holding them matchable, rather than rejecting or blanking them on first write.
+### How item 8 was answered for location
+
+It was the item that decided whether the rest was safe, so it is worth
+recording what was actually done rather than leaving it as a resolved
+checkbox.
+
+The answer was **not** to move to IDs. The new `country_code` / `state_code` /
+`city_code` columns were added *beside* the existing free-text columns, not in
+place of them:
+
+- The new columns are nullable and start NULL for every existing profile.
+- The free-text columns remain the source of truth for every profile written
+  before the change, and everything that already reads them (search, feed
+  cards, emails) still does.
+- A write carrying no codes leaves the code columns untouched rather than
+  nulling them, so an older client cannot wipe them.
+- Values no list offers — `TN`, `chennai`, a Singapore address filed under
+  Kerala — are left exactly as members typed them, and are never silently
+  corrected.
+- Backfilling the codes is a separate, reviewed step. `pnpm analyze:locations`
+  reports, read-only, what a backfill *would* set and why the rest is not
+  unambiguously resolvable. Nothing is written until that report is approved.
+
+The same approach is the recommended starting point if items 3, 5 and 7 are
+ever picked up for the religion and occupation taxonomies.
