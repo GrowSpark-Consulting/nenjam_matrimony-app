@@ -207,12 +207,28 @@ async function chunked<T>(rows: T[], fn: (batch: T[]) => Promise<unknown>): Prom
   }
 }
 
+/**
+ * Reads and validates the committed dataset without touching a database.
+ *
+ * Exported so a test can assert the files in `seed-data/` are sound, rather
+ * than finding out during a deploy. Throws on the first problem.
+ */
+export function loadDataset(dir: string = SEED_DATA_DIR): {
+  countries: CountryRow[];
+  subdivisions: SubdivisionRow[];
+  cities: CityRow[];
+  checksum: string;
+} {
+  const dataset = readDataset(dir);
+  validate(dataset.countries, dataset.subdivisions, dataset.cities);
+  return dataset;
+}
+
 export async function seedLocations(
   prisma: PrismaClient,
   dir: string = SEED_DATA_DIR,
 ): Promise<LocationSeedReport> {
-  const { countries, subdivisions, cities, checksum } = readDataset(dir);
-  validate(countries, subdivisions, cities);
+  const { countries, subdivisions, cities, checksum } = loadDataset(dir);
 
   // Parents before children, so a foreign key is never briefly unsatisfiable.
   // `createMany ... skipDuplicates` inserts what is new; the `updateMany`
