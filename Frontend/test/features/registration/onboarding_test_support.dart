@@ -5,6 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:nenjam_matrimony/core/widgets/inputs/birth_date_field.dart';
 import 'package:nenjam_matrimony/features/authentication/data/services/firebase_auth_service.dart';
+import 'package:dio/dio.dart' show CancelToken;
+import 'package:nenjam_matrimony/features/location/data/location_repository.dart';
+import 'package:nenjam_matrimony/features/location/domain/models/location_models.dart';
+import 'package:nenjam_matrimony/features/location/presentation/providers/location_providers.dart';
+import 'package:nenjam_matrimony/features/location/presentation/widgets/location_picker_field.dart';
 import 'package:nenjam_matrimony/features/registration/data/repositories/registration_repository.dart';
 import 'package:nenjam_matrimony/features/registration/domain/models/profile_draft.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/create_profile_for_page.dart';
@@ -244,12 +249,14 @@ Future<void> pickGender(WidgetTester tester, {String gender = 'Male'}) async {
 /// the optional sub-community alongside them.
 Future<void> fillBasics(
   WidgetTester tester, {
-  String state = 'Tamil Nadu',
-  String city = 'Chennai',
+  String state = 'Gujarat',
+  String city = 'Bhavnagar',
   String subCommunity = 'Iyer',
 }) async {
-  await pickDropdown(tester, 0, state);
-  await pickDropdown(tester, 1, city);
+  // State and city come from the backend's master data now, so they open the
+  // searchable sheet rather than a dropdown.
+  await pickLocation(tester, 'State *', state);
+  await pickLocation(tester, 'City *', city);
   // Sub-community is the only text field on the step.
   if (subCommunity.isNotEmpty) {
     await tester.enterText(find.byType(TextFormField).first, subCommunity);
@@ -290,4 +297,117 @@ Future<DateTime> fillNameStep(
   await tester.enterText(find.byType(TextFormField).at(1), lastName);
   await tester.pumpAndSettle();
   return enterDob(tester, dob);
+}
+
+// ─── Location master data ────────────────────────────────────────────────
+
+/// A stand-in for the backend's location master data.
+///
+/// Deliberately small but *shaped* like the real thing — ISO codes, a state
+/// scoped to its country, a city scoped to its state — because the codes are
+/// what the cascade and the server both key on. Onboarding must never reach
+/// the network in a test, and it must never fall back to a hardcoded list
+/// either, so every location test supplies this.
+class FakeLocationRepository implements LocationRepository {
+  FakeLocationRepository({this.failCountries = false, this.failStates = false});
+
+  final bool failCountries;
+  final bool failStates;
+
+  /// Every request made, so a test can assert the cascade only fetches what
+  /// the member's selection actually calls for.
+  final List<String> calls = <String>[];
+
+  static const country = LocationOption(code: 'IN', label: 'India');
+  static const otherCountry = LocationOption(code: 'CA', label: 'Canada');
+  static const state = LocationOption(
+    code: 'IN-GJ',
+    label: 'Gujarat',
+    parentCode: 'IN',
+    type: 'State',
+  );
+  static const otherState = LocationOption(
+    code: 'IN-TN',
+    label: 'Tamil Nadu',
+    parentCode: 'IN',
+    type: 'State',
+  );
+  static const city = LocationOption(
+    code: 'IN-GJ-BHAVNAGAR',
+    label: 'Bhavnagar',
+    parentCode: 'IN-GJ',
+  );
+  static const otherCity = LocationOption(
+    code: 'IN-GJ-AHMEDABAD',
+    label: 'Ahmedabad',
+    parentCode: 'IN-GJ',
+  );
+  static const tnCity = LocationOption(
+    code: 'IN-TN-CHENNAI',
+    label: 'Chennai',
+    parentCode: 'IN-TN',
+  );
+
+  @override
+  Future<List<LocationOption>> countries({CancelToken? cancelToken}) async {
+    calls.add('countries');
+    if (failCountries) throw Exception('offline');
+    return const [country, otherCountry];
+  }
+
+  @override
+  Future<List<LocationOption>> states(
+    String countryCode, {
+    CancelToken? cancelToken,
+  }) async {
+    calls.add('states:$countryCode');
+    if (failStates) throw Exception('offline');
+    if (countryCode == 'IN') return const [state, otherState];
+    return const [];
+  }
+
+  @override
+  Future<List<LocationOption>> cities(
+    String stateCode, {
+    CancelToken? cancelToken,
+  }) async {
+    calls.add('cities:$stateCode');
+    return switch (stateCode) {
+      'IN-GJ' => const [city, otherCity],
+      'IN-TN' => const [tnCity],
+      _ => const [],
+    };
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// The override every onboarding location test needs. Kept as one call so a
+/// test cannot accidentally leave the real repository in place and start
+/// making requests.
+List<Override> locationOverrides(FakeLocationRepository repository) => [
+      locationRepositoryProvider.overrideWithValue(repository),
+    ];
+
+/// Picks [option] from the location field headed [label].
+///
+/// Location levels are not `DropdownButtonFormField`s — they open the app's
+/// searchable sheet — so [pickDropdown] cannot drive them. Finding by the
+/// field's own heading rather than by index keeps a test readable and stops
+/// it breaking when a field moves.
+Future<void> pickLocation(
+  WidgetTester tester,
+  String label,
+  String option,
+) async {
+  final field = find.ancestor(
+    of: find.text(label),
+    matching: find.byType(LocationPickerField),
+  );
+  expect(field, findsOneWidget, reason: 'no location field headed "$label"');
+  await tester.tap(field);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(option).last);
+  await tester.pumpAndSettle();
 }

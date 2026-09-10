@@ -176,6 +176,15 @@ class OnboardingReligionForm {
   /// whether those two are even the right questions.
   final String livingIn;
 
+  /// "Living in" as a master-data code — draft: `LocationDetails.countryCode`.
+  ///
+  /// Carried alongside the label rather than replacing it, exactly as
+  /// [LocationDetails] does: the code is what the server validates, the label
+  /// is what the member reads back. Empty for a draft saved before the
+  /// location master data existed, which the backend reads as "no structured
+  /// location" and falls back to the text.
+  final String livingInCode;
+
   /// "Not particular about my partner's community". Optional, and mapped
   /// onto the partner preference the app already has — see
   /// [casteNoBarPreference].
@@ -185,6 +194,7 @@ class OnboardingReligionForm {
     this.religion = '',
     this.community = '',
     this.livingIn = '',
+    this.livingInCode = '',
     this.casteNoBar = false,
   });
 
@@ -200,12 +210,14 @@ class OnboardingReligionForm {
     String? religion,
     String? community,
     String? livingIn,
+    String? livingInCode,
     bool? casteNoBar,
   }) {
     return OnboardingReligionForm(
       religion: religion ?? this.religion,
       community: community ?? this.community,
       livingIn: livingIn ?? this.livingIn,
+      livingInCode: livingInCode ?? this.livingInCode,
       casteNoBar: casteNoBar ?? this.casteNoBar,
     );
   }
@@ -252,23 +264,36 @@ class ProfileBasicsForm {
   /// Draft: `LocationDetails.city`. Required.
   final String city;
 
+  /// The master-data codes behind [state] and [city] — draft:
+  /// `LocationDetails.stateCode` / `.cityCode`. Empty for an answer that
+  /// predates the location master data, which stays valid: the backend reads
+  /// an absent code as "no structured location" and keeps the text.
+  final String stateCode;
+  final String cityCode;
+
   /// Draft: `ReligionDetails.subCaste`. Optional — see the class doc.
   final String subCommunity;
 
   const ProfileBasicsForm({
     this.state = '',
     this.city = '',
+    this.stateCode = '',
+    this.cityCode = '',
     this.subCommunity = '',
   });
 
   ProfileBasicsForm copyWith({
     String? state,
     String? city,
+    String? stateCode,
+    String? cityCode,
     String? subCommunity,
   }) {
     return ProfileBasicsForm(
       state: state ?? this.state,
       city: city ?? this.city,
+      stateCode: stateCode ?? this.stateCode,
+      cityCode: cityCode ?? this.cityCode,
       subCommunity: subCommunity ?? this.subCommunity,
     );
   }

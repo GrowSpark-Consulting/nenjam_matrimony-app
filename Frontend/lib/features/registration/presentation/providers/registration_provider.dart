@@ -440,12 +440,36 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   /// This method leaves whatever is already stored untouched, so a member
   /// who answered them here before the move keeps their answers.
   Future<void> applyOnboardingReligion(OnboardingReligionForm form) async {
+    final previous = state.locationDetails;
+
+    // The country → state → city cascade, applied across a screen boundary.
+    //
+    // Country is asked here and state/city two steps later, so the usual
+    // "changing a parent clears its children" rule cannot live in one
+    // widget's setState — a member who backs up, switches India for Canada
+    // and goes forward again would otherwise carry Gujarat and Bhavnagar into
+    // Canada, which the server rejects outright. Enforcing it here means it
+    // holds no matter which route the member took to get back to this step.
+    //
+    // Compared on the code where there is one, falling back to the label for
+    // a draft that predates the master data.
+    final countryChanged = form.livingInCode.isNotEmpty
+        ? form.livingInCode != previous.countryCode
+        : form.livingIn.trim() != previous.country.trim();
+
     state = state.copyWith(
       religionDetails: state.religionDetails.copyWith(
         religion: form.religion,
         community: form.community,
       ),
-      locationDetails: state.locationDetails.copyWith(country: form.livingIn),
+      locationDetails: previous.copyWith(
+        country: form.livingIn,
+        countryCode: form.livingInCode,
+        state: countryChanged ? '' : previous.state,
+        stateCode: countryChanged ? '' : previous.stateCode,
+        city: countryChanged ? '' : previous.city,
+        cityCode: countryChanged ? '' : previous.cityCode,
+      ),
     );
 
     await _persist(() async {
@@ -521,6 +545,11 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
       locationDetails: state.locationDetails.copyWith(
         state: form.state,
         city: form.city,
+        // The codes travel with the labels — see ProfileBasicsForm. An answer
+        // with no code behind it (a draft from before the master data) keeps
+        // an empty code rather than a fabricated one.
+        stateCode: form.stateCode,
+        cityCode: form.cityCode,
       ),
       religionDetails: subCasteChanged
           ? state.religionDetails.copyWith(subCaste: subCommunity)

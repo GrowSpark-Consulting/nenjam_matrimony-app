@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_spacing.dart';
-import '../../../../core/constants/profile_options.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../location/domain/models/location_models.dart';
+import '../../../location/presentation/providers/location_providers.dart';
 import '../../domain/models/onboarding_forms.dart';
 import '../providers/registration_provider.dart';
+import '../widgets/onboarding_location_field.dart';
 import '../widgets/onboarding_scaffold.dart';
 
 /// Step 5 — "Now let's build your Profile": State, City and Sub-community.
@@ -36,17 +38,20 @@ class _ProfileBasicsPageState extends ConsumerState<ProfileBasicsPage> {
   @override
   void initState() {
     super.initState();
-    // Restored verbatim, NOT filtered through OnboardingScaffold.restore.
-    // The state/city lists are a curated subset, and real profiles hold
-    // answers outside it, so filtering blanked a stored answer and the next
-    // save overwrote it. The dropdowns below widen their options to include
-    // whatever was stored — see OnboardingScaffold.optionsWith.
+    // Restored verbatim. The state and city lists now come from the backend's
+    // master data, which is not loaded when this runs, so the stored label is
+    // matched against the API's own list once it arrives (see
+    // [resolveStoredLocation]) and shown as the member's answer meanwhile.
+    // Nothing is filtered away up front, which is what used to blank a stored
+    // answer and let the next save overwrite it.
     final draft = ref.read(registrationProvider);
     final location = draft.locationDetails;
     _subCommunityCtrl.text = draft.religionDetails.subCaste;
     _form = ProfileBasicsForm(
       state: location.state,
       city: location.city,
+      stateCode: location.stateCode,
+      cityCode: location.cityCode,
       // Verbatim: free text, so there is no list to filter against.
       subCommunity: draft.religionDetails.subCaste,
     );
@@ -64,26 +69,75 @@ class _ProfileBasicsPageState extends ConsumerState<ProfileBasicsPage> {
         ProfileBasicsField.city => l10n.registrationCityLabel,
       };
 
-  /// Changing state re-scopes the city list. The current answer is cleared
-  /// only when the new list no longer offers it, so correcting a typo'd
-  /// state does not silently discard a city that is still valid.
-  void _onStateChanged(String state) {
-    // Re-picking the state already selected changes nothing, so it must not
-    // cost the member their city. That matters now that a stored city outside
-    // the curated list survives rehydration: someone who saved "Bengaluru"
-    // and re-opened the step would lose it simply by tapping their own state,
-    // because the list for Karnataka offers "Bangalore" and not "Bengaluru".
-    if (state == _form.state) return;
+  /// Changing the state clears the city.
+  ///
+  /// Unconditionally, unlike the old curated-list behaviour that kept a city
+  /// still present in the new list. A city code is scoped to its state
+  /// (`IN-GJ-BHAVNAGAR`), so a city carried across a state change would be a
+  /// combination the server rejects — and re-picking is one tap, whereas a
+  /// silently invalid answer surfaces as a failed save much later.
+  ///
+  /// Re-picking the state already selected is still a no-op, so tapping your
+  /// own state never costs you your city.
+  void _onStateChanged(LocationOption? option) {
+    final code = option?.code ?? '';
+    if (code == _form.stateCode && (option?.label ?? '') == _form.state) return;
 
     setState(() {
-      final stillValid = ProfileOptions.citiesFor(state).contains(_form.city);
-      _form = _form.copyWith(state: state, city: stillValid ? _form.city : '');
+      _form = _form.copyWith(
+        state: option?.label ?? '',
+        stateCode: code,
+        city: '',
+        cityCode: '',
+      );
+    });
+  }
+
+  void _onCityChanged(LocationOption? option) {
+    setState(() {
+      _form = _form.copyWith(
+        city: option?.label ?? '',
+        cityCode: option?.code ?? '',
+      );
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+
+    // The country was chosen two steps earlier, on the Religion step. It is
+    // read from the draft rather than passed along, so resuming mid-flow (or
+    // arriving via PostAuthDestination's rehydrate) works identically to
+    // walking the steps in order.
+    final storedCountry = ref.watch(
+      registrationProvider.select((d) => d.locationDetails),
+    );
+
+    // Resolved against the country list for the same reason the Religion step
+    // does it: a draft written before the master data existed holds a label
+    // and no code. Without this the State field below would be permanently
+    // disabled for those members — a dead end reachable by resuming straight
+    // onto this step, where re-picking the country is not even offered.
+    final countryCode = resolveStoredLocation(
+          ref.watch(countriesProvider),
+          storedCountry.countryCode,
+          storedCountry.country,
+        )?.code ??
+        '';
+
+    final states = ref.watch(statesProvider(countryCode));
+    final stateOption =
+        resolveStoredLocation(states, _form.stateCode, _form.state);
+
+    // Cities are scoped by the RESOLVED state code: a draft whose state was
+    // stored as a label only still lists the right cities once that label is
+    // matched, rather than showing an empty city list until the member
+    // re-picks a state their screen already shows.
+    final stateCode = stateOption?.code ?? '';
+    final cities = ref.watch(citiesProvider(stateCode));
+    final cityOption =
+        resolveStoredLocation(cities, _form.cityCode, _form.city);
 
     return OnboardingStepScaffold(
       headline: l10n.profileBasicsHeadline,
@@ -93,31 +147,44 @@ class _ProfileBasicsPageState extends ConsumerState<ProfileBasicsPage> {
       isComplete: _form.isComplete,
       validationNames:
           _form.missingFields.map((f) => _fieldLabel(l10n, f)).toList(),
-      onSave: () =>
-          ref.read(registrationProvider.notifier).applyProfileBasics(_form),
+      // Saved with the RESOLVED state and city so a draft that carried only
+      // labels gains its codes here, the same way the country does on the
+      // Religion step.
+      onSave: () => ref.read(registrationProvider.notifier).applyProfileBasics(
+            _form.copyWith(
+              state: stateOption?.label ?? _form.state,
+              stateCode: stateOption?.code ?? _form.stateCode,
+              city: cityOption?.label ?? _form.city,
+              cityCode: cityOption?.code ?? _form.cityCode,
+            ),
+          ),
       fields: [
-        OnboardingDropdownField(
+        OnboardingLocationField(
           label: l10n.registrationStateLabel,
           hint: l10n.profileBasicsStateHint,
-          value: _form.state,
-          options: OnboardingScaffold.optionsWith(
-            ProfileOptions.states,
-            _form.state,
-          ),
+          options: states,
+          value: stateOption,
+          legacyValue: stateOption == null ? _form.state : '',
+          // A country stored as free text still lets the member open the
+          // state list and answer in place, rather than sending them back a
+          // step to re-pick a country their screen already shows.
+          enabled: countryCode.isNotEmpty,
+          disabledHint: l10n.onboardingLivingInHint,
           isRequired: true,
-          onChanged: (v) => _onStateChanged(v ?? ''),
+          onRetry: () => ref.invalidate(statesProvider(countryCode)),
+          onChanged: _onStateChanged,
         ),
-        OnboardingDropdownField(
+        OnboardingLocationField(
           label: l10n.registrationCityLabel,
           hint: l10n.profileBasicsCityHint,
-          value: _form.city,
-          options: OnboardingScaffold.optionsWith(
-            ProfileOptions.citiesFor(_form.state),
-            _form.city,
-          ),
+          options: cities,
+          value: cityOption,
+          legacyValue: cityOption == null ? _form.city : '',
+          enabled: stateCode.isNotEmpty,
+          disabledHint: l10n.profileBasicsStateHint,
           isRequired: true,
-          onChanged: (v) =>
-              setState(() => _form = _form.copyWith(city: v ?? '')),
+          onRetry: () => ref.invalidate(citiesProvider(stateCode)),
+          onChanged: _onCityChanged,
         ),
         // Free text, like the wizard's own sub-caste field: there is no
         // authoritative list in this app, and inventing one is not an option.
