@@ -162,6 +162,23 @@ model UserProfile {
   currentState       String        @map("current_state")
   nativeCity         String?       @map("native_city")
   country            String?
+  /// Structured location, added beside the free-text columns above rather
+  /// than replacing them. Nullable and unpopulated for every existing row:
+  /// legacy values ("TN", "chennai", a Singapore address filed under Kerala)
+  /// stay exactly as members typed them and are never silently corrected.
+  /// New registrations write both the code and the label. See
+  /// seed-data/README.md for how the codes are derived.
+  /// Column types match the master tables' primary keys exactly, so the
+  /// foreign keys below need no implicit cast.
+  countryCode        String?       @map("country_code") @db.VarChar(2)
+  stateCode          String?       @map("state_code") @db.VarChar(6)
+  cityCode           String?       @map("city_code") @db.VarChar(80)
+  /// onDelete: Restrict, not Prisma's default SET NULL for an optional
+  /// relation: retiring a city must never silently blank a member's stated
+  /// location. A referenced row is deactivated, never deleted.
+  countryRef         Country?      @relation(fields: [countryCode], references: [code], onDelete: Restrict)
+  stateRef           Subdivision?  @relation(fields: [stateCode], references: [code], onDelete: Restrict)
+  cityRef            City?         @relation(fields: [cityCode], references: [code], onDelete: Restrict)
   area               String?
   pinCode            String?       @map("pin_code")
   /// Device-reported coordinates backing the "Near Me" proximity search.
@@ -222,6 +239,12 @@ model UserProfile {
   @@index([annualIncomeLakhs])
   @@index([currentCity])
   @@index([currentState])
+  // Mirror the free-text indexes above for the structured columns. Search
+  // filters by code once a profile has one, and falls back to the text
+  // columns for profiles that predate the migration.
+  @@index([cityCode])
+  @@index([stateCode])
+  @@index([countryCode])
   // Serves the Near Me bounding-box prefilter (`latitude BETWEEN ? AND ?` /
   // `longitude BETWEEN ? AND ?`). Latitude leads because it is the more
   // selective of the two here: one degree of latitude is a constant ~111km,
@@ -1053,6 +1076,84 @@ enum ReportReason {
   OTHER
 
   @@map("report_reason")
+}
+
+// ─────────────────────────── Location master data ───────────────────────────
+//
+// Country -> Subdivision -> City, keyed by ISO 3166 codes. Populated once by
+// `pnpm seed:locations` from the files in seed-data/, which were built by hand
+// from GeoNames; nothing here is fetched at runtime.
+//
+// The natural key IS the ISO code, not a surrogate uuid. A code is already
+// unique, stable and meaningful, so profiles store `IN-TN-CHENNAI` directly and
+// the API never has to expose an internal database id to the client.
+//
+// `isActive` is what registration dropdowns filter on. Deactivating is how a
+// row is retired — rows are never deleted, because a profile may still
+// reference one (India's pre-2020 IN-DD / IN-DN are the worked example).
+// See seed-data/README.md for every deliberate deviation from the ISO source.
+
+/// ISO 3166-1 country.
+model Country {
+  code      String        @id @db.VarChar(2)
+  label     String
+  isActive  Boolean       @default(true) @map("is_active")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  states    Subdivision[]
+  cities    City[]
+  profiles  UserProfile[]
+
+  @@index([isActive])
+  @@map("countries")
+}
+
+/// ISO 3166-2 subdivision — a state, province, territory or region.
+model Subdivision {
+  code        String        @id @db.VarChar(6)
+  countryCode String        @map("country_code") @db.VarChar(2)
+  label       String
+  /// ISO's own wording for what this is ("State", "Union territory",
+  /// "Province"). Shown in the UI to disambiguate same-named entries.
+  type        String
+  isActive    Boolean       @default(true) @map("is_active")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  country     Country       @relation(fields: [countryCode], references: [code])
+  cities      City[]
+  profiles    UserProfile[]
+
+  // Serves the states-for-a-country dropdown, which is always
+  // "this country, active only, ordered by label".
+  @@index([countryCode, isActive, label])
+  @@map("subdivisions")
+}
+
+/// City, keyed as `{subdivision code}-{normalized name}` e.g. IN-TN-CHENNAI.
+model City {
+  code        String        @id @db.VarChar(80)
+  stateCode   String        @map("state_code") @db.VarChar(6)
+  /// Denormalized from the parent subdivision. Worth the redundancy: it lets
+  /// a country-wide city search skip the join, and the FK below still stops
+  /// it drifting out of step with the subdivision's own country.
+  countryCode String        @map("country_code") @db.VarChar(2)
+  label       String
+  /// Drives dropdown ordering — members expect their large city near the top,
+  /// not buried alphabetically.
+  population  Int
+  isActive    Boolean       @default(true) @map("is_active")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  state       Subdivision   @relation(fields: [stateCode], references: [code])
+  country     Country       @relation(fields: [countryCode], references: [code])
+  profiles    UserProfile[]
+
+  // Serves the cities-for-a-state dropdown: largest first, then alphabetical.
+  @@index([stateCode, isActive, population(sort: Desc)])
+  // Serves type-ahead search across a whole country.
+  @@index([countryCode, isActive])
+  @@index([label])
+  @@map("cities")
 }
 
 enum ReportStatus {

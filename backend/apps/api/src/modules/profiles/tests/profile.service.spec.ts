@@ -5,6 +5,7 @@ import { ProfileRepository } from '../repositories/profile.repository';
 import { PhotoRepository } from '../repositories/photo.repository';
 import { ProfileDraftService } from '../services/profile-draft.service';
 import { S3Service } from '@app/storage';
+import { LocationService } from '../../reference-data/services/location.service';
 import { ProfileService } from '../services/profile.service';
 import { ProfileCompletionService } from '../services/profile-completion.service';
 import { ProfileEntity } from '../entities/profile.entity';
@@ -198,6 +199,9 @@ describe('ProfileService', () => {
       (overrides?.s3 ?? {
         isConfigured: () => false,
       }) as unknown as S3Service,
+      // These drafts carry no location codes, so `resolve` returning null is
+      // exactly what the real service does with them.
+      { resolve: jest.fn().mockResolvedValue(null) } as unknown as LocationService,
     );
   }
 
@@ -1028,6 +1032,7 @@ describe('ProfileService', () => {
       // repository returned them — these tests are about profile assembly,
       // not URL signing (see photo.service.spec.ts for that).
       { isConfigured: () => false } as unknown as S3Service,
+      { resolve: jest.fn().mockResolvedValue(null) } as unknown as LocationService,
     );
         return { service, updateProfileCompletePct };
       }

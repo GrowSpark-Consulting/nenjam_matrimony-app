@@ -45,6 +45,7 @@
     "prisma:db:push": "prisma db push",
     "prisma:studio": "prisma studio",
     "db:seed": "ts-node libs/database/src/seed.ts",
+    "seed:locations": "ts-node libs/database/src/seed-locations.ts",
     "seed:fake": "ts-node libs/database/src/seed-fake.ts",
     "verify:fake-seed": "ts-node libs/database/src/verify-fake-seed.ts",
     "unseed:fake": "ts-node libs/database/src/unseed-fake.ts",

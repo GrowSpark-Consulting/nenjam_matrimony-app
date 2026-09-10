@@ -1,5 +1,6 @@
 import type { FeedInvalidationService } from '../../matches/cache/feed-invalidation.service';
 import { S3Service } from '@app/storage';
+import { LocationService } from '../../reference-data/services/location.service';
 import { ProfileService } from './profile.service';
 import type { ProfileRepository } from '../repositories/profile.repository';
 import type { PhotoRepository } from '../repositories/photo.repository';
@@ -100,6 +101,10 @@ function buildService(draftData: Record<string, unknown>) {
       // repository returned them — these tests are about profile assembly,
       // not URL signing (see photo.service.spec.ts for that).
       { isConfigured: () => false } as unknown as S3Service,
+      // These drafts carry no location codes, so `resolve` returning null is
+      // exactly what the real service does with them — the free-text city and
+      // state are what these tests assert on.
+      { resolve: jest.fn().mockResolvedValue(null) } as unknown as LocationService,
     );
   return { service, upsertProfile, emailDispatch };
 }
