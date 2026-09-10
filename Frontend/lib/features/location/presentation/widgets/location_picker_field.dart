@@ -32,9 +32,16 @@ class LocationPickerField extends ConsumerWidget {
     this.enabled = true,
     this.disabledHint,
     this.onRetry,
+    this.labelStyle,
   });
 
   final String label;
+
+  /// Overrides the caption style. Onboarding renders its field captions as
+  /// bold section headings (see [OnboardingLocationField]) while the wizard
+  /// uses the quieter default, so one component serves both rather than the
+  /// two flows growing separate pickers.
+  final TextStyle? labelStyle;
   final String hint;
 
   /// Free text from before the master data existed, shown when there is no
@@ -65,7 +72,7 @@ class LocationPickerField extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: AppTypography.labelMedium),
+        Text(label, style: labelStyle ?? AppTypography.labelMedium),
         const SizedBox(height: 6),
         InkWell(
           borderRadius: BorderRadius.circular(14),

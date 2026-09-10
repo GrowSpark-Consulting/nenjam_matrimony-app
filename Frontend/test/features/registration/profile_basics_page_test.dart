@@ -10,6 +10,8 @@ import 'package:nenjam_matrimony/features/registration/domain/models/profile_flo
 import 'package:nenjam_matrimony/features/registration/presentation/pages/profile_basics_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/providers/registration_provider.dart';
 
+import 'package:nenjam_matrimony/features/location/presentation/widgets/location_picker_field.dart';
+
 import 'onboarding_test_support.dart';
 
 /// **State and City are required, and answering them opens the Marital Status
@@ -49,10 +51,17 @@ void main() {
     );
   }
 
-  ProviderContainer containerWith(RecordingRegistrationRepository repository) {
+  ProviderContainer containerWith(
+    RecordingRegistrationRepository repository, {
+    FakeLocationRepository? locations,
+  }) {
     return ProviderContainer(
       overrides: [
         registrationRepositoryProvider.overrideWithValue(repository),
+        // State and city come from the location master data now. Every test
+        // supplies it, so the step can never reach the network and can never
+        // quietly fall back to a hardcoded list.
+        ...locationOverrides(locations ?? FakeLocationRepository()),
         // Onboarding persists to the backend only with a session; without
         // this the steps would write locally and the repository would never
         // be called.
@@ -78,7 +87,7 @@ void main() {
 
     // One of four is still not enough — the gate is on every required
     // field, not on the member having touched the form.
-    await pickDropdown(tester, 0, 'Tamil Nadu');
+    await pickLocation(tester, 'State *', 'Gujarat');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(find.text('marital-reached'), findsNothing);
@@ -101,14 +110,14 @@ void main() {
     await tester.pumpAndSettle();
 
     final draft = container.read(registrationProvider);
-    expect(draft.locationDetails.state, 'Tamil Nadu');
-    expect(draft.locationDetails.city, 'Chennai');
+    expect(draft.locationDetails.state, 'Gujarat');
+    expect(draft.locationDetails.city, 'Bhavnagar');
     expect(draft.religionDetails.subCaste, 'Iyer');
 
     // Onboarding has no later step to sync for it, so the answers must
     // reach the backend here — otherwise the gate sends the member back.
-    expect(repository.savedLocation?.state, 'Tamil Nadu');
-    expect(repository.savedLocation?.city, 'Chennai');
+    expect(repository.savedLocation?.state, 'Gujarat');
+    expect(repository.savedLocation?.city, 'Bhavnagar');
 
     // Sub-community rides on the religion section, which is where
     // `user_profiles.sub_caste` is read from.
@@ -201,9 +210,13 @@ void main() {
     await tester.pumpWidget(harness(container, buildRouter()));
     await tester.pumpAndSettle();
 
-    // Two dropdowns (State, City) and one text field (Sub-community). Caste
-    // and Mother tongue are not on this screen, and neither is Gender.
-    expect(find.byType(DropdownButtonFormField<String>), findsNWidgets(2));
+    // Two location fields (State, City) and one text field (Sub-community).
+    // The location levels are backend-backed pickers, not dropdowns — a
+    // remaining DropdownButtonFormField here would mean one of them slipped
+    // back onto a hardcoded list. Caste and Mother tongue are not on this
+    // screen, and neither is Gender.
+    expect(find.byType(LocationPickerField), findsNWidgets(2));
+    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
     expect(find.byType(TextFormField), findsOneWidget);
     expect(find.text('Caste'), findsNothing);
     expect(find.text('Caste *'), findsNothing);
@@ -212,12 +225,12 @@ void main() {
     expect(find.text('Gender'), findsNothing);
 
     // State alone is not enough; City is what completes the step.
-    await pickDropdown(tester, 0, 'Tamil Nadu');
+    await pickLocation(tester, 'State *', 'Gujarat');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(find.text('marital-reached'), findsNothing);
 
-    await pickDropdown(tester, 1, 'Chennai');
+    await pickLocation(tester, 'City *', 'Bhavnagar');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(find.text('marital-reached'), findsOneWidget);
@@ -242,12 +255,10 @@ void main() {
     // launch, because the gate reads the backend's copy.
     expect(find.text('marital-reached'), findsNothing);
 
-    // And the answers the member gave are still on the screen and in the
-    // draft — a failed API call must not cost them the form.
-    // The dropdowns still show what was picked — a failed API call must not
-    // cost the member the form.
-    expect(find.text('Tamil Nadu'), findsWidgets);
-    expect(find.text('Chennai'), findsWidgets);
+    // And the answers the member gave are still on the screen — a failed API
+    // call must not cost them the form.
+    expect(find.text('Gujarat'), findsWidgets);
+    expect(find.text('Bhavnagar'), findsWidgets);
   });
 
   testWidgets('the screen reopens on the answers already in the draft', (

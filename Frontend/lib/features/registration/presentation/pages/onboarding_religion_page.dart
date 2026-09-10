@@ -7,8 +7,11 @@ import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/tokens/app_radius.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../location/domain/models/location_models.dart';
+import '../../../location/presentation/providers/location_providers.dart';
 import '../../domain/models/onboarding_forms.dart';
 import '../providers/registration_provider.dart';
+import '../widgets/onboarding_location_field.dart';
 import '../widgets/onboarding_scaffold.dart';
 
 /// Step 3 — "Your religion": religion, community, and the country the member
@@ -55,12 +58,14 @@ class _OnboardingReligionPageState
         draft.religionDetails.community,
         ProfileOptions.communitiesFor(draft.religionDetails.religion),
       ),
-      // Verbatim, unlike religion/community above: this is a location answer,
-      // and the country list is a curated subset that a stored value can fall
-      // outside of. Filtering it blanked the answer and let the next save
-      // overwrite it — see OnboardingScaffold.optionsWith, which widens the
-      // dropdown below to display whatever was stored.
+      // Verbatim, unlike religion/community above: this is a location answer
+      // and the country list now comes from the backend's master data, which
+      // is not loaded yet at this point. The field resolves the stored label
+      // to a real option once the list arrives — see
+      // [resolveStoredLocation] — and shows it as the member's own answer in
+      // the meantime, so nothing is blanked while a request is in flight.
       livingIn: draft.locationDetails.country,
+      livingInCode: draft.locationDetails.countryCode,
       casteNoBar: draft.partnerPreference.castePref ==
           OnboardingReligionForm.casteNoBarPreference,
     );
@@ -88,10 +93,35 @@ class _OnboardingReligionPageState
     });
   }
 
+  /// Picking a country stores both halves: the code the server validates and
+  /// the label the member reads back. Clearing state and city is NOT done
+  /// here — it belongs to `applyOnboardingReligion`, because those two live
+  /// on a later step and this screen has no business reaching into them.
+  void _onCountryChanged(LocationOption? option) {
+    setState(() {
+      _form = _form.copyWith(
+        livingIn: option?.label ?? '',
+        livingInCode: option?.code ?? '',
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final communities = ProfileOptions.communitiesFor(_form.religion);
+    final countries = ref.watch(countriesProvider);
+
+    // A draft saved before the master data existed carries a label and no
+    // code — and `LocationDetails.country` defaults to 'India' for every new
+    // draft — so the stored label is matched against the list the API
+    // returned. Nothing is invented: a label the API does not offer stays
+    // legacy text.
+    final country = resolveStoredLocation(
+      countries,
+      _form.livingInCode,
+      _form.livingIn,
+    );
 
     return OnboardingStepScaffold(
       headline: l10n.onboardingReligionHeadline,
@@ -101,9 +131,17 @@ class _OnboardingReligionPageState
       isComplete: _form.isComplete,
       validationNames:
           _form.missingFields.map((f) => _label(l10n, f)).toList(),
-      onSave: () => ref
-          .read(registrationProvider.notifier)
-          .applyOnboardingReligion(_form),
+      // Saved with the RESOLVED country, not the raw form. A draft that
+      // carried only a label ('India', the default on every new draft) has
+      // just been matched to a real option above; without folding that back
+      // in, the code would stay empty and the State step two screens later
+      // would have no country to list states for.
+      onSave: () => ref.read(registrationProvider.notifier).applyOnboardingReligion(
+            _form.copyWith(
+              livingIn: country?.label ?? _form.livingIn,
+              livingInCode: country?.code ?? _form.livingInCode,
+            ),
+          ),
       fields: [
         OnboardingDropdownField(
           label: l10n.onboardingReligionLabel,
@@ -124,17 +162,18 @@ class _OnboardingReligionPageState
           onChanged: (v) =>
               setState(() => _form = _form.copyWith(community: v ?? '')),
         ),
-        OnboardingDropdownField(
+        OnboardingLocationField(
           label: l10n.onboardingLivingInLabel,
           hint: l10n.onboardingLivingInHint,
-          value: _form.livingIn,
-          options: OnboardingScaffold.optionsWith(
-            ProfileOptions.countries,
-            _form.livingIn,
-          ),
+          options: countries,
+          value: country,
+          // Shown when the draft holds a country the master data does not
+          // offer, so an older answer reads as an answer rather than as an
+          // empty field.
+          legacyValue: country == null ? _form.livingIn : '',
           isRequired: true,
-          onChanged: (v) =>
-              setState(() => _form = _form.copyWith(livingIn: v ?? '')),
+          onRetry: () => ref.invalidate(countriesProvider),
+          onChanged: _onCountryChanged,
         ),
       ],
       trailing: _CasteNoBarCheckbox(

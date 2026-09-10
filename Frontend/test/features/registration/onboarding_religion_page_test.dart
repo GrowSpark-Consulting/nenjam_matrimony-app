@@ -10,6 +10,8 @@ import 'package:nenjam_matrimony/features/registration/domain/models/profile_flo
 import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_religion_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/providers/registration_provider.dart';
 
+import 'package:nenjam_matrimony/features/location/presentation/widgets/location_picker_field.dart';
+
 import 'onboarding_test_support.dart';
 
 /// The third onboarding screen: **religion, community and "living in" are
@@ -43,10 +45,17 @@ void main() {
     );
   }
 
-  ProviderContainer containerWith(RecordingRegistrationRepository repository) {
+  ProviderContainer containerWith(
+    RecordingRegistrationRepository repository, {
+    FakeLocationRepository? locations,
+  }) {
     return ProviderContainer(
       overrides: [
         registrationRepositoryProvider.overrideWithValue(repository),
+        // "Living in" is backed by the location master data now, so every
+        // test supplies it. Without this the page would try to reach the
+        // network — and must never silently fall back to a hardcoded list.
+        ...locationOverrides(locations ?? FakeLocationRepository()),
         // Onboarding persists to the backend only with a session; without
         // this the steps would write locally and the repository would never
         // be called.
@@ -99,7 +108,7 @@ void main() {
 
     await pickDropdown(tester, 0, 'Hindu');
     await pickDropdown(tester, 1, 'Iyer');
-    await pickDropdown(tester, 2, 'India');
+    await pickLocation(tester, 'Living in *', 'India');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
@@ -138,10 +147,13 @@ void main() {
     expect(find.text('Mother Tongue'), findsNothing);
     expect(find.text('Mother Tongue *'), findsNothing);
 
-    // ...and there is no free-text input left at all: religion, community
-    // and living-in are three dropdowns, and caste was the only text field.
+    // ...and there is no free-text input left at all: caste was the only
+    // text field. Religion and community are dropdowns over their own
+    // (unchanged) option lists; "Living in" is a backend-backed location
+    // picker, so it is deliberately NOT a third dropdown.
     expect(find.byType(TextFormField), findsNothing);
-    expect(find.byType(DropdownButtonFormField<String>), findsNWidgets(3));
+    expect(find.byType(DropdownButtonFormField<String>), findsNWidgets(2));
+    expect(find.byType(LocationPickerField), findsOneWidget);
 
     // The partner-community opt-out is a different field — PartnerPreference
     // .castePref, not the member's own caste — and deliberately stays.
@@ -161,7 +173,7 @@ void main() {
 
     await pickDropdown(tester, 0, 'Hindu');
     await pickDropdown(tester, 1, 'Iyer');
-    await pickDropdown(tester, 2, 'India');
+    await pickLocation(tester, 'Living in *', 'India');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
@@ -180,7 +192,7 @@ void main() {
 
     await pickDropdown(tester, 0, 'Hindu');
     await pickDropdown(tester, 1, 'Iyer');
-    await pickDropdown(tester, 2, 'India');
+    await pickLocation(tester, 'Living in *', 'India');
     await tester.tap(find.byType(Checkbox));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continue'));
@@ -209,7 +221,7 @@ void main() {
 
     await pickDropdown(tester, 0, 'Hindu');
     await pickDropdown(tester, 1, 'Iyer');
-    await pickDropdown(tester, 2, 'India');
+    await pickLocation(tester, 'Living in *', 'India');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
