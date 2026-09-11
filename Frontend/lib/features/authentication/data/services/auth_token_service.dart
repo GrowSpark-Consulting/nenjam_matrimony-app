@@ -44,6 +44,11 @@ class AuthTokenService {
   /// genuinely signed-out member — the wait only materialises during the
   /// startup window it exists to cover. Bounded, so a Firebase that never
   /// reports readiness degrades to "no token" instead of hanging the caller.
+  ///
+  /// That last guarantee was only true of the intent, not of the code: the
+  /// wait used `firstWhere((user) => user != null)`, which discards the very
+  /// `null` that says "signed out" and blocked for the full timeout instead.
+  /// See `_awaitRestoredUser`.
   Future<String?> getFirebaseToken({bool forceRefresh = false}) async {
     final user = _auth.currentUser ?? await _awaitRestoredUser();
     if (user == null) return null;
@@ -52,13 +57,26 @@ class AuthTokenService {
 
   Future<User?> _awaitRestoredUser() async {
     try {
+      // `.first`, NOT `firstWhere((user) => user != null)`.
+      //
+      // authStateChanges() replays the restored state to each new subscriber,
+      // and for a genuinely signed-out member that state is `null`. Waiting
+      // for a non-null user therefore refused the very emission that answers
+      // the question, and — since the stream stays open — blocked for the
+      // whole `_sessionRestoreTimeout` before returning null anyway.
+      //
+      // AuthInterceptor awaits this on every request, and onboarding runs
+      // entirely signed out (auth is the last step), so each location request
+      // sat here for 5s before it was even sent. Measured: 5,029ms with
+      // firstWhere vs 2ms with first; a restored user still arrives in the
+      // first emission, so the signed-in path is unchanged.
       return await _auth
           .authStateChanges()
-          .firstWhere((user) => user != null)
+          .first
           .timeout(_sessionRestoreTimeout);
     } catch (_) {
-      // Timed out, or the stream closed without ever producing a user —
-      // both mean "no session", which is exactly what null already says.
+      // Timed out, or the stream closed without emitting at all — both mean
+      // "no session", which is exactly what null already says.
       return null;
     }
   }
