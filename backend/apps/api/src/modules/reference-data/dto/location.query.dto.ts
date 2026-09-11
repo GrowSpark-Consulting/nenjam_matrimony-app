@@ -70,4 +70,17 @@ export class CitiesQueryDto extends CountriesQueryDto {
   @Min(1)
   @Max(1000)
   limit?: number = 200;
+
+  @ApiPropertyOptional({
+    description:
+      'Rows to skip, for paging through a large subdivision. Combined with ' +
+      '`limit`, which is applied in the database — a page never loads the ' +
+      'whole subdivision first.',
+    default: 0,
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (value === undefined ? undefined : Number(value)))
+  @IsInt()
+  @Min(0)
+  offset?: number = 0;
 }

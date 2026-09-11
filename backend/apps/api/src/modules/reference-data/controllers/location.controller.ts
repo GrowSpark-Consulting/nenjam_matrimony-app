@@ -69,6 +69,7 @@ export class LocationController {
     return this.locations.listCities(query.stateCode, {
       search: query.search,
       limit: query.limit,
+      offset: query.offset,
     });
   }
 }

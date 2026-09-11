@@ -40,8 +40,19 @@ class LocationRepository {
     return _fetch(
       cacheKey: LocationCache.citiesKey(stateCode),
       path: ApiEndpoints.referenceCities,
-      // The server caps this itself; asking for the maximum means the whole
-      // subdivision is cached once and every subsequent search is local.
+      // One request per subdivision, then every search is local — which is
+      // why this asks for the maximum rather than the server's default page
+      // of 200. `filteredCitiesProvider` filters what it was given, so a
+      // truncated page would silently hide real cities from search.
+      //
+      // The largest subdivision in the dataset is GB-ENG at 743 cities and
+      // only 13 exceed 200, so 1000 covers every one of them today. The
+      // server's own cap is 1000, and `cities.csv` is checked against that
+      // ceiling by the seeder's spec.
+      //
+      // Worth it because the round trip dominates: ~330ms of network versus a
+      // 43KB body for Tamil Nadu, cached on device for 7 days. Paging would
+      // trade one request for several, each paying that 330ms again.
       query: {'stateCode': stateCode, 'limit': 1000},
       cancelToken: cancelToken,
     );
