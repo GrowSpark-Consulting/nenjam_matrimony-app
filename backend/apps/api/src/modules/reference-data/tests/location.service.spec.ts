@@ -43,19 +43,90 @@ const CITIES = [
   { code: 'AU-NSW-CASTLEHILL', stateCode: 'AU-NSW', countryCode: 'AU', label: 'Castle Hill', population: 39284, isActive: true },
 ];
 
+/**
+ * A fake `findMany` that actually applies `where` / `orderBy` / `take` /
+ * `skip`, rather than returning the fixtures whatever it is asked.
+ *
+ * This matters now that filtering, ordering and paging happen in Postgres
+ * instead of in Node: a mock that ignored the query would let the service
+ * stop passing `where: { isActive: true }` and every test would still pass.
+ * Here, a wrong query produces wrong rows.
+ */
+function fakeFindMany<T extends Record<string, unknown>>(rows: T[]) {
+  return jest.fn(async (args: any = {}) => {
+    let out = [...rows];
+
+    for (const [field, condition] of Object.entries(args.where ?? {})) {
+      out = out.filter((row) => {
+        const value = row[field];
+        // `{ contains, mode: 'insensitive' }` — the only operator used here.
+        if (condition && typeof condition === 'object' && 'contains' in condition) {
+          const { contains, mode } = condition as { contains: string; mode?: string };
+          return mode === 'insensitive'
+            ? String(value).toLowerCase().includes(contains.toLowerCase())
+            : String(value).includes(contains);
+        }
+        return value === condition;
+      });
+    }
+
+    const orderBy = Array.isArray(args.orderBy)
+      ? args.orderBy
+      : args.orderBy
+        ? [args.orderBy]
+        : [];
+    out.sort((a, b) => {
+      for (const clause of orderBy) {
+        const [field, direction] = Object.entries(clause)[0] as [string, 'asc' | 'desc'];
+        const x = a[field];
+        const y = b[field];
+        if (x === y) continue;
+        const cmp =
+          typeof x === 'number' && typeof y === 'number'
+            ? x - y
+            : String(x).localeCompare(String(y));
+        return direction === 'desc' ? -cmp : cmp;
+      }
+      return 0;
+    });
+
+    if (args.skip) out = out.slice(args.skip);
+    if (args.take) out = out.slice(0, args.take);
+
+    // Honour `select`, so a test can catch the service over-fetching columns.
+    const select = args.select as Record<string, boolean> | undefined;
+    if (!select) return out;
+    return out.map((row) =>
+      Object.fromEntries(Object.keys(select).map((key) => [key, row[key]])),
+    );
+  });
+}
+
+/** The `findMany` mock behind one model, for asserting what was queried. */
+function queryOf(service: LocationService, model: 'country' | 'subdivision' | 'city'): jest.Mock {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (service as any).prisma[model].findMany as jest.Mock;
+}
+
+/** Primary-key lookup that honours `select`, like the real client. */
+function fakeFindUnique<T extends Record<string, unknown>>(rows: T[]) {
+  return jest.fn(async (args: any) => {
+    const row = rows.find((r) => r.code === args.where.code);
+    if (!row) return null;
+    const select = args.select as Record<string, boolean> | undefined;
+    if (!select) return row;
+    return Object.fromEntries(Object.keys(select).map((k) => [k, row[k]]));
+  });
+}
+
 function buildService(): LocationService {
-  // The mock sorts the way the real queries' `orderBy` clauses do, so these
-  // tests exercise the service's own ordering rather than fixture order.
-  const byLabel = <T extends { label: string }>(rows: T[]) =>
-    [...rows].sort((a, b) => a.label.localeCompare(b.label));
   const prisma = {
-    country: { findMany: jest.fn().mockResolvedValue(byLabel(COUNTRIES)) },
-    subdivision: { findMany: jest.fn().mockResolvedValue(byLabel(SUBDIVISIONS)) },
-    city: {
-      findMany: jest.fn().mockResolvedValue(
-        [...CITIES].sort((a, b) => b.population - a.population || a.label.localeCompare(b.label)),
-      ),
+    country: { findMany: fakeFindMany(COUNTRIES), findUnique: fakeFindUnique(COUNTRIES) },
+    subdivision: {
+      findMany: fakeFindMany(SUBDIVISIONS),
+      findUnique: fakeFindUnique(SUBDIVISIONS),
     },
+    city: { findMany: fakeFindMany(CITIES), findUnique: fakeFindUnique(CITIES) },
   } as unknown as PrismaService;
   return new LocationService(prisma);
 }
@@ -117,14 +188,81 @@ describe('LocationService reads', () => {
     expect((await service.listCities('SG-SG')).map((c) => c.code)).toEqual(['SG-SG-SINGAPORE']);
   });
 
-  it('loads the dataset once, however many reads follow', async () => {
+  it('serves a repeated read from memory without re-querying', async () => {
     const service = buildService();
-    await service.listCountries();
-    await service.listCountries();
+    const cities = queryOf(service, 'city');
+
     await service.listCities('IN-TN');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const findMany = (service as any).prisma.country.findMany as jest.Mock;
-    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(cities).toHaveBeenCalledTimes(1);
+
+    await service.listCities('IN-TN');
+    await service.listCities('IN-TN');
+    expect(cities).toHaveBeenCalledTimes(1);
+  });
+
+  it('collapses concurrent first-time reads into a single query', async () => {
+    // Three dropdowns opening at once used to fire three separate full
+    // loads, because the guard was `if (!loaded) await load()` with nothing
+    // tracking the request already in flight.
+    const service = buildService();
+    const cities = queryOf(service, 'city');
+
+    const results = await Promise.all([
+      service.listCities('IN-TN'),
+      service.listCities('IN-TN'),
+      service.listCities('IN-TN'),
+    ]);
+
+    expect(cities).toHaveBeenCalledTimes(1);
+    expect(results[0]).toEqual(results[1]);
+    expect(results[1]).toEqual(results[2]);
+  });
+
+  it('never asks the database for more than one subdivision of cities', async () => {
+    const service = buildService();
+    const cities = queryOf(service, 'city');
+
+    await service.listCities('IN-TN');
+    await service.listCities('IN-KL', { search: 'ko' });
+
+    // The regression this guards: loading the whole city table. Every call
+    // must be scoped to one subdivision and bounded by a limit.
+    for (const [args] of cities.mock.calls) {
+      expect(args.where.stateCode).toBeDefined();
+      expect(args.take).toBeGreaterThan(0);
+    }
+  });
+
+  it('selects only the columns the UI renders', async () => {
+    const service = buildService();
+    await service.listCities('IN-TN');
+    await service.listCountries();
+
+    // population/isActive/createdAt/updatedAt were half the bytes on the
+    // wire and nothing renders them.
+    const [cityArgs] = queryOf(service, 'city').mock.calls[0];
+    expect(Object.keys(cityArgs.select).sort()).toEqual([
+      'code',
+      'countryCode',
+      'label',
+      'stateCode',
+    ]);
+    const [countryArgs] = queryOf(service, 'country').mock.calls[0];
+    expect(Object.keys(countryArgs.select).sort()).toEqual(['code', 'label']);
+  });
+
+  it('does not memoise an empty result', async () => {
+    // An empty list is far more likely to be an unseeded database than a
+    // real answer; caching it would leave the dropdown empty until the next
+    // deploy.
+    const service = buildService();
+    const cities = queryOf(service, 'city');
+
+    // IN-DD exists but its only city is inactive, so the active-only query
+    // comes back empty.
+    expect(await service.listCities('IN-DD')).toEqual([]);
+    await service.listCities('IN-DD');
+    expect(cities).toHaveBeenCalledTimes(2);
   });
 });
 

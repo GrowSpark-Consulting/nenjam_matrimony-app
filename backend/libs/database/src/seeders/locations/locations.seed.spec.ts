@@ -75,6 +75,19 @@ describe('committed location dataset', () => {
     expect(codes.has('IN-TN-MADURAI')).toBe(true);
   });
 
+  it('keeps every subdivision inside the API\'s maximum page size', () => {
+    // The Flutter client fetches a whole subdivision in one request (limit
+    // 1000) and then filters locally, so a subdivision larger than that cap
+    // would silently hide real cities from search rather than failing loudly.
+    // Largest today is GB-ENG at 743.
+    const perState = new Map<string, number>();
+    for (const city of dataset.cities) {
+      perState.set(city.stateCode, (perState.get(city.stateCode) ?? 0) + 1);
+    }
+    const oversized = [...perState.entries()].filter(([, n]) => n > 1000);
+    expect(oversized).toEqual([]);
+  });
+
   it('has no duplicate codes at any level', () => {
     const unique = (rows: { code: string }[]) => new Set(rows.map((r) => r.code)).size;
     expect(unique(dataset.countries)).toBe(dataset.countries.length);
