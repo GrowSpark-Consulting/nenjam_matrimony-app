@@ -6,9 +6,8 @@ import '../models/prompt_bank_item.dart';
 /// Fully independent of the registration feature — no [ProfileDraft],
 /// [RegistrationNotifier] or [RegistrationRepository] involvement, per
 /// architecture decision (prompts are optional profile enrichment, not
-/// registration data). [MockProfilePromptRepository] is wired as the
-/// default today; swap the `profilePromptRepositoryProvider` override to
-/// [ApiProfilePromptRepository] once the backend team's endpoints are ready.
+/// registration data). [ApiProfilePromptRepository] is what
+/// `profilePromptRepositoryProvider` wires today.
 abstract class ProfilePromptRepository {
   /// The pickable bank of prompts, optionally filtered by [category].
   Future<List<PromptBankItem>> getPrompts({

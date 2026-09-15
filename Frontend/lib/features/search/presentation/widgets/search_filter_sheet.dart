@@ -39,9 +39,9 @@ const _kStates = [
   'Other',
 ];
 
-// Same list NmLocationSelector (matrimony_selectors.dart) uses — duplicated
-// locally since that widget doesn't expose its option list, and this sheet
-// needs it in NmSearchableDropdown form instead of a plain dropdown.
+// Owned here, in NmSearchableDropdown form. (These options were once shared
+// with a core NmLocationSelector widget; that widget was unused and has been
+// deleted, so this sheet is now the single definition.)
 const _kCities = [
   'Chennai',
   'Coimbatore',
@@ -54,13 +54,12 @@ const _kCities = [
   'USA / UK / Abroad',
 ];
 
-// The following lists all mirror matrimony_selectors.dart's internal
-// option lists exactly (values must stay identical to what those widgets
-// would have produced, since search_filters_entity.dart's fields carry the
-// same strings) — duplicated locally for the same reason as _kCities:
-// every dropdown-style field in this sheet now uses NmSearchableDropdown
-// instead of the shared NmXSelector widgets (which wrap a native
-// DropdownButtonFormField). That native dropdown's overlay menu is
+// The following lists are the single definition of these option sets —
+// their values must stay in step with search_filters_entity.dart's fields,
+// which carry the same strings. They live here for the same reason as
+// _kCities: every dropdown-style field in this sheet uses
+// NmSearchableDropdown rather than a native DropdownButtonFormField.
+// That native dropdown's overlay menu is
 // positioned/clipped relative to the wrong ancestor when opened from
 // inside a modal bottom sheet — it can render partly off-screen or get
 // clipped by the sheet's own Material boundary. NmSearchableDropdown

@@ -54,7 +54,6 @@ abstract final class RouteNames {
   static const String supportTicketForm = '/help/ticket';
   static const String ticketHistory = '/help/tickets';
   static const String privacy = '/privacy';
-  static const String about = '/about';
   static const String partnerPreferences = '/partner-preferences';
   static const String interestsSent = '/interests-sent';
   static const String interestsReceived = '/interests-received';
@@ -116,7 +115,6 @@ abstract final class RouteNames {
   static const String supportTicketFormName = 'supportTicketForm';
   static const String ticketHistoryName = 'ticketHistory';
   static const String privacyName = 'privacy';
-  static const String aboutName = 'about';
   static const String partnerPreferencesName = 'partnerPreferences';
   static const String interestsSentName = 'interestsSent';
   static const String interestsReceivedName = 'interestsReceived';

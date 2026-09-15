@@ -371,7 +371,14 @@ class _ReplyQuote extends StatelessWidget {
                 width: 36,
                 height: 36,
                 child: replyTo.attachmentUrl!.startsWith('http')
-                    ? Image.network(replyTo.attachmentUrl!, fit: BoxFit.cover)
+                    ? Image.network(
+                        replyTo.attachmentUrl!,
+                        fit: BoxFit.cover,
+                        // 36x36 thumbnail — decode to size, not full photo,
+                        // exactly as the local branch below already does.
+                        cacheWidth: (36 * MediaQuery.devicePixelRatioOf(context))
+                            .round(),
+                      )
                     : NmLocalMediaImage(
                         source: replyTo.attachmentUrl!,
                         // 36x36 thumbnail — decode to size, not full photo.

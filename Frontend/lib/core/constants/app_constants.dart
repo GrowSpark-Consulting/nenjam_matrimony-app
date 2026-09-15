@@ -7,7 +7,6 @@ abstract final class AppConstants {
   static const String appName = 'Nenjam Matrimony';
   static const String appTagline = 'Where Hearts Meet';
   static const String appVersion = '1.0.0';
-  static const String appBuildNumber = '1';
 
   /// Android application id — must stay in step with `applicationId` in
   /// android/app/build.gradle.kts.
@@ -47,30 +46,11 @@ abstract final class AppConstants {
   /// quickly instead of holding the splash for the full 20s.
   static const Duration healthCheckTimeout = Duration(seconds: 8);
 
-  // ─── Pagination ──────────────────────────────────────────────────
-  static const int defaultPageSize = 20;
-  static const int maxPageSize = 50;
-  static const int infiniteScrollThreshold = 200;
-
-  // ─── Cache Durations ─────────────────────────────────────────────
-  static const Duration cacheShort = Duration(minutes: 5);
-  static const Duration cacheMedium = Duration(minutes: 30);
-  static const Duration cacheLong = Duration(hours: 24);
-
-  // ─── Animation Durations ─────────────────────────────────────────
-  static const Duration animFast = Duration(milliseconds: 150);
-  static const Duration animNormal = Duration(milliseconds: 300);
-  static const Duration animSlow = Duration(milliseconds: 500);
-  static const Duration animPageTransition = Duration(milliseconds: 350);
-
   // ─── UI Constraints ──────────────────────────────────────────────
   static const double maxContentWidth = 600;
   static const double tabletBreakpoint = 600;
   static const double desktopBreakpoint = 1024;
   static const double minTouchTarget = 48;
-  static const int maxProfilePhotos = 10;
-  static const int maxBioLength = 500;
-  static const int otpLength = 6;
 
   // ─── Storage Keys ────────────────────────────────────────────────
   static const String keyAccessToken = 'access_token';
@@ -81,8 +61,9 @@ abstract final class AppConstants {
   static const String keyNotificationsEnabled = 'notifications_enabled';
 
   /// Whether the Nenjam notification-permission explanation dialog has
-  /// already been shown once. Gates [NotificationPermissionGate] so the
-  /// user is never re-prompted every app launch after choosing "Not now".
+  /// already been shown once, so the user is never re-prompted on every
+  /// app launch after choosing "Not now". Its gate widget has been deleted;
+  /// the key and its accessors are retained for installs that already set it.
   static const String keyNotificationPermissionPrompted =
       'notification_permission_prompted';
 
@@ -123,18 +104,4 @@ abstract final class AppConstants {
 
   /// Languages the app currently ships translations for.
   static const List<String> activeLanguages = ['en', 'ta'];
-
-  /// Supported Languages roadmap (translations rolled out incrementally).
-  static const List<String> supportedLanguages = [
-    'en',
-    'ta',
-    'hi',
-    'gu',
-    'te',
-    'kn',
-    'ml',
-    'mr',
-    'bn',
-    'ar',
-  ];
 }

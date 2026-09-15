@@ -64,9 +64,11 @@ void main() {
   });
 
   group('root app wiring', () {
-    /// Both entry points (`main.dart` and the flavor `bootstrap.dart`) build
-    /// the root `MaterialApp.router`, so both have to be pinned.
-    for (final path in ['lib/main.dart', 'lib/bootstrap.dart']) {
+    /// `main.dart` is the app's only entry point — it builds the root
+    /// `MaterialApp.router`, so that is what has to be pinned. (The unused
+    /// flavor entry `bootstrap.dart` was deleted; if one is reintroduced,
+    /// add it to this list.)
+    for (final path in ['lib/main.dart']) {
       test('$path forces ThemeMode.light with no darkTheme', () {
         final source = File(path).readAsStringSync();
 
