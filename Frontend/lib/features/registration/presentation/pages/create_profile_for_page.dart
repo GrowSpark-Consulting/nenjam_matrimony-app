@@ -14,6 +14,7 @@ import '../../../../core/widgets/buttons/icon_button.dart';
 import '../../../../core/widgets/layout/responsive_layout.dart';
 import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../location/presentation/providers/location_providers.dart';
 import '../../domain/models/onboarding_forms.dart';
 import '../../domain/models/profile_for_relation.dart';
 import '../providers/registration_provider.dart';
@@ -70,6 +71,18 @@ class _CreateProfileForPageState extends ConsumerState<CreateProfileForPage> {
     // back here from Your Name — or resuming after PostAuthDestination
     // rehydrates the draft — reopens on the answer already given.
     _gender = basic.gender;
+
+    // Warm the country list here, on the first screen of onboarding, because
+    // the country is asked two screens later and the request is a ~290ms
+    // round trip that is otherwise paid while the member waits on the field.
+    // Server time for it is effectively zero — the latency is the network —
+    // so the only way to hide it is to spend it earlier.
+    //
+    // Fire-and-forget by design: nothing on this screen reads the result, a
+    // failure is silent, and the country field keeps its own loading, error
+    // and retry states for the case where it is genuinely needed. Repeat
+    // entries to this screen do not re-request — see [prefetchCountries].
+    prefetchCountries(ref);
   }
 
   /// Localized display label for a stored gender value. The value itself

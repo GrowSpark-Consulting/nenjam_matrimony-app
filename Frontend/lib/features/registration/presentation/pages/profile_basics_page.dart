@@ -114,17 +114,26 @@ class _ProfileBasicsPageState extends ConsumerState<ProfileBasicsPage> {
       registrationProvider.select((d) => d.locationDetails),
     );
 
-    // Resolved against the country list for the same reason the Religion step
-    // does it: a draft written before the master data existed holds a label
-    // and no code. Without this the State field below would be permanently
-    // disabled for those members — a dead end reachable by resuming straight
-    // onto this step, where re-picking the country is not even offered.
-    final countryCode = resolveStoredLocation(
-          ref.watch(countriesProvider),
-          storedCountry.countryCode,
-          storedCountry.country,
-        )?.code ??
-        '';
+    // A draft written before the master data existed holds a country label and
+    // no code, and the State field below would be permanently disabled for
+    // those members — a dead end reachable by resuming straight onto this
+    // step, where re-picking the country is not even offered. So the label is
+    // resolved against the country list.
+    //
+    // ONLY in that case, though. Watching `countriesProvider` unconditionally
+    // fired a country request on every open of this step to answer a question
+    // the draft had already answered — a wasted round trip competing with the
+    // states request for the same connection, on the step where the member is
+    // waiting. The common path (country chosen two steps back, code present)
+    // now reads the code straight off the draft and fetches nothing.
+    final countryCode = storedCountry.countryCode.isNotEmpty
+        ? storedCountry.countryCode
+        : resolveStoredLocation(
+              ref.watch(countriesProvider),
+              '',
+              storedCountry.country,
+            )?.code ??
+            '';
 
     final states = ref.watch(statesProvider(countryCode));
     final stateOption =

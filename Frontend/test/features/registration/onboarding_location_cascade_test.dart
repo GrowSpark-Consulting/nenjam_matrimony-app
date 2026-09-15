@@ -119,6 +119,46 @@ void main() {
       expect(locations.calls.where((c) => c.startsWith('states:')), hasLength(1));
     });
 
+    testWidgets('a known country code costs no country request', (
+      tester,
+    ) async {
+      useTallSurface(tester);
+      final locations = FakeLocationRepository();
+      final container = containerWith(locations: locations, location: inIndia);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(harness(container, basicsRouter()));
+      await tester.pumpAndSettle();
+
+      // The country was chosen two steps back and its code is on the draft,
+      // so there is nothing to look up. Fetching the list anyway was a wasted
+      // round trip competing with the states request on the very step where
+      // the member is waiting.
+      expect(locations.calls, isNot(contains('countries')));
+      expect(locations.calls, contains('states:IN'));
+    });
+
+    testWidgets('a legacy country label still resolves via the country list', (
+      tester,
+    ) async {
+      useTallSurface(tester);
+      final locations = FakeLocationRepository();
+      final container = containerWith(
+        locations: locations,
+        // Label, no code — a draft from before the master data existed.
+        location: const LocationDetails(country: 'India'),
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(harness(container, basicsRouter()));
+      await tester.pumpAndSettle();
+
+      // Here the list IS needed, and the State field must end up usable
+      // rather than stuck disabled.
+      expect(locations.calls, contains('countries'));
+      expect(locations.calls, contains('states:IN'));
+    });
+
     testWidgets('cities are not fetched before a state is chosen', (
       tester,
     ) async {
