@@ -1274,3 +1274,51 @@ enum ThemeMode {
 
   @@map("theme_mode")
 }
+
+// ─────────────────────── Religion / community master data ───────────────────
+//
+// Religion -> Community, the same shape as the location tables above and
+// populated the same way: `pnpm seed:religions` reads seed-data/religions.json,
+// which was migrated verbatim from the lists the Flutter app already shipped.
+//
+// NOTE ON NAMING: these deliberately mirror the columns that already exist on
+// user_profiles (`religion`, `community`) rather than introducing a "caste"
+// vocabulary. The app uses all three words inconsistently today — 'Iyer' is a
+// community in ProfileOptions, a caste in the profile seeder and a
+// sub-community in ProfileOptions.subCommunities — so renaming anything here
+// would have to pick a winner and migrate live profile data to match. Nothing
+// is renamed; these tables simply back the fields that already exist.
+//
+// There is deliberately no SubCommunity table. No community -> sub-community
+// relationship exists anywhere in the project, and inventing one is not an
+// option, so that field stays free text until a sourced dataset is supplied.
+
+/// A religion offered in registration and search.
+model Religion {
+  code        String      @id @db.VarChar(20)
+  label       String
+  isActive    Boolean     @default(true) @map("is_active")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  communities Community[]
+
+  @@index([isActive])
+  @@map("religions")
+}
+
+/// A community within a religion, keyed as `{religion code}-{normalized name}`
+/// e.g. HINDU-VELLALAR — deterministic, so a reseed reproduces the same code.
+model Community {
+  code         String   @id @db.VarChar(60)
+  religionCode String   @map("religion_code") @db.VarChar(20)
+  label        String
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  religion     Religion @relation(fields: [religionCode], references: [code])
+
+  // Serves the communities-for-a-religion dropdown: this religion, active
+  // only, ordered by label — the one query the endpoint issues.
+  @@index([religionCode, isActive, label])
+  @@map("communities")
+}

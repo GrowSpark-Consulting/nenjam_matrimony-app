@@ -457,10 +457,22 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
         ? form.livingInCode != previous.countryCode
         : form.livingIn.trim() != previous.country.trim();
 
+    // Religion → Community is the second cascade, and unlike country → state
+    // it lives entirely on this screen, so the widget already cleared the
+    // community when the religion changed. Both halves are written the same
+    // way as the country: the code the server validates, and the label the
+    // member reads back on their profile.
+    //
+    // subCaste is deliberately untouched here. It is asked two steps later as
+    // free text, has no master data behind it, and is not a child of
+    // community in any dataset this project holds — clearing it on a religion
+    // change would discard an answer nothing has invalidated.
     state = state.copyWith(
       religionDetails: state.religionDetails.copyWith(
         religion: form.religion,
         community: form.community,
+        religionCode: form.religionCode,
+        communityCode: form.communityCode,
       ),
       locationDetails: previous.copyWith(
         country: form.livingIn,

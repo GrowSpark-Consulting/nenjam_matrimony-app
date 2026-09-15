@@ -104,6 +104,13 @@ abstract final class ApiEndpoints {
   static const String referenceStates = '/reference-data/states';
   static const String referenceCities = '/reference-data/cities';
 
+  /// Religion → Community, the second reference-data cascade. Unauthenticated
+  /// for the same reason: the Religion step runs before auth, which is the
+  /// last onboarding step. These are the lists the app used to ship in its
+  /// own binary, so there is nothing here a caller could not already see.
+  static const String referenceReligions = '/reference-data/religions';
+  static const String referenceCommunities = '/reference-data/communities';
+
   // ─── Search & Discovery ──────────────────────────────────────────
   static const String search = '/search';
   static const String searchFilters = '/search/filters';
