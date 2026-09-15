@@ -259,16 +259,28 @@ class NotificationNavigationService {
           _log('skip: already at ${RouteNames.profileViewers}');
           return;
         }
-        router.goNamed(RouteNames.notificationsName);
-        await _branchSwitchApplied();
-        if (_isStale(sequence)) return;
+        //
+        // Only when Notifications is not already on screen. `go` to the
+        // location you are already at is not a no-op: it REBUILDS the stack
+        // as that route alone, discarding whatever the member pushed
+        // Notifications from. Tapping a PROFILE_VIEW row inside the
+        // Notification Center — which routes through here, exactly as a
+        // system-tray tap does — therefore threw away the Discover route
+        // underneath, and popping the viewers list landed on a Notifications
+        // page with nothing beneath it and so no back arrow at all.
+        final atNotifications = _currentLocation == RouteNames.notifications;
+        if (!atNotifications) {
+          router.goNamed(RouteNames.notificationsName);
+          await _branchSwitchApplied();
+          if (_isStale(sequence)) return;
+        }
         router.pushNamed(
           RouteNames.profileViewersName,
           queryParameters: const {
             RouteNames.openedFromNotificationParam: 'true',
           },
         );
-        _log('go ${RouteNames.notifications} '
+        _log('${atNotifications ? 'already at ${RouteNames.notifications}' : 'go ${RouteNames.notifications}'} '
             '+ push ${RouteNames.profileViewers}');
       case NotificationDeepLinkKind.verificationApproved:
         _goTo(router, RouteNames.verificationName, RouteNames.verification);
