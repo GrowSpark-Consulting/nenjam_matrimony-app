@@ -67,7 +67,7 @@ class LocationCache {
       // A cache is an optimisation. Anything unreadable — corrupt JSON, a
       // storage backend that throws, a shape from an older build — means
       // "fetch it again", never an error the member has to see.
-      debugPrint('LocationCache read failed for $key: $error');
+      if (kDebugMode) debugPrint('LocationCache read failed for $key: $error');
       return null;
     }
   }
@@ -84,7 +84,7 @@ class LocationCache {
         }),
       );
     } catch (error) {
-      debugPrint('LocationCache write failed for $key: $error');
+      if (kDebugMode) debugPrint('LocationCache write failed for $key: $error');
     }
   }
 

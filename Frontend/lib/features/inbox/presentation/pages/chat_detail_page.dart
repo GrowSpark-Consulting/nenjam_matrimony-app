@@ -291,18 +291,10 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       if (!mounted || !_scrollController.hasClients) return;
       final extent = _scrollController.position.maxScrollExtent;
-      // ignore: avoid_print
-      print('Before jump: ${_scrollController.position.maxScrollExtent}');
       _jumpToBottom();
-      // ignore: avoid_print
-      print('After jump: ${_scrollController.offset}');
       await SchedulerBinding.instance.endOfFrame;
       if (!mounted || !_scrollController.hasClients) return;
       final settled = _scrollController.position.maxScrollExtent;
-      // ignore: avoid_print
-      print(
-        'After final layout: ${_scrollController.position.maxScrollExtent}',
-      );
       if (settled == extent) {
         return; // stable: that jump caused no further growth
       }
