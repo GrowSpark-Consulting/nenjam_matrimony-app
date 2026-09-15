@@ -85,7 +85,7 @@ void main() {
 
     // One of the two outstanding fields is not enough — every required
     // field gates the CTA, not just the member having touched the form.
-    await pickDropdown(tester, 0, 'Hindu');
+    await pickLocation(tester, 'Religion *', 'Hindu');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(find.text('contact-reached'), findsNothing);
@@ -106,8 +106,7 @@ void main() {
     await tester.pumpWidget(harness(container, buildRouter()));
     await tester.pumpAndSettle();
 
-    await pickDropdown(tester, 0, 'Hindu');
-    await pickDropdown(tester, 1, 'Iyer');
+    await fillReligionStep(tester, religion: 'Hindu', community: 'Iyer');
     await pickLocation(tester, 'Living in *', 'India');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
@@ -148,12 +147,12 @@ void main() {
     expect(find.text('Mother Tongue *'), findsNothing);
 
     // ...and there is no free-text input left at all: caste was the only
-    // text field. Religion and community are dropdowns over their own
-    // (unchanged) option lists; "Living in" is a backend-backed location
-    // picker, so it is deliberately NOT a third dropdown.
+    // text field. All three fields on this screen — religion, community and
+    // "Living in" — are now backend-backed reference-data pickers, so none of
+    // them is a DropdownButtonFormField any more.
     expect(find.byType(TextFormField), findsNothing);
-    expect(find.byType(DropdownButtonFormField<String>), findsNWidgets(2));
-    expect(find.byType(LocationPickerField), findsOneWidget);
+    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+    expect(find.byType(LocationPickerField), findsNWidgets(3));
 
     // The partner-community opt-out is a different field — PartnerPreference
     // .castePref, not the member's own caste — and deliberately stays.
@@ -171,8 +170,7 @@ void main() {
     await tester.pumpWidget(harness(container, buildRouter()));
     await tester.pumpAndSettle();
 
-    await pickDropdown(tester, 0, 'Hindu');
-    await pickDropdown(tester, 1, 'Iyer');
+    await fillReligionStep(tester, religion: 'Hindu', community: 'Iyer');
     await pickLocation(tester, 'Living in *', 'India');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
@@ -190,8 +188,7 @@ void main() {
     await tester.pumpWidget(harness(container, buildRouter()));
     await tester.pumpAndSettle();
 
-    await pickDropdown(tester, 0, 'Hindu');
-    await pickDropdown(tester, 1, 'Iyer');
+    await fillReligionStep(tester, religion: 'Hindu', community: 'Iyer');
     await pickLocation(tester, 'Living in *', 'India');
     await tester.tap(find.byType(Checkbox));
     await tester.pumpAndSettle();
@@ -219,8 +216,7 @@ void main() {
     await tester.pumpWidget(harness(container, buildRouter()));
     await tester.pumpAndSettle();
 
-    await pickDropdown(tester, 0, 'Hindu');
-    await pickDropdown(tester, 1, 'Iyer');
+    await fillReligionStep(tester, religion: 'Hindu', community: 'Iyer');
     await pickLocation(tester, 'Living in *', 'India');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();

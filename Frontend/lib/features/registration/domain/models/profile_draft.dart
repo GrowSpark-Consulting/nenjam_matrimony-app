@@ -156,6 +156,19 @@ class ReligionDetails {
   final String denomination;
   final String community;
 
+  /// Religion and community as master-data codes, carried beside the text
+  /// above rather than replacing it.
+  ///
+  /// Empty for every draft written before the religion master data existed —
+  /// the backend reads that as "no structured religion" and keeps using the
+  /// free text, so nothing regresses. Exactly the pattern
+  /// [LocationDetails.countryCode] already follows.
+  ///
+  /// There is deliberately no `subCasteCode`: no community -> sub-community
+  /// dataset exists anywhere in the project, so [subCaste] stays free text.
+  final String religionCode;
+  final String communityCode;
+
   const ReligionDetails({
     this.religion = '',
     this.caste = '',
@@ -163,6 +176,8 @@ class ReligionDetails {
     this.gothra = '',
     this.denomination = '',
     this.community = '',
+    this.religionCode = '',
+    this.communityCode = '',
   });
 
   ReligionDetails copyWith({
@@ -172,6 +187,8 @@ class ReligionDetails {
     String? gothra,
     String? denomination,
     String? community,
+    String? religionCode,
+    String? communityCode,
   }) {
     return ReligionDetails(
       religion: religion ?? this.religion,
@@ -180,6 +197,8 @@ class ReligionDetails {
       gothra: gothra ?? this.gothra,
       denomination: denomination ?? this.denomination,
       community: community ?? this.community,
+      religionCode: religionCode ?? this.religionCode,
+      communityCode: communityCode ?? this.communityCode,
     );
   }
 
@@ -191,6 +210,8 @@ class ReligionDetails {
         gothra: json['gothra'] as String? ?? '',
         denomination: json['denomination'] as String? ?? '',
         community: json['community'] as String? ?? '',
+        religionCode: json['religionCode'] as String? ?? '',
+        communityCode: json['communityCode'] as String? ?? '',
       );
 
   Map<String, dynamic> toJson() => {
@@ -200,6 +221,8 @@ class ReligionDetails {
         if (gothra.isNotEmpty) 'gothra': gothra,
         if (denomination.isNotEmpty) 'denomination': denomination,
         if (community.isNotEmpty) 'community': community,
+        if (religionCode.isNotEmpty) 'religionCode': religionCode,
+        if (communityCode.isNotEmpty) 'communityCode': communityCode,
       };
 
   /// Step 2 is not skippable — religion, caste, sub caste, and community are

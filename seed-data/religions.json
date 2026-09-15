@@ -1,0 +1,116 @@
+{
+  "_source": "Frontend/lib/core/constants/profile_options.dart",
+  "_note": [
+    "Migrated verbatim from the curated lists the app already ships, so every",
+    "value an existing profile holds still matches. Nothing here is invented:",
+    "`religions` is ProfileOptions.religions in its original order, and each",
+    "religion's `communities` is its entry in ProfileOptions._communitiesByReligion.",
+    "",
+    "Codes are derived from the label the same deterministic way city codes are",
+    "(uppercase, accents stripped, punctuation collapsed), so HINDU-VELLALAR is",
+    "reproducible from 'Hindu' + 'Vellalar' and never needs to be looked up.",
+    "",
+    "Inter-Religion carries the UNION of every community rather than an empty",
+    "list. That is not a guess: ProfileOptions.communitiesFor() falls back to the",
+    "full union for any religion absent from the map, so this is exactly what the",
+    "app shows today for Inter-Religion. Preserving it keeps the dropdown from",
+    "silently emptying for those members.",
+    "",
+    "Sub-caste is deliberately absent. No caste -> sub-caste relationship exists",
+    "anywhere in the project (ProfileOptions.subCommunities is a flat list with no",
+    "parent), and inventing one is not an option - see profile_basics_page.dart.",
+    "That field stays free text until a sourced dataset is supplied."
+  ],
+  "religions": [
+    {
+      "code": "HINDU",
+      "label": "Hindu",
+      "communities": [
+        "Vellalar",
+        "Nadar",
+        "Chettiar",
+        "Mudaliar",
+        "Iyer",
+        "Iyengar",
+        "Naidu",
+        "Reddy",
+        "Tamil",
+        "Telugu",
+        "Malayalam",
+        "Kannada"
+      ]
+    },
+    {
+      "code": "CHRISTIAN",
+      "label": "Christian",
+      "communities": [
+        "Tamil",
+        "Malayalam",
+        "Telugu",
+        "Roman Catholic",
+        "Protestant"
+      ]
+    },
+    {
+      "code": "MUSLIM",
+      "label": "Muslim",
+      "communities": [
+        "Urdu",
+        "Tamil",
+        "Malayalam",
+        "Rowther",
+        "Lebbai",
+        "Marakayar"
+      ]
+    },
+    {
+      "code": "JAIN",
+      "label": "Jain",
+      "communities": ["Digambar", "Shwetambar", "Gujarati", "Marwari"]
+    },
+    {
+      "code": "SIKH",
+      "label": "Sikh",
+      "communities": ["Jat", "Khatri", "Ramgarhia", "Punjabi"]
+    },
+    {
+      "code": "BUDDHIST",
+      "label": "Buddhist",
+      "communities": ["Tamil", "Marathi", "Other"]
+    },
+    {
+      "code": "INTER-RELIGION",
+      "label": "Inter-Religion",
+      "communities": [
+        "Vellalar",
+        "Nadar",
+        "Chettiar",
+        "Mudaliar",
+        "Iyer",
+        "Iyengar",
+        "Naidu",
+        "Reddy",
+        "Tamil",
+        "Telugu",
+        "Malayalam",
+        "Kannada",
+        "Urdu",
+        "Rowther",
+        "Lebbai",
+        "Marakayar",
+        "Roman Catholic",
+        "Protestant",
+        "Digambar",
+        "Shwetambar",
+        "Gujarati",
+        "Marwari",
+        "Jat",
+        "Khatri",
+        "Ramgarhia",
+        "Punjabi",
+        "Marathi",
+        "Other"
+      ]
+    }
+  ]
+}

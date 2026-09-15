@@ -11,6 +11,8 @@ import 'package:dio/dio.dart' show CancelToken;
 import 'package:nenjam_matrimony/features/location/data/location_repository.dart';
 import 'package:nenjam_matrimony/features/location/domain/models/location_models.dart';
 import 'package:nenjam_matrimony/features/location/presentation/providers/location_providers.dart';
+import 'package:nenjam_matrimony/features/religion/data/religion_repository.dart';
+import 'package:nenjam_matrimony/features/religion/presentation/providers/religion_providers.dart';
 import 'package:nenjam_matrimony/features/location/presentation/widgets/location_picker_field.dart';
 import 'package:nenjam_matrimony/features/registration/data/repositories/registration_repository.dart';
 import 'package:nenjam_matrimony/features/registration/domain/models/profile_draft.dart';
@@ -410,12 +412,79 @@ extension FakeLocationCallCounts on FakeLocationRepository {
   int get countryRequests => calls.where((c) => c == 'countries').length;
 }
 
-/// The override every onboarding location test needs. Kept as one call so a
-/// test cannot accidentally leave the real repository in place and start
+/// Serves the Religion step's two reference-data levels.
+///
+/// The onboarding Religion screen reads religion and community from the
+/// backend now, exactly as it reads the country, so any test that renders
+/// that screen needs this or the step can never be completed.
+class FakeReligionRepository implements ReligionRepository {
+  FakeReligionRepository({this.failReligions = false});
+
+  final bool failReligions;
+
+  static const _religions = [
+    LocationOption(code: 'HINDU', label: 'Hindu'),
+    LocationOption(code: 'JAIN', label: 'Jain'),
+  ];
+
+  static const _byReligion = {
+    'HINDU': [
+      LocationOption(code: 'HINDU-IYER', label: 'Iyer', parentCode: 'HINDU'),
+      LocationOption(code: 'HINDU-NADAR', label: 'Nadar', parentCode: 'HINDU'),
+    ],
+    'JAIN': [
+      LocationOption(code: 'JAIN-DIGAMBAR', label: 'Digambar', parentCode: 'JAIN'),
+    ],
+  };
+
+  @override
+  Future<List<LocationOption>> religions({dynamic cancelToken}) async {
+    if (failReligions) throw Exception('religions unavailable');
+    return _religions;
+  }
+
+  @override
+  Future<List<LocationOption>> communities(
+    String religionCode, {
+    dynamic cancelToken,
+  }) async =>
+      _byReligion[religionCode] ?? const [];
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// The overrides every onboarding reference-data test needs. Kept as one call
+/// so a test cannot accidentally leave a real repository in place and start
 /// making requests.
-List<Override> locationOverrides(FakeLocationRepository repository) => [
+///
+/// Covers BOTH cascades on the onboarding path — country → state → city and
+/// religion → community — because the Religion screen renders fields from
+/// each, and a missing religion stub shows up as an unrelated "Could not
+/// load" in a location assertion.
+List<Override> locationOverrides(
+  FakeLocationRepository repository, {
+  FakeReligionRepository? religions,
+}) =>
+    [
       locationRepositoryProvider.overrideWithValue(repository),
+      religionRepositoryProvider
+          .overrideWithValue(religions ?? FakeReligionRepository()),
     ];
+
+/// Fills the Religion step's religion and community fields.
+///
+/// They are no longer `DropdownButtonFormField`s — both open the app's
+/// searchable sheet, like the location levels — so [pickDropdown] cannot
+/// drive them and index-based selection no longer applies.
+Future<void> fillReligionStep(
+  WidgetTester tester, {
+  String religion = 'Hindu',
+  String community = 'Iyer',
+}) async {
+  await pickLocation(tester, 'Religion *', religion);
+  await pickLocation(tester, 'Community *', community);
+}
 
 /// Picks [option] from the location field headed [label].
 ///

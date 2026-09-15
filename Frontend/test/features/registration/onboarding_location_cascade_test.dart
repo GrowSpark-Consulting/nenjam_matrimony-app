@@ -298,8 +298,7 @@ void main() {
       await tester.pumpWidget(harness(container, religionRouter()));
       await tester.pumpAndSettle();
 
-      await pickDropdown(tester, 0, 'Hindu');
-      await pickDropdown(tester, 1, 'Iyer');
+      await fillReligionStep(tester, religion: 'Hindu', community: 'Iyer');
       await pickLocation(tester, 'Living in *', 'Canada');
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
@@ -333,8 +332,7 @@ void main() {
       await tester.pumpWidget(harness(container, religionRouter()));
       await tester.pumpAndSettle();
 
-      await pickDropdown(tester, 0, 'Hindu');
-      await pickDropdown(tester, 1, 'Iyer');
+      await fillReligionStep(tester, religion: 'Hindu', community: 'Iyer');
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 
@@ -391,8 +389,7 @@ void main() {
       await tester.pumpWidget(harness(container, religionRouter()));
       await tester.pumpAndSettle();
 
-      await pickDropdown(tester, 0, 'Hindu');
-      await pickDropdown(tester, 1, 'Iyer');
+      await fillReligionStep(tester, religion: 'Hindu', community: 'Iyer');
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 
@@ -417,8 +414,7 @@ void main() {
       // Shown as the member's own answer rather than as an empty field...
       expect(find.text('Atlantis'), findsWidgets);
 
-      await pickDropdown(tester, 0, 'Hindu');
-      await pickDropdown(tester, 1, 'Iyer');
+      await fillReligionStep(tester, religion: 'Hindu', community: 'Iyer');
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 

@@ -190,9 +190,22 @@ class OnboardingReligionForm {
   /// [casteNoBarPreference].
   final bool casteNoBar;
 
+  /// Religion and community as master-data codes — draft:
+  /// `ReligionDetails.religionCode` / `.communityCode`.
+  ///
+  /// Carried alongside the labels for exactly the reasons [livingInCode] is:
+  /// the code is what the server validates, the label is what the member
+  /// reads back. Empty for a draft saved before the religion master data
+  /// existed, which the backend reads as "no structured religion" and falls
+  /// back to the free text it already stores.
+  final String religionCode;
+  final String communityCode;
+
   const OnboardingReligionForm({
     this.religion = '',
     this.community = '',
+    this.religionCode = '',
+    this.communityCode = '',
     this.livingIn = '',
     this.livingInCode = '',
     this.casteNoBar = false,
@@ -209,6 +222,8 @@ class OnboardingReligionForm {
   OnboardingReligionForm copyWith({
     String? religion,
     String? community,
+    String? religionCode,
+    String? communityCode,
     String? livingIn,
     String? livingInCode,
     bool? casteNoBar,
@@ -216,6 +231,8 @@ class OnboardingReligionForm {
     return OnboardingReligionForm(
       religion: religion ?? this.religion,
       community: community ?? this.community,
+      religionCode: religionCode ?? this.religionCode,
+      communityCode: communityCode ?? this.communityCode,
       livingIn: livingIn ?? this.livingIn,
       livingInCode: livingInCode ?? this.livingInCode,
       casteNoBar: casteNoBar ?? this.casteNoBar,

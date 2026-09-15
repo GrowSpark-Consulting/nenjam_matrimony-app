@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_spacing.dart';
-import '../../../../core/constants/profile_options.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/tokens/app_radius.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../location/domain/models/location_models.dart';
 import '../../../location/presentation/providers/location_providers.dart';
+import '../../../religion/domain/models/religion_models.dart';
+import '../../../religion/presentation/providers/religion_providers.dart';
 import '../../domain/models/onboarding_forms.dart';
 import '../providers/registration_provider.dart';
 import '../widgets/onboarding_location_field.dart';
@@ -45,25 +46,22 @@ class _OnboardingReligionPageState
     super.initState();
     // Reopen on whatever the draft already holds, so stepping back — or
     // resuming after PostAuthDestination rehydrates the draft — never blanks
-    // an answer the member already gave. Only values still offered are
-    // restored, so a custom religion typed in Edit Profile does not select a
-    // stale dropdown entry.
+    // an answer the member already gave.
+    //
+    // Every value is taken VERBATIM. Religion and community used to be
+    // filtered through `OnboardingScaffold.restore` against the hardcoded
+    // ProfileOptions lists, but all three fields now come from the backend's
+    // master data, which is not loaded yet at this point — restoring against
+    // a local list would blank a perfectly good stored answer while the
+    // request is still in flight. `resolveStoredLocation` matches each stored
+    // label to a real option once its list arrives, and shows it as the
+    // member's own answer meanwhile.
     final draft = ref.read(registrationProvider);
     _form = OnboardingReligionForm(
-      religion: OnboardingScaffold.restore(
-        draft.religionDetails.religion,
-        ProfileOptions.religions,
-      ),
-      community: OnboardingScaffold.restore(
-        draft.religionDetails.community,
-        ProfileOptions.communitiesFor(draft.religionDetails.religion),
-      ),
-      // Verbatim, unlike religion/community above: this is a location answer
-      // and the country list now comes from the backend's master data, which
-      // is not loaded yet at this point. The field resolves the stored label
-      // to a real option once the list arrives — see
-      // [resolveStoredLocation] — and shows it as the member's own answer in
-      // the meantime, so nothing is blanked while a request is in flight.
+      religion: draft.religionDetails.religion,
+      religionCode: draft.religionDetails.religionCode,
+      community: draft.religionDetails.community,
+      communityCode: draft.religionDetails.communityCode,
       livingIn: draft.locationDetails.country,
       livingInCode: draft.locationDetails.countryCode,
       casteNoBar: draft.partnerPreference.castePref ==
@@ -78,17 +76,34 @@ class _OnboardingReligionPageState
         OnboardingReligionField.livingIn => l10n.onboardingLivingInLabel,
       };
 
-  /// Changing religion re-scopes the community list. The current answer is
-  /// cleared only when the new list no longer offers it — a member who
-  /// corrects "Hindu" to "Jain" keeps a community both share, and nothing
-  /// else on the form is touched.
-  void _onReligionChanged(String religion) {
+  /// Changing religion invalidates the community beneath it.
+  ///
+  /// The community is cleared unconditionally, unlike the old list-based
+  /// version which kept an answer both religions happened to share. Community
+  /// codes are religion-scoped (HINDU-TAMIL and MUSLIM-TAMIL are different
+  /// rows even though both read "Tamil"), so carrying one across a religion
+  /// change would send the server a pair it rejects. Re-picking the same
+  /// religion is still a no-op — `copyWith` is only reached on a real change.
+  ///
+  /// Nothing else on the form is touched; the country lives on its own field.
+  void _onReligionChanged(ReligionOption? option) {
     setState(() {
-      final stillValid = ProfileOptions.communitiesFor(religion)
-          .contains(_form.community);
       _form = _form.copyWith(
-        religion: religion,
-        community: stillValid ? _form.community : '',
+        religion: option?.label ?? '',
+        religionCode: option?.code ?? '',
+        community: '',
+        communityCode: '',
+      );
+    });
+  }
+
+  /// Picking a community stores both halves, like every other master-data
+  /// field: the code the server validates and the label the member reads back.
+  void _onCommunityChanged(ReligionOption? option) {
+    setState(() {
+      _form = _form.copyWith(
+        community: option?.label ?? '',
+        communityCode: option?.code ?? '',
       );
     });
   }
@@ -109,8 +124,35 @@ class _OnboardingReligionPageState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final communities = ProfileOptions.communitiesFor(_form.religion);
     final countries = ref.watch(countriesProvider);
+    final religions = ref.watch(religionsProvider);
+
+    // Same label-matching as the country below: a draft written before the
+    // religion master data existed stores 'Hindu' with no code, so the stored
+    // label is resolved against the list the API returned. Nothing is
+    // invented — a label the API does not offer stays legacy text, and the
+    // member re-picks.
+    final religion = resolveStoredLocation(
+      religions,
+      _form.religionCode,
+      _form.religion,
+    );
+
+    // The child level is keyed on the RESOLVED religion code, so a draft that
+    // carried only a label still lists the right communities instead of
+    // showing an empty dropdown until the member re-picks a religion their
+    // screen is already showing them.
+    //
+    // Watching `communitiesProvider(code)` is also what makes a stale
+    // response harmless: a slow reply for the previous religion resolves into
+    // that religion's own provider, which nothing is watching any more.
+    final religionCode = religion?.code ?? '';
+    final communities = ref.watch(communitiesProvider(religionCode));
+    final community = resolveStoredLocation(
+      communities,
+      _form.communityCode,
+      _form.community,
+    );
 
     // A draft saved before the master data existed carries a label and no
     // code — and `LocationDetails.country` defaults to 'India' for every new
@@ -138,29 +180,43 @@ class _OnboardingReligionPageState
       // would have no country to list states for.
       onSave: () => ref.read(registrationProvider.notifier).applyOnboardingReligion(
             _form.copyWith(
+              religion: religion?.label ?? _form.religion,
+              religionCode: religion?.code ?? _form.religionCode,
+              community: community?.label ?? _form.community,
+              communityCode: community?.code ?? _form.communityCode,
               livingIn: country?.label ?? _form.livingIn,
               livingInCode: country?.code ?? _form.livingInCode,
             ),
           ),
       fields: [
-        OnboardingDropdownField(
+        OnboardingLocationField(
           label: l10n.onboardingReligionLabel,
           hint: l10n.onboardingReligionHint,
-          value: _form.religion,
-          options: ProfileOptions.religions,
-          showHeading: false,
+          options: religions,
+          value: religion,
+          // Shown when the draft holds a religion the master data does not
+          // offer, so an older answer reads as an answer rather than as an
+          // empty field.
+          legacyValue: religion == null ? _form.religion : '',
           isRequired: true,
-          onChanged: (v) => _onReligionChanged(v ?? ''),
+          onRetry: () => ref.invalidate(religionsProvider),
+          onChanged: _onReligionChanged,
         ),
-        OnboardingDropdownField(
+        OnboardingLocationField(
           label: l10n.onboardingCommunityLabel,
           hint: l10n.onboardingCommunityHint,
-          value: _form.community,
           options: communities,
+          value: community,
+          legacyValue: community == null ? _form.community : '',
+          // Disabled until a religion is chosen: there is nothing to list yet,
+          // and tapping should say so rather than open an empty sheet. A
+          // religion stored as free text still counts as answered, so the
+          // member can correct the community in place.
+          enabled: religionCode.isNotEmpty || _form.religion.isNotEmpty,
+          disabledHint: l10n.onboardingReligionHint,
           isRequired: true,
-          helpText: l10n.onboardingCommunityHelp,
-          onChanged: (v) =>
-              setState(() => _form = _form.copyWith(community: v ?? '')),
+          onRetry: () => ref.invalidate(communitiesProvider(religionCode)),
+          onChanged: _onCommunityChanged,
         ),
         OnboardingLocationField(
           label: l10n.onboardingLivingInLabel,
