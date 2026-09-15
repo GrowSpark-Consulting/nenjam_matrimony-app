@@ -175,8 +175,10 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     ref.invalidate(profileCompletenessSnapshotProvider);
     // discoverFeedProvider is a plain (non-autoDispose) FutureProvider kept
     // alive by the always-mounted Discover screen — invalidate it so a member
-    // whose save just made them eligible does not land back on a cached
-    // "INCOMPLETE_SELF_PROFILE" empty state from before this save.
+    // whose save just made them eligible does not land back on the cached
+    // empty feed from before this save. (Discover no longer renders a
+    // completion prompt for that state, but a stale empty feed is still a
+    // stale empty feed.)
     ref.invalidate(discoverFeedProvider);
 
     if (!mounted) return;

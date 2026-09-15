@@ -93,17 +93,17 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
     if (!mounted) return;
 
     // The edit is now persisted — refresh the dashboard's source-of-truth
-    // providers so the Profile page and the Discover completeness banner
-    // (both kept alive by the always-mounted Discover screen) reflect the
-    // change immediately instead of a stale pre-edit snapshot.
+    // providers so the Profile page and this screen's own completeness
+    // section reflect the change immediately instead of a stale pre-edit
+    // snapshot.
     ref.invalidate(profileDraftResponseProvider);
     ref.invalidate(profileCompletenessSnapshotProvider);
     // discoverFeedProvider is a plain (non-autoDispose) FutureProvider kept
     // alive by the always-mounted Discover screen — without invalidating it
     // here, a user who just went from 0 rows in user_profiles to their first
     // successful finalize (e.g. the height_cm P2011 regression) would land
-    // back on Discover still showing its cached "INCOMPLETE_SELF_PROFILE"
-    // empty state from before this save, even though they're now eligible.
+    // back on Discover still showing the cached empty feed from before this
+    // save, even though they're now eligible.
     ref.invalidate(discoverFeedProvider);
 
     // EDIT MODE: publish confirmation, reset to CREATE for hygiene, and

@@ -26,8 +26,6 @@ import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../../partner_preferences/presentation/utils/open_partner_preferences.dart';
-import '../../../registration/presentation/utils/open_edit_profile.dart';
-import '../../../profile_completion/presentation/widgets/complete_profile_section.dart';
 import '../../../nearby/data/repositories/nearby_repository_impl.dart';
 import '../../../nearby/presentation/providers/nearby_providers.dart';
 import '../../domain/entities/discovery_profile_entity.dart';
@@ -148,15 +146,6 @@ class _DiscoverFeedView extends ConsumerWidget {
           // ── 1. Sticky App Bar ──────────────────────────────────────
           const _DiscoverAppBar(),
 
-          // ── "Complete Your Profile" ────────────────────────────────
-          //
-          // Above the empty/non-empty branch deliberately: the member most
-          // likely to see an empty feed is the one whose own profile isn't
-          // finished, and that is exactly who these cards are for. Renders
-          // nothing once there is nothing left to recommend, so a finished
-          // profile loses no feed space to it.
-          const SliverToBoxAdapter(child: CompleteProfileSection()),
-
           // An empty preference-filtered feed no longer takes the whole page.
           // `SliverFillRemaining(hasScrollBody: false)` used to, which meant a
           // user with no preference matches also lost Near You — even though
@@ -164,9 +153,7 @@ class _DiscoverFeedView extends ConsumerWidget {
           // only, no partner preferences, a radius instead) and may well have
           // people to show. Sized to its content now, with Near You below it.
           if (isEmpty) ...[
-            SliverToBoxAdapter(
-              child: _DiscoverEmptyState(reason: feed.fallbackReason),
-            ),
+            const SliverToBoxAdapter(child: _DiscoverEmptyState()),
             const SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.symmetric(
@@ -2042,32 +2029,29 @@ class _PremiumMemberCard extends StatelessWidget {
 // Footer
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Shown when the feed has no profiles in any section. Distinguishes the two
-/// legitimate empty causes via the backend's machine-readable [reason]:
-///   • `INCOMPLETE_SELF_PROFILE` — the caller hasn't finalized their own
-///     profile, so no matching is possible yet → prompt to complete it.
-///   • anything else — a finalized caller whose preferences matched nobody
-///     even after the backend widened them → prompt to adjust preferences.
-/// All strings/CTAs reuse existing localized keys, so no new translations.
+/// Shown when the feed has no profiles in any section.
+///
+/// One message, deliberately. This used to branch on the backend's
+/// `INCOMPLETE_SELF_PROFILE` reason and show a "Complete Your Profile" /
+/// "Complete Your Story" prompt instead — which meant every member who landed
+/// on Discover straight after registering was met by a profile-completion
+/// call to action rather than the Discover page. Discover's landing is now
+/// the same for everyone: the feed, or the plain "nothing matched yet" state
+/// below.
+///
+/// The reason is still sent by the backend and still drives the API contract;
+/// this screen simply no longer renders a completion prompt from it. Profile
+/// completion remains reachable from Edit Profile, where it belongs.
 class _DiscoverEmptyState extends ConsumerWidget {
-  final String reason;
-
-  const _DiscoverEmptyState({required this.reason});
+  const _DiscoverEmptyState();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final incompleteProfile = reason == 'INCOMPLETE_SELF_PROFILE';
 
-    final title = incompleteProfile
-        ? l10n.homeCompleteProfileTitle
-        : l10n.searchEmptyResultsTitle;
-    final subtitle = incompleteProfile
-        ? l10n.profileCompletionTipRegistration
-        : l10n.searchEmptyResultsSubtitle;
-    final ctaLabel = incompleteProfile
-        ? l10n.profileCompletionActionRegistration
-        : l10n.profileCompletionActionPartnerPref;
+    final title = l10n.searchEmptyResultsTitle;
+    final subtitle = l10n.searchEmptyResultsSubtitle;
+    final ctaLabel = l10n.profileCompletionActionPartnerPref;
 
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -2075,9 +2059,7 @@ class _DiscoverEmptyState extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            incompleteProfile
-                ? Icons.person_add_alt_1_rounded
-                : Icons.travel_explore_rounded,
+            Icons.travel_explore_rounded,
             size: 64,
             color: AppColors.secondary.withValues(alpha: 0.6),
           ),
@@ -2100,9 +2082,7 @@ class _DiscoverEmptyState extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.xl),
           ElevatedButton(
-            onPressed: () => incompleteProfile
-                ? openEditProfile(context, ref)
-                : openPartnerPreferences(context, ref),
+            onPressed: () => openPartnerPreferences(context, ref),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.secondary,
               foregroundColor: AppColors.textOnSecondary,
