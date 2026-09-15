@@ -53,8 +53,23 @@ describe('draft section merge', () => {
       city: 'Mysore',
     });
 
+    // The structured trio is listed because the DTO declares it, not as an
+    // afterthought: LocationDetailsDto went a release without it while the
+    // Flutter model was already sending it, and `forbidNonWhitelisted` turned
+    // every location PATCH into a 400. Spelled out rather than derived, so
+    // that drift shows up here as a diff instead of passing silently.
     expect(Object.keys(dto).sort()).toEqual(
-      ['area', 'city', 'country', 'nativePlace', 'pinCode', 'state'].sort(),
+      [
+        'area',
+        'city',
+        'cityCode',
+        'country',
+        'countryCode',
+        'nativePlace',
+        'pinCode',
+        'state',
+        'stateCode',
+      ].sort(),
     );
     expect(dto.country).toBeUndefined();
     expect(dto.area).toBeUndefined();
