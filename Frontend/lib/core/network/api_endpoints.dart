@@ -3,8 +3,6 @@
 /// Centralized endpoint definitions. Backend-agnostic.
 abstract final class ApiEndpoints {
   // ─── Authentication ──────────────────────────────────────────────
-  static const String login = '/auth/login';
-  static const String register = '/auth/register';
 
   /// Unauthenticated: asked by the signup Email + Mobile step before an
   /// account exists, so it cannot carry a token.
@@ -14,12 +12,6 @@ abstract final class ApiEndpoints {
   /// token. Called from the OTP screens, which run before the member has any
   /// credential — see `DummyOtpSessionService` on the backend.
   static const String dummyOtpSession = '/auth/dummy-otp/session';
-  static const String verifyOtp = '/auth/verify-otp';
-  static const String resendOtp = '/auth/resend-otp';
-  static const String refreshToken = '/auth/refresh';
-  static const String logout = '/auth/logout';
-  static const String forgotPassword = '/auth/forgot-password';
-  static const String resetPassword = '/auth/reset-password';
 
   // ─── Registration wizard (implemented — matches backend/apps/api/src/
   // modules/profiles) ────────────────────────────────────────────────
@@ -80,9 +72,7 @@ abstract final class ApiEndpoints {
   static String astroCompatibility(String targetUserId) =>
       '/astro/compatibility/$targetUserId';
 
-  // ─── Profile (not yet implemented on the backend) ─────────────────
-  static const String profile = '/profile';
-  static const String profileUpdate = '/profile/update';
+  // ─── Profile photos ────────────────────────────────────────────
   // Photo management — backend/apps/api/src/modules/profiles' PhotoController
   // (all user-scoped via FirebaseAuthGuard). List + upload live at the base;
   // per-photo routes append the id.
@@ -91,10 +81,6 @@ abstract final class ApiEndpoints {
   static String profilePhoto(String id) => '/profiles/me/photos/$id';
   static String profilePhotoPrimary(String id) =>
       '/profiles/me/photos/$id/primary';
-  static const String profilePreferences = '/profile/preferences';
-  static const String profileCompletion = '/profile/completion';
-  static const String profileVerification = '/profile/verification';
-  static const String profileHoroscope = '/profile/horoscope';
 
   // ─── Reference data (location master data) ───────────────────────
   /// Unauthenticated by design: the location step runs during registration,
@@ -106,10 +92,7 @@ abstract final class ApiEndpoints {
 
   // ─── Search & Discovery ──────────────────────────────────────────
   static const String search = '/search';
-  static const String searchFilters = '/search/filters';
   static const String discover = '/discover';
-  static const String recommendations = '/recommendations';
-  static const String aiMatches = '/ai/matches';
 
   // ─── Matches ─────────────────────────────────────────────────────
   static const String matches = '/matches';
@@ -145,13 +128,7 @@ abstract final class ApiEndpoints {
 
   // ─── Notifications ───────────────────────────────────────────────
   static const String notifications = '/notifications';
-  static const String notificationSettings = '/notifications/settings';
   static const String registerDevice = '/notifications/device';
-
-  // ─── Subscription ────────────────────────────────────────────────
-  static const String plans = '/subscription/plans';
-  static const String subscribe = '/subscription/subscribe';
-  static const String subscriptionStatus = '/subscription/status';
 
   // ─── Verification (document-backed: income/asset/aadhaar/nri) ──────
   // backend/apps/api/src/modules/verification is scaffolded but its
@@ -172,9 +149,6 @@ abstract final class ApiEndpoints {
   static const String deleteAccount = '/settings/delete-account';
 
   // ─── Support ─────────────────────────────────────────────────────
-  static const String help = '/help';
-  static const String faq = '/help/faq';
-  static const String contactSupport = '/help/contact';
 
   /// Support tickets — POST to submit, GET for the caller's history.
   static const String supportTickets = '/support/tickets';

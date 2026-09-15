@@ -48,9 +48,9 @@ final discoverProfilesProvider = Provider<AsyncValue<List<DiscoveryProfileEntity
         // the dependency would be a lie about what that screen needs.
         //
         // Empty until something resolves it. Nothing in the app currently
-        // selects this filter — DiscoverTopBar, which is the only widget that
-        // sets it, is not mounted anywhere — so this is the contract a future
-        // caller gets, not a live code path. Whoever mounts that bar must also
+        // selects this filter — the only widget that set it was unused and
+        // has been deleted — so this is the contract a future caller gets,
+        // not a live code path. Whoever reintroduces such a control must also
         // render an idle/permission state, exactly as _NearYouSection does.
         final nearby = ref.watch(nearbyNotifierProvider);
         return nearby is NearbyLoaded ? nearby.profiles : const [];

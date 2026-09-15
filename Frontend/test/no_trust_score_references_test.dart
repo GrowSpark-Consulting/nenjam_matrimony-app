@@ -24,6 +24,7 @@ const _allowedKeys = {
   'registrationTipVerification',
   'registrationWizardVerificationHeadline',
   'onboardingVerifiedDescription',
+  'completionCardBodyVerification',
 };
 
 void main() {

@@ -172,6 +172,18 @@ jobs:
         # code.
         run: flutter analyze --no-fatal-infos
 
+      - name: Test
+        # The suite gates nothing unless it runs here. It covers the parts of
+        # this app that are easiest to break from a distance and hardest to
+        # notice: the responsive matrix (every page at 320-480dp, portrait and
+        # landscape, en and ta, with a keyboard), bottom-nav clearance, and the
+        # notification-tap navigation whose back-stack behaviour has regressed
+        # before.
+        #
+        # Deliberately no --coverage: it slows the run and nothing consumes the
+        # lcov output today. Add it when a coverage gate exists to read it.
+        run: flutter test
+
       # No `flutter build` here on purpose — an Android build pulls the whole
       # Gradle/AGP toolchain and adds several minutes for little extra signal
       # over analyze. Revisit if a build-only breakage ever ships.

@@ -893,8 +893,7 @@ class PartnerPreference {
       };
 
   /// Step 11 is skippable — used only to switch the entry-point card's
-  /// copy/button label between "Set" and "Edit" (see
-  /// PartnerPreferenceStepCard). Never gates Continue.
+  /// copy/button label between "Set" and "Edit". Never gates Continue.
   bool get hasAnyPreference =>
       preferredAgeRange.isNotEmpty ||
       preferredHeightRange.isNotEmpty ||

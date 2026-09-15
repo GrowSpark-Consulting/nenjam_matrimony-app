@@ -710,9 +710,9 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   // — the psychology feature (PersonalityRepository) is the single source
   // of truth. When registration flow logic needs to know step-10 status
   // (e.g. finalize-time checks), it pulls straight from there instead of
-  // maintaining a synchronized copy. StepPsychologicalQuiz itself never
-  // calls this — it displays status by watching
-  // myPersonalityResultProvider directly, the same as everywhere else.
+  // maintaining a synchronized copy. The quiz UI itself never calls this
+  // — it displays status by watching myPersonalityResultProvider directly,
+  // the same as everywhere else.
   Future<PersonalityResult?> psychologyQuizResult() {
     return ref.read(personalityRepositoryProvider).getMyResult();
   }
@@ -720,8 +720,8 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   // ─── Step 11: Partner Preference ───────────────────────────────────
   //
   // No wizard-local update-only method — the in-wizard step is now just a
-  // CTA card (see PartnerPreferenceStepCard) that pushes the standalone
-  // Partner Preferences page, which edits and persists in one step via
+  // CTA card that pushes the standalone Partner Preferences page, which
+  // edits and persists in one step via
   // [savePartnerPreference] below.
 
   /// Updates local state AND persists immediately — used by the standalone

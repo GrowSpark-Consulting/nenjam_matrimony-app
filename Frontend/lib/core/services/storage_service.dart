@@ -189,9 +189,10 @@ class StorageService {
     await _prefs.setBool(AppConstants.keyNotificationsEnabled, enabled);
   }
 
-  /// Whether [NotificationPermissionGate] has already shown its one-time
-  /// explanation dialog (regardless of the user's choice) — prevents
-  /// repeatedly prompting on every app launch.
+  /// Whether the one-time notification-permission explanation dialog has
+  /// been shown (regardless of the user's choice) — prevents repeatedly
+  /// prompting on every app launch. No caller today: the gate widget that
+  /// read this was unused and has been deleted.
   bool get hasPromptedNotificationPermission =>
       _prefs.getBool(AppConstants.keyNotificationPermissionPrompted) ?? false;
 

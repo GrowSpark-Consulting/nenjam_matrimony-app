@@ -62,11 +62,10 @@ class ConversationResultPage {
   final bool hasMore;
 }
 
-/// Pure abstract Dart interface. Concrete implementations live in `data/`:
-/// [ConversationApiRepositoryImpl] (what's actually wired via
-/// `conversationRepositoryProvider` today — talks to the real chat backend
-/// under `backend/apps/api/src/modules/chat/`) and [ConversationRepositoryImpl]
-/// (in-memory mock, kept for local UI iteration without a backend).
+/// Pure abstract Dart interface. The concrete implementation lives in
+/// `data/`: [ConversationApiRepositoryImpl], wired via
+/// `conversationRepositoryProvider` — it talks to the real chat backend
+/// under `backend/apps/api/src/modules/chat/`.
 abstract interface class ConversationRepository {
   Future<ConversationResultPage> getConversations({int page = 1, int limit = 20});
 
@@ -153,12 +152,11 @@ abstract interface class ConversationRepository {
   /// The peer is notified live via a `chat.messageDeleted` push.
   Future<void> deleteMessage(String messageId);
 
-  /// Signals this client's own typing state for [conversationId] so a real
-  /// backend can relay it to the other participant. A no-op today (see
-  /// [ConversationRepositoryImpl]) — deliberately NOT wired to
-  /// `core/realtime/RealtimeService` yet, since that would mean hardcoding
-  /// a guessed socket event name; wire it once the backend's actual chat
-  /// event contract exists (see docs/development/chat-backend-handoff.md).
+  /// Signals this client's own typing state for [conversationId] so the
+  /// backend can relay it to the other participant. Carried over the realtime
+  /// socket rather than REST (see [ConversationApiRepositoryImpl.setTyping]);
+  /// a down socket is a no-op, since typing is ephemeral and there is
+  /// nothing to reconcile afterwards.
   Future<void> setTyping(String conversationId, bool isTyping);
 
   /// Re-presigns [messageId]'s media URL — call when an image fails to load

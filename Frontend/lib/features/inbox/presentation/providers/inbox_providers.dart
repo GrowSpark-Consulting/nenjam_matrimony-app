@@ -5,21 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_providers.dart';
 import '../../../../core/realtime/realtime_providers.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
-import '../../data/datasources/conversation_mock_datasource.dart';
 import '../../data/repositories/conversation_api_repository_impl.dart';
 import '../../domain/entities/conversation_entity.dart';
 import '../../domain/entities/message_entity.dart';
 import '../../domain/repositories/conversation_repository.dart';
 import 'package:cross_file/cross_file.dart';
 
-final conversationMockDataSourceProvider = Provider<ConversationMockDataSource>(
-  (ref) => ConversationMockDataSource(),
-);
-
 /// The live chat repository — talks to the real backend over REST + the shared
 /// realtime socket (typing). Incoming socket events are applied by
-/// `chatRealtimeSyncProvider`. Swap back to `ConversationRepositoryImpl(
-/// ref.watch(conversationMockDataSourceProvider))` for the in-memory mock.
+/// `chatRealtimeSyncProvider`.
 final conversationRepositoryProvider = Provider<ConversationRepository>(
   (ref) => ConversationApiRepositoryImpl(
     ref.watch(apiClientProvider),
