@@ -21,7 +21,6 @@ dependencies:
 
   # State Management
   flutter_riverpod: ^2.6.1
-  hooks_riverpod: ^2.6.1
 
   # Navigation
   go_router: ^14.8.1
@@ -33,7 +32,6 @@ dependencies:
   flutter_screenutil: ^5.9.3
   google_fonts: ^6.2.1
   cached_network_image: ^3.4.1
-  flutter_svg: ^2.0.17
   shimmer: ^3.0.0
   # Profile photo picking. The crop screen (core/services/media) now owns
   # final downscale/compression post-crop, so picking itself just needs a
@@ -79,8 +77,6 @@ dependencies:
   shared_preferences: ^2.3.4
   flutter_dotenv: ^5.2.1
   intl: ^0.20.2
-  equatable: ^2.0.7
-  flutter_hooks: ^0.20.5
   firebase_core: ^4.11.0
   firebase_auth: ^6.5.4
   flutter_slidable: ^4.0.3
@@ -106,9 +102,4 @@ flutter:
     - .env.qa
     - .env.staging
     - .env.production
-    - assets/icons/
     - assets/images/
-    - assets/svg/
-    - assets/animations/
-    - assets/lottie/
-    - assets/illustrations/
