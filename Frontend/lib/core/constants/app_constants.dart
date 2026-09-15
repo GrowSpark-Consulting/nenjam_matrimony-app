@@ -29,9 +29,14 @@ abstract final class AppConstants {
   //
   // Overridable at build time without touching source, e.g.
   //   flutter build apk --release --dart-define=API_BASE_URL=https://staging.example.com
+  //
+  // The default IS production, deliberately. A `flutter build apk --release`
+  // with no --dart-define must not be able to produce an APK aimed at a
+  // decommissioned host, so the safe value is the one baked in and the
+  // override is what you reach for to point somewhere else.
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://api-production-83c6.up.railway.app',
+    defaultValue: 'https://nenjammatrimony-app-production.up.railway.app',
   );
   static const Duration apiConnectTimeout = Duration(seconds: 20);
   static const Duration apiReceiveTimeout = Duration(seconds: 20);

@@ -744,10 +744,16 @@ void main() {
       expect(homeCards, isNot(contains('Horoscope')));
     });
 
-    test('both screens embed the one shared section widget', () {
-      // A structural check, because this is the guarantee that no amount of
-      // widget testing can make on its own: if either screen ever grows its
-      // own card list, the two can drift again.
+    test('Edit Profile embeds the shared section, and Discover does not', () {
+      // A structural check, because this is the guarantee no amount of widget
+      // testing can make on its own.
+      //
+      // Edit Profile is the section's one host: a member who goes looking for
+      // what is missing from their profile finds it there. Discover is
+      // deliberately not a host — it used to be, and the result was that every
+      // member who landed on Discover straight after registering met a
+      // profile-completion call to action instead of the Discover page. If
+      // Discover ever grows the section back, that regression is back with it.
       final discover = File(
         'lib/features/discover/presentation/pages/discover_page.dart',
       ).readAsStringSync();
@@ -755,8 +761,12 @@ void main() {
         'lib/features/registration/presentation/pages/profile_review_page.dart',
       ).readAsStringSync();
 
-      expect(discover, contains('CompleteProfileSection('));
       expect(editProfile, contains('CompleteProfileSection('));
+      expect(
+        discover,
+        isNot(contains('CompleteProfileSection(')),
+        reason: 'Discover must stay free of the completion prompt',
+      );
     });
   });
 }

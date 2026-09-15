@@ -15,6 +15,28 @@ final countriesProvider = FutureProvider<List<LocationOption>>((ref) {
   return ref.watch(locationRepositoryProvider).countries();
 });
 
+/// Starts loading the country list without waiting for it.
+///
+/// Called when onboarding begins, two screens before the country is asked, so
+/// the single ~290ms round trip is spent while the member is answering
+/// something else rather than while they stare at a spinner.
+///
+/// Safe to call more than once, and deliberately so — every sign-up path
+/// lands on the same first screen, and a resumed registration re-enters it.
+/// [countriesProvider] is a `keepAlive` FutureProvider, so a second call
+/// during the flight attaches to the request already running, and a call
+/// after it resolves gets the cached result. Neither issues a second request;
+/// [LocationRepository] is cache-first underneath that, so even a cold
+/// provider on a warm device costs no network.
+///
+/// The future is ignored on purpose. A prefetch that fails must not surface
+/// as an unhandled error — nothing is waiting on it, the member has not asked
+/// for anything yet, and the field's own error-and-retry state already covers
+/// the case where the list is genuinely needed and missing.
+void prefetchCountries(WidgetRef ref) {
+  ref.read(countriesProvider.future).ignore();
+}
+
 /// States/provinces for a country, keyed by its ISO code.
 ///
 /// `.family` rather than a single provider holding a map: each country's list

@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:nenjam_matrimony/core/widgets/inputs/birth_date_field.dart';
 import 'package:nenjam_matrimony/features/authentication/data/services/firebase_auth_service.dart';
+import 'dart:async';
+
 import 'package:dio/dio.dart' show CancelToken;
 import 'package:nenjam_matrimony/features/location/data/location_repository.dart';
 import 'package:nenjam_matrimony/features/location/domain/models/location_models.dart';
@@ -309,10 +311,28 @@ Future<DateTime> fillNameStep(
 /// the network in a test, and it must never fall back to a hardcoded list
 /// either, so every location test supplies this.
 class FakeLocationRepository implements LocationRepository {
-  FakeLocationRepository({this.failCountries = false, this.failStates = false});
+  FakeLocationRepository({
+    this.failCountries = false,
+    this.failStates = false,
+    bool holdCountries = false,
+  }) : _countriesGate = holdCountries ? Completer<void>() : null;
 
   final bool failCountries;
   final bool failStates;
+
+  /// When set, `countries()` waits here until [releaseCountries] is called.
+  ///
+  /// Lets a test hold the first request in flight and then trigger a second
+  /// caller, which is the only way to prove the two are actually deduplicated
+  /// rather than merely fast enough that the first finished in between.
+  final Completer<void>? _countriesGate;
+
+  /// Lets a held `countries()` call complete.
+  void releaseCountries() {
+    if (_countriesGate != null && !_countriesGate.isCompleted) {
+      _countriesGate.complete();
+    }
+  }
 
   /// Every request made, so a test can assert the cascade only fetches what
   /// the member's selection actually calls for.
@@ -351,6 +371,7 @@ class FakeLocationRepository implements LocationRepository {
   @override
   Future<List<LocationOption>> countries({CancelToken? cancelToken}) async {
     calls.add('countries');
+    if (_countriesGate != null) await _countriesGate.future;
     if (failCountries) throw Exception('offline');
     return const [country, otherCountry];
   }
@@ -381,6 +402,12 @@ class FakeLocationRepository implements LocationRepository {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// How many times the country list was requested. The number that matters
+/// for the prefetch: it must stay at one however many screens ask.
+extension FakeLocationCallCounts on FakeLocationRepository {
+  int get countryRequests => calls.where((c) => c == 'countries').length;
 }
 
 /// The override every onboarding location test needs. Kept as one call so a
