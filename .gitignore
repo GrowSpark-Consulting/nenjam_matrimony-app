@@ -135,3 +135,10 @@ nenjam ui/
 # and fork, and removing them later would need a history rewrite. The
 # processed 1080x1080 crops are all the seeder needs.
 photos/WhatsApp*
+
+# AI Agent Skills
+.agents/
+
+# Local AI skill installation files
+setup-flutter-dart-skills.ps1
+skills-lock.json
