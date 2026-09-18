@@ -731,20 +731,14 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
 
   // ─── Step 11: Partner Preference ───────────────────────────────────
   //
-  // No wizard-local update-only method — the in-wizard step is now just a
-  // CTA card that pushes the standalone Partner Preferences page, which
-  // edits and persists in one step via
-  // [savePartnerPreference] below.
-
-  /// Updates local state AND persists immediately — used by the standalone
-  /// Partner Preferences page (features/partner_preferences), which isn't
-  /// part of the step-by-step wizard flow and so can't rely on
-  /// [syncCurrentStepToBackend]'s step-index switch. Same repository call
-  /// that switch makes for step 10.
-  Future<void> savePartnerPreference(PartnerPreference details) async {
-    state = state.copyWith(partnerPreference: details);
-    await ref.read(registrationRepositoryProvider).updatePartnerPreference(details);
-  }
+  // No wizard-local update method here, and no case in
+  // syncCurrentStepToBackend's switch either — the standalone Partner
+  // Preferences page (features/partner_preferences) now owns its 10 base
+  // fields exclusively via GET/PUT /discover/preferences
+  // (PartnerPreferencesRepository), not this draft. The registration
+  // draft's own `updatePartnerPreference` (on [RegistrationRepository]) is
+  // still used by [applyOnboardingReligion]'s "caste no bar" opt-out (the
+  // castePref write below) — that flow is unaffected by this change.
 
   // ─── Step 12: Photos ───────────────────────────────────────────────
   void updatePhotoGallery(PhotoGallery gallery) {

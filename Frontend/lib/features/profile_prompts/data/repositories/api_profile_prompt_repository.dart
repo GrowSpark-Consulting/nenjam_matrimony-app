@@ -82,4 +82,16 @@ class ApiProfilePromptRepository implements ProfilePromptRepository {
     );
     unwrapOrThrow(response.statusCode, response.data);
   }
+
+  @override
+  Future<void> deletePrompt(String promptId) async {
+    final response = await _apiClient.delete<Map<String, dynamic>>(
+      ApiEndpoints.profilePromptDelete(promptId),
+    );
+    // The backend returns 200 with an empty body — unwrapOrThrow only cares
+    // about turning a 4xx (401 unauthenticated, 404 already-deleted) into an
+    // ApiException; there's no payload to return on success. Same pattern as
+    // SafetyRepositoryImpl.unblockUser's DELETE call.
+    unwrapOrThrow(response.statusCode, response.data);
+  }
 }

@@ -8,7 +8,16 @@ enum RealtimeEvent {
   interestAccepted('interest.accepted'),
   interestRejected('interest.rejected'),
   notificationCreated('notification.created'),
-  shortlistCreated('shortlist.created');
+  shortlistCreated('shortlist.created'),
+
+  /// The caller's Discover feed may no longer be accurate — their profile or
+  /// partner preferences changed, or a block was created/removed (see
+  /// backend `FeedInvalidationService`/`FeedInvalidationReason`). Payload is
+  /// `{ version: number, reason: string, at: string }` — deliberately not
+  /// modeled here, same as every other [RealtimeEvent]: this is a refresh
+  /// signal, not a delivery of feed content, so the client just re-fetches
+  /// through the normal `GET /discover`/`GET /discover/search` endpoints.
+  feedInvalidate('feed.invalidate');
 
   const RealtimeEvent(this.wireName);
 

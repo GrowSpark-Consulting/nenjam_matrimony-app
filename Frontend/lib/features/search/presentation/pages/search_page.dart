@@ -16,7 +16,6 @@ import '../../../../core/widgets/navigation/app_bars.dart';
 import '../../../../core/widgets/sheets/app_sheets.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
-import '../../../discover/presentation/providers/discover_providers.dart';
 import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
 import '../../domain/entities/search_filters_entity.dart';
@@ -25,9 +24,12 @@ import '../widgets/search_filter_sheet.dart';
 import '../widgets/search_result_card.dart';
 import '../widgets/search_suggestions.dart';
 
-/// Premium matrimony search: real-time query against the shared discover
-/// feed, an advanced filter bottom sheet, recent/popular search
-/// suggestions, and the existing [NmProfileCard] grid for results.
+/// Premium matrimony search: a debounced query issued to the backend
+/// (`GET /discover/search`), an advanced filter bottom sheet, recent/popular
+/// search suggestions, and the existing [NmProfileCard] grid for results.
+///
+/// Results come from [searchResultsProvider] — the server — and are narrowed
+/// by [filteredSearchResultsProvider]. Nothing here reads the Discover feed.
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key});
 
@@ -86,7 +88,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final l10n = AppLocalizations.of(context);
     final query = ref.watch(searchQueryProvider);
     final filters = ref.watch(searchFiltersProvider);
-    final resultsAsync = ref.watch(searchResultsProvider);
+    final resultsAsync = ref.watch(filteredSearchResultsProvider);
+    final isLoadingMore = ref.watch(
+      searchResultsProvider.select(
+        (s) => s.valueOrNull?.isLoadingMore ?? false,
+      ),
+    );
     final showSuggestions = query.isEmpty && filters.isEmpty;
 
     return Scaffold(
@@ -157,12 +164,37 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             ),
                           );
                         }
-                        return _SearchResultsGrid(profiles: results);
+                        return _SearchResultsGrid(
+                          profiles: results,
+                          isLoadingMore: isLoadingMore,
+                          onNearEnd: () => ref
+                              .read(searchResultsProvider.notifier)
+                              .loadMore(),
+                          onRefresh: () => ref
+                              .read(searchResultsProvider.notifier)
+                              .refresh(),
+                        );
                       },
                       loading: () => const _SearchResultsShimmerGrid(),
+                      // skipError: a background refresh (realtime
+                      // `feed.invalidate`) that fails must not blank out
+                      // results the user is actively looking at — see
+                      // discover_page.dart's identical flag. A genuine
+                      // first-query failure still reaches this branch
+                      // regardless, since there's no previous value to fall
+                      // back on yet.
+                      skipError: true,
+                      // Covers every failure the repository can surface:
+                      // an ApiException from a 4xx (including a 401 the auth
+                      // interceptor could not recover, and a 429 from the
+                      // search throttle tier) and a DioException from a
+                      // timeout or a dead connection. Retry re-runs the
+                      // request from page 1 rather than reloading the app.
                       error: (_, __) => Center(
                         child: NmErrorWidget(
-                          onRetry: () => ref.invalidate(discoverFeedProvider),
+                          onRetry: () => ref
+                              .read(searchResultsProvider.notifier)
+                              .refresh(),
                         ),
                       ),
                     ),
@@ -223,8 +255,26 @@ int _crossAxisCountFor(double width) {
 
 class _SearchResultsGrid extends StatelessWidget {
   final List<DiscoveryProfileEntity> profiles;
+  final bool isLoadingMore;
+  final VoidCallback onNearEnd;
+  final Future<void> Function() onRefresh;
 
-  const _SearchResultsGrid({required this.profiles});
+  const _SearchResultsGrid({
+    required this.profiles,
+    required this.isLoadingMore,
+    required this.onNearEnd,
+    required this.onRefresh,
+  });
+
+  /// How close to the end the user must scroll before the next page is
+  /// requested. One viewport of slack, so the next page is usually already
+  /// in when they reach the bottom. The notifier ignores overlapping calls,
+  /// so firing this on several consecutive scroll notifications is safe.
+  bool _shouldLoadMore(ScrollNotification notification) {
+    final metrics = notification.metrics;
+    if (!metrics.hasContentDimensions) return false;
+    return metrics.pixels >= metrics.maxScrollExtent - metrics.viewportDimension;
+  }
 
   void _notify(BuildContext context, String message) {
     ScaffoldMessenger.of(context)
@@ -239,35 +289,74 @@ class _SearchResultsGrid extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final crossAxisCount = _crossAxisCountFor(MediaQuery.sizeOf(context).width);
 
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.base,
-        0,
-        AppSpacing.base,
-        AppSpacing.base,
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (_shouldLoadMore(notification)) onNearEnd();
+          // False: this only observes scrolling, it never consumes the
+          // notification, so RefreshIndicator above still sees it.
+          return false;
+        },
+        child: CustomScrollView(
+          // Always scrollable so pull-to-refresh works even when a
+          // restrictive filter leaves too few results to fill the viewport.
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.base,
+                0,
+                AppSpacing.base,
+                AppSpacing.base,
+              ),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  mainAxisSpacing: AppSpacing.base,
+                  crossAxisSpacing: AppSpacing.base,
+                  childAspectRatio: 0.68,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final profile = profiles[index];
+                    // Scoped Consumer so a shortlist change only rebuilds
+                    // this one grid cell, not the whole results grid.
+                    return Consumer(
+                      builder: (context, ref, _) => SearchResultCard(
+                        profile: profile,
+                        onTap: () => openProfileDetail(context, profile),
+                        onInterested: () => _notify(
+                          context,
+                          '${l10n.actionInterested}: ${profile.name}',
+                        ),
+                        onShortlist: () =>
+                            handleShortlistToggle(context, ref, profile),
+                        isShortlisted:
+                            ref.watch(isShortlistedProvider(profile.id)),
+                      ),
+                    );
+                  },
+                  childCount: profiles.length,
+                ),
+              ),
+            ),
+            if (isLoadingMore)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: AppSpacing.lg),
+                  child: Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        mainAxisSpacing: AppSpacing.base,
-        crossAxisSpacing: AppSpacing.base,
-        childAspectRatio: 0.68,
-      ),
-      itemCount: profiles.length,
-      itemBuilder: (context, index) {
-        final profile = profiles[index];
-        // Scoped Consumer so a shortlist change only rebuilds this one grid
-        // cell, not the whole results grid.
-        return Consumer(
-          builder: (context, ref, _) => SearchResultCard(
-            profile: profile,
-            onTap: () => openProfileDetail(context, profile),
-            onInterested: () =>
-                _notify(context, '${l10n.actionInterested}: ${profile.name}'),
-            onShortlist: () => handleShortlistToggle(context, ref, profile),
-            isShortlisted: ref.watch(isShortlistedProvider(profile.id)),
-          ),
-        );
-      },
     );
   }
 }

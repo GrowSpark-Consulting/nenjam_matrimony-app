@@ -21,4 +21,13 @@ abstract class ProfilePromptRepository {
   /// Replace-all save. Prompts are optional — an empty list is valid and
   /// clears any saved answers.
   Future<void> saveUserPrompts(List<PromptAnswer> prompts);
+
+  /// Removes one saved prompt answer, identified by [promptId] (the
+  /// prompt-bank id — [PromptAnswer.promptId] — not a row id; the backend
+  /// scopes the delete to the caller's own row via the verified auth token,
+  /// so this can only ever affect the signed-in user's own answer).
+  /// `DELETE /profiles/prompts/me/:promptId`. Throws on failure (the data
+  /// layer's `ApiException` in the real implementation), including a 404 if
+  /// the prompt was already removed.
+  Future<void> deletePrompt(String promptId);
 }
