@@ -2,8 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/authentication/presentation/providers/auth_providers.dart';
 import '../constants/app_constants.dart';
+import '../../features/discover/presentation/providers/discover_providers.dart';
 import '../../features/interests/presentation/providers/interests_provider.dart';
+import '../../features/matches/presentation/providers/reel_feed_provider.dart';
 import '../../features/notifications/presentation/providers/notification_providers.dart';
+import '../../features/search/presentation/providers/search_providers.dart';
 import '../../features/shortlist/presentation/providers/shortlist_provider.dart';
 import 'realtime_event.dart';
 import 'realtime_service.dart';
@@ -54,6 +57,32 @@ final realtimeSyncProvider = Provider<void>((ref) {
         ref.invalidate(notificationsNotifierProvider);
       case RealtimeEvent.notificationCreated:
         ref.invalidate(notificationsNotifierProvider);
+      case RealtimeEvent.feedInvalidate:
+        // The caller's own profile, preferences, or blocks changed — every
+        // provider that reads GET /discover or GET /discover/search can now
+        // be serving a stale eligibility set. Each invalidated provider is
+        // autoDispose (reelFeedProvider, searchResultsProvider) or, for
+        // discoverFeedProvider, only rebuilds if actively watched — so this
+        // is a safe no-op for whichever of the three the user isn't
+        // currently looking at.
+        //
+        // No loading flash: `AsyncValue.when()`'s `skipLoadingOnRefresh`
+        // defaults to true, so an invalidate-triggered rebuild keeps
+        // rendering the previous value until the re-fetch resolves — see
+        // discover_page.dart / matches_page.dart / search_page.dart's
+        // `skipError: true` (the one flag that ISN'T on by default) for the
+        // other half of "silent": a failed background refresh keeps
+        // whatever was on screen rather than replacing it with an error.
+        //
+        // Never a loop: none of GET /discover, GET /discover/search, or
+        // GET /discover (again, via reelFeedProvider) ever calls
+        // FeedInvalidationService — only profile/preferences/blocks WRITES
+        // do (confirmed by reading every call site in profile.service.ts,
+        // preferences.service.ts and blocks.service.ts). A refetch this
+        // event triggers can never cause the backend to emit it again.
+        ref.invalidate(discoverFeedProvider);
+        ref.invalidate(reelFeedProvider);
+        ref.invalidate(searchResultsProvider);
     }
   });
   ref.onDispose(subscription.cancel);

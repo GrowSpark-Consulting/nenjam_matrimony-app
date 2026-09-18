@@ -95,6 +95,10 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
             );
           },
           loading: () => const _ReelLoading(),
+          // See discover_page.dart's identical flag for why: keeps the reel
+          // on screen through a failed background refresh (e.g. a realtime
+          // `feed.invalidate`) instead of replacing it with an error state.
+          skipError: true,
           error: (_, __) => Center(
             child: NmErrorWidget(
               onRetry: () => ref.invalidate(reelFeedProvider),

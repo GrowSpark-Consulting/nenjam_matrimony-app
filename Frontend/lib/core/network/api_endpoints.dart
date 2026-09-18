@@ -65,6 +65,15 @@ abstract final class ApiEndpoints {
   // ─── Relationship Intelligence (Prompts / Psychology / Horoscope Compat) ──
   static const String profilePromptsBank = '/profiles/prompts/bank';
   static const String profilePromptsMe = '/profiles/prompts/me';
+
+  /// `DELETE /profiles/prompts/me/:promptId` — removes one saved prompt
+  /// answer (backend/apps/api/src/modules/profiles' PromptsController
+  /// `deleteMine`). [promptId] is the prompt-bank id (`PromptAnswer.promptId`),
+  /// not the row's own database id — the backend deletes by
+  /// `(userId, promptId)`, which is unique per the schema's
+  /// `@@unique([userId, promptId])`.
+  static String profilePromptDelete(String promptId) =>
+      '/profiles/prompts/me/$promptId';
   static const String psychologyQuizActive = '/psychology/quiz/active';
   static const String psychologyQuizMe = '/psychology/quiz/me';
   static const String psychologyQuizSubmit = '/psychology/quiz/submit';
@@ -98,8 +107,30 @@ abstract final class ApiEndpoints {
   static const String referenceCommunities = '/reference-data/communities';
 
   // ─── Search & Discovery ──────────────────────────────────────────
-  static const String search = '/search';
   static const String discover = '/discover';
+
+  /// Server-side profile search (backend/apps/api/src/modules/matches/
+  /// controllers/discover.controller.ts `search()`). Takes `q`, `page` and
+  /// `limit` — and nothing else. It returns the same envelope as [discover],
+  /// so the client parses both with one model.
+  ///
+  /// Mounted under `discover` rather than a top-level `/search`: the search
+  /// strategy shares `buildFeedWhere` with the feed, so results are subject
+  /// to the identical eligibility rules (opposite gender, saved partner
+  /// preferences, and exclusion of deleted/suspended/blocked/incomplete
+  /// profiles). It is the feed, narrowed by a term — not a separate index.
+  static const String discoverSearch = '/discover/search';
+
+  /// The saved-partner-preference CRUD pair (`DiscoverController.getPreferences`
+  /// / `.updatePreferences`, backed by `PreferencesService` and the
+  /// `partner_preferences` table). This — not the registration draft's
+  /// `PATCH /profiles/draft/partner-preference` — is the source of truth for
+  /// the 10 base preference fields (age/height/religion/caste/education/
+  /// occupation/income/location/motherTongue/maritalStatus): it is what the
+  /// Discover/Search feed filter and the compatibility scorer actually read.
+  /// See `features/partner_preferences/data/repositories/
+  /// partner_preferences_repository_impl.dart` for the exact field mapping.
+  static const String discoverPreferences = '/discover/preferences';
 
   // ─── Matches ─────────────────────────────────────────────────────
   static const String matches = '/matches';

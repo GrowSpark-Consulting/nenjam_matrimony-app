@@ -3842,6 +3842,12 @@ abstract class AppLocalizations {
   /// **'Could not save preferences. Check your connection.'**
   String get partnerPrefSaveErrorSnackbar;
 
+  /// No description provided for @partnerPrefAdvancedNotSyncedNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Age, height, religion, caste, education, occupation, income, location and mother tongue are saved to your profile. The advanced preferences below are not synced to the server yet.'**
+  String get partnerPrefAdvancedNotSyncedNotice;
+
   /// No description provided for @partnerPrefNotSetPlaceholder.
   ///
   /// In en, this message translates to:
@@ -7903,6 +7909,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Write your answer…'**
   String get promptsAnswerHint;
+
+  /// No description provided for @promptsYourPromptsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Prompts'**
+  String get promptsYourPromptsTitle;
+
+  /// No description provided for @promptsDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this prompt?'**
+  String get promptsDeleteConfirmTitle;
+
+  /// No description provided for @promptsDeleteConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This answer will be removed from your profile.'**
+  String get promptsDeleteConfirmMessage;
+
+  /// No description provided for @promptsDeleteSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt removed'**
+  String get promptsDeleteSuccess;
+
+  /// No description provided for @promptsDeleteErrorNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the server. Check your connection and try again.'**
+  String get promptsDeleteErrorNetwork;
+
+  /// No description provided for @promptsDeleteErrorUnauthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session expired. Please sign in again.'**
+  String get promptsDeleteErrorUnauthorized;
+
+  /// No description provided for @promptsDeleteErrorNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This prompt was already removed.'**
+  String get promptsDeleteErrorNotFound;
+
+  /// No description provided for @promptsDeleteErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t remove the prompt. Try again.'**
+  String get promptsDeleteErrorGeneric;
 
   /// No description provided for @psychologyQuizTitle.
   ///

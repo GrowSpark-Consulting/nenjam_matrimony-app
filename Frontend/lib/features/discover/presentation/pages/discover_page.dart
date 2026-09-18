@@ -67,6 +67,14 @@ class DiscoverPage extends ConsumerWidget {
         body: feedAsync.when(
           data: (feed) => _DiscoverFeedView(feed: feed),
           loading: () => const _DiscoverLoading(),
+          // skipError: a background refresh this provider's own `.invalidate`
+          // (pull-to-refresh, or a realtime `feed.invalidate` signal — see
+          // realtime_providers.dart) can fail without replacing an
+          // already-visible feed with a full error screen; only a genuine
+          // first-load failure (no previous value to fall back on) reaches
+          // this branch regardless of the flag — see AsyncValue.when's own
+          // doc comment.
+          skipError: true,
           error: (error, _) => Center(
             child: NmErrorWidget(
               onRetry: () => ref.invalidate(discoverFeedProvider),

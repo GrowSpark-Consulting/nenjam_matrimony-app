@@ -1958,6 +1958,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not save preferences. Check your connection.';
 
   @override
+  String get partnerPrefAdvancedNotSyncedNotice =>
+      'Age, height, religion, caste, education, occupation, income, location and mother tongue are saved to your profile. The advanced preferences below are not synced to the server yet.';
+
+  @override
   String get partnerPrefNotSetPlaceholder => 'Not set';
 
   @override
@@ -4197,6 +4201,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get promptsAnswerHint => 'Write your answer…';
+
+  @override
+  String get promptsYourPromptsTitle => 'Your Prompts';
+
+  @override
+  String get promptsDeleteConfirmTitle => 'Remove this prompt?';
+
+  @override
+  String get promptsDeleteConfirmMessage =>
+      'This answer will be removed from your profile.';
+
+  @override
+  String get promptsDeleteSuccess => 'Prompt removed';
+
+  @override
+  String get promptsDeleteErrorNetwork =>
+      'Couldn\'t reach the server. Check your connection and try again.';
+
+  @override
+  String get promptsDeleteErrorUnauthorized =>
+      'Your session expired. Please sign in again.';
+
+  @override
+  String get promptsDeleteErrorNotFound => 'This prompt was already removed.';
+
+  @override
+  String get promptsDeleteErrorGeneric =>
+      'Couldn\'t remove the prompt. Try again.';
 
   @override
   String get psychologyQuizTitle => 'Psychological Quiz';

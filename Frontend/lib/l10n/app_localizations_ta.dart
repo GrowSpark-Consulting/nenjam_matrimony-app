@@ -1977,6 +1977,10 @@ class AppLocalizationsTa extends AppLocalizations {
       'விருப்பத்தேர்வுகளை சேமிக்க முடியவில்லை. இணைப்பை சரிபார்க்கவும்.';
 
   @override
+  String get partnerPrefAdvancedNotSyncedNotice =>
+      'வயது, உயரம், மதம், சாதி, கல்வி, தொழில், வருமானம், இடம் மற்றும் தாய்மொழி உங்கள் சுயவிவரத்தில் சேமிக்கப்படுகின்றன. கீழே உள்ள மேம்பட்ட விருப்பத்தேர்வுகள் இன்னும் சேவையகத்துடன் ஒத்திசைக்கப்படவில்லை.';
+
+  @override
   String get partnerPrefNotSetPlaceholder => 'அமைக்கப்படவில்லை';
 
   @override
@@ -4267,6 +4271,35 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get promptsAnswerHint => 'உங்கள் பதிலை எழுதுங்கள்…';
+
+  @override
+  String get promptsYourPromptsTitle => 'உங்கள் ப்ராம்ப்ட்கள்';
+
+  @override
+  String get promptsDeleteConfirmTitle => 'இந்த ப்ராம்ப்ட்டை அகற்றவா?';
+
+  @override
+  String get promptsDeleteConfirmMessage =>
+      'இந்த பதில் உங்கள் சுயவிவரத்திலிருந்து அகற்றப்படும்.';
+
+  @override
+  String get promptsDeleteSuccess => 'ப்ராம்ப்ட் அகற்றப்பட்டது';
+
+  @override
+  String get promptsDeleteErrorNetwork =>
+      'சேவையகத்தை அணுக முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get promptsDeleteErrorUnauthorized =>
+      'உங்கள் அமர்வு காலாவதியானது. மீண்டும் உள்நுழையவும்.';
+
+  @override
+  String get promptsDeleteErrorNotFound =>
+      'இந்த ப்ராம்ப்ட் ஏற்கனவே அகற்றப்பட்டது.';
+
+  @override
+  String get promptsDeleteErrorGeneric =>
+      'ப்ராம்ப்ட்டை அகற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
 
   @override
   String get psychologyQuizTitle => 'உளவியல் தேர்வு';

@@ -3,16 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/profile_options.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
 import '../../../../core/widgets/cards/expandable_section.dart';
+import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../core/widgets/sheets/app_sheets.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../registration/domain/models/profile_draft.dart';
 import '../../../registration/presentation/providers/registration_provider.dart';
 import '../../../registration/presentation/utils/partner_preference_labels.dart';
 import '../../domain/models/partner_preference_extended.dart';
+import '../providers/partner_preferences_provider.dart';
 import '../widgets/age_range_sheet.dart';
 import '../widgets/preference_row.dart';
 import '../widgets/preference_switch_row.dart';
@@ -97,11 +100,32 @@ Map<AcceptancePreference, String> _acceptanceMap(AppLocalizations l10n) => {
 
 /// Standalone, first-class Partner Preferences editor — the full
 /// Jeevansathi-style field set, reachable from the Profile Drawer and the
-/// Profile page's edit icon. Reads/writes the exact same `PartnerPreference`
-/// entity, `RegistrationRepository`, and `registrationProvider` state as the
-/// registration wizard's step 10 (`StepPartnerPref`) — no parallel model or
-/// backend endpoint. See features/partner_preferences and
-/// registration/domain/models/profile_draft.dart's `PartnerPreference.extended`.
+/// Profile page's edit icon. Uses the same `PartnerPreference` domain model
+/// as the registration draft (`registration/domain/models/profile_draft.dart`)
+/// but has two genuinely different persisted sources for its two halves:
+///
+///  * The 10 **base** fields (age/height/religion/caste/education/
+///    occupation/income/location/motherTongue/maritalStatus) load from and
+///    save to `GET`/`PUT /discover/preferences` via
+///    [partnerPreferencesProvider] — the same row the Discover/Search feed
+///    filter and compatibility scorer read. This is the source of truth for
+///    them; the registration draft is no longer written from this page.
+///  * [PartnerPreference.extended] (religion/community, education/career,
+///    family, lifestyle, location, special cases, verification — the
+///    "advanced" sections below) has no equivalent on `/discover/preferences`
+///    — that endpoint's DTO has no `extendedPreferences` field at all. It is
+///    still read from `registrationProvider`'s draft (hydrated by
+///    `openPartnerPreferences`'s `startEditMode()` before this page opens)
+///    purely for display continuity, but **Save no longer persists it** —
+///    there is no safe way to do so without also resending the registration
+///    draft's base-field strings, which would risk clobbering whatever this
+///    page's own `/discover/preferences` writes just saved (the draft's
+///    materialize step overwrites the live row's base columns
+///    unconditionally from draft data — see `writeProfileFromDraft` in
+///    `profile.service.ts`). The advanced sections stay visible and
+///    editable in this session but are marked below as not yet saved to the
+///    server; the correct fix is a backend change (exposing
+///    `extendedPreferences` on `/discover/preferences`), out of scope here.
 ///
 /// Edits happen on a local draft and are only persisted when the user taps
 /// Save (mirrors search_filter_sheet.dart's "edit locally, commit on
@@ -114,7 +138,17 @@ class PartnerPreferencesPage extends ConsumerStatefulWidget {
 }
 
 class _PartnerPreferencesPageState extends ConsumerState<PartnerPreferencesPage> {
+  // Seeded once, synchronously, from whatever the registration draft
+  // already holds — this is what gives `extended` (and a placeholder value
+  // for the base fields) something valid to render on the very first frame,
+  // before the backend GET below resolves. `_hydratedBaseFromBackend` then
+  // gates a ONE-TIME overlay of the base fields once the real saved values
+  // arrive — see the `ref.listen` in `build()`. Never re-seeded after that:
+  // a later rebuild of `partnerPreferencesProvider` (e.g. a background
+  // refresh) must not overwrite whatever the user is mid-way through
+  // editing.
   late PartnerPreference _draft = ref.read(registrationProvider).partnerPreference;
+  bool _hydratedBaseFromBackend = false;
   bool _saving = false;
 
   PartnerPreferenceExtended get _ext => _draft.extended;
@@ -196,14 +230,41 @@ class _PartnerPreferencesPageState extends ConsumerState<PartnerPreferencesPage>
   String _displayMapped(Map<String, String> valueToLabel, String value) => value.isEmpty ? '' : (valueToLabel[value] ?? value);
 
   // ─── Save ───────────────────────────────────────────────────────────
+  //
+  // PUTs the 10 base fields to /discover/preferences — see the class doc
+  // comment for why `extended` is not sent. `_saving` both drives the
+  // button's loading state and (being checked before the request starts)
+  // stops a double-tap from firing a second PUT while the first is still in
+  // flight; PartnerPreferencesNotifier.save() guards the same thing at the
+  // provider level in case some other caller ever triggers a save
+  // concurrently.
 
   Future<void> _save() async {
+    if (_saving) return;
     final l10n = AppLocalizations.of(context);
     setState(() => _saving = true);
     try {
-      await ref.read(registrationProvider.notifier).savePartnerPreference(_draft);
+      final saved =
+          await ref.read(partnerPreferencesProvider.notifier).save(_draft);
       if (!mounted) return;
+      // Adopt the server's response as the new baseline (authoritative —
+      // e.g. a value clamped to the DTO's min/max would otherwise silently
+      // diverge from what the form shows), while keeping `extended` exactly
+      // as the user left it — the backend never saw it and has nothing to
+      // say about it.
+      setState(() => _draft = saved.copyWith(extended: _ext));
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.partnerPrefSavedSnackbar)));
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      // A 400 carries the backend's own validation message (e.g. an
+      // out-of-range height); anything else falls back to the generic copy.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.statusCode == 400 ? e.message : l10n.partnerPrefSaveErrorSnackbar,
+          ),
+        ),
+      );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.partnerPrefSaveErrorSnackbar)));
@@ -218,9 +279,51 @@ class _PartnerPreferencesPageState extends ConsumerState<PartnerPreferencesPage>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
+    // One-time overlay: the moment the real saved base-field values arrive,
+    // merge them into `_draft` (keeping whatever `extended`/other base edits
+    // are already there) and never do it again for this page instance —
+    // exactly what `_hydratedBaseFromBackend` gates. A later emission (a
+    // background `retry()`, for instance) is deliberately ignored here so it
+    // can never clobber an in-progress edit; see the field's doc comment.
+    ref.listen<AsyncValue<PartnerPreference>>(partnerPreferencesProvider,
+        (previous, next) {
+      if (_hydratedBaseFromBackend) return;
+      final saved = next.valueOrNull;
+      if (saved == null) return;
+      _hydratedBaseFromBackend = true;
+      setState(() => _draft = saved.copyWith(extended: _ext));
+    });
+    final prefsAsync = ref.watch(partnerPreferencesProvider);
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.partnerPrefPageTitle)),
-      body: SingleChildScrollView(
+      body: !_hydratedBaseFromBackend && prefsAsync.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : !_hydratedBaseFromBackend && prefsAsync.hasError
+              ? Center(
+                  child: NmErrorWidget(
+                    onRetry: () =>
+                        ref.read(partnerPreferencesProvider.notifier).retry(),
+                  ),
+                )
+              : _buildForm(context, l10n),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.all(AppSpacing.base),
+        child: NmPrimaryButton(
+          label: l10n.partnerPrefSaveButton,
+          isLoading: _saving,
+          // Disabled until the real saved values have loaded once — tapping
+          // Save before then would PUT the placeholder draft values (from
+          // registrationProvider, not necessarily what's actually saved)
+          // and could overwrite genuine preferences with empty/stale ones.
+          onPressed: _hydratedBaseFromBackend ? _save : null,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildForm(BuildContext context, AppLocalizations l10n) {
+    return SingleChildScrollView(
         padding: AppSpacing.pagePadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -240,6 +343,18 @@ class _PartnerPreferencesPageState extends ConsumerState<PartnerPreferencesPage>
               title: l10n.partnerPrefSectionBasic,
               initiallyExpanded: true,
               children: _basicRows(l10n),
+            ),
+            // The 8 sections below this point (Religion & Community's
+            // ethnicity/subCaste/mangalik onward) are `extended` fields with
+            // no home on /discover/preferences — see the class doc comment.
+            // This note is the honest disclosure Save's docs promise: these
+            // stay locally editable, but tapping Save does not persist them.
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: Text(
+                l10n.partnerPrefAdvancedNotSyncedNotice,
+                style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondaryLight, height: 1.4),
+              ),
             ),
             NmExpandableSection(
               title: l10n.partnerPrefSectionReligionCommunity,
@@ -276,16 +391,7 @@ class _PartnerPreferencesPageState extends ConsumerState<PartnerPreferencesPage>
             const SizedBox(height: AppSpacing.xl2),
           ],
         ),
-      ),
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.all(AppSpacing.base),
-        child: NmPrimaryButton(
-          label: l10n.partnerPrefSaveButton,
-          isLoading: _saving,
-          onPressed: _save,
-        ),
-      ),
-    );
+      );
   }
 
   // ─── Basic Preferences (base fields) ───────────────────────────────

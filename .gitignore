@@ -90,6 +90,7 @@ tmp/
 .flutter-plugins-dependencies
 .pub/
 .pub-cache/
+skills-lock.json
 
 # ─── Android (repo-wide backstop for any android/ dir in the tree) ─
 **/android/local.properties
