@@ -33,4 +33,26 @@ export class ReligionDetailsDto {
   @IsOptional()
   @IsString()
   community?: string;
+
+  // The master-data codes the onboarding Religion step sends alongside the
+  // labels (Frontend/.../profile_draft.dart -> ReligionDetails.toJson).
+  //
+  // Declared because the global ValidationPipe runs with
+  // `forbidNonWhitelisted: true`: while these were missing, every religion
+  // PATCH carrying a code was rejected 400 "property religionCode should not
+  // exist". Onboarding's one flush sends sections in order inside a single
+  // `try`, so that 400 skipped every section after religion — including the
+  // one that materialises the profile — and registration could never
+  // finalize. The same failure LocationDetailsDto's codes caused before them.
+  //
+  // Optional: a draft saved before the religion master data existed carries
+  // labels only. The codes are kept in the draft; the free-text `religion` /
+  // `community` above remain what is written to user_profiles.
+  @IsOptional()
+  @IsString()
+  religionCode?: string;
+
+  @IsOptional()
+  @IsString()
+  communityCode?: string;
 }
