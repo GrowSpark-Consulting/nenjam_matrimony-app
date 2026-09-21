@@ -49,7 +49,7 @@ function buildService(draftData: Record<string, unknown>) {
   const profileRepository = {
     upsertProfile,
     upsertAstrologyProfile: jest.fn().mockResolvedValue(undefined),
-    upsertPartnerPreference: jest.fn().mockResolvedValue(undefined),
+    createPartnerPreferenceIfMissing: jest.fn().mockResolvedValue(undefined),
     markComplete: jest.fn().mockResolvedValue(undefined),
     // recalculateAndPersistCompletion reads these; return benign shapes.
     findProfileByUserId: jest.fn().mockResolvedValue({ bio: null }),

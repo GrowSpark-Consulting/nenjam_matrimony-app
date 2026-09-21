@@ -133,7 +133,7 @@ describe('ProfileService', () => {
     findProfileByUserId?: jest.Mock;
     upsertProfile?: jest.Mock;
     upsertAstrologyProfile?: jest.Mock;
-    upsertPartnerPreference?: jest.Mock;
+    createPartnerPreferenceIfMissing?: jest.Mock;
     findPartnerPreference?: jest.Mock;
     findAstrologyProfile?: jest.Mock;
     markComplete?: jest.Mock;
@@ -148,7 +148,7 @@ describe('ProfileService', () => {
       findProfileByUserId: overrides?.findProfileByUserId ?? jest.fn(),
       upsertProfile: overrides?.upsertProfile ?? jest.fn(),
       upsertAstrologyProfile: overrides?.upsertAstrologyProfile ?? jest.fn(),
-      upsertPartnerPreference: overrides?.upsertPartnerPreference ?? jest.fn(),
+      createPartnerPreferenceIfMissing: overrides?.createPartnerPreferenceIfMissing ?? jest.fn(),
       findPartnerPreference:
         overrides?.findPartnerPreference ?? jest.fn().mockResolvedValue(null),
       findAstrologyProfile:
@@ -712,7 +712,7 @@ describe('ProfileService', () => {
     });
 
     it('maps partner-preference occupation/mother-tongue prefs as arrays', async () => {
-      const upsertPartnerPreference = jest.fn();
+      const createPartnerPreferenceIfMissing = jest.fn();
       const service = buildService({
         getDraft: jest.fn().mockResolvedValue(
           buildValidDraft({
@@ -724,18 +724,178 @@ describe('ProfileService', () => {
         ),
         upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
         findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
-        upsertPartnerPreference,
+        createPartnerPreferenceIfMissing,
       });
 
       await service.finalize('user-1');
 
-      expect(upsertPartnerPreference).toHaveBeenCalledWith(
+      expect(createPartnerPreferenceIfMissing).toHaveBeenCalledWith(
         'user-1',
         expect.objectContaining({
           preferredOccupations: ['Engineer', 'Doctor'],
           preferredMotherTongues: ['Tamil', 'Telugu'],
         }),
       );
+    });
+
+    describe('partner-preference ownership (F1)', () => {
+      /**
+       * A stand-in for partner_preferences with the repository's contract:
+       * `createPartnerPreferenceIfMissing` inserts only when there is no row.
+       * (The real INSERT … ON CONFLICT DO NOTHING is proven against Postgres
+       * in partner-preference-ownership.integration.spec.ts.) The repository
+       * mock exposes no other preference write, so a profile save has no way
+       * to overwrite a row even by accident.
+       */
+      function preferenceStore(existing: Record<string, unknown> | null) {
+        const store = { row: existing };
+        const createPartnerPreferenceIfMissing = jest.fn(
+          (_userId: string, data: Record<string, unknown>) => {
+            if (store.row) return Promise.resolve(false);
+            store.row = data;
+            return Promise.resolve(true);
+          },
+        );
+        return { store, createPartnerPreferenceIfMissing };
+      }
+
+      /** What PUT /discover/preferences stored: age 26-30, Hindu. */
+      const SAVED_THROUGH_API = {
+        minAge: 26,
+        maxAge: 30,
+        preferredReligions: ['Hindu'],
+      };
+
+      /** Registration-era draft values that disagree with the saved row. */
+      const STALE_DRAFT_PREF = {
+        preferredAgeRange: '18-22',
+        religionPref: 'Christian',
+        castePref: 'Any Caste',
+      };
+
+      it('a profile save (finalize) leaves an existing preference untouched', async () => {
+        const { store, createPartnerPreferenceIfMissing } = preferenceStore({
+          ...SAVED_THROUGH_API,
+        });
+        const service = buildService({
+          getDraft: jest
+            .fn()
+            .mockResolvedValue(
+              buildValidDraft({ partnerPreference: STALE_DRAFT_PREF }),
+            ),
+          upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+          findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+          createPartnerPreferenceIfMissing,
+        });
+
+        await service.finalize('user-1');
+
+        expect(createPartnerPreferenceIfMissing).toHaveBeenCalledTimes(1);
+        expect(store.row).toEqual({
+          minAge: 26,
+          maxAge: 30,
+          preferredReligions: ['Hindu'],
+        });
+      });
+
+      it('every draft section save (syncMatchableFromDraft) leaves it untouched too', async () => {
+        const { store, createPartnerPreferenceIfMissing } = preferenceStore({
+          ...SAVED_THROUGH_API,
+        });
+        const service = buildService({
+          upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+          findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+          createPartnerPreferenceIfMissing,
+        });
+
+        await service.syncMatchableFromDraft(
+          'user-1',
+          buildValidDraft({ partnerPreference: STALE_DRAFT_PREF }).data as never,
+        );
+
+        expect(createPartnerPreferenceIfMissing).toHaveBeenCalledTimes(1);
+        expect(store.row).toEqual(SAVED_THROUGH_API);
+      });
+
+      it('creates the row from the draft when the member has none', async () => {
+        const { store, createPartnerPreferenceIfMissing } =
+          preferenceStore(null);
+        const service = buildService({
+          getDraft: jest.fn().mockResolvedValue(
+            buildValidDraft({
+              partnerPreference: {
+                preferredAgeRange: '26-30',
+                religionPref: 'Hindu',
+              },
+            }),
+          ),
+          upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+          findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+          createPartnerPreferenceIfMissing,
+        });
+
+        await service.finalize('user-1');
+
+        expect(store.row).toEqual(
+          expect.objectContaining({
+            minAge: 26,
+            maxAge: 30,
+            preferredReligions: ['Hindu'],
+          }),
+        );
+      });
+
+      it('creates the row for a first-time "caste no bar" choice', async () => {
+        // Onboarding's opt-out writes only { castePref: 'Any Caste' } into the
+        // draft; every other field takes the same defaults it always has.
+        const { store, createPartnerPreferenceIfMissing } =
+          preferenceStore(null);
+        const service = buildService({
+          getDraft: jest.fn().mockResolvedValue(
+            buildValidDraft({
+              partnerPreference: { castePref: 'Any Caste' },
+            }),
+          ),
+          upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+          findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+          createPartnerPreferenceIfMissing,
+        });
+
+        await service.finalize('user-1');
+
+        expect(store.row).toEqual({
+          minAge: 18,
+          maxAge: 45,
+          minHeightCm: 140,
+          maxHeightCm: 210,
+          preferredReligions: [],
+          preferredCastes: ['Any Caste'],
+          minIncomeLakhs: null,
+          preferredCities: [],
+          preferredStates: [],
+          preferredEducation: [],
+          preferredOccupations: [],
+          preferredMotherTongues: [],
+          maritalStatusPref: [],
+          extendedPreferences: {},
+        });
+      });
+
+      it('writes nothing when the draft has no partner-preference section', async () => {
+        const { store, createPartnerPreferenceIfMissing } =
+          preferenceStore(null);
+        const service = buildService({
+          getDraft: jest.fn().mockResolvedValue(buildValidDraft()),
+          upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+          findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+          createPartnerPreferenceIfMissing,
+        });
+
+        await service.finalize('user-1');
+
+        expect(createPartnerPreferenceIfMissing).not.toHaveBeenCalled();
+        expect(store.row).toBeNull();
+      });
     });
 
     it('falls back to star when nakshatra is not provided, and persists horoscopeAvailable', async () => {
@@ -978,7 +1138,7 @@ describe('ProfileService', () => {
         const profileRepository = {
           upsertProfile: overrides.upsertProfile,
           upsertAstrologyProfile: jest.fn(),
-          upsertPartnerPreference: jest.fn(),
+          createPartnerPreferenceIfMissing: jest.fn(),
           markComplete: jest.fn(),
           findProfileByUserId: overrides.findProfileByUserId,
           findPartnerPreference: jest.fn().mockResolvedValue(null),
