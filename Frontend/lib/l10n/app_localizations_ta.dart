@@ -2683,6 +2683,10 @@ class AppLocalizationsTa extends AppLocalizations {
       'உங்களை உள்நுழைய முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
 
   @override
+  String get onboardingVerifyMobileRegistrationFailed =>
+      'உங்கள் எண் சரிபார்க்கப்பட்டது, ஆனால் உங்கள் சுயவிவரத்தைச் சேமிக்க முடியவில்லை. இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
   String get authEntrySignUp => 'பதிவு செய்யவும்';
 
   @override

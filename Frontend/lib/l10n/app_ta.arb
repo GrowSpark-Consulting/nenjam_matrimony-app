@@ -963,6 +963,7 @@
   "authInvalidOtp": "அந்தக் குறியீடு சரியல்ல. சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
   "onboardingVerifyMobileEnter": "தொடர ஏதேனும் 4 இலக்கக் குறியீட்டை உள்ளிடவும்.",
   "onboardingVerifyMobileSessionFailed": "உங்களை உள்நுழைய முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
+  "onboardingVerifyMobileRegistrationFailed": "உங்கள் எண் சரிபார்க்கப்பட்டது, ஆனால் உங்கள் சுயவிவரத்தைச் சேமிக்க முடியவில்லை. இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
   "authEntrySignUp": "பதிவு செய்யவும்",
   "authEntryLogin": "உள்நுழையவும்",
   "profileBasicsMissing": "தொடர {fields} தேர்ந்தெடுக்கவும்.",

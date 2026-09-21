@@ -125,9 +125,9 @@ class RecordingRegistrationRepository implements RegistrationRepository {
   }
 
   // The remaining three sections the end-of-onboarding flush sends. Stubbed
-  // so that flush can be exercised end to end: it swallows its own errors, so
-  // an unstubbed call would abort the run through `noSuchMethod` and be
-  // silently discarded, hiding whichever sections came after it.
+  // so that flush can be exercised end to end: it stops at its first failure
+  // and throws it, so an unstubbed call would abort the run through
+  // `noSuchMethod` and hide whichever sections came after it.
   @override
   Future<void> updatePhysicalDetails(
     PhysicalDetails details, {
