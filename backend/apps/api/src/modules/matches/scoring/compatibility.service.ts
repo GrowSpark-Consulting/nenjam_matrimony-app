@@ -76,8 +76,8 @@ const MS_PER_DAY = 86_400_000;
  * Three rules shape the whole design:
  *
  *  1. Nothing here filters. Hard eligibility — blocks, bans, deletions,
- *     gender, incomplete profiles — stays in buildFeedWhere and
- *     safety-exclusions.builder. A candidate that reaches this service has
+ *     gender, incomplete profiles, declined interests — stays in
+ *     eligibility.builder. A candidate that reaches this service has
  *     already been proven eligible; scoring only decides ORDER. Moving a
  *     safety rule in here would make it silently bypassable by a weight change.
  *

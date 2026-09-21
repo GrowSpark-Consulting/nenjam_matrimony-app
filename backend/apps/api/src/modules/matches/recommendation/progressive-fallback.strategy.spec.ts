@@ -6,6 +6,7 @@ import type {
 import type { PreferenceRepository } from '../repositories/preference.repository';
 import type { AppConfigService } from '@app/config';
 import type { FeedContextService } from '../cache/feed-context.cache';
+import { buildEligibilityConditions } from '../filters/eligibility.builder';
 
 const SELF = {
   gender: 'MALE' as const,
@@ -193,13 +194,38 @@ describe('ProgressiveFallbackStrategy', () => {
     expect(result.fallbackUsed).toBe(true);
     expect(countMatching).toHaveBeenCalledTimes(10);
     expect(findRows).toHaveBeenCalledTimes(1);
-    // Tier 10's WHERE must still be a safety-exclusion-wrapped, gender-only
+    // Tier 10's WHERE must still carry the shared eligibility, gender-only
     // query — status is a denylist (not an ACTIVE allowlist): PENDING_VERIFICATION
-    // must remain visible even at the loosest tier (see safety-exclusions.builder.ts).
+    // must remain visible even at the loosest tier (see eligibility.builder.ts).
     const tier10Where = countMatching.mock.calls[9][0];
     expect(JSON.stringify(tier10Where)).toContain(
       '"notIn":["SUSPENDED","DEACTIVATED","BANNED"]',
     );
+  });
+
+  it('every tier, Tier 1 included, carries the full shared eligibility', async () => {
+    const { strategy, countMatching } = buildStrategy({
+      countSequence: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    });
+
+    await strategy.getFeedForUser('me', { skip: 0, take: 20 });
+
+    const eligibility = buildEligibilityConditions({
+      currentUserId: 'me',
+      myGender: SELF.gender,
+    });
+    expect(countMatching).toHaveBeenCalledTimes(10);
+    countMatching.mock.calls.forEach(([where], index) => {
+      const and = (where as { AND: unknown[] }).AND;
+      for (const rule of eligibility) {
+        expect({
+          tier: index + 1,
+          has: and.some((c) => JSON.stringify(c) === JSON.stringify(rule)),
+        }).toEqual({ tier: index + 1, has: true });
+      }
+      // F5: a declined interest is excluded at Tier 1 exactly as at Tier 10.
+      expect(JSON.stringify(where)).toContain('"status":"DECLINED"');
+    });
   });
 
   it('no users in database (every tier empty, including Tier 10): returns an honest empty feed, not an error', async () => {

@@ -62,6 +62,18 @@ describe('buildFeedWhere', () => {
                   NOT: [
                     { blocksMade: { some: { blockedUserId: 'me' } } },
                     { blocksReceived: { some: { blockerId: 'me' } } },
+                    // F5: declined interests are hard eligibility on every
+                    // surface, not only from fallback Tier 2 onward.
+                    {
+                      receivedInterests: {
+                        some: { senderId: 'me', status: 'DECLINED' },
+                      },
+                    },
+                    {
+                      sentInterests: {
+                        some: { receiverId: 'me', status: 'DECLINED' },
+                      },
+                    },
                   ],
                 },
               },
@@ -222,7 +234,7 @@ describe('buildFeedWhere', () => {
     });
   });
 
-  it('excludes suspended/deactivated/banned users but not PENDING_VERIFICATION, and excludes both directions of a block', () => {
+  it('excludes suspended/deactivated/banned users but not PENDING_VERIFICATION, and excludes both directions of a block and of a declined interest', () => {
     const c = clauses({ ...base, currentUserId: 'user-42' });
     const userClause = c.find((x) => 'user' in x) as {
       user: { is: Record<string, unknown> };
@@ -233,6 +245,16 @@ describe('buildFeedWhere', () => {
     expect(userClause.user.is.NOT).toEqual([
       { blocksMade: { some: { blockedUserId: 'user-42' } } },
       { blocksReceived: { some: { blockerId: 'user-42' } } },
+      {
+        receivedInterests: {
+          some: { senderId: 'user-42', status: 'DECLINED' },
+        },
+      },
+      {
+        sentInterests: {
+          some: { receiverId: 'user-42', status: 'DECLINED' },
+        },
+      },
     ]);
   });
 

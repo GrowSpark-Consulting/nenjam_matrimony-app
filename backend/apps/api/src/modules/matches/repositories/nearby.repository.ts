@@ -4,7 +4,7 @@ import type {
   Gender,
   Prisma,
 } from '../../../../../../libs/database/generated/client';
-import { withSafetyExclusions } from '../filters/safety-exclusions.builder';
+import { buildEligibilityConditions } from '../filters/eligibility.builder';
 import { FEED_PROFILE_SELECT, type FeedProfileRow } from './feed.repository';
 import { boundingBoxFor, type GeoPoint } from '../geo/haversine';
 
@@ -44,7 +44,7 @@ interface CandidateRow {
  * the second phase below), the last page can come back short. That needs ~400
  * blocks against one member to trigger, and the alternative — pushing the
  * block/interest joins into the raw SQL — would fork the safety rules away
- * from withSafetyExclusions, which is the one place they are allowed to live.
+ * from eligibility.builder.ts, which is the one place they are allowed to live.
  */
 const MAX_CANDIDATES = 400;
 
@@ -61,8 +61,8 @@ const MAX_CANDIDATES = 400;
  *      along here, so the candidate set is already mostly correct.
  *
  *   2. [findVisibleProfiles] — Prisma. Re-fetches those ids through
- *      [withSafetyExclusions], the SAME builder the Discover fallback tiers
- *      use, so blocks, mutually-declined interests and suspended accounts are
+ *      [buildEligibilityConditions], the SAME rules every Discover tier and
+ *      Search use, so blocks, mutually-declined interests and suspended accounts are
  *      enforced by one implementation rather than a second copy transcribed
  *      into SQL. That duplication is the bug this split exists to avoid: a
  *      block rule fixed in one place and missed in the other means showing
@@ -141,7 +141,7 @@ export class NearbyRepository {
   }
 
   /**
-   * Display rows for [userIds], filtered through the shared safety exclusions.
+   * Display rows for [userIds], filtered through the shared eligibility rules.
    *
    * Returns FEED_PROFILE_SELECT — the same column set the Discover feed uses —
    * so ProfileFeedMapper can map these rows unchanged and Near Me cards are
@@ -153,19 +153,19 @@ export class NearbyRepository {
   async findVisibleProfiles(
     userIds: string[],
     currentUserId: string,
+    myGender: Gender,
   ): Promise<FeedProfileRow[]> {
     if (userIds.length === 0) return [];
 
-    const where: Prisma.UserProfileWhereInput = withSafetyExclusions(
-      {
-        userId: { in: userIds },
-        // Mirrors buildFeedWhere: never surface a half-written profile, and
-        // never surface a soft-deleted account.
-        isProfileComplete: true,
-        user: { is: { deletedAt: null } },
-      },
-      currentUserId,
-    );
+    // The full shared eligibility, not just the parts the SQL above skipped:
+    // re-asserting gender, completeness and self-exclusion costs nothing on a
+    // set this small, and it means Near Me cannot drift from Discover.
+    const where: Prisma.UserProfileWhereInput = {
+      AND: [
+        { userId: { in: userIds } },
+        ...buildEligibilityConditions({ currentUserId, myGender }),
+      ],
+    };
 
     const rows = await this.prisma.userProfile.findMany({
       where,

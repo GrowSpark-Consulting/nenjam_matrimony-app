@@ -3,6 +3,7 @@ import type {
   Gender,
   MaritalStatus,
 } from '../../../../../../libs/database/generated/client';
+import { buildEligibilityConditions } from './eligibility.builder';
 
 const MARITAL_STATUSES: readonly string[] = [
   'NEVER_MARRIED',
@@ -33,7 +34,8 @@ const MEANINGLESS_TOKENS: ReadonlySet<string> = new Set([
 export interface FeedWhereParams {
   currentUserId: string;
   /** The caller's own gender, if they've finalized a profile (opposite-gender
-   *  matching is a matrimony default). Null → no gender constraint. */
+   *  matching is a matrimony default). Null → nobody matches (fails closed —
+   *  see eligibility.builder.ts). */
   myGender: Gender | null;
   /** The caller's own matchable attributes, used to resolve relative "Same X"
    *  preferences (e.g. "Same Caste" → the caller's caste). Missing values make
@@ -73,8 +75,38 @@ export interface PreferenceFilters {
 }
 
 /**
- * Pure, deterministic translation of a user's PartnerPreference into a Prisma
- * `UserProfile` WHERE clause. No scoring, no ranking — filtering only.
+ * The complete feed WHERE: hard eligibility (see [buildEligibilityConditions])
+ * followed by the caller's partner-preference filters (see
+ * [buildPreferenceConditions]). Discover's every fallback tier and Search
+ * build their query through this, so they cannot disagree about who is
+ * eligible.
+ */
+export function buildFeedWhere(
+  params: FeedWhereParams,
+): Prisma.UserProfileWhereInput {
+  const { currentUserId, myGender, self, pref } = params;
+  return {
+    AND: [
+      ...buildEligibilityConditions({ currentUserId, myGender }),
+      ...buildPreferenceConditions(pref, self),
+    ],
+  };
+}
+
+/** [buildPreferenceConditions] as a standalone WHERE. */
+export function buildPreferenceWhere(
+  pref: PreferenceFilters | null,
+  self?: SelfAttributes | null,
+): Prisma.UserProfileWhereInput {
+  return { AND: buildPreferenceConditions(pref, self) };
+}
+
+/**
+ * Pure, deterministic translation of a user's PartnerPreference into Prisma
+ * `UserProfile` conditions. Preference filtering only — no eligibility, no
+ * scoring, no ranking. Every value here is the caller's PREFERENCE for a
+ * partner, compared against the CANDIDATE's own column; the caller's own
+ * attributes (`self`) are read only to resolve a relative "Same X".
  *
  * Rules:
  *  - An empty / unset preference is IGNORED — never a reason to exclude.
@@ -83,52 +115,13 @@ export interface PreferenceFilters {
  *    "B.E / B.Tech+") are non-literal — they are dropped, never filtered on, so
  *    the feed never over-filters to an empty result on a non-literal choice.
  *  - "Same X" resolves to the caller's own attribute (caste/city/state/tongue).
- *  - Always excludes: the caller themselves, soft-deleted users, suspended/
- *    deactivated/banned users, incomplete profiles, and anyone with a mutual
- *    block against the caller. PENDING_VERIFICATION users ARE included — no
- *    verification flow exists yet to ever clear that state.
  *  - Only fields that exist on the schema are used; nothing is invented.
  */
-export function buildFeedWhere(
-  params: FeedWhereParams,
-): Prisma.UserProfileWhereInput {
-  const { currentUserId, myGender, self, pref } = params;
-
-  const and: Prisma.UserProfileWhereInput[] = [
-    { userId: { not: currentUserId } },
-    // Defensive: a UserProfile row only exists once registration is finalized
-    // (finalize() sets this true), but this guards against ever surfacing a
-    // partially-written row.
-    { isProfileComplete: true },
-    {
-      user: {
-        is: {
-          deletedAt: null,
-          // Excludes only genuinely-bad account states (suspended, deactivated,
-          // banned). PENDING_VERIFICATION is deliberately NOT excluded: there is
-          // no verification flow in this app yet that ever promotes a user to
-          // ACTIVE, so requiring ACTIVE would permanently hide every real
-          // signup from Discover. Revisit this once verification exists.
-          status: { notIn: ['SUSPENDED', 'DEACTIVATED', 'BANNED'] },
-          // Mutual block: neither side of a block should see the other.
-          NOT: [
-            { blocksMade: { some: { blockedUserId: currentUserId } } },
-            { blocksReceived: { some: { blockerId: currentUserId } } },
-          ],
-        },
-      },
-    },
-  ];
-
-  if (myGender === 'MALE') and.push({ gender: 'FEMALE' });
-  else if (myGender === 'FEMALE') and.push({ gender: 'MALE' });
-  else {
-    // The opposite-gender rule is mandatory and must always apply — but with
-    // no finalized profile, the caller's own gender (and therefore who counts
-    // as "opposite") is unknown. Fail closed (zero results) rather than
-    // silently returning an unfiltered, mixed-gender feed.
-    and.push({ gender: { in: [] } });
-  }
+export function buildPreferenceConditions(
+  pref: PreferenceFilters | null,
+  self?: SelfAttributes | null,
+): Prisma.UserProfileWhereInput[] {
+  const and: Prisma.UserProfileWhereInput[] = [];
 
   if (pref) {
     // Date-only "today" so the bounds are birthday-accurate and immune to the
@@ -217,7 +210,7 @@ export function buildFeedWhere(
     addEquals(and, 'subCaste', ext.subCaste);
   }
 
-  return { AND: and };
+  return and;
 }
 
 /**
@@ -227,7 +220,10 @@ export function buildFeedWhere(
  *  - "Any"/meta/grouped label → dropped.
  * De-duplicated, order-preserving.
  */
-export function resolveValues(raw: unknown, ownValue?: string | null): string[] {
+export function resolveValues(
+  raw: unknown,
+  ownValue?: string | null,
+): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   for (const token of toStringArray(raw)) {

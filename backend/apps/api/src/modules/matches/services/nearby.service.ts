@@ -72,6 +72,7 @@ export class NearbyService {
     const rows = await this.repository.findVisibleProfiles(
       candidates.map((c) => c.userId),
       userId,
+      self.gender,
     );
 
     const distanceByUserId = new Map(
