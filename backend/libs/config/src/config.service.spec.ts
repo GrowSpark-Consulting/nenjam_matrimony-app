@@ -29,6 +29,15 @@ describe('AppConfigService', () => {
     },
     firebase: {},
     storage: {},
+    faceVerification: {
+      enabled: false,
+      region: 'ap-south-1',
+      credentialsTtlSeconds: 900,
+      minLivenessConfidence: 90,
+      minMatchSimilarity: 90,
+      maxAttemptsPerDay: 3,
+      globalDailyCap: 500,
+    },
     logLevel: 'debug',
     fallback: {
       enabled: true,

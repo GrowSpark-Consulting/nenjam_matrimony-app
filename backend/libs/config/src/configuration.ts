@@ -76,6 +76,28 @@ export interface AppConfig {
     secretAccessKey?: string;
     bucket?: string;
   };
+  /** Face verification (AWS Rekognition Face Liveness + CompareFaces).
+   *  Deliberately a separate AWS identity from `storage`: these credentials
+   *  belong to the face-verification backend IAM user only, and the S3 keys are
+   *  never reused here or handed to a client. Off unless explicitly enabled, and
+   *  inert (endpoints answer 503) until every AWS value below is supplied. */
+  faceVerification: {
+    enabled: boolean;
+    region: string;
+    accessKeyId?: string;
+    secretAccessKey?: string;
+    /** Role the backend assumes to mint the device's short-lived credentials. */
+    clientRoleArn?: string;
+    credentialsTtlSeconds: number;
+    /** Minimum AWS liveness confidence (0-100) to accept a session. */
+    minLivenessConfidence: number;
+    /** Minimum CompareFaces similarity (0-100) to accept a match. */
+    minMatchSimilarity: number;
+    /** Rolling 24-hour cap on paid attempts per member. */
+    maxAttemptsPerDay: number;
+    /** Cap on paid attempts across all members per UTC day — a spend breaker. */
+    globalDailyCap: number;
+  };
   logLevel: string;
   /** Progressive Discover-feed fallback (see ProgressiveFallbackStrategy) —
    *  how far and by how much the recommendation engine widens a search that
@@ -86,6 +108,13 @@ export interface AppConfig {
     ageRelaxStep2: number;
     maxTier: number;
   };
+}
+
+/** A numeric env var, or `fallback` when it is absent/blank/not a number. */
+function numberOr(raw: string | undefined, fallback: number): number {
+  if (raw == null || raw.trim() === '') return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : fallback;
 }
 
 export default (): AppConfig => ({
@@ -158,6 +187,36 @@ export default (): AppConfig => ({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || undefined,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || undefined,
     bucket: process.env.AWS_S3_BUCKET_NAME || undefined,
+  },
+  // Face verification. Mirrors the Firebase/AWS/Resend treatment: absent
+  // credentials never stop the app booting — FaceVerificationService answers
+  // 503 NOT_AVAILABLE instead. Numeric defaults match validation.ts.
+  faceVerification: {
+    enabled: process.env.FACE_VERIFICATION_ENABLED?.trim() === 'true',
+    region: process.env.FACE_VERIFICATION_AWS_REGION?.trim() || 'ap-south-1',
+    accessKeyId:
+      process.env.FACE_VERIFICATION_AWS_ACCESS_KEY_ID?.trim() || undefined,
+    secretAccessKey:
+      process.env.FACE_VERIFICATION_AWS_SECRET_ACCESS_KEY?.trim() || undefined,
+    clientRoleArn:
+      process.env.FACE_LIVENESS_CLIENT_ROLE_ARN?.trim() || undefined,
+    credentialsTtlSeconds: numberOr(
+      process.env.FACE_LIVENESS_CREDENTIALS_TTL_SECONDS,
+      900,
+    ),
+    minLivenessConfidence: numberOr(
+      process.env.FACE_LIVENESS_MIN_CONFIDENCE,
+      90,
+    ),
+    minMatchSimilarity: numberOr(process.env.FACE_MATCH_MIN_SIMILARITY, 90),
+    maxAttemptsPerDay: numberOr(
+      process.env.FACE_VERIFICATION_MAX_ATTEMPTS_PER_DAY,
+      3,
+    ),
+    globalDailyCap: numberOr(
+      process.env.FACE_VERIFICATION_GLOBAL_DAILY_CAP,
+      500,
+    ),
   },
   logLevel: process.env.LOG_LEVEL ?? 'info',
   fallback: {

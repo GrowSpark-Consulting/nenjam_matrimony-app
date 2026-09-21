@@ -108,3 +108,81 @@ describe('configuration', () => {
     expect(typeof config.database.port).toBe('number');
   });
 });
+
+describe('configuration: faceVerification', () => {
+  const originalEnv = process.env;
+  const FACE_VARS = [
+    'FACE_VERIFICATION_ENABLED',
+    'FACE_VERIFICATION_AWS_REGION',
+    'FACE_VERIFICATION_AWS_ACCESS_KEY_ID',
+    'FACE_VERIFICATION_AWS_SECRET_ACCESS_KEY',
+    'FACE_LIVENESS_CLIENT_ROLE_ARN',
+    'FACE_LIVENESS_CREDENTIALS_TTL_SECONDS',
+    'FACE_LIVENESS_MIN_CONFIDENCE',
+    'FACE_MATCH_MIN_SIMILARITY',
+    'FACE_VERIFICATION_MAX_ATTEMPTS_PER_DAY',
+    'FACE_VERIFICATION_GLOBAL_DAILY_CAP',
+  ];
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+    for (const key of FACE_VARS) delete process.env[key];
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
+  });
+
+  it('is off with the agreed defaults and no AWS identity when nothing is set', () => {
+    expect(configuration().faceVerification).toEqual({
+      enabled: false,
+      region: 'ap-south-1',
+      accessKeyId: undefined,
+      secretAccessKey: undefined,
+      clientRoleArn: undefined,
+      credentialsTtlSeconds: 900,
+      minLivenessConfidence: 90,
+      minMatchSimilarity: 90,
+      maxAttemptsPerDay: 3,
+      globalDailyCap: 500,
+    });
+  });
+
+  it('maps its own env vars and never reads the S3 credentials', () => {
+    process.env.AWS_ACCESS_KEY_ID = 'AKIA-S3-KEY';
+    process.env.AWS_SECRET_ACCESS_KEY = 's3-secret';
+    process.env.FACE_VERIFICATION_ENABLED = 'true';
+    process.env.FACE_VERIFICATION_AWS_REGION = 'us-east-1';
+    process.env.FACE_VERIFICATION_AWS_ACCESS_KEY_ID = 'AKIA-FACE-KEY';
+    process.env.FACE_VERIFICATION_AWS_SECRET_ACCESS_KEY = 'face-secret';
+    process.env.FACE_LIVENESS_CLIENT_ROLE_ARN =
+      'arn:aws:iam::123456789012:role/nenjam-face-liveness-client';
+    process.env.FACE_LIVENESS_CREDENTIALS_TTL_SECONDS = '1200';
+    process.env.FACE_LIVENESS_MIN_CONFIDENCE = '95.5';
+    process.env.FACE_MATCH_MIN_SIMILARITY = '92';
+    process.env.FACE_VERIFICATION_MAX_ATTEMPTS_PER_DAY = '5';
+    process.env.FACE_VERIFICATION_GLOBAL_DAILY_CAP = '1000';
+
+    expect(configuration().faceVerification).toEqual({
+      enabled: true,
+      region: 'us-east-1',
+      accessKeyId: 'AKIA-FACE-KEY',
+      secretAccessKey: 'face-secret',
+      clientRoleArn:
+        'arn:aws:iam::123456789012:role/nenjam-face-liveness-client',
+      credentialsTtlSeconds: 1200,
+      minLivenessConfidence: 95.5,
+      minMatchSimilarity: 92,
+      maxAttemptsPerDay: 5,
+      globalDailyCap: 1000,
+    });
+  });
+
+  it('only enables on an explicit "true" and treats blank numbers as unset', () => {
+    process.env.FACE_VERIFICATION_ENABLED = 'yes';
+    process.env.FACE_LIVENESS_MIN_CONFIDENCE = '';
+    const face = configuration().faceVerification;
+    expect(face.enabled).toBe(false);
+    expect(face.minLivenessConfidence).toBe(90);
+  });
+});

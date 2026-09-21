@@ -54,7 +54,9 @@
     "verify:email": "ts-node -r tsconfig-paths/register scripts/verify-email.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-rekognition": "3.1091.0",
     "@aws-sdk/client-s3": "^3.1091.0",
+    "@aws-sdk/client-sts": "3.1091.0",
     "@aws-sdk/s3-request-presigner": "^3.1091.0",
     "@elastic/elasticsearch": "^7.17.14",
     "@nestjs/bullmq": "^11.0.4",

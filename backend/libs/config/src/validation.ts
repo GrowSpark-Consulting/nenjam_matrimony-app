@@ -101,6 +101,50 @@ export const validationSchema = Joi.object({
   AWS_SECRET_ACCESS_KEY: Joi.string().allow('').optional(),
   AWS_S3_BUCKET_NAME: Joi.string().allow('').optional(),
 
+  // Optional: face verification (AWS Rekognition Face Liveness +
+  // CompareFaces). Off by default, and the app boots with every value absent —
+  // the endpoints answer 503 until enabled AND fully configured. The key pair
+  // belongs to the dedicated face-verification backend IAM identity, never the
+  // S3 credentials above. Thresholds/caps are range-checked so a typo fails at
+  // boot instead of silently verifying everyone (or no one).
+  FACE_VERIFICATION_ENABLED: Joi.boolean().default(false),
+  FACE_VERIFICATION_AWS_REGION: Joi.string()
+    .pattern(/^[a-z]{2}(-[a-z]+)+-\d$/)
+    .allow('')
+    .optional()
+    .messages({
+      'string.pattern.base':
+        'FACE_VERIFICATION_AWS_REGION must be an AWS region code, e.g. ap-south-1.',
+    }),
+  FACE_VERIFICATION_AWS_ACCESS_KEY_ID: Joi.string().allow('').optional(),
+  FACE_VERIFICATION_AWS_SECRET_ACCESS_KEY: Joi.string().allow('').optional(),
+  FACE_LIVENESS_CLIENT_ROLE_ARN: Joi.string()
+    .pattern(/^arn:aws[a-z-]*:iam::\d{12}:role\/[\w+=,.@/-]+$/)
+    .allow('')
+    .optional()
+    .messages({
+      'string.pattern.base':
+        'FACE_LIVENESS_CLIENT_ROLE_ARN must be an IAM role ARN, e.g. arn:aws:iam::123456789012:role/nenjam-face-liveness-client.',
+    }),
+  // STS AssumeRole accepts 900-43200s; the device only needs minutes (a
+  // liveness session itself expires after 3), so cap well below that.
+  FACE_LIVENESS_CREDENTIALS_TTL_SECONDS: Joi.number()
+    .integer()
+    .min(900)
+    .max(3600)
+    .default(900),
+  FACE_LIVENESS_MIN_CONFIDENCE: Joi.number().min(0).max(100).default(90),
+  FACE_MATCH_MIN_SIMILARITY: Joi.number().min(0).max(100).default(90),
+  FACE_VERIFICATION_MAX_ATTEMPTS_PER_DAY: Joi.number()
+    .integer()
+    .min(1)
+    .max(20)
+    .default(3),
+  FACE_VERIFICATION_GLOBAL_DAILY_CAP: Joi.number()
+    .integer()
+    .min(1)
+    .default(500),
+
   LOG_LEVEL: Joi.string()
     .valid('error', 'warn', 'info', 'debug', 'verbose')
     .default('info'),

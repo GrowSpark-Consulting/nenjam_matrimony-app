@@ -22,6 +22,7 @@ import { BlocksModule } from './modules/blocks/blocks.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { FeedCacheModule } from './modules/matches/cache/feed-cache.module';
 import { ReferenceDataModule } from './modules/reference-data/reference-data.module';
+import { VerificationModule } from './modules/verification/verification.module';
 import { throttlerConfig } from './throttling';
 
 @Module({
@@ -62,6 +63,9 @@ import { throttlerConfig } from './throttling';
     SupportModule,
     BlocksModule,
     ReportsModule,
+    // Face verification. Off by default (FACE_VERIFICATION_ENABLED) and inert
+    // without its AWS configuration — the routes answer 503, the app boots.
+    VerificationModule,
   ],
   controllers: [AppController],
   providers: [

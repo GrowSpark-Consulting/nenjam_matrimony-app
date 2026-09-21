@@ -115,3 +115,74 @@ describe('validationSchema', () => {
     expect(value.LOG_LEVEL).toBe('info');
   });
 });
+
+describe('validationSchema: face verification', () => {
+  const base = {
+    ELASTICSEARCH_NODE: 'http://localhost:9200',
+    SMTP_HOST: 'localhost',
+    SMTP_PORT: '1025',
+    JWT_SECRET: 'a-very-long-secret-value',
+  };
+
+  function validate(extra: Record<string, string>) {
+    return validationSchema.validate(
+      { ...base, ...extra },
+      { abortEarly: false },
+    ) as {
+      error?: Joi.ValidationError;
+      value: Record<string, unknown>;
+    };
+  }
+
+  it('boots with every face-verification value absent, off by default', () => {
+    const { error, value } = validate({});
+    expect(error).toBeUndefined();
+    expect(value.FACE_VERIFICATION_ENABLED).toBe(false);
+    expect(value.FACE_LIVENESS_CREDENTIALS_TTL_SECONDS).toBe(900);
+    expect(value.FACE_LIVENESS_MIN_CONFIDENCE).toBe(90);
+    expect(value.FACE_MATCH_MIN_SIMILARITY).toBe(90);
+    expect(value.FACE_VERIFICATION_MAX_ATTEMPTS_PER_DAY).toBe(3);
+    expect(value.FACE_VERIFICATION_GLOBAL_DAILY_CAP).toBe(500);
+  });
+
+  it('accepts blank credentials/role (the .env.example shape)', () => {
+    const { error } = validate({
+      FACE_VERIFICATION_AWS_REGION: 'ap-south-1',
+      FACE_VERIFICATION_AWS_ACCESS_KEY_ID: '',
+      FACE_VERIFICATION_AWS_SECRET_ACCESS_KEY: '',
+      FACE_LIVENESS_CLIENT_ROLE_ARN: '',
+    });
+    expect(error).toBeUndefined();
+  });
+
+  it('accepts a real-shaped role ARN and rejects anything else', () => {
+    expect(
+      validate({
+        FACE_LIVENESS_CLIENT_ROLE_ARN:
+          'arn:aws:iam::123456789012:role/nenjam-face-liveness-client',
+      }).error,
+    ).toBeUndefined();
+    expect(
+      validate({ FACE_LIVENESS_CLIENT_ROLE_ARN: 'nenjam-face-liveness-client' })
+        .error,
+    ).toBeDefined();
+    expect(
+      validate({
+        FACE_LIVENESS_CLIENT_ROLE_ARN: 'arn:aws:iam::123456789012:user/someone',
+      }).error,
+    ).toBeDefined();
+  });
+
+  it.each([
+    ['FACE_LIVENESS_CREDENTIALS_TTL_SECONDS', '899'],
+    ['FACE_LIVENESS_CREDENTIALS_TTL_SECONDS', '3601'],
+    ['FACE_LIVENESS_MIN_CONFIDENCE', '101'],
+    ['FACE_MATCH_MIN_SIMILARITY', '-1'],
+    ['FACE_VERIFICATION_MAX_ATTEMPTS_PER_DAY', '0'],
+    ['FACE_VERIFICATION_GLOBAL_DAILY_CAP', '0'],
+    ['FACE_VERIFICATION_AWS_REGION', 'mumbai'],
+    ['FACE_VERIFICATION_ENABLED', 'maybe'],
+  ])('rejects %s=%s', (key, raw) => {
+    expect(validate({ [key]: raw }).error).toBeDefined();
+  });
+});

@@ -3,6 +3,11 @@ import { S3Service } from '@app/storage';
 import { DiscoverProfileDto } from '../dto/discover-profile.response.dto';
 import type { CompatibilityBreakdown } from '../scoring/compatibility.service';
 import type { FeedProfileRow } from '../repositories/feed.repository';
+import {
+  isFaceVerified,
+  primaryPhotoOf,
+  type StoredFaceVerification,
+} from '../../verification/domain/face-verification-state';
 
 /**
  * Maps a finalized profile row into the display-safe DiscoverProfileDto shared
@@ -31,8 +36,10 @@ export class ProfileFeedMapper {
   ): Promise<DiscoverProfileDto> {
     const user = (row.user ?? {}) as {
       phone?: string | null;
-      photos?: Array<{ s3Key: string }>;
+      photos?: Array<{ id?: string; s3Key: string; isPrimary?: boolean }>;
+      faceVerification?: StoredFaceVerification | null;
     };
+    const photos = user.photos ?? [];
 
     return {
       id: String(row.userId),
@@ -44,9 +51,11 @@ export class ProfileFeedMapper {
         .join(', '),
       profession: (row.profession as string) ?? '',
       education: (row.highestEducation as string) ?? '',
-      photoUrls: await this.presignPhotos(user.photos ?? []),
-      // Phase 3+: derive from KycVerification/FaceVerification + UserSubscription.
-      isVerified: false,
+      photoUrls: await this.presignPhotos(photos),
+      // Face verification, derived at read time: true only while the photo
+      // the live selfie was matched against is still this member's primary
+      // photo. Rows selected without faceVerification read as false.
+      isVerified: isFaceVerified(user.faceVerification, primaryPhotoOf(photos)),
       isPremium: false,
       isPsychologyCompleted: false,
       isOnline: false,

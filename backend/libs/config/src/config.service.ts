@@ -69,6 +69,10 @@ export class AppConfigService implements OnModuleInit {
     return this.configService.get('storage', { infer: true });
   }
 
+  get faceVerification(): AppConfig['faceVerification'] {
+    return this.configService.get('faceVerification', { infer: true });
+  }
+
   get logLevel(): string {
     return this.configService.get('logLevel', { infer: true });
   }

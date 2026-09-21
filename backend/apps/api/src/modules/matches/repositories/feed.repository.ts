@@ -75,7 +75,21 @@ export const FEED_PROFILE_SELECT = {
       },
       photos: {
         orderBy: [{ isPrimary: 'desc' }, { order: 'asc' }],
-        select: { s3Key: true },
+        // id + isPrimary identify the current primary photo, which the face
+        // verification badge is derived against (see below).
+        select: { id: true, s3Key: true, isPrimary: true },
+      },
+      // Stored face-verification state. The card's `isVerified` is derived
+      // from this AND the primary photo above (verification/domain/
+      // face-verification-state.ts), so a replaced/removed/changed primary
+      // photo drops the badge on every surface that uses this select.
+      faceVerification: {
+        select: {
+          status: true,
+          matchedPhotoId: true,
+          matchedPhotoS3Key: true,
+          revokedAt: true,
+        },
       },
     },
   },

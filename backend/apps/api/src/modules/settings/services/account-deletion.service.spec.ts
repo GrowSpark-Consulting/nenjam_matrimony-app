@@ -73,6 +73,21 @@ describe('AccountDeletionService', () => {
     expect(del).toHaveBeenCalledWith({ where: { id: 'user-2' } });
   });
 
+  // Face verification (liveness) stores no selfie, so a verification row now
+  // usually has selfieS3Key = null — that must never reach S3 as a key.
+  it('ignores a face verification row that holds no selfie key', async () => {
+    const { service, deleteObjects } = build({
+      firebaseUid: 'fb-uid-3',
+      photos: [{ s3Key: 'profile-photos/user-3/a.jpg' }],
+      faceVerification: { selfieS3Key: null },
+      kycVerifications: [],
+    });
+
+    await service.deleteAccount('user-3');
+
+    expect(deleteObjects).toHaveBeenCalledWith(['profile-photos/user-3/a.jpg']);
+  });
+
   it('throws NotFound (and deletes nothing) when the account is already gone', async () => {
     const { service, del, deleteObjects, deleteUser } = build(null);
 

@@ -32,6 +32,7 @@ model User {
   receivedInterests ExpressInterest[]    @relation("ReceivedInterests")
   sentInterests     ExpressInterest[]    @relation("SentInterests")
   faceVerification  FaceVerification?
+  faceVerificationAttempts FaceVerificationAttempt[]
   horoscopeRequests HoroscopeMatch[]     @relation("HoroscopeRequester")
   horoscopeTargets  HoroscopeMatch[]     @relation("HoroscopeTarget")
   kycVerifications  KycVerification[]
@@ -275,6 +276,12 @@ model ProfilePhoto {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Face verifications whose match was made against this photo. Deleting the
+  /// photo nulls the link (SetNull), which by itself invalidates the badge —
+  /// see FaceVerification.
+  faceVerificationsMatched FaceVerification[]        @relation("FaceVerificationMatchedPhoto")
+  /// Attempts that compared a liveness selfie against this photo.
+  faceVerificationAttempts FaceVerificationAttempt[] @relation("FaceVerificationAttemptComparedPhoto")
 
   @@index([userId])
   @@index([userId, isPrimary])
@@ -760,19 +767,99 @@ model KycVerification {
   @@map("kyc_verifications")
 }
 
-/// Facial biometric verification against the KYC document selfie.
+/// Current face-verification state — exactly one row per user. The history of
+/// how it got here lives in FaceVerificationAttempt.
+///
+/// A stored `status = VERIFIED` is necessary but NOT sufficient for the
+/// "Face Verified" badge. The badge is derived at read time
+/// (verification/domain/face-verification-state.ts): the photo the live selfie
+/// was matched against (`matchedPhotoId` + `matchedPhotoS3Key`) must still
+/// exist, still hold the same object, and still be the member's primary photo.
+/// Replacing that photo changes its s3Key, deleting it nulls matchedPhotoId,
+/// and promoting another photo moves isPrimary — each silently ends the badge
+/// without PhotoService having to know face verification exists.
 model FaceVerification {
-  id              String    @id @default(uuid())
-  userId          String    @unique @map("user_id")
-  selfieS3Key     String    @map("selfie_s3_key")
-  isVerified      Boolean   @default(false) @map("is_verified")
-  confidenceScore Decimal?  @map("confidence_score") @db.Decimal(5, 2)
-  verifiedAt      DateTime? @map("verified_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String                    @id @default(uuid())
+  userId            String                    @unique @map("user_id")
+  /// Legacy column from the original KYC-selfie design. Nullable: the liveness
+  /// flow deliberately stores no selfie/reference image (no biometric storage
+  /// in phase 1). Still collected by AccountDeletionService if ever set.
+  selfieS3Key       String?                   @map("selfie_s3_key")
+  status            FaceVerificationStatus    @default(UNVERIFIED)
+  provider          FaceVerificationProvider?
+  /// Mirrors `status == VERIFIED` for older readers; never the source of truth.
+  isVerified        Boolean                   @default(false) @map("is_verified")
+  /// Liveness confidence (0-100) of the attempt that produced the verification.
+  confidenceScore   Decimal?                  @map("confidence_score") @db.Decimal(5, 2)
+  /// CompareFaces similarity (0-100) of that same attempt.
+  matchSimilarity   Decimal?                  @map("match_similarity") @db.Decimal(5, 2)
+  matchedPhotoId    String?                   @map("matched_photo_id")
+  matchedPhotoS3Key String?                   @map("matched_photo_s3_key")
+  latestAttemptId   String?                   @unique @map("latest_attempt_id")
+  verifiedAt        DateTime?                 @map("verified_at")
+  /// Explicit (e.g. moderation) revocation. Photo changes do not set this —
+  /// they invalidate by derivation, see the model comment.
+  revokedAt         DateTime?                 @map("revoked_at")
+  revocationReason  String?                   @map("revocation_reason")
+  createdAt         DateTime                  @default(now()) @map("created_at")
+  updatedAt         DateTime                  @updatedAt @map("updated_at")
+  user              User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  matchedPhoto      ProfilePhoto?             @relation("FaceVerificationMatchedPhoto", fields: [matchedPhotoId], references: [id], onDelete: SetNull)
+  latestAttempt     FaceVerificationAttempt?  @relation("FaceVerificationLatestAttempt", fields: [latestAttemptId], references: [id], onDelete: SetNull)
 
+  @@index([matchedPhotoId])
   @@map("face_verifications")
+}
+
+/// One Face Liveness + CompareFaces attempt. Append-only history used for the
+/// per-user and global attempt caps, idempotent completion, and audit.
+///
+/// Stores scores and outcomes only — never the liveness reference image or
+/// any other biometric artefact. `comparedPhotoId`/`comparedPhotoS3Key` pin
+/// the exact primary photo the attempt was started against, so completion
+/// compares against that photo and nothing else.
+model FaceVerificationAttempt {
+  id                  String                   @id @default(uuid())
+  userId              String                   @map("user_id")
+  provider            FaceVerificationProvider @default(AWS_REKOGNITION)
+  /// AWS Face Liveness session id. Null until the session is created (and
+  /// forever, if creation failed — such attempts do not count toward caps).
+  livenessSessionId   String?                  @unique @map("liveness_session_id")
+  /// Raw AWS session status (CREATED/IN_PROGRESS/SUCCEEDED/FAILED/EXPIRED).
+  livenessStatus      String?                  @map("liveness_status")
+  livenessConfidence  Decimal?                 @map("liveness_confidence") @db.Decimal(5, 2)
+  comparedPhotoId     String?                  @map("compared_photo_id")
+  comparedPhotoS3Key  String?                  @map("compared_photo_s3_key")
+  matchSimilarity     Decimal?                 @map("match_similarity") @db.Decimal(5, 2)
+  /// Faces CompareFaces detected in the profile photo. Must be exactly 1.
+  targetFaceCount     Int?                     @map("target_face_count")
+  /// Thresholds in force when the attempt was decided — kept so a later
+  /// config change never makes an old decision unexplainable.
+  livenessThreshold   Decimal                  @map("liveness_threshold") @db.Decimal(5, 2)
+  similarityThreshold Decimal                  @map("similarity_threshold") @db.Decimal(5, 2)
+  outcome             FaceVerificationOutcome  @default(PENDING)
+  /// Internal diagnostic (e.g. an AWS error name). Never returned to clients.
+  failureReason       String?                  @map("failure_reason")
+  /// What the device reported. Recorded for audit, never used to decide.
+  clientOutcome       String?                  @map("client_outcome")
+  clientErrorCode     String?                  @map("client_error_code")
+  consentAt           DateTime                 @map("consent_at")
+  /// AWS discards a liveness session 3 minutes after creation; after this
+  /// instant the attempt can only end as EXPIRED.
+  expiresAt           DateTime                 @map("expires_at")
+  processingStartedAt DateTime?                @map("processing_started_at")
+  completedAt         DateTime?                @map("completed_at")
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+  user                User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comparedPhoto       ProfilePhoto?            @relation("FaceVerificationAttemptComparedPhoto", fields: [comparedPhotoId], references: [id], onDelete: SetNull)
+  latestFor           FaceVerification?        @relation("FaceVerificationLatestAttempt")
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@index([outcome, expiresAt])
+  @@index([comparedPhotoId])
+  @@map("face_verification_attempts")
 }
 
 /// Audit trail for trust score changes (reasons: KYC, face verify, report, etc.).
@@ -1043,6 +1130,44 @@ enum VerificationStatus {
   REJECTED
 
   @@map("verification_status")
+}
+
+/// Stored face-verification state. The badge itself is derived — see
+/// FaceVerification.
+enum FaceVerificationStatus {
+  UNVERIFIED
+  VERIFIED
+  /// Explicitly withdrawn (e.g. by moderation).
+  REVOKED
+
+  @@map("face_verification_status")
+}
+
+enum FaceVerificationProvider {
+  AWS_REKOGNITION
+
+  @@map("face_verification_provider")
+}
+
+enum FaceVerificationOutcome {
+  /// Created; waiting for the device to finish the liveness check.
+  PENDING
+  /// Claimed by one /complete request; guards against double processing.
+  PROCESSING
+  VERIFIED
+  FAILED_LIVENESS
+  FAILED_MATCH
+  NO_FACE_IN_PHOTO
+  MULTIPLE_FACES_IN_PHOTO
+  UNSUPPORTED_PHOTO
+  NO_REFERENCE_IMAGE
+  /// The primary photo changed between session start and completion.
+  PHOTO_CHANGED
+  EXPIRED
+  CANCELLED
+  ERROR
+
+  @@map("face_verification_outcome")
 }
 
 enum NotificationType {
