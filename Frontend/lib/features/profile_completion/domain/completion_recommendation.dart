@@ -68,6 +68,13 @@ abstract final class CompletionCardKeys {
   static const String verification = 'verification';
   static const String psychology = 'psychology';
 
+  /// Not in [known] on purpose. Home's compact "Complete Your Profile" card
+  /// looks this key up directly off the raw `recommendations` response
+  /// rather than through [known]/[visibleRecommendations], so adding it here
+  /// would also start surfacing it on the full Edit Profile completion
+  /// section, which nobody asked for.
+  static const String partnerPreference = 'partner_preference';
+
   /// The two cards that stand in for an unfinished registration. They are
   /// shown *instead of* the section cards, never alongside them.
   static const Set<String> registrationGroup = {registration, photo};

@@ -109,6 +109,7 @@ type Overrides = {
   approvedDocTypes?: string[];
   quizResponseCount?: number;
   dismissedCardKeys?: string[];
+  hasPartnerPreferenceRow?: boolean;
 };
 
 function buildService(overrides: Overrides = {}) {
@@ -139,6 +140,13 @@ function buildService(overrides: Overrides = {}) {
     },
     userQuizResponse: {
       count: jest.fn().mockResolvedValue(overrides.quizResponseCount ?? 0),
+    },
+    partnerPreference: {
+      findUnique: jest
+        .fn()
+        .mockResolvedValue(
+          overrides.hasPartnerPreferenceRow ? { userId: 'user-1' } : null,
+        ),
     },
   } as unknown as PrismaService;
 
@@ -541,7 +549,7 @@ describe('ProfileCompletionService', () => {
         approvedDocTypes: [],
       });
       await calculate();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const [call] = kycFindMany.mock.calls as Array<
         [{ where: { status: string } }]
       >;
@@ -586,6 +594,47 @@ describe('ProfileCompletionService', () => {
       });
       expect((await withPhoto.calculate()).percentage).toBe(60);
       expect((await withoutPhoto.calculate()).percentage).toBe(57);
+    });
+  });
+
+  describe('the partner_preference card', () => {
+    // Same shape as `psychology`: a signal-only card with no module and no
+    // weight, so it must never move the percentage in either direction.
+    it('is incomplete with no saved PartnerPreference row, and scores nothing', async () => {
+      const result = await buildService({
+        draftData: registrationAnswered,
+        photoCount: 1,
+        hasPartnerPreferenceRow: false,
+      }).calculate();
+
+      const card = result.recommendations.find(
+        (r) => r.key === 'partner_preference',
+      );
+      expect(card).toEqual({
+        key: 'partner_preference',
+        isComplete: false,
+        isDismissed: false,
+        affectsScore: false,
+        wizardStep: 10,
+      });
+      expect(result.breakdown.map((m) => m.id)).not.toContain(
+        'partner_preference',
+      );
+      expect(result.percentage).toBe(60);
+    });
+
+    it('is complete once a PartnerPreference row exists, and still scores nothing', async () => {
+      const result = await buildService({
+        draftData: registrationAnswered,
+        photoCount: 1,
+        hasPartnerPreferenceRow: true,
+      }).calculate();
+
+      const card = result.recommendations.find(
+        (r) => r.key === 'partner_preference',
+      );
+      expect(card?.isComplete).toBe(true);
+      expect(result.percentage).toBe(60);
     });
   });
 });

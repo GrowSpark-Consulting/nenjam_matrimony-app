@@ -620,6 +620,18 @@ abstract class AppLocalizations {
   /// **'Complete Your Profile'**
   String get homeCompleteProfileTitle;
 
+  /// No description provided for @homeCompleteProfileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get better matches by adding a few more details'**
+  String get homeCompleteProfileSubtitle;
+
+  /// No description provided for @homeCompleteProfileDismissTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide this for now'**
+  String get homeCompleteProfileDismissTooltip;
+
   /// No description provided for @homeProfileNextStep.
   ///
   /// In en, this message translates to:
@@ -6044,6 +6056,24 @@ abstract class AppLocalizations {
   /// **'Profile Intelligence'**
   String get drawerProfileIntelligence;
 
+  /// No description provided for @drawerHoroscope.
+  ///
+  /// In en, this message translates to:
+  /// **'Horoscope'**
+  String get drawerHoroscope;
+
+  /// No description provided for @drawerFamilyDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Family Details'**
+  String get drawerFamilyDetails;
+
+  /// No description provided for @drawerPsychology.
+  ///
+  /// In en, this message translates to:
+  /// **'Psychology'**
+  String get drawerPsychology;
+
   /// No description provided for @drawerVerificationCenter.
   ///
   /// In en, this message translates to:
@@ -8989,6 +9019,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Discover your personality profile.'**
   String get completionCardBodyPsychology;
+
+  /// No description provided for @completionCardShortTitlePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Photos'**
+  String get completionCardShortTitlePhoto;
+
+  /// No description provided for @completionCardShortTitlePsychology.
+  ///
+  /// In en, this message translates to:
+  /// **'Psychology'**
+  String get completionCardShortTitlePsychology;
+
+  /// No description provided for @completionCardTitlePartnerPreference.
+  ///
+  /// In en, this message translates to:
+  /// **'Partner Preferences'**
+  String get completionCardTitlePartnerPreference;
+
+  /// No description provided for @completionCardBodyPartnerPreference.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us who you\'re looking for.'**
+  String get completionCardBodyPartnerPreference;
 
   /// No description provided for @completionCardStatusOptional.
   ///

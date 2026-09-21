@@ -285,6 +285,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeCompleteProfileTitle => 'Complete Your Profile';
 
   @override
+  String get homeCompleteProfileSubtitle =>
+      'Get better matches by adding a few more details';
+
+  @override
+  String get homeCompleteProfileDismissTooltip => 'Hide this for now';
+
+  @override
   String homeProfileNextStep(String step) {
     return 'Next: $step';
   }
@@ -3172,6 +3179,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drawerProfileIntelligence => 'Profile Intelligence';
 
   @override
+  String get drawerHoroscope => 'Horoscope';
+
+  @override
+  String get drawerFamilyDetails => 'Family Details';
+
+  @override
+  String get drawerPsychology => 'Psychology';
+
+  @override
   String get drawerVerificationCenter => 'Verification Center';
 
   @override
@@ -4867,6 +4883,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get completionCardBodyPsychology =>
       'Discover your personality profile.';
+
+  @override
+  String get completionCardShortTitlePhoto => 'Add Photos';
+
+  @override
+  String get completionCardShortTitlePsychology => 'Psychology';
+
+  @override
+  String get completionCardTitlePartnerPreference => 'Partner Preferences';
+
+  @override
+  String get completionCardBodyPartnerPreference =>
+      'Tell us who you\'re looking for.';
 
   @override
   String get completionCardStatusOptional => 'Optional';

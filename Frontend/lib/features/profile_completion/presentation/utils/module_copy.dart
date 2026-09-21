@@ -123,6 +123,7 @@ IconData completionCardIcon(String cardKey) => switch (cardKey) {
   CompletionCardKeys.horoscope => Icons.stars_rounded,
   CompletionCardKeys.verification => Icons.verified_rounded,
   CompletionCardKeys.psychology => Icons.psychology_alt_rounded,
+  CompletionCardKeys.partnerPreference => Icons.handshake_rounded,
   _ => Icons.circle_outlined,
 };
 
@@ -134,7 +135,24 @@ String completionCardTitle(AppLocalizations l10n, String cardKey) =>
       CompletionCardKeys.horoscope => l10n.completionCardTitleHoroscope,
       CompletionCardKeys.verification => l10n.completionCardTitleVerification,
       CompletionCardKeys.psychology => l10n.completionCardTitlePsychology,
+      CompletionCardKeys.partnerPreference =>
+        l10n.completionCardTitlePartnerPreference,
       _ => '',
+    };
+
+/// Tile label for Home's compact `CompleteProfileCard`.
+///
+/// Same sections, fewer words: that card's tiles are small and horizontally
+/// scrollable, so a label that fits Edit Profile's wider cards ("Add
+/// photo(s)", "Psychology Test") turns into cramped multi-line text there.
+/// Everything else reuses [completionCardTitle] rather than growing a second
+/// copy of the same string.
+String completeProfileTileLabel(AppLocalizations l10n, String cardKey) =>
+    switch (cardKey) {
+      CompletionCardKeys.photo => l10n.completionCardShortTitlePhoto,
+      CompletionCardKeys.psychology =>
+        l10n.completionCardShortTitlePsychology,
+      _ => completionCardTitle(l10n, cardKey),
     };
 
 String completionCardBody(AppLocalizations l10n, String cardKey) =>
@@ -145,6 +163,8 @@ String completionCardBody(AppLocalizations l10n, String cardKey) =>
       CompletionCardKeys.horoscope => l10n.completionCardBodyHoroscope,
       CompletionCardKeys.verification => l10n.completionCardBodyVerification,
       CompletionCardKeys.psychology => l10n.completionCardBodyPsychology,
+      CompletionCardKeys.partnerPreference =>
+        l10n.completionCardBodyPartnerPreference,
       _ => '',
     };
 
@@ -169,6 +189,7 @@ Color completionCardTint(String cardKey) => switch (cardKey) {
   CompletionCardKeys.horoscope => AppColors.scoreAstrology,
   CompletionCardKeys.verification => AppColors.verifiedBlue,
   CompletionCardKeys.psychology => AppColors.scorePsychology,
+  CompletionCardKeys.partnerPreference => AppColors.secondary,
   _ => AppColors.primary,
 };
 
@@ -179,5 +200,6 @@ Color completionCardTintSurface(String cardKey) => switch (cardKey) {
   CompletionCardKeys.horoscope => AppColors.primarySurface,
   CompletionCardKeys.verification => AppColors.infoLight,
   CompletionCardKeys.psychology => AppColors.secondarySurface,
+  CompletionCardKeys.partnerPreference => AppColors.secondarySurface,
   _ => AppColors.primarySurface,
 };

@@ -287,6 +287,13 @@ class AppLocalizationsTa extends AppLocalizations {
   String get homeCompleteProfileTitle => 'உங்கள் சுயவிவரத்தை முழுமையாக்குங்கள்';
 
   @override
+  String get homeCompleteProfileSubtitle =>
+      'மேலும் சில விவரங்களைச் சேர்த்து சிறந்த பொருத்தங்களைப் பெறுங்கள்';
+
+  @override
+  String get homeCompleteProfileDismissTooltip => 'இப்போதைக்கு மறை';
+
+  @override
   String homeProfileNextStep(String step) {
     return 'அடுத்து: $step';
   }
@@ -3224,6 +3231,15 @@ class AppLocalizationsTa extends AppLocalizations {
   String get drawerProfileIntelligence => 'சுயவிவர நுண்ணறிவு';
 
   @override
+  String get drawerHoroscope => 'ஜாதகம்';
+
+  @override
+  String get drawerFamilyDetails => 'குடும்ப விவரங்கள்';
+
+  @override
+  String get drawerPsychology => 'உளவியல்';
+
+  @override
   String get drawerVerificationCenter => 'சரிபார்ப்பு மையம்';
 
   @override
@@ -4948,6 +4964,19 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get completionCardBodyPsychology => 'உங்கள் ஆள்மையைக் கண்டறியுங்கள்.';
+
+  @override
+  String get completionCardShortTitlePhoto => 'புகைப்படம் சேர்';
+
+  @override
+  String get completionCardShortTitlePsychology => 'உளவியல்';
+
+  @override
+  String get completionCardTitlePartnerPreference => 'துணை விருப்பத்தேர்வுகள்';
+
+  @override
+  String get completionCardBodyPartnerPreference =>
+      'நீங்கள் தேடுவது யார் என்று எங்களிடம் கூறுங்கள்.';
 
   @override
   String get completionCardStatusOptional => 'விருப்பம்';

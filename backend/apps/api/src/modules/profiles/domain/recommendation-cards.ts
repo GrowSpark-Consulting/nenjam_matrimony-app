@@ -22,6 +22,7 @@ export const RECOMMENDATION_CARD_KEYS = [
   'horoscope',
   'verification',
   'psychology',
+  'partner_preference',
 ] as const;
 
 export type RecommendationCardKey = (typeof RECOMMENDATION_CARD_KEYS)[number];
@@ -94,6 +95,15 @@ export const RECOMMENDATION_CARDS: readonly RecommendationCardDefinition[] = [
   {
     key: 'psychology',
     wizardStep: 9,
+    affectsScore: false,
+    registrationGroup: false,
+  },
+  // Not a scored module (see ProfileCompletionService's doc comment on why
+  // `partnerPreference` was folded out of the weighted slices) — offered as
+  // an optional card only, same as `psychology`.
+  {
+    key: 'partner_preference',
+    wizardStep: 10,
     affectsScore: false,
     registrationGroup: false,
   },
