@@ -111,6 +111,13 @@ void main() {
           gothra: 'Bharadwaj',
           denomination: '',
           community: 'Brahmin',
+          // The master-data codes the onboarding Religion step now sends.
+          // Without them this fixture never exercised the bug: toJson drops
+          // empty fields, so the codes stayed out of the payload and the
+          // missing DTO declarations went unnoticed until every religion
+          // PATCH 400ed. Real seeded codes, from seed-data/religions.json.
+          religionCode: 'HINDU',
+          communityCode: 'HINDU-IYER',
         ).toJson(),
         'religion-details.dto.ts',
       ),
