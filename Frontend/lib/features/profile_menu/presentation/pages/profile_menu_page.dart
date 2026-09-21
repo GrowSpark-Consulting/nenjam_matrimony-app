@@ -220,6 +220,24 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                         onTap: () => openPartnerPreferences(context, ref),
                       ),
                       _DrawerItem(
+                        icon: Icons.stars_rounded,
+                        label: l10n.drawerHoroscope,
+                        onTap: () =>
+                            openEditProfile(context, ref, wizardStep: 8),
+                      ),
+                      _DrawerItem(
+                        icon: Icons.family_restroom_rounded,
+                        label: l10n.drawerFamilyDetails,
+                        onTap: () =>
+                            openEditProfile(context, ref, wizardStep: 7),
+                      ),
+                      _DrawerItem(
+                        icon: Icons.psychology_alt_rounded,
+                        label: l10n.drawerPsychology,
+                        onTap: () =>
+                            openEditProfile(context, ref, wizardStep: 9),
+                      ),
+                      _DrawerItem(
                         icon: Icons.auto_awesome_rounded,
                         label: l10n.drawerProfileIntelligence,
                         onTap: () =>

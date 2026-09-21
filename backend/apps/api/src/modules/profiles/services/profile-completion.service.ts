@@ -94,31 +94,46 @@ export class ProfileCompletionService {
     userId: string,
     prefetchedDraftData?: Record<string, unknown>,
   ): Promise<ProfileCompletionEntity> {
-    const [draftData, photoCount, user, kycRows, dismissedKeys, quizCount] =
-      await Promise.all([
-        prefetchedDraftData
-          ? Promise.resolve(prefetchedDraftData)
-          : this.profileRepository
-              .getOrCreateRegistrationStep(userId)
-              .then((step) => step.draftData as Record<string, unknown>),
-        this.photoRepository.countForUser(userId),
-        this.prisma.user.findUnique({
-          where: { id: userId },
-          select: { phone: true },
-        }),
-        this.prisma.kycVerification.findMany({
-          where: { userId, status: 'APPROVED' },
-          select: { docType: true },
-        }),
-        // Two extra reads on this hot path (every wizard "Continue" recomputes
-        // completion), both single-column and index-covered on user_id. They
-        // are here rather than on a second endpoint precisely so Home and Edit
-        // Profile cannot drift: one response carries the percentage AND the
-        // cards, so the two screens physically cannot be looking at different
-        // states of the same profile.
-        this.dismissalRepository.findKeysForUser(userId),
-        this.prisma.userQuizResponse.count({ where: { userId } }),
-      ]);
+    const [
+      draftData,
+      photoCount,
+      user,
+      kycRows,
+      dismissedKeys,
+      quizCount,
+      partnerPreferenceRow,
+    ] = await Promise.all([
+      prefetchedDraftData
+        ? Promise.resolve(prefetchedDraftData)
+        : this.profileRepository
+            .getOrCreateRegistrationStep(userId)
+            .then((step) => step.draftData as Record<string, unknown>),
+      this.photoRepository.countForUser(userId),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { phone: true },
+      }),
+      this.prisma.kycVerification.findMany({
+        where: { userId, status: 'APPROVED' },
+        select: { docType: true },
+      }),
+      // Two extra reads on this hot path (every wizard "Continue" recomputes
+      // completion), both single-column and index-covered on user_id. They
+      // are here rather than on a second endpoint precisely so Home and Edit
+      // Profile cannot drift: one response carries the percentage AND the
+      // cards, so the two screens physically cannot be looking at different
+      // states of the same profile.
+      this.dismissalRepository.findKeysForUser(userId),
+      this.prisma.userQuizResponse.count({ where: { userId } }),
+      // Existence only — GET /discover/preferences never creates this row
+      // (PreferencesService reads with `row?.field ?? DEFAULTS.field`), so a
+      // row present here means the member has actually submitted the PUT at
+      // least once, not merely viewed the schema defaults.
+      this.prisma.partnerPreference.findUnique({
+        where: { userId },
+        select: { userId: true },
+      }),
+    ]);
 
     const data = (draftData ?? {}) as Record<string, Section>;
     const section = (name: string): Section => data[name] ?? {};
@@ -241,6 +256,12 @@ export class ProfileCompletionService {
     // appears here so the optional card can show the right state.
     const psychologyComplete = quizCount > 0;
 
+    // Same shape as psychology: a signal for the optional card, no module,
+    // no weight, no term in `percentage`. A saved PartnerPreference row is
+    // real evidence the member submitted the PUT — see the fetch above for
+    // why a missing row can't be confused with "saw the defaults."
+    const partnerPreferenceComplete = partnerPreferenceRow !== null;
+
     // Registration splits into two cards: the answers, and the photo. A
     // member missing only a photo is asked for a photo, not told to "complete
     // registration" — and both stand in for the whole group, which is why the
@@ -260,6 +281,7 @@ export class ProfileCompletionService {
       horoscope: horoscopeComplete,
       verification: verificationEarned >= VERIFICATION_WEIGHT,
       psychology: psychologyComplete,
+      partner_preference: partnerPreferenceComplete,
     };
 
     const dismissed = new Set(dismissedKeys);

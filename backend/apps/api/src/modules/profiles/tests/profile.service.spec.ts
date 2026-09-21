@@ -1003,6 +1003,7 @@ describe('ProfileService', () => {
           user: { findUnique: jest.fn().mockResolvedValue({ phone: null }) },
           kycVerification: { findMany: jest.fn().mockResolvedValue([]) },
           userQuizResponse: { count: jest.fn().mockResolvedValue(0) },
+          partnerPreference: { findUnique: jest.fn().mockResolvedValue(null) },
         } as unknown as PrismaService;
 
         const completionService = new ProfileCompletionService(

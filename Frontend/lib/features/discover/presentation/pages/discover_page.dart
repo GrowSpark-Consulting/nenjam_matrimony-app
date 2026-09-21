@@ -28,6 +28,7 @@ import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../../partner_preferences/presentation/utils/open_partner_preferences.dart';
 import '../../../nearby/data/repositories/nearby_repository_impl.dart';
 import '../../../nearby/presentation/providers/nearby_providers.dart';
+import '../../../profile_completion/presentation/widgets/complete_profile_card.dart';
 import '../../domain/entities/discovery_profile_entity.dart';
 import '../../domain/entities/discover_feed_entity.dart';
 import '../../domain/entities/story_entity.dart';
@@ -154,6 +155,25 @@ class _DiscoverFeedView extends ConsumerWidget {
           // ── 1. Sticky App Bar ──────────────────────────────────────
           const _DiscoverAppBar(),
 
+          // ── 2. New Today stories ───────────────────────────────────
+          // Hoisted above the isEmpty/feed-content split rather than left
+          // inside the non-empty branch: `feed.stories.isNotEmpty` already
+          // implies `isEmpty == false` (stories is one of the six conditions
+          // isEmpty checks), so this renders in exactly the same case either
+          // way — but living up here keeps it a sibling of, not nested
+          // inside, the branch that used to also hide the card below.
+          if (feed.stories.isNotEmpty)
+            SliverToBoxAdapter(child: _NewTodaySection(stories: feed.stories)),
+
+          // ── 2b. Complete Your Profile reminder ──────────────────────
+          // Deliberately a sibling of the isEmpty/feed-content branch below,
+          // not nested inside either side of it: this card reflects the
+          // profile-completion response, never Discover's match results, so
+          // an empty or errored feed must not take it down with it. Renders
+          // nothing on its own when every section is done or the card was
+          // dismissed this session — see CompleteProfileCard.
+          const SliverToBoxAdapter(child: CompleteProfileCard()),
+
           // An empty preference-filtered feed no longer takes the whole page.
           // `SliverFillRemaining(hasScrollBody: false)` used to, which meant a
           // user with no preference matches also lost Near You — even though
@@ -177,12 +197,6 @@ class _DiscoverFeedView extends ConsumerWidget {
             // ── Fallback banner (backend widened the search) ───────────
             if (feed.fallbackUsed)
               const SliverToBoxAdapter(child: _FallbackBanner()),
-
-            // ── 2. New Today stories ───────────────────────────────────
-            if (feed.stories.isNotEmpty)
-              SliverToBoxAdapter(
-                child: _NewTodaySection(stories: feed.stories),
-              ),
 
             // ── 3. AI Recommended card ────────────────────────────────
             if (feed.aiRecommended.isNotEmpty)

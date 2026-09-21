@@ -87,6 +87,7 @@ type Overrides = {
   approvedDocTypes?: string[];
   quizResponseCount?: number;
   dismissedCardKeys?: string[];
+  hasPartnerPreferenceRow?: boolean;
 };
 
 function buildService(overrides: Overrides = {}) {
@@ -113,6 +114,13 @@ function buildService(overrides: Overrides = {}) {
     },
     userQuizResponse: {
       count: jest.fn().mockResolvedValue(overrides.quizResponseCount ?? 0),
+    },
+    partnerPreference: {
+      findUnique: jest
+        .fn()
+        .mockResolvedValue(
+          overrides.hasPartnerPreferenceRow ? { userId: 'user-1' } : null,
+        ),
     },
   } as unknown as PrismaService;
 
@@ -257,13 +265,15 @@ describe('completion recommendations', () => {
       expect(withQuiz.breakdown).toEqual(without.breakdown);
     });
 
-    it('is flagged as not affecting the score, unlike every other card', async () => {
+    it('is flagged as not affecting the score, like partner_preference and unlike every other card', async () => {
       const result = await buildService(REGISTERED).calculate();
 
       expect(card(result, 'psychology').affectsScore).toBe(false);
       expect(
         result.recommendations
-          .filter((r) => r.key !== 'psychology')
+          .filter(
+            (r) => r.key !== 'psychology' && r.key !== 'partner_preference',
+          )
           .every((r) => r.affectsScore),
       ).toBe(true);
     });
@@ -301,6 +311,43 @@ describe('completion recommendations', () => {
 
       expect(result.percentage).toBe(100);
       expect(card(result, 'psychology').isComplete).toBe(false);
+    });
+  });
+
+  describe('the partner_preference card never touches the percentage', () => {
+    it('saving preferences changes nothing about the score', async () => {
+      const without = await buildService(REGISTERED).calculate();
+      const withPreferences = await buildService({
+        ...REGISTERED,
+        hasPartnerPreferenceRow: true,
+      }).calculate();
+
+      expect(withPreferences.percentage).toBe(without.percentage);
+      expect(withPreferences.breakdown).toEqual(without.breakdown);
+    });
+
+    it('has no module and no weight in the breakdown', async () => {
+      const result = await buildService({
+        ...REGISTERED,
+        hasPartnerPreferenceRow: true,
+      }).calculate();
+
+      expect(
+        result.breakdown.find((m) => m.id === 'partner_preference'),
+      ).toBeUndefined();
+      expect(result.breakdown.reduce((sum, m) => sum + m.weight, 0)).toBe(100);
+    });
+
+    it('is incomplete until a PartnerPreference row is saved', async () => {
+      const before = await buildService(REGISTERED).calculate();
+      expect(card(before, 'partner_preference').isComplete).toBe(false);
+
+      const after = await buildService({
+        ...REGISTERED,
+        hasPartnerPreferenceRow: true,
+      }).calculate();
+      expect(card(after, 'partner_preference').isComplete).toBe(true);
+      expect(card(after, 'partner_preference').wizardStep).toBe(10);
     });
   });
 
