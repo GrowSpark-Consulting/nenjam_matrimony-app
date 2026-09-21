@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -196,9 +197,18 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
 
   /// Switches to CREATE mode with an empty draft — the normal first-time
   /// signup path. Also used to reset state after an EDIT session ends.
+  ///
+  /// Also discards whatever pre-session onboarding draft is on disk (see
+  /// [_snapshot]/[discardPersistedDraft]). Every call site means the same
+  /// thing for that snapshot: a member choosing to start a fresh signup from
+  /// the landing screen has no earlier progress worth resuming (the splash
+  /// already offered to resume one before they could reach that screen), and
+  /// an EDIT session finishing has nothing to do with onboarding's draft at
+  /// all. Neither caller wants a stale snapshot outliving this call.
   void startCreateMode() {
     enterCreateMode();
     state = const ProfileDraft();
+    unawaited(discardPersistedDraft());
   }
 
   /// Switches to CREATE mode and keeps whatever the draft already holds.
@@ -319,6 +329,22 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
         profileFlowMode: ProfileFlowMode.create.name,
         profileDraftJson: jsonEncode(state.toJson()),
       );
+    } catch (_) {}
+  }
+
+  /// Drops the on-disk pre-session snapshot [_snapshot] writes, once it is no
+  /// longer needed: onboarding finished (the backend now holds the answers,
+  /// so the local copy would only be a stale duplicate — see
+  /// [OnboardingVerifyMobilePage._completeRegistration]) or the member
+  /// deliberately starts a fresh signup (see [startCreateMode]).
+  ///
+  /// Deliberately narrower than [StorageService.clearNavState]: that also
+  /// drops [StorageService.lastRoute] and the EDIT-mode registration step,
+  /// which this draft has nothing to do with — see [SplashController] for
+  /// why those two must not be conflated.
+  Future<void> discardPersistedDraft() async {
+    try {
+      await storageService.clearOnboardingDraft();
     } catch (_) {}
   }
 

@@ -167,4 +167,30 @@ void main() {
       expectAccepted(label, entry.$1, entry.$2);
     });
   });
+
+  test('PartnerPreference — extended advanced fields reach the draft DTO', () {
+    // registration_provider.dart's applyOnboardingReligion is the one caller
+    // of RegistrationRepository.updatePartnerPreference during onboarding;
+    // the standalone Partner Preferences page seeds its local draft from
+    // this same model. Populated with an advanced field so the payload
+    // exercises the `extended` key, not just the 10 base fields.
+    final payload = const PartnerPreference(
+      castePref: 'Same Caste',
+      extended: PartnerPreferenceExtended(ethnicity: 'Tamil'),
+    ).toJson();
+
+    expect(payload.keys, contains('extended'));
+    expect(payload['extended'], containsPair('ethnicity', 'Tamil'));
+    expectAccepted(
+      'PartnerPreference',
+      payload,
+      'partner-preference.dto.ts',
+    );
+  });
+
+  test('PartnerPreference — an empty extended block is omitted, not sent '
+      'as {}', () {
+    final payload = const PartnerPreference(castePref: 'Same Caste').toJson();
+    expect(payload.keys, isNot(contains('extended')));
+  });
 }

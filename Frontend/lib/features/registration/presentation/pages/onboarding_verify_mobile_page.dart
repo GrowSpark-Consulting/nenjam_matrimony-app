@@ -304,9 +304,13 @@ class _OnboardingVerifyMobilePageState
 
     // 4. Only now is onboarding finished. The flag is written after the
     //    backend has confirmed it, never before, and the number stops being
-    //    "pending" at the same moment.
+    //    "pending" at the same moment. The pre-session draft snapshot
+    //    (RegistrationNotifier._snapshot) has done its job — the backend now
+    //    holds every answer — so it is discarded here rather than left on
+    //    disk to be misread as unfinished progress on a later cold start.
     await storageService.setOnboardingCompleted(true);
     await storageService.clearPendingPhone();
+    await notifier.discardPersistedDraft();
     if (!mounted) return;
     AuthTrace.navigate(RouteNames.discover, reason: 'onboarding finalized');
     context.go(RouteNames.discover);

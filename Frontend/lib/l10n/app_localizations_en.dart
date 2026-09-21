@@ -2393,6 +2393,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileBasicsCityHint => 'City you live in';
 
   @override
+  String get loadingStates => 'Loading states...';
+
+  @override
+  String get couldntLoadStates => 'Couldn\'t load states';
+
+  @override
+  String get noStatesAvailable => 'No states available';
+
+  @override
+  String findingCitiesIn(String stateName) {
+    return 'Finding cities in $stateName...';
+  }
+
+  @override
+  String get couldntLoadCities => 'Couldn\'t load cities';
+
+  @override
+  String get noCitiesFoundForState => 'No cities found for this state';
+
+  @override
   String get profileBasicsCasteNoBar =>
       'Not particular about my partner\'s community (caste no bar)';
 
@@ -2406,10 +2426,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingReligionHint => 'Select your religion';
 
   @override
+  String get loadingReligions => 'Loading religions...';
+
+  @override
+  String get couldntLoadReligions => 'Couldn\'t load religions';
+
+  @override
+  String get noReligionsAvailable => 'No religions available';
+
+  @override
   String get onboardingCommunityLabel => 'Community';
 
   @override
   String get onboardingCommunityHint => 'Select your community';
+
+  @override
+  String get loadingCommunities => 'Loading communities...';
+
+  @override
+  String get couldntLoadCommunities => 'Couldn\'t load communities';
+
+  @override
+  String get noCommunitiesFound => 'No communities found';
 
   @override
   String get onboardingCommunityHelp =>

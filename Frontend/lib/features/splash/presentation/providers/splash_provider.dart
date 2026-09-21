@@ -14,17 +14,24 @@ import '../../../authentication/presentation/utils/post_auth_destination.dart';
 import '../../../registration/domain/models/profile_draft.dart';
 import '../../../registration/domain/models/profile_flow_mode.dart';
 import '../../../registration/presentation/providers/registration_provider.dart';
+import '../../../registration/presentation/utils/onboarding_draft_gate.dart';
 
 /// Routes that a screen paused on may be safely resumed into on the next
-/// cold start — an Edit Profile session (data rehydrated from the saved
-/// draft) or simply the last bottom-nav tab. Anything else (splash, auth
-/// screens, OTP entry, ...) depends on ephemeral state that can't survive a
-/// process restart, so those are never restored to.
+/// cold start via [SplashController._resolveSavedRoute] — an Edit Profile
+/// session (data rehydrated from the saved draft) or simply the last
+/// bottom-nav tab. Anything else (splash, auth screens, OTP entry, ...)
+/// depends on ephemeral state that can't survive a process restart, so those
+/// are never restored through this particular set.
 ///
-/// Both entries below are Edit Profile's screens. Onboarding is deliberately
-/// absent: its two steps are resolved from the backend draft by
-/// [PostAuthDestination], which is authoritative and cannot be outvoted by
-/// a stale local snapshot.
+/// Both entries below are Edit Profile's screens, and deliberately: an EDIT
+/// snapshot is a signed-in member's own screen state and this set exists to
+/// resume it exactly, unquestioned. Onboarding is absent from it for the
+/// opposite reason — a CREATE-mode snapshot is a draft still being answered,
+/// which is why it takes its own gate chain instead: [PostAuthDestination]
+/// for a signed-in member (session exists, backend's copy of the draft is
+/// authoritative), or [SplashController._resolvePreSessionOnboarding] for
+/// one who has not signed in yet at all (no backend copy exists — the local
+/// snapshot is the only one there is).
 const _restorableRegistrationRoutes = {
   RouteNames.profileEdit,
   RouteNames.profileReview,
@@ -40,11 +47,17 @@ const _restorableTabRoutes = {
 ///
 /// Order of precedence:
 /// 1. First launch (no language chosen) → language selection.
-/// 2. No Firebase session → the sign-up landing screen.
-/// 3. Signed in but not fully verified → resume the verification flow.
-/// 4. Signed in, verified, and an Edit Profile session (or last tab) was
+/// 2. No session of any kind, but a local onboarding draft has an unanswered
+///    step → resume that step (see [_resolvePreSessionOnboarding]). This is
+///    the only path a member mid-onboarding has: the backend has no draft
+///    for them yet, because every onboarding step before Verify Mobile
+///    persists locally only.
+/// 3. No session, and nothing local is worth resuming → the sign-up landing
+///    screen.
+/// 4. Signed in but not fully verified → resume the verification flow.
+/// 5. Signed in, verified, and an Edit Profile session (or last tab) was
 ///    saved before the process died → resume it exactly.
-/// 5. Signed in and verified, with no local snapshot to resume → ask
+/// 6. Signed in and verified, with no local snapshot to resume → ask
 ///    [PostAuthDestination]: an unanswered onboarding step reopens that
 ///    step (from the backend's own copy of the draft), an answered one
 ///    opens Discover. This is what makes a reinstall, a new device, or a
@@ -85,8 +98,17 @@ class SplashController extends Notifier<void> {
       if (ref.read(localAuthSessionProvider).isActive) {
         return RouteNames.discover;
       }
-      await storageService.clearNavState();
-      return RouteNames.registrationLanding;
+      // No session at all, either kind — but that no longer means nothing
+      // is worth resuming. Onboarding runs entirely before either kind of
+      // session exists (see RegistrationNotifier's onboarding-persistence
+      // comment), so a member who filled in several steps and then had the
+      // process killed — an Android background reclaim, not a deliberate
+      // exit — has no session to prove it, only the local snapshot
+      // RegistrationNotifier._snapshot wrote after every step. Losing that
+      // snapshot here used to be indistinguishable from the member never
+      // having started, which is the bug this resumes instead of erasing.
+      return _resolvePreSessionOnboarding() ??
+          await _clearAndLandOnRegistration();
     }
 
     // Best-effort: refreshes this session's mirror in the NestJS + Postgres
@@ -120,6 +142,57 @@ class SplashController extends Notifier<void> {
     // Otherwise fall back to the backend's view of how far they got.
     return _resolveSavedRoute() ??
         await ref.read(postAuthDestinationProvider).resolve();
+  }
+
+  /// Resumes an unfinished onboarding draft when there is no session of any
+  /// kind to ask [PostAuthDestination] instead — the pre-session half of
+  /// onboarding (Profile For through About) has nowhere else its answers are
+  /// held; see [RegistrationNotifier._snapshot].
+  ///
+  /// Returns null when there is nothing safe to resume: no snapshot was
+  /// written, it fails to decode (a corrupted or foreign-shaped value —
+  /// treated as absent, never as a crash), or — the one case a draft alone
+  /// cannot answer — every draft-backed step is already filled in. That last
+  /// case is reached only when the member reached the Email + Mobile /
+  /// Verify Mobile steps (which write no draft field of their own) and the
+  /// process died there; [firstUnansweredOnboardingStep] has no field to gate
+  /// on for either, so it would otherwise return null and this method would
+  /// have to guess between two screens it cannot tell apart. Falling through
+  /// to the landing screen is correct either way: nothing here ever mints a
+  /// session, so this can only ever resume back into onboarding, never into
+  /// the app itself — a member this far along answers Email + Mobile again
+  /// from a clean start, at worst re-asking two fields already on this
+  /// device ([StorageService.pendingEmail]/[pendingPhone], left untouched by
+  /// this whole path).
+  String? _resolvePreSessionOnboarding() {
+    final draftJson = storageService.savedProfileDraftJson;
+    if (draftJson == null) return null;
+    try {
+      final draft = ProfileDraft.fromJson(
+        jsonDecode(draftJson) as Map<String, dynamic>,
+      );
+      final nextStep = firstUnansweredOnboardingStep(draft);
+      if (nextStep == null) return null;
+
+      // Rehydrates the same way PostAuthDestination.resolve() does for the
+      // backend-draft case, so the onboarding screen reopens on the answers
+      // already given rather than blank.
+      ref
+          .read(registrationProvider.notifier)
+          .restore(draft, ProfileFlowMode.create);
+      return nextStep;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// The pre-fix fallback: nothing worth resuming, so drop whatever local
+  /// onboarding/nav bookkeeping exists and send the member to sign up fresh.
+  /// Never reached when [_resolvePreSessionOnboarding] found an unfinished
+  /// draft — only when there genuinely is none, or it could not be read.
+  Future<String> _clearAndLandOnRegistration() async {
+    await storageService.clearNavState();
+    return RouteNames.registrationLanding;
   }
 
   /// Resumes whatever screen was saved on the last [AppLifecycleState.paused]

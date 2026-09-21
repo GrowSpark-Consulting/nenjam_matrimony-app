@@ -4676,6 +4676,42 @@ abstract class AppLocalizations {
   /// **'City you live in'**
   String get profileBasicsCityHint;
 
+  /// No description provided for @loadingStates.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading states...'**
+  String get loadingStates;
+
+  /// No description provided for @couldntLoadStates.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load states'**
+  String get couldntLoadStates;
+
+  /// No description provided for @noStatesAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No states available'**
+  String get noStatesAvailable;
+
+  /// No description provided for @findingCitiesIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding cities in {stateName}...'**
+  String findingCitiesIn(String stateName);
+
+  /// No description provided for @couldntLoadCities.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load cities'**
+  String get couldntLoadCities;
+
+  /// No description provided for @noCitiesFoundForState.
+  ///
+  /// In en, this message translates to:
+  /// **'No cities found for this state'**
+  String get noCitiesFoundForState;
+
   /// No description provided for @profileBasicsCasteNoBar.
   ///
   /// In en, this message translates to:
@@ -4700,6 +4736,24 @@ abstract class AppLocalizations {
   /// **'Select your religion'**
   String get onboardingReligionHint;
 
+  /// No description provided for @loadingReligions.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading religions...'**
+  String get loadingReligions;
+
+  /// No description provided for @couldntLoadReligions.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load religions'**
+  String get couldntLoadReligions;
+
+  /// No description provided for @noReligionsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No religions available'**
+  String get noReligionsAvailable;
+
   /// No description provided for @onboardingCommunityLabel.
   ///
   /// In en, this message translates to:
@@ -4711,6 +4765,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select your community'**
   String get onboardingCommunityHint;
+
+  /// No description provided for @loadingCommunities.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading communities...'**
+  String get loadingCommunities;
+
+  /// No description provided for @couldntLoadCommunities.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load communities'**
+  String get couldntLoadCommunities;
+
+  /// No description provided for @noCommunitiesFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No communities found'**
+  String get noCommunitiesFound;
 
   /// No description provided for @onboardingCommunityHelp.
   ///

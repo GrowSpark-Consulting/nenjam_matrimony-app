@@ -172,6 +172,7 @@ class _ProfileBasicsPageState extends ConsumerState<ProfileBasicsPage> {
           label: l10n.registrationStateLabel,
           hint: l10n.profileBasicsStateHint,
           options: states,
+          optionsProvider: statesProvider(countryCode),
           value: stateOption,
           legacyValue: stateOption == null ? _form.state : '',
           // A country stored as free text still lets the member open the
@@ -182,11 +183,15 @@ class _ProfileBasicsPageState extends ConsumerState<ProfileBasicsPage> {
           isRequired: true,
           onRetry: () => ref.invalidate(statesProvider(countryCode)),
           onChanged: _onStateChanged,
+          loadingMessage: l10n.loadingStates,
+          emptyMessage: l10n.noStatesAvailable,
+          errorMessage: l10n.couldntLoadStates,
         ),
         OnboardingLocationField(
           label: l10n.registrationCityLabel,
           hint: l10n.profileBasicsCityHint,
           options: cities,
+          optionsProvider: citiesProvider(stateCode),
           value: cityOption,
           legacyValue: cityOption == null ? _form.city : '',
           enabled: stateCode.isNotEmpty,
@@ -194,6 +199,14 @@ class _ProfileBasicsPageState extends ConsumerState<ProfileBasicsPage> {
           isRequired: true,
           onRetry: () => ref.invalidate(citiesProvider(stateCode)),
           onChanged: _onCityChanged,
+          // Named after the state the member just picked, so switching
+          // states shows "Finding cities in Gujarat..." rather than a
+          // caption that could belong to any field.
+          loadingMessage: l10n.findingCitiesIn(
+            stateOption?.label ?? _form.state,
+          ),
+          emptyMessage: l10n.noCitiesFoundForState,
+          errorMessage: l10n.couldntLoadCities,
         ),
         // Free text, like the wizard's own sub-caste field: there is no
         // authoritative list in this app, and inventing one is not an option.

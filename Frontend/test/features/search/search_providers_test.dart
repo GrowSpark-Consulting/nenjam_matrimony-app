@@ -52,6 +52,10 @@ DiscoveryProfileEntity _profile(
   String id, {
   int age = 28,
   String religion = 'Hindu',
+  String gender = '',
+  String smoking = '',
+  String drinking = '',
+  String annualIncome = '',
 }) =>
     DiscoveryProfileEntity(
       id: id,
@@ -63,6 +67,10 @@ DiscoveryProfileEntity _profile(
       education: 'B.E.',
       photoUrls: const ['https://example.test/photo.jpg'],
       religion: religion,
+      gender: gender,
+      smoking: smoking,
+      drinking: drinking,
+      annualIncome: annualIncome,
     );
 
 ProviderContainer _container(_RecordingRepository repo) {
@@ -356,6 +364,82 @@ void main() {
       await _settle(container);
 
       expect(container.read(filteredSearchResultsProvider).value, hasLength(2));
+    });
+  });
+
+  group('SearchFilters.matches — gender/smoking/drinking/annualIncome', () {
+    test('gender filter matches and excludes correctly', () {
+      const filters = SearchFilters(gender: 'Male');
+      expect(filters.matches(_profile('a', gender: 'Male')), isTrue);
+      expect(filters.matches(_profile('b', gender: 'Female')), isFalse);
+    });
+
+    test('gender filter treats a missing profile value as no match', () {
+      const filters = SearchFilters(gender: 'Male');
+      expect(filters.matches(_profile('a')), isFalse);
+    });
+
+    test('smoking filter matches and excludes correctly', () {
+      const filters = SearchFilters(smoking: 'No');
+      expect(filters.matches(_profile('a', smoking: 'No')), isTrue);
+      expect(filters.matches(_profile('b', smoking: 'Yes')), isFalse);
+    });
+
+    test('smoking filter treats a missing profile value as no match', () {
+      const filters = SearchFilters(smoking: 'No');
+      expect(filters.matches(_profile('a')), isFalse);
+    });
+
+    test('drinking filter matches and excludes correctly', () {
+      const filters = SearchFilters(drinking: 'Occasionally');
+      expect(filters.matches(_profile('a', drinking: 'Occasionally')), isTrue);
+      expect(filters.matches(_profile('b', drinking: 'No')), isFalse);
+    });
+
+    test('drinking filter treats a missing profile value as no match', () {
+      const filters = SearchFilters(drinking: 'Occasionally');
+      expect(filters.matches(_profile('a')), isFalse);
+    });
+
+    test('annual income filter admits profiles at or above the selected '
+        'bracket floor', () {
+      const filters = SearchFilters(annualIncome: '10 - 20 Lakhs PA');
+      expect(filters.matches(_profile('a', annualIncome: '10 - 20 Lakhs')), isTrue);
+      expect(filters.matches(_profile('b', annualIncome: '20 - 50 Lakhs')), isTrue);
+      expect(filters.matches(_profile('c', annualIncome: '1 Crore+')), isTrue);
+    });
+
+    test('annual income filter excludes profiles below the selected bracket '
+        'floor', () {
+      const filters = SearchFilters(annualIncome: '20 - 50 Lakhs PA');
+      expect(filters.matches(_profile('a', annualIncome: '5 - 10 Lakhs')), isFalse);
+    });
+
+    test('annual income filter accepts a custom numeric income above the '
+        'floor', () {
+      const filters = SearchFilters(annualIncome: '5 - 10 Lakhs PA');
+      // A custom entry of 1,200,000 rupees = 12 lakhs.
+      expect(filters.matches(_profile('a', annualIncome: '1200000')), isTrue);
+    });
+
+    test('annual income filter treats a missing/non-numeric profile value '
+        'as no match', () {
+      const filters = SearchFilters(annualIncome: '5 - 10 Lakhs PA');
+      expect(filters.matches(_profile('a')), isFalse);
+      expect(filters.matches(_profile('b', annualIncome: 'Prefer not to say')), isFalse);
+    });
+
+    test('a non-numeric filter selection (Prefer not to say) does not '
+        'exclude any profile', () {
+      const filters = SearchFilters(annualIncome: 'Prefer not to say');
+      expect(filters.matches(_profile('a', annualIncome: '5 - 10 Lakhs')), isTrue);
+      expect(filters.matches(_profile('b')), isTrue);
+    });
+
+    test('other filters keep working unaffected', () {
+      const filters = SearchFilters(religion: 'Hindu');
+      expect(filters.matches(_profile('a', religion: 'Hindu')), isTrue);
+      expect(filters.matches(_profile('b', religion: 'Christian')), isFalse);
     });
   });
 

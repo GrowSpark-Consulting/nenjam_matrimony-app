@@ -255,6 +255,37 @@ class StorageService {
     ]);
   }
 
+  /// Drops only the pre-session onboarding snapshot
+  /// ([RegistrationNotifier.discardPersistedDraft]'s key), leaving
+  /// [lastRoute] untouched.
+  ///
+  /// Narrower than [clearNavState] on purpose: [keyRegistrationStep] and
+  /// [keyProfileFlowMode] are shared with the EDIT-mode nav-state snapshot
+  /// main.dart's `_saveNavStateSnapshot` writes for
+  /// `profileEdit`/`profileReview`, which this call must not disturb. They
+  /// are only removed here when they are not currently describing a live
+  /// EDIT snapshot — every onboarding snapshot writes `'create'` to
+  /// [savedProfileFlowMode] (see [RegistrationNotifier._snapshot]), so this
+  /// check can only ever protect an EDIT snapshot, never mistake one for
+  /// onboarding's own bookkeeping. [lastRoute] is left alone entirely: an
+  /// onboarding snapshot always sets it to the same fixed, non-restorable
+  /// value (`RouteNames.createProfileFor` — see
+  /// [SplashController._resolveSavedRoute], which never reads it back for a
+  /// CREATE-mode snapshot), so clearing it here would only ever risk
+  /// clobbering an EDIT snapshot's real, restorable route for no benefit.
+  Future<void> clearOnboardingDraft() async {
+    final futures = <Future<bool>>[
+      _prefs.remove(AppConstants.keyProfileDraftJson),
+    ];
+    if (savedProfileFlowMode != 'edit') {
+      futures.addAll([
+        _prefs.remove(AppConstants.keyRegistrationStep),
+        _prefs.remove(AppConstants.keyProfileFlowMode),
+      ]);
+    }
+    await Future.wait(futures);
+  }
+
   // ─── Clear All ───────────────────────────────────────────────────
   Future<void> clearAll() async {
     await _prefs.clear();
