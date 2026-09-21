@@ -157,17 +157,28 @@ export class ProfileRepository {
     );
   }
 
-  async upsertPartnerPreference(
+  /**
+   * Seeds a member's partner preferences from their registration draft, but
+   * only if they have none yet. Returns whether a row was created.
+   *
+   * Never an update. Once the row exists, `PUT /discover/preferences`
+   * (PreferencesService) is its only writer: the draft is re-materialised on
+   * every profile save and finalize, and when this was an upsert each of those
+   * reset preferences the member had since edited back to the draft's values.
+   *
+   * One `INSERT … ON CONFLICT DO NOTHING` rather than read-then-create, so two
+   * saves racing for the same new member cannot both insert (userId is
+   * unique) and neither can overwrite what the other wrote.
+   */
+  async createPartnerPreferenceIfMissing(
     userId: string,
-    data: Omit<Prisma.PartnerPreferenceCreateInput, 'user'>,
-  ): Promise<void> {
-    await this.updateThenCreate(
-      () => this.prisma.partnerPreference.update({ where: { userId }, data }),
-      () =>
-        this.prisma.partnerPreference.create({
-          data: { ...data, user: { connect: { id: userId } } },
-        }),
-    );
+    data: Omit<Prisma.PartnerPreferenceCreateManyInput, 'userId'>,
+  ): Promise<boolean> {
+    const { count } = await this.prisma.partnerPreference.createMany({
+      data: [{ ...data, userId }],
+      skipDuplicates: true,
+    });
+    return count > 0;
   }
 
   async findPartnerPreference(

@@ -616,6 +616,12 @@ export class ProfileService {
         })
       : Promise.resolve();
 
+    // Partner preferences are SEEDED from the draft, never re-written by it.
+    // This method runs on every profile save and finalize, and the draft's
+    // partner-preference section is whatever registration left there; once a
+    // row exists it belongs to PUT /discover/preferences, and writing the draft
+    // over it would silently undo the member's later edits. So the draft only
+    // creates the row when there is none.
     const hasPartnerPrefData = Object.keys(partnerPref).length > 0;
     let partnerPrefWrite: Promise<unknown> = Promise.resolve();
     if (hasPartnerPrefData) {
@@ -627,7 +633,7 @@ export class ProfileService {
         partnerPref.preferredHeightRange as string | undefined,
         [140, 210],
       );
-      partnerPrefWrite = this.profileRepository.upsertPartnerPreference(
+      partnerPrefWrite = this.profileRepository.createPartnerPreferenceIfMissing(
         userId,
         {
           minAge,
