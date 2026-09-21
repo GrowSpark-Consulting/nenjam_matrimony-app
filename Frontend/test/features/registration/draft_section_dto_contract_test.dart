@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nenjam_matrimony/features/partner_preferences/domain/models/partner_preference_extended.dart';
 import 'package:nenjam_matrimony/features/registration/domain/models/profile_draft.dart';
 
 /// The wire contract between each draft section model and the NestJS DTO that

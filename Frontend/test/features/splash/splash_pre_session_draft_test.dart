@@ -117,7 +117,7 @@ void main() {
     test('an unfinished draft is still on disk after a fresh app startup '
         'with no session, and resolves to an onboarding route (not wiped)',
         () async {
-      final draft = const ProfileDraft(
+      const draft = ProfileDraft(
         basicDetails: BasicDetails(
           profileCreatedFor: 'Myself',
           gender: 'Male',
@@ -143,7 +143,7 @@ void main() {
   group('Test 2 — resume the correct step', () {
     test('a draft with the first several sections answered resumes at the '
         'first unanswered one, not step 1', () async {
-      final draft = const ProfileDraft(
+      const draft = ProfileDraft(
         basicDetails: BasicDetails(
           profileCreatedFor: 'Myself',
           gender: 'Female',
@@ -224,7 +224,7 @@ void main() {
 
   group('Test 3 — completed registration clears the temporary draft', () {
     test('discardPersistedDraft removes the snapshot', () async {
-      final draft = const ProfileDraft(
+      const draft = ProfileDraft(
         basicDetails: BasicDetails(profileCreatedFor: 'Myself', gender: 'Male'),
       );
       await saveOnboardingSnapshot(draft);
@@ -242,7 +242,7 @@ void main() {
     test('once discarded, a fresh startup with no session lands on the '
         'registration landing screen rather than resuming stale progress',
         () async {
-      final draft = const ProfileDraft(
+      const draft = ProfileDraft(
         basicDetails: BasicDetails(profileCreatedFor: 'Myself', gender: 'Male'),
       );
       await saveOnboardingSnapshot(draft);
@@ -263,7 +263,7 @@ void main() {
 
   group('Test 4 — explicit reset clears the draft', () {
     test('startCreateMode discards the persisted snapshot', () async {
-      final draft = const ProfileDraft(
+      const draft = ProfileDraft(
         basicDetails: BasicDetails(profileCreatedFor: 'Myself', gender: 'Male'),
       );
       await saveOnboardingSnapshot(draft);
@@ -376,7 +376,7 @@ void main() {
 
     test('restoring the draft never marks onboarding completed or opens a '
         'local session', () async {
-      final draft = const ProfileDraft(
+      const draft = ProfileDraft(
         basicDetails: BasicDetails(profileCreatedFor: 'Myself', gender: 'Male'),
       );
       await saveOnboardingSnapshot(draft);
