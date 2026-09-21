@@ -3,7 +3,16 @@ import type { RankedCandidate } from '../scoring/ranking.service';
 import type { CompatibilityBreakdown } from '../scoring/compatibility.service';
 
 function breakdown(overall: number, mutualFit: number | null = null): CompatibilityBreakdown {
-  return { seekerFit: overall, mutualFit, overall, band: 'Good', components: [] };
+  return {
+    seekerFit: overall,
+    mutualFit,
+    overall,
+    band: 'Good',
+    components: [],
+    matchedPreferences: [],
+    unmatchedPreferences: [],
+    algorithmVersion: 'v1-preference',
+  };
 }
 
 function candidate(
