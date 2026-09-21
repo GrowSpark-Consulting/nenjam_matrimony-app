@@ -169,6 +169,15 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     ref.invalidate(myProfileProvider);
   }
 
+  /// Marks the registration complete (`POST /profiles/finalize`). Throws on
+  /// failure — both the wizard's Completing screen and the onboarding
+  /// verify-mobile step keep the member on screen with a way to retry.
+  ///
+  /// Onboarding used to call this through a "quiet" wrapper that swallowed
+  /// the failure and let the member into the app anyway, on the reasoning
+  /// that a profile row already existed. It does not when an earlier section
+  /// was rejected, and a member let in with an unfinalized profile was hidden
+  /// from every feed and saw an empty one of their own.
   Future<void> finalizeToBackend() async {
     await ref.read(registrationRepositoryProvider).finalizeProfile();
     // finalize() recomputes completion and materializes photos/astrology
@@ -178,28 +187,6 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     // would serve the pre-edit cached profile. (myProfileProvider's own doc
     // comment has always claimed this invalidation happened; it did not.)
     ref.invalidate(myProfileProvider);
-  }
-
-  /// Finalizes the registration at the end of onboarding, swallowing any
-  /// failure.
-  ///
-  /// Same call as [finalizeToBackend]; the difference is who it is for. The
-  /// wizard's Review screen shows the member a spinner and can report an error
-  /// they can retry. The OTP step cannot: the member has answered every
-  /// question and passed verification, so the only useful thing left to do is
-  /// let them into the app. A profile row already exists by this point —
-  /// `syncMatchableFromDraft` writes it on the per-step PATCHes — so what a
-  /// failure here costs is the completion flag and percentage, not the
-  /// profile, and the next launch's PostAuthDestination check re-runs anyway.
-  ///
-  /// Returns whether it succeeded, so a caller that does want to react can.
-  Future<bool> finalizeOnboardingQuietly() async {
-    try {
-      await finalizeToBackend();
-      return true;
-    } catch (_) {
-      return false;
-    }
   }
 
   // ─── Flow Mode ───────────────────────────────────────────────────────
@@ -363,56 +350,64 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   }
 
   /// Pushes every onboarding answer the draft holds to the backend. Called
-  /// once a session exists — after the Email + Mobile step links an account,
-  /// and again at the end of onboarding — so the work done while signed out
-  /// is not stranded on the device.
+  /// by the verify-mobile step once a session exists, so the work done while
+  /// signed out is not stranded on the device.
   ///
-  /// Best-effort and never throws: the local draft remains the source of
-  /// truth until a call succeeds, and the next step's save retries anyway.
+  /// **Throws the first failure**, and stops there. It used to swallow every
+  /// error, which is how one rejected section (a 400 on religion, earlier a
+  /// 400 on location) silently skipped every section after it — including
+  /// the one that materialises the profile — while the caller carried on as
+  /// though registration had succeeded. The caller now has to decide what a
+  /// failure means, and the verify-mobile step keeps the member on screen
+  /// with a Retry.
+  ///
+  /// Safe to retry as-is. The local draft is never modified here, so nothing
+  /// the member entered is lost, and each section PATCH is a merge of the
+  /// same values — re-sending a section that already landed changes nothing.
+  ///
+  /// Signed out it is still a no-op rather than a failure: there is nothing
+  /// to authenticate the requests with, and the local snapshot is the whole
+  /// of persistence until a session exists.
   Future<void> flushOnboardingToBackend() async {
     if (!_hasSession) return;
     final repo = ref.read(registrationRepositoryProvider);
-    try {
-      // Every section but the last is sent with `skipMaterialize: true`.
-      // They are all stored either way; what is skipped is the server-side
-      // profile write and completion recompute, which only the final call
-      // needs to run because only it sees the whole draft. See the comment
-      // on that call below.
-      await repo.updateBasicDetails(state.basicDetails, skipMaterialize: true);
-      await repo.updateReligionDetails(state.religionDetails,
-          skipMaterialize: true);
-      // `languageDetails` is not optional bookkeeping — `motherTongue` is a
-      // NOT NULL column on `user_profiles`, so the profile row cannot be
-      // written without it (see isMatchableFromDraft / writeProfileFromDraft).
-      //
-      // Omitting it here stranded every member who signed up by phone. That
-      // path has no session until step 10 mints one, so `_persist` no-ops for
-      // all nine earlier steps and this flush is the ONLY thing that ever
-      // reaches the backend — the mother tongue collected on the Religion
-      // step included. Confirmed against the live API with a fresh account:
-      // after the full flush, `draft_data` held basicDetails, religionDetails,
-      // locationDetails, physicalDetails, educationDetails and
-      // lifestyleDetails but no `languageDetails` at all, materialization was
-      // skipped, and `GET /profiles/me` answered 404 — the member landed on
-      // Discover with no profile of their own.
-      await repo.updateLanguageDetails(state.languageDetails,
-          skipMaterialize: true);
-      await repo.updateLocationDetails(state.locationDetails,
-          skipMaterialize: true);
-      await repo.updatePhysicalDetails(state.physicalDetails,
-          skipMaterialize: true);
-      await repo.updateEducationDetails(state.educationDetails,
-          skipMaterialize: true);
-      // The LAST call deliberately materializes, and it has to be the last:
-      // every section above is already stored by the time it runs, so this
-      // one pass sees the complete draft. Letting all seven materialize did
-      // the same writeProfileFromDraft + recalculateAndPersistCompletion work
-      // seven times over — measured at ~416ms apiece against the Singapore
-      // database — to reach a result only the final one could produce.
-      await repo.updateLifestyleDetails(state.lifestyleDetails);
-    } catch (_) {
-      // Left for the next successful save to carry.
-    }
+    // Every section but the last is sent with `skipMaterialize: true`.
+    // They are all stored either way; what is skipped is the server-side
+    // profile write and completion recompute, which only the final call
+    // needs to run because only it sees the whole draft. See the comment
+    // on that call below.
+    await repo.updateBasicDetails(state.basicDetails, skipMaterialize: true);
+    await repo.updateReligionDetails(state.religionDetails,
+        skipMaterialize: true);
+    // `languageDetails` is not optional bookkeeping — `motherTongue` is a
+    // NOT NULL column on `user_profiles`, so the profile row cannot be
+    // written without it (see isMatchableFromDraft / writeProfileFromDraft).
+    //
+    // Omitting it here stranded every member who signed up by phone. That
+    // path has no session until step 10 mints one, so `_persist` no-ops for
+    // all nine earlier steps and this flush is the ONLY thing that ever
+    // reaches the backend — the mother tongue collected on the Religion
+    // step included. Confirmed against the live API with a fresh account:
+    // after the full flush, `draft_data` held basicDetails, religionDetails,
+    // locationDetails, physicalDetails, educationDetails and
+    // lifestyleDetails but no `languageDetails` at all, materialization was
+    // skipped, and `GET /profiles/me` answered 404 — the member landed on
+    // Discover with no profile of their own.
+    await repo.updateLanguageDetails(state.languageDetails,
+        skipMaterialize: true);
+    await repo.updateLocationDetails(state.locationDetails,
+        skipMaterialize: true);
+    await repo.updatePhysicalDetails(state.physicalDetails,
+        skipMaterialize: true);
+    await repo.updateEducationDetails(state.educationDetails,
+        skipMaterialize: true);
+    // The LAST call deliberately materializes, and it has to be the last:
+    // every section above is already stored by the time it runs, so this
+    // one pass sees the complete draft. Letting all seven materialize did
+    // the same writeProfileFromDraft + recalculateAndPersistCompletion work
+    // seven times over — measured at ~416ms apiece against the Singapore
+    // database — to reach a result only the final one could produce.
+    await repo.updateLifestyleDetails(state.lifestyleDetails);
   }
 
   // ─── Onboarding steps ──────────────────────────────────────────────

@@ -2650,6 +2650,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'We could not finish signing you in. Please try again.';
 
   @override
+  String get onboardingVerifyMobileRegistrationFailed =>
+      'Your number is verified, but we could not save your profile. Check your connection and tap Retry.';
+
+  @override
   String get authEntrySignUp => 'Sign Up';
 
   @override

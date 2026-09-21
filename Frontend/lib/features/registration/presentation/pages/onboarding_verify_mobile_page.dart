@@ -1,4 +1,5 @@
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -48,11 +49,21 @@ class _OnboardingVerifyMobilePageState
   bool _verifying = false;
   bool _wrongCode = false;
 
-  /// Why the correct code still did not produce a session. Rendered in the
-  /// same line the wrong-code message uses — a member who answered correctly
-  /// and got nothing is owed the reason, not a silent walk into an app where
-  /// nothing they do will persist.
+  /// Why the correct code still did not produce a session — or why the
+  /// profile could not be saved once it had. Rendered in the same line the
+  /// wrong-code message uses: a member who answered correctly and got nothing
+  /// is owed the reason, not a silent walk into an app where nothing they do
+  /// will persist.
   String? _sessionError;
+
+  /// Set once the backend has minted a session for this number. A failure
+  /// after that point — saving the profile or finalizing it — is retried from
+  /// the save onwards; the code and the session exchange are not repeated.
+  bool _sessionReady = false;
+
+  /// Whether the last attempt to save the profile failed. Turns the button
+  /// into Retry, since the code the member entered is already accepted.
+  bool _registrationFailed = false;
 
   @override
   void initState() {
@@ -156,9 +167,19 @@ class _OnboardingVerifyMobilePageState
   }
 
   Future<void> _verify() async {
+    // First, before anything else: one attempt at a time. Without this a
+    // double tap on Retry — or the code box re-submitting — would start two
+    // registrations and send every section twice.
+    if (_verifying) return;
+
+    // A session already exists — the code was accepted and the account
+    // provisioned on an earlier attempt — so only the save that failed after
+    // it is retried.
+    if (_sessionReady) return _completeRegistration();
+
     final l10n = AppLocalizations.of(context);
     final verifier = ref.read(otpVerifierProvider);
-    if (_otp.length != verifier.codeLength || _verifying) return;
+    if (_otp.length != verifier.codeLength) return;
     setState(() {
       _verifying = true;
       _wrongCode = false;
@@ -218,51 +239,100 @@ class _OnboardingVerifyMobilePageState
     }
     if (!mounted) return;
     AuthTrace.firebaseAuth(channel: 'dummy-otp', success: true);
+    _sessionReady = true;
 
-    // Still written for the router's own local-completion bridge, and cleared
-    // on sign-out along with everything else.
-    await storageService.setOnboardingCompleted(true);
+    await _completeRegistration();
+  }
 
-    // Now that a session exists, the answers gathered along the way are sent
-    // with a credential attached, so the backend can provision the internal
-    // User row and materialize the profile.
+  /// Sends the profile, finalizes it, and only then lets the member in.
+  ///
+  /// The order is the contract: **save → finalize → mark complete → Discover**,
+  /// and any failure stops the sequence with the member still on this screen.
+  ///
+  /// It used to be the opposite. `onboardingCompleted` was written before
+  /// anything was sent, the save swallowed its own errors, finalize ran
+  /// "quietly", and the member was navigated to Discover regardless. So one
+  /// rejected section — a 400 on religion, earlier a 400 on location — let
+  /// the member into the app with an unfinalized profile: hidden from every
+  /// feed, shown an empty one of their own, and sent back to an earlier step
+  /// on their next login. A local flag claimed onboarding had finished while
+  /// the backend held a half-written profile.
+  ///
+  /// Retrying is safe. Nothing the member entered is touched on failure; each
+  /// section PATCH is a merge of the same values; finalize is idempotent; and
+  /// photos that already uploaded leave the pending queue, so a retry sends
+  /// only what did not.
+  Future<void> _completeRegistration() async {
+    final l10n = AppLocalizations.of(context);
+    if (!_verifying) {
+      setState(() {
+        _verifying = true;
+        _registrationFailed = false;
+        _sessionError = null;
+      });
+    }
+
+    // Cleared first so the flag can only ever describe the attempt that just
+    // finished. A build that wrote it early may have left it set; if this
+    // attempt fails, it must not keep claiming onboarding is done.
+    await storageService.setOnboardingCompleted(false);
+
     final notifier = ref.read(registrationProvider.notifier);
-    await notifier.flushOnboardingToBackend();
 
-    // ...including any photo picked on the Add Photos step, which could not
-    // be uploaded when it was chosen: that screen runs before this one, so
-    // there was no credential to attach and the POST came back 401. Same
-    // controller, same repository, same endpoint Edit Profile uses — only
-    // now, with a session.
+    // 1. Save every section. Now that a session exists, the answers gathered
+    //    along the way go out with a credential attached, so the backend can
+    //    provision the internal User row and materialize the profile.
+    try {
+      await notifier.flushOnboardingToBackend();
+    } catch (error) {
+      return _registrationFailedWith(l10n, stage: 'save', error: error);
+    }
+
+    // 2. Upload any photo picked on the Add Photos step, which could not be
+    //    sent then: that screen runs before this one, with no credential to
+    //    attach. Non-fatal by design — a photo is not required to finalize,
+    //    the queue keeps anything that did not upload, and the member is told.
     await _uploadPendingPhotos();
 
-    // ...and then finalize, which is what marks the registration COMPLETE.
-    //
-    // Onboarding never called this. The per-step PATCHes already materialize
-    // `user_profiles` on their own (syncMatchableFromDraft runs on every save),
-    // so a profile did exist — but `registration_steps.is_complete` stayed
-    // false, `profile_complete_pct` stayed 0, and the welcome email never
-    // went out, for every member who signed up through this flow.
-    //
-    // It could not have been called before this commit: finalize's location
-    // contract demanded `area`, `pinCode` and `nativePlace`, which no
-    // onboarding screen collects, so it would have thrown BadRequestException
-    // for every member. That contract now asks for country/state/city, which
-    // is what the flow actually gathers.
-    //
-    // Deliberately non-fatal. The member has answered everything, their
-    // profile row already exists, and the OTP they just passed is the last
-    // thing standing between them and the app — a failed bookkeeping call
-    // must not strand them on this screen. finalize is idempotent, and
-    // PostAuthDestination re-runs the same check on the next launch.
-    await notifier.finalizeOnboardingQuietly();
+    // 3. Finalize — what marks the registration COMPLETE on the backend
+    //    (`registration_steps.is_complete`, completion %, the welcome email).
+    try {
+      await notifier.finalizeToBackend();
+    } catch (error) {
+      return _registrationFailedWith(l10n, stage: 'finalize', error: error);
+    }
 
-    // Onboarding is finished. The number stops being "pending" the moment
-    // it is verified.
+    // 4. Only now is onboarding finished. The flag is written after the
+    //    backend has confirmed it, never before, and the number stops being
+    //    "pending" at the same moment.
+    await storageService.setOnboardingCompleted(true);
     await storageService.clearPendingPhone();
     if (!mounted) return;
     AuthTrace.navigate(RouteNames.discover, reason: 'onboarding finalized');
     context.go(RouteNames.discover);
+  }
+
+  /// Keeps the member on this screen with a reason and a Retry.
+  ///
+  /// The original error is kept for diagnosis — logged in debug builds — but
+  /// never shown: a backend validation message is not something a member can
+  /// act on, and "your number is verified, your profile did not save, try
+  /// again" is. The pending number and the local draft are both left as they
+  /// are, so a retry, a relaunch or the next login all still have them.
+  void _registrationFailedWith(
+    AppLocalizations l10n, {
+    required String stage,
+    required Object error,
+  }) {
+    if (kDebugMode) {
+      debugPrint('[ONBOARDING] registration $stage failed: $error');
+    }
+    if (!mounted) return;
+    setState(() {
+      _verifying = false;
+      _registrationFailed = true;
+      _sessionError = l10n.onboardingVerifyMobileRegistrationFailed;
+    });
   }
 
   @override
@@ -380,10 +450,18 @@ class _OnboardingVerifyMobilePageState
                 ),
                 OnboardingFooter(
                   child: NmGradientButton(
-                    label: l10n.authVerifyAndContinue,
-                    icon: Icons.arrow_forward_rounded,
+                    // After a failed save the code is already accepted, so
+                    // the one action left is to try the save again.
+                    label: _registrationFailed
+                        ? l10n.commonRetry
+                        : l10n.authVerifyAndContinue,
+                    icon: _registrationFailed
+                        ? Icons.refresh_rounded
+                        : Icons.arrow_forward_rounded,
                     isLoading: _verifying,
-                    onPressed: _otp.length == length ? _verify : null,
+                    onPressed: _registrationFailed || _otp.length == length
+                        ? _verify
+                        : null,
                   ),
                 ),
               ],

@@ -5144,6 +5144,12 @@ abstract class AppLocalizations {
   /// **'We could not finish signing you in. Please try again.'**
   String get onboardingVerifyMobileSessionFailed;
 
+  /// No description provided for @onboardingVerifyMobileRegistrationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your number is verified, but we could not save your profile. Check your connection and tap Retry.'**
+  String get onboardingVerifyMobileRegistrationFailed;
+
   /// No description provided for @authEntrySignUp.
   ///
   /// In en, this message translates to:

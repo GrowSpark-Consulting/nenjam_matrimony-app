@@ -991,6 +991,7 @@
   "authInvalidOtp": "That code isn't right. Check it and try again.",
   "onboardingVerifyMobileEnter": "Enter any 4-digit code to continue.",
   "onboardingVerifyMobileSessionFailed": "We could not finish signing you in. Please try again.",
+  "onboardingVerifyMobileRegistrationFailed": "Your number is verified, but we could not save your profile. Check your connection and tap Retry.",
   "authEntrySignUp": "Sign Up",
   "authEntryLogin": "Login",
   "profileBasicsMissing": "Select your {fields} to continue.",
