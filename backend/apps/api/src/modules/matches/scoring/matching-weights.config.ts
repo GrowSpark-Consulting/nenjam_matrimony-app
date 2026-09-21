@@ -7,6 +7,16 @@
  * set still sums to 100 so a future edit cannot silently skew the scale.
  */
 
+/**
+ * Which scoring formula produced a compatibility result.
+ *
+ * `v1-preference`: partner-preference fit in both directions, blended 60/40,
+ * plus the three candidate-quality signals, under the weights below. Bump it
+ * whenever a signal is added or a weight changes, so a stored or logged score
+ * can always be traced to the formula that made it.
+ */
+export const MATCHING_ALGORITHM_VERSION = 'v1-preference';
+
 /** A single scored dimension. */
 export type ScoreKey =
   | 'age'
