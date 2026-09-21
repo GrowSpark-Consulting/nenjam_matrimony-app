@@ -21,6 +21,9 @@ function candidate(
     overall,
     band: 'Good',
     components: [],
+    matchedPreferences: [],
+    unmatchedPreferences: [],
+    algorithmVersion: 'v1-preference',
   };
   return { row: { userId, createdAt } as unknown as RankedCandidate['row'], score };
 }

@@ -9,7 +9,6 @@ import {
   buildFeedWhere,
   type PreferenceFilters,
 } from '../filters/partner-preference-where.builder';
-import { withSafetyExclusions } from '../filters/safety-exclusions.builder';
 import { buildTierPlan, TierDefinition } from './tier-plan';
 import {
   FeedPageQuery,
@@ -25,13 +24,9 @@ import {
  * matches or exhausts the configured tier ceiling. The first tier with
  * candidates wins — lower-relevance tiers are never reached once one succeeds.
  *
- * Tier 1 is deliberately built the exact same way FilteredFeedStrategy builds
- * it (same `buildFeedWhere` call, same inputs, no extra exclusions) — the
- * existing engine's behavior for a caller whose preferences already match
- * something is completely unchanged. The safety exclusions (blocked/rejected/
- * inactive — see [withSafetyExclusions]) only apply from Tier 2 onward, since
- * they are new behavior this strategy introduces, not part of the original
- * engine's contract.
+ * This is the feed's candidate generation. Every tier's WHERE is built by
+ * [buildFeedWhere]: the shared hard eligibility (see eligibility.builder.ts)
+ * plus that tier's preference. Tiers differ only in the preference half.
  */
 @Injectable()
 export class ProgressiveFallbackStrategy implements RecommendationService {
@@ -52,8 +47,9 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
     // On a hit this removes a whole sequential round trip from the request; on
     // a miss (or with Redis down) FeedContextService performs exactly the same
     // parallel pair of queries this line used to, so behaviour is unchanged
-    // either way. Nothing safety-critical is cached — blocks, account status
-    // and deletedAt are still evaluated live inside buildFeedWhere below.
+    // either way. Nothing safety-critical is cached — blocks, declined
+    // interests, account status and deletedAt are still evaluated live inside
+    // buildFeedWhere below.
     const { self, pref } = await this.feedContext.load(userId);
 
     // No finalized profile → the caller's own gender is unknown, so the
@@ -84,21 +80,16 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
       maxTier: config.enabled ? config.maxTier : 1,
     });
 
-    const whereFor = (
-      tierDef: TierDefinition,
-    ): Prisma.UserProfileWhereInput => {
-      const baseWhere = buildFeedWhere({
+    // Every tier is the same hard eligibility plus that tier's (relaxed)
+    // preference. Relaxation only ever touches the preference half, so no tier
+    // — not even Tier 10 — can surface someone eligibility excludes.
+    const whereFor = (tierDef: TierDefinition): Prisma.UserProfileWhereInput =>
+      buildFeedWhere({
         currentUserId: userId,
         myGender,
         self,
         pref: tierDef.pref,
       });
-      // Tier 1 mirrors the original engine exactly (no extra exclusions); the
-      // widened tiers layer on the blocked/rejected/inactive safety filter.
-      return tierDef.tier === 1
-        ? baseWhere
-        : withSafetyExclusions(baseWhere, userId);
-    };
 
     // Tier 1 (the caller's exact saved preferences) is the overwhelmingly
     // common hit, so probe it alone first — the normal case pays exactly one
@@ -115,7 +106,14 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
     // 177ms to 2013ms), so the invariant wins.
     const tier1Count = await this.feedRepository.countMatching(tier1Where);
     if (tier1Count > 0) {
-      return this.page(tier1, tier1Where, tier1Count, { skip, take }, self, pref);
+      return this.page(
+        tier1,
+        tier1Where,
+        tier1Count,
+        { skip, take },
+        self,
+        pref,
+      );
     }
 
     // Tier 1 was empty. The tier plan is *monotonically relaxing* — every

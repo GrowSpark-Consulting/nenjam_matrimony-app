@@ -2,11 +2,14 @@ import { CompatibilityService } from '../scoring/compatibility.service';
 import type { ScorableProfile } from '../scoring/compatibility.service';
 import type { PreferenceFilters } from '../filters/partner-preference-where.builder';
 import {
+  MATCHING_ALGORITHM_VERSION,
   MATCHING_WEIGHTS,
   MUTUAL_BLEND,
   totalWeight,
   scoreBand,
 } from '../scoring/matching-weights.config';
+import { PREFERENCE_COMPATIBILITY_SIGNAL } from '../scoring/preference/preference-compatibility.signal';
+import { CANDIDATE_QUALITY_SIGNAL } from '../scoring/quality/candidate-quality.signal';
 import { buildFeedWhere } from '../filters/partner-preference-where.builder';
 
 const YEAR = 365.25 * 24 * 3600 * 1000;
@@ -311,6 +314,114 @@ describe('CompatibilityService', () => {
       for (const w of Object.values(MATCHING_WEIGHTS)) {
         expect(w).toBeGreaterThan(0);
       }
+    });
+  });
+
+  describe('signal architecture', () => {
+    it('pins every weight and the 60/40 blend at their v1 values', () => {
+      expect({ ...MATCHING_WEIGHTS }).toEqual({
+        age: 14,
+        religion: 12,
+        community: 11,
+        motherTongue: 9,
+        location: 9,
+        education: 8,
+        profession: 7,
+        maritalStatus: 6,
+        height: 5,
+        lifestyle: 4,
+        profileCompleteness: 6,
+        verification: 6,
+        activity: 3,
+      });
+      expect({ ...MUTUAL_BLEND }).toEqual({
+        seekerToCandidate: 0.6,
+        candidateToSeeker: 0.4,
+      });
+    });
+
+    it('blends exactly 60/40: round(0.6 x seekerFit + 0.4 x mutualFit)', () => {
+      const seeker = profile({ userId: 'me', religion: 'Christian' });
+      const candidate = profile({
+        preference: preference({ preferredReligions: ['Hindu'] }),
+      });
+      const r = svc.score(seeker, preference(), candidate);
+      expect(r.mutualFit).not.toBeNull();
+      expect(r.seekerFit).not.toBe(r.mutualFit);
+      expect(r.overall).toBe(
+        Math.round(r.seekerFit * 0.6 + (r.mutualFit as number) * 0.4),
+      );
+    });
+
+    it('emits all 13 components once each, preference signal first, in a fixed order', () => {
+      const r = svc.score(profile({ userId: 'me' }), preference(), profile());
+      expect(r.components.map((c) => c.key)).toEqual([
+        ...PREFERENCE_COMPATIBILITY_SIGNAL.keys,
+        ...CANDIDATE_QUALITY_SIGNAL.keys,
+      ]);
+      expect(new Set(r.components.map((c) => c.key))).toEqual(
+        new Set(Object.keys(MATCHING_WEIGHTS)),
+      );
+      expect(PREFERENCE_COMPATIBILITY_SIGNAL.kind).toBe('compatibility');
+      expect(CANDIDATE_QUALITY_SIGNAL.kind).toBe('quality');
+    });
+
+    it('stamps the algorithm version on every result', () => {
+      expect(MATCHING_ALGORITHM_VERSION).toBe('v1-preference');
+      const r = svc.score(profile({ userId: 'me' }), null, profile());
+      expect(r.algorithmVersion).toBe('v1-preference');
+    });
+  });
+
+  describe('matched / unmatched preferences', () => {
+    it('lists every stated preference as matched for an exact match', () => {
+      const r = svc.score(profile({ userId: 'me' }), preference(), profile());
+      expect(r.matchedPreferences).toEqual([
+        'age',
+        'religion',
+        'community',
+        'motherTongue',
+        'location',
+        'education',
+        'profession',
+        'maritalStatus',
+        'height',
+      ]);
+      expect(r.unmatchedPreferences).toEqual([]);
+    });
+
+    it('lists missed and partially met preferences as unmatched', () => {
+      const r = svc.score(
+        profile({ userId: 'me' }),
+        // City only, so the right state earns partial (0.5) credit.
+        preference({ preferredStates: [] }),
+        profile({ religion: 'Christian', currentCity: 'Madurai' }),
+      );
+      const location = r.components.find((c) => c.key === 'location');
+      expect(location?.ratio).toBe(0.5);
+      expect(r.unmatchedPreferences).toEqual(['religion', 'location']);
+      expect(r.matchedPreferences).not.toContain('religion');
+      expect(r.matchedPreferences).not.toContain('location');
+    });
+
+    it('lists unstated preferences in neither list', () => {
+      const r = svc.score(
+        profile({ userId: 'me' }),
+        { minAge: 25, maxAge: 32 },
+        profile(),
+      );
+      expect(r.matchedPreferences).toEqual(['age']);
+      expect(r.unmatchedPreferences).toEqual([]);
+    });
+
+    it('never reports candidate-quality components as preferences', () => {
+      const r = svc.score(
+        profile({ userId: 'me' }),
+        null,
+        profile({ profileCompletePct: 10, trustScore: 0 }),
+      );
+      expect(r.matchedPreferences).toEqual([]);
+      expect(r.unmatchedPreferences).toEqual([]);
     });
   });
 });
