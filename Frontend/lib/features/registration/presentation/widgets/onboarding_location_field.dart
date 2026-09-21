@@ -21,6 +21,7 @@ class OnboardingLocationField extends StatelessWidget {
     required this.label,
     required this.hint,
     required this.options,
+    required this.optionsProvider,
     required this.value,
     required this.onChanged,
     this.legacyValue = '',
@@ -28,6 +29,9 @@ class OnboardingLocationField extends StatelessWidget {
     this.disabledHint,
     this.onRetry,
     this.isRequired = false,
+    this.loadingMessage,
+    this.emptyMessage,
+    this.errorMessage,
   });
 
   final String label;
@@ -35,6 +39,10 @@ class OnboardingLocationField extends StatelessWidget {
 
   /// The options for this level — loading, failed or ready.
   final AsyncValue<List<LocationOption>> options;
+
+  /// The live provider behind [options] — see
+  /// [LocationPickerField.optionsProvider].
+  final ProviderListenable<AsyncValue<List<LocationOption>>> optionsProvider;
 
   final LocationOption? value;
   final ValueChanged<LocationOption?> onChanged;
@@ -49,6 +57,16 @@ class OnboardingLocationField extends StatelessWidget {
   final VoidCallback? onRetry;
   final bool isRequired;
 
+  /// Shown inside the sheet while [options] is loading — see
+  /// [LocationPickerField.loadingMessage].
+  final String? loadingMessage;
+
+  /// Shown inside the sheet when [options] resolved with no items.
+  final String? emptyMessage;
+
+  /// Shown inside the sheet when [options] failed to load.
+  final String? errorMessage;
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -61,12 +79,16 @@ class OnboardingLocationField extends StatelessWidget {
       ),
       hint: hint,
       options: options,
+      optionsProvider: optionsProvider,
       value: value,
       legacyValue: legacyValue,
       enabled: enabled,
       disabledHint: disabledHint,
       onRetry: onRetry,
       onChanged: onChanged,
+      loadingMessage: loadingMessage,
+      emptyMessage: emptyMessage,
+      errorMessage: errorMessage,
     );
   }
 }

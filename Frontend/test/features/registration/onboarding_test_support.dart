@@ -316,11 +316,26 @@ class FakeLocationRepository implements LocationRepository {
   FakeLocationRepository({
     this.failCountries = false,
     this.failStates = false,
+    this.failCities = false,
     bool holdCountries = false,
-  }) : _countriesGate = holdCountries ? Completer<void>() : null;
+    bool holdStates = false,
+    bool holdCities = false,
+    this.cityDelay = const {},
+  })  : _countriesGate = holdCountries ? Completer<void>() : null,
+        _statesGate = holdStates ? Completer<void>() : null,
+        _citiesGate = holdCities ? Completer<void>() : null;
 
   final bool failCountries;
-  final bool failStates;
+
+  /// Mutable, unlike [failCountries]: a retry test flips this off between the
+  /// failed load and the "Try again" tap, so the same fake can serve both a
+  /// failure and the successful retry that follows it.
+  bool failStates;
+  bool failCities;
+
+  /// Per-state-code delay, for a city-cascade stale-response test — the
+  /// location equivalent of `_StubReligionRepository.communityDelay`.
+  final Map<String, Duration> cityDelay;
 
   /// When set, `countries()` waits here until [releaseCountries] is called.
   ///
@@ -329,10 +344,32 @@ class FakeLocationRepository implements LocationRepository {
   /// rather than merely fast enough that the first finished in between.
   final Completer<void>? _countriesGate;
 
+  /// Same idea as [_countriesGate], for `states()` — lets a test observe the
+  /// State field's loading skeleton before the list resolves.
+  final Completer<void>? _statesGate;
+
+  /// Same idea as [_countriesGate], for `cities()` — lets a test observe the
+  /// City field's loading skeleton before the list resolves.
+  final Completer<void>? _citiesGate;
+
   /// Lets a held `countries()` call complete.
   void releaseCountries() {
     if (_countriesGate != null && !_countriesGate.isCompleted) {
       _countriesGate.complete();
+    }
+  }
+
+  /// Lets a held `states()` call complete.
+  void releaseStates() {
+    if (_statesGate != null && !_statesGate.isCompleted) {
+      _statesGate.complete();
+    }
+  }
+
+  /// Lets a held `cities()` call complete.
+  void releaseCities() {
+    if (_citiesGate != null && !_citiesGate.isCompleted) {
+      _citiesGate.complete();
     }
   }
 
@@ -384,6 +421,7 @@ class FakeLocationRepository implements LocationRepository {
     CancelToken? cancelToken,
   }) async {
     calls.add('states:$countryCode');
+    if (_statesGate != null) await _statesGate.future;
     if (failStates) throw Exception('offline');
     if (countryCode == 'IN') return const [state, otherState];
     return const [];
@@ -395,6 +433,10 @@ class FakeLocationRepository implements LocationRepository {
     CancelToken? cancelToken,
   }) async {
     calls.add('cities:$stateCode');
+    if (_citiesGate != null) await _citiesGate.future;
+    final delay = cityDelay[stateCode];
+    if (delay != null) await Future<void>.delayed(delay);
+    if (failCities) throw Exception('offline');
     return switch (stateCode) {
       'IN-GJ' => const [city, otherCity],
       'IN-TN' => const [tnCity],
@@ -418,9 +460,41 @@ extension FakeLocationCallCounts on FakeLocationRepository {
 /// backend now, exactly as it reads the country, so any test that renders
 /// that screen needs this or the step can never be completed.
 class FakeReligionRepository implements ReligionRepository {
-  FakeReligionRepository({this.failReligions = false});
+  FakeReligionRepository({
+    this.failReligions = false,
+    this.failCommunities = false,
+    bool holdReligions = false,
+    bool holdCommunities = false,
+    this.communityDelay = const {},
+  })  : _religionsGate = holdReligions ? Completer<void>() : null,
+        _communitiesGate = holdCommunities ? Completer<void>() : null;
 
-  final bool failReligions;
+  /// Mutable, so a retry test can flip either of these off between the
+  /// failed load and the "Try again" tap.
+  bool failReligions;
+  bool failCommunities;
+
+  /// Per-religion-code delay, for a community-cascade stale-response test.
+  final Map<String, Duration> communityDelay;
+
+  /// Lets a test observe the Religion field's loading skeleton before the
+  /// list resolves — the same idea as [FakeLocationRepository]'s gates.
+  final Completer<void>? _religionsGate;
+  final Completer<void>? _communitiesGate;
+
+  /// Lets a held `religions()` call complete.
+  void releaseReligions() {
+    if (_religionsGate != null && !_religionsGate.isCompleted) {
+      _religionsGate.complete();
+    }
+  }
+
+  /// Lets a held `communities()` call complete.
+  void releaseCommunities() {
+    if (_communitiesGate != null && !_communitiesGate.isCompleted) {
+      _communitiesGate.complete();
+    }
+  }
 
   static const _religions = [
     LocationOption(code: 'HINDU', label: 'Hindu'),
@@ -439,6 +513,7 @@ class FakeReligionRepository implements ReligionRepository {
 
   @override
   Future<List<LocationOption>> religions({dynamic cancelToken}) async {
+    if (_religionsGate != null) await _religionsGate.future;
     if (failReligions) throw Exception('religions unavailable');
     return _religions;
   }
@@ -447,8 +522,13 @@ class FakeReligionRepository implements ReligionRepository {
   Future<List<LocationOption>> communities(
     String religionCode, {
     dynamic cancelToken,
-  }) async =>
-      _byReligion[religionCode] ?? const [];
+  }) async {
+    if (_communitiesGate != null) await _communitiesGate.future;
+    final delay = communityDelay[religionCode];
+    if (delay != null) await Future<void>.delayed(delay);
+    if (failCommunities) throw Exception('communities unavailable');
+    return _byReligion[religionCode] ?? const [];
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

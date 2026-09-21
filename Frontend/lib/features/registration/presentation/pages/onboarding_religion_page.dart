@@ -193,6 +193,7 @@ class _OnboardingReligionPageState
           label: l10n.onboardingReligionLabel,
           hint: l10n.onboardingReligionHint,
           options: religions,
+          optionsProvider: religionsProvider,
           value: religion,
           // Shown when the draft holds a religion the master data does not
           // offer, so an older answer reads as an answer rather than as an
@@ -201,11 +202,15 @@ class _OnboardingReligionPageState
           isRequired: true,
           onRetry: () => ref.invalidate(religionsProvider),
           onChanged: _onReligionChanged,
+          loadingMessage: l10n.loadingReligions,
+          emptyMessage: l10n.noReligionsAvailable,
+          errorMessage: l10n.couldntLoadReligions,
         ),
         OnboardingLocationField(
           label: l10n.onboardingCommunityLabel,
           hint: l10n.onboardingCommunityHint,
           options: communities,
+          optionsProvider: communitiesProvider(religionCode),
           value: community,
           legacyValue: community == null ? _form.community : '',
           // Disabled until a religion is chosen: there is nothing to list yet,
@@ -217,11 +222,15 @@ class _OnboardingReligionPageState
           isRequired: true,
           onRetry: () => ref.invalidate(communitiesProvider(religionCode)),
           onChanged: _onCommunityChanged,
+          loadingMessage: l10n.loadingCommunities,
+          emptyMessage: l10n.noCommunitiesFound,
+          errorMessage: l10n.couldntLoadCommunities,
         ),
         OnboardingLocationField(
           label: l10n.onboardingLivingInLabel,
           hint: l10n.onboardingLivingInHint,
           options: countries,
+          optionsProvider: countriesProvider,
           value: country,
           // Shown when the draft holds a country the master data does not
           // offer, so an older answer reads as an answer rather than as an

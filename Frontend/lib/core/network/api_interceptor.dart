@@ -21,6 +21,13 @@ const _authRetriedKey = 'nm_auth_retried';
 /// authStateChanges listener and app_router.dart's redirect). Callers
 /// (repositories, pages) never see or handle 401s directly.
 ///
+/// The force-refresh itself is single-flight (see `_refreshTokenOnce`):
+/// several requests that 401 around the same time — a common shape when a
+/// screen fires a handful of calls together — share one refresh instead of
+/// each starting its own, and every waiter retries with whatever token that
+/// shared refresh produced (including null, which still runs the normal
+/// expiry path for each).
+///
 /// Both delivery paths are covered. The client's `validateStatus` accepts
 /// anything below 500, so a 401 normally arrives as a *successful* response
 /// and never reaches [onError] — [onResponse] is therefore the primary hook.
@@ -51,6 +58,21 @@ class AuthInterceptor extends Interceptor {
     required this.onSessionExpired,
     this.devAuthPhone,
   });
+
+  /// Single-flight guard: when several requests 401 around the same time,
+  /// they must not each force-refresh the token independently — that's
+  /// redundant network/Firebase load and, being concurrent, can race. The
+  /// first 401 to arrive starts the refresh and stores it here; every other
+  /// concurrent 401 awaits this same future instead of starting its own, and
+  /// it is cleared once the refresh settles so the next genuine expiry
+  /// refreshes again.
+  Future<String?>? _refreshInFlight;
+
+  Future<String?> _refreshTokenOnce() {
+    return _refreshInFlight ??= _safeToken(refreshAccessToken).whenComplete(() {
+      _refreshInFlight = null;
+    });
+  }
 
   @override
   Future<void> onRequest(
@@ -149,7 +171,7 @@ class AuthInterceptor extends Interceptor {
     // never authenticated to begin with.
     final wasAuthenticated = options.headers.containsKey('Authorization');
 
-    final refreshedToken = await _safeToken(refreshAccessToken);
+    final refreshedToken = await _refreshTokenOnce();
     if (refreshedToken == null || refreshedToken.isEmpty) {
       // No session to refresh.
       //

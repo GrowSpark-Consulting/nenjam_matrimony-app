@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/location_models.dart';
 import '../providers/location_providers.dart';
 import 'location_picker_field.dart';
@@ -50,6 +51,7 @@ class LocationCascade extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final countryCode = value.country?.code ?? '';
     final stateCode = value.state?.code ?? '';
 
@@ -69,6 +71,7 @@ class LocationCascade extends ConsumerWidget {
           hint: countryHint,
           legacyValue: legacyCountry,
           options: countries,
+          optionsProvider: countriesProvider,
           value: value.country,
           onChanged: (country) => onChanged(value.withCountry(country)),
           onRetry: () => ref.invalidate(countriesProvider),
@@ -79,6 +82,7 @@ class LocationCascade extends ConsumerWidget {
           hint: stateHint,
           legacyValue: legacyState,
           options: states,
+          optionsProvider: statesProvider(countryCode),
           value: value.state,
           // A legacy country counts as "the parent is answered": the member
           // must be able to open the state list and correct it in place,
@@ -87,6 +91,9 @@ class LocationCascade extends ConsumerWidget {
           disabledHint: countryHint,
           onChanged: (state) => onChanged(value.withState(state)),
           onRetry: () => ref.invalidate(statesProvider(countryCode)),
+          loadingMessage: l10n.loadingStates,
+          emptyMessage: l10n.noStatesAvailable,
+          errorMessage: l10n.couldntLoadStates,
         ),
         SizedBox(height: spacing),
         LocationPickerField(
@@ -94,11 +101,17 @@ class LocationCascade extends ConsumerWidget {
           hint: cityHint,
           legacyValue: legacyCity,
           options: cities,
+          optionsProvider: citiesProvider(stateCode),
           value: value.city,
           enabled: value.state != null || legacyState.isNotEmpty,
           disabledHint: stateHint,
           onChanged: (city) => onChanged(value.withCity(city)),
           onRetry: () => ref.invalidate(citiesProvider(stateCode)),
+          loadingMessage: l10n.findingCitiesIn(
+            value.state?.label ?? legacyState,
+          ),
+          emptyMessage: l10n.noCitiesFoundForState,
+          errorMessage: l10n.couldntLoadCities,
         ),
       ],
     );

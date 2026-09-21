@@ -905,12 +905,31 @@
   "profileBasicsHeadline": "Now let's build your Profile",
   "profileBasicsStateHint": "State you live in",
   "profileBasicsCityHint": "City you live in",
+  "loadingStates": "Loading states...",
+  "couldntLoadStates": "Couldn't load states",
+  "noStatesAvailable": "No states available",
+  "findingCitiesIn": "Finding cities in {stateName}...",
+  "@findingCitiesIn": {
+    "placeholders": {
+      "stateName": {
+        "type": "String"
+      }
+    }
+  },
+  "couldntLoadCities": "Couldn't load cities",
+  "noCitiesFoundForState": "No cities found for this state",
   "profileBasicsCasteNoBar": "Not particular about my partner's community (caste no bar)",
   "onboardingReligionHeadline": "Your religion",
   "onboardingReligionLabel": "Religion",
   "onboardingReligionHint": "Select your religion",
+  "loadingReligions": "Loading religions...",
+  "couldntLoadReligions": "Couldn't load religions",
+  "noReligionsAvailable": "No religions available",
   "onboardingCommunityLabel": "Community",
   "onboardingCommunityHint": "Select your community",
+  "loadingCommunities": "Loading communities...",
+  "couldntLoadCommunities": "Couldn't load communities",
+  "noCommunitiesFound": "No communities found",
   "onboardingCommunityHelp": "Your community is the group you identify with — for some families that is a caste, for others a language or region.",
   "onboardingLivingInLabel": "Living in",
   "onboardingLivingInHint": "Country you live in",

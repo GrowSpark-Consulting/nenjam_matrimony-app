@@ -66,6 +66,7 @@ import '../../features/subscription/presentation/pages/subscription_page.dart';
 import '../../features/verification/presentation/pages/verification_page.dart';
 import '../../features/authentication/domain/services/local_auth_session.dart';
 import '../../features/authentication/presentation/providers/auth_providers.dart';
+import '../../features/authentication/presentation/utils/post_auth_destination.dart';
 import '../../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../widgets/navigation/app_bottom_nav.dart';
@@ -129,7 +130,9 @@ class GoRouterRefreshStream extends ChangeNotifier {
 }
 
 /// Builds the app's [GoRouter], gating every route not listed in
-/// [RouteNames.publicRoutes] behind an active Firebase session.
+/// [RouteNames.publicRoutes] behind an active Firebase session AND, once
+/// signed in, behind [PostAuthDestination] agreeing onboarding is either
+/// finished or not the reason this particular route was requested.
 ///
 /// [redirect] is the single source of truth for route protection — it runs
 /// for every navigation, including deep links and links restored from a
@@ -138,6 +141,15 @@ class GoRouterRefreshStream extends ChangeNotifier {
 /// [authStateChangesProvider]'s first emission (Firebase's own session
 /// restoration signal) rather than reading `currentUser` synchronously, so
 /// it never races a session that's still being restored.
+///
+/// The onboarding half defers entirely to [PostAuthDestination.resolve] —
+/// the same resolver splash/login/verify screens already call — rather than
+/// restating its gate chain: this guard only decides *whether* to ask it
+/// (skipped once [StorageService.onboardingCompleted] is locally true, so a
+/// finished member's ordinary navigation never pays for the network calls
+/// `resolve()` can make) and *whether* its answer is a real block (only a
+/// [RouteNames.publicRoutes] destination is — see the inline comment at the
+/// call site for why `RouteNames.discover` specifically is not).
 ///
 /// [refreshListenable] re-runs that redirect whenever the Firebase auth
 /// stream emits — e.g. a background 401 recovery (see api_providers.dart)
@@ -191,16 +203,51 @@ GoRouter createRouter(WidgetRef ref) {
       }
 
       final user = await ref.read(authStateChangesProvider.future);
-      if (user == null) {
-        // Development bridges — see _signedInLocally, which is where both
-        // are documented and where both are deleted from.
-        if (_signedInLocally()) return null;
-
+      if (user == null && !_signedInLocally()) {
         // The landing screen, not Login: a signed-out visitor is far more
         // often someone who has never had an account than someone whose
         // session lapsed, and Login is one tap away from there anyway.
         return RouteNames.registrationLanding;
       }
+
+      // Signed in (Firebase or a development bridge — see _signedInLocally)
+      // and asking for a protected, non-onboarding route (every onboarding
+      // screen is in publicRoutes and returned above already). Being signed
+      // in only proves identity, not that onboarding finished, and until now
+      // nothing here checked the second thing: PostAuthDestination — the
+      // resolver that actually knows which onboarding step (if any) is still
+      // owed — was only ever invoked from specific screens (splash, login,
+      // phone/email verify), never from this guard. A deep link, a restored
+      // nav state, or any programmatic `context.go` to e.g. Discover that
+      // skipped those screens reached it anyway, with no onboarding gate at
+      // all.
+      //
+      // onboardingCompleted is the same local, no-network flag the dev
+      // bridges above already read — checked first so a member who has
+      // already finished (the overwhelming majority of navigations) never
+      // pays for a draft/profile fetch just to reconfirm what is already
+      // known. Only an incomplete-or-unknown device asks the resolver.
+      if (!_onboardingCompletedLocally()) {
+        final destination = await ref.read(postAuthDestinationProvider).resolve();
+        // Only a public route (an onboarding step, or verifyEmail — every
+        // real gate PostAuthDestination guards with) is a genuine block.
+        // RouteNames.discover, the one non-public route it can return, means
+        // "onboarding is done" — and PostAuthDestination.resolve() never
+        // targets any other protected route (Settings, Profile, Edit
+        // Profile, ...), so seeing anything besides an onboarding gate here
+        // means this device's local onboardingCompleted flag just has not
+        // caught up yet (a second device, a reinstall, a stale flag from
+        // before finalize ran) while the account itself is fine — and the
+        // originally requested route is legitimate. Redirecting on that
+        // would wrongly bounce an already-finished member away from a real
+        // destination, which is exactly what the EDIT/profile flows this fix
+        // must not disturb depend on not happening.
+        if (RouteNames.publicRoutes.contains(destination) &&
+            destination != location) {
+          return destination;
+        }
+      }
+
       return null;
     },
     routes: [

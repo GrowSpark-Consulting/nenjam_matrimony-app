@@ -885,12 +885,31 @@
   "profileBasicsHeadline": "இப்போது உங்கள் சுயவிவரத்தை உருவாக்குவோம்",
   "profileBasicsStateHint": "நீங்கள் வசிக்கும் மாநிலம்",
   "profileBasicsCityHint": "நீங்கள் வசிக்கும் நகரம்",
+  "loadingStates": "மாநிலங்கள் ஏற்றப்படுகின்றன...",
+  "couldntLoadStates": "மாநிலங்களை ஏற்ற முடியவில்லை",
+  "noStatesAvailable": "மாநிலங்கள் எதுவும் இல்லை",
+  "findingCitiesIn": "{stateName} இல் நகரங்களைத் தேடுகிறது...",
+  "@findingCitiesIn": {
+    "placeholders": {
+      "stateName": {
+        "type": "String"
+      }
+    }
+  },
+  "couldntLoadCities": "நகரங்களை ஏற்ற முடியவில்லை",
+  "noCitiesFoundForState": "இந்த மாநிலத்திற்கு நகரங்கள் எதுவும் கிடைக்கவில்லை",
   "profileBasicsCasteNoBar": "என் துணையின் சமூகம் குறித்து எனக்கு நிபந்தனை இல்லை (சாதி தடை இல்லை)",
   "onboardingReligionHeadline": "உங்கள் மதம்",
   "onboardingReligionLabel": "மதம்",
   "onboardingReligionHint": "உங்கள் மதத்தைத் தேர்ந்தெடுக்கவும்",
+  "loadingReligions": "மதங்கள் ஏற்றப்படுகின்றன...",
+  "couldntLoadReligions": "மதங்களை ஏற்ற முடியவில்லை",
+  "noReligionsAvailable": "மதங்கள் எதுவும் இல்லை",
   "onboardingCommunityLabel": "சமூகம்",
   "onboardingCommunityHint": "உங்கள் சமூகத்தைத் தேர்ந்தெடுக்கவும்",
+  "loadingCommunities": "சமூகங்கள் ஏற்றப்படுகின்றன...",
+  "couldntLoadCommunities": "சமூகங்களை ஏற்ற முடியவில்லை",
+  "noCommunitiesFound": "சமூகங்கள் எதுவும் கிடைக்கவில்லை",
   "onboardingCommunityHelp": "நீங்கள் அடையாளம் காணும் குழுவே உங்கள் சமூகம் — சில குடும்பங்களுக்கு அது சாதி, சிலருக்கு மொழி அல்லது பகுதி.",
   "onboardingLivingInLabel": "வசிக்கும் இடம்",
   "onboardingLivingInHint": "நீங்கள் வசிக்கும் நாடு",

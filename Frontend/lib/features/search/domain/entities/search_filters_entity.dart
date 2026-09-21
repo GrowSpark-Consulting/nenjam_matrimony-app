@@ -7,10 +7,10 @@ const _defaultAgeRange = RangeValues(18, 60);
 /// All criteria selectable in the Search advanced-filter sheet.
 ///
 /// Fields that have no corresponding property on [DiscoveryProfileEntity]
-/// yet (gender, country, state, annual income, smoking, drinking, rashi,
-/// star, income-verified) are still captured here so the sheet's UI and
-/// "Apply/Reset" behaviour work end-to-end — see [matches] for exactly
-/// which criteria are applied today versus pending a backend/entity field.
+/// yet (country, state, rashi, star, income-verified) are still captured
+/// here so the sheet's UI and "Apply/Reset" behaviour work end-to-end — see
+/// [matches] for exactly which criteria are applied today versus pending a
+/// backend/entity field.
 @immutable
 class SearchFilters {
   final RangeValues ageRange;
@@ -146,17 +146,37 @@ class SearchFilters {
     bool? withPhoto,
     bool? completedProfile,
   }) {
+    // Religion is the parent of caste/community, and country is the parent
+    // of state, which is the parent of city. Changing a parent to a
+    // different value invalidates whatever was selected for its children,
+    // so those are cleared here unless the caller is also setting them
+    // explicitly in the same call.
+    final religionChanged =
+        (clearReligion || religion != null) && religion != this.religion;
+    final countryChanged =
+        (clearCountry || country != null) && country != this.country;
+    final stateChanged =
+        countryChanged || ((clearState || state != null) && state != this.state);
+
     return SearchFilters(
       ageRange: ageRange ?? this.ageRange,
       heightMin: clearHeightMin ? null : (heightMin ?? this.heightMin),
       heightMax: clearHeightMax ? null : (heightMax ?? this.heightMax),
       gender: clearGender ? null : (gender ?? this.gender),
       religion: clearReligion ? null : (religion ?? this.religion),
-      caste: clearCaste ? null : (caste ?? this.caste),
-      community: clearCommunity ? null : (community ?? this.community),
+      caste: clearCaste
+          ? null
+          : (caste ?? (religionChanged ? null : this.caste)),
+      community: clearCommunity
+          ? null
+          : (community ?? (religionChanged ? null : this.community)),
       country: clearCountry ? null : (country ?? this.country),
-      state: clearState ? null : (state ?? this.state),
-      city: clearCity ? null : (city ?? this.city),
+      state: clearState
+          ? null
+          : (state ?? (countryChanged ? null : this.state)),
+      city: clearCity
+          ? null
+          : (city ?? (stateChanged ? null : this.city)),
       education: clearEducation ? null : (education ?? this.education),
       occupation: clearOccupation ? null : (occupation ?? this.occupation),
       annualIncome: clearAnnualIncome ? null : (annualIncome ?? this.annualIncome),
@@ -175,21 +195,53 @@ class SearchFilters {
     );
   }
 
-  /// Extracts the centimetre figure embedded in height strings shaped like
+  /// Extracts the centimetre figure from height strings shaped like
   /// `'5 ft 8 in (172 cm)'` (the format shared by [NmHeightSelector] and
-  /// [DiscoveryProfileEntity.height]).
+  /// [DiscoveryProfileEntity.height]), or `'6 ft 2 in+'` (the open-ended top
+  /// bracket in the filter sheet's own options, which carries no `(NNN cm)`
+  /// suffix). Prefers the explicit `(NNN cm)` figure when present, and falls
+  /// back to converting the `ft`/`in` figures so the open-ended option still
+  /// normalizes to a comparable value instead of being silently ignored.
   static int? _heightCm(String value) {
-    final match = RegExp(r'(\d+)\s*cm').firstMatch(value);
-    return match == null ? null : int.tryParse(match.group(1)!);
+    final cmMatch = RegExp(r'(\d+)\s*cm').firstMatch(value);
+    if (cmMatch != null) return int.tryParse(cmMatch.group(1)!);
+
+    final ftInMatch = RegExp(r'(\d+)\s*ft\s*(\d+)\s*in').firstMatch(value);
+    if (ftInMatch == null) return null;
+    final feet = int.tryParse(ftInMatch.group(1)!);
+    final inches = int.tryParse(ftInMatch.group(2)!);
+    if (feet == null || inches == null) return null;
+    return ((feet * 12 + inches) * 2.54).round();
+  }
+
+  /// Extracts the lakh-equivalent floor of an income bracket string shaped
+  /// like `'5 - 10 Lakhs'`, `'50 Lakhs - 1 Crore PA'`, `'1 Crore+'`, or a
+  /// plain digit string entered as a custom annual income (e.g. `'1200000'`,
+  /// treated as rupees). Returns null for non-numeric strings such as
+  /// `'Prefer not to say'`.
+  static double? _incomeFloorLakhs(String value) {
+    final digitsOnly = RegExp(r'^\d+$');
+    if (digitsOnly.hasMatch(value)) {
+      return int.parse(value) / 100000;
+    }
+    final croreMatch = RegExp(r'([\d.]+)\s*Crore').firstMatch(value);
+    if (croreMatch != null) {
+      return double.parse(croreMatch.group(1)!) * 100;
+    }
+    final lakhMatch = RegExp(r'([\d.]+)\s*Lakh').firstMatch(value);
+    if (lakhMatch != null) {
+      return double.parse(lakhMatch.group(1)!);
+    }
+    return null;
   }
 
   /// Whether [profile] satisfies every criterion this instance can actually
   /// evaluate against [DiscoveryProfileEntity]'s fields.
   ///
-  /// TODO(backend): gender, country, state, annualIncome, smoking, drinking,
-  /// rashi, star and incomeVerified have no corresponding field on the
-  /// entity yet, so they're captured in state (and shown in [activeCount])
-  /// but intentionally not applied below until a real field/API exists.
+  /// TODO(backend): country, state, rashi, star and incomeVerified have no
+  /// corresponding field on the entity yet, so they're captured in state
+  /// (and shown in [activeCount]) but intentionally not applied below until
+  /// a real field/API exists.
   bool matches(DiscoveryProfileEntity profile) {
     if (profile.age < ageRange.start || profile.age > ageRange.end) return false;
 
@@ -205,6 +257,7 @@ class SearchFilters {
       }
     }
 
+    if (gender != null && profile.gender != gender) return false;
     if (religion != null && profile.religion != religion) return false;
     if (caste != null && profile.caste != caste) return false;
     if (community != null && profile.community != community) return false;
@@ -213,7 +266,16 @@ class SearchFilters {
     }
     if (education != null && profile.education != education) return false;
     if (occupation != null && profile.profession != occupation) return false;
+    if (annualIncome != null) {
+      final selectedFloor = _incomeFloorLakhs(annualIncome!);
+      final profileFloor = _incomeFloorLakhs(profile.annualIncome);
+      if (selectedFloor != null && (profileFloor == null || profileFloor < selectedFloor)) {
+        return false;
+      }
+    }
     if (diet != null && profile.diet != diet) return false;
+    if (smoking != null && profile.smoking != smoking) return false;
+    if (drinking != null && profile.drinking != drinking) return false;
     if (horoscopeAvailable && !profile.horoscopeAvailable) return false;
     if (aadhaarVerified && !profile.isVerified) return false;
     if (nriVerified && !profile.tags.contains('NRI')) return false;

@@ -9,6 +9,7 @@ import '../../../registration/domain/models/onboarding_forms.dart';
 import '../../../registration/domain/models/profile_draft.dart';
 import '../../../registration/domain/models/profile_flow_mode.dart';
 import '../../../registration/presentation/providers/registration_provider.dart';
+import '../../../registration/presentation/utils/onboarding_draft_gate.dart';
 import '../providers/auth_providers.dart';
 
 /// The draft lookup is a routing decision, not a screen the user is waiting
@@ -334,53 +335,10 @@ class PostAuthDestination {
         .read(registrationProvider.notifier)
         .restore(restored, ProfileFlowMode.create);
 
-    final profileForStep = ProfileForForm(
-      profileCreatedFor: restored.basicDetails.profileCreatedFor,
-      gender: restored.basicDetails.gender,
-    );
-    if (!profileForStep.isComplete) return RouteNames.createProfileFor;
-
-    final nameStep = OnboardingNameForm.fromDraft(
-      firstName: restored.basicDetails.firstName,
-      lastName: restored.basicDetails.lastName,
-      dob: restored.basicDetails.dob,
-    );
-    if (!nameStep.isAnswered) return RouteNames.onboardingNameDob;
-
-    final religionStep = OnboardingReligionForm(
-      religion: restored.religionDetails.religion,
-      community: restored.religionDetails.community,
-      livingIn: restored.locationDetails.country,
-    );
-    if (!religionStep.isComplete) return RouteNames.onboardingReligion;
-
-    final basicsStep = ProfileBasicsForm(
-      state: restored.locationDetails.state,
-      city: restored.locationDetails.city,
-    );
-    if (!basicsStep.isComplete) return RouteNames.profileBasics;
-
-    final maritalStep = OnboardingMaritalForm(
-      maritalStatus: restored.basicDetails.maritalStatus,
-      height: restored.physicalDetails.height,
-    );
-    if (!maritalStep.isComplete) return RouteNames.onboardingMarital;
-
-    final educationStep = OnboardingEducationForm(
-      qualification: restored.educationDetails.qualification,
-    );
-    if (!educationStep.isComplete) return RouteNames.onboardingEducation;
-
-    final incomeStep = OnboardingIncomeForm(
-      annualIncome: restored.educationDetails.annualIncome,
-    );
-    if (!incomeStep.isComplete) return RouteNames.onboardingIncome;
-
-    if (restored.lifestyleDetails.aboutMe.trim().isEmpty) {
-      return RouteNames.onboardingAbout;
-    }
-
-    return RouteNames.discover;
+    // See firstUnansweredOnboardingStep's doc comment: this is the same
+    // draft-backed gate chain resolve() walks, shared rather than
+    // reimplemented so the two paths cannot silently drift apart.
+    return firstUnansweredOnboardingStep(restored) ?? RouteNames.discover;
   }
 
   /// Whether the backend already holds a finalized profile for this member.

@@ -2418,6 +2418,27 @@ class AppLocalizationsTa extends AppLocalizations {
   String get profileBasicsCityHint => 'நீங்கள் வசிக்கும் நகரம்';
 
   @override
+  String get loadingStates => 'மாநிலங்கள் ஏற்றப்படுகின்றன...';
+
+  @override
+  String get couldntLoadStates => 'மாநிலங்களை ஏற்ற முடியவில்லை';
+
+  @override
+  String get noStatesAvailable => 'மாநிலங்கள் எதுவும் இல்லை';
+
+  @override
+  String findingCitiesIn(String stateName) {
+    return '$stateName இல் நகரங்களைத் தேடுகிறது...';
+  }
+
+  @override
+  String get couldntLoadCities => 'நகரங்களை ஏற்ற முடியவில்லை';
+
+  @override
+  String get noCitiesFoundForState =>
+      'இந்த மாநிலத்திற்கு நகரங்கள் எதுவும் கிடைக்கவில்லை';
+
+  @override
   String get profileBasicsCasteNoBar =>
       'என் துணையின் சமூகம் குறித்து எனக்கு நிபந்தனை இல்லை (சாதி தடை இல்லை)';
 
@@ -2431,10 +2452,28 @@ class AppLocalizationsTa extends AppLocalizations {
   String get onboardingReligionHint => 'உங்கள் மதத்தைத் தேர்ந்தெடுக்கவும்';
 
   @override
+  String get loadingReligions => 'மதங்கள் ஏற்றப்படுகின்றன...';
+
+  @override
+  String get couldntLoadReligions => 'மதங்களை ஏற்ற முடியவில்லை';
+
+  @override
+  String get noReligionsAvailable => 'மதங்கள் எதுவும் இல்லை';
+
+  @override
   String get onboardingCommunityLabel => 'சமூகம்';
 
   @override
   String get onboardingCommunityHint => 'உங்கள் சமூகத்தைத் தேர்ந்தெடுக்கவும்';
+
+  @override
+  String get loadingCommunities => 'சமூகங்கள் ஏற்றப்படுகின்றன...';
+
+  @override
+  String get couldntLoadCommunities => 'சமூகங்களை ஏற்ற முடியவில்லை';
+
+  @override
+  String get noCommunitiesFound => 'சமூகங்கள் எதுவும் கிடைக்கவில்லை';
 
   @override
   String get onboardingCommunityHelp =>

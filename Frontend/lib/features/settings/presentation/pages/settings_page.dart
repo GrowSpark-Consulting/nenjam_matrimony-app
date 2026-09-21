@@ -11,6 +11,7 @@ import '../../../../core/widgets/dialogs/app_dialogs.dart';
 import '../../../../core/widgets/inputs/nm_toggle_row.dart';
 import '../../../../core/widgets/permissions/permission_dialogs.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../authentication/domain/services/local_auth_session.dart';
 import '../../../authentication/presentation/providers/auth_providers.dart';
 import '../../../authentication/presentation/utils/logout_flow.dart';
 import '../providers/settings_providers.dart';
@@ -107,6 +108,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
       if (!mounted) return;
       Navigator.of(context).pop(); // dismiss progress dialog
       await ref.read(authRepositoryProvider).logout();
+      // A mobile login (OTP or password) leaves no Firebase session for the
+      // sign-out above to end, so the local one has to be closed explicitly
+      // here too — see logout_flow.dart's confirmAndLogout, which this
+      // mirrors. Without it, a deleted account whose only session was local
+      // still satisfies the router guard, so the device stays "logged in"
+      // to an account that no longer exists.
+      await ref.read(localAuthSessionProvider).clear();
       if (!mounted) return;
       context.go(RouteNames.login);
     } catch (_) {
