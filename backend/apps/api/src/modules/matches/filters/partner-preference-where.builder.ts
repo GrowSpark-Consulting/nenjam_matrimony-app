@@ -4,6 +4,10 @@ import type {
   MaritalStatus,
 } from '../../../../../../libs/database/generated/client';
 import { buildEligibilityConditions } from './eligibility.builder';
+import {
+  resolveEducationPreference,
+  resolveOccupationPreference,
+} from './preference-categories';
 
 const MARITAL_STATUSES: readonly string[] = [
   'NEVER_MARRIED',
@@ -159,8 +163,12 @@ export function buildPreferenceConditions(
       'motherTongue',
       resolveValues(pref.preferredMotherTongues, self?.motherTongue),
     );
-    addValues(and, 'highestEducation', resolveValues(pref.preferredEducation));
-    addValues(and, 'profession', resolveValues(pref.preferredOccupations));
+    addValues(
+      and,
+      'highestEducation',
+      resolveEducation(pref.preferredEducation),
+    );
+    addValues(and, 'profession', resolveOccupations(pref.preferredOccupations));
 
     const { cities, states } = resolveLocation(pref, self);
     addValues(and, 'currentCity', cities);
@@ -244,6 +252,21 @@ export function resolveMaritalStatuses(raw: unknown): string[] {
   return toStringArray(raw)
     .map((s) => s.toUpperCase().replace(/[\s-]+/g, '_'))
     .filter((s) => MARITAL_STATUSES.includes(s));
+}
+
+/**
+ * The profile education values an education preference matches — categories
+ * like "B.E / B.Tech+" expanded, exact profile values kept even though they
+ * contain "/", anything else read the generic way. See preference-categories.
+ * Exported so scoring reads the preference exactly as the filter does.
+ */
+export function resolveEducation(raw: unknown): string[] {
+  return resolveEducationPreference(raw, (token) => resolveValues([token]));
+}
+
+/** As [resolveEducation], for occupation ("Software / IT" → Software Engineer). */
+export function resolveOccupations(raw: unknown): string[] {
+  return resolveOccupationPreference(raw, (token) => resolveValues([token]));
 }
 
 /**

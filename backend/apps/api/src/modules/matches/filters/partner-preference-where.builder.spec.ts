@@ -168,12 +168,15 @@ describe('buildFeedWhere', () => {
   });
 
   it('drops grouped UI labels (with "/" or "+") that never match a profile', () => {
+    // Labels that are neither a mapped category nor a real profile value.
+    // Known categories ("Software / IT", "B.E / B.Tech+") are expanded
+    // instead — see preference-categories.spec.ts.
     expect(
       clauses({
         ...base,
         pref: {
-          preferredOccupations: ['Software / IT'],
-          preferredEducation: ['B.E / B.Tech+'],
+          preferredOccupations: ['Arts / Media'],
+          preferredEducation: ['Diploma+'],
         },
       }),
     ).toHaveLength(BASE_CLAUSE_COUNT);

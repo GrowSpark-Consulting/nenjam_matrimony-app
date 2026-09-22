@@ -154,11 +154,11 @@ describe('CompatibilityService', () => {
       expect(b?.ratio).toBeLessThan(1);
     });
 
-    it('ignores grouped UI labels, exactly as the filter does', () => {
-      // "Software / IT" is a screen label, not a stored profile value. The
-      // WHERE builder drops it; scoring must agree or a candidate would be
-      // filtered IN and then scored as a mismatch.
-      const pref = preference({ preferredOccupations: ['Software / IT'] });
+    it('ignores an unmapped grouped UI label, exactly as the filter does', () => {
+      // A "/" label that is neither a known category nor a real profile value
+      // cannot match anyone. The WHERE builder drops it; scoring must agree or
+      // a candidate would be filtered IN and then scored as a mismatch.
+      const pref = preference({ preferredOccupations: ['Arts / Media'] });
       const result = svc.score(
         profile({ userId: 'me' }),
         pref,
@@ -166,6 +166,49 @@ describe('CompatibilityService', () => {
       );
       const prof = result.components.find((c) => c.key === 'profession');
       expect(prof?.applicable).toBe(false);
+    });
+
+    it('expands a known category the way the filter does', () => {
+      // "Software / IT" is a category the picker offers; it covers the
+      // profile value "Software Engineer". It used to be dropped as a label,
+      // so the preference never counted at all.
+      const pref = preference({ preferredOccupations: ['Software / IT'] });
+      const match = svc.score(
+        profile({ userId: 'me' }),
+        pref,
+        profile({ profession: 'Software Engineer' }),
+      );
+      const miss = svc.score(
+        profile({ userId: 'me' }),
+        pref,
+        profile({ profession: 'Doctor' }),
+      );
+      expect(
+        match.components.find((c) => c.key === 'profession'),
+      ).toMatchObject({ applicable: true, ratio: 1 });
+      expect(
+        miss.components.find((c) => c.key === 'profession'),
+      ).toMatchObject({ applicable: true, ratio: 0 });
+    });
+
+    it('scores "B.E / B.Tech+" as this level or higher', () => {
+      const pref = preference({ preferredEducation: ['B.E / B.Tech+'] });
+      for (const [education, ratio] of [
+        ['B.E / B.Tech', 1],
+        ['M.Tech / M.E', 1],
+        ['Ph.D', 1],
+        ['B.Com / M.Com', 0],
+      ] as const) {
+        const r = svc.score(
+          profile({ userId: 'me' }),
+          pref,
+          profile({ highestEducation: education }),
+        );
+        expect({
+          education,
+          ratio: r.components.find((c) => c.key === 'education')?.ratio,
+        }).toEqual({ education, ratio });
+      }
     });
   });
 
@@ -367,9 +410,9 @@ describe('CompatibilityService', () => {
     });
 
     it('stamps the algorithm version on every result', () => {
-      expect(MATCHING_ALGORITHM_VERSION).toBe('v1.1-preference');
+      expect(MATCHING_ALGORITHM_VERSION).toBe('v1.2-preference');
       const r = svc.score(profile({ userId: 'me' }), null, profile());
-      expect(r.algorithmVersion).toBe('v1.1-preference');
+      expect(r.algorithmVersion).toBe('v1.2-preference');
     });
   });
 
