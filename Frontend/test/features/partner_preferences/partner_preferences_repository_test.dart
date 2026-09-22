@@ -61,14 +61,14 @@ class _StubClient extends ApiClient {
   }
 }
 
-/// The backend's schema defaults (`PreferencesService.DEFAULTS`) — what
-/// `GET /discover/preferences` returns for a member who has never saved
-/// anything.
+/// What `GET /discover/preferences` returns for a member who has never saved
+/// anything: no limits at all. (It used to fill in 18-45 / 140-210, which the
+/// app then showed — and re-saved — as a real range.)
 Map<String, dynamic> _defaultsResponse() => {
-      'minAge': 18,
-      'maxAge': 45,
-      'minHeightCm': 140,
-      'maxHeightCm': 210,
+      'minAge': null,
+      'maxAge': null,
+      'minHeightCm': null,
+      'maxHeightCm': null,
       'minIncomeLakhs': null,
       'preferredReligions': <String>[],
       'preferredCastes': <String>[],
@@ -99,12 +99,9 @@ void main() {
       final result =
           await PartnerPreferencesRepositoryImpl(client).getPreferences();
 
-      // 18-45 is a real, exact slider value (age has no bucket ambiguity),
-      // but height/income defaults are indistinguishable from "never set"
-      // and from an explicit "Any" — both map to "" per the repository's
-      // documented fallback, matching the placeholder a fresh
-      // PartnerPreference already renders.
-      expect(result.preferredAgeRange, '18-45');
+      // No limit reads back as "", the placeholder a fresh PartnerPreference
+      // already renders — never as a range the member didn't choose.
+      expect(result.preferredAgeRange, '');
       expect(result.preferredHeightRange, '');
       expect(result.incomePref, '');
       expect(result.religionPref, '');
@@ -265,8 +262,8 @@ void main() {
       expect(client.bodies.single, isNot(contains('preferredStates')));
     });
 
-    test('"Any" age/height/income are indistinguishable from unset and are '
-        'omitted, matching the backend\'s own fallback collapse', () async {
+    test('"Any" age/height/income are sent as null, which CLEARS a saved '
+        'limit', () async {
       final client = _StubClient(data: _defaultsResponse());
 
       await PartnerPreferencesRepositoryImpl(client).updatePreferences(
@@ -277,11 +274,31 @@ void main() {
         ),
       );
 
-      expect(client.bodies.single, <String, dynamic>{});
+      // Explicit nulls, not omissions: an omitted field is left as it is on
+      // the server, so omitting "Any" could never remove a range once saved.
+      expect(client.bodies.single, <String, dynamic>{
+        'minAge': null,
+        'maxAge': null,
+        'minHeightCm': null,
+        'maxHeightCm': null,
+        'minIncomeLakhs': null,
+      });
     });
 
-    test('the open-ended height preset ("6\'0"+") parses to a bounded '
-        'max, not an unbounded one', () async {
+    test('an untouched range is still omitted — only "Any" clears', () async {
+      final client = _StubClient(data: _defaultsResponse());
+
+      await PartnerPreferencesRepositoryImpl(client).updatePreferences(
+        const PartnerPreference(religionPref: 'Hindu'),
+      );
+
+      final body = client.bodies.single as Map<String, dynamic>;
+      expect(body.containsKey('minAge'), isFalse);
+      expect(body.containsKey('minHeightCm'), isFalse);
+      expect(body.containsKey('minIncomeLakhs'), isFalse);
+    });
+
+    test('the open-ended height preset ("6\'0"+") has no maximum', () async {
       final client = _StubClient(data: _defaultsResponse());
 
       await PartnerPreferencesRepositoryImpl(client).updatePreferences(
@@ -290,7 +307,24 @@ void main() {
 
       final body = client.bodies.single as Map<String, dynamic>;
       expect(body['minHeightCm'], 183);
-      expect(body['maxHeightCm'], 250); // DTO's own @Max(250) ceiling
+      // Sent as a cleared upper bound — the same thing the backend seeds for
+      // this preset from a registration draft.
+      expect(body.containsKey('maxHeightCm'), isTrue);
+      expect(body['maxHeightCm'], isNull);
+    });
+
+    test('an open-ended height reads back as its preset, with no maximum or '
+        'with the 250 older builds stored', () async {
+      for (final max in <int?>[null, 250]) {
+        final client = _StubClient(data: {
+          ..._defaultsResponse(),
+          'minHeightCm': 183,
+          'maxHeightCm': max,
+        });
+        final result =
+            await PartnerPreferencesRepositoryImpl(client).getPreferences();
+        expect(result.preferredHeightRange, '6\'0"+', reason: 'max=$max');
+      }
     });
 
     test('returns the backend\'s post-write response, not an echo of the '

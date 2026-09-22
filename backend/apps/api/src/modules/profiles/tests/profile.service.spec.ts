@@ -847,7 +847,9 @@ describe('ProfileService', () => {
 
       it('creates the row for a first-time "caste no bar" choice', async () => {
         // Onboarding's opt-out writes only { castePref: 'Any Caste' } into the
-        // draft; every other field takes the same defaults it always has.
+        // draft. Every range the member never set is seeded as NULL — no
+        // limit — not the old 18-45 / 140-210 defaults, which filtered like
+        // ranges they had chosen.
         const { store, createPartnerPreferenceIfMissing } =
           preferenceStore(null);
         const service = buildService({
@@ -864,10 +866,10 @@ describe('ProfileService', () => {
         await service.finalize('user-1');
 
         expect(store.row).toEqual({
-          minAge: 18,
-          maxAge: 45,
-          minHeightCm: 140,
-          maxHeightCm: 210,
+          minAge: null,
+          maxAge: null,
+          minHeightCm: null,
+          maxHeightCm: null,
           preferredReligions: [],
           preferredCastes: ['Any Caste'],
           minIncomeLakhs: null,
@@ -878,6 +880,60 @@ describe('ProfileService', () => {
           preferredMotherTongues: [],
           maritalStatusPref: [],
           extendedPreferences: {},
+        });
+      });
+
+      it('seeds "Any" age and height as no limit', async () => {
+        const { store, createPartnerPreferenceIfMissing } =
+          preferenceStore(null);
+        const service = buildService({
+          getDraft: jest.fn().mockResolvedValue(
+            buildValidDraft({
+              partnerPreference: {
+                preferredAgeRange: 'Any',
+                preferredHeightRange: 'Any',
+              },
+            }),
+          ),
+          upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+          findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+          createPartnerPreferenceIfMissing,
+        });
+
+        await service.finalize('user-1');
+
+        expect(store.row).toMatchObject({
+          minAge: null,
+          maxAge: null,
+          minHeightCm: null,
+          maxHeightCm: null,
+        });
+      });
+
+      it('gives an open-ended height (6 ft and up) no maximum, not a made-up 210 cm', async () => {
+        const { store, createPartnerPreferenceIfMissing } =
+          preferenceStore(null);
+        const service = buildService({
+          getDraft: jest.fn().mockResolvedValue(
+            buildValidDraft({
+              partnerPreference: {
+                preferredAgeRange: '26-30',
+                preferredHeightRange: `6'0"+`,
+              },
+            }),
+          ),
+          upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+          findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+          createPartnerPreferenceIfMissing,
+        });
+
+        await service.finalize('user-1');
+
+        expect(store.row).toMatchObject({
+          minAge: 26,
+          maxAge: 30,
+          minHeightCm: 183,
+          maxHeightCm: null,
         });
       });
 
