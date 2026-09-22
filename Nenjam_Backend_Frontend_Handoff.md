@@ -4,6 +4,9 @@
 **Audience:** Backend engineers, product owner
 **Scope:** Flutter client (`Frontend/`) ↔ NestJS API (`backend/`)
 
+> **Revision — verified against `main` after PR #79 (`feat/premium-privacy`) and PR #80 (`fix/preference-scoring`).**
+> Premium has moved from *unimplemented* to **partially implemented**, and a new **Privacy / photo visibility** capability shipped fully wired on both sides. Section 3.1 and the Premium checklist have been rewritten accordingly; counts in Sections 1 and 9 are recalculated. The four backend fixes in Section 2 were each re-verified and **all four still stand unchanged**.
+
 ---
 
 ## Section 1 — Executive Summary
@@ -15,7 +18,9 @@ What remains is not frontend work. It falls into three buckets:
 | Category | Count | Nature |
 |---|---|---|
 | **Backend fixes required** | **4** | Concrete defects or missing contract fields in existing backend code |
-| **Backend / product features not implemented** | **7** | Capabilities that have never been built |
+| **Backend / product features partially implemented** | **1** | Premium — full read path built; no write path to create the data |
+| **Backend / product features not implemented** | **6** | Capabilities that have never been built |
+| **Shipped since the original audit** | **1** | Privacy / photo visibility — wired end to end |
 | **Intentionally deferred** | **2** | Awaiting a product decision or a prerequisite switch |
 
 A recurring theme runs through this document and is important to internalise before reading further:
@@ -73,6 +78,13 @@ The frontend cannot fix this unilaterally. The API runs with `forbidNonWhitelist
 - Extended preferences are returned by the `GET` / response.
 - Existing base preferences still save correctly, including the omit-vs-clear distinction.
 - Existing registration draft behaviour is unchanged.
+
+> **Re-verified after PR #80 (`fix/preference-scoring`) — this blocker still stands.**
+> PR #80 added `matches/filters/preference-categories.ts`, which fixes how **base** preference values are *matched*: the preference picker offers categories ("B.E / B.Tech+", "Software / IT") while profiles store specific values ("B.E / B.Tech", "Software Engineer"), and because both contain "/", a generic group-label rule was dropping every one of them — so an education preference was **never applied, not even an exact match**. That is a genuine matching fix, and it is pinned by a spec that reads the Dart source and fails on drift.
+>
+> **It does not touch `extended`.** It concerns base-field *matching semantics*, not advanced-preference *persistence*. The `matches` partner-preference DTO was re-checked and still does **not** declare `extended`, so the standalone save path remains unable to persist advanced preferences. The §2.1 conclusion is unchanged.
+>
+> Note the distinction for the earlier statement that advanced preferences are "not persisted / not used": advanced preferences captured **during onboarding** *are* persisted (via the draft path) and *are* consumed by `preference-compatibility.signal.ts` for diet/smoking/drinking scoring. What is lost is edits made on the **standalone Edit Profile page**. PR #80 does not change either half of that.
 
 ---
 
@@ -179,36 +191,67 @@ This is therefore **backend contract work, not frontend mapping work.** The clie
 
 ---
 
-## Section 3 — Backend / Product Features Not Implemented
+## Section 3 — Backend / Product Features: Status
 
-**These are not frontend bugs.** In each case the frontend mapping is already written and correct; the capability has simply never been built server-side. Where the backend currently sends a hardcoded placeholder, the client renders it faithfully — which generally means showing nothing rather than showing something false.
+**These are not frontend bugs.** In each case the frontend mapping is already written and correct; the capability has simply never been built server-side (or, for Premium, is built but has no data). Where the backend currently sends a placeholder, the client renders it faithfully — which generally means showing nothing rather than showing something false.
 
----
+**Status legend used below:**
 
-### 3.1 — Subscription / Premium
-
-**Current state**
-
-- `isPremium` is hardcoded `false` in the feed mapper.
-- Own-profile premium status is also a hardcoded placeholder in two places, each carrying a `TODO(backend)` noting that no subscription endpoint is wired.
-- `ApiEndpoints.subscriptionStatus` is defined on the client but has **zero consumers**.
-- The `Subscription` module is **not registered in `AppModule`**.
-- Frontend mapping is already prepared and tested.
-
-**Backend / product work**
-
-- Implement subscription / premium status.
-- Provide real premium state through the appropriate API.
-- Maintain a stable response contract.
-
-**Frontend follow-up (later)**
-
-- Consume the real premium value.
-- Verify existing badge / UI behaviour.
+| Marker | Meaning |
+|---|---|
+| ✅ **IMPLEMENTED** | Built and wired end to end, both sides |
+| ⚠️ **PARTIALLY IMPLEMENTED** | Real code path exists, but a required piece is missing |
+| ❌ **NOT IMPLEMENTED** | Never built; frontend maps a hardcoded backend placeholder |
 
 ---
 
-### 3.2 — Psychology module
+### 3.1 — Subscription / Premium — ⚠️ **PARTIALLY IMPLEMENTED** (updated after PR #79)
+
+> **This section was rewritten after PR #79.** The original handoff stated that `isPremium` was hardcoded `false` in the feed mapper. **That is no longer true** — the read path is now fully built and derives from real data. What remains missing is the *write* path: nothing creates the subscription rows it reads.
+
+#### ✅ What is now implemented and wired
+
+- **A single shared definition of "premium"** — `activePremiumSubscriptionWhere(now)` in `backend/libs/database/src/entitlements/premium-entitlement.ts`. A subscription counts only while `status = ACTIVE`, `startDate <= now < endDate`, and the plan is not `FREE`. It takes `now` as a parameter so every filter in one request evaluates against the same instant.
+- **`EntitlementsModule`** (module / service / repository / specs) — **wired into the runtime graph** via `SettingsModule`, which is registered in `AppModule`. It is not imported by `AppModule` directly, but it *is* reachable.
+- **The feed mapper no longer hardcodes the value.** It is now `isPremium: isPremiumMember(user)` (`profile-feed.mapper.ts:76`), reading a real `subscriptions` probe.
+- **The feed query actually selects that probe** — `feed.repository.ts:126` spreads `photoPrivacySelectFor(viewerId, now)`, which includes a `take: 1` nested select filtered by `activePremiumSubscriptionWhere`. Notifications use the same probe.
+- **A real privacy API** — `GET /settings` and `PATCH /settings/privacy`, returning `isPremium`, `hideMyProfile`, `hidePhotosFromNonConnections`, `profileVisibleToPremiumOnly`.
+
+#### ❌ What is still missing
+
+- **Nothing creates `UserSubscription` rows.** A repo-wide search for `userSubscription.create` / `.upsert` in application code returns **no hits** (only generated Prisma client boilerplate). Checkout, the Razorpay webhook, and the subscription module remain unimplemented stubs.
+- The source states this plainly: *"nothing creates UserSubscription rows yet … so today this matches nobody and every member is treated as non-premium."*
+- **Net runtime behaviour is unchanged:** `isPremium` still evaluates to `false` for every member — but now because there is no *data*, not because the value is faked.
+- **One frontend own-profile hardcode remains:** `Frontend/lib/features/profile/presentation/pages/profile_page.dart:177` still passes `isPremium: false` with a `TODO(backend)`. The Discover/feed path is correct; this one screen is not.
+- `ApiEndpoints.subscriptionStatus` still has **zero consumers** on the client.
+
+#### Backend / product work remaining
+
+- Implement checkout and the Razorpay webhook so `UserSubscription` rows are actually created.
+- Implement the subscription module (currently a stub, still not in `AppModule`).
+- No change needed to the entitlement rule, the feed probe, or the privacy API — those are done.
+
+#### Frontend follow-up (later)
+
+- Replace the `isPremium: false` hardcode at `profile_page.dart:177` once own-profile premium status is available.
+- No change needed for the Discover/feed badge — the client already maps `isPremium` as a pass-through and will light up as soon as real rows exist.
+
+---
+
+### 3.1b — Privacy / photo visibility — ✅ **IMPLEMENTED** (new since the original audit)
+
+Shipped by PR #79 and **wired end to end**; recorded here so it is not mistaken for outstanding work.
+
+- **Backend:** `photo-visibility.ts` provides `photoPrivacySelectFor` (per-viewer probes as one `take: 1` nested select, so a page of 20 cards stays a single query), `arePhotosHidden`, and `isPremiumMember`. `hiddenFromDiscoveryWhere` hides premium members who enabled "Hide My Profile". `GET /settings` + `PATCH /settings/privacy` expose the settings.
+- **Frontend:** `Frontend/lib/features/privacy/presentation/pages/privacy_page.dart` consumes both endpoints and correctly gates "Hide My Profile" behind `isPremium`.
+- **Design note worth preserving:** `profileVisibleToPremiumOnly` was *repurposed* to mean "hide my profile" rather than adding a second overlapping flag. Hiding is premium-gated, so the flag alone is insufficient — a non-premium member stays visible even with it set.
+- **Practical consequence today:** because no member can be premium (see §3.1), the hide-profile path is effectively inert until subscription rows exist. The photo-visibility gate for connections works independently of premium and is live.
+
+**No frontend or backend work outstanding for this item.**
+
+---
+
+### 3.2 — Psychology module — ❌ **NOT IMPLEMENTED**
 
 **Current state**
 
@@ -236,7 +279,7 @@ This is therefore **backend contract work, not frontend mapping work.** The clie
 
 ---
 
-### 3.3 — Astrology engine
+### 3.3 — Astrology engine — ❌ **NOT IMPLEMENTED**
 
 **Current state**
 
@@ -260,7 +303,7 @@ This is therefore **backend contract work, not frontend mapping work.** The clie
 
 ---
 
-### 3.4 — Presence / Online status
+### 3.4 — Presence / Online status — ❌ **NOT IMPLEMENTED**
 
 **Current state**
 
@@ -280,7 +323,7 @@ This is therefore **backend contract work, not frontend mapping work.** The clie
 
 ---
 
-### 3.5 — Daily Recommendations
+### 3.5 — Daily Recommendations — ❌ **NOT IMPLEMENTED**
 
 **Current state**
 
@@ -300,7 +343,7 @@ This is therefore **backend contract work, not frontend mapping work.** The clie
 
 ---
 
-### 3.6 — Profile analytics
+### 3.6 — Profile analytics — ❌ **NOT IMPLEMENTED**
 
 **Current state**
 
@@ -319,7 +362,7 @@ This is therefore **backend contract work, not frontend mapping work.** The clie
 
 ---
 
-### 3.7 — Verification status
+### 3.7 — Verification status — ❌ **NOT IMPLEMENTED**
 
 **Current state**
 
@@ -414,7 +457,8 @@ This was the most recent frontend production fix and is called out prominently h
 | **Gothra structured read-back** | Consume the structured Gothra value; verify finalized-profile hydration. |
 | **Search server-side filtering** | Send the newly supported filter parameters; adapt pagination **only if** the backend contract requires it. Add API contract / integration tests. |
 | **Search feed fields** | Consume newly exposed `country`, `state`, `rashi`, `star`, `incomeVerified`; activate the five currently inert filters. |
-| **Subscription / Premium** | Consume real `isPremium`; verify badge and own-profile display. |
+| **Subscription / Premium** | Discover/feed badge needs **no change** — already a verified pass-through. Remaining: replace the `isPremium: false` hardcode at `profile_page.dart:177` once own-profile premium status exists. |
+| **Privacy / photo visibility** | **None — already integrated** (`privacy_page.dart` consumes `GET /settings` + `PATCH /settings/privacy`). |
 | **Psychology** | Replace the mock repository with the real API; consume completion status and compatibility score; implement quiz persistence **according to the backend contract**. |
 | **Astrology** | Consume real horoscope availability and compatibility; verify existing zero / unavailable gating. |
 | **Presence** | Consume real `isOnline`; verify badge behaviour. |
@@ -490,7 +534,7 @@ Ordered by **dependency and impact**, not by subjective score.
 | 2 | Gothra structured persistence | Backend fix |
 | 3 | Search server-side filtering | Backend fix |
 | 4 | Search feed fields (country/state/rashi/star/incomeVerified) | Backend fix |
-| 5 | Subscription / Premium | Product feature |
+| 5 | Subscription / Premium — **checkout + webhook only** (read path already built, see §3.1) | Product feature (partial) |
 | 6 | Psychology backend | Product feature |
 | 7 | Astrology backend | Product feature |
 | 8 | Presence | Product feature |
@@ -531,9 +575,20 @@ Ordered by **dependency and impact**, not by subjective score.
 - [ ] `star` exposed
 - [ ] `incomeVerified` exposed
 
-### Premium
-- [ ] Subscription status API available
-- [ ] `isPremium` is real
+### Premium *(partially complete — see §3.1)*
+- [x] Shared premium-entitlement rule defined (`activePremiumSubscriptionWhere`)
+- [x] `EntitlementsModule` reachable in the runtime graph (via `SettingsModule`)
+- [x] Feed mapper derives `isPremium` from real data (no longer hardcoded)
+- [x] Feed query selects the premium probe
+- [ ] Checkout / Razorpay webhook create `UserSubscription` rows
+- [ ] Subscription module implemented and registered in `AppModule`
+- [ ] `isPremium` evaluates `true` for an actually-subscribed member
+- [ ] Own-profile premium status available (unblocks `profile_page.dart:177`)
+
+### Privacy / photo visibility *(complete — §3.1b)*
+- [x] `GET /settings` / `PATCH /settings/privacy` implemented
+- [x] Photo-visibility probes wired into feed and notifications
+- [x] Frontend privacy page consumes both endpoints and gates on `isPremium`
 
 ### Psychology
 - [ ] Backend module exists
@@ -562,13 +617,19 @@ Ordered by **dependency and impact**, not by subjective score.
 
 ## Section 9 — Final Status
 
+*Recalculated after PR #79 / PR #80.*
+
 | | |
 |---|---|
 | **Frontend audit** | **COMPLETE** |
-| **Frontend fixes remaining** | **0** |
-| **Backend fixes required** | **4** |
-| **Backend / product features still incomplete** | **7** |
+| **Frontend fixes remaining** | **0** (one deferred hardcode at `profile_page.dart:177`, blocked on backend) |
+| **Backend fixes required** | **4** (all four re-verified as still standing) |
+| **Backend / product features partially implemented** | **1** (Premium — read path done, write path missing) |
+| **Backend / product features still incomplete** | **6** |
+| **Shipped since the original audit** | **1** (Privacy / photo visibility) |
 | **Deferred decisions** | **2** |
+
+**Count reconciliation:** the original handoff listed **7** unimplemented features. Premium moved from *unimplemented* to *partially implemented*, leaving **6** genuinely unimplemented (Psychology, Astrology, Presence, Daily Recommendations, Profile analytics, Verification status). Total feature items remains 7; Privacy is tracked separately as newly shipped.
 
 **The frontend should not create workarounds for missing backend contracts.**
 
