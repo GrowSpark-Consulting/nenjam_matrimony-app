@@ -90,17 +90,28 @@ class DiscoverRepositoryImpl implements DiscoverRepository {
   Future<DiscoverProfilePage> getDiscoverProfilesPage({
     int page = 1,
     int limit = 20,
+    String? cursor,
   }) async {
     final response = await _apiClient.get<Map<String, dynamic>>(
       ApiEndpoints.discover,
-      queryParameters: {'page': page, 'limit': limit},
+      queryParameters: {
+        // Sent either way: the backend ignores `page` once a cursor is
+        // present, and still needs it for the first request.
+        'page': page,
+        'limit': limit,
+        if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+      },
     );
     final data =
         unwrapOrThrow(response.statusCode, response.data) ?? const {};
+    final nextCursor = data['nextCursor'];
     return DiscoverProfilePage(
       items: _parseProfiles(data),
       page: (data['page'] as num?)?.toInt() ?? page,
       hasMore: data['hasMore'] == true,
+      nextCursor: nextCursor is String && nextCursor.isNotEmpty
+          ? nextCursor
+          : null,
     );
   }
 

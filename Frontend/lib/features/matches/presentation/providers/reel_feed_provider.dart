@@ -7,26 +7,30 @@ import '../../../discover/presentation/providers/discover_providers.dart';
 /// profiles grown page-by-page as the user swipes down the vertical `PageView`.
 class ReelFeedState {
   final List<DiscoveryProfileEntity> profiles;
-  final int page;
+
+  /// Where the next page continues from. Null once the feed is exhausted —
+  /// which is also why [hasMore] is kept: a page can report more results
+  /// without handing back a cursor, and the reel must not then ask again.
+  final String? cursor;
   final bool hasMore;
   final bool isLoadingMore;
 
   const ReelFeedState({
     required this.profiles,
-    required this.page,
     required this.hasMore,
+    this.cursor,
     this.isLoadingMore = false,
   });
 
   ReelFeedState copyWith({
     List<DiscoveryProfileEntity>? profiles,
-    int? page,
+    String? cursor,
     bool? hasMore,
     bool? isLoadingMore,
   }) =>
       ReelFeedState(
         profiles: profiles ?? this.profiles,
-        page: page ?? this.page,
+        cursor: cursor ?? this.cursor,
         hasMore: hasMore ?? this.hasMore,
         isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       );
@@ -35,6 +39,12 @@ class ReelFeedState {
 /// Drives the infinite-scroll Matches reel. `build()` loads the first page;
 /// [loadMore] appends the next one when the user nears the end. Dedupes by id
 /// so a profile never appears twice, and never fires overlapping requests.
+///
+/// Pages by cursor, not by page number. The backend ranks the feed per request
+/// and demotes profiles it has just served, so "rows 20-40" of the second
+/// request is not what followed rows 0-20 of the first: asking for page 2 by
+/// offset skipped twenty profiles a member then never saw. The cursor names
+/// the last profile served instead, so the next page continues from there.
 class ReelFeedNotifier extends AutoDisposeAsyncNotifier<ReelFeedState> {
   static const _pageSize = 20;
 
@@ -45,20 +55,25 @@ class ReelFeedNotifier extends AutoDisposeAsyncNotifier<ReelFeedState> {
         .getDiscoverProfilesPage(page: 1, limit: _pageSize);
     return ReelFeedState(
       profiles: page.items,
-      page: page.page,
-      hasMore: page.hasMore,
+      cursor: page.nextCursor,
+      // A first page that reports more results but hands back no cursor has
+      // no way to continue; treating it as exhausted beats re-requesting the
+      // same first page forever.
+      hasMore: page.hasMore && page.nextCursor != null,
     );
   }
 
   Future<void> loadMore() async {
     final current = state.valueOrNull;
     if (current == null || !current.hasMore || current.isLoadingMore) return;
+    final cursor = current.cursor;
+    if (cursor == null) return;
 
     state = AsyncData(current.copyWith(isLoadingMore: true));
     try {
       final next = await ref
           .read(discoverRepositoryProvider)
-          .getDiscoverProfilesPage(page: current.page + 1, limit: _pageSize);
+          .getDiscoverProfilesPage(limit: _pageSize, cursor: cursor);
       final seen = current.profiles.map((p) => p.id).toSet();
       final merged = [
         ...current.profiles,
@@ -67,8 +82,8 @@ class ReelFeedNotifier extends AutoDisposeAsyncNotifier<ReelFeedState> {
       state = AsyncData(
         ReelFeedState(
           profiles: merged,
-          page: next.page,
-          hasMore: next.hasMore,
+          cursor: next.nextCursor,
+          hasMore: next.hasMore && next.nextCursor != null,
         ),
       );
     } catch (_) {
