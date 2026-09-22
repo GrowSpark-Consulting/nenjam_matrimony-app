@@ -23,7 +23,23 @@ import '../../domain/models/profile_draft.dart';
 ///
 /// Returns `null` when every draft-backed step is answered — onboarding is
 /// done, as far as the draft alone can say.
-String? firstUnansweredOnboardingStep(ProfileDraft draft) {
+///
+/// [gatePendingPhotos] adds the Add Photos step to the chain, gated on the
+/// draft's *staged* photos. Off by default, and deliberately so: photos are
+/// not a draft field. They are an independent resource the backend serves
+/// from `GET /profiles/me/photos`, and `photoGallery` holds only the
+/// pre-session staging queue — nothing ever writes it back from the server.
+/// A caller that restored a backend draft therefore sees an empty gallery
+/// for a member with six uploaded photos, so gating it there would send
+/// every established member to the photo step instead of the app. Only a
+/// caller whose draft IS the local snapshot (see [SplashController]) may
+/// turn it on, because for that caller a staged photo is the whole truth.
+/// Post-session, the requirement is enforced by the Add Photos screen
+/// itself, which reads live photo state.
+String? firstUnansweredOnboardingStep(
+  ProfileDraft draft, {
+  bool gatePendingPhotos = false,
+}) {
   final profileForStep = ProfileForForm(
     profileCreatedFor: draft.basicDetails.profileCreatedFor,
     gender: draft.basicDetails.gender,
@@ -66,14 +82,9 @@ String? firstUnansweredOnboardingStep(ProfileDraft draft) {
   );
   if (!incomeStep.isComplete) return RouteNames.onboardingIncome;
 
-  // At least one photo is required. Gated on the draft's staged photos only:
-  // that is all a draft can answer, and it is the pre-session case that
-  // needs the gate most. A member whose photo already reached the backend
-  // has an empty gallery here, so the photo screen re-opens and reads its
-  // count from `myPhotosProvider` — showing an enabled Continue, not a
-  // dead end. Without this the chain jumped income → about, and a member
-  // who skipped photos resumed permanently past the step.
-  if (draft.photoGallery.pendingPaths.isEmpty) {
+  // At least one photo is required — but only a caller that opted in can be
+  // asked this, and only about staged photos. See [gatePendingPhotos].
+  if (gatePendingPhotos && draft.photoGallery.pendingPaths.isEmpty) {
     return RouteNames.onboardingPhotos;
   }
 

@@ -285,26 +285,31 @@ void main() {
   });
 
   group('Resume gate — the bypass that skipped the step entirely', () {
-    test('a draft with no photos resumes at the photo step', () {
+    test('a pre-session draft with no staged photos resumes at the photo step',
+        () {
       expect(
-        firstUnansweredOnboardingStep(_draftUpToPhotos()),
+        firstUnansweredOnboardingStep(
+          _draftUpToPhotos(),
+          gatePendingPhotos: true,
+        ),
         RouteNames.onboardingPhotos,
       );
     });
 
-    test('a saved draft with one photo stays completable', () {
+    test('a saved draft with one staged photo stays completable', () {
       expect(
         firstUnansweredOnboardingStep(
           _draftUpToPhotos(
             gallery: const PhotoGallery(primaryPhotoPath: '/tmp/a.jpg'),
           ),
+          gatePendingPhotos: true,
         ),
         isNull,
         reason: 'a restored draft that already has a photo is done',
       );
     });
 
-    test('a saved draft with several photos stays completable', () {
+    test('a saved draft with several staged photos stays completable', () {
       expect(
         firstUnansweredOnboardingStep(
           _draftUpToPhotos(
@@ -313,8 +318,23 @@ void main() {
               galleryPaths: ['/tmp/b.jpg', '/tmp/c.jpg'],
             ),
           ),
+          gatePendingPhotos: true,
         ),
         isNull,
+      );
+    });
+
+    test(
+        'a restored BACKEND draft is never gated on photos, however empty its '
+        'gallery', () {
+      // The regression this guards: `photoGallery` is a local staging queue
+      // that the backend never populates, so an established member with
+      // uploaded photos restores a draft with an empty gallery. Gating that
+      // sent every such member to the photo step instead of the app.
+      expect(
+        firstUnansweredOnboardingStep(_draftUpToPhotos()),
+        isNull,
+        reason: 'the default must not gate a server-restored draft on photos',
       );
     });
 
@@ -325,7 +345,7 @@ void main() {
         educationDetails: const EducationDetails(qualification: 'Bachelors'),
       );
       expect(
-        firstUnansweredOnboardingStep(noIncome),
+        firstUnansweredOnboardingStep(noIncome, gatePendingPhotos: true),
         RouteNames.onboardingIncome,
       );
 
@@ -333,7 +353,7 @@ void main() {
         gallery: const PhotoGallery(primaryPhotoPath: '/tmp/a.jpg'),
       ).copyWith(lifestyleDetails: const LifestyleDetails(aboutMe: ''));
       expect(
-        firstUnansweredOnboardingStep(noAbout),
+        firstUnansweredOnboardingStep(noAbout, gatePendingPhotos: true),
         RouteNames.onboardingAbout,
       );
     });

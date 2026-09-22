@@ -21,11 +21,14 @@ import '../providers/registration_provider.dart';
 import '../widgets/onboarding_scaffold.dart';
 
 /// Step 8 — "Add Photos". **At least one photo is required**: Continue stays
-/// disabled until one exists, and there is no "Add Photos Later" escape. This
-/// is a client-side product rule — no backend rule requires a photo before a
-/// profile exists — so the matching gate in [firstUnansweredOnboardingStep]
-/// is what stops a resumed signup re-entering past this step. Change the two
-/// together.
+/// disabled until one exists, and there is no "Add Photos Later" escape.
+///
+/// This screen is where the rule is enforced, because it is the only place
+/// that can read the real count — uploaded photos come from
+/// `GET /profiles/me/photos` via [PhotosController], not from the draft. The
+/// draft gate can only see *staged* photos, so it applies the same rule only
+/// for the pre-session caller that opts in (`gatePendingPhotos`); it must not
+/// be applied to a restored backend draft, which never carries a gallery.
 ///
 /// Owns no photo storage of its own. Picking, cropping and uploading all go
 /// through the services the profile photo manager already uses
