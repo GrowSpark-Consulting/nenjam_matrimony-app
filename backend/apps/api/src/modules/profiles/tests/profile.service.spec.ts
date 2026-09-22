@@ -962,11 +962,15 @@ describe('ProfileService', () => {
       await expect(service.finalize('user-1')).resolves.toBeDefined();
     });
 
+    // `weight` is what marks this section as genuinely engaged-with: it is
+    // written only by the Physical step. `height` alone is not — onboarding's
+    // Marital step writes it for the member without that step ever opening
+    // (see the case below).
     it('throws when Physical is partially filled instead of skipped or completed', async () => {
       const service = buildService({
         getDraft: jest.fn().mockResolvedValue(
           buildValidDraft({
-            physicalDetails: { height: '178 cm' }, // weight, disability missing
+            physicalDetails: { weight: '70 kg' }, // height, disability missing
           }),
         ),
       });
@@ -974,6 +978,20 @@ describe('ProfileService', () => {
       await expect(service.finalize('user-1')).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    it('does not throw for the height-only section onboarding writes', async () => {
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(
+          buildValidDraft({
+            physicalDetails: { height: '178 cm', disability: 'None' },
+          }),
+        ),
+        upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+      });
+
+      await expect(service.finalize('user-1')).resolves.toBeDefined();
     });
 
     it('does not throw when Physical is left entirely empty (skipped)', async () => {
@@ -1002,6 +1020,37 @@ describe('ProfileService', () => {
       );
     });
 
+    // The whole draft a fresh onboarding signup actually produces, in one
+    // case: all three skippable sections half-filled on the member's behalf,
+    // none of their wizard steps ever shown. This exact shape made finalize
+    // answer 400 for every new device, which stopped registration from
+    // completing at all.
+    it('finalizes the draft the onboarding flow produces', async () => {
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(
+          buildValidDraft({
+            physicalDetails: { height: '178 cm', disability: 'None' },
+            educationDetails: {
+              qualification: "Bachelor's",
+              college: 'Anna University',
+              occupation: 'Engineer',
+              company: 'Acme Corp',
+              employmentType: 'Private',
+              annualIncome: '10',
+            },
+            lifestyleDetails: {
+              eatingHabit: 'Vegetarian',
+              aboutMe: 'A short description.',
+            },
+          }),
+        ),
+        upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+      });
+
+      await expect(service.finalize('user-1')).resolves.toBeDefined();
+    });
+
     it('does not throw when Education is left entirely empty (skipped)', async () => {
       const service = buildService({
         getDraft: jest
@@ -1014,11 +1063,15 @@ describe('ProfileService', () => {
       await expect(service.finalize('user-1')).resolves.toBeDefined();
     });
 
+    // smoking/drinking/fitness are written only by the Lifestyle step, so any
+    // of them marks the section as genuinely engaged-with. `eatingHabit` and
+    // `aboutMe` do not — onboarding writes both for the member from other
+    // steps (see the case below).
     it('throws when Lifestyle is partially filled instead of skipped or completed', async () => {
       const service = buildService({
         getDraft: jest.fn().mockResolvedValue(
           buildValidDraft({
-            lifestyleDetails: { eatingHabit: 'Vegetarian' }, // rest missing
+            lifestyleDetails: { smoking: 'No' }, // rest missing
           }),
         ),
       });
@@ -1026,6 +1079,23 @@ describe('ProfileService', () => {
       await expect(service.finalize('user-1')).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    it('does not throw for the eatingHabit/aboutMe section onboarding writes', async () => {
+      const service = buildService({
+        getDraft: jest.fn().mockResolvedValue(
+          buildValidDraft({
+            lifestyleDetails: {
+              eatingHabit: 'Vegetarian',
+              aboutMe: 'A short description.',
+            },
+          }),
+        ),
+        upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+        findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+      });
+
+      await expect(service.finalize('user-1')).resolves.toBeDefined();
     });
 
     it('throws when Horoscope is touched but Rashi is missing', async () => {

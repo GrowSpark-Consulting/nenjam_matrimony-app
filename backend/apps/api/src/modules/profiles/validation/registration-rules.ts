@@ -163,7 +163,15 @@ export function isMatchableFromDraft(
 
 // ---- Steps 5, 6, 7: skippable, all-required-if-touched ----
 
-const EDUCATION_FIELDS = [
+// `workLocation` is deliberately absent from the REQUIRED list: no screen in
+// the current registration flow asks for it. Onboarding's Education and
+// Income steps together fill every other field here, so requiring one the
+// product never collects made finalize reject every onboarding signup for a
+// field the member was never shown — the same class of bug that removed
+// `caste`/`motherTongue` from isMatchableFromDraft. It stays in TOUCH_FIELDS
+// so the full wizard's Education step, which does collect it, still counts as
+// engaged when it is the only thing filled in.
+const EDUCATION_TOUCH_FIELDS = [
   'qualification',
   'college',
   'occupation',
@@ -173,22 +181,41 @@ const EDUCATION_FIELDS = [
   'workLocation',
 ];
 
+const EDUCATION_REQUIRED_FIELDS = [
+  'qualification',
+  'college',
+  'occupation',
+  'company',
+  'employmentType',
+  'annualIncome',
+];
+
 export function isEducationSectionTouched(education: Section): boolean {
-  return anyPresent(education, EDUCATION_FIELDS);
+  return anyPresent(education, EDUCATION_TOUCH_FIELDS);
 }
 
 export function isEducationDetailsValid(education: Section): boolean {
   return (
     !isEducationSectionTouched(education) ||
-    allPresent(education, EDUCATION_FIELDS)
+    allPresent(education, EDUCATION_REQUIRED_FIELDS)
   );
 }
 
-// Physical "touched" only looks at height/weight — `disability` defaults to
-// `'None'` on the client, which is always non-empty, so including it here
-// would make the section read as "touched" even when the user never
-// interacted with the page at all.
-const PHYSICAL_TOUCH_FIELDS = ['height', 'weight'];
+// Physical "touched" looks at `weight` alone, because that is the only field
+// here the member can set by opening the Physical step and nothing else.
+//
+// `disability` was already excluded: it defaults to `'None'` on the client,
+// which is always non-empty, so it would mark the section touched for
+// everyone. `height` has since become the same kind of field — onboarding's
+// Marital step writes it on the member's behalf (see
+// `applyOnboardingMarital`), without ever showing the Physical step. Leaving
+// it in TOUCH meant every onboarding signup read as "half-filled Physical"
+// and finalize rejected it, naming a step the member had never opened.
+//
+// The rule it protects is unchanged for anyone who does open that step: the
+// Physical step always writes `weight`, so a member who engages with it is
+// still held to height + weight + disability.
+const PHYSICAL_TOUCH_FIELDS = ['weight'];
 const PHYSICAL_REQUIRED_FIELDS = ['height', 'weight', 'disability'];
 
 export function isPhysicalSectionTouched(physical: Section): boolean {
@@ -210,9 +237,24 @@ const LIFESTYLE_SCALAR_FIELDS = [
   'aboutMe',
 ];
 
+// Two of the scalars above reach this section without the member ever opening
+// the Lifestyle step: onboarding's Marital step writes `eatingHabit` and its
+// About step writes `aboutMe` (both required onboarding gates in their own
+// right). Touch-detection therefore keys on the three fields only the
+// Lifestyle step itself writes — smoking, drinking, fitness — plus hobbies.
+// With `eatingHabit`/`aboutMe` in TOUCH, every onboarding signup read as a
+// half-filled Lifestyle section and finalize rejected it for smoking/
+// drinking/fitness/hobbies the member was never asked for.
+//
+// A member who does open that step still has to finish it: the step writes
+// all of smoking, drinking and fitness together, so engaging with it trips
+// this check and the full LIFESTYLE_SCALAR_FIELDS + hobbies rule applies
+// unchanged.
+const LIFESTYLE_TOUCH_FIELDS = ['smoking', 'drinking', 'fitness'];
+
 export function isLifestyleSectionTouched(lifestyle: Section): boolean {
   return (
-    anyPresent(lifestyle, LIFESTYLE_SCALAR_FIELDS) ||
+    anyPresent(lifestyle, LIFESTYLE_TOUCH_FIELDS) ||
     hasNonEmptyArray(lifestyle.hobbies)
   );
 }
