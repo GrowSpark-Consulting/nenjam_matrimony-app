@@ -173,6 +173,7 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                           location: profileDisplayLocation(draft, l10n),
                           community: draft?.religionDetails.community ?? '',
                           profileId: profileDisplayId(authUser),
+                          profileCopyValue: profileCopyId(authUser),
                           isVerified: authUser?.isFullyVerified ?? false,
                           isPremium: widget.isPremium,
                           onAvatarTap: () =>
@@ -514,6 +515,10 @@ class _ProfileHeader extends StatelessWidget {
   final String location;
   final String community;
   final String profileId;
+
+  /// Full uid copied when the ID chip is tapped. [profileId] is the short
+  /// form shown on screen; this is what actually lands on the clipboard.
+  final String profileCopyValue;
   final bool isVerified;
   final bool isPremium;
   final VoidCallback? onAvatarTap;
@@ -526,6 +531,7 @@ class _ProfileHeader extends StatelessWidget {
     required this.location,
     required this.community,
     required this.profileId,
+    required this.profileCopyValue,
     required this.isVerified,
     required this.isPremium,
     this.onAvatarTap,
@@ -723,7 +729,10 @@ class _ProfileHeader extends StatelessWidget {
           // itself and says so.
           if (profileId.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xs),
-            _ProfileIdChip(profileId: profileId),
+            _ProfileIdChip(
+              profileId: profileId,
+              copyValue: profileCopyValue,
+            ),
           ],
         ],
       ),
@@ -738,9 +747,14 @@ class _ProfileHeader extends StatelessWidget {
 /// is covered by something else, then returns to the copy glyph. Nothing
 /// about the ID itself changes.
 class _ProfileIdChip extends StatefulWidget {
+  /// Short, display-only form rendered in the chip.
   final String profileId;
 
-  const _ProfileIdChip({required this.profileId});
+  /// Full uid placed on the clipboard. Falls back to [profileId] when empty
+  /// so the chip never silently copies nothing.
+  final String copyValue;
+
+  const _ProfileIdChip({required this.profileId, required this.copyValue});
 
   @override
   State<_ProfileIdChip> createState() => _ProfileIdChipState();
@@ -763,8 +777,12 @@ class _ProfileIdChipState extends State<_ProfileIdChip> {
     final messenger = ScaffoldMessenger.of(context);
 
     // The bare ID, not the "ID: x" label around it - what a member pastes
-    // into a support chat should be the identifier alone.
-    await Clipboard.setData(ClipboardData(text: widget.profileId));
+    // into a support chat should be the identifier alone. And the *full*
+    // uid, not the 8-character form on screen: support can't resolve a
+    // prefix, and a prefix isn't guaranteed unique.
+    final copyText =
+        widget.copyValue.isNotEmpty ? widget.copyValue : widget.profileId;
+    await Clipboard.setData(ClipboardData(text: copyText));
     if (!mounted) return;
 
     setState(() => _copied = true);

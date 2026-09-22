@@ -49,6 +49,7 @@ abstract final class RouteNames {
   static const String premium = '/premium';
   static const String settings = '/settings';
   static const String verification = '/verification';
+  static const String faceVerification = '/verification/face';
   static const String subscription = '/subscription';
   static const String help = '/help';
   static const String supportTicketForm = '/help/ticket';
@@ -110,6 +111,7 @@ abstract final class RouteNames {
   static const String premiumName = 'premium';
   static const String settingsName = 'settings';
   static const String verificationName = 'verification';
+  static const String faceVerificationName = 'faceVerification';
   static const String subscriptionName = 'subscription';
   static const String helpName = 'help';
   static const String supportTicketFormName = 'supportTicketForm';
@@ -167,5 +169,6 @@ abstract final class RouteNames {
     verifyPhone,
     forgotPassword,
     registration,
+    faceVerification,
   };
 }

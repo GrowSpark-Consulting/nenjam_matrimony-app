@@ -43,9 +43,8 @@ class MessagePage {
   final String? nextCursor;
 }
 
-/// A single page of the conversations list — mirrors
-/// `features/matches/domain/repositories/matches_repository.dart`'s
-/// `MatchesResultPage` shape for consistency across list features.
+/// A single page of the conversations list — the `{ items, page, limit,
+/// total, hasMore }` envelope shared by the paginated list features.
 class ConversationResultPage {
   const ConversationResultPage({
     required this.items,

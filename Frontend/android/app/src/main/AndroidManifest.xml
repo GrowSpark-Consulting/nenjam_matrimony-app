@@ -56,6 +56,18 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Face Liveness (docs/development/selfie-verification-frontend-handoff.md
+             §3/§5): a separate native ComponentActivity hosting Amplify's
+             FaceLivenessDetector Compose UI, launched from Flutter via
+             FaceLivenessChannel's MethodChannel. exported="false" — nothing
+             outside this app may start it directly, since doing so would
+             bypass the backend-issued, single-use AWS credentials the
+             channel hands it. -->
+        <activity
+            android:name=".liveness.LivenessActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/LivenessTheme" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

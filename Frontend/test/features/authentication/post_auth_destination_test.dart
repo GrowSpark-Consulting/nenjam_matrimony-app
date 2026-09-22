@@ -11,6 +11,9 @@ import 'package:nenjam_matrimony/features/profile/presentation/providers/profile
 import 'package:nenjam_matrimony/features/registration/data/repositories/registration_repository.dart';
 import 'package:nenjam_matrimony/features/registration/domain/models/profile_draft.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/providers/registration_provider.dart';
+import 'package:nenjam_matrimony/features/verification/domain/models/face_verification.dart';
+import 'package:nenjam_matrimony/features/verification/domain/repositories/face_verification_repository.dart';
+import 'package:nenjam_matrimony/features/verification/presentation/providers/face_verification_providers.dart';
 
 /// The rule under test: **a brand-new user who has never answered "who is
 /// this profile for?" must always land on CreateProfileForPage** — never in
@@ -126,10 +129,44 @@ class _FakeProfileRepository implements ApiProfileRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// Defaults to `NOT_AVAILABLE` — the real state of every environment today
+/// (`FACE_VERIFICATION_ENABLED=false`) — so every existing test above, none
+/// of which knows this gate exists, keeps reaching Discover exactly as
+/// before. Tests that care about the gate override this explicitly.
+class _FakeFaceVerificationRepository implements FaceVerificationRepository {
+  _FakeFaceVerificationRepository(this._state);
+
+  final FaceVerificationState _state;
+
+  @override
+  Future<FaceVerificationState> getState() async => _state;
+
+  @override
+  Future<LivenessSessionTicket> startSession({required bool consent}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<FaceVerificationResult> complete({
+    required String attemptId,
+    ClientLivenessOutcome? clientOutcome,
+    String? clientErrorCode,
+  }) => throw UnimplementedError();
+}
+
+const _faceVerificationNotAvailable = FaceVerificationState(
+  status: FaceVerificationStatus.unverified,
+  verifiedAt: null,
+  canStart: false,
+  blockedReason: FaceBlockedReason.notAvailable,
+  attemptsRemainingToday: 0,
+  retryAfter: null,
+);
+
 ProviderContainer _container({
   required Future<Map<String, dynamic>> Function() draft,
   User? user,
   bool hasFinalizedProfile = false,
+  FaceVerificationState faceVerification = _faceVerificationNotAvailable,
 }) {
   final container = ProviderContainer(
     overrides: [
@@ -141,6 +178,9 @@ ProviderContainer _container({
       ),
       profileRepositoryProvider.overrideWithValue(
         _FakeProfileRepository(hasProfile: hasFinalizedProfile),
+      ),
+      faceVerificationRepositoryProvider.overrideWithValue(
+        _FakeFaceVerificationRepository(faceVerification),
       ),
     ],
   );
@@ -750,6 +790,103 @@ void main() {
       expect(route, RouteNames.onboardingContact);
       expect(route, isNot(RouteNames.profileBasics));
     });
+
+    test(
+        'a member below the current age floor is not re-asked their name, but '
+        'still owes the contact step', () async {
+      // The one case where the name step's two rules disagree, and the reason
+      // they are two rules: routing asks OnboardingNameForm.isAnswered (no age
+      // floor), while this gate's "is the signup finished" test asks
+      // isComplete (floor applied). A member who registered under the previous
+      // floor of 18 has a real date of birth they cannot change.
+      //
+      // So: never bounced back to Your Name (isAnswered passes), but not
+      // waved through as a finished signup either (isComplete fails), which
+      // leaves the contact step genuinely owed. Pins the asymmetry that
+      // sharing one predicate between the two would quietly collapse.
+      // Every other step answered, so the chain runs to the end and the name
+      // step's two rules are the only thing that can still differ. No contact
+      // details on record, so the gate can fire if it considers the signup
+      // unfinished — which, by isComplete, it is.
+      final underFloorDob = DateTime.now()
+          .subtract(const Duration(days: 365 * 19))
+          .toIso8601String();
+      final container = _container(
+        draft: () async => _answeredDraft(dob: underFloorDob),
+      );
+
+      final route = await _resolve(container);
+      expect(
+        route,
+        isNot(RouteNames.onboardingNameDob),
+        reason: 'the age floor must not re-ask a step they cannot satisfy',
+      );
+      expect(route, RouteNames.onboardingContact);
+    });
   });
 
+  group('Face verification gate', () {
+    test('a finalized, unverified member is sent to face verification, not Discover',
+        () async {
+      final c = _container(
+        draft: () async => _draftBody(),
+        hasFinalizedProfile: true,
+        faceVerification: const FaceVerificationState(
+          status: FaceVerificationStatus.unverified,
+          verifiedAt: null,
+          canStart: true,
+          blockedReason: null,
+          attemptsRemainingToday: 3,
+          retryAfter: null,
+        ),
+      );
+
+      expect(await _resolve(c), RouteNames.faceVerification);
+    });
+
+    test('a verified member reaches Discover', () async {
+      final c = _container(
+        draft: () async => _draftBody(),
+        hasFinalizedProfile: true,
+        faceVerification: const FaceVerificationState(
+          status: FaceVerificationStatus.verified,
+          verifiedAt: null,
+          canStart: false,
+          blockedReason: FaceBlockedReason.alreadyVerified,
+          attemptsRemainingToday: 3,
+          retryAfter: null,
+        ),
+      );
+
+      expect(await _resolve(c), RouteNames.discover);
+    });
+
+    test('NOT_AVAILABLE (feature off) does not block Discover', () async {
+      final c = _container(
+        draft: () async => _draftBody(),
+        hasFinalizedProfile: true,
+        faceVerification: _faceVerificationNotAvailable,
+      );
+
+      expect(await _resolve(c), RouteNames.discover);
+    });
+
+    test('a REVOKED member (primary photo changed) is sent back to verify',
+        () async {
+      final c = _container(
+        draft: () async => _draftBody(),
+        hasFinalizedProfile: true,
+        faceVerification: const FaceVerificationState(
+          status: FaceVerificationStatus.revoked,
+          verifiedAt: null,
+          canStart: true,
+          blockedReason: null,
+          attemptsRemainingToday: 3,
+          retryAfter: null,
+        ),
+      );
+
+      expect(await _resolve(c), RouteNames.faceVerification);
+    });
+  });
 }

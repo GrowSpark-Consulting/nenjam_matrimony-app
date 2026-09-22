@@ -64,6 +64,7 @@ import '../../features/shortlist/presentation/pages/shortlisted_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 import '../../features/subscription/presentation/pages/subscription_page.dart';
 import '../../features/verification/presentation/pages/verification_page.dart';
+import '../../features/verification/presentation/pages/face_verification_page.dart';
 import '../../features/authentication/domain/services/local_auth_session.dart';
 import '../../features/authentication/presentation/providers/auth_providers.dart';
 import '../../features/authentication/presentation/utils/post_auth_destination.dart';
@@ -470,6 +471,11 @@ GoRouter createRouter(WidgetRef ref) {
         path: RouteNames.verification,
         name: RouteNames.verificationName,
         builder: (context, state) => const VerificationPage(),
+      ),
+      GoRoute(
+        path: RouteNames.faceVerification,
+        name: RouteNames.faceVerificationName,
+        builder: (context, state) => const FaceVerificationPage(),
       ),
       GoRoute(
         path: RouteNames.subscription,

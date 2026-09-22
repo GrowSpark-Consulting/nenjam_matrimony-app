@@ -1983,5 +1983,33 @@
         "type": "int"
       }
     }
-  }
+  },
+  "faceVerificationTitle": "Account on hold",
+  "faceVerificationExplanation": "As part of our routine safety checks, please complete a quick selfie verification to continue using your account.",
+  "faceVerificationConsent": "Your video selfie is sent to Amazon Web Services only to check that you are a real person and that you match your main profile photo. Nenjam does not store your selfie video or selfie image — we keep only the result (verified or not).",
+  "faceVerificationCta": "Verify with Selfie",
+  "faceVerificationConsentShort": "Your selfie is checked by Amazon Web Services to confirm you are real and match your photo. Nenjam stores no selfie — only the result.",
+  "faceVerificationConsentLearnMore": "Learn more",
+  "faceVerificationVerifying": "Checking…",
+  "faceVerificationPrivacyNote": "Verification selfies are NOT shown to others.",
+  "faceVerificationUnavailable": "Verification is unavailable right now.",
+  "faceVerificationAlreadyVerified": "You're already verified.",
+  "faceVerificationNoPrimaryPhoto": "Add a clear photo of your face first.",
+  "faceVerificationUnsupportedPhoto": "Update your main photo to continue.",
+  "faceVerificationAttemptLimit": "You've reached today's limit. Please try again later.",
+  "faceVerificationFailedGeneric": "We couldn't complete verification.",
+  "faceVerificationFailedLiveness": "We couldn't confirm you're a live person. Please try again in good lighting.",
+  "faceVerificationFailedMatch": "This selfie doesn't match your main profile photo.",
+  "faceVerificationNoFaceInPhoto": "We couldn't find a face in your main profile photo.",
+  "faceVerificationMultipleFaces": "Your main profile photo shows more than one face.",
+  "faceVerificationPhotoChanged": "Your main profile photo changed since you were verified. Please verify again.",
+  "faceVerificationExpired": "That attempt expired. Please try again.",
+  "faceVerificationCancelled": "Verification was cancelled.",
+  "faceVerificationNetworkError": "We couldn't confirm your result. Please check your connection and try again.",
+  "faceVerificationCameraPermissionDenied": "Camera access is required for selfie verification.",
+  "faceVerificationOpenSettings": "Open Settings",
+  "faceVerificationUpdatePhoto": "Update main photo",
+  "faceVerificationCenterVerified": "Verified",
+  "faceVerificationCenterReverify": "Your main photo changed — re-verify",
+  "faceVerificationCenterIncomplete": "Not verified yet"
 }

@@ -18,6 +18,7 @@ import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
 import '../../../authentication/domain/services/dummy_otp_session.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/domain/services/otp_verifier.dart';
+import '../../../authentication/presentation/utils/post_auth_destination.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../data/services/pending_photo_store.dart';
 import '../../domain/services/pending_photo_uploader.dart';
@@ -312,8 +313,18 @@ class _OnboardingVerifyMobilePageState
     await storageService.clearPendingPhone();
     await notifier.discardPersistedDraft();
     if (!mounted) return;
-    AuthTrace.navigate(RouteNames.discover, reason: 'onboarding finalized');
-    context.go(RouteNames.discover);
+    // Not a bare `context.go(RouteNames.discover)`: onboardingCompleted is
+    // now true, which means the router's own redirect guard skips
+    // PostAuthDestination entirely for this navigation (it only calls the
+    // resolver when that flag is still false) — so this is the one place
+    // left that has to ask it directly. Skipping this would let a
+    // brand-new member reach Discover with a required face verification
+    // never checked, since finishing onboarding is exactly the moment the
+    // gate needs to run for the first time.
+    final destination = await ref.read(postAuthDestinationProvider).resolve();
+    if (!mounted) return;
+    AuthTrace.navigate(destination, reason: 'onboarding finalized');
+    context.go(destination);
   }
 
   /// Keeps the member on this screen with a reason and a Retry.

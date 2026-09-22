@@ -5,11 +5,11 @@ import '../../../../core/services/storage_service.dart';
 import '../../../../core/utils/auth_trace.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../domain/services/local_auth_session.dart';
-import '../../../registration/domain/models/onboarding_forms.dart';
 import '../../../registration/domain/models/profile_draft.dart';
 import '../../../registration/domain/models/profile_flow_mode.dart';
 import '../../../registration/presentation/providers/registration_provider.dart';
 import '../../../registration/presentation/utils/onboarding_draft_gate.dart';
+import '../../../verification/presentation/providers/face_verification_providers.dart';
 import '../providers/auth_providers.dart';
 
 /// The draft lookup is a routing decision, not a screen the user is waiting
@@ -127,6 +127,8 @@ class PostAuthDestination {
     // request and replaces the draft fetch below for exactly the members who
     // would otherwise be sent backwards.
     if (await _hasFinalizedProfile()) {
+      final gated = await _faceVerificationGate();
+      if (gated != null) return gated;
       AuthTrace.profileState('COMPLETED');
       AuthTrace.destination(RouteNames.discover);
       return RouteNames.discover;
@@ -157,72 +159,23 @@ class PostAuthDestination {
         .read(registrationProvider.notifier)
         .restore(restored, ProfileFlowMode.create);
 
-    // Step 1 — "Profile For" and Gender, which that screen now asks together.
-    // An empty value means the question has genuinely never been answered —
-    // BasicDetails documents why neither field has a default.
-    final profileForStep = ProfileForForm(
-      profileCreatedFor: restored.basicDetails.profileCreatedFor,
-      gender: restored.basicDetails.gender,
-    );
-    if (!profileForStep.isComplete) {
+    // Steps 1-3 — Profile For + Gender, Name + DOB, Religion. Walked by the
+    // shared draft gate rather than written out again here: one definition of
+    // each rule, and one definition of their order, for this path and the
+    // dev-session one below alike. The chain stops at the first unanswered
+    // step, so a route from it that is one of these three is that step.
+    final draftStep = firstUnansweredOnboardingStep(restored);
+    if (draftStep == RouteNames.createProfileFor) {
       AuthTrace.profileState('NEW');
       AuthTrace.destination(RouteNames.createProfileFor);
       return RouteNames.createProfileFor;
     }
     AuthTrace.profileState('PARTIAL');
-
-    // Step 2 — name and date of birth. Reconstructed through
-    // OnboardingNameForm.fromDraft so the gate applies the screen's own rule
-    // (a stored date that is somehow not a real one re-asks the step) rather
-    // than a second, looser "is it non-null" test written out here.
-    //
-    // `isAnswered`, not `isComplete`: the age floor is a rule for what may be
-    // entered now, and a member who registered under the previous floor of 18
-    // would otherwise be sent back here on every launch, to a step no answer
-    // of theirs can satisfy.
-    final nameStep = OnboardingNameForm.fromDraft(
-      firstName: restored.basicDetails.firstName,
-      lastName: restored.basicDetails.lastName,
-      dob: restored.basicDetails.dob,
-    );
-    if (!nameStep.isAnswered) {
-      AuthTrace.destination(RouteNames.onboardingNameDob);
-      return RouteNames.onboardingNameDob;
+    if (draftStep == RouteNames.onboardingNameDob ||
+        draftStep == RouteNames.onboardingReligion) {
+      AuthTrace.destination(draftStep!);
+      return draftStep;
     }
-
-    // Step 3 — the same fields OnboardingReligionForm.isComplete requires,
-    // read back from the sections applyOnboardingReligion writes them to.
-    final religionStep = OnboardingReligionForm(
-      religion: restored.religionDetails.religion,
-      community: restored.religionDetails.community,
-      livingIn: restored.locationDetails.country,
-    );
-    if (!religionStep.isComplete) {
-      AuthTrace.destination(RouteNames.onboardingReligion);
-      return RouteNames.onboardingReligion;
-    }
-
-    // Steps 5-10, evaluated up front because step 4 has to consult them —
-    // see below. Each tests exactly the fields its own screen requires, which
-    // is why caste and mother tongue appear in no gate at all: onboarding no
-    // longer collects them, and a gate on a field no screen asks for is a
-    // gate a member cannot answer their way past. Sub-community is absent for
-    // the same reason — asked, but not required.
-    final basicsStep = ProfileBasicsForm(
-      state: restored.locationDetails.state,
-      city: restored.locationDetails.city,
-    );
-    final maritalStep = OnboardingMaritalForm(
-      maritalStatus: restored.basicDetails.maritalStatus,
-      height: restored.physicalDetails.height,
-    );
-    final educationStep = OnboardingEducationForm(
-      qualification: restored.educationDetails.qualification,
-    );
-    final incomeStep = OnboardingIncomeForm(
-      annualIncome: restored.educationDetails.annualIncome,
-    );
-    final hasAbout = restored.lifestyleDetails.aboutMe.trim().isNotEmpty;
 
     // Step 3 — Email + Mobile. **A signup gate, not a session gate.**
     //
@@ -245,14 +198,7 @@ class PostAuthDestination {
     // by construction — a login is not the place to re-collect them. What
     // stays gated is exactly the case the step exists for: a half-finished
     // signup, on the device it was started on, that never reached the end.
-    final onboardingAnswered = profileForStep.isComplete &&
-        nameStep.isComplete &&
-        basicsStep.isComplete &&
-        maritalStep.isComplete &&
-        educationStep.isComplete &&
-        incomeStep.isComplete &&
-        hasAbout;
-    if (!onboardingAnswered && !_onboardingCompleted()) {
+    if (!allOnboardingStepsAnswered(restored) && !_onboardingCompleted()) {
       // `pendingEmail`/`pendingPhone` cover the window between answering
       // this step and the account carrying the values: Firebase attaches an
       // address only once the member opens the link, and never attaches the
@@ -267,39 +213,20 @@ class PostAuthDestination {
       }
     }
 
-    // Step 5.
-    if (!basicsStep.isComplete) {
-      AuthTrace.destination(RouteNames.profileBasics);
-      return RouteNames.profileBasics;
-    }
-
-    // Step 6 — marital status and height.
-    if (!maritalStep.isComplete) {
-      AuthTrace.destination(RouteNames.onboardingMarital);
-      return RouteNames.onboardingMarital;
-    }
-
-    // Step 7 — highest qualification.
-    if (!educationStep.isComplete) {
-      AuthTrace.destination(RouteNames.onboardingEducation);
-      return RouteNames.onboardingEducation;
-    }
-
-    // Step 8 — annual income.
-    if (!incomeStep.isComplete) {
-      AuthTrace.destination(RouteNames.onboardingIncome);
-      return RouteNames.onboardingIncome;
-    }
-
-    // Step 9 (photos) is deliberately not a gate — it is optional, and a
-    // member who chose "Add Photos Later" must not be sent back to it every
-    // launch. Step 10 is, since a description is part of a usable profile.
-    if (!hasAbout) {
-      AuthTrace.destination(RouteNames.onboardingAbout);
-      return RouteNames.onboardingAbout;
+    // Steps 5-10 — state/city, marital, education, income, about. The same
+    // chain again, and the same [draftStep] answer: the three gates it could
+    // have stopped at before this point have already been handled above, so
+    // anything left is one of these. Step 9 (photos) is deliberately absent
+    // from it — optional, and a member who chose "Add Photos Later" must not
+    // be sent back every launch.
+    if (draftStep != null) {
+      AuthTrace.destination(draftStep);
+      return draftStep;
     }
 
     // Every step that leaves a durable answer has one. Onboarding is done.
+    final gated = await _faceVerificationGate();
+    if (gated != null) return gated;
     AuthTrace.profileState('COMPLETED');
     AuthTrace.destination(RouteNames.discover);
     return RouteNames.discover;
@@ -316,7 +243,9 @@ class PostAuthDestination {
   /// gate that guards profile data — still applies exactly as it does for a
   /// real session.
   Future<String> _resolveFromDraftOnly() async {
-    if (await _hasFinalizedProfile()) return RouteNames.discover;
+    if (await _hasFinalizedProfile()) {
+      return await _faceVerificationGate() ?? RouteNames.discover;
+    }
 
     final Map<String, dynamic> draft;
     try {
@@ -338,7 +267,9 @@ class PostAuthDestination {
     // See firstUnansweredOnboardingStep's doc comment: this is the same
     // draft-backed gate chain resolve() walks, shared rather than
     // reimplemented so the two paths cannot silently drift apart.
-    return firstUnansweredOnboardingStep(restored) ?? RouteNames.discover;
+    final step = firstUnansweredOnboardingStep(restored);
+    if (step != null) return step;
+    return await _faceVerificationGate() ?? RouteNames.discover;
   }
 
   /// Whether the backend already holds a finalized profile for this member.
@@ -401,6 +332,40 @@ class PostAuthDestination {
       return storageService.onboardingCompleted;
     } catch (_) {
       return false;
+    }
+  }
+
+  /// Whether the signed-in member must complete face verification before
+  /// reaching Discover — [RouteNames.faceVerification] if so, else `null`.
+  ///
+  /// Reads the real backend state (`GET /verification/face` via
+  /// [faceVerificationStatusProvider]) rather than any local flag: per
+  /// docs/development/selfie-verification-frontend-handoff.md, "verified" is
+  /// derived entirely server-side and can revert (a photo change revokes it),
+  /// so a device-local cache could both wrongly block a verified member and
+  /// wrongly admit a revoked one.
+  ///
+  /// `NOT_AVAILABLE` (the feature is off, unconfigured, or at its global
+  /// daily cap — currently true everywhere, since `FACE_VERIFICATION_ENABLED`
+  /// defaults to false) is a deliberate pass-through, not a bypass: the
+  /// backend has not offered verification, so it cannot be a precondition
+  /// for entry. The moment the backend turns the feature on this check
+  /// starts gating automatically, with nothing to change here.
+  ///
+  /// On any failure to reach the backend, this falls through to Discover
+  /// (returns `null`) rather than blocking a member on a state it could not
+  /// confirm — matching this resolver's "never blocks on an unknown" policy
+  /// elsewhere ([_hasFinalizedProfile]).
+  Future<String?> _faceVerificationGate() async {
+    try {
+      final state = await _ref
+          .read(faceVerificationStatusProvider.future)
+          .timeout(_draftLookupTimeout);
+      if (state.satisfiesEntryGate) return null;
+      AuthTrace.destination(RouteNames.faceVerification);
+      return RouteNames.faceVerification;
+    } catch (_) {
+      return null;
     }
   }
 

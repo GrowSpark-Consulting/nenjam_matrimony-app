@@ -125,6 +125,45 @@ void main() {
     });
 
     testWidgets(
+        'a refresh that fails after results shows the error, not "no matches"',
+        (tester) async {
+      var shouldFail = false;
+      final repository = _FakeSearchRepository(
+        page: (query, page) async {
+          if (shouldFail) throw Exception('network down');
+          return SearchResultPage(
+            items: [_profile('a', name: 'Asha')],
+            page: 1,
+            limit: 20,
+            total: 1,
+            hasMore: false,
+          );
+        },
+      );
+
+      await _pump(tester, repository: repository);
+      await tester.enterText(find.byType(TextField), 'asha');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      expect(find.text('Asha, 28'), findsOneWidget);
+
+      // The results are on screen; now a retry/refresh of the same query
+      // fails. The user must be told the request failed — never shown the
+      // "No matching profiles found" screen, which would wrongly imply the
+      // search succeeded and matched nobody.
+      shouldFail = true;
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(SearchPage)),
+      );
+      await container.read(searchResultsProvider.notifier).refresh();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Something went wrong'), findsOneWidget);
+      expect(find.byIcon(Icons.search_off_rounded), findsNothing);
+      expect(find.text('No matching profiles found.'), findsNothing);
+    });
+
+    testWidgets(
         'a filter-only search with no matches can be reset back to idle',
         (tester) async {
       final repository = _FakeSearchRepository(

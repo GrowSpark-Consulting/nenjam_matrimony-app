@@ -181,6 +181,15 @@ abstract final class ApiEndpoints {
   static const String verificationDocuments = '/verification/documents';
   static const String verificationStatus = '/verification/status';
 
+  // ─── Face verification (selfie liveness + compare-faces; AWS Rekognition
+  // via backend/apps/api/src/modules/verification's real, wired-in
+  // controller — see docs/development/selfie-verification-frontend-handoff.md).
+  // Ships with FACE_VERIFICATION_ENABLED=false; every call 503s with code
+  // NOT_AVAILABLE until the backend team turns it on.
+  static const String faceVerification = '/verification/face';
+  static const String faceVerificationSessions = '/verification/face/sessions';
+  static const String faceVerificationComplete = '/verification/face/complete';
+
   // ─── Settings ────────────────────────────────────────────────────
   static const String settings = '/settings';
   static const String privacySettings = '/settings/privacy';

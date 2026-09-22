@@ -24,6 +24,12 @@ plugins {
     id("com.google.gms.google-services") version("4.3.15") apply false
     // END: FlutterFire Configuration
     id("org.jetbrains.kotlin.android") version "2.2.20" apply false
+    // Face Liveness (docs/development/selfie-verification-frontend-handoff.md
+    // §2/§3): Amplify's FaceLivenessDetector is a Jetpack Compose composable.
+    // With Kotlin 2.x this plugin replaces the old
+    // composeOptions { kotlinCompilerExtensionVersion } block — don't add
+    // that block back.
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.20" apply false
 }
 
 include(":app")

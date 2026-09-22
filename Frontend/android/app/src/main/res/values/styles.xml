@@ -15,4 +15,9 @@
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
     </style>
+    <!-- Face Liveness's LivenessActivity: no action bar, so the Compose
+         camera UI fills the whole window (handoff doc §3). -->
+    <style name="LivenessTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
 </resources>

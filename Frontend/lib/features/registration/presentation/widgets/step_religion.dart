@@ -37,6 +37,14 @@ class _StepReligionState extends State<StepReligion> {
   late String _community;
   late String _subCommunity;
 
+  /// The structured pair captured by the onboarding Religion step, which
+  /// picks from the live religion master data. This step's own options come
+  /// from [ProfileOptions], which carries labels only — so these are carried
+  /// through an edit rather than re-derived, and cleared only when the
+  /// religion changes (see [_onReligionChanged]).
+  late String _religionCode;
+  late String _communityCode;
+
   static const _religions = [...ProfileOptions.religions, 'Other'];
 
   @override
@@ -48,6 +56,8 @@ class _StepReligionState extends State<StepReligion> {
     _denominationCtrl = TextEditingController(text: widget.details.denomination);
     _community = widget.details.community;
     _subCommunity = widget.details.subCaste;
+    _religionCode = widget.details.religionCode;
+    _communityCode = widget.details.communityCode;
   }
 
   @override
@@ -80,23 +90,51 @@ class _StepReligionState extends State<StepReligion> {
   /// re-picking a religion should not cost an answer that remains true.
   void _onReligionChanged(String religion) {
     setState(() {
+      final changed = religion != _religion;
       _religion = religion;
+      // A code identifies the religion it was captured for, so a real change
+      // invalidates it — and this step has no master-data lookup to mint a
+      // replacement. Dropping it falls back to the free-text religion above,
+      // which is exactly what a draft written before the master data existed
+      // looks like (see ReligionDetails.religionCode).
+      if (changed) _religionCode = '';
       if (!ProfileOptions.isCommunityInReligion(religion, _community)) {
         _community = '';
         _subCommunity = '';
+        _communityCode = '';
+      } else if (changed) {
+        // The community label still stands under the new religion, but its
+        // code was scoped to the old one.
+        _communityCode = '';
       }
     });
     _emit();
   }
 
+  /// Rebuilds [ReligionDetails] from this step's fields.
+  ///
+  /// Built with `copyWith` on the incoming details rather than a fresh
+  /// [ReligionDetails], so `religionCode`/`communityCode` survive an edit.
+  /// This step offers [ProfileOptions] — plain labels, no codes — while the
+  /// onboarding Religion step picks from the live religion master data and
+  /// stores both halves. Constructing a new instance here dropped both codes
+  /// to `''`, and `ReligionDetails.toJson` then omitted them, so editing any
+  /// field on this step silently discarded the structured pair onboarding had
+  /// captured.
+  ///
+  /// [_onReligionChanged] clears them deliberately when the religion changes;
+  /// everywhere else they are carried through untouched. No code is invented
+  /// here — this step has no source for one.
   void _emit() {
-    widget.onChanged(ReligionDetails(
+    widget.onChanged(widget.details.copyWith(
       religion: _religion,
       caste: _casteCtrl.text.trim(),
       subCaste: _subCommunity,
       gothra: _gothraCtrl.text.trim(),
       denomination: _denominationCtrl.text.trim(),
       community: _community,
+      religionCode: _religionCode,
+      communityCode: _communityCode,
     ));
   }
 
@@ -148,7 +186,16 @@ class _StepReligionState extends State<StepReligion> {
             value: _community,
             customFieldLabel: l10n.registrationSpecifyCommunityLabel,
             customFieldHint: l10n.registrationCommunityHint,
-            onChanged: (v) { setState(() => _community = v); _emit(); },
+            // Picking a different community here invalidates the code the
+            // onboarding step captured for the old one; this step offers
+            // labels only, so there is no replacement code to store.
+            onChanged: (v) {
+              setState(() {
+                if (v != _community) _communityCode = '';
+                _community = v;
+              });
+              _emit();
+            },
           ),
           const SizedBox(height: 16),
           // Optional. Never gates anything and never counts against

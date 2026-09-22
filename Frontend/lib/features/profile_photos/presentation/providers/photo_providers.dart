@@ -7,6 +7,7 @@ import '../../../authentication/presentation/providers/auth_providers.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../data/repositories/photo_repository.dart';
 import '../../domain/models/user_photo.dart';
+import '../../../verification/presentation/providers/face_verification_providers.dart';
 
 /// Backend-backed photo repository, wired to the shared authenticated
 /// [apiClientProvider] so every request carries the Firebase ID token.
@@ -185,17 +186,34 @@ class PhotosController extends AsyncNotifier<List<UserPhoto>> {
     return _run(() async {
       await _repo.replace(id, file);
       return _repo.fetchPhotos();
-    }).whenComplete(() => PhotoTrace.end('replace'));
+    }).whenComplete(() {
+      PhotoTrace.end('replace');
+      _invalidateFaceVerificationStatus();
+    });
   }
 
   Future<void> delete(String id) {
     PhotoTrace.begin('delete $id');
-    return _run(() => _repo.delete(id))
-        .whenComplete(() => PhotoTrace.end('delete'));
+    return _run(() => _repo.delete(id)).whenComplete(() {
+      PhotoTrace.end('delete');
+      _invalidateFaceVerificationStatus();
+    });
   }
 
   Future<void> reorder(List<String> orderedIds) =>
       _run(() => _repo.reorder(orderedIds));
 
-  Future<void> setPrimary(String id) => _run(() => _repo.setPrimary(id));
+  Future<void> setPrimary(String id) => _run(() => _repo.setPrimary(id))
+      .whenComplete(_invalidateFaceVerificationStatus);
+
+  /// The three mutations above can each change which photo is primary
+  /// (replace keeps the same photo id but a new S3 key; delete can remove
+  /// the primary photo; setPrimary moves it outright) — any of those revokes
+  /// a face verification server-side (see
+  /// docs/development/selfie-verification-frontend-handoff.md §6.1), so the
+  /// cached status must be refetched rather than left showing a stale
+  /// "verified" badge.
+  void _invalidateFaceVerificationStatus() {
+    ref.invalidate(faceVerificationStatusProvider);
+  }
 }

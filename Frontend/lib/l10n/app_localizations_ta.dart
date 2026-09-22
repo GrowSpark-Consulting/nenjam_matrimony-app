@@ -5035,4 +5035,108 @@ class AppLocalizationsTa extends AppLocalizations {
   String completionCardsScoreLabel(int percent) {
     return 'சுயவிவர நிறைவு மதிப்பெண் $percent%';
   }
+
+  @override
+  String get faceVerificationTitle => 'கணக்கு தற்காலிகமாக நிறுத்தப்பட்டுள்ளது';
+
+  @override
+  String get faceVerificationExplanation =>
+      'எங்கள் வழக்கமான பாதுகாப்பு சரிபார்ப்பின் ஒரு பகுதியாக, உங்கள் கணக்கைத் தொடர்ந்து பயன்படுத்த ஒரு சுருக்கமான செல்ஃபி சரிபார்ப்பை முடிக்கவும்.';
+
+  @override
+  String get faceVerificationConsent =>
+      'நீங்கள் ஒரு உண்மையான நபர் என்பதையும், உங்கள் முதன்மை புகைப்படத்துடன் பொருந்துகிறீர்கள் என்பதையும் சரிபார்க்க மட்டுமே உங்கள் வீடியோ செல்ஃபி Amazon Web Services-க்கு அனுப்பப்படுகிறது. Nenjam உங்கள் செல்ஃபி வீடியோ அல்லது படத்தை சேமிக்காது — முடிவை மட்டுமே (சரிபார்க்கப்பட்டதா இல்லையா) வைத்திருக்கிறோம்.';
+
+  @override
+  String get faceVerificationCta => 'செல்ஃபி மூலம் சரிபார்க்கவும்';
+
+  @override
+  String get faceVerificationConsentShort =>
+      'நீங்கள் உண்மையானவர் என்பதையும் உங்கள் புகைப்படத்துடன் பொருந்துகிறீர்கள் என்பதையும் Amazon Web Services சரிபார்க்கிறது. Nenjam செல்ஃபியைச் சேமிக்காது — முடிவை மட்டுமே.';
+
+  @override
+  String get faceVerificationConsentLearnMore => 'மேலும் அறியவும்';
+
+  @override
+  String get faceVerificationVerifying => 'சரிபார்க்கிறது…';
+
+  @override
+  String get faceVerificationPrivacyNote =>
+      'சரிபார்ப்பு செல்ஃபிகள் மற்றவர்களுக்குக் காட்டப்படாது.';
+
+  @override
+  String get faceVerificationUnavailable =>
+      'சரிபார்ப்பு தற்போது கிடைக்கவில்லை.';
+
+  @override
+  String get faceVerificationAlreadyVerified =>
+      'நீங்கள் ஏற்கனவே சரிபார்க்கப்பட்டுள்ளீர்கள்.';
+
+  @override
+  String get faceVerificationNoPrimaryPhoto =>
+      'முதலில் உங்கள் முகத்தின் தெளிவான புகைப்படத்தைச் சேர்க்கவும்.';
+
+  @override
+  String get faceVerificationUnsupportedPhoto =>
+      'தொடர உங்கள் முதன்மை புகைப்படத்தைப் புதுப்பிக்கவும்.';
+
+  @override
+  String get faceVerificationAttemptLimit =>
+      'இன்றைய வரம்பை எட்டிவிட்டீர்கள். பின்னர் மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get faceVerificationFailedGeneric =>
+      'சரிபார்ப்பை முடிக்க முடியவில்லை.';
+
+  @override
+  String get faceVerificationFailedLiveness =>
+      'நீங்கள் நேரடியாக இருப்பதை உறுதிப்படுத்த முடியவில்லை. நல்ல வெளிச்சத்தில் மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get faceVerificationFailedMatch =>
+      'இந்த செல்ஃபி உங்கள் முதன்மை புகைப்படத்துடன் பொருந்தவில்லை.';
+
+  @override
+  String get faceVerificationNoFaceInPhoto =>
+      'உங்கள் முதன்மை புகைப்படத்தில் முகத்தைக் கண்டறிய முடியவில்லை.';
+
+  @override
+  String get faceVerificationMultipleFaces =>
+      'உங்கள் முதன்மை புகைப்படத்தில் ஒன்றுக்கு மேற்பட்ட முகங்கள் உள்ளன.';
+
+  @override
+  String get faceVerificationPhotoChanged =>
+      'நீங்கள் சரிபார்க்கப்பட்ட பிறகு உங்கள் முதன்மை புகைப்படம் மாறிவிட்டது. மீண்டும் சரிபார்க்கவும்.';
+
+  @override
+  String get faceVerificationExpired =>
+      'அந்த முயற்சி காலாவதியானது. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get faceVerificationCancelled => 'சரிபார்ப்பு ரத்து செய்யப்பட்டது.';
+
+  @override
+  String get faceVerificationNetworkError =>
+      'உங்கள் முடிவை உறுதிப்படுத்த முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get faceVerificationCameraPermissionDenied =>
+      'செல்ஃபி சரிபார்ப்புக்கு கேமரா அணுகல் தேவை.';
+
+  @override
+  String get faceVerificationOpenSettings => 'அமைப்புகளைத் திறக்கவும்';
+
+  @override
+  String get faceVerificationUpdatePhoto =>
+      'முதன்மை புகைப்படத்தைப் புதுப்பிக்கவும்';
+
+  @override
+  String get faceVerificationCenterVerified => 'சரிபார்க்கப்பட்டது';
+
+  @override
+  String get faceVerificationCenterReverify =>
+      'உங்கள் முதன்மை புகைப்படம் மாறியது — மீண்டும் சரிபார்க்கவும்';
+
+  @override
+  String get faceVerificationCenterIncomplete => 'இன்னும் சரிபார்க்கப்படவில்லை';
 }
