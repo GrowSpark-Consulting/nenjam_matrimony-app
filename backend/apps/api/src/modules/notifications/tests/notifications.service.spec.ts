@@ -200,7 +200,9 @@ describe('NotificationsService.list', () => {
       pageNumber: 1,
     });
 
-    expect(repo.findActorSnapshots).toHaveBeenCalledWith(['actor-1']);
+    // The recipient is passed so the actor's photo privacy is evaluated
+    // against them, inside the same batch query.
+    expect(repo.findActorSnapshots).toHaveBeenCalledWith(['actor-1'], 'me');
     expect(page).toMatchObject({
       page: 1,
       limit: 20,
@@ -237,5 +239,66 @@ describe('NotificationsService.list', () => {
 
     expect(repo.findActorSnapshots).not.toHaveBeenCalled();
     expect(page.items[0].actor).toBeNull();
+  });
+
+  describe('actor photo privacy', () => {
+    async function listWithActor(user: Record<string, unknown>) {
+      const built = build();
+      built.repo.listPaginated.mockResolvedValue([[notification()], 1]);
+      built.repo.findActorSnapshots.mockResolvedValue([
+        {
+          userId: 'actor-1',
+          firstName: 'Actor',
+          lastName: 'One',
+          user: { photos: [{ s3Key: 'photos/a.jpg' }], ...user },
+        },
+      ]);
+      const page = await built.service.list('me', {
+        skip: 0,
+        take: 20,
+        pageNumber: 1,
+      });
+      return { ...built, actor: page.items[0].actor };
+    }
+
+    it('premium actor hiding photos, recipient not connected: no URL is signed', async () => {
+      const { actor, s3 } = await listWithActor({
+        hidePhotosFromNonConnections: true,
+        subscriptions: [{ id: 'sub-1' }],
+        receivedInterests: [],
+        sentInterests: [],
+      });
+      expect(actor).toMatchObject({ id: 'actor-1', photoUrl: null });
+      expect(s3.getPresignedGetUrl).not.toHaveBeenCalled();
+    });
+
+    it('premium actor hiding photos, recipient connected: photo is signed', async () => {
+      const { actor, s3 } = await listWithActor({
+        hidePhotosFromNonConnections: true,
+        subscriptions: [{ id: 'sub-1' }],
+        receivedInterests: [],
+        sentInterests: [{ id: 'int-9' }],
+      });
+      expect(actor?.photoUrl).toBe('https://signed/photo.jpg');
+      expect(s3.getPresignedGetUrl).toHaveBeenCalledWith('photos/a.jpg');
+    });
+
+    it('non-premium actor with the flag on: photo stays visible (premium-only feature)', async () => {
+      const { actor } = await listWithActor({
+        hidePhotosFromNonConnections: true,
+        subscriptions: [],
+        receivedInterests: [],
+        sentInterests: [],
+      });
+      expect(actor?.photoUrl).toBe('https://signed/photo.jpg');
+    });
+
+    it('flag on but probes missing: fails closed', async () => {
+      const { actor, s3 } = await listWithActor({
+        hidePhotosFromNonConnections: true,
+      });
+      expect(actor?.photoUrl).toBeNull();
+      expect(s3.getPresignedGetUrl).not.toHaveBeenCalled();
+    });
   });
 });

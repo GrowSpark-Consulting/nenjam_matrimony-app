@@ -3358,12 +3358,22 @@ class AppLocalizationsTa extends AppLocalizations {
   String get privacyVisibilitySection => 'சுயவிவரக் காட்சி';
 
   @override
-  String get privacyPremiumOnlyTitle =>
-      'பிரீமியம் உறுப்பினர்களுக்கு மட்டும் சுயவிவரத்தைக் காட்டு';
+  String get privacyHideProfileTitle => 'எனது சுயவிவரத்தை மறை';
 
   @override
-  String get privacyPremiumOnlySubtitle =>
-      'பிரீமியம் உறுப்பினர்கள் மட்டுமே உங்கள் முழு சுயவிவரத்தைப் பார்க்க முடியும்';
+  String get privacyHideProfileSubtitle =>
+      'டிஸ்கவர், தேடல், அருகில் உள்ளவர்கள் பகுதிகளில் எனது சுயவிவரத்தைக் காட்ட வேண்டாம்';
+
+  @override
+  String get privacyPremiumLockedTitle =>
+      'பிரீமியம் தனியுரிமைக் கட்டுப்பாடுகள்';
+
+  @override
+  String get privacyPremiumLockedMessage =>
+      'உங்கள் சுயவிவரம் அல்லது புகைப்படங்களை மறைக்கும் வசதி பிரீமியம் உறுப்பினர்களுக்கு மட்டுமே கிடைக்கும்.';
+
+  @override
+  String get privacyUpgradeCta => 'பிரீமியத்திற்கு மேம்படுத்து';
 
   @override
   String get privacyHidePhotosTitle =>

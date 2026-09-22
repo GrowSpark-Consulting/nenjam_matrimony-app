@@ -5,8 +5,13 @@ import {
 } from './eligibility.builder';
 import { buildFeedWhere } from './partner-preference-where.builder';
 import type { Prisma } from '../../../../../../libs/database/generated/client';
+import { hiddenFromDiscoveryWhere } from '@app/database';
+import { FROZEN_NOW, freezeClock } from '../tests/freeze-clock';
 
 type Where = Prisma.UserProfileWhereInput;
+
+// The hidden-profile rule embeds the current time (subscription expiry).
+freezeClock();
 
 const ME = 'user-42';
 const conditions = (myGender: 'MALE' | 'FEMALE' | null = 'MALE'): Where[] =>
@@ -56,6 +61,60 @@ describe('buildEligibilityConditions', () => {
     // They sent it, I declined.
     expect(not).toContainEqual({
       sentInterests: { some: { receiverId: ME, status: 'DECLINED' } },
+    });
+  });
+
+  describe('Hide My Profile (premium-only)', () => {
+    const hiddenRule = () =>
+      (accountRules(conditions()).NOT as Where[]).find(
+        (x) => 'profileVisibleToPremiumOnly' in x,
+      ) as Record<string, unknown>;
+
+    it('excludes a member only when the flag is on AND they hold an active premium subscription', () => {
+      expect(hiddenRule()).toEqual({
+        profileVisibleToPremiumOnly: true,
+        subscriptions: {
+          some: {
+            status: 'ACTIVE',
+            startDate: { lte: FROZEN_NOW },
+            endDate: { gt: FROZEN_NOW },
+            plan: { name: { not: 'FREE' } },
+          },
+        },
+      });
+    });
+
+    it('is the shared hiddenFromDiscoveryWhere rule, not a local copy', () => {
+      expect(hiddenRule()).toEqual(hiddenFromDiscoveryWhere(FROZEN_NOW));
+    });
+
+    it('non-premium + flag on stays visible: the flag alone never excludes anyone', () => {
+      // The exclusion is a conjunction — without the premium EXISTS the
+      // flag matches nothing — and the flag is never a standalone clause.
+      const json = JSON.stringify(conditions());
+      const flagOnly = JSON.stringify({ profileVisibleToPremiumOnly: true });
+      expect(json).not.toContain(flagOnly);
+      expect(Object.keys(hiddenRule())).toEqual([
+        'profileVisibleToPremiumOnly',
+        'subscriptions',
+      ]);
+    });
+
+    it('lives in the single account-rule block (evaluated inside the same query)', () => {
+      expect(conditions().filter((x) => 'user' in x)).toHaveLength(1);
+      expect(hiddenRule()).toBeDefined();
+    });
+
+    it('evaluates expiry against the supplied instant', () => {
+      const at = new Date('2030-01-01T00:00:00.000Z');
+      const c = buildEligibilityConditions({
+        currentUserId: ME,
+        myGender: 'MALE',
+        now: at,
+      });
+      expect(accountRules(c).NOT as Where[]).toContainEqual(
+        hiddenFromDiscoveryWhere(at),
+      );
     });
   });
 

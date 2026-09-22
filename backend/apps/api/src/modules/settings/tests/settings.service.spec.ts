@@ -1,14 +1,20 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { SettingsService } from '../services/settings.service';
 import { PrivacySettings } from '../repositories/settings.repository';
 
-function build() {
+function build({ premium = true }: { premium?: boolean } = {}) {
   const settingsRepository = {
     findPrivacyByUserId: jest.fn(),
     updatePrivacyByUserId: jest.fn(),
   };
-  const service = new SettingsService(settingsRepository as never);
-  return { service, settingsRepository };
+  const entitlementService = {
+    hasActivePremiumSubscription: jest.fn().mockResolvedValue(premium),
+  };
+  const service = new SettingsService(
+    settingsRepository as never,
+    entitlementService as never,
+  );
+  return { service, settingsRepository, entitlementService };
 }
 
 const DEFAULTS: PrivacySettings = {
@@ -16,11 +22,21 @@ const DEFAULTS: PrivacySettings = {
   hidePhotosFromNonConnections: false,
 };
 
+const BOTH_ON: PrivacySettings = {
+  profileVisibleToPremiumOnly: true,
+  hidePhotosFromNonConnections: true,
+};
+
 describe('SettingsService.getPrivacySettings', () => {
   it('returns the stored settings (DB-backed defaults)', async () => {
     const { service, settingsRepository } = build();
     settingsRepository.findPrivacyByUserId.mockResolvedValue(DEFAULTS);
-    await expect(service.getPrivacySettings('u1')).resolves.toEqual(DEFAULTS);
+    await expect(service.getPrivacySettings('u1')).resolves.toEqual({
+      isPremium: true,
+      hideMyProfile: false,
+      hidePhotosFromNonConnections: false,
+      profileVisibleToPremiumOnly: false,
+    });
     expect(settingsRepository.findPrivacyByUserId).toHaveBeenCalledWith('u1');
   });
 
@@ -30,6 +46,37 @@ describe('SettingsService.getPrivacySettings', () => {
     await expect(service.getPrivacySettings('u1')).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+
+  it('premium: reports the stored flags as enforced', async () => {
+    const { service, settingsRepository } = build({ premium: true });
+    settingsRepository.findPrivacyByUserId.mockResolvedValue(BOTH_ON);
+    await expect(service.getPrivacySettings('u1')).resolves.toEqual({
+      isPremium: true,
+      hideMyProfile: true,
+      hidePhotosFromNonConnections: true,
+      profileVisibleToPremiumOnly: true,
+    });
+  });
+
+  it('non-premium: never reports a privacy feature as on, even when stored', async () => {
+    const { service, settingsRepository } = build({ premium: false });
+    settingsRepository.findPrivacyByUserId.mockResolvedValue(BOTH_ON);
+    await expect(service.getPrivacySettings('u1')).resolves.toEqual({
+      isPremium: false,
+      hideMyProfile: false,
+      hidePhotosFromNonConnections: false,
+      profileVisibleToPremiumOnly: false,
+    });
+  });
+
+  it("derives premium from the caller's own id, server-side", async () => {
+    const { service, settingsRepository, entitlementService } = build();
+    settingsRepository.findPrivacyByUserId.mockResolvedValue(DEFAULTS);
+    await service.getPrivacySettings('u1');
+    expect(
+      entitlementService.hasActivePremiumSubscription,
+    ).toHaveBeenCalledWith('u1');
   });
 });
 
@@ -42,7 +89,7 @@ describe('SettingsService.updatePrivacySettings', () => {
     });
 
     const result = await service.updatePrivacySettings('u1', {
-      profileVisibleToPremiumOnly: true,
+      hideMyProfile: true,
     });
 
     expect(settingsRepository.updatePrivacyByUserId).toHaveBeenCalledWith(
@@ -51,22 +98,54 @@ describe('SettingsService.updatePrivacySettings', () => {
         profileVisibleToPremiumOnly: true,
       },
     );
+    expect(result.hideMyProfile).toBe(true);
+  });
+
+  it('still accepts the legacy profileVisibleToPremiumOnly key as hideMyProfile', async () => {
+    const { service, settingsRepository } = build();
+    settingsRepository.updatePrivacyByUserId.mockResolvedValue({
+      profileVisibleToPremiumOnly: true,
+      hidePhotosFromNonConnections: false,
+    });
+
+    const result = await service.updatePrivacySettings('u1', {
+      profileVisibleToPremiumOnly: true,
+    });
+
+    expect(settingsRepository.updatePrivacyByUserId).toHaveBeenCalledWith(
+      'u1',
+      { profileVisibleToPremiumOnly: true },
+    );
     expect(result.profileVisibleToPremiumOnly).toBe(true);
+  });
+
+  it('prefers hideMyProfile over the legacy key when both are sent', async () => {
+    const { service, settingsRepository } = build();
+    settingsRepository.updatePrivacyByUserId.mockResolvedValue(DEFAULTS);
+
+    await service.updatePrivacySettings('u1', {
+      hideMyProfile: false,
+      profileVisibleToPremiumOnly: true,
+    });
+
+    expect(settingsRepository.updatePrivacyByUserId).toHaveBeenCalledWith(
+      'u1',
+      { profileVisibleToPremiumOnly: false },
+    );
   });
 
   it('updates both fields when both are supplied', async () => {
     const { service, settingsRepository } = build();
-    const both: PrivacySettings = {
-      profileVisibleToPremiumOnly: true,
-      hidePhotosFromNonConnections: true,
-    };
-    settingsRepository.updatePrivacyByUserId.mockResolvedValue(both);
+    settingsRepository.updatePrivacyByUserId.mockResolvedValue(BOTH_ON);
 
-    await service.updatePrivacySettings('u1', both);
+    await service.updatePrivacySettings('u1', {
+      hideMyProfile: true,
+      hidePhotosFromNonConnections: true,
+    });
 
     expect(settingsRepository.updatePrivacyByUserId).toHaveBeenCalledWith(
       'u1',
-      both,
+      BOTH_ON,
     );
   });
 
@@ -82,7 +161,12 @@ describe('SettingsService.updatePrivacySettings', () => {
 
     expect(settingsRepository.updatePrivacyByUserId).not.toHaveBeenCalled();
     expect(settingsRepository.findPrivacyByUserId).toHaveBeenCalledWith('u1');
-    expect(result).toEqual(current);
+    expect(result).toEqual({
+      isPremium: true,
+      hideMyProfile: true,
+      hidePhotosFromNonConnections: false,
+      profileVisibleToPremiumOnly: true,
+    });
   });
 
   it('never writes a field the caller omitted, even when the other is set', async () => {
@@ -109,8 +193,80 @@ describe('SettingsService.updatePrivacySettings', () => {
     });
     await expect(
       service.updatePrivacySettings('u1', {
-        profileVisibleToPremiumOnly: true,
+        hideMyProfile: true,
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  describe('premium gating', () => {
+    it.each([
+      [{ hideMyProfile: true }],
+      [{ profileVisibleToPremiumOnly: true }],
+      [{ hidePhotosFromNonConnections: true }],
+      [{ hideMyProfile: false, hidePhotosFromNonConnections: true }],
+    ])(
+      'non-premium: refuses to switch a feature on (%j) and writes nothing',
+      async (dto) => {
+        const { service, settingsRepository } = build({ premium: false });
+
+        await expect(
+          service.updatePrivacySettings('u1', dto),
+        ).rejects.toBeInstanceOf(ForbiddenException);
+        expect(settingsRepository.updatePrivacyByUserId).not.toHaveBeenCalled();
+      },
+    );
+
+    it('non-premium: may still switch features off, and sees them reported off', async () => {
+      const { service, settingsRepository } = build({ premium: false });
+      settingsRepository.updatePrivacyByUserId.mockResolvedValue(DEFAULTS);
+
+      const result = await service.updatePrivacySettings('u1', {
+        hideMyProfile: false,
+        hidePhotosFromNonConnections: false,
+      });
+
+      expect(settingsRepository.updatePrivacyByUserId).toHaveBeenCalledWith(
+        'u1',
+        DEFAULTS,
+      );
+      expect(result).toEqual({
+        isPremium: false,
+        hideMyProfile: false,
+        hidePhotosFromNonConnections: false,
+        profileVisibleToPremiumOnly: false,
+      });
+    });
+
+    it('premium: may switch features on', async () => {
+      const { service, settingsRepository } = build({ premium: true });
+      settingsRepository.updatePrivacyByUserId.mockResolvedValue(BOTH_ON);
+
+      const result = await service.updatePrivacySettings('u1', {
+        hideMyProfile: true,
+        hidePhotosFromNonConnections: true,
+      });
+
+      expect(result).toEqual({
+        isPremium: true,
+        hideMyProfile: true,
+        hidePhotosFromNonConnections: true,
+        profileVisibleToPremiumOnly: true,
+      });
+    });
+
+    it('checks premium only after narrowing the patch — an empty patch never asks', async () => {
+      const { service, settingsRepository, entitlementService } = build({
+        premium: false,
+      });
+      settingsRepository.findPrivacyByUserId.mockResolvedValue(DEFAULTS);
+
+      await service.updatePrivacySettings('u1', {});
+
+      // Only the read path's single lookup.
+      expect(
+        entitlementService.hasActivePremiumSubscription,
+      ).toHaveBeenCalledTimes(1);
+      expect(settingsRepository.updatePrivacyByUserId).not.toHaveBeenCalled();
+    });
   });
 });

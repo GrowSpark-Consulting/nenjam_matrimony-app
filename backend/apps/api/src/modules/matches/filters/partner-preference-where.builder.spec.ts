@@ -3,6 +3,11 @@ import {
   FeedWhereParams,
 } from './partner-preference-where.builder';
 import type { Prisma } from '../../../../../../libs/database/generated/client';
+import { hiddenFromDiscoveryWhere } from '@app/database';
+import { FROZEN_NOW, freezeClock } from '../tests/freeze-clock';
+
+// The eligibility WHERE embeds the current time (subscription expiry).
+freezeClock();
 
 // Pulls the AND clauses out for assertion. buildFeedWhere always returns
 // `{ AND: [...] }`, so this is safe.
@@ -74,6 +79,8 @@ describe('buildFeedWhere', () => {
                         some: { receiverId: 'me', status: 'DECLINED' },
                       },
                     },
+                    // A premium member who chose "Hide My Profile".
+                    hiddenFromDiscoveryWhere(FROZEN_NOW),
                   ],
                 },
               },
@@ -255,6 +262,7 @@ describe('buildFeedWhere', () => {
           some: { receiverId: 'user-42', status: 'DECLINED' },
         },
       },
+      hiddenFromDiscoveryWhere(FROZEN_NOW),
     ]);
   });
 

@@ -12,6 +12,7 @@ import {
   NotificationRepository,
   PrismaClientLike,
 } from '../repositories/notification.repository';
+import { arePhotosHidden } from '../../matches/privacy/photo-visibility';
 import {
   NotificationActorDto,
   NotificationItemDto,
@@ -126,7 +127,7 @@ export class NotificationsService {
       take,
     );
 
-    const actorsById = await this.resolveActors(rows);
+    const actorsById = await this.resolveActors(rows, userId);
 
     const items = rows.map((row) => this.toItem(row, actorsById));
 
@@ -192,6 +193,7 @@ export class NotificationsService {
 
   private async resolveActors(
     rows: Notification[],
+    viewerId: string,
   ): Promise<Map<string, NotificationActorDto>> {
     const actorIds = [
       ...new Set(
@@ -202,8 +204,10 @@ export class NotificationsService {
     ];
     if (actorIds.length === 0) return new Map();
 
-    const snapshots =
-      await this.notificationRepository.findActorSnapshots(actorIds);
+    const snapshots = await this.notificationRepository.findActorSnapshots(
+      actorIds,
+      viewerId,
+    );
 
     const entries = await Promise.all(
       snapshots.map(async (snap): Promise<[string, NotificationActorDto]> => [
@@ -219,7 +223,11 @@ export class NotificationsService {
   }
 
   private async presignActorPhoto(snap: ActorSnapshot): Promise<string | null> {
-    const key = snap.user?.photos?.[0]?.s3Key;
+    // Same photo-privacy rule as every profile card: a premium actor who
+    // hides photos from non-connections gets no signed URL for a recipient
+    // they aren't connected to. A missing snapshot user fails closed.
+    if (!snap.user || arePhotosHidden(snap.user)) return null;
+    const key = snap.user.photos?.[0]?.s3Key;
     if (!key || !this.s3.isConfigured()) return null;
     try {
       return await this.s3.getPresignedGetUrl(key);
