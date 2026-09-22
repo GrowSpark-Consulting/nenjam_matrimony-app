@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/database';
+import {
+  photoPrivacySelectFor,
+  type PhotoPrivacyProbes,
+} from '../../matches/privacy/photo-visibility';
 import type {
   DevicePlatform,
   DevicePushToken,
@@ -17,12 +21,14 @@ export interface CreateNotificationData {
 }
 
 /** A short display snapshot of a notification's actor, resolved in one batch
- *  query for a whole page (never per-row — avoids N+1). */
+ *  query for a whole page (never per-row — avoids N+1). `user` carries the
+ *  photo-privacy probes for the recipient, so the service can tell whether
+ *  the actor's avatar may be signed at all. */
 export interface ActorSnapshot {
   userId: string;
   firstName: string;
   lastName: string;
-  user: { photos: { s3Key: string }[] };
+  user: PhotoPrivacyProbes & { photos: { s3Key: string }[] };
 }
 
 /**
@@ -118,8 +124,13 @@ export class NotificationRepository {
 
   /** Batch-resolves actor display data for a page of notifications in one
    *  query. Only actors with a finalized profile are returned; callers treat a
-   *  missing actor as "no actor" (system/verification notices have none). */
-  findActorSnapshots(userIds: string[]): Promise<ActorSnapshot[]> {
+   *  missing actor as "no actor" (system/verification notices have none).
+   *  `viewerId` is the recipient — the photo-privacy probes are evaluated
+   *  against them, inside the same query. */
+  findActorSnapshots(
+    userIds: string[],
+    viewerId: string,
+  ): Promise<ActorSnapshot[]> {
     if (userIds.length === 0) return Promise.resolve([]);
     return this.prisma.userProfile.findMany({
       where: { userId: { in: userIds } },
@@ -134,6 +145,7 @@ export class NotificationRepository {
               take: 1,
               select: { s3Key: true },
             },
+            ...photoPrivacySelectFor(viewerId, new Date()),
           },
         },
       },

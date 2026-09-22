@@ -11,8 +11,8 @@ import {
 import { CurrentUser, FirebaseAuthGuard } from '@app/common';
 import { AccountDeletionService } from '../services/account-deletion.service';
 import { SettingsService } from '../services/settings.service';
-import { PrivacySettings } from '../repositories/settings.repository';
 import { UpdatePrivacyDto } from '../dto/update-privacy.dto';
+import { PrivacySettingsResponse } from '../dto/privacy-settings.response.dto';
 
 // Every route derives the user from the verified Firebase token
 // (`@CurrentUser('id')`), so a caller can only ever read or change their own
@@ -26,19 +26,23 @@ export class SettingsController {
     private readonly accountDeletionService: AccountDeletionService,
   ) {}
 
-  /** GET /settings — the caller's settings (privacy preferences today). */
+  /** GET /settings — the caller's settings (privacy preferences today) plus
+   *  their server-derived premium status. */
   @Get()
-  getSettings(@CurrentUser('id') userId: string): Promise<PrivacySettings> {
+  getSettings(
+    @CurrentUser('id') userId: string,
+  ): Promise<PrivacySettingsResponse> {
     return this.settingsService.getPrivacySettings(userId);
   }
 
   /** PATCH /settings/privacy — partial update of the caller's privacy
-   *  preferences; omitted fields are left unchanged. */
+   *  preferences; omitted fields are left unchanged. 403 when switching a
+   *  premium-only feature on without premium. */
   @Patch('privacy')
   updatePrivacy(
     @CurrentUser('id') userId: string,
     @Body() dto: UpdatePrivacyDto,
-  ): Promise<PrivacySettings> {
+  ): Promise<PrivacySettingsResponse> {
     return this.settingsService.updatePrivacySettings(userId, dto);
   }
 

@@ -6248,17 +6248,35 @@ abstract class AppLocalizations {
   /// **'Profile Visibility'**
   String get privacyVisibilitySection;
 
-  /// No description provided for @privacyPremiumOnlyTitle.
+  /// No description provided for @privacyHideProfileTitle.
   ///
   /// In en, this message translates to:
-  /// **'Show Profile to Premium Members Only'**
-  String get privacyPremiumOnlyTitle;
+  /// **'Hide My Profile'**
+  String get privacyHideProfileTitle;
 
-  /// No description provided for @privacyPremiumOnlySubtitle.
+  /// No description provided for @privacyHideProfileSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Only premium members can view your full profile'**
-  String get privacyPremiumOnlySubtitle;
+  /// **'Don\'t show my profile in Discover, Search or Near Me'**
+  String get privacyHideProfileSubtitle;
+
+  /// No description provided for @privacyPremiumLockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium privacy controls'**
+  String get privacyPremiumLockedTitle;
+
+  /// No description provided for @privacyPremiumLockedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Hiding your profile or your photos is available with a Premium membership.'**
+  String get privacyPremiumLockedMessage;
+
+  /// No description provided for @privacyUpgradeCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to Premium'**
+  String get privacyUpgradeCta;
 
   /// No description provided for @privacyHidePhotosTitle.
   ///

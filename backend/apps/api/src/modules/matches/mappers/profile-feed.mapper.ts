@@ -4,6 +4,11 @@ import { DiscoverProfileDto } from '../dto/discover-profile.response.dto';
 import type { CompatibilityBreakdown } from '../scoring/compatibility.service';
 import type { FeedProfileRow } from '../repositories/feed.repository';
 import {
+  arePhotosHidden,
+  isPremiumMember,
+  type PhotoPrivacyProbes,
+} from '../privacy/photo-visibility';
+import {
   isFaceVerified,
   primaryPhotoOf,
   type StoredFaceVerification,
@@ -34,29 +39,21 @@ export class ProfileFeedMapper {
     row: FeedProfileRow,
     score?: CompatibilityBreakdown,
   ): Promise<DiscoverProfileDto> {
-    const user = (row.user ?? {}) as {
+    const user = (row.user ?? {}) as PhotoPrivacyProbes & {
       phone?: string | null;
       photos?: Array<{ id?: string; s3Key: string; isPrimary?: boolean }>;
       faceVerification?: StoredFaceVerification | null;
-      hidePhotosFromNonConnections?: boolean;
-      receivedInterests?: Array<{ id: string }>;
-      sentInterests?: Array<{ id: string }>;
     };
     const photos = user.photos ?? [];
 
-    // Privacy: this member shows photos only to people they are connected
-    // with, and this viewer is not one of them. The URLs are never signed, so
-    // nothing leaks — withholding them in the client would still have put a
-    // working link on the wire.
+    // Privacy: a premium member who shows photos only to connections, and
+    // this viewer is not one of them. Decided BEFORE signing, so no URL is
+    // ever generated for a photo this viewer may not see — withholding them
+    // in the client would still have put a working link on the wire.
     //
-    // The connection probes come from `feedProfileSelectFor(viewerId)`. A row
-    // selected without them reads as "not connected", which fails CLOSED: a
-    // caller that forgets the viewer-aware select hides the photos rather than
-    // exposing them.
-    const photosHidden =
-      user.hidePhotosFromNonConnections === true &&
-      (user.receivedInterests?.length ?? 0) === 0 &&
-      (user.sentInterests?.length ?? 0) === 0;
+    // The probes come from `feedProfileSelectFor(viewerId)`; a row selected
+    // without them fails closed (see arePhotosHidden).
+    const photosHidden = arePhotosHidden(user);
     const visiblePhotos = photosHidden ? [] : photos;
 
     return {
@@ -74,7 +71,9 @@ export class ProfileFeedMapper {
       // the live selfie was matched against is still this member's primary
       // photo. Rows selected without faceVerification read as false.
       isVerified: isFaceVerified(user.faceVerification, primaryPhotoOf(photos)),
-      isPremium: false,
+      // From the candidate's own subscription rows, never from anything the
+      // client sent.
+      isPremium: isPremiumMember(user),
       isPsychologyCompleted: false,
       isOnline: false,
       horoscopeAvailable: false,

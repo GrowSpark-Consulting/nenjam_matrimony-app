@@ -1,3 +1,4 @@
+import { hiddenFromDiscoveryWhere } from '@app/database';
 import type {
   Prisma,
   Gender,
@@ -19,6 +20,10 @@ export interface EligibilityParams {
   currentUserId: string;
   /** The caller's own gender. Null (no finalized profile) fails closed. */
   myGender: Gender | null;
+  /** The instant subscription expiry is judged against. Defaults to the
+   *  current time; passed explicitly only where one request builds several
+   *  WHEREs, or by tests that need a stable filter. */
+  now?: Date;
 }
 
 /**
@@ -44,15 +49,23 @@ export interface EligibilityParams {
  *  - never a SUSPENDED / DEACTIVATED / BANNED account;
  *  - never across a block, in either direction;
  *  - never across a declined interest, in either direction;
+ *  - never a premium member who chose "Hide My Profile" — the flag is ignored
+ *    for members without an active premium subscription, who stay visible
+ *    (see hiddenFromDiscoveryWhere). Relationship surfaces (interests, chat,
+ *    shortlist, profile views, blocks) don't go through this builder, so an
+ *    existing relationship keeps working after someone hides;
  *  - opposite gender only — and with the caller's own gender unknown, nobody
  *    (fail closed rather than return a mixed-gender list).
  *
  * The account rules share one `user.is` relation filter so the database
- * resolves the user row once for all of them.
+ * resolves the user row once for all of them — including the hidden-profile
+ * rule, whose subscription check is an EXISTS inside the same query rather
+ * than a lookup per candidate.
  */
 export function buildEligibilityConditions({
   currentUserId,
   myGender,
+  now = new Date(),
 }: EligibilityParams): Prisma.UserProfileWhereInput[] {
   return [
     { userId: { not: currentUserId } },
@@ -77,6 +90,8 @@ export function buildEligibilityConditions({
                 some: { receiverId: currentUserId, status: 'DECLINED' },
               },
             },
+            // A premium member who hid their profile.
+            hiddenFromDiscoveryWhere(now),
           ],
         },
       },

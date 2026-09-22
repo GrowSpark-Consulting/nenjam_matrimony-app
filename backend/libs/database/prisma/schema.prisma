@@ -17,6 +17,11 @@ model User {
   role              UserRole             @default(USER)
   status            UserStatus           @default(PENDING_VERIFICATION)
   trustScore        Int                  @default(0) @map("trust_score")
+  // Means "Hide My Profile" (exposed by the API as `hideMyProfile`): hidden
+  // from Discover/Search/Near Me/digest — but only while the member has an
+  // active premium subscription (hiddenFromDiscoveryWhere in @app/database).
+  // Repurposed rather than renamed; the name predates that decision.
+  // hidePhotosFromNonConnections is likewise honoured only for premium members.
   profileVisibleToPremiumOnly  Boolean         @default(false) @map("profile_visible_to_premium_only")
   hidePhotosFromNonConnections Boolean         @default(false) @map("hide_photos_from_non_connections")
   createdAt         DateTime             @default(now()) @map("created_at")

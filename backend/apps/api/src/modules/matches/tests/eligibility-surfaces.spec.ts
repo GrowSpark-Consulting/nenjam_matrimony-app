@@ -5,8 +5,13 @@ import { PostgresSearchStrategy } from '../search/postgres-search.strategy';
 import { NearbyRepository } from '../repositories/nearby.repository';
 import type { FeedRepository } from '../repositories/feed.repository';
 import type { PreferenceRepository } from '../repositories/preference.repository';
+import { freezeClock } from './freeze-clock';
 
 type Where = Prisma.UserProfileWhereInput;
+
+// Eligibility embeds the current time (subscription expiry); pin it so the
+// rules built here equal the ones each surface builds internally.
+freezeClock();
 
 /**
  * The query each non-Discover surface actually sends carries the complete
@@ -26,6 +31,9 @@ function expectEveryRule(where: Where): void {
     expect(and).toContainEqual(rule);
   }
   expect(JSON.stringify(where)).toContain('"status":"DECLINED"');
+  // A hidden premium profile can't be reached through an alternate
+  // discovery surface either.
+  expect(JSON.stringify(where)).toContain('"profileVisibleToPremiumOnly":true');
 }
 
 describe('Search uses the shared eligibility', () => {

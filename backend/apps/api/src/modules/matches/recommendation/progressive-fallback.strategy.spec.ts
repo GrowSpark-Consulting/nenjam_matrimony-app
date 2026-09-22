@@ -7,6 +7,11 @@ import type { PreferenceRepository } from '../repositories/preference.repository
 import type { AppConfigService } from '@app/config';
 import type { FeedContextService } from '../cache/feed-context.cache';
 import { buildEligibilityConditions } from '../filters/eligibility.builder';
+import { freezeClock } from '../tests/freeze-clock';
+
+// Eligibility embeds the current time (subscription expiry); pin it so the
+// rules built in a test equal the ones each tier builds internally.
+freezeClock();
 
 const SELF = {
   // The seeker's own id: the row fetch passes it through so photo privacy is

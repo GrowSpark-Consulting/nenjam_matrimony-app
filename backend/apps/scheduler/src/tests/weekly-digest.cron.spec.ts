@@ -31,6 +31,7 @@ type ProfileFindManyArgs = {
     user: {
       blocksMade: { none: { blockedUserId: string } };
       blocksReceived: { none: { blockerId: string } };
+      NOT: Record<string, unknown>;
     };
   };
 };
@@ -130,6 +131,18 @@ describe('WeeklyDigestCron', () => {
     const where = findManyProfiles.mock.calls[0][0].where.user;
     expect(where.blocksMade).toEqual({ none: { blockedUserId: 'u1' } });
     expect(where.blocksReceived).toEqual({ none: { blockerId: 'u1' } });
+  });
+
+  it('never mails out a premium member who chose "Hide My Profile"', async () => {
+    await cron.run();
+
+    const where = findManyProfiles.mock.calls[0][0].where.user;
+    // The shared rule (flag AND active premium) — so a non-premium member
+    // with the flag set is still included, exactly as in Discover.
+    expect(where.NOT).toMatchObject({
+      profileVisibleToPremiumOnly: true,
+      subscriptions: { some: { status: 'ACTIVE' } },
+    });
   });
 
   it('skips members with no email or no finalized profile', async () => {

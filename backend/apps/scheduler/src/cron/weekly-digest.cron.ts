@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PrismaService } from '@app/database';
+import { PrismaService, hiddenFromDiscoveryWhere } from '@app/database';
 import { MailService } from '@app/mail';
 
 /** How far back "new this week" reaches. */
@@ -154,6 +154,9 @@ export class WeeklyDigestCron {
           // blocksReceived = blocks created against them.
           blocksMade: { none: { blockedUserId: user.id } },
           blocksReceived: { none: { blockerId: user.id } },
+          // A digest is a discovery surface: never mail out a premium member
+          // who chose "Hide My Profile" (same rule as Discover/Search/Near Me).
+          NOT: hiddenFromDiscoveryWhere(now),
         },
       },
       select: {
