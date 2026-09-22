@@ -4,7 +4,7 @@ import type {
   Prisma,
   ProfileView,
 } from '../../../../../../libs/database/generated/client';
-import { FEED_PROFILE_SELECT, type FeedProfileRow } from './feed.repository';
+import { feedProfileSelectFor, type FeedProfileRow } from './feed.repository';
 import { notBlockedWith } from '../../blocks/filters/block-exclusion.builder';
 import type { PrismaClientLike } from './shortlist.repository';
 
@@ -121,11 +121,14 @@ export class ProfileViewRepository {
     return [rows, allViewers.length];
   }
 
-  findFeedProfilesByUserIds(userIds: string[]): Promise<FeedProfileRow[]> {
+  findFeedProfilesByUserIds(
+    userIds: string[],
+    viewerId: string,
+  ): Promise<FeedProfileRow[]> {
     if (userIds.length === 0) return Promise.resolve([]);
     return this.prisma.userProfile.findMany({
       where: { userId: { in: userIds } },
-      select: FEED_PROFILE_SELECT,
+      select: feedProfileSelectFor(viewerId),
     });
   }
 }

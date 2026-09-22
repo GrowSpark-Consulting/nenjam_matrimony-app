@@ -38,8 +38,26 @@ export class ProfileFeedMapper {
       phone?: string | null;
       photos?: Array<{ id?: string; s3Key: string; isPrimary?: boolean }>;
       faceVerification?: StoredFaceVerification | null;
+      hidePhotosFromNonConnections?: boolean;
+      receivedInterests?: Array<{ id: string }>;
+      sentInterests?: Array<{ id: string }>;
     };
     const photos = user.photos ?? [];
+
+    // Privacy: this member shows photos only to people they are connected
+    // with, and this viewer is not one of them. The URLs are never signed, so
+    // nothing leaks — withholding them in the client would still have put a
+    // working link on the wire.
+    //
+    // The connection probes come from `feedProfileSelectFor(viewerId)`. A row
+    // selected without them reads as "not connected", which fails CLOSED: a
+    // caller that forgets the viewer-aware select hides the photos rather than
+    // exposing them.
+    const photosHidden =
+      user.hidePhotosFromNonConnections === true &&
+      (user.receivedInterests?.length ?? 0) === 0 &&
+      (user.sentInterests?.length ?? 0) === 0;
+    const visiblePhotos = photosHidden ? [] : photos;
 
     return {
       id: String(row.userId),
@@ -51,7 +69,7 @@ export class ProfileFeedMapper {
         .join(', '),
       profession: (row.profession as string) ?? '',
       education: (row.highestEducation as string) ?? '',
-      photoUrls: await this.presignPhotos(photos),
+      photoUrls: await this.presignPhotos(visiblePhotos),
       // Face verification, derived at read time: true only while the photo
       // the live selfie was matched against is still this member's primary
       // photo. Rows selected without faceVerification read as false.
@@ -60,7 +78,9 @@ export class ProfileFeedMapper {
       isPsychologyCompleted: false,
       isOnline: false,
       horoscopeAvailable: false,
-      photoProtected: false,
+      // Tells the client WHY there are no photos, so it can show "photos
+      // visible to connections" instead of the generic no-photo placeholder.
+      photoProtected: photosHidden,
       phoneVerified: Boolean(user.phone),
       compatibility: {
         // Preference-and-quality compatibility, 0-100. `overallCompatibility`

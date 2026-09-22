@@ -326,7 +326,10 @@ describe('InterestsService lists', () => {
       pageNumber: 1,
     });
 
-    expect(repo.findFeedProfilesByUserIds).toHaveBeenCalledWith(['s1', 's2']);
+    expect(repo.findFeedProfilesByUserIds).toHaveBeenCalledWith(
+      ['s1', 's2'],
+      'me',
+    );
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({
       id: 'a',
@@ -349,7 +352,7 @@ describe('InterestsService lists', () => {
       pageNumber: 1,
     });
 
-    expect(repo.findFeedProfilesByUserIds).toHaveBeenCalledWith(['r1']);
+    expect(repo.findFeedProfilesByUserIds).toHaveBeenCalledWith(['r1'], 'me');
     expect(items[0].profile).toMatchObject({ id: 'r1' });
   });
 });

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/database';
 import type { UserBlock } from '../../../../../../libs/database/generated/client';
 import {
-  FEED_PROFILE_SELECT,
+  feedProfileSelectFor,
   type FeedProfileRow,
 } from '../../matches/repositories/feed.repository';
 
@@ -61,11 +61,14 @@ export class BlocksRepository {
   /** Public profile cards for a set of users, in the exact shape
    *  ProfileFeedMapper consumes — reuses the feed's column selection so
    *  blocked-member cards render identically to Discover cards. */
-  findFeedProfilesByUserIds(userIds: string[]): Promise<FeedProfileRow[]> {
+  findFeedProfilesByUserIds(
+    userIds: string[],
+    viewerId: string,
+  ): Promise<FeedProfileRow[]> {
     if (userIds.length === 0) return Promise.resolve([]);
     return this.prisma.userProfile.findMany({
       where: { userId: { in: userIds } },
-      select: FEED_PROFILE_SELECT,
+      select: feedProfileSelectFor(viewerId),
     });
   }
 }

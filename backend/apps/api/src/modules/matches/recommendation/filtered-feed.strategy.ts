@@ -39,6 +39,6 @@ export class FilteredFeedStrategy implements RecommendationService {
       self,
       pref,
     });
-    return this.feedRepository.findMatching(where, { skip, take });
+    return this.feedRepository.findMatching(where, { skip, take }, userId);
   }
 }

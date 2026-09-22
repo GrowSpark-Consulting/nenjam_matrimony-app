@@ -50,6 +50,10 @@ export const FEED_PROFILE_SELECT = {
       phone: true,
       // Trust signal for the verification component.
       trustScore: true,
+      // Privacy: when set, this member's photos are shown only to people they
+      // are connected with. The mapper enforces it; the connection itself is
+      // per-viewer, so it comes from [feedProfileSelectFor] rather than here.
+      hidePhotosFromNonConnections: true,
       // The candidate's OWN preference, for the mutual direction of the score.
       // Selected here rather than fetched per row on purpose: this is a nested
       // select on a query that already runs, so mutual scoring costs zero extra
@@ -94,6 +98,44 @@ export const FEED_PROFILE_SELECT = {
     },
   },
 } satisfies Prisma.UserProfileSelect;
+
+/**
+ * [FEED_PROFILE_SELECT] plus whether each candidate is CONNECTED to the viewer
+ * — which is what decides if a member who hides their photos from
+ * non-connections shows them to this particular caller.
+ *
+ * A connection is an accepted interest in either direction, the app's own
+ * definition of a match. Both probes are `take: 1` nested selects on a query
+ * that already runs, so this costs no extra round trip and stays out of N+1
+ * territory: the alternative — asking "are we connected?" per candidate —
+ * turns one page into 21 queries.
+ *
+ * Every surface that renders a member's card should select through this, so a
+ * photo hidden in Discover is not visible in Search, Near Me, shortlists,
+ * interest lists or "who viewed me".
+ */
+export function feedProfileSelectFor(viewerId: string) {
+  return {
+    ...FEED_PROFILE_SELECT,
+    user: {
+      select: {
+        ...FEED_PROFILE_SELECT.user.select,
+        // They accepted an interest I sent.
+        receivedInterests: {
+          where: { senderId: viewerId, status: 'ACCEPTED' as const },
+          select: { id: true },
+          take: 1,
+        },
+        // I accepted an interest they sent.
+        sentInterests: {
+          where: { receiverId: viewerId, status: 'ACCEPTED' as const },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    },
+  } satisfies Prisma.UserProfileSelect;
+}
 
 // A finalized profile row plus the joined user/photos the card needs.
 export type FeedProfileRow = Record<string, unknown>;
@@ -183,6 +225,7 @@ export class FeedRepository {
   async findMatching(
     where: Prisma.UserProfileWhereInput,
     { skip, take }: { skip: number; take: number },
+    viewerId: string,
   ): Promise<{ rows: FeedProfileRow[]; total: number }> {
     const [rows, total] = await Promise.all([
       this.prisma.userProfile.findMany({
@@ -190,7 +233,7 @@ export class FeedRepository {
         orderBy: { createdAt: 'desc' },
         skip,
         take,
-        select: FEED_PROFILE_SELECT,
+        select: feedProfileSelectFor(viewerId),
       }),
       this.prisma.userProfile.count({ where }),
     ]);
@@ -213,13 +256,14 @@ export class FeedRepository {
   async findRows(
     where: Prisma.UserProfileWhereInput,
     { skip, take }: { skip: number; take: number },
+    viewerId: string,
   ): Promise<FeedProfileRow[]> {
     const rows = await this.prisma.userProfile.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       skip,
       take,
-      select: FEED_PROFILE_SELECT,
+      select: feedProfileSelectFor(viewerId),
     });
     return rows as FeedProfileRow[];
   }
