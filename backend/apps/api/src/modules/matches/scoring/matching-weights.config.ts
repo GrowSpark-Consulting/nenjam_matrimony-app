@@ -20,8 +20,13 @@
  * way the filter does. Before, a "Never Married" preference never matched the
  * stored NEVER_MARRIED, and "Same State" was compared against the seeker's
  * city — so candidates the filter had accepted scored as mismatches.
+ *
+ * `v1.2-preference`: education and occupation preferences apply at all. Their
+ * picker options are categories ("B.E / B.Tech+", "Software / IT") mapped to
+ * the profile values they cover (filters/preference-categories.ts); before,
+ * every one was dropped as a UI label and the preference never counted.
  */
-export const MATCHING_ALGORITHM_VERSION = 'v1.1-preference';
+export const MATCHING_ALGORITHM_VERSION = 'v1.2-preference';
 
 /** A single scored dimension. */
 export type ScoreKey =

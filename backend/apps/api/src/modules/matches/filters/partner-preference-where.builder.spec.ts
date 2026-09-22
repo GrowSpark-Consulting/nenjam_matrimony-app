@@ -168,12 +168,15 @@ describe('buildFeedWhere', () => {
   });
 
   it('drops grouped UI labels (with "/" or "+") that never match a profile', () => {
+    // Labels that are neither a mapped category nor a real profile value.
+    // Known categories ("Software / IT", "B.E / B.Tech+") are expanded
+    // instead — see preference-categories.spec.ts.
     expect(
       clauses({
         ...base,
         pref: {
-          preferredOccupations: ['Software / IT'],
-          preferredEducation: ['B.E / B.Tech+'],
+          preferredOccupations: ['Arts / Media'],
+          preferredEducation: ['Diploma+'],
         },
       }),
     ).toHaveLength(BASE_CLAUSE_COUNT);
@@ -264,7 +267,29 @@ describe('buildFeedWhere', () => {
       pref: { minAge: 25, maxAge: 30, minHeightCm: 150, maxHeightCm: 175 },
     });
     expect(c.some((x) => 'dob' in x)).toBe(true);
-    expect(c).toContainEqual({ heightCm: { gte: 150 } });
-    expect(c).toContainEqual({ heightCm: { lte: 175 } });
+    // One clause for the range, which also admits a member with no height.
+    expect(c).toContainEqual({
+      OR: [{ heightCm: { gte: 150, lte: 175 } }, { heightCm: null }],
+    });
+  });
+
+  it('keeps members who never gave a height, unjudged on it', () => {
+    // SQL treats `NULL >= 140` as unknown, so a bare range silently dropped
+    // them from the feed of anyone with a saved range — nearly everyone,
+    // given the 140-210 default on every preference row.
+    const onlyMin = clauses({ ...base, pref: { minHeightCm: 160 } });
+    expect(onlyMin).toContainEqual({
+      OR: [{ heightCm: { gte: 160 } }, { heightCm: null }],
+    });
+    const onlyMax = clauses({ ...base, pref: { maxHeightCm: 180 } });
+    expect(onlyMax).toContainEqual({
+      OR: [{ heightCm: { lte: 180 } }, { heightCm: null }],
+    });
+  });
+
+  it('adds no height clause when no range is stated', () => {
+    const c = clauses({ ...base, pref: { minHeightCm: null, maxHeightCm: 0 } });
+    expect(JSON.stringify(c)).not.toContain('heightCm');
+    expect(c).toHaveLength(BASE_CLAUSE_COUNT);
   });
 });
