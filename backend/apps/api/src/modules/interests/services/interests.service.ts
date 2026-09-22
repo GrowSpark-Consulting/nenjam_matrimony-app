@@ -321,7 +321,7 @@ export class InterestsService {
   ): Promise<InterestListItemDto[]> {
     return this.interestsRepository
       .listReceived(userId, pagination.skip, pagination.take)
-      .then(([rows]) => this.toItems(rows, (r) => r.senderId));
+      .then(([rows]) => this.toItems(rows, (r) => r.senderId, userId));
   }
 
   listSent(
@@ -330,7 +330,7 @@ export class InterestsService {
   ): Promise<InterestListItemDto[]> {
     return this.interestsRepository
       .listSent(userId, pagination.skip, pagination.take)
-      .then(([rows]) => this.toItems(rows, (r) => r.receiverId));
+      .then(([rows]) => this.toItems(rows, (r) => r.receiverId, userId));
   }
 
   // ── internals ────────────────────────────────────────────────────────────
@@ -349,12 +349,17 @@ export class InterestsService {
   private async toItems(
     rows: ExpressInterest[],
     counterpartOf: (row: ExpressInterest) => string,
+    /** The caller, so photo privacy is resolved against THEIR connections. */
+    userId: string,
   ): Promise<InterestListItemDto[]> {
     if (rows.length === 0) return [];
 
     const counterpartIds = [...new Set(rows.map(counterpartOf))];
     const profileRows =
-      await this.interestsRepository.findFeedProfilesByUserIds(counterpartIds);
+      await this.interestsRepository.findFeedProfilesByUserIds(
+        counterpartIds,
+        userId,
+      );
     const dtos = await this.profileMapper.toDtoList(profileRows);
     const profileByUserId = new Map(dtos.map((dto) => [dto.id, dto]));
 

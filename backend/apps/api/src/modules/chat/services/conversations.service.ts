@@ -77,9 +77,10 @@ export class ConversationsService {
     ] = await Promise.all([
       this.conversationRepository.unreadCountsByRoom(userId, roomIds),
       this.conversationRepository.blockedPeerIds(userId, peerIds),
-      this.conversationRepository.findFeedProfilesByUserIds([
-        ...new Set(peerIds),
-      ]),
+      this.conversationRepository.findFeedProfilesByUserIds(
+        [...new Set(peerIds)],
+        userId,
+      ),
       this.conversationRepository.statesByRoom(userId, roomIds),
       this.presence.presenceOfMany(peerIds),
     ]);

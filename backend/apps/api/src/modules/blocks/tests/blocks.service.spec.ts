@@ -121,7 +121,10 @@ describe('BlocksService.listBlocked', () => {
 
     const page = await service.listBlocked('me', PAGE);
 
-    expect(repo.findFeedProfilesByUserIds).toHaveBeenCalledWith(['target-1']);
+    expect(repo.findFeedProfilesByUserIds).toHaveBeenCalledWith(
+      ['target-1'],
+      'me',
+    );
     expect(page.items).toEqual([
       {
         id: 'target-1',

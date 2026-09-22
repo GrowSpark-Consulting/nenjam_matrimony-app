@@ -7,7 +7,7 @@ import type {
   UserStatus,
 } from '../../../../../../libs/database/generated/client';
 import {
-  FEED_PROFILE_SELECT,
+  feedProfileSelectFor,
   type FeedProfileRow,
 } from '../../matches/repositories/feed.repository';
 import { notBlockedWith } from '../../blocks/filters/block-exclusion.builder';
@@ -190,11 +190,14 @@ export class InterestsRepository {
   /** Public profile cards for a set of users, in the exact shape
    *  ProfileFeedMapper consumes — reuses the feed's column selection so the
    *  interest/shortlist cards are identical to Discover cards. */
-  findFeedProfilesByUserIds(userIds: string[]): Promise<FeedProfileRow[]> {
+  findFeedProfilesByUserIds(
+    userIds: string[],
+    viewerId: string,
+  ): Promise<FeedProfileRow[]> {
     if (userIds.length === 0) return Promise.resolve([]);
     return this.prisma.userProfile.findMany({
       where: { userId: { in: userIds } },
-      select: FEED_PROFILE_SELECT,
+      select: feedProfileSelectFor(viewerId),
     });
   }
 }

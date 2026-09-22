@@ -128,7 +128,10 @@ export class ProfileViewService {
 
     const viewerIds = rows.map((row) => row.viewerId);
     const profileRows =
-      await this.profileViewRepository.findFeedProfilesByUserIds(viewerIds);
+      await this.profileViewRepository.findFeedProfilesByUserIds(
+        viewerIds,
+        userId,
+      );
     const dtos = await this.profileMapper.toDtoList(profileRows);
 
     // Preserve most-recent-first order and drop viewers with no finalized

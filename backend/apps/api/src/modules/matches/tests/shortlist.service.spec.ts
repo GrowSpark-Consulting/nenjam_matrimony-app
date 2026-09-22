@@ -108,7 +108,10 @@ describe('ShortlistService.list', () => {
       pageNumber: 1,
     } as never);
 
-    expect(repo.findFeedProfilesByUserIds).toHaveBeenCalledWith(['t1', 't2']);
+    expect(repo.findFeedProfilesByUserIds).toHaveBeenCalledWith(
+      ['t1', 't2'],
+      'me',
+    );
     expect(result).toEqual([{ id: 't1', name: 'T One' }]);
   });
 });

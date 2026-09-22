@@ -19,7 +19,7 @@ export interface ChatStatePatch {
   customNotification?: string | null;
 }
 import {
-  FEED_PROFILE_SELECT,
+  feedProfileSelectFor,
   type FeedProfileRow,
 } from '../../matches/repositories/feed.repository';
 
@@ -176,11 +176,14 @@ export class ConversationRepository {
 
   /** Public profile cards for a set of users, in the exact shape
    *  ProfileFeedMapper consumes (reuses the feed column selection). */
-  findFeedProfilesByUserIds(userIds: string[]): Promise<FeedProfileRow[]> {
+  findFeedProfilesByUserIds(
+    userIds: string[],
+    viewerId: string,
+  ): Promise<FeedProfileRow[]> {
     if (userIds.length === 0) return Promise.resolve([]);
     return this.prisma.userProfile.findMany({
       where: { userId: { in: userIds } },
-      select: FEED_PROFILE_SELECT,
+      select: feedProfileSelectFor(viewerId),
     });
   }
 

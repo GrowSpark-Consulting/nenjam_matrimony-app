@@ -72,6 +72,10 @@ export class PostgresSearchStrategy implements SearchStrategy {
       });
     }
 
-    return this.feedRepository.findMatching(where, { skip, take });
+    return this.feedRepository.findMatching(
+      where,
+      { skip, take },
+      currentUserId,
+    );
   }
 }
