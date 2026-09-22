@@ -149,11 +149,22 @@ export function buildPreferenceConditions(
         },
       });
     }
+    // Height is optional on a profile, and a member who never gave one is
+    // SHOWN — they simply aren't judged on height (scoring marks the
+    // component inapplicable too). This has to be spelled out: SQL compares
+    // NULL against a range as unknown, so `height_cm >= 140` alone silently
+    // dropped every such member from the feed of anyone with a saved range —
+    // which, with the 140-210 default on every preference row, was nearly
+    // everyone.
+    const heightRange: Prisma.IntNullableFilter = {};
     if (isPositive(pref.minHeightCm)) {
-      and.push({ heightCm: { gte: pref.minHeightCm as number } });
+      heightRange.gte = pref.minHeightCm as number;
     }
     if (isPositive(pref.maxHeightCm)) {
-      and.push({ heightCm: { lte: pref.maxHeightCm as number } });
+      heightRange.lte = pref.maxHeightCm as number;
+    }
+    if (heightRange.gte !== undefined || heightRange.lte !== undefined) {
+      and.push({ OR: [{ heightCm: heightRange }, { heightCm: null }] });
     }
 
     addValues(and, 'religion', resolveValues(pref.preferredReligions));
