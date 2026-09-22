@@ -9,6 +9,9 @@ import type { FeedContextService } from '../cache/feed-context.cache';
 import { buildEligibilityConditions } from '../filters/eligibility.builder';
 
 const SELF = {
+  // The seeker's own id: the row fetch passes it through so photo privacy is
+  // resolved against THIS viewer's connections.
+  userId: 'me',
   gender: 'MALE' as const,
   caste: 'Iyer',
   currentCity: 'Chennai',
@@ -249,10 +252,11 @@ describe('ProgressiveFallbackStrategy', () => {
 
     await strategy.getFeedForUser('me', { skip: 40, take: 10 });
 
-    expect(findRows).toHaveBeenCalledWith(expect.anything(), {
-      skip: 40,
-      take: 10,
-    });
+    expect(findRows).toHaveBeenCalledWith(
+      expect.anything(),
+      { skip: 40, take: 10 },
+      'me',
+    );
   });
 
   it('duplicate prevention: findRows is called at most once per request, never once per tier', async () => {

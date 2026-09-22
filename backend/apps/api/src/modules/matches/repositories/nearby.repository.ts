@@ -5,7 +5,7 @@ import type {
   Prisma,
 } from '../../../../../../libs/database/generated/client';
 import { buildEligibilityConditions } from '../filters/eligibility.builder';
-import { FEED_PROFILE_SELECT, type FeedProfileRow } from './feed.repository';
+import { feedProfileSelectFor, type FeedProfileRow } from './feed.repository';
 import { boundingBoxFor, type GeoPoint } from '../geo/haversine';
 
 /** The caller's own attributes Near Me needs: gender (to match the opposite)
@@ -169,7 +169,7 @@ export class NearbyRepository {
 
     const rows = await this.prisma.userProfile.findMany({
       where,
-      select: FEED_PROFILE_SELECT,
+      select: feedProfileSelectFor(currentUserId),
     });
     return rows;
   }

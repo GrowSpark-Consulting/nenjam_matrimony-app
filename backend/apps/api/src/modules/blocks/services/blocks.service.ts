@@ -83,7 +83,7 @@ export class BlocksService {
 
     const blockedIds = rows.map((row) => row.blockedUserId);
     const profileRows =
-      await this.blocksRepository.findFeedProfilesByUserIds(blockedIds);
+      await this.blocksRepository.findFeedProfilesByUserIds(blockedIds, userId);
     const dtos = await this.profileMapper.toDtoList(profileRows);
     const profileByUserId = new Map(dtos.map((dto) => [dto.id, dto]));
 

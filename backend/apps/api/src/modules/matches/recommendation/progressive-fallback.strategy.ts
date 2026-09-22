@@ -162,7 +162,11 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
     seeker: SelfProfile,
     seekerPreference: PreferenceFilters | null,
   ): Promise<RecommendationResult> {
-    const rows = await this.feedRepository.findRows(where, { skip, take });
+    const rows = await this.feedRepository.findRows(
+      where,
+      { skip, take },
+      seeker.userId,
+    );
     return {
       rows,
       total,

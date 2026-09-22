@@ -128,7 +128,10 @@ export class ShortlistService {
 
     const targetIds = rows.map((row: Shortlist) => row.targetUserId);
     const profileRows =
-      await this.shortlistRepository.findFeedProfilesByUserIds(targetIds);
+      await this.shortlistRepository.findFeedProfilesByUserIds(
+        targetIds,
+        userId,
+      );
     const dtos = await this.profileMapper.toDtoList(profileRows);
 
     // Preserve shortlist order (newest first) and drop targets with no
