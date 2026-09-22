@@ -351,6 +351,7 @@ class _RecordingDiscoverRepository implements DiscoverRepository {
   Future<DiscoverProfilePage> getDiscoverProfilesPage({
     int page = 1,
     int limit = 20,
+    String? cursor,
   }) async {
     pageCalls++;
     return const DiscoverProfilePage(items: [], page: 1, hasMore: false);

@@ -176,5 +176,5 @@ void main() {
 class _StubReelFeed extends ReelFeedNotifier {
   @override
   Future<ReelFeedState> build() async =>
-      const ReelFeedState(profiles: [_profile], page: 1, hasMore: false);
+      const ReelFeedState(profiles: [_profile], hasMore: false);
 }

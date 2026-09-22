@@ -9,9 +9,13 @@ abstract class DiscoverRepository {
   Future<DiscoverFeedEntity> getDiscoverFeed();
 
   /// A flat page of the feed for infinite-scroll surfaces (the Matches reel).
-  /// `GET /discover?page=&limit=` — the backend already returns `hasMore`.
+  /// `GET /discover?limit=&cursor=` — pass the previous page's
+  /// [DiscoverProfilePage.nextCursor] to continue; omit it for the first page.
+  /// [page] is still accepted for callers that only ever read page 1, and is
+  /// ignored by the backend whenever a cursor is sent.
   Future<DiscoverProfilePage> getDiscoverProfilesPage({
     int page = 1,
     int limit = 20,
+    String? cursor,
   });
 }

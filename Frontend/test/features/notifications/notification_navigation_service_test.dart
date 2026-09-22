@@ -819,6 +819,7 @@ class _FakeDiscoverRepository implements DiscoverRepository {
   Future<DiscoverProfilePage> getDiscoverProfilesPage({
     int page = 1,
     int limit = 20,
+    String? cursor,
   }) async =>
       DiscoverProfilePage(items: _profiles, page: 1, hasMore: false);
 }
