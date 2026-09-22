@@ -75,7 +75,23 @@ export class FaceVerificationService {
     private readonly s3: S3Service,
     @Inject(FACE_LIVENESS_GATEWAY)
     private readonly gateway: FaceLivenessGateway,
-  ) {}
+  ) {
+    // One line at boot saying which of the three availability conditions
+    // holds. `isAvailable()` is an AND of three things owned by three
+    // different config surfaces (a feature flag, four FACE_* variables, four
+    // AWS_* variables), and until this existed a 503 NOT_AVAILABLE gave no
+    // way to tell which one was false — the flag being off and the
+    // credentials never landing produced byte-identical responses.
+    //
+    // Booleans only: no values, no ARNs, no key prefixes. AwsFaceLivenessGateway
+    // names the specific missing variables (also without values).
+    this.logger.log(
+      'Face verification availability — ' +
+        `enabled=${this.settings.enabled} ` +
+        `awsGatewayConfigured=${this.gateway.isConfigured()} ` +
+        `s3Configured=${this.s3.isConfigured()}`,
+    );
+  }
 
   private get settings() {
     return this.config.faceVerification;
