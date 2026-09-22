@@ -12,10 +12,16 @@
  *
  * `v1-preference`: partner-preference fit in both directions, blended 60/40,
  * plus the three candidate-quality signals, under the weights below. Bump it
- * whenever a signal is added or a weight changes, so a stored or logged score
- * can always be traced to the formula that made it.
+ * whenever a signal is added, a weight changes, or a fix changes what a
+ * component returns, so a stored or logged score can always be traced to the
+ * formula that made it.
+ *
+ * `v1.1-preference`: marital status and "Same State" read the preference the
+ * way the filter does. Before, a "Never Married" preference never matched the
+ * stored NEVER_MARRIED, and "Same State" was compared against the seeker's
+ * city — so candidates the filter had accepted scored as mismatches.
  */
-export const MATCHING_ALGORITHM_VERSION = 'v1-preference';
+export const MATCHING_ALGORITHM_VERSION = 'v1.1-preference';
 
 /** A single scored dimension. */
 export type ScoreKey =

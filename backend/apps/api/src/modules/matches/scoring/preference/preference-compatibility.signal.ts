@@ -1,5 +1,7 @@
 import {
   isLiteral,
+  resolveLocation,
+  resolveMaritalStatuses,
   resolveValues,
   type PreferenceFilters,
   type SelfAttributes,
@@ -81,12 +83,7 @@ export const PREFERENCE_COMPATIBILITY_SIGNAL: CompatibilitySignal = {
         candidate.profession,
         null,
       ),
-      listComponent(
-        'maritalStatus',
-        pref?.maritalStatusPref,
-        candidate.maritalStatus,
-        null,
-      ),
+      maritalStatusComponent(pref, candidate),
       heightComponent(pref, candidate),
       lifestyleComponent(pref, candidate),
     ];
@@ -174,14 +171,39 @@ function communityComponent(
   return scoreComponent('community', hit ? 1 : 0, true);
 }
 
+/**
+ * The marital status a member stated they want, compared against the enum the
+ * column actually holds.
+ *
+ * Both sides go through the filter's own [resolveMaritalStatuses], so the
+ * picker's "Never Married" and the stored NEVER_MARRIED are the same value
+ * here — they were not, and every candidate the filter accepted for marital
+ * status then scored zero on it.
+ */
+function maritalStatusComponent(
+  pref: PreferenceFilters | null,
+  candidate: ScorableProfile,
+): ScoreComponent {
+  const wanted = resolveMaritalStatuses(pref?.maritalStatusPref);
+  const have = resolveMaritalStatuses([candidate.maritalStatus ?? '']);
+  if (wanted.length === 0 || have.length === 0) {
+    return scoreComponent('maritalStatus', 0, false);
+  }
+  return scoreComponent(
+    'maritalStatus',
+    wanted.includes(have[0]) ? 1 : 0,
+    true,
+  );
+}
+
 /** City is a full match; same state is partial credit, not zero. */
 function locationComponent(
   pref: PreferenceFilters | null,
   candidate: ScorableProfile,
   self: SelfAttributes,
 ): ScoreComponent {
-  const cities = resolveValues(pref?.preferredCities, self.currentCity);
-  const states = resolveValues(pref?.preferredStates, self.currentState);
+  // The same split the filter applies: "Same State" names a state, not a city.
+  const { cities, states } = resolveLocation(pref, self);
   if (cities.length === 0 && states.length === 0) {
     return scoreComponent('location', 0, false);
   }

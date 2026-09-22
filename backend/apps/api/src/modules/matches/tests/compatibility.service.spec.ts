@@ -367,9 +367,9 @@ describe('CompatibilityService', () => {
     });
 
     it('stamps the algorithm version on every result', () => {
-      expect(MATCHING_ALGORITHM_VERSION).toBe('v1-preference');
+      expect(MATCHING_ALGORITHM_VERSION).toBe('v1.1-preference');
       const r = svc.score(profile({ userId: 'me' }), null, profile());
-      expect(r.algorithmVersion).toBe('v1-preference');
+      expect(r.algorithmVersion).toBe('v1.1-preference');
     });
   });
 
@@ -422,6 +422,88 @@ describe('CompatibilityService', () => {
       );
       expect(r.matchedPreferences).toEqual([]);
       expect(r.unmatchedPreferences).toEqual([]);
+    });
+  });
+
+  describe('scoring reads preferences the way the filter does', () => {
+    it('matches a "Never Married" label against the stored NEVER_MARRIED', () => {
+      // The picker writes labels; the column holds the enum. The filter always
+      // normalised them, so it accepted these candidates — and scoring then
+      // marked every one of them a mismatch.
+      const r = svc.score(
+        profile({ userId: 'me' }),
+        preference({ maritalStatusPref: ['Never Married'] }),
+        profile({ maritalStatus: 'NEVER_MARRIED' }),
+      );
+      const marital = r.components.find((c) => c.key === 'maritalStatus');
+      expect(marital).toMatchObject({ applicable: true, ratio: 1 });
+      expect(r.matchedPreferences).toContain('maritalStatus');
+    });
+
+    it('still scores a different marital status as a mismatch', () => {
+      const r = svc.score(
+        profile({ userId: 'me' }),
+        preference({ maritalStatusPref: ['Never Married'] }),
+        profile({ maritalStatus: 'DIVORCED' }),
+      );
+      const marital = r.components.find((c) => c.key === 'maritalStatus');
+      expect(marital).toMatchObject({ applicable: true, ratio: 0 });
+    });
+
+    it(`treats "Doesn't Matter" as no marital preference at all`, () => {
+      const r = svc.score(
+        profile({ userId: 'me' }),
+        preference({ maritalStatusPref: ["Doesn't Matter"] }),
+        profile({ maritalStatus: 'DIVORCED' }),
+      );
+      const marital = r.components.find((c) => c.key === 'maritalStatus');
+      expect(marital?.applicable).toBe(false);
+    });
+
+    it(`scores "Same State" against the seeker's STATE, not their city`, () => {
+      // Seeker in Chennai; candidate elsewhere in Tamil Nadu. The filter routes
+      // "Same State" to the state column and accepts her — scoring used to
+      // resolve it to the seeker's city and give only partial credit.
+      const r = svc.score(
+        profile({ userId: 'me', currentCity: 'Chennai' }),
+        preference({ preferredCities: ['Same State'], preferredStates: [] }),
+        profile({ currentCity: 'Madurai', currentState: 'Tamil Nadu' }),
+      );
+      const location = r.components.find((c) => c.key === 'location');
+      expect(location).toMatchObject({ applicable: true, ratio: 1 });
+    });
+
+    it('still scores a different state as a location mismatch under "Same State"', () => {
+      const r = svc.score(
+        profile({ userId: 'me', currentState: 'Tamil Nadu' }),
+        preference({ preferredCities: ['Same State'], preferredStates: [] }),
+        profile({ currentCity: 'Bengaluru', currentState: 'Karnataka' }),
+      );
+      const location = r.components.find((c) => c.key === 'location');
+      expect(location).toMatchObject({ applicable: true, ratio: 0 });
+    });
+
+    it('agrees with the filter on every marital label the picker offers', () => {
+      // One vocabulary, one interpretation: whatever the WHERE builder turns a
+      // label into is what scoring compares against.
+      for (const label of ['Never Married', 'Divorced', 'Widowed', 'Awaiting Divorce']) {
+        const where = JSON.stringify(
+          buildFeedWhere({
+            currentUserId: 'me',
+            myGender: 'MALE',
+            self: null,
+            pref: { maritalStatusPref: [label] },
+          }),
+        );
+        const stored = label.toUpperCase().replace(/ /g, '_');
+        expect(where).toContain(stored);
+        const r = svc.score(
+          profile({ userId: 'me' }),
+          preference({ maritalStatusPref: [label] }),
+          profile({ maritalStatus: stored }),
+        );
+        expect(r.components.find((c) => c.key === 'maritalStatus')?.ratio).toBe(1);
+      }
     });
   });
 });

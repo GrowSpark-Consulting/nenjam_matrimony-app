@@ -19,10 +19,12 @@ import type { FeedProfileRow } from '../repositories/feed.repository';
  * order. A diff here is a change to matching behaviour, not a stale snapshot —
  * find the cause rather than updating it.
  *
- * Deliberately includes the cases the audit flagged as scoring bugs (marital
- * labels scored against the enum, "Same State" scored against the seeker's
- * city, grouped education labels). They are recorded as they behave today so
- * that fixing them later is a visible, reviewed change to this file.
+ * Deliberately includes the cases the audit flagged as scoring bugs, recorded
+ * as they behave so that fixing one is a visible, reviewed change to this file.
+ * Marital labels ("Never Married" vs NEVER_MARRIED) and "Same State" (scored
+ * against the seeker's city) were fixed that way — the `onboarding-labels`
+ * snapshot changed, and nothing else did. Grouped education labels
+ * ("B.E / B.Tech+") are still recorded as unmatched.
  *
  * Only the fields that existed before the refactor are recorded, so fields
  * added to the breakdown later cannot move this baseline.
