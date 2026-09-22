@@ -3082,12 +3082,12 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels ran
     "c03-caste-via-community",
     "c04-age-2y-over",
     "c06-height-4cm-over",
+    "c07-same-state-other-city",
     "c09-lifestyle-partial",
     "c05-no-dob-no-height",
-    "c07-same-state-other-city",
-    "c12-stale-low-quality",
     "c08-other-state",
     "c02-wrong-religion",
+    "c12-stale-low-quality",
     "c11-rejects-seeker",
   ],
   "full": [
@@ -3098,12 +3098,12 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels ran
     "c03-caste-via-community",
     "c04-age-2y-over",
     "c06-height-4cm-over",
+    "c07-same-state-other-city",
     "c09-lifestyle-partial",
     "c05-no-dob-no-height",
-    "c07-same-state-other-city",
-    "c12-stale-low-quality",
     "c08-other-state",
     "c02-wrong-religion",
+    "c12-stale-low-quality",
     "c11-rejects-seeker",
   ],
   "withSeen": [
@@ -3112,12 +3112,12 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels ran
     "c03-caste-via-community",
     "c04-age-2y-over",
     "c06-height-4cm-over",
+    "c07-same-state-other-city",
     "c09-lifestyle-partial",
     "c05-no-dob-no-height",
-    "c07-same-state-other-city",
-    "c12-stale-low-quality",
     "c08-other-state",
     "c02-wrong-religion",
+    "c12-stale-low-quality",
     "c11-rejects-seeker",
     "c10-likes-seeker",
     "c01-exact",
@@ -3128,31 +3128,31 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels ran
 exports[`compatibility + ranking golden master seeker with onboarding-labels ranks the pool in the same order (mutual) 1`] = `
 {
   "afterFourth": [
-    "c03-caste-via-community",
     "c04-age-2y-over",
     "c06-height-4cm-over",
-    "c09-lifestyle-partial",
-    "c05-no-dob-no-height",
     "c07-same-state-other-city",
-    "c12-stale-low-quality",
+    "c09-lifestyle-partial",
+    "c10-likes-seeker",
+    "c05-no-dob-no-height",
     "c08-other-state",
     "c02-wrong-religion",
+    "c12-stale-low-quality",
     "c11-rejects-seeker",
   ],
   "full": [
-    "c10-likes-seeker",
     "tie-a",
     "tie-b",
     "c01-exact",
     "c03-caste-via-community",
     "c04-age-2y-over",
     "c06-height-4cm-over",
-    "c09-lifestyle-partial",
-    "c05-no-dob-no-height",
     "c07-same-state-other-city",
-    "c12-stale-low-quality",
+    "c09-lifestyle-partial",
+    "c10-likes-seeker",
+    "c05-no-dob-no-height",
     "c08-other-state",
     "c02-wrong-religion",
+    "c12-stale-low-quality",
     "c11-rejects-seeker",
   ],
   "withSeen": [
@@ -3161,15 +3161,15 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels ran
     "c03-caste-via-community",
     "c04-age-2y-over",
     "c06-height-4cm-over",
+    "c07-same-state-other-city",
     "c09-lifestyle-partial",
     "c05-no-dob-no-height",
-    "c07-same-state-other-city",
-    "c12-stale-low-quality",
     "c08-other-state",
     "c02-wrong-religion",
+    "c12-stale-low-quality",
     "c11-rejects-seeker",
-    "c10-likes-seeker",
     "c01-exact",
+    "c10-likes-seeker",
   ],
 }
 `;
@@ -3280,8 +3280,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       {
         "applicable": true,
         "key": "maritalStatus",
-        "points": 0,
-        "ratio": 0,
+        "points": 6,
+        "ratio": 1,
         "weight": 6,
       },
       {
@@ -3321,8 +3321,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       },
     ],
     "mutualFit": null,
-    "overall": 84,
-    "seekerFit": 84,
+    "overall": 93,
+    "seekerFit": 93,
   },
   "c02-wrong-religion": {
     "band": "Very good",
@@ -3379,8 +3379,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       {
         "applicable": true,
         "key": "maritalStatus",
-        "points": 0,
-        "ratio": 0,
+        "points": 6,
+        "ratio": 1,
         "weight": 6,
       },
       {
@@ -3420,8 +3420,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       },
     ],
     "mutualFit": null,
-    "overall": 67,
-    "seekerFit": 67,
+    "overall": 76,
+    "seekerFit": 76,
   },
   "c03-caste-via-community": {
     "band": "Excellent",
@@ -3478,8 +3478,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       {
         "applicable": true,
         "key": "maritalStatus",
-        "points": 0,
-        "ratio": 0,
+        "points": 6,
+        "ratio": 1,
         "weight": 6,
       },
       {
@@ -3519,8 +3519,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       },
     ],
     "mutualFit": null,
-    "overall": 84,
-    "seekerFit": 84,
+    "overall": 93,
+    "seekerFit": 93,
   },
   "c04-age-2y-over": {
     "band": "Excellent",
@@ -3577,8 +3577,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       {
         "applicable": true,
         "key": "maritalStatus",
-        "points": 0,
-        "ratio": 0,
+        "points": 6,
+        "ratio": 1,
         "weight": 6,
       },
       {
@@ -3618,11 +3618,11 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       },
     ],
     "mutualFit": null,
-    "overall": 84,
-    "seekerFit": 84,
+    "overall": 93,
+    "seekerFit": 93,
   },
   "c05-no-dob-no-height": {
-    "band": "Very good",
+    "band": "Excellent",
     "components": [
       {
         "applicable": false,
@@ -3676,8 +3676,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       {
         "applicable": true,
         "key": "maritalStatus",
-        "points": 0,
-        "ratio": 0,
+        "points": 6,
+        "ratio": 1,
         "weight": 6,
       },
       {
@@ -3717,8 +3717,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       },
     ],
     "mutualFit": null,
-    "overall": 78,
-    "seekerFit": 78,
+    "overall": 90,
+    "seekerFit": 90,
   },
   "c06-height-4cm-over": {
     "band": "Excellent",
@@ -3775,8 +3775,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       {
         "applicable": true,
         "key": "maritalStatus",
-        "points": 0,
-        "ratio": 0,
+        "points": 6,
+        "ratio": 1,
         "weight": 6,
       },
       {
@@ -3816,11 +3816,11 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       },
     ],
     "mutualFit": null,
-    "overall": 84,
-    "seekerFit": 84,
+    "overall": 93,
+    "seekerFit": 93,
   },
   "c07-same-state-other-city": {
-    "band": "Very good",
+    "band": "Excellent",
     "components": [
       {
         "applicable": true,
@@ -3853,8 +3853,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       {
         "applicable": true,
         "key": "location",
-        "points": 4.5,
-        "ratio": 0.5,
+        "points": 9,
+        "ratio": 1,
         "weight": 9,
       },
       {
@@ -3874,8 +3874,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       {
         "applicable": true,
         "key": "maritalStatus",
-        "points": 0,
-        "ratio": 0,
+        "points": 6,
+        "ratio": 1,
         "weight": 6,
       },
       {
@@ -3915,11 +3915,11 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       },
     ],
     "mutualFit": null,
-    "overall": 78,
-    "seekerFit": 78,
+    "overall": 93,
+    "seekerFit": 93,
   },
   "c08-other-state": {
-    "band": "Very good",
+    "band": "Excellent",
     "components": [
       {
         "applicable": true,
@@ -3973,8 +3973,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       {
         "applicable": true,
         "key": "maritalStatus",
-        "points": 0,
-        "ratio": 0,
+        "points": 6,
+        "ratio": 1,
         "weight": 6,
       },
       {
@@ -4014,8 +4014,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       },
     ],
     "mutualFit": null,
-    "overall": 71,
-    "seekerFit": 71,
+    "overall": 80,
+    "seekerFit": 80,
   },
   "c09-lifestyle-partial": {
     "band": "Excellent",
@@ -4072,8 +4072,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       {
         "applicable": true,
         "key": "maritalStatus",
-        "points": 0,
-        "ratio": 0,
+        "points": 6,
+        "ratio": 1,
         "weight": 6,
       },
       {
@@ -4113,8 +4113,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       },
     ],
     "mutualFit": null,
-    "overall": 84,
-    "seekerFit": 84,
+    "overall": 93,
+    "seekerFit": 93,
   },
   "c10-likes-seeker": {
     "band": "Excellent",
@@ -4171,8 +4171,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       {
         "applicable": true,
         "key": "maritalStatus",
-        "points": 0,
-        "ratio": 0,
+        "points": 6,
+        "ratio": 1,
         "weight": 6,
       },
       {
@@ -4212,8 +4212,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       },
     ],
     "mutualFit": 91,
-    "overall": 90,
-    "seekerFit": 89,
+    "overall": 95,
+    "seekerFit": 97,
   },
   "c11-rejects-seeker": {
     "band": "Very good",
@@ -4270,8 +4270,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       {
         "applicable": true,
         "key": "maritalStatus",
-        "points": 0,
-        "ratio": 0,
+        "points": 6,
+        "ratio": 1,
         "weight": 6,
       },
       {
@@ -4311,8 +4311,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       },
     ],
     "mutualFit": 27,
-    "overall": 64,
-    "seekerFit": 89,
+    "overall": 69,
+    "seekerFit": 97,
   },
   "c12-stale-low-quality": {
     "band": "Very good",
@@ -4468,8 +4468,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       {
         "applicable": true,
         "key": "maritalStatus",
-        "points": 0,
-        "ratio": 0,
+        "points": 6,
+        "ratio": 1,
         "weight": 6,
       },
       {
@@ -4509,8 +4509,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       },
     ],
     "mutualFit": null,
-    "overall": 84,
-    "seekerFit": 84,
+    "overall": 93,
+    "seekerFit": 93,
   },
   "tie-b": {
     "band": "Excellent",
@@ -4567,8 +4567,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       {
         "applicable": true,
         "key": "maritalStatus",
-        "points": 0,
-        "ratio": 0,
+        "points": 6,
+        "ratio": 1,
         "weight": 6,
       },
       {
@@ -4608,8 +4608,8 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
       },
     ],
     "mutualFit": null,
-    "overall": 84,
-    "seekerFit": 84,
+    "overall": 93,
+    "seekerFit": 93,
   },
 }
 `;

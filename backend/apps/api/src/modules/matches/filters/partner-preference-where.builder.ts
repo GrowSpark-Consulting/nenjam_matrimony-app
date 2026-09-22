@@ -162,30 +162,13 @@ export function buildPreferenceConditions(
     addValues(and, 'highestEducation', resolveValues(pref.preferredEducation));
     addValues(and, 'profession', resolveValues(pref.preferredOccupations));
 
-    // Location: the wizard stores a single meta-choice in preferredCities
-    // ("Same City" | "Same State" | "Anywhere in India" | "NRI OK" | "Any", or
-    // a literal city), so "Same State" must be routed to the state column, not
-    // the city column. preferredStates is honored too (usually empty).
-    const cityValues: string[] = [];
-    const stateValues: string[] = [];
-    for (const token of toStringArray(pref.preferredCities)) {
-      const lower = token.toLowerCase();
-      if (lower === 'same city') pushIf(cityValues, self?.currentCity);
-      else if (lower === 'same state') pushIf(stateValues, self?.currentState);
-      else if (isLiteral(token)) cityValues.push(token);
-    }
-    for (const value of resolveValues(
-      pref.preferredStates,
-      self?.currentState,
-    )) {
-      stateValues.push(value);
-    }
-    addValues(and, 'currentCity', cityValues);
-    addValues(and, 'currentState', stateValues);
+    const { cities, states } = resolveLocation(pref, self);
+    addValues(and, 'currentCity', cities);
+    addValues(and, 'currentState', states);
 
-    const maritalStatuses = toStringArray(pref.maritalStatusPref)
-      .map((s) => s.toUpperCase().replace(/[\s-]+/g, '_'))
-      .filter((s) => MARITAL_STATUSES.includes(s)) as MaritalStatus[];
+    const maritalStatuses = resolveMaritalStatuses(
+      pref.maritalStatusPref,
+    ) as MaritalStatus[];
     if (maritalStatuses.length > 0) {
       and.push({ maritalStatus: { in: maritalStatuses } });
     }
@@ -211,6 +194,56 @@ export function buildPreferenceConditions(
   }
 
   return and;
+}
+
+/**
+ * Splits the location preference into the two columns it actually addresses.
+ *
+ * The wizard stores a single meta-choice in `preferredCities` ("Same City" |
+ * "Same State" | "Anywhere in India" | "NRI OK" | "Any", or a literal city), so
+ * "Same State" names a STATE and must never be compared against the city
+ * column. `preferredStates` is honoured too (usually empty).
+ *
+ * Exported because scoring has to read the preference the same way the filter
+ * does. It did not: it resolved "Same State" against the seeker's CITY, so a
+ * candidate the filter had just accepted for being in the right state scored
+ * as a near-miss on location.
+ */
+export function resolveLocation(
+  pref: PreferenceFilters | null,
+  self?: SelfAttributes | null,
+): { cities: string[]; states: string[] } {
+  const cities: string[] = [];
+  const states: string[] = [];
+  if (!pref) return { cities, states };
+
+  for (const token of toStringArray(pref.preferredCities)) {
+    const lower = token.toLowerCase();
+    if (lower === 'same city') pushIf(cities, self?.currentCity);
+    else if (lower === 'same state') pushIf(states, self?.currentState);
+    else if (isLiteral(token)) cities.push(token);
+  }
+  for (const value of resolveValues(pref.preferredStates, self?.currentState)) {
+    states.push(value);
+  }
+  return { cities, states };
+}
+
+/**
+ * The marital-status preference as stored ENUM values.
+ *
+ * The picker writes labels ("Never Married"); the column holds enum values
+ * (NEVER_MARRIED). Anything that is neither — "Doesn't Matter", "Any" — is
+ * dropped, which is what makes those choices mean "no preference".
+ *
+ * Exported for the same reason as [resolveLocation]: scoring compared the raw
+ * label against the enum, so the two never matched and a candidate who
+ * satisfied the filter scored zero on marital status.
+ */
+export function resolveMaritalStatuses(raw: unknown): string[] {
+  return toStringArray(raw)
+    .map((s) => s.toUpperCase().replace(/[\s-]+/g, '_'))
+    .filter((s) => MARITAL_STATUSES.includes(s));
 }
 
 /**
