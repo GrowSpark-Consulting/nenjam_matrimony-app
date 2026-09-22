@@ -1,7 +1,9 @@
 import {
   isLiteral,
   resolveLocation,
+  resolveEducation,
   resolveMaritalStatuses,
+  resolveOccupations,
   resolveValues,
   type PreferenceFilters,
   type SelfAttributes,
@@ -71,17 +73,15 @@ export const PREFERENCE_COMPATIBILITY_SIGNAL: CompatibilitySignal = {
         self.motherTongue ?? null,
       ),
       locationComponent(pref, candidate, self),
-      listComponent(
+      categoryComponent(
         'education',
-        pref?.preferredEducation,
+        resolveEducation(pref?.preferredEducation),
         candidate.highestEducation,
-        null,
       ),
-      listComponent(
+      categoryComponent(
         'profession',
-        pref?.preferredOccupations,
+        resolveOccupations(pref?.preferredOccupations),
         candidate.profession,
-        null,
       ),
       maritalStatusComponent(pref, candidate),
       heightComponent(pref, candidate),
@@ -150,6 +150,26 @@ function listComponent(
   const hit = wanted.some(
     (w) => w.trim().toLowerCase() === candidateValue.trim().toLowerCase(),
   );
+  return scoreComponent(key, hit ? 1 : 0, true);
+}
+
+/**
+ * Membership against an already-resolved list of profile values — education
+ * and occupation, whose preference options are categories that the filter's
+ * own resolvers expand ("B.E / B.Tech+" → B.E / B.Tech, M.Tech / M.E, Ph.D).
+ * Resolving here the same way is what keeps a candidate the filter accepted
+ * from scoring as a mismatch.
+ */
+function categoryComponent(
+  key: ScoreKey,
+  wanted: string[],
+  candidateValue: string | null,
+): ScoreComponent {
+  if (wanted.length === 0 || !candidateValue) {
+    return scoreComponent(key, 0, false);
+  }
+  const have = candidateValue.trim().toLowerCase();
+  const hit = wanted.some((w) => w.trim().toLowerCase() === have);
   return scoreComponent(key, hit ? 1 : 0, true);
 }
 

@@ -4,6 +4,10 @@ import type {
   MaritalStatus,
 } from '../../../../../../libs/database/generated/client';
 import { buildEligibilityConditions } from './eligibility.builder';
+import {
+  resolveEducationPreference,
+  resolveOccupationPreference,
+} from './preference-categories';
 
 const MARITAL_STATUSES: readonly string[] = [
   'NEVER_MARRIED',
@@ -145,11 +149,22 @@ export function buildPreferenceConditions(
         },
       });
     }
+    // Height is optional on a profile, and a member who never gave one is
+    // SHOWN — they simply aren't judged on height (scoring marks the
+    // component inapplicable too). This has to be spelled out: SQL compares
+    // NULL against a range as unknown, so `height_cm >= 140` alone silently
+    // dropped every such member from the feed of anyone with a saved range —
+    // which, with the 140-210 default on every preference row, was nearly
+    // everyone.
+    const heightRange: Prisma.IntNullableFilter = {};
     if (isPositive(pref.minHeightCm)) {
-      and.push({ heightCm: { gte: pref.minHeightCm as number } });
+      heightRange.gte = pref.minHeightCm as number;
     }
     if (isPositive(pref.maxHeightCm)) {
-      and.push({ heightCm: { lte: pref.maxHeightCm as number } });
+      heightRange.lte = pref.maxHeightCm as number;
+    }
+    if (heightRange.gte !== undefined || heightRange.lte !== undefined) {
+      and.push({ OR: [{ heightCm: heightRange }, { heightCm: null }] });
     }
 
     addValues(and, 'religion', resolveValues(pref.preferredReligions));
@@ -159,8 +174,12 @@ export function buildPreferenceConditions(
       'motherTongue',
       resolveValues(pref.preferredMotherTongues, self?.motherTongue),
     );
-    addValues(and, 'highestEducation', resolveValues(pref.preferredEducation));
-    addValues(and, 'profession', resolveValues(pref.preferredOccupations));
+    addValues(
+      and,
+      'highestEducation',
+      resolveEducation(pref.preferredEducation),
+    );
+    addValues(and, 'profession', resolveOccupations(pref.preferredOccupations));
 
     const { cities, states } = resolveLocation(pref, self);
     addValues(and, 'currentCity', cities);
@@ -244,6 +263,21 @@ export function resolveMaritalStatuses(raw: unknown): string[] {
   return toStringArray(raw)
     .map((s) => s.toUpperCase().replace(/[\s-]+/g, '_'))
     .filter((s) => MARITAL_STATUSES.includes(s));
+}
+
+/**
+ * The profile education values an education preference matches — categories
+ * like "B.E / B.Tech+" expanded, exact profile values kept even though they
+ * contain "/", anything else read the generic way. See preference-categories.
+ * Exported so scoring reads the preference exactly as the filter does.
+ */
+export function resolveEducation(raw: unknown): string[] {
+  return resolveEducationPreference(raw, (token) => resolveValues([token]));
+}
+
+/** As [resolveEducation], for occupation ("Software / IT" → Software Engineer). */
+export function resolveOccupations(raw: unknown): string[] {
+  return resolveOccupationPreference(raw, (token) => resolveValues([token]));
 }
 
 /**

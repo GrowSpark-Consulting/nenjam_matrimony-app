@@ -23,8 +23,11 @@ import type { FeedProfileRow } from '../repositories/feed.repository';
  * as they behave so that fixing one is a visible, reviewed change to this file.
  * Marital labels ("Never Married" vs NEVER_MARRIED) and "Same State" (scored
  * against the seeker's city) were fixed that way — the `onboarding-labels`
- * snapshot changed, and nothing else did. Grouped education labels
- * ("B.E / B.Tech+") are still recorded as unmatched.
+ * snapshot changed, and nothing else did. Education and occupation categories
+ * ("B.E / B.Tech+", "Software / IT") were then mapped to profile values the
+ * same way. Note the fixture's candidates store legacy-style values ("B.E",
+ * not the picker's "B.E / B.Tech"), so under a "B.E / B.Tech+" preference they
+ * now correctly score as an education mismatch.
  *
  * Only the fields that existed before the refactor are recorded, so fields
  * added to the breakdown later cannot move this baseline.
