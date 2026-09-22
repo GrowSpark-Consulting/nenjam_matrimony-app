@@ -1,4 +1,8 @@
-import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { FirebaseAuthGuard } from './firebase-auth.guard';
 import type { FirebaseService } from '@app/firebase';
 import type { PrismaService } from '@app/database';
@@ -31,11 +35,23 @@ function redisDown(): RedisService {
   } as unknown as RedisService;
 }
 
+/** Redis serving one cached account, so the guard takes its fast path. */
+function redisServing(value: unknown): RedisService {
+  return {
+    getClient: () => ({
+      status: 'ready',
+      get: () => Promise.resolve(JSON.stringify(value)),
+      set: () => Promise.resolve('OK'),
+    }),
+  } as unknown as RedisService;
+}
+
 function buildGuard(opts: {
   verifyIdToken: jest.Mock;
   findUnique?: jest.Mock;
   upsert?: jest.Mock;
   update?: jest.Mock;
+  redis?: RedisService;
 }) {
   const findUnique = opts.findUnique ?? jest.fn(() => Promise.resolve(null));
   const upsert =
@@ -51,7 +67,7 @@ function buildGuard(opts: {
   } as unknown as FirebaseService;
 
   return {
-    guard: new FirebaseAuthGuard(firebase, prisma, redisDown()),
+    guard: new FirebaseAuthGuard(firebase, prisma, opts.redis ?? redisDown()),
     findUnique,
     upsert,
   };
@@ -191,6 +207,117 @@ describe('FirebaseAuthGuard', () => {
   // These deliberately run with the flags at their most permissive: that is
   // the configuration in which honouring the header would be dangerous, so it
   // is the configuration worth pinning.
+  describe('accounts that may no longer use the API', () => {
+    // Authentication answers "who is this"; this answers "are they still
+    // allowed in". Before this existed a banned member kept full read access
+    // to Discover and Search — every profile in the product, a page at a time.
+    const verifyIdToken = () => jest.fn(() => Promise.resolve({ uid: UID }));
+
+    it.each(['SUSPENDED', 'BANNED', 'DEACTIVATED'])(
+      'refuses a %s account found in the database',
+      async (status) => {
+        const { guard } = buildGuard({
+          verifyIdToken: verifyIdToken(),
+          findUnique: jest.fn(() =>
+            Promise.resolve({ id: 'internal-1', status, deletedAt: null }),
+          ),
+        });
+        const { ctx } = contextFor(`Bearer ${TOKEN}`);
+
+        // 403, not 401: the token is valid and signing in again changes
+        // nothing.
+        await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(
+          ForbiddenException,
+        );
+      },
+    );
+
+    it('refuses a soft-deleted account', async () => {
+      const { guard } = buildGuard({
+        verifyIdToken: verifyIdToken(),
+        findUnique: jest.fn(() =>
+          Promise.resolve({
+            id: 'internal-1',
+            status: 'PENDING_VERIFICATION',
+            deletedAt: new Date(),
+          }),
+        ),
+      });
+      const { ctx } = contextFor(`Bearer ${TOKEN}`);
+
+      await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+    });
+
+    it('refuses a suspended account served from the cache, without a DB read', async () => {
+      // Otherwise a member suspended a moment ago keeps browsing for the rest
+      // of the cache TTL.
+      const findUnique = jest.fn();
+      const { guard } = buildGuard({
+        verifyIdToken: verifyIdToken(),
+        findUnique,
+        redis: redisServing({
+          id: 'internal-1',
+          status: 'SUSPENDED',
+          deleted: false,
+        }),
+      });
+      const { ctx } = contextFor(`Bearer ${TOKEN}`);
+
+      await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(findUnique).not.toHaveBeenCalled();
+    });
+
+    it('still admits a normal account from the cache', async () => {
+      const { guard } = buildGuard({
+        verifyIdToken: verifyIdToken(),
+        redis: redisServing({
+          id: 'internal-1',
+          status: 'PENDING_VERIFICATION',
+          deleted: false,
+        }),
+      });
+      const { ctx, request } = contextFor(`Bearer ${TOKEN}`);
+
+      await expect(guard.canActivate(ctx)).resolves.toBe(true);
+      expect(request.user?.id).toBe('internal-1');
+    });
+
+    it('admits PENDING_VERIFICATION and ACTIVE — the states every real member is in', async () => {
+      for (const status of ['PENDING_VERIFICATION', 'ACTIVE']) {
+        const { guard } = buildGuard({
+          verifyIdToken: verifyIdToken(),
+          findUnique: jest.fn(() =>
+            Promise.resolve({ id: 'internal-1', status, deletedAt: null }),
+          ),
+        });
+        const { ctx } = contextFor(`Bearer ${TOKEN}`);
+        await expect(guard.canActivate(ctx)).resolves.toBe(true);
+      }
+    });
+
+    it('admits a freshly created account', async () => {
+      // The upsert path: a brand-new row is PENDING_VERIFICATION and must not
+      // be caught by the denylist.
+      const { guard } = buildGuard({
+        verifyIdToken: verifyIdToken(),
+        upsert: jest.fn(() =>
+          Promise.resolve({
+            id: 'internal-1',
+            status: 'PENDING_VERIFICATION',
+            deletedAt: null,
+          }),
+        ),
+      });
+      const { ctx } = contextFor(`Bearer ${TOKEN}`);
+
+      await expect(guard.canActivate(ctx)).resolves.toBe(true);
+    });
+  });
+
   describe('the X-Dev-Auth-Phone bypass is closed', () => {
     const original = { ...process.env };
 
