@@ -46,9 +46,14 @@ class PartnerPreferencesRepositoryImpl implements PartnerPreferencesRepository {
 
   // ─── Flutter -> backend (PUT body) ─────────────────────────────────
   //
-  // UpdatePartnerPreferenceDto: every field @IsOptional(). Omitted, not sent
-  // as null/empty, when the local value is unset — a partial PUT must never
-  // clear a field the caller didn't touch.
+  // UpdatePartnerPreferenceDto: every field @IsOptional(). Two different
+  // "nothing"s, and they must not be confused:
+  //
+  //  * an UNSET local value ("") is omitted — a partial PUT never touches a
+  //    field the member didn't;
+  //  * an explicit "Any" is sent as `null`, which CLEARS the saved limit.
+  //
+  // "Any" used to be omitted too, so it could never remove a range once saved.
 
   Map<String, dynamic> _toRequestBody(PartnerPreference p) {
     final ageRange = _parseIntRange(p.preferredAgeRange);
@@ -59,12 +64,21 @@ class PartnerPreferencesRepositoryImpl implements PartnerPreferencesRepository {
       if (ageRange != null) ...{
         'minAge': ageRange.$1,
         'maxAge': ageRange.$2,
+      } else if (_isAny(p.preferredAgeRange)) ...{
+        'minAge': null,
+        'maxAge': null,
       },
       if (heightRange != null) ...{
         'minHeightCm': heightRange.$1,
         'maxHeightCm': heightRange.$2,
+      } else if (_isAny(p.preferredHeightRange)) ...{
+        'minHeightCm': null,
+        'maxHeightCm': null,
       },
-      if (minIncome != null) 'minIncomeLakhs': minIncome,
+      if (minIncome != null)
+        'minIncomeLakhs': minIncome
+      else if (_isAny(p.incomePref))
+        'minIncomeLakhs': null,
       ..._arrayField('preferredReligions', p.religionPref),
       ..._arrayField('preferredCastes', p.castePref),
       ..._arrayField('preferredMotherTongues', p.motherTonguePref),
@@ -78,6 +92,9 @@ class PartnerPreferencesRepositoryImpl implements PartnerPreferencesRepository {
       ..._arrayField('maritalStatusPref', p.maritalStatusPref),
     };
   }
+
+  /// The picker's explicit "no limit" choice — as opposed to "" (untouched).
+  bool _isAny(String value) => value.trim().toLowerCase() == 'any';
 
   /// `toStringArray` port: wraps a single non-empty value in a one-element
   /// array under `key`, or sends nothing at all when empty ("no preference"
@@ -118,22 +135,23 @@ class PartnerPreferencesRepositoryImpl implements PartnerPreferencesRepository {
     return first is String ? first : '';
   }
 
-  /// Backend defaults (140/210, PreferencesService.DEFAULTS) are what a
-  /// never-set row returns — indistinguishable from "Any" was explicitly
-  /// chosen (parseHeightRangeToCm('Any', fallback) also returns the
-  /// fallback). Both map back to "" so the row shows the same "Not set"
-  /// placeholder a fresh [PartnerPreference] already renders. A saved value
-  /// matching one of the picker's own presets round-trips to that preset's
-  /// exact string; a value that matches none of them (legacy/out-of-band
-  /// data) also falls back to "" rather than fabricating a label the picker
-  /// sheet has no way to reselect.
+  /// No bound at all (null/null) is "no limit" and maps to "" — the same
+  /// "Not set" placeholder a fresh [PartnerPreference] renders. (140/210 is
+  /// the old stamped default, cleared by migration; treated the same in case
+  /// a row slipped through.) A saved value matching one of the picker's own
+  /// presets round-trips to that preset's exact string — including the
+  /// open-ended "6'0\"+", stored with no maximum (or 250 by older builds). A
+  /// value that matches none of them falls back to "" rather than fabricating
+  /// a label the picker sheet has no way to reselect.
   String _formatHeightRange(int? minCm, int? maxCm) {
-    if (minCm == null || maxCm == null) return '';
+    if (minCm == null && maxCm == null) return '';
     if (minCm == 140 && maxCm == 210) return '';
     for (final preset in partnerPrefHeightRanges) {
       if (preset == 'Any') continue;
       final parsed = _parseHeightRangeToCm(preset);
-      if (parsed != null && parsed.$1 == minCm && parsed.$2 == maxCm) {
+      if (parsed == null || parsed.$1 != minCm) continue;
+      final openEnded = parsed.$2 == null;
+      if (openEnded ? (maxCm == null || maxCm >= 250) : parsed.$2 == maxCm) {
         return preset;
       }
     }
@@ -188,21 +206,19 @@ class PartnerPreferencesRepositoryImpl implements PartnerPreferencesRepository {
 
   /// `parseHeightRangeToCm` port: handles the picker's bucketed
   /// feet'inches ranges ("4'6\"-5'0\"") and open-ended ("6'0\"+"). "Any"
-  /// and anything unparseable return null here (unlike the backend, which
-  /// takes a `fallback` — this repository omits the field instead of
-  /// substituting one, per [PartnerPreferencesRepository]'s partial-update
-  /// contract).
-  (int, int)? _parseHeightRangeToCm(String value) {
+  /// and anything unparseable return null here — the caller decides whether
+  /// that means "leave alone" (unset) or "clear" ("Any").
+  ///
+  /// An open-ended preset has no maximum: `(min, null)`, sent as a cleared
+  /// upper bound — the same thing the backend seeds for it from a draft.
+  (int, int?)? _parseHeightRangeToCm(String value) {
     final trimmed = value.trim();
     if (trimmed.isEmpty || trimmed.toLowerCase() == 'any') return null;
 
     final plusMatch = RegExp(r'^(.+?)\+$').firstMatch(trimmed);
     if (plusMatch != null) {
       final min = _parseHeightToCm(plusMatch.group(1)!);
-      // No fallback max here (unlike the backend, which has one to fall
-      // back to) — an open-ended preset with no resolvable lower bound has
-      // nothing meaningful to send.
-      return min != null ? (min.round(), 250) : null;
+      return min != null ? (min.round(), null) : null;
     }
 
     final dashIndex = trimmed.indexOf('-');

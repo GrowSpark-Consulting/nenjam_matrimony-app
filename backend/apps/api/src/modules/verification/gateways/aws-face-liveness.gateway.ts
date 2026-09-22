@@ -48,6 +48,27 @@ export class AwsFaceLivenessGateway implements FaceLivenessGateway {
     } else {
       this.rekognition = null;
       this.sts = null;
+      // Names the missing variables and nothing else. Without this the
+      // unconfigured path was completely silent, so a deployment whose
+      // credentials had not landed looked identical to one that was simply
+      // switched off: every endpoint answered 503 NOT_AVAILABLE with no way
+      // to tell which of the four values was absent, short of shell access.
+      //
+      // Presence booleans only — never a value, a prefix or a length. The
+      // region is safe to name because it is not a secret and defaults to
+      // 'ap-south-1', so it is the one that is never actually missing.
+      const missing = [
+        !region && 'FACE_VERIFICATION_AWS_REGION',
+        !accessKeyId && 'FACE_VERIFICATION_AWS_ACCESS_KEY_ID',
+        !secretAccessKey && 'FACE_VERIFICATION_AWS_SECRET_ACCESS_KEY',
+        !clientRoleArn && 'FACE_LIVENESS_CLIENT_ROLE_ARN',
+      ].filter((name): name is string => typeof name === 'string');
+      this.logger.warn(
+        `Face verification AWS gateway not configured (missing: ${missing.join(
+          ', ',
+        )}) — /verification/face endpoints will answer 503 NOT_AVAILABLE ` +
+          'until these are set.',
+      );
     }
   }
 

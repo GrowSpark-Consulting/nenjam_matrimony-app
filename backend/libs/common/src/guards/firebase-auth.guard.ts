@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -11,7 +12,11 @@ import { FirebaseService } from '@app/firebase';
 import { PrismaService } from '@app/database';
 import { RedisService } from '@app/cache';
 import type { AuthenticatedUser } from '../decorators/current-user.decorator';
-import { getCachedUserId, setCachedUserId } from '../auth/auth-user-cache';
+import {
+  getCachedAuthUser,
+  isAccountUsable,
+  setCachedAuthUser,
+} from '../auth/auth-user-cache';
 
 interface RequestWithUser extends Request {
   user?: AuthenticatedUser;
@@ -106,10 +111,15 @@ export class FirebaseAuthGuard implements CanActivate {
     // below come from the verified token, not the DB, so a cached id is enough
     // to build the full AuthenticatedUser. Fails open — a miss / Redis-down
     // just falls through to the authoritative DB reconciliation below.
-    const cachedId = await getCachedUserId(this.redis, decoded.uid);
-    if (cachedId) {
+    const cached = await getCachedAuthUser(this.redis, decoded.uid);
+    if (cached) {
+      // Checked here too, not only on the DB path below: otherwise a member
+      // suspended a moment ago would keep browsing for the rest of the cache
+      // TTL. The status travels in the cached value precisely so this costs no
+      // round trip.
+      this.assertUsable(cached, decoded.uid);
       return {
-        id: cachedId,
+        id: cached.id,
         uid: decoded.uid,
         email: decoded.email,
         phone_number: decoded.phone_number,
@@ -205,9 +215,20 @@ export class FirebaseAuthGuard implements CanActivate {
       },
     });
 
+    const account = {
+      id: user.id,
+      // `?? ''` rather than String(): an absent status is unknown, not the
+      // literal "undefined", and an unknown status is not a blocked one.
+      status: typeof user.status === 'string' ? user.status : '',
+      deleted: user.deletedAt != null,
+    };
+
     // Populate the cache so subsequent requests for this UID skip the DB. Best
-    // effort — a Redis failure here must not fail the request.
-    await setCachedUserId(this.redis, decoded.uid, user.id);
+    // effort — a Redis failure here must not fail the request. Written before
+    // the status check so a blocked account is cached as blocked, and the next
+    // request refuses it without a round trip either.
+    await setCachedAuthUser(this.redis, decoded.uid, account);
+    this.assertUsable(account, decoded.uid);
 
     return {
       id: user.id,
@@ -215,5 +236,31 @@ export class FirebaseAuthGuard implements CanActivate {
       email: decoded.email,
       phone_number: decoded.phone_number,
     };
+  }
+
+  /**
+   * Refuses a caller whose account may not use the API — suspended, banned,
+   * deactivated or soft-deleted.
+   *
+   * 403, not 401: the token is perfectly valid and re-authenticating would
+   * change nothing, which is exactly the distinction the two codes carry. The
+   * client should show "your account is unavailable", not a login screen.
+   *
+   * This is the one place it is enforced. Before it existed, a banned member
+   * kept full read access to Discover and Search — every profile in the
+   * product, a page at a time — because the guard only ever asked who they
+   * were, never whether they were still allowed in.
+   */
+  private assertUsable(
+    account: { status: string; deleted: boolean },
+    uid: string,
+  ): void {
+    if (isAccountUsable(account)) return;
+    this.logger.warn(
+      `Refused ${account.deleted ? 'deleted' : account.status} account uid=${uid}`,
+    );
+    throw new ForbiddenException(
+      'This account is no longer active. Please contact support.',
+    );
   }
 }

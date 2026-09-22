@@ -2,10 +2,11 @@
 export class PartnerPreferenceEntity {
   id!: string;
   userId!: string;
-  minAge!: number;
-  maxAge!: number;
-  minHeightCm!: number;
-  maxHeightCm!: number;
+  /** Null means no limit on that side ("Any", or never set). */
+  minAge!: number | null;
+  maxAge!: number | null;
+  minHeightCm!: number | null;
+  maxHeightCm!: number | null;
   preferredReligions!: string[];
   preferredCastes!: string[];
   minIncomeLakhs!: string | null;

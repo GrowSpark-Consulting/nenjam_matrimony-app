@@ -297,10 +297,14 @@ model ProfilePhoto {
 model PartnerPreference {
   id                     String   @id @default(uuid())
   userId                 String   @unique @map("user_id")
-  minAge                 Int      @default(18) @map("min_age")
-  maxAge                 Int      @default(45) @map("max_age")
-  minHeightCm            Int      @default(140) @map("min_height_cm")
-  maxHeightCm            Int      @default(210) @map("max_height_cm")
+  /// Age and height bounds. NULL means no limit on that side — what "Any"
+  /// and an unset range both mean. They used to default to 18-45 and
+  /// 140-210, which quietly acted as real filters: a member who never chose
+  /// an age still excluded everyone over 45, and every missing height.
+  minAge                 Int?     @map("min_age")
+  maxAge                 Int?     @map("max_age")
+  minHeightCm            Int?     @map("min_height_cm")
+  maxHeightCm            Int?     @map("max_height_cm")
   preferredReligions     Json     @default("[]") @map("preferred_religions")
   preferredCastes        Json     @default("[]") @map("preferred_castes")
   minIncomeLakhs         Decimal? @map("min_income_lakhs") @db.Decimal(10, 2)

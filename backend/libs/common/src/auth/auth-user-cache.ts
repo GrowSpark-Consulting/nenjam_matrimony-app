@@ -1,8 +1,8 @@
 import type { RedisService } from '@app/cache';
 
 /**
- * Caches the near-immutable Firebase-UID → internal-user-id mapping that the
- * FirebaseAuthGuard resolves on EVERY authenticated request.
+ * Caches the Firebase-UID → internal account record that the FirebaseAuthGuard
+ * resolves on EVERY authenticated request.
  *
  * Why this exists: against a managed Postgres in another region (Neon
  * us-east-1) a single round trip costs ~250-300ms, and the guard's
@@ -12,8 +12,15 @@ import type { RedisService } from '@app/cache';
  * rotated/re-linked, so a short-TTL cache removes that hop from virtually every
  * request while staying correct via explicit invalidation on deletion.
  *
- * Only `user.id` is cached — the guard's other returned fields (uid, email,
- * phone_number) come straight from the verified token, never the DB.
+ * The id is cached WITH the account's status, so the guard can refuse a
+ * suspended/banned/deactivated caller without paying that round trip back. The
+ * guard's other returned fields (uid, email, phone_number) come straight from
+ * the verified token, never the DB.
+ *
+ * Staleness that matters: a status changed directly in the database keeps
+ * working for up to the TTL below. Whatever suspends or bans an account must
+ * therefore call [invalidateCachedUserId] — account deletion already does (see
+ * AccountDeletionService) — and a future moderation action must do the same.
  *
  * Fail-open by design: Redis is a non-critical dependency (in dev it may not be
  * running at all — see RedisService.handleStartupFailure). Every call is a
@@ -23,36 +30,76 @@ import type { RedisService } from '@app/cache';
  */
 const AUTH_USER_CACHE_TTL_SECONDS = 900; // 15 minutes
 
+/**
+ * `v2` because the value changed shape (a bare id string → JSON with the
+ * status). A running deploy's `v1` entries are simply never read again and
+ * expire on their own, which is cheaper and safer than parsing both forms.
+ */
 function cacheKey(firebaseUid: string): string {
-  return `authuser:uid:${firebaseUid}`;
+  return `authuser:v2:uid:${firebaseUid}`;
 }
 
-/** Cached internal user id for a Firebase UID, or null on miss / Redis down. */
-export async function getCachedUserId(
+/** The cached account: who they are, and whether they may still use the API. */
+export interface CachedAuthUser {
+  id: string;
+  /** `User.status` as stored. */
+  status: string;
+  /** Whether the account is soft-deleted (`User.deletedAt` is set). */
+  deleted: boolean;
+}
+
+/** Cached account for a Firebase UID, or null on miss / Redis down / bad JSON. */
+export async function getCachedAuthUser(
   redis: RedisService,
   firebaseUid: string,
-): Promise<string | null> {
+): Promise<CachedAuthUser | null> {
   const client = redis.getClient();
   if (client.status !== 'ready') return null;
   try {
-    return await client.get(cacheKey(firebaseUid));
+    const raw = await client.get(cacheKey(firebaseUid));
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    const value = parsed as Partial<CachedAuthUser>;
+    if (typeof value.id !== 'string' || typeof value.status !== 'string') {
+      return null;
+    }
+    return {
+      id: value.id,
+      status: value.status,
+      deleted: value.deleted === true,
+    };
   } catch {
+    // A miss, a Redis error and an unreadable payload are the same thing to the
+    // caller: fall through to the authoritative DB read.
     return null;
   }
 }
 
-/** Best-effort populate; silently skipped when Redis is unavailable. */
-export async function setCachedUserId(
+/** Cached internal user id only, for callers that do their own eligibility
+ *  checks. Returns null whenever the cached account may not use the API, so a
+ *  suspended caller is never served from cache. */
+export async function getCachedUserId(
   redis: RedisService,
   firebaseUid: string,
-  userId: string,
+): Promise<string | null> {
+  const cached = await getCachedAuthUser(redis, firebaseUid);
+  if (!cached || !isAccountUsable(cached)) return null;
+  return cached.id;
+}
+
+/** Best-effort populate; silently skipped when Redis is unavailable. */
+export async function setCachedAuthUser(
+  redis: RedisService,
+  firebaseUid: string,
+  user: CachedAuthUser,
 ): Promise<void> {
   const client = redis.getClient();
   if (client.status !== 'ready') return;
   try {
     await client.set(
       cacheKey(firebaseUid),
-      userId,
+      JSON.stringify(user),
       'EX',
       AUTH_USER_CACHE_TTL_SECONDS,
     );
@@ -61,7 +108,8 @@ export async function setCachedUserId(
   }
 }
 
-/** Invalidate on account deletion so a deleted UID can't resolve from cache. */
+/** Invalidate on account deletion, suspension or ban so the change takes
+ *  effect on the next request rather than after the TTL. */
 export async function invalidateCachedUserId(
   redis: RedisService,
   firebaseUid: string,
@@ -73,4 +121,25 @@ export async function invalidateCachedUserId(
   } catch {
     // Non-fatal — the entry expires within AUTH_USER_CACHE_TTL_SECONDS anyway.
   }
+}
+
+/**
+ * Account states that may not use the API at all.
+ *
+ * Deliberately a denylist, matching the feed's eligibility rules: nothing in
+ * this app ever promotes an account out of PENDING_VERIFICATION, so requiring
+ * ACTIVE here would lock out every real member.
+ */
+export const BLOCKED_ACCOUNT_STATUSES: readonly string[] = [
+  'SUSPENDED',
+  'BANNED',
+  'DEACTIVATED',
+];
+
+/** Whether this account may make authenticated requests. */
+export function isAccountUsable(account: {
+  status: string;
+  deleted: boolean;
+}): boolean {
+  return !account.deleted && !BLOCKED_ACCOUNT_STATUSES.includes(account.status);
 }

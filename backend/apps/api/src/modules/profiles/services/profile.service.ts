@@ -33,10 +33,13 @@ import { parseBirthDate } from '../validation/birth-date';
 // wizard collects. These assume the wizard's dropdown/picker values look
 // like "25-30", "150-180 cm", "5 lakhs+", etc. — adjust the regexes here if
 // the actual picker value format differs once the UI is wired to this API.
+/** A `[min, max]` range; either side null means no limit on that side. */
+type OpenRange = [number | null, number | null];
+
 function parseIntRange(
   value: string | undefined,
-  fallback: [number, number],
-): [number, number] {
+  fallback: OpenRange,
+): OpenRange {
   if (!value) return fallback;
   const match = value.match(/(\d+)\D+(\d+)/);
   if (!match) return fallback;
@@ -76,8 +79,8 @@ function parseHeightToCm(value: string | undefined): number | null {
 // realistic centimetres.
 function parseHeightRangeToCm(
   value: string | undefined,
-  fallback: [number, number],
-): [number, number] {
+  fallback: OpenRange,
+): OpenRange {
   if (!value) return fallback;
   const trimmed = value.trim();
   if (/^any$/i.test(trimmed)) return fallback;
@@ -625,13 +628,16 @@ export class ProfileService {
     const hasPartnerPrefData = Object.keys(partnerPref).length > 0;
     let partnerPrefWrite: Promise<unknown> = Promise.resolve();
     if (hasPartnerPrefData) {
+      // An unset or "Any" range seeds NULL — no limit — rather than the old
+      // 18-45 / 140-210 defaults, which filtered like ranges the member had
+      // actually chosen.
       const [minAge, maxAge] = parseIntRange(
         partnerPref.preferredAgeRange as string | undefined,
-        [18, 45],
+        [null, null],
       );
       const [minHeightCm, maxHeightCm] = parseHeightRangeToCm(
         partnerPref.preferredHeightRange as string | undefined,
-        [140, 210],
+        [null, null],
       );
       partnerPrefWrite = this.profileRepository.createPartnerPreferenceIfMissing(
         userId,

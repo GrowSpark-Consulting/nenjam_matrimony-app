@@ -9,37 +9,40 @@ import {
 } from 'class-validator';
 
 // Fields mirror the partner_preferences table exactly — no invented columns.
-// All optional: a PUT may set any subset; an omitted/empty field means "no
-// preference", which the feed filter then ignores (never excludes).
+// All optional: a PUT may set any subset, and an OMITTED field is left as it
+// is. For the four range bounds and the minimum income, an explicit `null`
+// CLEARS the limit — that is how "Any" is sent. The two must stay distinct:
+// omitting could never clear a saved range, so "Any" used to leave the old
+// restriction in place.
 export class UpdatePartnerPreferenceDto {
   @IsOptional()
   @IsInt()
   @Min(18)
   @Max(100)
-  minAge?: number;
+  minAge?: number | null;
 
   @IsOptional()
   @IsInt()
   @Min(18)
   @Max(100)
-  maxAge?: number;
+  maxAge?: number | null;
 
   @IsOptional()
   @IsInt()
   @Min(120)
   @Max(250)
-  minHeightCm?: number;
+  minHeightCm?: number | null;
 
   @IsOptional()
   @IsInt()
   @Min(120)
   @Max(250)
-  maxHeightCm?: number;
+  maxHeightCm?: number | null;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  minIncomeLakhs?: number;
+  minIncomeLakhs?: number | null;
 
   @IsOptional()
   @IsArray()
@@ -85,10 +88,11 @@ export class UpdatePartnerPreferenceDto {
 // Full preferences as returned by GET — the stored row, or schema defaults if
 // the user has never set any.
 export interface PartnerPreferenceResponseDto {
-  minAge: number;
-  maxAge: number;
-  minHeightCm: number;
-  maxHeightCm: number;
+  /** Null: no limit on that side. */
+  minAge: number | null;
+  maxAge: number | null;
+  minHeightCm: number | null;
+  maxHeightCm: number | null;
   minIncomeLakhs: number | null;
   preferredReligions: string[];
   preferredCastes: string[];

@@ -7,15 +7,6 @@ import {
   UpdatePartnerPreferenceDto,
 } from '../dto/partner-preference.dto';
 
-// Schema defaults (partner_preferences) — returned by GET before a user has
-// saved anything, so the client always renders a complete, sensible form.
-const DEFAULTS = {
-  minAge: 18,
-  maxAge: 45,
-  minHeightCm: 140,
-  maxHeightCm: 210,
-} as const;
-
 /**
  * The single source of truth for a user's partner preferences. The
  * registration wizard may seed them at finalize, but every later read/edit
@@ -78,10 +69,13 @@ export class PreferencesService {
     row: PartnerPreferenceRow | null,
   ): PartnerPreferenceResponseDto {
     return {
-      minAge: row?.minAge ?? DEFAULTS.minAge,
-      maxAge: row?.maxAge ?? DEFAULTS.maxAge,
-      minHeightCm: row?.minHeightCm ?? DEFAULTS.minHeightCm,
-      maxHeightCm: row?.maxHeightCm ?? DEFAULTS.maxHeightCm,
+      // Null stays null: "no limit". Filling in 18-45 / 140-210 here would
+      // hand the client a range the member never chose, which the next Save
+      // would then write back as a real restriction.
+      minAge: row?.minAge ?? null,
+      maxAge: row?.maxAge ?? null,
+      minHeightCm: row?.minHeightCm ?? null,
+      maxHeightCm: row?.maxHeightCm ?? null,
       minIncomeLakhs:
         row?.minIncomeLakhs != null ? Number(row.minIncomeLakhs) : null,
       preferredReligions: asStringArray(row?.preferredReligions),

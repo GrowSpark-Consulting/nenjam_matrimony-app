@@ -12,7 +12,11 @@ import type { Server, Socket } from 'socket.io';
 import { FirebaseService } from '@app/firebase';
 import { PrismaService } from '@app/database';
 import { RedisService } from '@app/cache';
-import { getCachedUserId, setCachedUserId } from '@app/common';
+import {
+  getCachedUserId,
+  isAccountUsable,
+  setCachedAuthUser,
+} from '@app/common';
 import { PresenceService } from './presence.service';
 import { ActiveConversationService } from './active-conversation.service';
 import {
@@ -241,16 +245,28 @@ export class RealtimeGateway
   }
 
   /** firebaseUid → internal user id, reusing the same short-lived cache the
-   *  auth guard uses (fail-open to a single DB read). */
+   *  auth guard uses (fail-open to a single DB read).
+   *
+   *  Null for an account that may not use the API — suspended, banned,
+   *  deactivated or soft-deleted — so a socket is refused on the same rule the
+   *  HTTP guard applies. `getCachedUserId` already withholds those, so a
+   *  blocked account cannot slip through on a cache hit either. */
   private async resolveUserId(firebaseUid: string): Promise<string | null> {
     const cached = await getCachedUserId(this.redis, firebaseUid);
     if (cached) return cached;
     const user = await this.prisma.user.findUnique({
       where: { firebaseUid },
-      select: { id: true },
+      select: { id: true, status: true, deletedAt: true },
     });
-    if (user) await setCachedUserId(this.redis, firebaseUid, user.id);
-    return user?.id ?? null;
+    if (!user) return null;
+
+    const account = {
+      id: user.id,
+      status: typeof user.status === 'string' ? user.status : '',
+      deleted: user.deletedAt != null,
+    };
+    await setCachedAuthUser(this.redis, firebaseUid, account);
+    return isAccountUsable(account) ? account.id : null;
   }
 
   private reject(client: Socket, reason: string): void {
