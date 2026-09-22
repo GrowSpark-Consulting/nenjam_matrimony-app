@@ -61,6 +61,18 @@ class _AgeRangeSheetBodyState extends State<_AgeRangeSheetBody> {
               child: Text(AppLocalizations.of(context).commonDone),
             ),
           ),
+          // The slider alone could only ever narrow: there was no way to say
+          // "no age limit", so a range once saved could never be cleared.
+          // "Any" is sent as an explicit clear (see the repository's request
+          // body), which is what makes it different from leaving the row
+          // untouched.
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () => Navigator.pop(context, 'Any'),
+              child: Text(AppLocalizations.of(context).commonAny),
+            ),
+          ),
         ],
       ),
     );
