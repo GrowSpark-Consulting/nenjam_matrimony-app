@@ -20,9 +20,12 @@ import '../../data/services/pending_photo_store.dart';
 import '../providers/registration_provider.dart';
 import '../widgets/onboarding_scaffold.dart';
 
-/// Step 8 — "Add Photos". Optional by design: the reference offers an
-/// explicit "Add Photos Later", and no backend rule requires a photo before
-/// a profile exists.
+/// Step 8 — "Add Photos". **At least one photo is required**: Continue stays
+/// disabled until one exists, and there is no "Add Photos Later" escape. This
+/// is a client-side product rule — no backend rule requires a photo before a
+/// profile exists — so the matching gate in [firstUnansweredOnboardingStep]
+/// is what stops a resumed signup re-entering past this step. Change the two
+/// together.
 ///
 /// Owns no photo storage of its own. Picking, cropping and uploading all go
 /// through the services the profile photo manager already uses
@@ -49,7 +52,15 @@ class _OnboardingPhotosPageState extends ConsumerState<OnboardingPhotosPage> {
     }
   }
 
-  void _next() => context.go(RouteNames.onboardingAbout);
+  /// At least one photo, and no upload still in flight. The single rule the
+  /// button, its label and [_next] all read, so disabling the button is not
+  /// the only thing enforcing it.
+  bool get _canContinue => !_busy && _photoCount > 0;
+
+  void _next() {
+    if (!_canContinue) return;
+    context.go(RouteNames.onboardingAbout);
+  }
 
   Future<void> _add(ImageSource source) async {
     if (_busy) return;
@@ -294,17 +305,23 @@ class _OnboardingPhotosPageState extends ConsumerState<OnboardingPhotosPage> {
                           label: Text(l10n.onboardingPhotosCamera),
                         ),
                         const SizedBox(height: AppSpacing.xs),
-                        // Continuing is never blocked: photos are optional,
-                        // and a member with one already added reads this as
-                        // "done" rather than "skip".
+                        // At least one photo is required, so there is no
+                        // "Add Photos Later" escape here any more: with none
+                        // added the button stays disabled and the member
+                        // stays on this step. `_canContinue` — not just a
+                        // greyed-out label — is what `_next` is gated on, so
+                        // an in-flight upload cannot slip through either.
                         TextButton(
-                          onPressed: _busy ? null : _next,
+                          onPressed: _canContinue ? _next : null,
                           child: Text(
-                            count > 0
-                                ? l10n.commonContinue
-                                : l10n.onboardingPhotosLater,
-                            style: AppTypography.labelLarge
-                                .copyWith(color: colors.onSurfaceVariant),
+                            l10n.commonContinue,
+                            style: AppTypography.labelLarge.copyWith(
+                              color: _canContinue
+                                  ? colors.onSurfaceVariant
+                                  : colors.onSurfaceVariant.withValues(
+                                      alpha: 0.38,
+                                    ),
+                            ),
                           ),
                         ),
                       ],

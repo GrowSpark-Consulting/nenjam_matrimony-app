@@ -30,6 +30,7 @@ import 'features/authentication/presentation/providers/auth_providers.dart';
 import 'features/profile/presentation/providers/profile_dashboard_providers.dart';
 import 'features/profile/presentation/providers/profile_providers.dart';
 import 'features/profile_photos/presentation/providers/photo_providers.dart';
+import 'features/verification/presentation/providers/face_verification_providers.dart';
 import 'features/registration/presentation/providers/registration_provider.dart';
 import 'l10n/app_localizations.dart';
 export 'core/services/storage_service.dart' show storageService;
@@ -293,6 +294,7 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
         ref.invalidate(myPhotosProvider);
         ref.invalidate(myProfileProvider);
         ref.invalidate(profileDraftResponseProvider);
+        ref.invalidate(faceVerificationStatusProvider);
       }
 
       // The other half: rebuild that same server-backed state whenever a
@@ -314,6 +316,7 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
         ref.invalidate(myPhotosProvider);
         ref.invalidate(myProfileProvider);
         ref.invalidate(profileDraftResponseProvider);
+        ref.invalidate(faceVerificationStatusProvider);
       }
     });
 

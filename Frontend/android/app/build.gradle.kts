@@ -7,6 +7,8 @@ plugins {
     id("com.google.gms.google-services")
     // END: FlutterFire Configuration
     id("kotlin-android")
+    // Face Liveness — see the matching plugin declaration in settings.gradle.kts.
+    id("org.jetbrains.kotlin.plugin.compose")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -30,7 +32,11 @@ val keystoreProperties = Properties().apply {
 
 android {
     namespace = "com.growspark.nenjam"
-    compileSdk = flutter.compileSdkVersion
+    // Amplify's Face Liveness component (com.amplifyframework.ui:liveness)
+    // AAR-metadata can require a higher compileSdk than the Flutter template
+    // default — see docs/development/selfie-verification-frontend-handoff.md
+    // §3. Bump only if a build actually asks for it.
+    compileSdk = maxOf(36, flutter.compileSdkVersion)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -41,11 +47,19 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
+    buildFeatures {
+        // Amplify's FaceLivenessDetector is a Compose composable, hosted in
+        // its own small ComponentActivity — see LivenessActivity.kt.
+        compose = true
+    }
+
     defaultConfig {
         applicationId = "com.growspark.nenjam"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // Face Liveness's minimum supported level (handoff doc §3) — floors
+        // the Flutter template default rather than overriding it downward.
+        minSdk = maxOf(24, flutter.minSdkVersion)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -171,4 +185,21 @@ dependencies {
     // Required by flutter_local_notifications' core library desugaring
     // requirement (see compileOptions above).
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
+    // Face Liveness (docs/development/selfie-verification-frontend-handoff.md
+    // §2/§3). AWS has no Flutter SDK for this; this is the AWS-supported
+    // Android component, a Jetpack Compose composable. Pinned exactly —
+    // 1.8.2 and 1.9.0 are flagged by AWS. Deliberately NOT paired with
+    // com.amplifyframework:aws-auth-cognito: this app never uses Amplify
+    // Auth/Cognito, only the component's custom credentialsProvider fed by
+    // backend-issued STS credentials (BackendIssuedCredentialsProvider.kt).
+    implementation("com.amplifyframework.ui:liveness:1.11.0")
+    implementation("androidx.activity:activity-compose:1.11.0")
+    // Compose BOM version matches the one the liveness artifact's own POM
+    // declares (com.amplifyframework.ui:liveness:1.11.0's
+    // dependencyManagement) — LivenessActivity hosts the composable in a
+    // minimal Material/Foundation shell.
+    implementation(platform("androidx.compose:compose-bom:2026.03.00"))
+    implementation("androidx.compose.material:material")
+    implementation("androidx.compose.foundation:foundation")
 }

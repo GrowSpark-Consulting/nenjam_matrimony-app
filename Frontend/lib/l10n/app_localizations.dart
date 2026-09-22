@@ -9163,6 +9163,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Profile completeness score {percent}%'**
   String completionCardsScoreLabel(int percent);
+
+  /// No description provided for @faceVerificationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account on hold'**
+  String get faceVerificationTitle;
+
+  /// No description provided for @faceVerificationExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'As part of our routine safety checks, please complete a quick selfie verification to continue using your account.'**
+  String get faceVerificationExplanation;
+
+  /// No description provided for @faceVerificationConsent.
+  ///
+  /// In en, this message translates to:
+  /// **'Your video selfie is sent to Amazon Web Services only to check that you are a real person and that you match your main profile photo. Nenjam does not store your selfie video or selfie image — we keep only the result (verified or not).'**
+  String get faceVerificationConsent;
+
+  /// No description provided for @faceVerificationCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify with Selfie'**
+  String get faceVerificationCta;
+
+  /// No description provided for @faceVerificationConsentShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Your selfie is checked by Amazon Web Services to confirm you are real and match your photo. Nenjam stores no selfie — only the result.'**
+  String get faceVerificationConsentShort;
+
+  /// No description provided for @faceVerificationConsentLearnMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn more'**
+  String get faceVerificationConsentLearnMore;
+
+  /// No description provided for @faceVerificationVerifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking…'**
+  String get faceVerificationVerifying;
+
+  /// No description provided for @faceVerificationPrivacyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification selfies are NOT shown to others.'**
+  String get faceVerificationPrivacyNote;
+
+  /// No description provided for @faceVerificationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification is unavailable right now.'**
+  String get faceVerificationUnavailable;
+
+  /// No description provided for @faceVerificationAlreadyVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re already verified.'**
+  String get faceVerificationAlreadyVerified;
+
+  /// No description provided for @faceVerificationNoPrimaryPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a clear photo of your face first.'**
+  String get faceVerificationNoPrimaryPhoto;
+
+  /// No description provided for @faceVerificationUnsupportedPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Update your main photo to continue.'**
+  String get faceVerificationUnsupportedPhoto;
+
+  /// No description provided for @faceVerificationAttemptLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve reached today\'s limit. Please try again later.'**
+  String get faceVerificationAttemptLimit;
+
+  /// No description provided for @faceVerificationFailedGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t complete verification.'**
+  String get faceVerificationFailedGeneric;
+
+  /// No description provided for @faceVerificationFailedLiveness.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t confirm you\'re a live person. Please try again in good lighting.'**
+  String get faceVerificationFailedLiveness;
+
+  /// No description provided for @faceVerificationFailedMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'This selfie doesn\'t match your main profile photo.'**
+  String get faceVerificationFailedMatch;
+
+  /// No description provided for @faceVerificationNoFaceInPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t find a face in your main profile photo.'**
+  String get faceVerificationNoFaceInPhoto;
+
+  /// No description provided for @faceVerificationMultipleFaces.
+  ///
+  /// In en, this message translates to:
+  /// **'Your main profile photo shows more than one face.'**
+  String get faceVerificationMultipleFaces;
+
+  /// No description provided for @faceVerificationPhotoChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Your main profile photo changed since you were verified. Please verify again.'**
+  String get faceVerificationPhotoChanged;
+
+  /// No description provided for @faceVerificationExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'That attempt expired. Please try again.'**
+  String get faceVerificationExpired;
+
+  /// No description provided for @faceVerificationCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification was cancelled.'**
+  String get faceVerificationCancelled;
+
+  /// No description provided for @faceVerificationNetworkError.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t confirm your result. Please check your connection and try again.'**
+  String get faceVerificationNetworkError;
+
+  /// No description provided for @faceVerificationCameraPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera access is required for selfie verification.'**
+  String get faceVerificationCameraPermissionDenied;
+
+  /// No description provided for @faceVerificationOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get faceVerificationOpenSettings;
+
+  /// No description provided for @faceVerificationUpdatePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Update main photo'**
+  String get faceVerificationUpdatePhoto;
+
+  /// No description provided for @faceVerificationCenterVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get faceVerificationCenterVerified;
+
+  /// No description provided for @faceVerificationCenterReverify.
+  ///
+  /// In en, this message translates to:
+  /// **'Your main photo changed — re-verify'**
+  String get faceVerificationCenterReverify;
+
+  /// No description provided for @faceVerificationCenterIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Not verified yet'**
+  String get faceVerificationCenterIncomplete;
 }
 
 class _AppLocalizationsDelegate

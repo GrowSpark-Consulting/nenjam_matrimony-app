@@ -50,52 +50,11 @@ void main() {
     return container;
   }
 
-  group('saving one edited section', () {
-    test('writes it to the backend and asks finalize nothing', () async {
-      final repository = RecordingRegistrationRepository();
-      final container = editing(repository);
-      addTearDown(container.dispose);
-      final notifier = container.read(registrationProvider.notifier);
-
-      notifier.goToStep(0);
-      notifier.updateBasicDetails(
-        container.read(registrationProvider).basicDetails.copyWith(
-              firstName: 'Nithya',
-            ),
-      );
-      await notifier.publishEditedSection();
-
-      expect(repository.savedSections, ['basicDetails']);
-      expect(repository.savedBasic?.firstName, 'Nithya');
-      // The whole point: no finalize, so an unrelated optional section cannot
-      // veto a name change.
-      expect(repository.finalizeCalls, 0);
-    });
-
-    test('materializes, because nothing follows it to do that work', () async {
-      final repository = RecordingRegistrationRepository();
-      final container = editing(repository);
-      addTearDown(container.dispose);
-      final notifier = container.read(registrationProvider.notifier);
-
-      notifier.goToStep(3);
-      await notifier.publishEditedSection();
-
-      // `skipMaterialize` false — the PATCH has to rewrite `user_profiles`
-      // and recompute completion itself now that finalize is not doing it.
-      expect(repository.skipMaterializeFlags, [false]);
-    });
-
-    test('a failed save is reported, never swallowed', () async {
-      final repository = _FailingRepository();
-      final container = editing(repository);
-      addTearDown(container.dispose);
-      final notifier = container.read(registrationProvider.notifier);
-
-      notifier.goToStep(0);
-      await expectLater(notifier.publishEditedSection(), throwsException);
-    });
-  });
+  // The per-section save (goToStep + publishEditedSection) was removed along
+  // with the per-section wizard that drove it; Edit Profile is one scrolling
+  // page whose Save goes through publishEditedProfile. The group that covered
+  // it went with it — what it pinned (a section save must not be gated on
+  // finalize) is still pinned below, on the path that is actually live.
 
   group('saving the whole profile from the review summary', () {
     test('republishes every section and materializes exactly once', () async {

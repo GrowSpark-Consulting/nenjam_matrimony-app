@@ -74,6 +74,16 @@ String profileDisplayId(AuthUser? authUser) {
   return uid.length > 8 ? uid.substring(0, 8).toUpperCase() : uid.toUpperCase();
 }
 
+/// The full, untruncated uid behind [profileDisplayId] — what a member copies
+/// and pastes into a support chat.
+///
+/// [profileDisplayId] shortens the uid to 8 characters so it fits the ID chip,
+/// which is fine on screen but useless to support: a prefix can't be looked up
+/// and isn't guaranteed unique. Copying therefore carries the whole uid while
+/// the chip keeps showing the short form. Empty when there is no signed-in
+/// user, so callers can suppress the copy affordance rather than copying '—'.
+String profileCopyId(AuthUser? authUser) => authUser?.uid ?? '';
+
 /// Maps real partner-preference fields to display rows, skipping any the
 /// user hasn't filled in. Falls back to a single "not set yet" row rather
 /// than inventing specific preference values when none exist.

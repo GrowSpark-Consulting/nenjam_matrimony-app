@@ -4963,4 +4963,106 @@ class AppLocalizationsEn extends AppLocalizations {
   String completionCardsScoreLabel(int percent) {
     return 'Profile completeness score $percent%';
   }
+
+  @override
+  String get faceVerificationTitle => 'Account on hold';
+
+  @override
+  String get faceVerificationExplanation =>
+      'As part of our routine safety checks, please complete a quick selfie verification to continue using your account.';
+
+  @override
+  String get faceVerificationConsent =>
+      'Your video selfie is sent to Amazon Web Services only to check that you are a real person and that you match your main profile photo. Nenjam does not store your selfie video or selfie image — we keep only the result (verified or not).';
+
+  @override
+  String get faceVerificationCta => 'Verify with Selfie';
+
+  @override
+  String get faceVerificationConsentShort =>
+      'Your selfie is checked by Amazon Web Services to confirm you are real and match your photo. Nenjam stores no selfie — only the result.';
+
+  @override
+  String get faceVerificationConsentLearnMore => 'Learn more';
+
+  @override
+  String get faceVerificationVerifying => 'Checking…';
+
+  @override
+  String get faceVerificationPrivacyNote =>
+      'Verification selfies are NOT shown to others.';
+
+  @override
+  String get faceVerificationUnavailable =>
+      'Verification is unavailable right now.';
+
+  @override
+  String get faceVerificationAlreadyVerified => 'You\'re already verified.';
+
+  @override
+  String get faceVerificationNoPrimaryPhoto =>
+      'Add a clear photo of your face first.';
+
+  @override
+  String get faceVerificationUnsupportedPhoto =>
+      'Update your main photo to continue.';
+
+  @override
+  String get faceVerificationAttemptLimit =>
+      'You\'ve reached today\'s limit. Please try again later.';
+
+  @override
+  String get faceVerificationFailedGeneric =>
+      'We couldn\'t complete verification.';
+
+  @override
+  String get faceVerificationFailedLiveness =>
+      'We couldn\'t confirm you\'re a live person. Please try again in good lighting.';
+
+  @override
+  String get faceVerificationFailedMatch =>
+      'This selfie doesn\'t match your main profile photo.';
+
+  @override
+  String get faceVerificationNoFaceInPhoto =>
+      'We couldn\'t find a face in your main profile photo.';
+
+  @override
+  String get faceVerificationMultipleFaces =>
+      'Your main profile photo shows more than one face.';
+
+  @override
+  String get faceVerificationPhotoChanged =>
+      'Your main profile photo changed since you were verified. Please verify again.';
+
+  @override
+  String get faceVerificationExpired =>
+      'That attempt expired. Please try again.';
+
+  @override
+  String get faceVerificationCancelled => 'Verification was cancelled.';
+
+  @override
+  String get faceVerificationNetworkError =>
+      'We couldn\'t confirm your result. Please check your connection and try again.';
+
+  @override
+  String get faceVerificationCameraPermissionDenied =>
+      'Camera access is required for selfie verification.';
+
+  @override
+  String get faceVerificationOpenSettings => 'Open Settings';
+
+  @override
+  String get faceVerificationUpdatePhoto => 'Update main photo';
+
+  @override
+  String get faceVerificationCenterVerified => 'Verified';
+
+  @override
+  String get faceVerificationCenterReverify =>
+      'Your main photo changed — re-verify';
+
+  @override
+  String get faceVerificationCenterIncomplete => 'Not verified yet';
 }

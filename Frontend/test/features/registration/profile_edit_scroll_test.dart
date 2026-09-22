@@ -1,3 +1,9 @@
+// Nested per-section x other-sections scroll check — one of the heaviest
+// files in the suite. Runs on main/pre-merge, not PRs.
+// See .github/workflows/ci.yml for the fast/full split.
+@Tags(['heavy'])
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

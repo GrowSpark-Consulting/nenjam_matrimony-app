@@ -910,6 +910,16 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 0 means "not computed", not "0% compatible" — the astrology engine does
+    // not exist yet, so the backend sends a deliberate 0 (see
+    // profile-feed.mapper.ts). Rendering it as "Astro 0%" beside a real AI
+    // score reads as a computed verdict. Hidden instead, exactly as
+    // CompatibilityBadge and HoroscopeSection already gate the same value.
+    // The divider goes with it, so a lone AI stat carries no dangling rule.
+    // Explicitly cast: `compatibility` is `dynamic` here, so the comparison
+    // yields `dynamic` and strict-casts rejects it as a condition.
+    final showAstro = (compatibility.astroMatchPercent as int) > 0;
+
     return Row(
       children: [
         Flexible(
@@ -919,14 +929,16 @@ class _StatsRow extends StatelessWidget {
             isAccent: true,
           ),
         ),
-        _Divider(),
-        Flexible(
-          child: _Stat(
-            label: l10n.discoverStatAstroLabel,
-            value: '${compatibility.astroMatchPercent}%',
-            isAccent: true,
+        if (showAstro) ...[
+          _Divider(),
+          Flexible(
+            child: _Stat(
+              label: l10n.discoverStatAstroLabel,
+              value: '${compatibility.astroMatchPercent}%',
+              isAccent: true,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

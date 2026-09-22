@@ -6,6 +6,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../registration/domain/models/profile_draft.dart';
 import '../../../registration/presentation/widgets/step_verification.dart';
 import '../providers/verification_providers.dart';
+import '../widgets/face_verification_card.dart';
 
 /// Verification center screen.
 ///
@@ -38,9 +39,12 @@ class VerificationPage extends ConsumerWidget {
           color: AppColors.secondary,
           onRefresh: () =>
               ref.read(verificationStatusesProvider.notifier).refresh(),
-          child: const StepVerification(
-            status: VerificationStatus(),
-            onChanged: _noop,
+          child: ListView(
+            padding: const EdgeInsets.all(0),
+            children: const [
+              FaceVerificationCard(),
+              StepVerification(status: VerificationStatus(), onChanged: _noop),
+            ],
           ),
         ),
       ),

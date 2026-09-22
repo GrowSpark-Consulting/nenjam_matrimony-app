@@ -172,17 +172,24 @@ jobs:
         # code.
         run: flutter analyze --no-fatal-infos
 
-      - name: Test
-        # The suite gates nothing unless it runs here. It covers the parts of
-        # this app that are easiest to break from a distance and hardest to
-        # notice: the responsive matrix (every page at 320-480dp, portrait and
-        # landscape, en and ta, with a keyboard), bottom-nav clearance, and the
-        # notification-tap navigation whose back-stack behaviour has regressed
-        # before.
+      - name: Test (fast)
+        # Everything except the 'heavy' tag — five files (the full responsive
+        # matrices, the real-ProfileDetailPage diagnostic, the profile-edit
+        # nested scroll check, and the profile-menu percentage x width sweep)
+        # that dominate the suite's tail without adding proportional PR
+        # feedback value. They still run in full on main — see the step below.
         #
         # Deliberately no --coverage: it slows the run and nothing consumes the
         # lcov output today. Add it when a coverage gate exists to read it.
-        run: flutter test
+        run: flutter test --exclude-tags=heavy
+
+      - name: Test (heavy — main only)
+        # The five 'heavy' files, run only on main so a merge still gets full
+        # regression coverage (the responsive matrix, the real ProfileDetailPage
+        # tree, bottom-nav clearance, etc.) without adding their tail latency to
+        # every PR's feedback loop.
+        if: github.ref == 'refs/heads/main'
+        run: flutter test --tags=heavy
 
       # No `flutter build` here on purpose — an Android build pulls the whole
       # Gradle/AGP toolchain and adds several minutes for little extra signal

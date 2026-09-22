@@ -65,6 +65,12 @@ void main() {
   /// real Firebase user. The fake starter cannot mint one, and the flush is
   /// gated on there being a session, so a test about what gets sent has to
   /// supply it — see `RegistrationNotifier._hasSession`.
+  /// [signedIn] still decides what the *flush* sees, but the auth service is
+  /// now always faked: finishing onboarding asks [PostAuthDestination] where
+  /// to go (it is the only thing that runs the face verification gate for a
+  /// brand-new member — see that call site), and the resolver reads the
+  /// Firebase user. Left unoverridden it reaches the real `FirebaseAuth
+  /// .instance` and throws `core/no-app` in a test binding.
   ProviderContainer containerWith(
     RecordingRegistrationRepository repository,
     DummyOtpSessionStarter starter, {
@@ -74,8 +80,9 @@ void main() {
       overrides: [
         registrationRepositoryProvider.overrideWithValue(repository),
         dummyOtpSessionStarterProvider.overrideWithValue(starter),
-        if (signedIn)
-          firebaseAuthServiceProvider.overrideWithValue(SignedInAuthService()),
+        firebaseAuthServiceProvider.overrideWithValue(
+          signedIn ? SignedInAuthService() : SignedOutUntilExchangeAuthService(),
+        ),
       ],
     );
   }
@@ -93,7 +100,12 @@ void main() {
     useTallSurface(tester);
     final starter = _RecordingStarter();
     final repository = RecordingRegistrationRepository();
-    final container = containerWith(repository, starter);
+    // `signedIn`, because that is what the exchange this test just passed
+    // actually leaves behind — and the destination resolver reads the
+    // Firebase user to decide where the member goes. Without one it answers
+    // "signed out → landing screen", which is right for a signed-out caller
+    // but not for the case under test here.
+    final container = containerWith(repository, starter, signedIn: true);
     addTearDown(container.dispose);
 
     await tester.pumpWidget(harness(container, buildRouter()));

@@ -7,9 +7,9 @@ import '../../../discover/domain/entities/discovery_profile_entity.dart';
 /// `matches`/shortlist routes ship — the `Shortlist` Prisma model is
 /// already live in the DB, only the NestJS controller is an empty stub).
 abstract interface class ShortlistRepository {
-  /// `GET /matches/shortlist` — same path `MatchesRepository.shortlist()`
-  /// POSTs to, listing rather than adding (a common REST convention: one
-  /// resource path, verb picks the action).
+  /// `GET /matches/shortlist` — the same path [add] POSTs to, listing
+  /// rather than adding (a common REST convention: one resource path, verb
+  /// picks the action).
   Future<List<DiscoveryProfileEntity>> getShortlisted({
     int page = 1,
     int limit = 20,

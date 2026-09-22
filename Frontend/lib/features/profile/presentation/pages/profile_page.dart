@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/router/route_names.dart';
+import '../../../verification/domain/models/face_verification.dart';
+import '../../../verification/presentation/providers/face_verification_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/relationship_intelligence/horoscope_compatibility_section.dart';
@@ -114,6 +116,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     // supply elegant fallbacks for anything still null.
     final authUser = ref.watch(currentAuthUserProvider);
     final ProfileDraft? draft = ref.watch(myProfileDraftProvider).valueOrNull;
+    final faceVerificationStatus = ref.watch(faceVerificationStatusProvider);
     final completeness = ref
         .watch(profileCompletenessSnapshotProvider)
         .valueOrNull;
@@ -391,11 +394,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       NmVerificationItem(
                         icon: Icons.face_rounded,
                         label: l10n.fieldFaceMatch,
+                        // REVOKED (the matched photo is no longer primary),
+                        // still loading, or errored all read as incomplete —
+                        // only a confirmed VERIFIED from the backend counts
+                        // (see docs/development/
+                        // selfie-verification-frontend-handoff.md §6.1).
                         status:
-                            (draft?.verificationStatus.faceVerified ?? false)
+                            faceVerificationStatus.valueOrNull?.status ==
+                                FaceVerificationStatus.verified
                             ? NmVerificationStatus.verified
                             : NmVerificationStatus.incomplete,
-                        onTap: () => context.push(RouteNames.verification),
+                        onTap: () => context.push(RouteNames.faceVerification),
                       ),
                     ],
                   ),

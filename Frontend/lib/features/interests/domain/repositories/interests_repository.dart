@@ -92,9 +92,8 @@ abstract interface class InterestsRepository {
   /// `GET /interests/sent` (proposed).
   Future<List<InterestRecord>> getSent({int page = 1, int limit = 20});
 
-  /// `POST /matches/interest` — reuses the same write endpoint
-  /// `MatchesRepository.expressInterest` already targets rather than
-  /// inventing a second one, since both are "create an interest" actions.
+  /// `POST /matches/interest` — the shared "create an interest" write
+  /// endpoint, rather than a second one invented for this feature.
   /// Throws if an active (non-declined) interest already exists between
   /// this pair in either direction — mirrors the backend's
   /// `@@unique([senderId, receiverId])` constraint.

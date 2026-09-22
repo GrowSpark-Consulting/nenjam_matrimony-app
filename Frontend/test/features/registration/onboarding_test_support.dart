@@ -199,9 +199,54 @@ class SignedInAuthService implements FirebaseAuthService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// No Firebase user, which is what the flush's `_hasSession` check reads as
+/// "signed out — persist locally instead". Exists so a test can keep that
+/// behaviour without leaving `firebaseAuthServiceProvider` unoverridden,
+/// which now reaches the real `FirebaseAuth.instance` (via
+/// [PostAuthDestination]) and throws `core/no-app` under a test binding.
+class SignedOutUntilExchangeAuthService implements FirebaseAuthService {
+  @override
+  User? get currentUser => null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 class _StubUser implements User {
   @override
   String get uid => 'test-uid';
+
+  /// A phone signup carries no address, which is the case onboarding's last
+  /// step actually produces — and the case that keeps
+  /// [PostAuthDestination]'s verify-email gate from firing, since that gate
+  /// keys on "has an email that is unverified" rather than on
+  /// `emailVerified` alone.
+  @override
+  String? get email => null;
+
+  @override
+  bool get emailVerified => false;
+
+  @override
+  String? get phoneNumber => '+919876543210';
+
+  /// Read by [PostAuthDestination] only to pick a fallback when the draft
+  /// lookup fails. Far apart, i.e. an established account, which is the
+  /// conservative direction here: it keeps that fallback at Discover rather
+  /// than bouncing a test's member back to the start of signup.
+  @override
+  UserMetadata get metadata => _StubUserMetadata();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _StubUserMetadata implements UserMetadata {
+  @override
+  DateTime? get creationTime => DateTime(2020, 1, 1);
+
+  @override
+  DateTime? get lastSignInTime => DateTime(2024, 6, 1);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

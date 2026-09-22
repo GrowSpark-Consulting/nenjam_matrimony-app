@@ -8,9 +8,15 @@ import 'package:nenjam_matrimony/core/router/route_names.dart';
 import 'package:nenjam_matrimony/core/services/storage_service.dart';
 import 'package:nenjam_matrimony/features/authentication/domain/services/dummy_otp_session.dart';
 import 'package:nenjam_matrimony/features/authentication/presentation/providers/auth_providers.dart';
+import 'package:nenjam_matrimony/features/profile/data/repositories/api_profile_repository.dart';
+import 'package:nenjam_matrimony/features/profile/domain/models/profile.dart';
+import 'package:nenjam_matrimony/features/profile/presentation/providers/profile_providers.dart';
 import 'package:nenjam_matrimony/features/registration/domain/models/profile_draft.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_verify_mobile_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/providers/registration_provider.dart';
+import 'package:nenjam_matrimony/features/verification/domain/models/face_verification.dart';
+import 'package:nenjam_matrimony/features/verification/domain/repositories/face_verification_repository.dart';
+import 'package:nenjam_matrimony/features/verification/presentation/providers/face_verification_providers.dart';
 
 import 'onboarding_test_support.dart';
 
@@ -26,6 +32,37 @@ import 'onboarding_test_support.dart';
 /// Failures are injected as the same [ApiException] the real repository
 /// throws — a 400 from a rejected section, a 500 from finalize — so the page
 /// is exercised against the errors it will actually see.
+/// The backend's answer while `FACE_VERIFICATION_ENABLED=false`: the feature
+/// is not offered at all, so it cannot be a precondition for entry.
+const _notAvailable = FaceVerificationState(
+  status: FaceVerificationStatus.unverified,
+  verifiedAt: null,
+  canStart: false,
+  blockedReason: FaceBlockedReason.notAvailable,
+  attemptsRemainingToday: 0,
+  retryAfter: null,
+);
+
+/// Feature on, member has never verified — the gate must hold.
+const _verificationRequired = FaceVerificationState(
+  status: FaceVerificationStatus.unverified,
+  verifiedAt: null,
+  canStart: true,
+  blockedReason: null,
+  attemptsRemainingToday: 3,
+  retryAfter: null,
+);
+
+/// Feature on, already verified against the current primary photo.
+const _verified = FaceVerificationState(
+  status: FaceVerificationStatus.verified,
+  verifiedAt: null,
+  canStart: false,
+  blockedReason: FaceBlockedReason.alreadyVerified,
+  attemptsRemainingToday: 3,
+  retryAfter: null,
+);
+
 void main() {
   const failureMessage =
       'Your number is verified, but we could not save your profile. '
@@ -55,6 +92,11 @@ void main() {
             builder: (context, state) =>
                 const Scaffold(body: Text('discover-reached')),
           ),
+          GoRoute(
+            path: RouteNames.faceVerification,
+            builder: (context, state) =>
+                const Scaffold(body: Text('face-verification-reached')),
+          ),
         ],
       );
 
@@ -62,15 +104,31 @@ void main() {
   /// the flush only sends with a session — see `RegistrationNotifier
   /// ._hasSession`. Without it the flush is a no-op and nothing here would be
   /// exercised.
+  /// Finishing onboarding now routes through [PostAuthDestination] rather
+  /// than straight to Discover (see the comment at that call site): once
+  /// `onboardingCompleted` is true the router's own guard stops asking the
+  /// resolver, so this screen is the only place left that can run the face
+  /// verification gate for a brand-new member. That makes the resolver's two
+  /// backend reads — the finalized-profile check and `GET /verification/face`
+  /// — part of this flow, so both are faked here.
+  ///
+  /// The defaults describe the real world today: the member's profile exists
+  /// (finalize just wrote it) and face verification is switched off backend
+  /// side, which is the `NOT_AVAILABLE` pass-through. Every pre-existing test
+  /// below therefore still ends at Discover exactly as it did.
   ProviderContainer containerWith(
     _ControllableRepository repository,
-    _RecordingStarter starter,
-  ) {
+    _RecordingStarter starter, {
+    FaceVerificationState faceVerification = _notAvailable,
+  }) {
     return ProviderContainer(
       overrides: [
         registrationRepositoryProvider.overrideWithValue(repository),
         dummyOtpSessionStarterProvider.overrideWithValue(starter),
         firebaseAuthServiceProvider.overrideWithValue(SignedInAuthService()),
+        profileRepositoryProvider.overrideWithValue(_FinalizedProfileRepository()),
+        faceVerificationRepositoryProvider
+            .overrideWithValue(_FakeFaceVerificationRepository(faceVerification)),
       ],
     );
   }
@@ -267,6 +325,100 @@ void main() {
         reason: 'the failure must be surfaced, not swallowed');
   });
 
+  // ─── Test 6 — The face verification gate ──────────────────────────────
+  //
+  // Finishing onboarding is the first moment the gate can run for a new
+  // member, and for a while it was the one moment it could not: this screen
+  // navigated straight to Discover, and `setOnboardingCompleted(true)` (a few
+  // lines earlier) had already switched off the router guard's own call to
+  // PostAuthDestination — the only other place the gate lives. A member who
+  // owed a verification walked past it into Discover.
+
+  testWidgets('verification required: the new member is sent to Face '
+      'Verification, not Discover', (tester) async {
+    final repository = _ControllableRepository();
+    final starter = _RecordingStarter();
+    final container = containerWith(
+      repository,
+      starter,
+      faceVerification: _verificationRequired,
+    );
+    addTearDown(container.dispose);
+
+    await pumpVerifyStep(tester, container);
+    await enterCode(tester);
+
+    // Registration itself genuinely finished — this is a gate, not a failure.
+    expect(repository.finalizeCalls, 1);
+    expect(storageService.onboardingCompleted, isTrue);
+    expect(find.text(failureMessage), findsNothing);
+
+    expect(find.text('face-verification-reached'), findsOneWidget);
+    expect(find.text('discover-reached'), findsNothing,
+        reason: 'an unverified member must not reach Discover');
+  });
+
+  testWidgets('already verified: the new member goes straight to Discover', (
+    tester,
+  ) async {
+    final repository = _ControllableRepository();
+    final starter = _RecordingStarter();
+    final container =
+        containerWith(repository, starter, faceVerification: _verified);
+    addTearDown(container.dispose);
+
+    await pumpVerifyStep(tester, container);
+    await enterCode(tester);
+
+    expect(find.text('discover-reached'), findsOneWidget);
+    expect(find.text('face-verification-reached'), findsNothing);
+  });
+
+  testWidgets('NOT_AVAILABLE: the feature being off never blocks entry', (
+    tester,
+  ) async {
+    final repository = _ControllableRepository();
+    final starter = _RecordingStarter();
+    final container =
+        containerWith(repository, starter, faceVerification: _notAvailable);
+    addTearDown(container.dispose);
+
+    await pumpVerifyStep(tester, container);
+    await enterCode(tester);
+
+    // The pass-through that keeps today's builds working: the backend has not
+    // offered verification, so it cannot be owed. Deliberately NOT the same
+    // thing as being verified — see FaceVerificationState.satisfiesEntryGate.
+    expect(find.text('discover-reached'), findsOneWidget);
+    expect(find.text('face-verification-reached'), findsNothing);
+  });
+
+  testWidgets('REVOKED: a member whose primary photo changed must re-verify', (
+    tester,
+  ) async {
+    final repository = _ControllableRepository();
+    final starter = _RecordingStarter();
+    final container = containerWith(
+      repository,
+      starter,
+      faceVerification: const FaceVerificationState(
+        status: FaceVerificationStatus.revoked,
+        verifiedAt: null,
+        canStart: true,
+        blockedReason: null,
+        attemptsRemainingToday: 3,
+        retryAfter: null,
+      ),
+    );
+    addTearDown(container.dispose);
+
+    await pumpVerifyStep(tester, container);
+    await enterCode(tester);
+
+    expect(find.text('face-verification-reached'), findsOneWidget);
+    expect(find.text('discover-reached'), findsNothing);
+  });
+
   test('the flush throws the original error instead of swallowing it', () async {
     final repository = _ControllableRepository()..failReligionSave = true;
     final container = containerWith(repository, _RecordingStarter());
@@ -329,4 +481,43 @@ class _RecordingStarter implements DummyOtpSessionStarter {
     phones.add(phoneE164);
     return 'firebase-uid-1';
   }
+}
+
+/// `GET /profiles/me` answering with a row, which is what finalize has just
+/// written by the time the resolver asks. Returning one (rather than the 404
+/// a half-registered member gets) is what makes [PostAuthDestination] take its
+/// finalized-profile branch, where the face verification gate sits.
+class _FinalizedProfileRepository implements ApiProfileRepository {
+  @override
+  Future<Profile> getMyProfile() async => Profile.fromJson(const {
+        'firstName': 'Member',
+        'currentState': 'Tamil Nadu',
+      });
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// `GET /verification/face`. Only the read matters here: the gate never starts
+/// a session or completes an attempt, so both of those throw rather than
+/// return a fabricated result.
+class _FakeFaceVerificationRepository implements FaceVerificationRepository {
+  _FakeFaceVerificationRepository(this._state);
+
+  final FaceVerificationState _state;
+
+  @override
+  Future<FaceVerificationState> getState() async => _state;
+
+  @override
+  Future<LivenessSessionTicket> startSession({required bool consent}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<FaceVerificationResult> complete({
+    required String attemptId,
+    ClientLivenessOutcome? clientOutcome,
+    String? clientErrorCode,
+  }) =>
+      throw UnimplementedError();
 }

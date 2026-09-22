@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/constants/profile_options.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -16,69 +17,27 @@ import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/search_filters_entity.dart';
 import '../providers/search_providers.dart';
 
-const _kCommunities = [
-  'Vellalar',
-  'Nadar',
-  'Chettiar',
-  'Mudaliar',
-  'Iyer',
-  'Iyengar',
-  'Naidu',
-  'Reddy',
-  'Other',
-];
-
-const _kStates = [
-  'Tamil Nadu',
-  'Kerala',
-  'Karnataka',
-  'Andhra Pradesh',
-  'Telangana',
-  'Maharashtra',
-  'Delhi',
-  'Other',
-];
-
-// Owned here, in NmSearchableDropdown form. (These options were once shared
-// with a core NmLocationSelector widget; that widget was unused and has been
-// deleted, so this sheet is now the single definition.)
-const _kCities = [
-  'Chennai',
-  'Coimbatore',
-  'Madurai',
-  'Trichy',
-  'Bangalore',
-  'Hyderabad',
-  'Mumbai',
-  'Singapore',
-  'USA / UK / Abroad',
-];
-
-// The following lists are the single definition of these option sets —
-// their values must stay in step with search_filters_entity.dart's fields,
-// which carry the same strings. They live here for the same reason as
-// _kCities: every dropdown-style field in this sheet uses
-// NmSearchableDropdown rather than a native DropdownButtonFormField.
-// That native dropdown's overlay menu is
-// positioned/clipped relative to the wrong ancestor when opened from
+// Religion, sub-community, country, state, city and diet now come from
+// [ProfileOptions] — the same lists the registration wizard and Edit Profile
+// offer, including its religion→community and country→state→city cascades.
+// A profile's values are chosen from those lists and `SearchFilters.matches`
+// compares the two strings for equality, so any divergence here silently
+// makes a filter match nothing.
+//
+// The lists below remain owned by this sheet: their values are Search-only
+// display brackets (see each one's note) with no canonical counterpart whose
+// strings would match a profile field.
+//
+// Every dropdown-style field in this sheet uses NmSearchableDropdown rather
+// than a native DropdownButtonFormField. That native dropdown's overlay menu
+// is positioned/clipped relative to the wrong ancestor when opened from
 // inside a modal bottom sheet — it can render partly off-screen or get
 // clipped by the sheet's own Material boundary. NmSearchableDropdown
 // sidesteps this entirely by opening its own bottom sheet (via
 // AppSheets.showSearchableSelection) instead of a native overlay.
-const _kReligions = ['Hindu', 'Christian', 'Muslim', 'Jain', 'Sikh', 'Buddhist', 'Inter-Religion'];
 
-const _kCastes = [
-  'Iyer',
-  'Iyengar',
-  'Mudaliar',
-  'Pillai',
-  'Chettiar',
-  'Gounder',
-  'Nadar',
-  'Vanniyar',
-  'Don\'t Wish to Specify',
-];
-
+// Search-only: coarser groupings than [ProfileOptions.occupations], matched
+// against `DiscoveryProfileEntity.profession` by equality.
 const _kProfessions = [
   'Software Engineer',
   'Doctor',
@@ -89,6 +48,9 @@ const _kProfessions = [
   'Civil / Mechanical Engg',
 ];
 
+// Search-only: bracket *floors* parsed numerically by
+// `SearchFilters._incomeFloorLakhs`, never compared to a profile string. The
+// ' PA' suffix and 'Prefer not to say' have no canonical counterpart.
 const _kIncomes = [
   '5 - 10 Lakhs PA',
   '10 - 20 Lakhs PA',
@@ -98,6 +60,9 @@ const _kIncomes = [
   'Prefer not to say',
 ];
 
+// Search-only: a coarse 8-rung ladder for picking a min/max bound, parsed to
+// cm by `SearchFilters._heightCm`. [ProfileOptions.heights] is a per-centimetre
+// list for stating one exact height, not for bounding a range.
 const _kHeights = [
   '5 ft 0 in (152 cm)',
   '5 ft 2 in (157 cm)',
@@ -109,6 +74,8 @@ const _kHeights = [
   '6 ft 2 in+',
 ];
 
+// Search-only: coarser groupings than [ProfileOptions.qualifications],
+// matched against `DiscoveryProfileEntity.education` by equality.
 const _kEducations = [
   'B.E / B.Tech / M.Tech',
   'MBBS / MD / MS',
@@ -119,17 +86,9 @@ const _kEducations = [
   'Other Bachelors / Masters',
 ];
 
-const _kCountries = [
-  'India (+91)',
-  'United States (+1)',
-  'United Kingdom (+44)',
-  'Singapore (+65)',
-  'UAE (+971)',
-  'Malaysia (+60)',
-  'Australia (+61)',
-  'Canada (+1)',
-];
-
+// Search-only: Vedic sign/star names. No canonical counterpart exists —
+// `DiscoveryProfileEntity` carries no rashi/star field, so these are captured
+// but not applied (see `SearchFilters.matches`'s TODO(backend)).
 const _kRashis = [
   'Mesha',
   'Vrishabha',
@@ -332,7 +291,7 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                         label: l10n.fieldReligion,
                         hint: l10n.fieldReligionHint,
                         value: _draft.religion,
-                        options: _kReligions,
+                        options: ProfileOptions.religions,
                         onChanged: (v) => _update((f) => f.copyWith(religion: v, clearReligion: v == null)),
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -340,7 +299,7 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                         label: l10n.fieldCasteDivision,
                         hint: l10n.fieldCasteHint,
                         value: _draft.caste,
-                        options: _kCastes,
+                        options: ProfileOptions.subCommunities,
                         onChanged: (v) => _update((f) => f.copyWith(caste: v, clearCaste: v == null)),
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -348,7 +307,12 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                         label: l10n.searchFilterCommunity,
                         hint: l10n.searchFilterCommunity,
                         value: _draft.community,
-                        options: _kCommunities,
+                        // Scoped to the chosen religion, exactly as the
+                        // wizard scopes it. With no religion chosen this
+                        // returns the full list rather than an empty one.
+                        options: ProfileOptions.communitiesFor(
+                          _draft.religion ?? '',
+                        ),
                         onChanged: (v) => _update((f) => f.copyWith(community: v, clearCommunity: v == null)),
                       ),
                     ],
@@ -367,7 +331,7 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                         label: l10n.fieldCountry,
                         hint: l10n.fieldCountryHint,
                         value: _draft.country,
-                        options: _kCountries,
+                        options: ProfileOptions.countries,
                         onChanged: (v) => _update((f) => f.copyWith(country: v, clearCountry: v == null)),
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -375,7 +339,9 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                         label: l10n.searchFilterState,
                         hint: l10n.searchFilterState,
                         value: _draft.state,
-                        options: _kStates,
+                        // Scoped to the chosen country; falls back to the
+                        // full state list when none is chosen.
+                        options: ProfileOptions.statesFor(_draft.country ?? ''),
                         onChanged: (v) => _update((f) => f.copyWith(state: v, clearState: v == null)),
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -383,7 +349,9 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                         label: l10n.fieldCurrentLocation,
                         hint: l10n.fieldLocationHint,
                         value: _draft.city,
-                        options: _kCities,
+                        // Scoped to the chosen state; falls back to the full
+                        // city list when none is chosen.
+                        options: ProfileOptions.citiesFor(_draft.state ?? ''),
                         onChanged: (v) => _update((f) => f.copyWith(city: v, clearCity: v == null)),
                       ),
                     ],
@@ -443,7 +411,10 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                       _ChoiceChips(
                         label: l10n.searchFilterDiet,
                         value: _draft.diet,
-                        options: const ['Vegetarian', 'Non-Vegetarian', 'Eggetarian', 'Vegan'],
+                        // The wizard's Lifestyle step writes these exact
+                        // strings to the profile; this list was missing
+                        // 'Jain', so no Jain profile could be filtered for.
+                        options: ProfileOptions.diets,
                         onChanged: (v) => _update((f) => f.copyWith(diet: v, clearDiet: v == null)),
                       ),
                       const SizedBox(height: AppSpacing.md),

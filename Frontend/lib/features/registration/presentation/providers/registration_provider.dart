@@ -45,99 +45,12 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
 
   // ─── Backend sync ────────────────────────────────────────────────────
   //
-  // Sends whichever single section [ProfileDraft.currentStep] names, via
-  // [publishEditedSection]. Step 9 (psychological quiz) is synced
-  // independently by the psychology feature's own repository the moment
-  // the quiz is submitted, not through this draft. Step 10 (partner
-  // preference) is handled by the standalone Partner Preferences page,
-  // which already persists immediately via [savePartnerPreference] when
-  // the user saves there — nothing left to sync here. Steps 11 (photos)
-  // and 12 (verification) aren't sent here either: photos persist
-  // immediately via PhotoController on upload, and verification status is
-  // read-only, reflecting other modules.
-  //
-  // [skipMaterialize] suppresses the server-side materialize-and-recompute
-  // pass this save would otherwise trigger (see
-  // ProfileDraftController.save's skipMaterialize doc) — for a caller that
-  // writes several sections in a row and materializes once at the end
-  // instead of paying for that work on every one. [publishEditedProfile]
-  // is the shape that needs it; a lone section save leaves it off, because
-  // nothing follows it to do that work.
-  Future<void> syncCurrentStepToBackend({bool skipMaterialize = false}) async {
-    final repo = ref.read(registrationRepositoryProvider);
-    switch (state.currentStep) {
-      case 0:
-        await repo.updateBasicDetails(state.basicDetails,
-            skipMaterialize: skipMaterialize);
-        return;
-      case 1:
-        await repo.updateReligionDetails(state.religionDetails,
-            skipMaterialize: skipMaterialize);
-        return;
-      case 2:
-        await repo.updateLanguageDetails(state.languageDetails,
-            skipMaterialize: skipMaterialize);
-        return;
-      case 3:
-        await repo.updateLocationDetails(state.locationDetails,
-            skipMaterialize: skipMaterialize);
-        return;
-      case 4:
-        await repo.updateEducationDetails(state.educationDetails,
-            skipMaterialize: skipMaterialize);
-        return;
-      case 5:
-        await repo.updatePhysicalDetails(state.physicalDetails,
-            skipMaterialize: skipMaterialize);
-        return;
-      case 6:
-        await repo.updateLifestyleDetails(state.lifestyleDetails,
-            skipMaterialize: skipMaterialize);
-        return;
-      case 7:
-        await repo.updateFamilyDetails(state.familyDetails,
-            skipMaterialize: skipMaterialize);
-        return;
-      case 8:
-        await repo.updateHoroscopeDetails(state.horoscopeDetails,
-            skipMaterialize: skipMaterialize);
-        return;
-      default:
-        // Steps 9 (psychological quiz), 10 (partner preference), 11
-        // (photos), 12 (verification): nothing to sync here.
-        return;
-    }
-  }
-
-  /// Maps the accumulated draft into the finalized backend profile. Call
-  /// from the Profile Review screen's "Enter App" button. Idempotent on the
-  /// backend, so this also doubles as the EDIT MODE "publish my changes"
-  /// step — see [startEditMode].
-  /// EDIT MODE's save. Writes the sections the member changed and leaves
-  /// them materialized — without asking `POST /profiles/finalize` whether
-  /// the *registration* is complete.
-  ///
-  /// That question is why editing used to fail. finalize() re-runs the
-  /// end-of-signup gate, which rejects a half-filled optional section — and
-  /// onboarding half-fills three of them on the member's behalf: it stores
-  /// `height` but never `weight`, `eatingHabit` + `aboutMe` but never
-  /// smoking/drinking/fitness/hobbies, and every education field but
-  /// `workLocation`. So finalize answered 400 for every member who signed up
-  /// through onboarding, naming sections they had never opened, and Edit
-  /// Profile reported "could not save changes" — over edits the PATCH above
-  /// had in fact already written. The data was saved; only the verdict was
-  /// wrong.
-  ///
-  /// Editing an existing profile is not completing a registration, so it no
-  /// longer asks that question. The section PATCH is the save: it stores the
-  /// values and, with materialization on, rewrites `user_profiles` and
-  /// recomputes completion server-side — everything an edit needs. Nothing
-  /// about the finalize contract or its validation changed; CREATE mode still
-  /// calls it, unchanged, from the Completing screen.
-  Future<void> publishEditedSection() async {
-    await syncCurrentStepToBackend();
-    ref.invalidate(myProfileProvider);
-  }
+  // Sections are written whole, by [publishEditedProfile] (EDIT MODE's Save)
+  // and [flushOnboardingToBackend] (the end of onboarding). Steps 9-12 are
+  // not written from this draft at all: the psychology quiz syncs through
+  // its own repository on submit, partner preferences through the standalone
+  // Partner Preferences page, photos immediately via PhotoController on
+  // upload, and verification status is read-only.
 
   /// EDIT MODE's "Save Changes" from the review summary, where there is no
   /// single open section to save: republishes the whole draft, materializing
@@ -240,24 +153,11 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
     state = draft;
   }
 
-  // ─── Step Navigation ───────────────────────────────────────────────
-  void goToStep(int step) {
-    if (step >= 0 && step < ProfileDraft.totalSteps) {
-      state = state.copyWith(currentStep: step);
-    }
-  }
-
-  void nextStep() {
-    if (state.currentStep < ProfileDraft.totalSteps - 1) {
-      state = state.copyWith(currentStep: state.currentStep + 1);
-    }
-  }
-
-  void previousStep() {
-    if (state.currentStep > 0) {
-      state = state.copyWith(currentStep: state.currentStep - 1);
-    }
-  }
+  // Step navigation (goToStep/nextStep/previousStep) lived here for the
+  // per-section registration wizard. That wizard is gone — onboarding is a
+  // chain of routed pages now, and Edit Profile is one scrolling page — so
+  // nothing drove `currentStep` through them. The field itself is still live:
+  // SplashController restores it and main.dart reads it.
 
   // ─── Step 1: Profile For + Gender ──────────────────────────────────
 
@@ -752,8 +652,8 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
 
   // ─── Step 11: Partner Preference ───────────────────────────────────
   //
-  // No wizard-local update method here, and no case in
-  // syncCurrentStepToBackend's switch either — the standalone Partner
+  // No wizard-local update method here, and nothing writes this section from
+  // the draft either — the standalone Partner
   // Preferences page (features/partner_preferences) now owns its 10 base
   // fields exclusively via GET/PUT /discover/preferences
   // (PartnerPreferencesRepository), not this draft. The registration
