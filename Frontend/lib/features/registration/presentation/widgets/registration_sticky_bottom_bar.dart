@@ -5,14 +5,15 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
 
-/// Floating action card pinned to the bottom of [ProfileEditPage]: a
+/// Floating action card pinned to the bottom of each section edit page
+/// (ProfileSectionEditPage): a
 /// Back control, the primary action, and — when the open section is
 /// incomplete — a line saying why the primary action is disabled.
 ///
 /// It used to carry the signup wizard's progress chrome as well (a
 /// milestone label, an estimated-time-remaining string and a Skip action).
-/// That 13-step flow no longer exists — this bar now serves only Edit
-/// Profile's save — so those went with it rather than
+/// That 13-step flow no longer exists — this bar now serves only the
+/// section edit pages' Save — so those went with it rather than
 /// lingering as always-null parameters.
 ///
 /// Composes the existing [NmGradientButton]/[AppAnimations.buttonPress] —

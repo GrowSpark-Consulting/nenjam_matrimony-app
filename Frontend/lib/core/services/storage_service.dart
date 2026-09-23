@@ -262,7 +262,7 @@ class StorageService {
   /// Narrower than [clearNavState] on purpose: [keyRegistrationStep] and
   /// [keyProfileFlowMode] are shared with the EDIT-mode nav-state snapshot
   /// main.dart's `_saveNavStateSnapshot` writes for
-  /// `profileEdit`/`profileReview`, which this call must not disturb. They
+  /// `editProfile`/`profileReview`, which this call must not disturb. They
   /// are only removed here when they are not currently describing a live
   /// EDIT snapshot — every onboarding snapshot writes `'create'` to
   /// [savedProfileFlowMode] (see [RegistrationNotifier._snapshot]), so this

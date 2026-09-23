@@ -17,8 +17,8 @@ import 'package:nenjam_matrimony/features/registration/data/repositories/registr
 import 'package:nenjam_matrimony/features/registration/presentation/providers/registration_provider.dart';
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 
-/// The "Complete Your Profile" section, as Home and Edit Profile both render
-/// it.
+/// The "Complete Your Profile" section, as Home and the end-of-registration
+/// review both render it.
 ///
 /// Everything here is driven by one `GET /profiles/draft` response, because
 /// that is the actual guarantee being tested: the two screens embed this one
@@ -175,12 +175,24 @@ class _Harness {
           ),
         ),
         GoRoute(
-          path: RouteNames.profileEdit,
-          builder: (_, state) => page(
-            Text(
-              'EDIT PROFILE section=${state.uri.queryParameters['section']}',
-            ),
-          ),
+          path: RouteNames.editProfile,
+          builder: (_, _) => page(const Text('EDIT PROFILE')),
+        ),
+        GoRoute(
+          path: RouteNames.basicInfoEdit,
+          builder: (_, _) => page(const Text('BASIC INFO PAGE')),
+        ),
+        GoRoute(
+          path: RouteNames.photosEdit,
+          builder: (_, _) => page(const Text('PHOTOS PAGE')),
+        ),
+        GoRoute(
+          path: RouteNames.familyDetailsEdit,
+          builder: (_, _) => page(const Text('FAMILY DETAILS PAGE')),
+        ),
+        GoRoute(
+          path: RouteNames.horoscopeDetailsEdit,
+          builder: (_, _) => page(const Text('HOROSCOPE PAGE')),
         ),
         GoRoute(
           path: RouteNames.profileReview,
@@ -666,23 +678,21 @@ void main() {
       expect(find.byType(CompleteProfileSection), findsNothing);
     }
 
-    testWidgets('About Family opens Edit Profile at the family section', (
-      tester,
-    ) async {
+    // Family and horoscope are no longer sections of Edit Profile — each has
+    // a dedicated page, and the card opens that page directly.
+    testWidgets('About Family opens the Family Details page', (tester) async {
       await expectTapOpens(
         tester,
         CompletionCardKeys.aboutFamily,
-        'EDIT PROFILE section=7',
+        'FAMILY DETAILS PAGE',
       );
     });
 
-    testWidgets('Horoscope opens Edit Profile at the horoscope section', (
-      tester,
-    ) async {
+    testWidgets('Horoscope opens the Horoscope page', (tester) async {
       await expectTapOpens(
         tester,
         CompletionCardKeys.horoscope,
-        'EDIT PROFILE section=8',
+        'HOROSCOPE PAGE',
       );
     });
 
@@ -702,11 +712,12 @@ void main() {
       );
     });
 
-    testWidgets('the same card opens the same page from Edit Profile', (
+    testWidgets('the same card opens the same page from the review', (
       tester,
     ) async {
-      // Edit Profile embeds the identical widget with zero horizontal
-      // padding; the destination is decided by the card, not the host.
+      // The registration review embeds the identical widget with zero
+      // horizontal padding; the destination is decided by the card, not the
+      // host.
       final harness = _Harness(_draft());
       await harness.pump(tester, horizontalPadding: 0);
 
@@ -717,11 +728,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('EDIT PROFILE section=7'), findsOneWidget);
+      expect(find.text('FAMILY DETAILS PAGE'), findsOneWidget);
     });
   });
 
-  group('Home and Edit Profile stay in step', () {
+  group('Home and the registration review stay in step', () {
     testWidgets('both hosts render the same cards from one response', (
       tester,
     ) async {
@@ -736,32 +747,37 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
 
-      final editProfile = _Harness(draft);
-      await editProfile.pump(tester, horizontalPadding: 0);
-      final editCards = _renderedCardTitles(tester);
+      final review = _Harness(draft);
+      await review.pump(tester, horizontalPadding: 0);
+      final reviewCards = _renderedCardTitles(tester);
 
-      expect(homeCards, editCards);
+      expect(homeCards, reviewCards);
       expect(homeCards, isNot(contains('Horoscope')));
     });
 
-    test('Edit Profile embeds the shared section, and Discover does not', () {
+    test('the registration review embeds the shared section; Edit Profile '
+        'and Discover do not', () {
       // A structural check, because this is the guarantee no amount of widget
       // testing can make on its own.
       //
-      // Edit Profile is the section's one host: a member who goes looking for
-      // what is missing from their profile finds it there. Discover is
-      // deliberately not a host — it used to be, and the result was that every
-      // member who landed on Discover straight after registering met a
-      // profile-completion call to action instead of the Discover page. If
-      // Discover ever grows the section back, that regression is back with it.
+      // Edit Profile is the member's registration details and nothing else —
+      // its seven section cards. Discover is deliberately not a host either —
+      // it used to be, and the result was that every member who landed on
+      // Discover straight after registering met a profile-completion call to
+      // action instead of the Discover page. If Discover ever grows the
+      // section back, that regression is back with it.
       final discover = File(
         'lib/features/discover/presentation/pages/discover_page.dart',
       ).readAsStringSync();
       final editProfile = File(
+        'lib/features/registration/presentation/pages/edit_profile_page.dart',
+      ).readAsStringSync();
+      final review = File(
         'lib/features/registration/presentation/pages/profile_review_page.dart',
       ).readAsStringSync();
 
-      expect(editProfile, contains('CompleteProfileSection('));
+      expect(review, contains('CompleteProfileSection('));
+      expect(editProfile, isNot(contains('CompleteProfileSection(')));
       expect(
         discover,
         isNot(contains('CompleteProfileSection(')),

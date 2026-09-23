@@ -120,13 +120,14 @@ void main() {
       'My Profile',
       'Edit Profile',
       'Partner Preferences',
-      'Profile Intelligence',
       'Verification Center',
       'Interests Sent',
       'Interests Received',
     ]) {
       expect(find.text(label), findsOneWidget, reason: 'missing row: $label');
     }
+    // The Profile Intelligence hub was removed; no row may link to it.
+    expect(find.text('Profile Intelligence'), findsNothing);
 
     // Every navigating row carries the trailing chevron the reference shows.
     expect(find.byIcon(Icons.chevron_right_rounded), findsAtLeast(7));

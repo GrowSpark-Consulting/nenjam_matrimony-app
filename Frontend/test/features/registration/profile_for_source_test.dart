@@ -55,7 +55,7 @@ void main() {
               const Scaffold(body: Text('name-reached')),
         ),
         GoRoute(
-          path: RouteNames.profileEdit,
+          path: RouteNames.editProfile,
           builder: (context, state) =>
               const Scaffold(body: Text('wizard-reached')),
         ),

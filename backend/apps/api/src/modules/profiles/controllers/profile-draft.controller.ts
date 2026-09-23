@@ -168,8 +168,9 @@ export class ProfileDraftController {
    * Persists a wizard section, then — the single reason this controller depends
    * on ProfileService — materialises the user into a real, matchable
    * UserProfile the moment all mandatory fields exist (see
-   * ProfileService.syncMatchableFromDraft). That call is non-throwing, so the
-   * step save's response is unaffected whether the user is eligible yet or not.
+   * ProfileService.syncMatchableFromDraft). A member not yet eligible is a
+   * silent no-op; a copy that FAILS fails this request, so a save is never
+   * reported as successful while `user_profiles` still holds the old values.
    *
    * [skipMaterialize] — set by the Flutter edit-mode flow (see
    * RegistrationRepository._patchSection), which always calls POST

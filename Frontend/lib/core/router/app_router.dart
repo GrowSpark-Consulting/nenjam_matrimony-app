@@ -34,11 +34,8 @@ import '../../features/premium/presentation/pages/premium_page.dart';
 import '../../features/privacy/presentation/pages/privacy_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile_detail/presentation/pages/profile_detail_page.dart';
-import '../../features/profile_intelligence/presentation/pages/profile_intelligence_page.dart';
 import '../../features/profile_menu/presentation/pages/profile_menu_page.dart';
 import '../../features/profile_views/presentation/pages/profile_viewers_page.dart';
-import '../../features/profile_prompts/domain/models/prompt_bank_item.dart';
-import '../../features/profile_prompts/presentation/pages/choose_prompt_page.dart';
 import '../../features/profile_completion/presentation/pages/profile_completion_page.dart';
 import '../../features/psychology/presentation/pages/psychology_quiz_page.dart';
 import '../../features/registration/presentation/pages/create_profile_for_page.dart';
@@ -53,7 +50,8 @@ import '../../features/registration/presentation/pages/onboarding_religion_page.
 import '../../features/registration/presentation/pages/onboarding_verify_mobile_page.dart';
 import '../../features/registration/presentation/pages/profile_basics_page.dart';
 import '../../features/registration/presentation/pages/profile_review_page.dart';
-import '../../features/registration/presentation/pages/profile_edit_page.dart';
+import '../../features/registration/presentation/pages/edit_profile_page.dart';
+import '../../features/registration/presentation/pages/profile_section_edit_page.dart';
 import '../../features/registration/presentation/pages/registration_completing_page.dart';
 import '../../features/registration/presentation/pages/registration_page.dart';
 import '../../features/registration/presentation/pages/registration_success_page.dart';
@@ -403,17 +401,62 @@ GoRouter createRouter(WidgetRef ref) {
         name: RouteNames.registrationWelcomeName,
         builder: (context, state) => const RegistrationWelcomePage(),
       ),
+      // ─── Edit Profile ───────────────────────────────────────────
+      //
+      // A section list, and one edit page per section that saves only that
+      // section — see profileSectionRoute(). Family and horoscope are
+      // separate profile sections, reached from the Profile screen. None of
+      // these is in RouteNames.publicRoutes, so all require a signed-in
+      // member.
       GoRoute(
-        path: RouteNames.profileEdit,
-        name: RouteNames.profileEditName,
-        // `?section=<draft step index>` scrolls the page to one section on
-        // open — see profileSectionRoute(). Absent or unparseable, the page
-        // opens at the top.
-        builder: (context, state) => ProfileEditPage(
-          initialSection: int.tryParse(
-            state.uri.queryParameters['section'] ?? '',
-          ),
-        ),
+        path: RouteNames.editProfile,
+        name: RouteNames.editProfileName,
+        builder: (context, state) => const EditProfilePage(),
+      ),
+      GoRoute(
+        path: RouteNames.basicInfoEdit,
+        name: RouteNames.basicInfoEditName,
+        builder: (context, state) => const BasicInfoEditPage(),
+      ),
+      GoRoute(
+        path: RouteNames.religionCommunityEdit,
+        name: RouteNames.religionCommunityEditName,
+        builder: (context, state) => const ReligionCommunityEditPage(),
+      ),
+      GoRoute(
+        path: RouteNames.locationEdit,
+        name: RouteNames.locationEditName,
+        builder: (context, state) => const LocationEditPage(),
+      ),
+      GoRoute(
+        path: RouteNames.educationWorkEdit,
+        name: RouteNames.educationWorkEditName,
+        builder: (context, state) => const EducationWorkEditPage(),
+      ),
+      GoRoute(
+        path: RouteNames.physicalDetailsEdit,
+        name: RouteNames.physicalDetailsEditName,
+        builder: (context, state) => const PhysicalDetailsEditPage(),
+      ),
+      GoRoute(
+        path: RouteNames.lifestyleAboutEdit,
+        name: RouteNames.lifestyleAboutEditName,
+        builder: (context, state) => const LifestyleAboutEditPage(),
+      ),
+      GoRoute(
+        path: RouteNames.photosEdit,
+        name: RouteNames.photosEditName,
+        builder: (context, state) => const PhotosEditPage(),
+      ),
+      GoRoute(
+        path: RouteNames.familyDetailsEdit,
+        name: RouteNames.familyDetailsEditName,
+        builder: (context, state) => const FamilyDetailsEditPage(),
+      ),
+      GoRoute(
+        path: RouteNames.horoscopeDetailsEdit,
+        name: RouteNames.horoscopeDetailsEditName,
+        builder: (context, state) => const HoroscopeDetailsEditPage(),
       ),
       GoRoute(
         path: RouteNames.registrationCompleting,
@@ -431,22 +474,6 @@ GoRouter createRouter(WidgetRef ref) {
         builder: (context, state) => const PsychologyQuizPage(),
       ),
       // ─── Relationship Intelligence (independent of registration) ──
-      GoRoute(
-        path: RouteNames.profileIntelligence,
-        name: RouteNames.profileIntelligenceName,
-        builder: (context, state) => const ProfileIntelligencePage(),
-      ),
-      GoRoute(
-        path: RouteNames.choosePrompt,
-        name: RouteNames.choosePromptName,
-        builder: (context, state) {
-          final extra = state.extra;
-          final selection = extra is List<PromptAnswer>
-              ? extra
-              : const <PromptAnswer>[];
-          return ChoosePromptPage(currentSelection: selection);
-        },
-      ),
       GoRoute(
         path: RouteNames.horoscopeMatching,
         name: RouteNames.horoscopeMatchingName,

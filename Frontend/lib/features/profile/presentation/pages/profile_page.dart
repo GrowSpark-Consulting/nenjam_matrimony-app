@@ -9,7 +9,6 @@ import '../../../verification/presentation/providers/face_verification_providers
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/relationship_intelligence/horoscope_compatibility_section.dart';
-import '../../../../core/widgets/relationship_intelligence/profile_prompt_section.dart';
 import '../../../../core/widgets/relationship_intelligence/psychology_section.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../astro/domain/models/compatibility_result.dart';
@@ -23,8 +22,6 @@ import '../../../profile_completion/presentation/providers/profile_completeness_
 import '../../../partner_preferences/presentation/utils/open_partner_preferences.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../../profile_completion/presentation/utils/module_copy.dart';
-import '../../../profile_prompts/domain/models/prompt_bank_item.dart';
-import '../../../profile_prompts/presentation/providers/profile_prompt_provider.dart';
 import '../../../psychology/domain/models/personality_result.dart';
 import '../../../psychology/presentation/providers/personality_provider.dart';
 import '../../../registration/domain/models/profile_draft.dart';
@@ -55,12 +52,14 @@ import '../widgets/verification_card.dart';
 ///
 /// Layout:
 ///   1.  Identity Hero
+///   1b. Manage Your Profile (Edit Profile / Horoscope / Family / Partner
+///       Preferences / Psychology / Verification)
 ///   2.  Today's Priorities
 ///   3.  AI Match Coach
 ///   4.  Match Journey
 ///   5.  Activity + Performance
 ///   6.  Discover Opportunities
-///   7.  Relationship Intelligence (Horoscope / Personality / Prompts)
+///   7.  Relationship Intelligence (Horoscope / Personality)
 ///   8.  Verification Center
 ///   9.  Partner Preferences
 ///  10.  Photo Gallery
@@ -104,9 +103,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
     final AsyncValue<PersonalityResult?> personalityAsync = ref.watch(
       myPersonalityResultProvider,
-    );
-    final AsyncValue<List<PromptAnswer>> promptsAsync = ref.watch(
-      myPromptsProvider,
     );
 
     // ── Real user/profile data ──────────────────────────────────────
@@ -181,6 +177,57 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     maritalStatus: profileDisplayMaritalStatus(draft),
                     profession: profileDisplayProfession(draft),
                     onEditTap: () => openEditProfile(context, ref),
+                  ),
+                ),
+                gap,
+
+                // ── 1b. Manage Your Profile ───────────────────────
+                //
+                // One entry per separately owned part of the profile. Edit
+                // Profile holds only the registration details; the other
+                // five are edited on pages of their own. Each goes through
+                // the same helper/route the drawer and summary already use.
+                _FadeInSection(
+                  delay: 30,
+                  child: NmQuickActionsCard(
+                    title: l10n.profileManageSections,
+                    actions: [
+                      NmQuickAction(
+                        icon: Icons.edit_outlined,
+                        label: l10n.drawerEditProfile,
+                        onTap: () => openEditProfile(context, ref),
+                      ),
+                      NmQuickAction(
+                        icon: Icons.stars_rounded,
+                        label: l10n.drawerHoroscope,
+                        onTap: () =>
+                            openEditProfile(context, ref, wizardStep: 8),
+                      ),
+                      NmQuickAction(
+                        icon: Icons.family_restroom_rounded,
+                        label: l10n.drawerFamilyDetails,
+                        onTap: () =>
+                            openEditProfile(context, ref, wizardStep: 7),
+                      ),
+                      NmQuickAction(
+                        icon: Icons.favorite_border_rounded,
+                        label: l10n.drawerPartnerPreferences,
+                        onTap: () => openPartnerPreferences(context, ref),
+                      ),
+                      NmQuickAction(
+                        icon: Icons.psychology_alt_rounded,
+                        label: l10n.drawerPsychology,
+                        onTap: () async {
+                          await context.push(RouteNames.psychologyQuiz);
+                          ref.invalidate(myPersonalityResultProvider);
+                        },
+                      ),
+                      NmQuickAction(
+                        icon: Icons.shield_outlined,
+                        label: l10n.drawerVerificationCenter,
+                        onTap: () => context.push(RouteNames.verification),
+                      ),
+                    ],
                   ),
                 ),
                 gap,
@@ -340,18 +387,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     data: (result) => PsychologySection(
                       result: result ?? const PersonalityResult(),
                     ),
-                  ),
-                ),
-                smallGap,
-                _FadeInSection(
-                  delay: 400,
-                  child: promptsAsync.when(
-                    loading: () => const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                    error: (_, __) => const SizedBox.shrink(),
-                    data: (prompts) => ProfilePromptSection(prompts: prompts),
                   ),
                 ),
                 gap,

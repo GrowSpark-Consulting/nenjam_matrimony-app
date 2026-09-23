@@ -23,7 +23,7 @@ import '../../../registration/presentation/utils/onboarding_draft_gate.dart';
 /// depends on ephemeral state that can't survive a process restart, so those
 /// are never restored through this particular set.
 ///
-/// Both entries below are Edit Profile's screens, and deliberately: an EDIT
+/// Both entries below are profile-editing screens, and deliberately: an EDIT
 /// snapshot is a signed-in member's own screen state and this set exists to
 /// resume it exactly, unquestioned. Onboarding is absent from it for the
 /// opposite reason — a CREATE-mode snapshot is a draft still being answered,
@@ -33,7 +33,7 @@ import '../../../registration/presentation/utils/onboarding_draft_gate.dart';
 /// one who has not signed in yet at all (no backend copy exists — the local
 /// snapshot is the only one there is).
 const _restorableRegistrationRoutes = {
-  RouteNames.profileEdit,
+  RouteNames.editProfile,
   RouteNames.profileReview,
 };
 const _restorableTabRoutes = {

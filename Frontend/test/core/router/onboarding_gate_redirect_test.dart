@@ -262,10 +262,10 @@ void main() {
         postAuthDestination: (ref) => _FakeResolver(RouteNames.discover),
       );
 
-      router.go(RouteNames.profileEdit);
+      router.go(RouteNames.editProfile);
       await tester.pumpAndSettle();
 
-      expect(router.state.matchedLocation, RouteNames.profileEdit);
+      expect(router.state.matchedLocation, RouteNames.editProfile);
     });
 
     testWidgets('Edit Profile stays reachable even with a stale local flag, '
@@ -280,12 +280,12 @@ void main() {
         postAuthDestination: (ref) => _FakeResolver(RouteNames.discover),
       );
 
-      router.go(RouteNames.profileEdit);
+      router.go(RouteNames.editProfile);
       await tester.pumpAndSettle();
 
       expect(
         router.state.matchedLocation,
-        RouteNames.profileEdit,
+        RouteNames.editProfile,
         reason: 'PostAuthDestination.resolve() returning Discover means '
             '"onboarding is done," not "go to Discover instead of wherever '
             'you were headed" — Edit Profile must remain reachable',

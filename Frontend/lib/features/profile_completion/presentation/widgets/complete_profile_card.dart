@@ -48,11 +48,11 @@ class _HomeCompletionItem {
 
 /// The compact "Complete Your Profile" reminder for Home/Discover — a header
 /// plus a horizontally scrollable row of tappable tiles for whichever of
-/// Add Photos, Family Details, Horoscope, Psychology and Partner Preferences
-/// are still incomplete.
+/// Add Photos, Family Details, Horoscope, Psychology, Partner Preferences and
+/// Verification are still incomplete.
 ///
 /// A deliberately smaller sibling of `CompleteProfileSection` (Edit
-/// Profile's full card row): the four backend-scored sections read the same
+/// Profile's full card row): the five backend-scored sections read the same
 /// [profileCompletenessSnapshotProvider] response that section reads, so the
 /// two can never disagree about what's done. Photos is the one exception —
 /// see [_items] — sourced from the same [myPhotosProvider] every other photo
@@ -69,7 +69,7 @@ class CompleteProfileCard extends ConsumerWidget {
   // Wizard-step destinations, the same stable numbering `profileSectionRoute`
   // and the backend's `RECOMMENDATION_CARDS` already use everywhere else in
   // the app (family/horoscope are Edit Profile sections, psychology/partner
-  // preference/photos are pages of their own) — hardcoded here rather than
+  // preference/verification/photos are pages of their own) — hardcoded here rather than
   // read off a recommendation entry's `wizardStep`, so a tile still knows
   // where to navigate even in the edge case its own entry is missing from
   // the response.
@@ -78,6 +78,7 @@ class CompleteProfileCard extends ConsumerWidget {
   static const int _wizardStepPsychology = 9;
   static const int _wizardStepPartnerPreference = 10;
   static const int _wizardStepPhotos = 11;
+  static const int _wizardStepVerification = 12;
 
   /// Whether [key]'s section is complete, straight off the real backend
   /// signal — never re-derived, never guessed.
@@ -88,13 +89,18 @@ class CompleteProfileCard extends ConsumerWidget {
   /// key up explicitly means a missing or malformed entry reads as
   /// incomplete — the safe default for a reminder card is to keep asking,
   /// not to go quiet.
-  bool _isComplete(List<CompletionRecommendation> recommendations, String key) =>
-      recommendations.any((r) => r.key == key && r.isComplete);
+  bool _isComplete(
+    List<CompletionRecommendation> recommendations,
+    String key,
+  ) => recommendations.any((r) => r.key == key && r.isComplete);
 
   /// The tiles to offer, in display order: Add Photos (the single biggest
   /// lever on match quality), then Family Details, Horoscope, Psychology,
-  /// Partner Preferences — each evaluated independently against its own
-  /// real completion source, not filtered from one shared list.
+  /// Partner Preferences, Verification — each evaluated independently
+  /// against its own real completion source, not filtered from one shared
+  /// list. Verification reads the backend's own `verification` card, which
+  /// completes only once every verification weight is earned — the same
+  /// signal the percentage is scored from.
   ///
   /// Photos is scored differently from every other tile here on purpose:
   /// the backend's own `photo` recommendation card completes at the first
@@ -128,7 +134,12 @@ class CompleteProfileCard extends ConsumerWidget {
       if (!_isComplete(recommendations, CompletionCardKeys.psychology))
         tile(CompletionCardKeys.psychology, _wizardStepPsychology),
       if (!_isComplete(recommendations, CompletionCardKeys.partnerPreference))
-        tile(CompletionCardKeys.partnerPreference, _wizardStepPartnerPreference),
+        tile(
+          CompletionCardKeys.partnerPreference,
+          _wizardStepPartnerPreference,
+        ),
+      if (!_isComplete(recommendations, CompletionCardKeys.verification))
+        tile(CompletionCardKeys.verification, _wizardStepVerification),
     ];
   }
 
@@ -207,9 +218,14 @@ class CompleteProfileCard extends ConsumerWidget {
                       iconSize: 15,
                       visualDensity: VisualDensity.compact,
                       tooltip: l10n.homeCompleteProfileDismissTooltip,
-                      onPressed: () => ref
-                          .read(completeProfileCardDismissedProvider.notifier)
-                          .state = true,
+                      onPressed: () =>
+                          ref
+                                  .read(
+                                    completeProfileCardDismissedProvider
+                                        .notifier,
+                                  )
+                                  .state =
+                              true,
                       icon: const Icon(
                         Icons.close_rounded,
                         color: AppColors.textTertiaryLight,
@@ -220,8 +236,8 @@ class CompleteProfileCard extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.xs),
-            // Horizontally scrollable rather than Expanded: up to five tiles
-            // (Photos + four sections) no longer reliably fit one phone
+            // Horizontally scrollable rather than Expanded: up to six tiles
+            // (Photos + five sections) no longer reliably fit one phone
             // width without cramming, and the card must stay this short
             // regardless of how many tiles there are — a taller card was
             // exactly what made the first version feel like a section
@@ -276,7 +292,9 @@ class _CompleteProfileTile extends StatelessWidget {
 
   /// Fixed rather than [Expanded]: the row now scrolls, so each tile keeps
   /// its own natural width instead of splitting whatever space is left.
-  static const double _width = 72;
+  /// Wide enough that the longest English word on any tile ("Preferences")
+  /// fits one line at this label size — at 72 it was ellipsized.
+  static const double _width = 84;
 
   @override
   Widget build(BuildContext context) {

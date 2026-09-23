@@ -33,7 +33,17 @@ abstract final class RouteNames {
   static const String onboardingAbout = '/registration/about';
   static const String onboardingVerifyMobile = '/registration/verify-mobile';
   static const String registrationWelcome = '/registration/welcome';
-  static const String profileEdit = '/profile-edit';
+  // ─── Edit Profile: a section list, and one editor per section ─────
+  static const String editProfile = '/edit-profile';
+  static const String basicInfoEdit = '/edit-profile/basic-info';
+  static const String religionCommunityEdit = '/edit-profile/religion';
+  static const String locationEdit = '/edit-profile/location';
+  static const String educationWorkEdit = '/edit-profile/education-work';
+  static const String physicalDetailsEdit = '/edit-profile/physical';
+  static const String lifestyleAboutEdit = '/edit-profile/lifestyle-about';
+  static const String photosEdit = '/edit-profile/photos';
+  static const String familyDetailsEdit = '/family-details';
+  static const String horoscopeDetailsEdit = '/horoscope-details';
   static const String psychologyQuiz = '/registration/psychology-quiz';
   static const String profileReview = '/profile-review';
   static const String registrationCompleting = '/registration/completing';
@@ -65,8 +75,6 @@ abstract final class RouteNames {
   static const String chatDetail = '/chat-detail';
 
   // ─── Relationship Intelligence (independent of registration) ──────
-  static const String profileIntelligence = '/profile-intelligence';
-  static const String choosePrompt = '/profile-prompts/choose';
   static const String horoscopeMatching = '/horoscope-matching';
 
   // ─── Named Routes ───────────────────────────────────────────────
@@ -95,7 +103,16 @@ abstract final class RouteNames {
   static const String onboardingAboutName = 'onboardingAbout';
   static const String onboardingVerifyMobileName = 'onboardingVerifyMobile';
   static const String registrationWelcomeName = 'registrationWelcome';
-  static const String profileEditName = 'profileEdit';
+  static const String editProfileName = 'editProfile';
+  static const String basicInfoEditName = 'basicInfoEdit';
+  static const String religionCommunityEditName = 'religionCommunityEdit';
+  static const String locationEditName = 'locationEdit';
+  static const String educationWorkEditName = 'educationWorkEdit';
+  static const String physicalDetailsEditName = 'physicalDetailsEdit';
+  static const String lifestyleAboutEditName = 'lifestyleAboutEdit';
+  static const String photosEditName = 'photosEdit';
+  static const String familyDetailsEditName = 'familyDetailsEdit';
+  static const String horoscopeDetailsEditName = 'horoscopeDetailsEdit';
   static const String psychologyQuizName = 'psychologyQuiz';
   static const String profileReviewName = 'profileReview';
   static const String registrationCompletingName = 'registrationCompleting';
@@ -126,8 +143,6 @@ abstract final class RouteNames {
   static const String profileDetailName = 'profileDetail';
   static const String chatDetailName = 'chatDetail';
 
-  static const String profileIntelligenceName = 'profileIntelligence';
-  static const String choosePromptName = 'choosePrompt';
   static const String horoscopeMatchingName = 'horoscopeMatching';
 
   // ─── Query Parameters ───────────────────────────────────────────────

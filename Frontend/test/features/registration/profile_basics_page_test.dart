@@ -43,7 +43,7 @@ void main() {
         // wizard lands somewhere distinguishable instead of silently
         // failing to navigate.
         GoRoute(
-          path: RouteNames.profileEdit,
+          path: RouteNames.editProfile,
           builder: (context, state) =>
               const Scaffold(body: Text('wizard-reached')),
         ),

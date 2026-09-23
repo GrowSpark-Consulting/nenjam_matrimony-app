@@ -13,8 +13,7 @@ final personalityRepositoryProvider = Provider<PersonalityRepository>(
 );
 
 /// The signed-in user's current OCEAN result, if the quiz has been taken.
-/// Used by ProfilePage, the Profile Intelligence hub, and
-/// profile_review_page.dart's edit-mode summary.
+/// Used by ProfilePage and profile_review_page.dart's summary.
 final myPersonalityResultProvider =
     FutureProvider.autoDispose<PersonalityResult?>((ref) {
   return ref.watch(personalityRepositoryProvider).getMyResult();

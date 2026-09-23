@@ -236,8 +236,7 @@ void main() {
       double y(String label) => tester.getTopLeft(find.text(label)).dy;
       expect(y('My Profile'), lessThan(y('Edit Profile')));
       expect(y('Edit Profile'), lessThan(y('Partner Preferences')));
-      expect(y('Partner Preferences'), lessThan(y('Profile Intelligence')));
-      expect(y('Profile Intelligence'), lessThan(y('Verification Center')));
+      expect(y('Partner Preferences'), lessThan(y('Verification Center')));
     });
   });
 

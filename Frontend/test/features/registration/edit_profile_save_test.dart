@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nenjam_matrimony/features/authentication/presentation/providers/auth_providers.dart';
@@ -7,22 +9,34 @@ import 'package:nenjam_matrimony/features/registration/presentation/providers/re
 
 import 'onboarding_test_support.dart';
 
-/// Editing a profile: **the section PATCH is the save, and it is not gated on
-/// `POST /profiles/finalize`.**
+/// Editing a profile: **each section is saved on its own, by its own
+/// `PATCH /profiles/draft/<section>`, and nothing else is sent.**
 ///
-/// Edit Profile used to save the open section and then call finalize, which
-/// re-runs the end-of-*registration* gate. That gate rejects a half-filled
-/// optional section — and onboarding half-fills three of them on the member's
-/// behalf (height without weight; eatingHabit + aboutMe without
-/// smoking/drinking/fitness/hobbies; every education field but workLocation).
-/// So finalize answered 400 for every member who had signed up through
-/// onboarding, naming sections they had never opened, and the screen reported
-/// "could not save changes" over edits the PATCH had already written: the data
-/// was saved, only the verdict was wrong.
+/// Edit Profile used to be one page with one Save that republished every
+/// section of the draft, so changing a city also re-sent the member's basic
+/// details, religion, education and the rest — any of which a stale copy
+/// could overwrite. Each section now has an edit page of its own, and its
+/// Save calls exactly one of these methods.
 ///
-/// Nothing about the finalize contract or its validation changed — CREATE mode
-/// still calls it. These pin that editing no longer does.
+/// Editing is also not completing a registration: none of these call
+/// `POST /profiles/finalize`, whose end-of-signup gate rejects the optional
+/// sections onboarding half-fills on the member's behalf.
 void main() {
+  final saved = ProfileDraft(
+    basicDetails: BasicDetails(
+      firstName: 'Meera',
+      lastName: 'Rajan',
+      gender: 'Female',
+      dob: DateTime(1995, 3, 21),
+      profileCreatedFor: 'Myself',
+    ),
+    locationDetails: const LocationDetails(
+      country: 'India',
+      state: 'Tamil Nadu',
+      city: 'Chennai',
+    ),
+  );
+
   ProviderContainer editing(RecordingRegistrationRepository repository) {
     final container = ProviderContainer(
       overrides: [
@@ -30,87 +44,139 @@ void main() {
         firebaseAuthServiceProvider.overrideWithValue(SignedInAuthService()),
       ],
     );
-    container.read(registrationProvider.notifier).restore(
-          ProfileDraft(
-            basicDetails: BasicDetails(
-              firstName: 'Meera',
-              lastName: 'Rajan',
-              gender: 'Female',
-              dob: DateTime(1995, 3, 21),
-              profileCreatedFor: 'Myself',
-            ),
-            locationDetails: const LocationDetails(
-              country: 'India',
-              state: 'Tamil Nadu',
-              city: 'Chennai',
-            ),
-          ),
-          ProfileFlowMode.edit,
-        );
+    container
+        .read(registrationProvider.notifier)
+        .restore(saved, ProfileFlowMode.edit);
     return container;
   }
 
-  // The per-section save (goToStep + publishEditedSection) was removed along
-  // with the per-section wizard that drove it; Edit Profile is one scrolling
-  // page whose Save goes through publishEditedProfile. The group that covered
-  // it went with it — what it pinned (a section save must not be gated on
-  // finalize) is still pinned below, on the path that is actually live.
+  /// Every section save: its name on the wire, the call, and how to read the
+  /// section back off the draft.
+  final sections =
+      <
+        String,
+        (
+          Future<void> Function(RegistrationNotifier),
+          Object Function(ProfileDraft),
+        )
+      >{
+        'basicDetails': (
+          (n) => n.publishBasicDetails(const BasicDetails(firstName: 'Anu')),
+          (d) => d.basicDetails.firstName,
+        ),
+        'religionDetails': (
+          (n) => n.publishReligionDetails(
+            const ReligionDetails(religion: 'Hindu'),
+          ),
+          (d) => d.religionDetails.religion,
+        ),
+        'locationDetails': (
+          (n) =>
+              n.publishLocationDetails(const LocationDetails(city: 'Madurai')),
+          (d) => d.locationDetails.city,
+        ),
+        'educationDetails': (
+          (n) => n.publishEducationDetails(
+            const EducationDetails(qualification: 'B.E.'),
+          ),
+          (d) => d.educationDetails.qualification,
+        ),
+        'physicalDetails': (
+          (n) =>
+              n.publishPhysicalDetails(const PhysicalDetails(height: "5'4\"")),
+          (d) => d.physicalDetails.height,
+        ),
+        'lifestyleDetails': (
+          (n) => n.publishLifestyleDetails(
+            const LifestyleDetails(eatingHabit: 'Vegetarian'),
+          ),
+          (d) => d.lifestyleDetails.eatingHabit,
+        ),
+        'familyDetails': (
+          (n) => n.publishFamilyDetails(
+            const FamilyDetails(familyType: 'Nuclear'),
+          ),
+          (d) => d.familyDetails.familyType,
+        ),
+        'horoscopeDetails': (
+          (n) =>
+              n.publishHoroscopeDetails(const HoroscopeDetails(rashi: 'Mesha')),
+          (d) => d.horoscopeDetails.rashi,
+        ),
+      };
 
-  group('saving the whole profile from the review summary', () {
-    test('republishes every section and materializes exactly once', () async {
-      final repository = RecordingRegistrationRepository();
-      final container = editing(repository);
-      addTearDown(container.dispose);
+  const expectedValues = {
+    'basicDetails': 'Anu',
+    'religionDetails': 'Hindu',
+    'locationDetails': 'Madurai',
+    'educationDetails': 'B.E.',
+    'physicalDetails': "5'4\"",
+    'lifestyleDetails': 'Vegetarian',
+    'familyDetails': 'Nuclear',
+    'horoscopeDetails': 'Mesha',
+  };
 
-      await container.read(registrationProvider.notifier).publishEditedProfile();
+  group('saving one section', () {
+    for (final entry in sections.entries) {
+      test(
+        '${entry.key}: sends only that section, once, materializing',
+        () async {
+          final repository = RecordingRegistrationRepository();
+          final container = editing(repository);
+          addTearDown(container.dispose);
 
-      expect(
-        repository.savedSections,
-        containsAll(<String>[
-          'basicDetails',
-          'religionDetails',
-          'languageDetails',
-          'locationDetails',
-          'physicalDetails',
-          'educationDetails',
-          // Family and horoscope were absent from publishEditedProfile()
-          // until Edit Profile became a single editable page. It never
-          // showed, because the only way to reach those two sections was the
-          // per-section wizard, which saved through publishEditedSection()
-          // instead. Now that one Save covers every section at once, leaving
-          // them out would silently drop the member's edits.
-          'familyDetails',
-          'horoscopeDetails',
-          'lifestyleDetails',
-        ]),
+          await entry.value.$1(container.read(registrationProvider.notifier));
+
+          expect(repository.savedSections, [entry.key]);
+          // The only call, so it is the one that materializes.
+          expect(repository.skipMaterializeFlags, [false]);
+          expect(repository.finalizeCalls, 0);
+          // Committed to the draft, so Edit Profile's summary shows it.
+          expect(
+            entry.value.$2(container.read(registrationProvider)),
+            expectedValues[entry.key],
+          );
+        },
       );
-      expect(repository.finalizeCalls, 0);
-      // One materializing call, and it is the last — every section is stored
-      // by then, so that single pass sees the whole draft.
-      expect(
-        repository.skipMaterializeFlags.where((skipped) => !skipped).length,
-        1,
-      );
-      expect(repository.skipMaterializeFlags.last, isFalse);
-    });
+    }
+  });
 
-    test('a failure part-way through surfaces to the screen', () async {
-      final repository = _FailingRepository();
-      final container = editing(repository);
-      addTearDown(container.dispose);
+  group('a failed save', () {
+    test(
+      'surfaces to the page and leaves the draft as the backend has it',
+      () async {
+        final container = editing(_FailingRepository());
+        addTearDown(container.dispose);
 
-      await expectLater(
-        container.read(registrationProvider.notifier).publishEditedProfile(),
-        throwsException,
-      );
-    });
+        await expectLater(
+          container
+              .read(registrationProvider.notifier)
+              .publishLocationDetails(const LocationDetails(city: 'Madurai')),
+          throwsException,
+        );
+        // Not committed: the summary must not show a value that was not saved.
+        expect(
+          container.read(registrationProvider).locationDetails.city,
+          'Chennai',
+        );
+      },
+    );
+  });
+
+  test('there is no whole-profile save', () {
+    // A structural check: one method that re-sent every section is exactly
+    // what let one section's save overwrite another's.
+    final provider = File(
+      'lib/features/registration/presentation/providers/registration_provider.dart',
+    ).readAsStringSync();
+    expect(provider, isNot(contains('publishEditedProfile')));
   });
 }
 
 class _FailingRepository extends RecordingRegistrationRepository {
   @override
-  Future<void> updateBasicDetails(
-    BasicDetails details, {
+  Future<void> updateLocationDetails(
+    LocationDetails details, {
     bool skipMaterialize = false,
   }) async {
     throw Exception('save failed');

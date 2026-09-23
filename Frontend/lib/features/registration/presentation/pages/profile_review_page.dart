@@ -8,24 +8,15 @@ import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/indicators/nm_gradient_progress_bar.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
-import '../../../../core/widgets/relationship_intelligence/horoscope_compatibility_section.dart';
-import '../../../../core/widgets/relationship_intelligence/profile_prompt_section.dart';
 import '../../../../core/widgets/relationship_intelligence/psychology_section.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../astro/presentation/providers/compatibility_provider.dart';
-import '../../../discover/presentation/providers/discover_providers.dart';
 import '../../../profile/presentation/providers/profile_dashboard_providers.dart';
-import '../../../profile_completion/presentation/providers/profile_completeness_provider.dart';
 import '../../../profile_completion/presentation/widgets/complete_profile_section.dart';
 import '../../../profile_photos/domain/models/user_photo.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
-import '../../../profile_prompts/domain/models/prompt_bank_item.dart';
-import '../../../profile_prompts/presentation/providers/profile_prompt_provider.dart';
 import '../../../psychology/domain/models/personality_result.dart';
 import '../../../psychology/presentation/providers/personality_provider.dart';
-import '../../data/repositories/registration_repository.dart';
 import '../../domain/models/profile_draft.dart';
-import '../../domain/models/profile_flow_mode.dart';
 import '../providers/registration_provider.dart';
 import '../utils/open_edit_profile.dart';
 
@@ -41,89 +32,20 @@ class ProfileReviewPage extends ConsumerStatefulWidget {
 }
 
 class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
-  bool _isSaving = false;
-
-  Future<void> _onEnterApp() async {
-    final mode = ref.read(profileFlowModeProvider);
-
-    // CREATE MODE: the real save now happens on the Completing screen (see
-    // registration_completing_page.dart) so its checklist reflects an
-    // actual in-flight finalizeToBackend() call rather than a fake loader.
-    if (mode != ProfileFlowMode.edit) {
-      context.go(RouteNames.registrationCompleting);
-      return;
-    }
-
-    // Guard against a second tap while the first is still in flight — the
-    // button is disabled below, but a fast double-tap can land before the
-    // rebuild does, and this save is not idempotent-cheap.
-    if (_isSaving) return;
-    setState(() => _isSaving = true);
-    try {
-      // Republishes the whole draft rather than calling finalize: editing an
-      // existing profile is not completing a registration, and finalize's
-      // gate rejects optional sections onboarding half-filled on the member's
-      // behalf. See RegistrationNotifier.publishEditedProfile.
-      await ref.read(registrationProvider.notifier).publishEditedProfile();
-    } on RegistrationApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(
-              context,
-            ).registrationSaveProfileErrorDetail(e.message),
-          ),
-        ),
-      );
-      return;
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).registrationSaveProfileError,
-          ),
-        ),
-      );
-      return;
-    }
-    if (!mounted) return;
-
-    // The edit is now persisted — refresh the dashboard's source-of-truth
-    // providers so the Profile page and this screen's own completeness
-    // section reflect the change immediately instead of a stale pre-edit
-    // snapshot.
-    ref.invalidate(profileDraftResponseProvider);
-    ref.invalidate(profileCompletenessSnapshotProvider);
-    // discoverFeedProvider is a plain (non-autoDispose) FutureProvider kept
-    // alive by the always-mounted Discover screen — without invalidating it
-    // here, a user who just went from 0 rows in user_profiles to their first
-    // successful finalize (e.g. the height_cm P2011 regression) would land
-    // back on Discover still showing the cached empty feed from before this
-    // save, even though they're now eligible.
-    ref.invalidate(discoverFeedProvider);
-
-    // EDIT MODE: publish confirmation, reset to CREATE for hygiene, and
-    // return to Discover — never back into onboarding/registration.
-    ref.read(registrationProvider.notifier).startCreateMode();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context).registrationProfileUpdated),
-      ),
-    );
-    context.go(RouteNames.discover);
-  }
+  /// The real save happens on the Completing screen (see
+  /// registration_completing_page.dart) so its checklist reflects an actual
+  /// in-flight finalizeToBackend() call rather than a fake loader.
+  ///
+  /// This page is the end-of-registration review only. Editing an existing
+  /// profile happens on Edit Profile's section list and its per-section
+  /// pages, each of which saves just its own section — there is no
+  /// whole-profile save here any more.
+  void _onEnterApp() => context.go(RouteNames.registrationCompleting);
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final draft = ref.watch(registrationProvider);
-    final mode = ref.watch(profileFlowModeProvider);
-    final isEditMode = mode == ProfileFlowMode.edit;
     // Photos are a backend resource (PhotoController), not part of the draft —
     // read them from the single source of truth so the count/primary here
     // matches the wizard photo step and the profile dashboard exactly.
@@ -137,16 +59,15 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
     final completion =
         ref.watch(backendProfileCompletionProvider).valueOrNull ?? 0;
 
-    // Every section's Edit button opens the one editable page, scrolled to
-    // that section — except the three that are separate features with pages
-    // of their own, which are linked directly. See profileSectionRoute().
+    // Every section's Edit button opens that section's own edit page. See
+    // profileSectionRoute().
     void editStep(int step) {
       context.push(profileSectionRoute(step));
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditMode ? 'Edit Profile' : l10n.registrationReviewTitle),
+        title: Text(l10n.registrationReviewTitle),
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
@@ -227,25 +148,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                         _ri('Sub Caste', draft.religionDetails.subCaste),
                         _ri('Community', draft.religionDetails.community),
                         _ri('Gothra', draft.religionDetails.gothra),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // ─── Step 3: Languages ────────────────────────
-                    _ReviewSection(
-                      title: l10n.registrationLanguagesTitle,
-                      icon: Icons.translate_rounded,
-                      stepIndex: 2,
-                      onEdit: () => editStep(2),
-                      items: [
-                        _ri(
-                          'Mother Tongue',
-                          draft.languageDetails.motherTongue,
-                        ),
-                        _ri(
-                          'Languages Known',
-                          draft.languageDetails.languagesKnown.join(', '),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -397,8 +299,7 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                     //
                     // Reuses the same PsychologySection widget and
                     // myPersonalityResultProvider as the psychology feature
-                    // and the (former edit-mode-only) Profile Intelligence
-                    // block below — no separate review-row implementation.
+                    // — no separate review-row implementation.
                     Text(
                       l10n.registrationWizardQuizHeadline,
                       style: AppTypography.titleMedium.copyWith(
@@ -508,77 +409,6 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                         ),
                       ],
                     ),
-                    // ─── Profile Intelligence (EDIT MODE ONLY) ─────
-                    //
-                    // Registration mode already showed the personality quiz
-                    // as Step 10 above. This block only covers prompts and
-                    // horoscope-compatibility matching — those stay optional
-                    // enrichment, added anytime from Edit Profile, never
-                    // blocking a new user. Sourced entirely from independent
-                    // providers (profile_prompts / astro features) — never
-                    // from ProfileDraft, registrationProvider or
-                    // RegistrationRepository.
-                    if (isEditMode) ...[
-                      const SizedBox(height: 24),
-                      Text(
-                        AppLocalizations.of(context).drawerProfileIntelligence,
-                        style: AppTypography.headlineSmall.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        AppLocalizations.of(context).profileIntelReviewSubtitle,
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textSecondaryLight,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Consumer(
-                        builder: (context, ref, _) {
-                          final promptsAsync = ref.watch(myPromptsProvider);
-                          final prompts = promptsAsync.value ?? const [];
-                          return ProfilePromptSection(
-                            prompts: prompts,
-                            editable: true,
-                            onEditTap: () async {
-                              final result = await context
-                                  .push<List<PromptAnswer>>(
-                                    RouteNames.choosePrompt,
-                                    extra: prompts,
-                                  );
-                              if (result != null) {
-                                await ref
-                                    .read(profilePromptRepositoryProvider)
-                                    .saveUserPrompts(result);
-                              }
-                              ref.invalidate(myPromptsProvider);
-                            },
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      Consumer(
-                        builder: (context, ref, _) {
-                          final horoscopeAsync = ref.watch(
-                            myHoroscopeSummaryProvider,
-                          );
-                          final summary = horoscopeAsync.value;
-                          return GestureDetector(
-                            onTap: () async {
-                              await context.push(RouteNames.horoscopeMatching);
-                              ref.invalidate(myHoroscopeSummaryProvider);
-                            },
-                            child: HoroscopeCompatibilitySection(
-                              rasi: summary?.rasi,
-                              nakshatra: summary?.nakshatra,
-                              dosham: summary?.dosham,
-                              matchingEnabled: summary?.matchingEnabled ?? true,
-                            ),
-                          );
-                        },
-                      ),
-                    ],
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -599,13 +429,10 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                 ],
               ),
               child: NmGradientButton(
-                label: isEditMode
-                    ? 'Save Changes'
-                    : l10n.registrationContinueYourStory,
+                label: l10n.registrationContinueYourStory,
                 useAccentGradient: true,
                 icon: Icons.favorite_rounded,
-                isLoading: _isSaving,
-                onPressed: _isSaving ? null : _onEnterApp,
+                onPressed: _onEnterApp,
               ),
             ),
           ],

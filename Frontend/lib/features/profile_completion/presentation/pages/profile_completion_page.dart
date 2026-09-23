@@ -192,13 +192,6 @@ class _ProfileCompletionBody extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           NmGrowthCard(
-            icon: Icons.chat_bubble_outline_rounded,
-            title: l10n.profileCompletionGrowthPrompts,
-            subtitle: l10n.profileCompletionGrowthPromptsSubtitle,
-            onTap: () => context.push(RouteNames.choosePrompt, extra: const []),
-          ),
-          const SizedBox(height: 12),
-          NmGrowthCard(
             icon: Icons.workspace_premium_rounded,
             title: l10n.profileCompletionGrowthPremium,
             subtitle: l10n.profileCompletionGrowthPremiumSubtitle,

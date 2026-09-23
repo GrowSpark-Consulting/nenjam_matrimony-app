@@ -25,14 +25,20 @@ class NmQuickAction {
 class NmQuickActionsCard extends StatelessWidget {
   final List<NmQuickAction> actions;
 
-  const NmQuickActionsCard({super.key, required this.actions});
+  /// Heading above the grid. Defaults to "Quick Actions".
+  final String? title;
+
+  const NmQuickActionsCard({super.key, required this.actions, this.title});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(AppLocalizations.of(context).profileQuickActions, style: AppTypography.titleMedium),
+        Text(
+          title ?? AppLocalizations.of(context).profileQuickActions,
+          style: AppTypography.titleMedium,
+        ),
         const SizedBox(height: AppSpacing.md),
         // A Wrap of quarter-width tiles sizes to its content height, so
         // tiles never clip when the label wraps under large font scaling

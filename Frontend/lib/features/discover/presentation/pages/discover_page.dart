@@ -46,9 +46,6 @@ import '../widgets/compatibility_badge.dart';
 ///   5. Verified Profiles — full-height card with stats
 ///   6. Near You — 2-column grid
 ///   7. Premium Members — deep plum section
-///
-/// Profile Intelligence is optional enrichment, never auto-opened here —
-/// users reach it deliberately via the profile menu or Profile page.
 class DiscoverPage extends ConsumerWidget {
   const DiscoverPage({super.key});
 

@@ -3146,13 +3146,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'See your astrological match insights.';
 
   @override
-  String get profileCompletionGrowthPrompts => 'Profile Prompts';
-
-  @override
-  String get profileCompletionGrowthPromptsSubtitle =>
-      'Add a few words that sound like you.';
-
-  @override
   String get profileCompletionGrowthPremium => 'Nenjam Premium';
 
   @override
@@ -3212,9 +3205,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get drawerEditProfile => 'Edit Profile';
-
-  @override
-  String get drawerProfileIntelligence => 'Profile Intelligence';
 
   @override
   String get drawerHoroscope => 'Horoscope';
@@ -4023,9 +4013,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add your horoscope details to enable compatibility matching.';
 
   @override
-  String get riAddFirstPrompt => 'Add your first profile prompt';
-
-  @override
   String get riDiscoverPersonality => 'Discover your personality';
 
   @override
@@ -4157,6 +4144,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileQuickActions => 'Quick Actions';
 
   @override
+  String get profileManageSections => 'Manage Your Profile';
+
+  @override
   String get profileAiMatchCoach => 'AI MATCH COACH';
 
   @override
@@ -4236,67 +4226,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileDetailActiveNow => 'Active now';
-
-  @override
-  String get profileIntelEnrichTitle => 'Enrich your profile';
-
-  @override
-  String get profileIntelEnrichSubtitle =>
-      'These are optional — add them anytime to help us find better matches for you.';
-
-  @override
-  String get profileIntelReviewSubtitle =>
-      'Optional enrichment — add anytime to help us find better matches.';
-
-  @override
-  String get profileIntelPersonalityInsights => 'Personality Insights';
-
-  @override
-  String get promptsChooseTitle => 'Choose a Prompt';
-
-  @override
-  String get promptsMaxReached =>
-      'You\'ve picked 3 prompts — the maximum. Remove one to add another.';
-
-  @override
-  String get promptsLoadError => 'Could not load prompts.';
-
-  @override
-  String get promptsCategoryEmpty => 'No more prompts in this category.';
-
-  @override
-  String get promptsYourAnswer => 'Your Answer';
-
-  @override
-  String get promptsAnswerHint => 'Write your answer…';
-
-  @override
-  String get promptsYourPromptsTitle => 'Your Prompts';
-
-  @override
-  String get promptsDeleteConfirmTitle => 'Remove this prompt?';
-
-  @override
-  String get promptsDeleteConfirmMessage =>
-      'This answer will be removed from your profile.';
-
-  @override
-  String get promptsDeleteSuccess => 'Prompt removed';
-
-  @override
-  String get promptsDeleteErrorNetwork =>
-      'Couldn\'t reach the server. Check your connection and try again.';
-
-  @override
-  String get promptsDeleteErrorUnauthorized =>
-      'Your session expired. Please sign in again.';
-
-  @override
-  String get promptsDeleteErrorNotFound => 'This prompt was already removed.';
-
-  @override
-  String get promptsDeleteErrorGeneric =>
-      'Couldn\'t remove the prompt. Try again.';
 
   @override
   String get psychologyQuizTitle => 'Psychological Quiz';

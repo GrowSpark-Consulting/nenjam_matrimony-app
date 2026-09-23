@@ -62,18 +62,7 @@ abstract final class ApiEndpoints {
   /// one location per member, replaced wholesale.
   static const String profileMeLocation = '/profiles/me/location';
 
-  // ─── Relationship Intelligence (Prompts / Psychology / Horoscope Compat) ──
-  static const String profilePromptsBank = '/profiles/prompts/bank';
-  static const String profilePromptsMe = '/profiles/prompts/me';
-
-  /// `DELETE /profiles/prompts/me/:promptId` — removes one saved prompt
-  /// answer (backend/apps/api/src/modules/profiles' PromptsController
-  /// `deleteMine`). [promptId] is the prompt-bank id (`PromptAnswer.promptId`),
-  /// not the row's own database id — the backend deletes by
-  /// `(userId, promptId)`, which is unique per the schema's
-  /// `@@unique([userId, promptId])`.
-  static String profilePromptDelete(String promptId) =>
-      '/profiles/prompts/me/$promptId';
+  // ─── Relationship Intelligence (Psychology / Horoscope Compat) ──
   static const String psychologyQuizActive = '/psychology/quiz/active';
   static const String psychologyQuizMe = '/psychology/quiz/me';
   static const String psychologyQuizSubmit = '/psychology/quiz/submit';
@@ -133,11 +122,8 @@ abstract final class ApiEndpoints {
   static const String discoverPreferences = '/discover/preferences';
 
   // ─── Matches ─────────────────────────────────────────────────────
-  static const String matches = '/matches';
   static const String matchInterest = '/matches/interest';
   static const String matchShortlist = '/matches/shortlist';
-  static const String matchDecline = '/matches/decline';
-  static const String matchViewed = '/matches/viewed';
 
   // Real, implemented routes (backend/apps/api/src/modules/matches/
   // controllers/matches.controller.ts). `matchProfileViews` lists who viewed
