@@ -1,8 +1,10 @@
 import type { RedisService } from '@app/cache';
 import {
+  AUTH_USER_CACHE_TTL_SECONDS,
   BLOCKED_ACCOUNT_STATUSES,
   getCachedAuthUser,
   getCachedUserId,
+  invalidateCachedUserId,
   isAccountUsable,
   setCachedAuthUser,
 } from './auth-user-cache';
@@ -73,6 +75,43 @@ describe('auth user cache', () => {
     const { service } = redis();
     await setCachedAuthUser(service, 'uid-1', ACTIVE);
     await expect(getCachedUserId(service, 'uid-1')).resolves.toBe('u1');
+  });
+
+  describe('how long a stale status can survive', () => {
+    it('expires after a minute — the ceiling on a ban applied straight in SQL', () => {
+      // This number is the worst case for the one control that stops an
+      // abusive member, so it is asserted rather than left to a comment. It was
+      // 900 (15 minutes), which is far too long to leave a banned account live.
+      expect(AUTH_USER_CACHE_TTL_SECONDS).toBe(60);
+    });
+
+    it('writes the entry with that TTL', async () => {
+      const set = jest.fn().mockResolvedValue('OK');
+      const { service } = redis({ set });
+      await setCachedAuthUser(service, 'uid-1', ACTIVE);
+      expect(set).toHaveBeenCalledWith(
+        'authuser:v2:uid:uid-1',
+        JSON.stringify(ACTIVE),
+        'EX',
+        60,
+      );
+    });
+
+    it('drops the entry on invalidation, so a deliberate ban needs no waiting', async () => {
+      const { service } = redis();
+      await setCachedAuthUser(service, 'uid-1', ACTIVE);
+      await invalidateCachedUserId(service, 'uid-1');
+      await expect(getCachedAuthUser(service, 'uid-1')).resolves.toBeNull();
+    });
+
+    it('invalidation is a no-op when Redis is down, never an error', async () => {
+      const down = {
+        getClient: () => ({ status: 'connecting' }),
+      } as unknown as RedisService;
+      await expect(
+        invalidateCachedUserId(down, 'uid-1'),
+      ).resolves.toBeUndefined();
+    });
   });
 
   it('treats a v1 entry (a bare id string) as a miss rather than trusting it', async () => {
