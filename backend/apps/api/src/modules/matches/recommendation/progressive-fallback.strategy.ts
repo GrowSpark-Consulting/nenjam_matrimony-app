@@ -97,23 +97,37 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
     const tier1 = plan[0];
     const tier1Where = whereFor(tier1);
 
-    // Counting before fetching is deliberate and stays that way. Issuing the
-    // count and the row fetch together would remove one sequential round trip
-    // on the common path, but it also fetches rows for a tier that may turn out
-    // to be empty — breaking the "findRows runs at most once per request"
-    // invariant this strategy is tested on. The round-trip saving could not be
-    // measured against this database's own noise (a bare `SELECT 1` ranges
-    // 177ms to 2013ms), so the invariant wins.
-    const tier1Count = await this.feedRepository.countMatching(tier1Where);
+    // Tier 1's count and its rows are issued TOGETHER, not one after the other.
+    //
+    // They are independent queries against the same WHERE, and a round trip to
+    // this database costs ~250ms — so awaiting the count first made the common
+    // request (Tier 1 hits for almost everyone) pay two sequential trips where
+    // one would do. Overlapping them removes a whole trip from the hot path.
+    //
+    // The cost of that: when Tier 1 turns out to be empty, its row fetch was
+    // wasted. That fetch returns no rows, so it transfers nothing and stops at
+    // the same point the count does — a cheap query on the rare path, traded
+    // for a saved round trip on the common one.
+    //
+    // The count still decides the tier, not the row count: with `skip` past the
+    // end of a non-empty tier the fetch legitimately returns nothing, and
+    // falling through to the wider tiers there would quietly relax someone's
+    // preferences on page 3 while pages 1-2 were exact.
+    const [tier1Count, tier1Rows] = await Promise.all([
+      this.feedRepository.countMatching(tier1Where),
+      this.feedRepository.findRows(tier1Where, { skip, take }, self.userId),
+    ]);
     if (tier1Count > 0) {
-      return this.page(
-        tier1,
-        tier1Where,
-        tier1Count,
-        { skip, take },
-        self,
-        pref,
-      );
+      return {
+        rows: tier1Rows,
+        total: tier1Count,
+        seeker: self,
+        seekerPreference: pref,
+        tier: tier1.tier,
+        fallbackUsed: false,
+        reason: tier1.reason,
+        relaxedFilters: tier1.relaxedFilters,
+      };
     }
 
     // Tier 1 was empty. The tier plan is *monotonically relaxing* — every
