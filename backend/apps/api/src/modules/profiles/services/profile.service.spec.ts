@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import type { FeedInvalidationService } from '../../matches/cache/feed-invalidation.service';
 import { S3Service } from '@app/storage';
 import { LocationService } from '../../reference-data/services/location.service';
@@ -93,19 +94,24 @@ function buildService(draftData: Record<string, unknown>) {
     draftService,
     completionService,
     emailDispatch as never,
-      // Feed invalidation is fire-and-forget bookkeeping after a successful
-      // write; these tests assert the write, not the cache signalling.
-      { invalidate: jest.fn(), invalidatePair: jest.fn() } as unknown as FeedInvalidationService,
-      // S3 stub reporting "not configured", so getOwn()'s presigning step
-      // is a no-op and photo `cdnUrl`s reach these assertions exactly as the
-      // repository returned them — these tests are about profile assembly,
-      // not URL signing (see photo.service.spec.ts for that).
-      { isConfigured: () => false } as unknown as S3Service,
-      // These drafts carry no location codes, so `resolve` returning null is
-      // exactly what the real service does with them — the free-text city and
-      // state are what these tests assert on.
-      { resolve: jest.fn().mockResolvedValue(null) } as unknown as LocationService,
-    );
+    // Feed invalidation is fire-and-forget bookkeeping after a successful
+    // write; these tests assert the write, not the cache signalling.
+    {
+      invalidate: jest.fn(),
+      invalidatePair: jest.fn(),
+    } as unknown as FeedInvalidationService,
+    // S3 stub reporting "not configured", so getOwn()'s presigning step
+    // is a no-op and photo `cdnUrl`s reach these assertions exactly as the
+    // repository returned them — these tests are about profile assembly,
+    // not URL signing (see photo.service.spec.ts for that).
+    { isConfigured: () => false } as unknown as S3Service,
+    // These drafts carry no location codes, so `resolve` returning null is
+    // exactly what the real service does with them — the free-text city and
+    // state are what these tests assert on.
+    {
+      resolve: jest.fn().mockResolvedValue(null),
+    } as unknown as LocationService,
+  );
   return { service, upsertProfile, emailDispatch };
 }
 
@@ -138,12 +144,25 @@ describe('ProfileService.syncMatchableFromDraft', () => {
     expect(upsertProfile).not.toHaveBeenCalled();
   });
 
-  it('never throws — a materialisation failure must not fail the step save', async () => {
+  // Reversed deliberately: a swallowed failure let a section PATCH answer 200
+  // while user_profiles kept the old values, so the client reported a save
+  // that the public profile never received.
+  it('surfaces a materialisation failure instead of reporting success', async () => {
     const { service, upsertProfile } = buildService(COMPLETE_DRAFT);
     upsertProfile.mockRejectedValueOnce(new Error('db down'));
 
-    await expect(
-      service.syncMatchableFromDraft('user-1'),
-    ).resolves.toBeUndefined();
+    await expect(service.syncMatchableFromDraft('user-1')).rejects.toThrow(
+      'db down',
+    );
+  });
+
+  it('keeps an HTTP error intact, so its status and message reach the client', async () => {
+    const { service, upsertProfile } = buildService(COMPLETE_DRAFT);
+    const rejection = new NotFoundException('Unknown city code "XX".');
+    upsertProfile.mockRejectedValueOnce(rejection);
+
+    await expect(service.syncMatchableFromDraft('user-1')).rejects.toBe(
+      rejection,
+    );
   });
 });

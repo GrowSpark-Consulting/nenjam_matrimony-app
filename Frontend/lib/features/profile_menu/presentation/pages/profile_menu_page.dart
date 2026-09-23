@@ -239,12 +239,6 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
                             openEditProfile(context, ref, wizardStep: 9),
                       ),
                       _DrawerItem(
-                        icon: Icons.auto_awesome_rounded,
-                        label: l10n.drawerProfileIntelligence,
-                        onTap: () =>
-                            context.push(RouteNames.profileIntelligence),
-                      ),
-                      _DrawerItem(
                         icon: Icons.shield_outlined,
                         label: l10n.drawerVerificationCenter,
                         onTap: () =>

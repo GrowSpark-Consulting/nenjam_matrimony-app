@@ -1,0 +1,99 @@
+{
+  "basicDetails": {
+    "method": "PATCH",
+    "path": "/profiles/draft/basic-details",
+    "query": null,
+    "body": {
+      "firstName": "Meenakshi",
+      "lastName": "Rajan",
+      "gender": "FEMALE",
+      "dob": "1995-03-21",
+      "maritalStatus": "NEVER_MARRIED",
+      "profileCreatedFor": "Myself"
+    }
+  },
+  "religionDetails": {
+    "method": "PATCH",
+    "path": "/profiles/draft/religion-details",
+    "query": null,
+    "body": {
+      "religion": "Hindu",
+      "caste": "Brahmin",
+      "subCaste": "Vathima",
+      "gothra": "Kashyapa",
+      "community": "Iyer",
+      "religionCode": "HINDU",
+      "communityCode": "HINDU-IYER"
+    }
+  },
+  "locationDetails": {
+    "method": "PATCH",
+    "path": "/profiles/draft/location-details",
+    "query": null,
+    "body": {
+      "country": "India",
+      "state": "Gujarat",
+      "city": "Ahmedabad",
+      "pinCode": "600001",
+      "countryCode": "IN",
+      "stateCode": "IN-GJ",
+      "cityCode": "IN-GJ-AHMEDABAD"
+    }
+  },
+  "educationDetails": {
+    "method": "PATCH",
+    "path": "/profiles/draft/education-details",
+    "query": null,
+    "body": {
+      "qualification": "M.Tech / M.E",
+      "college": "Anna University",
+      "occupation": "Software Engineer",
+      "company": "Globex",
+      "employmentType": "Private",
+      "annualIncome": "20 - 50 Lakhs"
+    }
+  },
+  "physicalDetails": {
+    "method": "PATCH",
+    "path": "/profiles/draft/physical-details",
+    "query": null,
+    "body": {
+      "height": "5'6\" (168 cm)",
+      "weight": "55",
+      "disability": "None"
+    }
+  },
+  "lifestyleDetails": {
+    "method": "PATCH",
+    "path": "/profiles/draft/lifestyle-details",
+    "query": null,
+    "body": {
+      "eatingHabit": "Eggetarian",
+      "smoking": "No",
+      "aboutMe": "I love music and travel."
+    }
+  },
+  "familyDetails": {
+    "method": "PATCH",
+    "path": "/profiles/draft/family-details",
+    "query": null,
+    "body": {
+      "father": {
+        "name": "Suresh",
+        "age": 58,
+        "occupation": "Engineer"
+      },
+      "familyType": "Joint"
+    }
+  },
+  "horoscopeDetails": {
+    "method": "PATCH",
+    "path": "/profiles/draft/horoscope-details",
+    "query": null,
+    "body": {
+      "rashi": "Mesha",
+      "nakshatra": "Ashwini",
+      "horoscopeAvailable": false
+    }
+  }
+}

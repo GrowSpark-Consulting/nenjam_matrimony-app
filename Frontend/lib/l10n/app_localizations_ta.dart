@@ -3199,13 +3199,6 @@ class AppLocalizationsTa extends AppLocalizations {
       'உங்கள் ஜோதிட பொருத்த நுண்ணறிவுகளைப் பாருங்கள்.';
 
   @override
-  String get profileCompletionGrowthPrompts => 'சுயவிவர கேள்விகள்';
-
-  @override
-  String get profileCompletionGrowthPromptsSubtitle =>
-      'உங்களைப் போல் தோன்றும் சில வார்த்தைகளைச் சேர்க்கவும்.';
-
-  @override
   String get profileCompletionGrowthPremium => 'நெஞ்சம் பிரீமியம்';
 
   @override
@@ -3265,9 +3258,6 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get drawerEditProfile => 'சுயவிவரம் திருத்து';
-
-  @override
-  String get drawerProfileIntelligence => 'சுயவிவர நுண்ணறிவு';
 
   @override
   String get drawerHoroscope => 'ஜாதகம்';
@@ -4090,10 +4080,6 @@ class AppLocalizationsTa extends AppLocalizations {
       'பொருத்தப் பரிசோதனையை இயக்க உங்கள் ஜாதக விவரங்களைச் சேர்க்கவும்.';
 
   @override
-  String get riAddFirstPrompt =>
-      'உங்கள் முதல் சுயவிவரக் கேள்வியைச் சேர்க்கவும்';
-
-  @override
   String get riDiscoverPersonality => 'உங்கள் ஆளுமையைக் கண்டறியுங்கள்';
 
   @override
@@ -4228,6 +4214,9 @@ class AppLocalizationsTa extends AppLocalizations {
   String get profileQuickActions => 'விரைவுச் செயல்கள்';
 
   @override
+  String get profileManageSections => 'உங்கள் சுயவிவரத்தை நிர்வகிக்கவும்';
+
+  @override
   String get profileAiMatchCoach => 'AI பொருத்த பயிற்சியாளர்';
 
   @override
@@ -4307,68 +4296,6 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get profileDetailActiveNow => 'இப்போது செயலில்';
-
-  @override
-  String get profileIntelEnrichTitle => 'உங்கள் சுயவிவரத்தை வளப்படுத்துங்கள்';
-
-  @override
-  String get profileIntelEnrichSubtitle =>
-      'இவை விருப்பத்தேர்வு — சிறந்த பொருத்தங்களைக் கண்டறிய எப்போது வேண்டுமானாலும் சேர்க்கலாம்.';
-
-  @override
-  String get profileIntelReviewSubtitle =>
-      'விருப்ப வளப்படுத்தல் — சிறந்த பொருத்தங்களைக் கண்டறிய எப்போது வேண்டுமானாலும் சேர்க்கலாம்.';
-
-  @override
-  String get profileIntelPersonalityInsights => 'ஆளுமை நுண்ணறிவுகள்';
-
-  @override
-  String get promptsChooseTitle => 'ஒரு கேள்வியைத் தேர்ந்தெடுக்கவும்';
-
-  @override
-  String get promptsMaxReached =>
-      'நீங்கள் அதிகபட்சமாக 3 கேள்விகளைத் தேர்ந்தெடுத்துவிட்டீர்கள். மற்றொன்றைச் சேர்க்க ஒன்றை நீக்கவும்.';
-
-  @override
-  String get promptsLoadError => 'கேள்விகளை ஏற்ற முடியவில்லை.';
-
-  @override
-  String get promptsCategoryEmpty => 'இந்தப் பிரிவில் மேலும் கேள்விகள் இல்லை.';
-
-  @override
-  String get promptsYourAnswer => 'உங்கள் பதில்';
-
-  @override
-  String get promptsAnswerHint => 'உங்கள் பதிலை எழுதுங்கள்…';
-
-  @override
-  String get promptsYourPromptsTitle => 'உங்கள் ப்ராம்ப்ட்கள்';
-
-  @override
-  String get promptsDeleteConfirmTitle => 'இந்த ப்ராம்ப்ட்டை அகற்றவா?';
-
-  @override
-  String get promptsDeleteConfirmMessage =>
-      'இந்த பதில் உங்கள் சுயவிவரத்திலிருந்து அகற்றப்படும்.';
-
-  @override
-  String get promptsDeleteSuccess => 'ப்ராம்ப்ட் அகற்றப்பட்டது';
-
-  @override
-  String get promptsDeleteErrorNetwork =>
-      'சேவையகத்தை அணுக முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
-
-  @override
-  String get promptsDeleteErrorUnauthorized =>
-      'உங்கள் அமர்வு காலாவதியானது. மீண்டும் உள்நுழையவும்.';
-
-  @override
-  String get promptsDeleteErrorNotFound =>
-      'இந்த ப்ராம்ப்ட் ஏற்கனவே அகற்றப்பட்டது.';
-
-  @override
-  String get promptsDeleteErrorGeneric =>
-      'ப்ராம்ப்ட்டை அகற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
 
   @override
   String get psychologyQuizTitle => 'உளவியல் தேர்வு';

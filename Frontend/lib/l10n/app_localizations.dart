@@ -5996,18 +5996,6 @@ abstract class AppLocalizations {
   /// **'See your astrological match insights.'**
   String get profileCompletionGrowthHoroscopeSubtitle;
 
-  /// No description provided for @profileCompletionGrowthPrompts.
-  ///
-  /// In en, this message translates to:
-  /// **'Profile Prompts'**
-  String get profileCompletionGrowthPrompts;
-
-  /// No description provided for @profileCompletionGrowthPromptsSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Add a few words that sound like you.'**
-  String get profileCompletionGrowthPromptsSubtitle;
-
   /// No description provided for @profileCompletionGrowthPremium.
   ///
   /// In en, this message translates to:
@@ -6121,12 +6109,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit Profile'**
   String get drawerEditProfile;
-
-  /// No description provided for @drawerProfileIntelligence.
-  ///
-  /// In en, this message translates to:
-  /// **'Profile Intelligence'**
-  String get drawerProfileIntelligence;
 
   /// No description provided for @drawerHoroscope.
   ///
@@ -7574,12 +7556,6 @@ abstract class AppLocalizations {
   /// **'Add your horoscope details to enable compatibility matching.'**
   String get riHoroscopeEmpty;
 
-  /// No description provided for @riAddFirstPrompt.
-  ///
-  /// In en, this message translates to:
-  /// **'Add your first profile prompt'**
-  String get riAddFirstPrompt;
-
   /// No description provided for @riDiscoverPersonality.
   ///
   /// In en, this message translates to:
@@ -7820,6 +7796,12 @@ abstract class AppLocalizations {
   /// **'Quick Actions'**
   String get profileQuickActions;
 
+  /// No description provided for @profileManageSections.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Your Profile'**
+  String get profileManageSections;
+
   /// No description provided for @profileAiMatchCoach.
   ///
   /// In en, this message translates to:
@@ -7975,114 +7957,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Active now'**
   String get profileDetailActiveNow;
-
-  /// No description provided for @profileIntelEnrichTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Enrich your profile'**
-  String get profileIntelEnrichTitle;
-
-  /// No description provided for @profileIntelEnrichSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'These are optional — add them anytime to help us find better matches for you.'**
-  String get profileIntelEnrichSubtitle;
-
-  /// No description provided for @profileIntelReviewSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Optional enrichment — add anytime to help us find better matches.'**
-  String get profileIntelReviewSubtitle;
-
-  /// No description provided for @profileIntelPersonalityInsights.
-  ///
-  /// In en, this message translates to:
-  /// **'Personality Insights'**
-  String get profileIntelPersonalityInsights;
-
-  /// No description provided for @promptsChooseTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose a Prompt'**
-  String get promptsChooseTitle;
-
-  /// No description provided for @promptsMaxReached.
-  ///
-  /// In en, this message translates to:
-  /// **'You\'ve picked 3 prompts — the maximum. Remove one to add another.'**
-  String get promptsMaxReached;
-
-  /// No description provided for @promptsLoadError.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not load prompts.'**
-  String get promptsLoadError;
-
-  /// No description provided for @promptsCategoryEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'No more prompts in this category.'**
-  String get promptsCategoryEmpty;
-
-  /// No description provided for @promptsYourAnswer.
-  ///
-  /// In en, this message translates to:
-  /// **'Your Answer'**
-  String get promptsYourAnswer;
-
-  /// No description provided for @promptsAnswerHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Write your answer…'**
-  String get promptsAnswerHint;
-
-  /// No description provided for @promptsYourPromptsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Your Prompts'**
-  String get promptsYourPromptsTitle;
-
-  /// No description provided for @promptsDeleteConfirmTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Remove this prompt?'**
-  String get promptsDeleteConfirmTitle;
-
-  /// No description provided for @promptsDeleteConfirmMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'This answer will be removed from your profile.'**
-  String get promptsDeleteConfirmMessage;
-
-  /// No description provided for @promptsDeleteSuccess.
-  ///
-  /// In en, this message translates to:
-  /// **'Prompt removed'**
-  String get promptsDeleteSuccess;
-
-  /// No description provided for @promptsDeleteErrorNetwork.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t reach the server. Check your connection and try again.'**
-  String get promptsDeleteErrorNetwork;
-
-  /// No description provided for @promptsDeleteErrorUnauthorized.
-  ///
-  /// In en, this message translates to:
-  /// **'Your session expired. Please sign in again.'**
-  String get promptsDeleteErrorUnauthorized;
-
-  /// No description provided for @promptsDeleteErrorNotFound.
-  ///
-  /// In en, this message translates to:
-  /// **'This prompt was already removed.'**
-  String get promptsDeleteErrorNotFound;
-
-  /// No description provided for @promptsDeleteErrorGeneric.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t remove the prompt. Try again.'**
-  String get promptsDeleteErrorGeneric;
 
   /// No description provided for @psychologyQuizTitle.
   ///

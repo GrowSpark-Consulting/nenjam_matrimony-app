@@ -223,7 +223,9 @@ export class ProfileService {
    * throwing, because getOwn() also answers the client's "do I have a
    * finalized profile?" routing check — that must not turn into a 500.
    */
-  private async withPresignedUrls(photos: PhotoEntity[]): Promise<PhotoEntity[]> {
+  private async withPresignedUrls(
+    photos: PhotoEntity[],
+  ): Promise<PhotoEntity[]> {
     if (photos.length === 0 || !this.s3.isConfigured()) return photos;
     try {
       return await Promise.all(
@@ -386,9 +388,17 @@ export class ProfileService {
    * profile field exists — without waiting for the optional steps (photos,
    * quiz, verification) or the final Review/finalize tap. Called after every
    * wizard draft-section save (see ProfileDraftController). No-op until the
-   * mandatory set is complete. Never throws: the draft is already persisted, so
-   * a failure here must not fail the user's step save — they'll still become
-   * matchable on the next save or at finalize().
+   * mandatory set is complete.
+   *
+   * A materialisation FAILURE propagates. It used to be logged and swallowed,
+   * so the section PATCH answered 200 while `user_profiles` — the row every
+   * other member's Discover, search and profile view reads — kept the old
+   * values: the client reported "Profile updated" over a public profile that
+   * was not. Now the PATCH fails with the cause (a location code the master
+   * data rejects surfaces as its own 404 message; anything unexpected as a
+   * 500), and the editor keeps the member on the page to retry. The draft
+   * itself is already persisted by then; a retry re-sends the same section —
+   * an idempotent merge — and re-attempts the copy.
    *
    * [draftData] lets a caller that just fetched/merged the draft (e.g.
    * ProfileDraftController.save, right after updateSection) pass it straight
@@ -431,9 +441,10 @@ export class ProfileService {
         `[STORY-PERF-SRV] ${Date.now()} syncMatchableFromDraft: recalculateAndPersistCompletion complete`,
       );
     } catch (error) {
-      this.logger.warn(
-        `Auto-materialise from draft skipped for ${userId}: ${(error as Error).message}`,
+      this.logger.error(
+        `Materialise from draft failed for ${userId}: ${(error as Error).message}`,
       );
+      throw error;
     }
   }
 
@@ -554,9 +565,15 @@ export class ProfileService {
       // these keys are absent entirely rather than null, so an existing
       // profile that already has codes keeps them instead of having them
       // wiped by a save from an older client.
-      ...(resolved?.countryCode ? { countryRef: { connect: { code: resolved.countryCode } } } : {}),
-      ...(resolved?.stateCode ? { stateRef: { connect: { code: resolved.stateCode } } } : {}),
-      ...(resolved?.cityCode ? { cityRef: { connect: { code: resolved.cityCode } } } : {}),
+      ...(resolved?.countryCode
+        ? { countryRef: { connect: { code: resolved.countryCode } } }
+        : {}),
+      ...(resolved?.stateCode
+        ? { stateRef: { connect: { code: resolved.stateCode } } }
+        : {}),
+      ...(resolved?.cityCode
+        ? { cityRef: { connect: { code: resolved.cityCode } } }
+        : {}),
       area: (location.area as string) || null,
       pinCode: (location.pinCode as string) || null,
       bio: (lifestyle.aboutMe as string) || null,
@@ -639,9 +656,8 @@ export class ProfileService {
         partnerPref.preferredHeightRange as string | undefined,
         [null, null],
       );
-      partnerPrefWrite = this.profileRepository.createPartnerPreferenceIfMissing(
-        userId,
-        {
+      partnerPrefWrite =
+        this.profileRepository.createPartnerPreferenceIfMissing(userId, {
           minAge,
           maxAge,
           minHeightCm,
@@ -674,8 +690,7 @@ export class ProfileService {
           ),
           extendedPreferences:
             (partnerPref.extended as Prisma.InputJsonValue | undefined) ?? {},
-        },
-      );
+        });
     }
 
     const [writtenProfile] = await Promise.all([

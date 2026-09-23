@@ -25,7 +25,11 @@ import 'package:nenjam_matrimony/features/registration/presentation/pages/onboar
 import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_name_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_religion_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/profile_basics_page.dart';
-import 'package:nenjam_matrimony/features/registration/presentation/pages/profile_edit_page.dart';
+import 'package:nenjam_matrimony/features/profile/presentation/providers/profile_dashboard_providers.dart';
+import 'package:nenjam_matrimony/features/registration/domain/models/profile_flow_mode.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/pages/edit_profile_page.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/pages/profile_section_edit_page.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/providers/registration_provider.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/registration_page.dart';
 import 'package:nenjam_matrimony/features/profile_photos/data/repositories/photo_repository.dart';
 import 'package:nenjam_matrimony/features/profile_photos/domain/models/user_photo.dart';
@@ -419,17 +423,48 @@ void main() {
     await _audit(tester, 'ProfileBasicsPage', () => const ProfileBasicsPage());
   });
 
-  testWidgets('Profile edit is responsive across phone sizes', (tester) async {
-    // Edit Profile's single editable page: every field section stacked in
-    // one viewport. The longest page in the app, and the one most exposed to
-    // a raised keyboard.
+  // Edit Profile is a section list, and each section is edited on a page of
+  // its own. EDIT mode is set so the pages open on the (empty) draft rather
+  // than fetching one.
+  final editMode = profileFlowModeProvider.overrideWith(
+    (ref) => ProfileFlowMode.edit,
+  );
+
+  testWidgets('Edit Profile is responsive across phone sizes', (tester) async {
     await _audit(
       tester,
-      'ProfileEditPage',
-      () => const ProfileEditPage(),
+      'EditProfilePage',
+      () => const EditProfilePage(),
       overrides: [
+        editMode,
+        profileDraftResponseProvider.overrideWith((ref) async => {}),
         photoRepositoryProvider.overrideWithValue(_EmptyPhotoRepository()),
       ],
+    );
+  });
+
+  testWidgets('Basic info edit is responsive across phone sizes', (
+    tester,
+  ) async {
+    // The densest section editor: two names, three date boxes, seven
+    // profile-for pills, the gender pair and a dropdown, behind a keyboard.
+    await _audit(
+      tester,
+      'BasicInfoEditPage',
+      () => const BasicInfoEditPage(),
+      overrides: [editMode],
+      keyboard: true,
+    );
+  });
+
+  testWidgets('Education & work edit is responsive across phone sizes', (
+    tester,
+  ) async {
+    await _audit(
+      tester,
+      'EducationWorkEditPage',
+      () => const EducationWorkEditPage(),
+      overrides: [editMode],
       keyboard: true,
     );
   });

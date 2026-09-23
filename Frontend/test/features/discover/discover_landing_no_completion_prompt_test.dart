@@ -287,7 +287,7 @@ void main() {
     test('has no route to Edit Profile', () {
       expect(code, isNot(contains('openEditProfile')));
       expect(code, isNot(contains('open_edit_profile')));
-      expect(code, isNot(contains('RouteNames.profileEdit')));
+      expect(code, isNot(contains('RouteNames.editProfile')));
     });
   });
 }

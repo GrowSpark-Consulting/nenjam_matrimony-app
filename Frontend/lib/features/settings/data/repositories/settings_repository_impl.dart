@@ -4,11 +4,12 @@ import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../domain/repositories/settings_repository.dart';
 
-/// Real backend implementation — dormant, not wired to any provider.
+/// Real backend implementation, wired through `settingsRepositoryProvider`
+/// (`settings_providers.dart`) and used by the Privacy page
+/// (`updatePrivacySettings`) and the Settings page (`deleteAccount`).
 ///
-/// TODO(backend): the `settings` controller is currently an empty stub —
-/// zero routes, despite `ApiEndpoints.settings`/`.privacySettings`/
-/// `.deleteAccount` all being defined.
+/// Backed by the `settings` controller's `GET /settings`,
+/// `PATCH /settings/privacy` and `DELETE /settings/delete-account` routes.
 class SettingsRepositoryImpl implements SettingsRepository {
   SettingsRepositoryImpl(this._apiClient);
 

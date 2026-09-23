@@ -108,6 +108,11 @@ Map<String, dynamic> _draft({bool allComplete = false}) => <String, dynamic>{
       isComplete: allComplete,
       wizardStep: 10,
     ),
+    _card(
+      CompletionCardKeys.verification,
+      isComplete: allComplete,
+      wizardStep: 12,
+    ),
   ],
 };
 
@@ -138,7 +143,7 @@ class _FakeRegistrationRepository implements RegistrationRepository {
 class _FakePhotosController extends PhotosController {
   @override
   // Photos already at the cap by default — these tests are about the feed
-  // and the four backend-scored sections, not the photo tile (that's
+  // and the five backend-scored sections, not the photo tile (that's
   // exercised in complete_profile_card_test.dart).
   Future<List<UserPhoto>> build() async => List.generate(
     kMaxPhotos,
@@ -255,7 +260,7 @@ void main() {
   });
 
   group('completion state still governs the card', () {
-    testWidgets('all four complete hides it on an empty feed', (tester) async {
+    testWidgets('all five complete hides it on an empty feed', (tester) async {
       await _pumpDiscover(
         tester,
         feed: _emptyFeed,
@@ -268,7 +273,7 @@ void main() {
       expect(find.byIcon(Icons.travel_explore_rounded), findsOneWidget);
     });
 
-    testWidgets('all four complete hides it on a populated feed', (
+    testWidgets('all five complete hides it on a populated feed', (
       tester,
     ) async {
       await _pumpDiscover(
@@ -297,7 +302,7 @@ void main() {
   });
 
   group('narrow screens', () {
-    testWidgets('no overflow with four tiles over an empty feed', (
+    testWidgets('no overflow with five tiles over an empty feed', (
       tester,
     ) async {
       await _pumpDiscover(

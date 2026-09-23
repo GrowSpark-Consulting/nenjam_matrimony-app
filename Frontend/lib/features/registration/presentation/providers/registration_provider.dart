@@ -45,43 +45,82 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
 
   // ─── Backend sync ────────────────────────────────────────────────────
   //
-  // Sections are written whole, by [publishEditedProfile] (EDIT MODE's Save)
-  // and [flushOnboardingToBackend] (the end of onboarding). Steps 9-12 are
-  // not written from this draft at all: the psychology quiz syncs through
-  // its own repository on submit, partner preferences through the standalone
-  // Partner Preferences page, photos immediately via PhotoController on
-  // upload, and verification status is read-only.
+  // Onboarding writes sections through [flushOnboardingToBackend] and the
+  // applyOnboarding* steps below. After registration, every section is edited
+  // on a page of its own and saved by exactly one of the publish* methods
+  // here — one section, one `PATCH /profiles/draft/<section>` — so saving one
+  // section can never re-send (and overwrite) another. There is no
+  // whole-profile save. Partner preferences, the psychology quiz, photos and
+  // verification are not written from this draft at all: each has its own
+  // feature, repository and API.
 
-  /// EDIT MODE's "Save Changes" from the review summary, where there is no
-  /// single open section to save: republishes the whole draft, materializing
-  /// once at the end. The same order and the same one-materialization rule
-  /// [flushOnboardingToBackend] uses — but errors propagate, because this one
-  /// is a member pressing Save and being told whether it worked.
-  Future<void> publishEditedProfile() async {
-    final repo = ref.read(registrationRepositoryProvider);
-    await repo.updateBasicDetails(state.basicDetails, skipMaterialize: true);
-    await repo.updateReligionDetails(state.religionDetails,
-        skipMaterialize: true);
-    await repo.updateLanguageDetails(state.languageDetails,
-        skipMaterialize: true);
-    await repo.updateLocationDetails(state.locationDetails,
-        skipMaterialize: true);
-    await repo.updatePhysicalDetails(state.physicalDetails,
-        skipMaterialize: true);
-    await repo.updateEducationDetails(state.educationDetails,
-        skipMaterialize: true);
-    // Family and horoscope were missing here until Edit Profile became a
-    // single editable page. It never showed, because the only way to reach
-    // those two sections was the per-section wizard, which saved through
-    // publishEditedSection() instead. Now that one Save covers every section
-    // at once, leaving them out would silently drop the member's edits.
-    await repo.updateFamilyDetails(state.familyDetails, skipMaterialize: true);
-    await repo.updateHoroscopeDetails(state.horoscopeDetails,
-        skipMaterialize: true);
-    // Last, and the only one that materializes — see flushOnboardingToBackend.
-    await repo.updateLifestyleDetails(state.lifestyleDetails);
+  /// Shared by every section save. The PATCH goes first and the draft is
+  /// only updated once it succeeds, so a failed save leaves the draft — and
+  /// the Edit Profile summary that reads it — exactly as the backend has it.
+  /// The one call per save, so it materializes. Errors propagate so the page
+  /// can report them and keep the member's edits on screen.
+  Future<void> _publishSection(
+    Future<void> Function(RegistrationRepository repo) patch,
+    ProfileDraft Function(ProfileDraft draft) commit,
+  ) async {
+    await patch(ref.read(registrationRepositoryProvider));
+    state = commit(state);
     ref.invalidate(myProfileProvider);
   }
+
+  /// Basic Information: `PATCH /profiles/draft/basic-details`.
+  Future<void> publishBasicDetails(BasicDetails details) => _publishSection(
+        (repo) => repo.updateBasicDetails(details),
+        (draft) => draft.copyWith(basicDetails: details),
+      );
+
+  /// Religion & Community: `PATCH /profiles/draft/religion-details`.
+  Future<void> publishReligionDetails(ReligionDetails details) =>
+      _publishSection(
+        (repo) => repo.updateReligionDetails(details),
+        (draft) => draft.copyWith(religionDetails: details),
+      );
+
+  /// Location: `PATCH /profiles/draft/location-details`.
+  Future<void> publishLocationDetails(LocationDetails details) =>
+      _publishSection(
+        (repo) => repo.updateLocationDetails(details),
+        (draft) => draft.copyWith(locationDetails: details),
+      );
+
+  /// Education & Work: `PATCH /profiles/draft/education-details`.
+  Future<void> publishEducationDetails(EducationDetails details) =>
+      _publishSection(
+        (repo) => repo.updateEducationDetails(details),
+        (draft) => draft.copyWith(educationDetails: details),
+      );
+
+  /// Physical Details: `PATCH /profiles/draft/physical-details`.
+  Future<void> publishPhysicalDetails(PhysicalDetails details) =>
+      _publishSection(
+        (repo) => repo.updatePhysicalDetails(details),
+        (draft) => draft.copyWith(physicalDetails: details),
+      );
+
+  /// Lifestyle & About: `PATCH /profiles/draft/lifestyle-details`.
+  Future<void> publishLifestyleDetails(LifestyleDetails details) =>
+      _publishSection(
+        (repo) => repo.updateLifestyleDetails(details),
+        (draft) => draft.copyWith(lifestyleDetails: details),
+      );
+
+  /// Family Details: `PATCH /profiles/draft/family-details`.
+  Future<void> publishFamilyDetails(FamilyDetails details) => _publishSection(
+        (repo) => repo.updateFamilyDetails(details),
+        (draft) => draft.copyWith(familyDetails: details),
+      );
+
+  /// Horoscope: `PATCH /profiles/draft/horoscope-details`.
+  Future<void> publishHoroscopeDetails(HoroscopeDetails details) =>
+      _publishSection(
+        (repo) => repo.updateHoroscopeDetails(details),
+        (draft) => draft.copyWith(horoscopeDetails: details),
+      );
 
   /// Marks the registration complete (`POST /profiles/finalize`). Throws on
   /// failure — both the wizard's Completing screen and the onboarding

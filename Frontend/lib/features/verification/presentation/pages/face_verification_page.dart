@@ -376,7 +376,7 @@ class _BlockedMessage extends StatelessWidget {
       background: AppColors.primarySurface,
       actionLabel: offersPhotoUpdate ? l10n.faceVerificationUpdatePhoto : null,
       onAction: offersPhotoUpdate
-          ? () => context.push(RouteNames.profileEdit)
+          ? () => context.push(RouteNames.photosEdit)
           : null,
     );
   }
@@ -420,7 +420,7 @@ class _FailedMessage extends ConsumerWidget {
           ? l10n.faceVerificationUpdatePhoto
           : null,
       onAction: reason?.suggestsPhotoUpdate == true
-          ? () => context.push(RouteNames.profileEdit)
+          ? () => context.push(RouteNames.photosEdit)
           : null,
     );
   }

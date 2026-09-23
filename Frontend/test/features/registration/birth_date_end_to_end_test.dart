@@ -16,7 +16,7 @@ import 'package:nenjam_matrimony/features/registration/data/repositories/registr
 import 'package:nenjam_matrimony/features/registration/domain/models/profile_draft.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/pages/onboarding_name_page.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/providers/registration_provider.dart';
-import 'package:nenjam_matrimony/features/registration/presentation/widgets/step_basic_info.dart';
+import 'package:nenjam_matrimony/features/registration/presentation/widgets/profile_section_forms.dart';
 
 import 'onboarding_test_support.dart';
 
@@ -148,9 +148,10 @@ void main() {
 
   // ─── Editing an existing date, and surviving a restart ──────────────
 
-  group('the Edit Profile wizard', () {
+  group('the Edit Profile Basic Information page', () {
     testWidgets('shows a stored date in the same three boxes', (tester) async {
-      // The wizard step and the onboarding step are the same field. A member
+      // The Basic Information editor and the onboarding step are the same
+      // field. A member
       // who edits their profile must not meet a different input, or a
       // different rule, from the one they filled in at signup.
       await tester.pumpWidget(
@@ -158,9 +159,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
-            body: StepBasicInfo(
-              details: BasicDetails(dob: DateTime(1995, 3, 21)),
-              onChanged: (_) {},
+            body: SingleChildScrollView(
+              child: BasicInfoForm(
+                initial: BasicDetails(dob: DateTime(1995, 3, 21)),
+                onChanged: (_, _) {},
+              ),
             ),
           ),
         ),
@@ -172,9 +175,6 @@ void main() {
       expect(find.text('03'), findsOneWidget);
       expect(find.text('1995'), findsOneWidget);
 
-      // RegistrationHelperTip fades in through flutter_animate, whose ticker
-      // outlives the tree if the test ends mid-animation. Let it finish.
-      await tester.pump(const Duration(seconds: 1));
     });
 
     testWidgets('emits an edited date in the same date-only wire format', (
@@ -186,9 +186,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
-            body: StepBasicInfo(
-              details: BasicDetails(dob: DateTime(1995, 3, 21)),
-              onChanged: (d) => emitted = d,
+            body: SingleChildScrollView(
+              child: BasicInfoForm(
+                initial: BasicDetails(dob: DateTime(1995, 3, 21)),
+                onChanged: (d, _) => emitted = d,
+              ),
             ),
           ),
         ),
@@ -212,14 +214,20 @@ void main() {
 
     testWidgets('refuses to emit a date the rule rejects', (tester) async {
       BasicDetails? emitted;
+      String? lastError;
       await tester.pumpWidget(
         MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
-            body: StepBasicInfo(
-              details: const BasicDetails(),
-              onChanged: (d) => emitted = d,
+            body: SingleChildScrollView(
+              child: BasicInfoForm(
+                initial: const BasicDetails(),
+                onChanged: (d, error) {
+                  emitted = d;
+                  lastError = error;
+                },
+              ),
             ),
           ),
         ),
@@ -237,6 +245,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(emitted?.dob, isNull);
       expect(find.text('Please enter a valid date of birth.'), findsOneWidget);
+      // ...and says so to the page, which refuses to save while it stands.
+      expect(lastError, isNotNull);
 
       await tester.enterText(boxes.at(0), '15');
       await tester.enterText(boxes.at(1), '08');

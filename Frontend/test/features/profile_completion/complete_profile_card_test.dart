@@ -18,10 +18,10 @@ import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 
 /// Home/Discover's compact "Complete Your Profile" reminder — the
 /// whole-card-dismissible sibling of `CompleteProfileSection`, offering up
-/// to five tiles: Add Photos, Family Details, Horoscope, Psychology and
-/// Partner Preferences.
+/// to six tiles: Add Photos, Family Details, Horoscope, Psychology, Partner
+/// Preferences and Verification.
 ///
-/// Four of the five read the exact same `GET /profiles/draft` response the
+/// Five of the six read the exact same `GET /profiles/draft` response the
 /// full section reads (via [profileDraftResponseProvider] /
 /// [profileCompletenessSnapshotProvider]). Photos is the one exception —
 /// it reads the live photo count off [myPhotosProvider], the same provider
@@ -50,6 +50,7 @@ Map<String, dynamic> _draft({
   bool horoscopeComplete = false,
   bool psychologyComplete = false,
   bool partnerPreferenceComplete = false,
+  bool verificationComplete = false,
 }) => <String, dynamic>{
   'completionPercentage': 65,
   'completionBreakdown': const [
@@ -80,9 +81,11 @@ Map<String, dynamic> _draft({
       affectsScore: false,
       wizardStep: 10,
     ),
-    // Verification is deliberately part of the same response but never a
-    // tile on this card — proves the filter, not just an absent fixture.
-    _card(CompletionCardKeys.verification, wizardStep: 12),
+    _card(
+      CompletionCardKeys.verification,
+      isComplete: verificationComplete,
+      wizardStep: 12,
+    ),
   ],
 };
 
@@ -158,12 +161,24 @@ class _Harness {
           builder: (_, _) => page(const CompleteProfileCard()),
         ),
         GoRoute(
-          path: RouteNames.profileEdit,
-          builder: (_, state) => page(
-            Text(
-              'EDIT PROFILE section=${state.uri.queryParameters['section']}',
-            ),
-          ),
+          path: RouteNames.editProfile,
+          builder: (_, _) => page(const Text('EDIT PROFILE')),
+        ),
+        GoRoute(
+          path: RouteNames.basicInfoEdit,
+          builder: (_, _) => page(const Text('BASIC INFO PAGE')),
+        ),
+        GoRoute(
+          path: RouteNames.photosEdit,
+          builder: (_, _) => page(const Text('PHOTOS PAGE')),
+        ),
+        GoRoute(
+          path: RouteNames.familyDetailsEdit,
+          builder: (_, _) => page(const Text('FAMILY DETAILS PAGE')),
+        ),
+        GoRoute(
+          path: RouteNames.horoscopeDetailsEdit,
+          builder: (_, _) => page(const Text('HOROSCOPE PAGE')),
         ),
         GoRoute(
           path: RouteNames.psychologyQuiz,
@@ -172,6 +187,10 @@ class _Harness {
         GoRoute(
           path: RouteNames.partnerPreferences,
           builder: (_, _) => page(const Text('PARTNER PREFERENCES PAGE')),
+        ),
+        GoRoute(
+          path: RouteNames.verification,
+          builder: (_, _) => page(const Text('VERIFICATION PAGE')),
         ),
       ],
     );
@@ -190,7 +209,10 @@ class _Harness {
     await tester.pumpAndSettle();
   }
 
-  Future<void> refreshWith(WidgetTester tester, Map<String, dynamic> next) async {
+  Future<void> refreshWith(
+    WidgetTester tester,
+    Map<String, dynamic> next,
+  ) async {
     draft = next;
     container.invalidate(profileDraftResponseProvider);
     await tester.pumpAndSettle();
@@ -209,10 +231,8 @@ List<String> _tileTitles(WidgetTester tester) => tester
     .toList();
 
 void main() {
-  group('the four backend-scored sections, photos already complete', () {
-    testWidgets('shows exactly the four tiles, and no others', (
-      tester,
-    ) async {
+  group('the five backend-scored sections, photos already complete', () {
+    testWidgets('shows exactly the five tiles, and no others', (tester) async {
       await _Harness(_draft()).pump(tester);
 
       final titles = _tileTitles(tester);
@@ -220,10 +240,10 @@ void main() {
       expect(titles, contains('Horoscope'));
       expect(titles, contains('Psychology'));
       expect(titles, contains('Partner Preferences'));
+      expect(titles, contains('Verification'));
       expect(titles, isNot(contains('Add Photos')));
-      // The response carries a verification card too — proves the card
-      // filters to its keys rather than drawing everything it is given.
-      expect(titles, isNot(contains('Verification')));
+      // The response carries a completed registration card too — proves the
+      // card filters to its keys rather than drawing everything it is given.
       expect(titles, isNot(contains('Finish Registration')));
     });
 
@@ -287,6 +307,17 @@ void main() {
         expect(titles, contains('Psychology'));
       },
     );
+
+    testWidgets('verification complete removes the Verification tile', (
+      tester,
+    ) async {
+      await _Harness(_draft(verificationComplete: true)).pump(tester);
+
+      final titles = _tileTitles(tester);
+      expect(titles, isNot(contains('Verification')));
+      expect(titles, contains('Partner Preferences'));
+      expect(titles, contains('Family Details'));
+    });
   });
 
   group('Add Photos tracks the real photo count', () {
@@ -315,7 +346,16 @@ void main() {
           .where((t) => t != 'Get better matches by adding a few more details')
           .toList();
       expect(titles.first, 'Add Photos');
-      expect(titles, containsAll(['Family Details', 'Horoscope', 'Psychology', 'Partner Preferences']));
+      expect(
+        titles,
+        containsAll([
+          'Family Details',
+          'Horoscope',
+          'Psychology',
+          'Partner Preferences',
+          'Verification',
+        ]),
+      );
     });
 
     testWidgets('uploading photos up to the cap and returning hides the '
@@ -328,16 +368,41 @@ void main() {
       // exactly how a real upload updates this same provider — with no
       // extra refresh call from this card, since it already watches
       // myPhotosProvider live.
-      harness.container
-          .read(myPhotosProvider.notifier)
-          .state = AsyncValue.data(_photos(kMaxPhotos));
+      harness.container.read(myPhotosProvider.notifier).state = AsyncValue.data(
+        _photos(kMaxPhotos),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Add Photos'), findsNothing);
     });
   });
 
-  group('all five complete', () {
+  group('the tiles keep their display order', () {
+    testWidgets('Photos, Family, Horoscope, Psychology, Partner Preferences, '
+        'Verification — left to right', (tester) async {
+      await _Harness(_draft(), photoCount: 0).pump(tester);
+
+      const order = [
+        CompletionCardKeys.photo,
+        CompletionCardKeys.aboutFamily,
+        CompletionCardKeys.horoscope,
+        CompletionCardKeys.psychology,
+        CompletionCardKeys.partnerPreference,
+        CompletionCardKeys.verification,
+      ];
+      final lefts = [
+        for (final key in order)
+          tester
+              .getTopLeft(find.byKey(ValueKey('home-complete-profile-$key')))
+              .dx,
+      ];
+      for (var i = 1; i < lefts.length; i++) {
+        expect(lefts[i], greaterThan(lefts[i - 1]));
+      }
+    });
+  });
+
+  group('all six complete', () {
     testWidgets('the whole card disappears, not just its tiles', (
       tester,
     ) async {
@@ -347,6 +412,7 @@ void main() {
           horoscopeComplete: true,
           psychologyComplete: true,
           partnerPreferenceComplete: true,
+          verificationComplete: true,
         ),
         // Already defaults to kMaxPhotos (complete).
       ).pump(tester);
@@ -358,6 +424,7 @@ void main() {
       expect(find.text('Horoscope'), findsNothing);
       expect(find.text('Psychology'), findsNothing);
       expect(find.text('Partner Preferences'), findsNothing);
+      expect(find.text('Verification'), findsNothing);
     });
 
     testWidgets('completing the last section removes the card on refresh', (
@@ -368,10 +435,11 @@ void main() {
           familyComplete: true,
           horoscopeComplete: true,
           psychologyComplete: true,
+          partnerPreferenceComplete: true,
         ),
       );
       await harness.pump(tester);
-      expect(find.text('Partner Preferences'), findsOneWidget);
+      expect(find.text('Verification'), findsOneWidget);
 
       await harness.refreshWith(
         tester,
@@ -380,6 +448,7 @@ void main() {
           horoscopeComplete: true,
           psychologyComplete: true,
           partnerPreferenceComplete: true,
+          verificationComplete: true,
         ),
       );
 
@@ -404,34 +473,32 @@ void main() {
       expect(find.byType(CompleteProfileCard), findsNothing);
     }
 
-    testWidgets('Add Photos opens Edit Profile at the photos step', (
-      tester,
-    ) async {
+    testWidgets('Add Photos opens the Photos page', (tester) async {
       await expectTapOpens(
         tester,
         CompletionCardKeys.photo,
-        'EDIT PROFILE section=11',
+        'PHOTOS PAGE',
         photoCount: 0,
       );
     });
 
-    testWidgets('Family Details opens Edit Profile at the family section', (
+    // Family and horoscope have dedicated pages; they are no longer sections
+    // of Edit Profile.
+    testWidgets('Family Details opens the Family Details page', (
       tester,
     ) async {
       await expectTapOpens(
         tester,
         CompletionCardKeys.aboutFamily,
-        'EDIT PROFILE section=7',
+        'FAMILY DETAILS PAGE',
       );
     });
 
-    testWidgets('Horoscope opens Edit Profile at the horoscope section', (
-      tester,
-    ) async {
+    testWidgets('Horoscope opens the Horoscope page', (tester) async {
       await expectTapOpens(
         tester,
         CompletionCardKeys.horoscope,
-        'EDIT PROFILE section=8',
+        'HOROSCOPE PAGE',
       );
     });
 
@@ -450,6 +517,16 @@ void main() {
         tester,
         CompletionCardKeys.partnerPreference,
         'PARTNER PREFERENCES PAGE',
+      );
+    });
+
+    testWidgets('Verification opens the existing verification page', (
+      tester,
+    ) async {
+      await expectTapOpens(
+        tester,
+        CompletionCardKeys.verification,
+        'VERIFICATION PAGE',
       );
     });
 
@@ -542,7 +619,7 @@ void main() {
       );
     });
 
-    testWidgets('all five tiles are reachable by scrolling', (tester) async {
+    testWidgets('all six tiles are reachable by scrolling', (tester) async {
       tester.view.physicalSize = const Size(360, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -551,7 +628,7 @@ void main() {
 
       final lastTile = find.byKey(
         const ValueKey(
-          'home-complete-profile-${CompletionCardKeys.partnerPreference}',
+          'home-complete-profile-${CompletionCardKeys.verification}',
         ),
       );
 
@@ -570,22 +647,44 @@ void main() {
     });
   });
 
-  group('narrow screens', () {
-    testWidgets('five tiles never overflow the layout', (tester) async {
-      // The narrowest phone width the app's responsive audit covers.
-      tester.view.physicalSize = const Size(320, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+  group('phone widths', () {
+    for (final width in const [320.0, 360.0, 375.0, 390.0, 412.0]) {
+      testWidgets('six tiles never overflow the layout at ${width.toInt()}dp', (
+        tester,
+      ) async {
+        tester.view.physicalSize = Size(width, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      await _Harness(_draft(), photoCount: 0).pump(tester);
+        await _Harness(_draft(), photoCount: 0).pump(tester);
 
-      expect(tester.takeException(), isNull);
-      expect(find.text('Add Photos'), findsOneWidget);
-      expect(find.text('Family Details'), findsOneWidget);
-      expect(find.text('Horoscope'), findsOneWidget);
-      expect(find.text('Psychology'), findsOneWidget);
-      expect(find.text('Partner Preferences'), findsOneWidget);
-    });
+        expect(tester.takeException(), isNull);
+        expect(find.text('Add Photos'), findsOneWidget);
+        expect(find.text('Family Details'), findsOneWidget);
+        expect(find.text('Horoscope'), findsOneWidget);
+        expect(find.text('Psychology'), findsOneWidget);
+        expect(find.text('Partner Preferences'), findsOneWidget);
+        expect(find.text('Verification'), findsOneWidget);
+
+        // Every tile keeps the same width whatever the screen — the row
+        // scrolls rather than squeezing tiles to fit.
+        const keys = [
+          CompletionCardKeys.photo,
+          CompletionCardKeys.aboutFamily,
+          CompletionCardKeys.horoscope,
+          CompletionCardKeys.psychology,
+          CompletionCardKeys.partnerPreference,
+          CompletionCardKeys.verification,
+        ];
+        final widths = {
+          for (final key in keys)
+            tester
+                .getSize(find.byKey(ValueKey('home-complete-profile-$key')))
+                .width,
+        };
+        expect(widths, hasLength(1));
+      });
+    }
   });
 
   group('nothing to show yet', () {

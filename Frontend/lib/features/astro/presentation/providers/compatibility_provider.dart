@@ -12,8 +12,7 @@ final compatibilityRepositoryProvider = Provider<CompatibilityRepository>(
 );
 
 /// The signed-in user's own horoscope summary + matching opt-in status.
-/// Used by ProfilePage, the Profile Intelligence hub, and
-/// profile_review_page.dart's edit-mode summary.
+/// Used by ProfilePage and HoroscopeMatchingPage.
 final myHoroscopeSummaryProvider =
     FutureProvider.autoDispose<HoroscopeSummary>((ref) {
   return ref.watch(compatibilityRepositoryProvider).getMyHoroscopeSummary();

@@ -6,34 +6,39 @@ import '../../../../core/router/route_names.dart';
 import '../providers/registration_provider.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// Where a profile section is edited.
-///
-/// Most sections are field groups on the one editable page
-/// (`ProfileEditPage`), which scrolls to [section] on open. Three are not:
-/// the psychological quiz, partner preferences and verification are separate
-/// features with pages of their own, and have been all along — the old
-/// per-section wizard only ever embedded a CTA card that pushed those same
-/// pages. They are linked directly rather than through a card that links
-/// again.
+/// Where a profile section is edited — every section has a page of its own.
 ///
 /// [section] indices are [ProfileDraft] step indices, the values callers
 /// have always passed (and that the backend returns as `wizardStep` on the
-/// profile-completion modules). A null section opens the Edit Profile
-/// summary.
+/// profile-completion modules). A null section opens Edit Profile's section
+/// list.
+///
+/// Step 2 (languages) has no page: the registration flow does not collect it,
+/// so Edit Profile does not edit it either. It, and any index this build does
+/// not know, opens the section list rather than a page that does not exist.
 String profileSectionRoute(int? section) => switch (section) {
-      null => RouteNames.profileReview,
+      0 => RouteNames.basicInfoEdit,
+      1 => RouteNames.religionCommunityEdit,
+      3 => RouteNames.locationEdit,
+      4 => RouteNames.educationWorkEdit,
+      5 => RouteNames.physicalDetailsEdit,
+      6 => RouteNames.lifestyleAboutEdit,
+      7 => RouteNames.familyDetailsEdit,
+      8 => RouteNames.horoscopeDetailsEdit,
       9 => RouteNames.psychologyQuiz,
       10 => RouteNames.partnerPreferences,
+      11 => RouteNames.photosEdit,
       12 => RouteNames.verification,
-      _ => '${RouteNames.profileEdit}?section=$section',
+      _ => RouteNames.editProfile,
     };
 
 /// Switches the registration provider into EDIT MODE, fetches the logged-in
-/// user's saved profile (`GET /profiles/draft`), then opens either the
-/// review summary (Edit Profile) or the editable page scrolled to a specific
-/// section, pre-populated with that data. A blocking loader covers the fetch
-/// since it's a network round-trip. Shared by the navigation drawer and the
-/// Profile Completion screen — every "edit this section" action goes through
+/// user's saved profile (`GET /profiles/draft`), then opens either Edit
+/// Profile's section list or one section's edit page (see
+/// [profileSectionRoute]), pre-populated with that data. A blocking loader
+/// covers the fetch since it's a network round-trip. Shared by the
+/// navigation drawer, the Profile screen and the Profile Completion screen —
+/// every "edit this section" action from outside Edit Profile goes through
 /// here.
 Future<void> openEditProfile(
   BuildContext context,

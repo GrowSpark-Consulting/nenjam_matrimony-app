@@ -105,7 +105,7 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
   /// see StorageService.saveNavState. Anything else (splash, auth/OTP
   /// screens, ...) depends on ephemeral state that can't be resumed.
   static const _registrationRoutes = {
-    RouteNames.profileEdit,
+    RouteNames.editProfile,
     RouteNames.profileReview,
   };
   static const _tabRoutes = {
