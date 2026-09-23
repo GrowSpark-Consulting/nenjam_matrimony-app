@@ -80,9 +80,15 @@ export class FeedService {
     // Fetch the pool from the top, not the page — the page is cut after
     // ranking, so asking the database for rows 20-40 of ITS ordering would
     // discard exactly the candidates ranking is meant to surface.
+    //
+    // One row wider than the page needs (`+ 1`) so "is there anything after
+    // this page?" is answerable from the rows themselves. That replaced a
+    // COUNT over the entire matching set, which ran on every request to
+    // produce a `total` no Discover client ever read.
+    const poolSize = Math.max(CANDIDATE_POOL, skip + limit) + 1;
     const result = await this.recommendation.getFeedForUser(currentUserId, {
       skip: 0,
-      take: Math.max(CANDIDATE_POOL, skip + limit),
+      take: poolSize,
     });
 
     // Scoring runs over the whole pool, not just the page — the page cannot be
@@ -120,10 +126,15 @@ export class FeedService {
       this.feedVersion.get(currentUserId),
     ]);
 
-    const ranked = this.ranking.rank(candidates, strategy, { skip, take: limit }, {
-      seen: seenIds,
-      cursor,
-    });
+    const ranked = this.ranking.rank(
+      candidates,
+      strategy,
+      { skip, take: limit },
+      {
+        seen: seenIds,
+        cursor,
+      },
+    );
     const pageRows = ranked.map((r) => r.row);
 
     // Record what was served. Deliberately not awaited: the response is
@@ -143,10 +154,11 @@ export class FeedService {
       items: await this.mapper.toDtoList(pageRows, scores),
       page,
       limit,
-      total: result.total,
-      hasMore: cursor
-        ? nextCursor !== null
-        : skip + pageRows.length < result.total,
+      // Offset mode: the pool was fetched one row wider than this page needs,
+      // so a pool longer than `skip + limit` means at least one candidate
+      // survived past the page — exactly what `hasMore` claims, without
+      // counting the whole matching set. Cursor mode is unchanged.
+      hasMore: cursor ? nextCursor !== null : result.rows.length > skip + limit,
       nextCursor,
       version,
       // A strategy that doesn't implement tiered fallback (e.g. the plain
