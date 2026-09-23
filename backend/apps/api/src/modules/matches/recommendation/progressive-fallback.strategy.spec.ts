@@ -157,7 +157,10 @@ describe('ProgressiveFallbackStrategy', () => {
     // plan is monotonically relaxing, so the lowest-numbered non-empty tier is
     // the winner) — 1 (Tier 1) + 9 (wider) count probes, regardless of winner.
     expect(countMatching).toHaveBeenCalledTimes(10);
-    expect(findRows).toHaveBeenCalledTimes(1); // only the winning tier fetches rows
+    // Two fetches on this path, and only two: Tier 1's (issued alongside its
+    // count, and wasted because Tier 1 turned out empty) plus the winner's. The
+    // wider tiers are probed by count alone — never one fetch per tier.
+    expect(findRows).toHaveBeenCalledTimes(2);
   });
 
   it('Tier 1-2 empty, Tier 3 has candidates: returns Tier 3', async () => {
@@ -187,7 +190,8 @@ describe('ProgressiveFallbackStrategy', () => {
     expect(result.tier).toBe(4);
     expect(result.total).toBe(7);
     expect(result.relaxedFilters).toEqual(['Age', 'City', 'Caste']);
-    expect(findRows).toHaveBeenCalledTimes(1);
+    // Tier 1's (empty) fetch plus the winner's — not one per probed tier.
+    expect(findRows).toHaveBeenCalledTimes(2);
   });
 
   it('Tier 10 returns users: every relaxation exhausted before the gender-only tier succeeds', async () => {
@@ -201,7 +205,9 @@ describe('ProgressiveFallbackStrategy', () => {
     expect(result.tier).toBe(10);
     expect(result.fallbackUsed).toBe(true);
     expect(countMatching).toHaveBeenCalledTimes(10);
-    expect(findRows).toHaveBeenCalledTimes(1);
+    // Tier 1's (empty) fetch plus Tier 10's — the eight tiers between them are
+    // probed by count alone.
+    expect(findRows).toHaveBeenCalledTimes(2);
     // Tier 10's WHERE must still carry the shared eligibility, gender-only
     // query — status is a denylist (not an ACTIVE allowlist): PENDING_VERIFICATION
     // must remain visible even at the loosest tier (see eligibility.builder.ts).
@@ -264,7 +270,7 @@ describe('ProgressiveFallbackStrategy', () => {
     );
   });
 
-  it('duplicate prevention: findRows is called at most once per request, never once per tier', async () => {
+  it('duplicate prevention: rows are fetched for Tier 1 and the winner only, never once per tier', async () => {
     const { strategy, findRows } = buildStrategy({
       countSequence: [0, 0, 0, 8],
       rows: [makeRow('a'), makeRow('b')],
@@ -272,10 +278,58 @@ describe('ProgressiveFallbackStrategy', () => {
 
     const result = await strategy.getFeedForUser('me', { skip: 0, take: 20 });
 
-    expect(findRows).toHaveBeenCalledTimes(1);
+    // Four tiers were probed; exactly two fetched rows.
+    expect(findRows).toHaveBeenCalledTimes(2);
     // No duplicate ids possible from merging tiers — only one tier's rows are ever returned.
     const ids = result.rows.map((r) => (r as { userId: string }).userId);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("Tier 1's count and row fetch are issued together, not one after the other", async () => {
+    // The assertion is structural rather than timing-based: the count promise
+    // is resolved BY the row fetch, so it can only settle if both queries were
+    // in flight at once. An implementation that awaited the count first would
+    // deadlock here and fail on timeout.
+    const { strategy, countMatching, findRows } = buildStrategy({
+      countSequence: [],
+      rows: [makeRow('a')],
+    });
+
+    let releaseCount: (value: number) => void = () => {};
+    countMatching.mockImplementationOnce(
+      () =>
+        new Promise<number>((resolve) => {
+          releaseCount = resolve;
+        }),
+    );
+    findRows.mockImplementationOnce(() => {
+      releaseCount(4);
+      return Promise.resolve([makeRow('a')]);
+    });
+
+    const result = await strategy.getFeedForUser('me', { skip: 0, take: 20 });
+
+    expect(result.tier).toBe(1);
+    expect(result.total).toBe(4);
+    expect(result.rows).toHaveLength(1);
+  });
+
+  it('a non-empty Tier 1 paged past its end stays on Tier 1 rather than relaxing', async () => {
+    // The count decides the tier, not the number of rows the page happened to
+    // return. Falling through here would relax a member's preferences on a
+    // later page while the earlier ones were exact matches.
+    const { strategy, countMatching } = buildStrategy({
+      countSequence: [5],
+      rows: [],
+    });
+
+    const result = await strategy.getFeedForUser('me', { skip: 40, take: 20 });
+
+    expect(result.tier).toBe(1);
+    expect(result.fallbackUsed).toBe(false);
+    expect(result.total).toBe(5);
+    expect(result.rows).toHaveLength(0);
+    expect(countMatching).toHaveBeenCalledTimes(1);
   });
 
   it('caller has no saved preference at all: only Tier 1 (gender-only) is tried, no fallback', async () => {
