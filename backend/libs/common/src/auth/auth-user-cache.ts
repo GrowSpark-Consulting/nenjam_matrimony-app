@@ -18,9 +18,20 @@ import type { RedisService } from '@app/cache';
  * the verified token, never the DB.
  *
  * Staleness that matters: a status changed directly in the database keeps
- * working for up to the TTL below. Whatever suspends or bans an account must
- * therefore call [invalidateCachedUserId] — account deletion already does (see
- * AccountDeletionService) — and a future moderation action must do the same.
+ * working for up to the TTL below. Whatever suspends or bans an account should
+ * therefore call [invalidateCachedUserId] so the change lands on the very next
+ * request — account deletion does (see AccountDeletionService), and
+ * `pnpm account:status` (scripts/set-account-status.ts) does it for moderation
+ * actions taken by hand.
+ *
+ * The TTL is the backstop for the case that cannot call anything: a status
+ * edited straight in SQL. It was 15 minutes, which meant a ban could take that
+ * long to bite — far too long for the one control that stops an abusive member.
+ * 60 seconds bounds it to something defensible while still removing the DB hop
+ * from ~97% of requests: a member making a request every two seconds pays one
+ * lookup per minute instead of thirty. The cost is one indexed primary-key
+ * read per active member per minute, which at this scale is a rounding error
+ * against the feed's own query load.
  *
  * Fail-open by design: Redis is a non-critical dependency (in dev it may not be
  * running at all — see RedisService.handleStartupFailure). Every call is a
@@ -28,7 +39,7 @@ import type { RedisService } from '@app/cache';
  * always falls back to the authoritative DB lookup. Caching must never be able
  * to lock a user out.
  */
-const AUTH_USER_CACHE_TTL_SECONDS = 900; // 15 minutes
+export const AUTH_USER_CACHE_TTL_SECONDS = 60;
 
 /**
  * `v2` because the value changed shape (a bare id string → JSON with the

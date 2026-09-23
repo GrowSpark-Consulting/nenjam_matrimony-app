@@ -29,6 +29,9 @@ import {
 /** Per-socket state we attach after authenticating the handshake. */
 interface AuthedSocketData {
   userId?: string;
+  /** Kept so the heartbeat can re-check the account against the auth cache,
+   *  which is keyed by Firebase UID. */
+  firebaseUid?: string;
 }
 
 /**
@@ -72,7 +75,9 @@ export class RealtimeGateway
       const userId = await this.resolveUserId(decoded.uid);
       if (!userId) return this.reject(client, 'Unknown user.');
 
-      (client.data as AuthedSocketData).userId = userId;
+      const data = client.data as AuthedSocketData;
+      data.userId = userId;
+      data.firebaseUid = decoded.uid;
       await client.join(userRoom(userId));
       // Record this device. If the user had no other device online, this is an
       // offline→online transition worth telling their conversation peers about.
@@ -109,11 +114,22 @@ export class RealtimeGateway
    * PresenceService.HEARTBEAT_INTERVAL_MS) so a device that's connected but idle
    * keeps its presence fresh and doesn't age out of the stale window. Replies
    * `presence.pong` so the client can also use it as a liveness/RTT probe.
+   *
+   * It is also where a socket learns it is no longer welcome. The handshake
+   * check runs once, so without this a member banned mid-session kept a live
+   * socket — still receiving chat messages and notification events — until they
+   * happened to disconnect, however long that took. Re-checking here bounds
+   * that to one heartbeat (~25s) plus the auth cache TTL, and costs nothing on
+   * the normal path: a cache hit is one Redis read on a heartbeat that already
+   * makes several.
    */
   @SubscribeMessage('presence.ping')
   async handlePresencePing(@ConnectedSocket() client: Socket): Promise<void> {
     const userId = (client.data as AuthedSocketData).userId;
     if (!userId) return;
+    if (!(await this.stillAllowed(client))) {
+      return this.rejectBlocked(client, userId);
+    }
     // A heartbeat also re-establishes presence after an explicit background
     // (`presence.offline`) or a stale-window age-out, so detect that transition
     // and re-announce online to peers.
@@ -267,6 +283,32 @@ export class RealtimeGateway
     };
     await setCachedAuthUser(this.redis, firebaseUid, account);
     return isAccountUsable(account) ? account.id : null;
+  }
+
+  /**
+   * Whether this socket's account may still use the API, re-checked against the
+   * same source the HTTP guard uses.
+   *
+   * Reads through the shared auth cache, so this is a Redis hit on the common
+   * path and one indexed DB read once the entry expires — the same read the
+   * member's next HTTP request would have made anyway. Fails OPEN on a socket
+   * with no recorded uid (one authenticated before this field existed, mid
+   * deploy): those keep working until they reconnect, exactly as before.
+   */
+  private async stillAllowed(client: Socket): Promise<boolean> {
+    const { firebaseUid } = client.data as AuthedSocketData;
+    if (!firebaseUid) return true;
+    return (await this.resolveUserId(firebaseUid)) !== null;
+  }
+
+  /** Disconnects a socket whose account was suspended, banned, deactivated or
+   *  deleted after it connected, clearing its presence so peers stop seeing the
+   *  member as online. */
+  private async rejectBlocked(client: Socket, userId: string): Promise<void> {
+    await this.activeConversation.leave(userId, client.id);
+    await this.presence.removeAll(userId);
+    await this.broadcastPresence(userId, false, new Date());
+    this.reject(client, 'Account is no longer active.');
   }
 
   private reject(client: Socket, reason: string): void {
