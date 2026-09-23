@@ -63,7 +63,16 @@ export interface DiscoverFeedResponseDto {
   items: DiscoverProfileDto[];
   page: number;
   limit: number;
-  total: number;
+  /**
+   * Total matching profiles — SEARCH ONLY, and absent from `/discover`.
+   *
+   * Search shows a result count, and its query returns one anyway. Discover
+   * never displayed it: the Flutter client parses `items`, `page`, `hasMore`
+   * and `nextCursor` and nothing else. Producing it there cost a COUNT over
+   * the whole matching set on every feed request, so the feed no longer sends
+   * it and derives `hasMore` from the rows instead.
+   */
+  total?: number;
   hasMore: boolean;
   /** Opaque cursor for the next page, or null at the end. Additive: clients
    *  still using `page`/`limit` can ignore it entirely. */

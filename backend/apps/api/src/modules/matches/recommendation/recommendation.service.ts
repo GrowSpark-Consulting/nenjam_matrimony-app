@@ -15,7 +15,17 @@ export interface FeedPageQuery {
 
 export interface RecommendationResult {
   rows: FeedProfileRow[];
-  total: number;
+  /**
+   * Total matching candidates, when the strategy happens to know it.
+   *
+   * Optional because Discover deliberately does not compute one: producing it
+   * meant a COUNT over the full matching set on every request — the most
+   * expensive query in the feed — for a number no Discover client reads.
+   * `hasMore` is derived from the rows instead (see FeedService). Strategies
+   * that get a count for free from their own query (FilteredFeedStrategy via
+   * `findMatching`) may still report it.
+   */
+  total?: number;
   /** Which tier produced these rows (1 = exact match on saved preferences).
    *  Strategies that don't implement tiered fallback can omit this — callers
    *  default it to 1/false/[] . */

@@ -4,7 +4,10 @@ import type { Prisma } from '../../../../../../libs/database/generated/client';
 import { FeedRepository } from '../repositories/feed.repository';
 import { PreferenceRepository } from '../repositories/preference.repository';
 import { FeedContextService } from '../cache/feed-context.cache';
-import type { SelfProfile } from '../repositories/feed.repository';
+import type {
+  FeedProfileRow,
+  SelfProfile,
+} from '../repositories/feed.repository';
 import {
   buildFeedWhere,
   type PreferenceFilters,
@@ -60,7 +63,6 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
     if (!self) {
       return {
         rows: [],
-        total: 0,
         tier: 1,
         fallbackUsed: false,
         reason: 'INCOMPLETE_SELF_PROFILE',
@@ -97,45 +99,47 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
     const tier1 = plan[0];
     const tier1Where = whereFor(tier1);
 
-    // Tier 1's count and its rows are issued TOGETHER, not one after the other.
+    // ONE query on the common path: the page fetch IS Tier 1's probe.
     //
-    // They are independent queries against the same WHERE, and a round trip to
-    // this database costs ~250ms — so awaiting the count first made the common
-    // request (Tier 1 hits for almost everyone) pay two sequential trips where
-    // one would do. Overlapping them removes a whole trip from the hot path.
-    //
-    // The cost of that: when Tier 1 turns out to be empty, its row fetch was
-    // wasted. That fetch returns no rows, so it transfers nothing and stops at
-    // the same point the count does — a cheap query on the rare path, traded
-    // for a saved round trip on the common one.
-    //
-    // The count still decides the tier, not the row count: with `skip` past the
-    // end of a non-empty tier the fetch legitimately returns nothing, and
-    // falling through to the wider tiers there would quietly relax someone's
-    // preferences on page 3 while pages 1-2 were exact.
-    const [tier1Count, tier1Rows] = await Promise.all([
-      this.feedRepository.countMatching(tier1Where),
-      this.feedRepository.findRows(tier1Where, { skip, take }, self.userId),
-    ]);
-    if (tier1Count > 0) {
-      return {
-        rows: tier1Rows,
-        total: tier1Count,
-        seeker: self,
-        seekerPreference: pref,
-        tier: tier1.tier,
-        fallbackUsed: false,
-        reason: tier1.reason,
-        relaxedFilters: tier1.relaxedFilters,
-      };
+    // Tier selection only ever needed the answer to "does this tier have
+    // anyone?", and a COUNT is an expensive way to ask it — it scans every
+    // matching row to produce a number the Discover client never reads. A
+    // LIMITed fetch answers the same question and stops as soon as it has
+    // enough rows, so asking and fetching became the same query.
+    const tier1Rows = await this.feedRepository.findRows(
+      tier1Where,
+      { skip, take },
+      self.userId,
+    );
+    if (tier1Rows.length > 0) {
+      return this.result(tier1, tier1Rows, self, pref);
+    }
+
+    // An empty window is not the same as an empty tier: a caller paging past
+    // the end of a perfectly good Tier 1 lands here too, and relaxing their
+    // preferences at that point would widen page 3 while pages 1-2 were exact
+    // matches. One cheap head probe separates the two cases. Discover always
+    // reads from the top (FeedService fetches the pool at offset 0 and pages
+    // in memory), so this costs nothing on that path.
+    if (skip > 0) {
+      const head = await this.feedRepository.findRows(
+        tier1Where,
+        { skip: 0, take: 1 },
+        self.userId,
+      );
+      if (head.length > 0) return this.result(tier1, [], self, pref);
     }
 
     // Tier 1 was empty. The tier plan is *monotonically relaxing* — every
     // later tier matches a superset of the previous one — so the first
-    // non-empty tier is simply the lowest-numbered tier whose count > 0.
-    // That lets us probe every remaining tier's count in ONE parallel batch
-    // instead of walking them one slow round trip at a time (the old path did
-    // up to 9 sequential ~250-300ms COUNTs against Neon before giving up).
+    // non-empty tier is simply the lowest-numbered tier that returns a row.
+    // All of them are probed in ONE parallel batch instead of walking them a
+    // slow round trip at a time (the old path did up to 9 sequential
+    // ~250-300ms queries against Neon before giving up).
+    //
+    // `take: 1` is the whole probe: existence is all tier selection ever asks,
+    // and a single row is the cheapest possible answer — the database stops at
+    // the first match instead of counting every one of them.
     const widerTiers = plan.slice(1);
     if (widerTiers.length === 0) {
       // No preferences to relax (caller has none saved) — Tier 1 was already
@@ -144,13 +148,15 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
     }
 
     const widerWheres = widerTiers.map(whereFor);
-    const counts = await Promise.all(
-      widerWheres.map((where) => this.feedRepository.countMatching(where)),
+    const probes = await Promise.all(
+      widerWheres.map((where) =>
+        this.feedRepository.findRows(where, { skip: 0, take: 1 }, self.userId),
+      ),
     );
-    const winnerIndex = counts.findIndex((count) => count > 0);
+    const winnerIndex = probes.findIndex((rows) => rows.length > 0);
 
     if (winnerIndex === -1) {
-      // Every tier up to the configured ceiling returned zero — an honest
+      // Every tier up to the configured ceiling returned nothing — an honest
       // empty feed, tagged with the loosest tier that was tried.
       this.logger.debug('No candidates at any tier — returning empty feed.');
       return this.emptyFeed(widerTiers[widerTiers.length - 1]);
@@ -160,7 +166,6 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
     return this.page(
       widerTiers[winnerIndex],
       widerWheres[winnerIndex],
-      counts[winnerIndex],
       { skip, take },
       self,
       pref,
@@ -171,7 +176,6 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
   private async page(
     tierDef: TierDefinition,
     where: Prisma.UserProfileWhereInput,
-    total: number,
     { skip, take }: FeedPageQuery,
     seeker: SelfProfile,
     seekerPreference: PreferenceFilters | null,
@@ -181,9 +185,19 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
       { skip, take },
       seeker.userId,
     );
+    return this.result(tierDef, rows, seeker, seekerPreference);
+  }
+
+  /** The RecommendationResult for a tier that won, with its rows already in
+   *  hand. No `total`: Discover derives `hasMore` from the rows themselves. */
+  private result(
+    tierDef: TierDefinition,
+    rows: FeedProfileRow[],
+    seeker: SelfProfile,
+    seekerPreference: PreferenceFilters | null,
+  ): RecommendationResult {
     return {
       rows,
-      total,
       seeker,
       seekerPreference,
       tier: tierDef.tier,
@@ -196,7 +210,6 @@ export class ProgressiveFallbackStrategy implements RecommendationService {
   private emptyFeed(tierDef: TierDefinition): RecommendationResult {
     return {
       rows: [],
-      total: 0,
       tier: tierDef.tier,
       fallbackUsed: tierDef.tier > 1,
       reason: 'No compatible profiles found.',
