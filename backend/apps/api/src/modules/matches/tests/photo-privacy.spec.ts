@@ -10,7 +10,8 @@ import {
 import { arePhotosHidden, isPremiumMember } from '../privacy/photo-visibility';
 
 /**
- * "Hide my photos from people I'm not connected with" — a PREMIUM feature.
+ * "Hide my photos from people I'm not connected with" — temporarily open to
+ * every member (ALLOW_FREE_PRIVACY_CONTROLS); premium-only otherwise.
  *
  * Enforced in the mapper, which backs EVERY profile card (feed, search, near
  * me, profile views, shortlist, interests, chat, blocks), and fed by
@@ -20,11 +21,12 @@ import { arePhotosHidden, isPremiumMember } from '../privacy/photo-visibility';
  * app's own definition of a match.
  *
  *   premium  flag  viewer      → photos
- *   no       off   anyone      → visible
- *   no       on    anyone      → visible (feature unavailable, flag ignored)
- *   yes      off   anyone      → visible
- *   yes      on    stranger    → hidden, photoUrls = [], photoProtected
- *   yes      on    connection  → visible
+ *   any      off   anyone      → visible
+ *   any      on    stranger    → hidden, photoUrls = [], photoProtected
+ *   any      on    connection  → visible
+ *
+ * With free privacy switched off, a non-premium member's flag is ignored
+ * again (see the last describe block).
  */
 function makeS3() {
   const getPresignedGetUrl = jest.fn((key: string) =>
@@ -65,7 +67,7 @@ describe('photo privacy — premium x flag x connection matrix', () => {
     expect(dto.photoProtected).toBe(false);
   });
 
-  it('non-premium + privacy ON: photos stay visible — premium-only privacy is unavailable', async () => {
+  it('non-premium + privacy ON + stranger: withheld (free privacy), nothing signed', async () => {
     const dto = await mapper.toDto(
       row({
         photos: [PHOTO],
@@ -74,9 +76,32 @@ describe('photo privacy — premium x flag x connection matrix', () => {
         ...STRANGER,
       }),
     );
-    expect(dto.photoUrls).toEqual(['https://signed/u1/a.jpg']);
-    expect(dto.photoProtected).toBe(false);
+    expect(dto.photoUrls).toEqual([]);
+    expect(dto.photoProtected).toBe(true);
+    expect(getPresignedGetUrl).not.toHaveBeenCalled();
+    // The member's own premium status is untouched by the privacy unlock.
+    expect(dto.isPremium).toBe(false);
   });
+
+  it.each([
+    ['viewer sent, owner accepted', [{ id: 'i1' }], []],
+    ['owner sent, viewer accepted', [], [{ id: 'i2' }]],
+  ])(
+    'non-premium + privacy ON + connected (%s): visible',
+    async (_label, receivedInterests, sentInterests) => {
+      const dto = await mapper.toDto(
+        row({
+          photos: [PHOTO],
+          hidePhotosFromNonConnections: true,
+          subscriptions: NOT_PREMIUM,
+          receivedInterests,
+          sentInterests,
+        }),
+      );
+      expect(dto.photoUrls).toEqual(['https://signed/u1/a.jpg']);
+      expect(dto.photoProtected).toBe(false);
+    },
+  );
 
   it('premium + privacy OFF: photos visible', async () => {
     const dto = await mapper.toDto(
@@ -169,6 +194,43 @@ describe('photo privacy — premium x flag x connection matrix', () => {
     ]);
     expect(getPresignedGetUrl).toHaveBeenCalledTimes(1);
     expect(getPresignedGetUrl).not.toHaveBeenCalledWith('u2/a.jpg');
+  });
+});
+
+describe('photo privacy — with free privacy switched off (premium-only)', () => {
+  it('non-premium + flag on: the flag is ignored, photos visible', () => {
+    expect(
+      arePhotosHidden(
+        {
+          hidePhotosFromNonConnections: true,
+          subscriptions: NOT_PREMIUM,
+          ...STRANGER,
+        },
+        false,
+      ),
+    ).toBe(false);
+  });
+
+  it('premium + flag on + stranger: hidden', () => {
+    expect(
+      arePhotosHidden(
+        {
+          hidePhotosFromNonConnections: true,
+          subscriptions: PREMIUM,
+          ...STRANGER,
+        },
+        false,
+      ),
+    ).toBe(true);
+  });
+
+  it('flag on, premium probe missing: treated as premium, hidden', () => {
+    expect(
+      arePhotosHidden(
+        { hidePhotosFromNonConnections: true, ...STRANGER },
+        false,
+      ),
+    ).toBe(true);
   });
 });
 

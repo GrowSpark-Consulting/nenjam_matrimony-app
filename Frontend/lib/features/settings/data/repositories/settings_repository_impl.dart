@@ -25,12 +25,14 @@ class SettingsRepositoryImpl implements SettingsRepository {
   }
 
   @override
-  Future<void> updatePrivacySettings(Map<String, dynamic> settings) async {
+  Future<Map<String, dynamic>> updatePrivacySettings(
+    Map<String, dynamic> settings,
+  ) async {
     final response = await _apiClient.patch<Map<String, dynamic>>(
       ApiEndpoints.privacySettings,
       data: settings,
     );
-    unwrapOrThrow(response.statusCode, response.data);
+    return unwrapOrThrow(response.statusCode, response.data) ?? {};
   }
 
   @override

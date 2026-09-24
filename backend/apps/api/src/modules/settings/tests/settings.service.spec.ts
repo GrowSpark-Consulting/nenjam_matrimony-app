@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { SettingsService } from '../services/settings.service';
 import { PrivacySettings } from '../repositories/settings.repository';
 
@@ -59,14 +59,14 @@ describe('SettingsService.getPrivacySettings', () => {
     });
   });
 
-  it('non-premium: never reports a privacy feature as on, even when stored', async () => {
+  it('non-premium: reports both privacy flags as stored (free privacy), isPremium stays false', async () => {
     const { service, settingsRepository } = build({ premium: false });
     settingsRepository.findPrivacyByUserId.mockResolvedValue(BOTH_ON);
     await expect(service.getPrivacySettings('u1')).resolves.toEqual({
       isPremium: false,
-      hideMyProfile: false,
-      hidePhotosFromNonConnections: false,
-      profileVisibleToPremiumOnly: false,
+      hideMyProfile: true,
+      hidePhotosFromNonConnections: true,
+      profileVisibleToPremiumOnly: true,
     });
   });
 
@@ -200,19 +200,41 @@ describe('SettingsService.updatePrivacySettings', () => {
 
   describe('premium gating', () => {
     it.each([
-      [{ hideMyProfile: true }],
-      [{ profileVisibleToPremiumOnly: true }],
-      [{ hidePhotosFromNonConnections: true }],
-      [{ hideMyProfile: false, hidePhotosFromNonConnections: true }],
+      [{ hideMyProfile: true }, { profileVisibleToPremiumOnly: true }],
+      [
+        { profileVisibleToPremiumOnly: true },
+        { profileVisibleToPremiumOnly: true },
+      ],
+      [
+        { hidePhotosFromNonConnections: true },
+        { hidePhotosFromNonConnections: true },
+      ],
+      [
+        { hideMyProfile: true, hidePhotosFromNonConnections: true },
+        {
+          profileVisibleToPremiumOnly: true,
+          hidePhotosFromNonConnections: true,
+        },
+      ],
     ])(
-      'non-premium: refuses to switch a feature on (%j) and writes nothing',
-      async (dto) => {
+      'non-premium: may switch privacy on (%j) — temporarily free',
+      async (dto, written) => {
         const { service, settingsRepository } = build({ premium: false });
+        const stored = { ...DEFAULTS, ...written };
+        settingsRepository.updatePrivacyByUserId.mockResolvedValue(stored);
 
-        await expect(
-          service.updatePrivacySettings('u1', dto),
-        ).rejects.toBeInstanceOf(ForbiddenException);
-        expect(settingsRepository.updatePrivacyByUserId).not.toHaveBeenCalled();
+        const result = await service.updatePrivacySettings('u1', dto);
+
+        expect(settingsRepository.updatePrivacyByUserId).toHaveBeenCalledWith(
+          'u1',
+          written,
+        );
+        expect(result).toEqual({
+          isPremium: false,
+          hideMyProfile: stored.profileVisibleToPremiumOnly,
+          hidePhotosFromNonConnections: stored.hidePhotosFromNonConnections,
+          profileVisibleToPremiumOnly: stored.profileVisibleToPremiumOnly,
+        });
       },
     );
 

@@ -11,9 +11,13 @@ abstract interface class SettingsRepository {
   Future<Map<String, dynamic>> getSettings({CancelToken? cancelToken});
 
   /// `PATCH /settings/privacy` — a partial update; send only the keys that
-  /// changed. The backend answers 403 when a non-premium member tries to
-  /// switch a privacy feature on.
-  Future<void> updatePrivacySettings(Map<String, dynamic> settings);
+  /// changed. Returns the server's settings after the write (same shape as
+  /// [getSettings]) — the confirmed values, so no follow-up read is needed.
+  /// The backend answers 403 when a non-premium member tries to switch a
+  /// privacy feature on.
+  Future<Map<String, dynamic>> updatePrivacySettings(
+    Map<String, dynamic> settings,
+  );
 
   /// `DELETE /settings/delete-account`.
   Future<void> deleteAccount();

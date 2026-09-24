@@ -31,16 +31,35 @@ export function activePremiumSubscriptionWhere(
 }
 
 /**
- * Members hidden from discovery: premium members who switched on "Hide My
- * Profile". Stored in the `profileVisibleToPremiumOnly` column, which was
- * repurposed to mean "hide my profile" rather than adding a second, overlapping
- * flag.
+ * TODO(premium): both privacy controls — "Hide My Profile" and "Hide Photos
+ * from Non-Connections" — are temporarily available to all users; restore
+ * premium gating when subscriptions/checkout are live — set this back to
+ * `false`. It is the ONLY switch: the discovery rule below, the photo gate
+ * (`arePhotosHidden`) and the `PATCH /settings/privacy` check all read it, so
+ * enforcement and the API can never disagree. Nothing else premium reads it.
  *
- * Hiding is a premium feature, so the flag alone is not enough: a member
- * without an active premium subscription stays visible even with it set. Used
- * as a `NOT` clause on the user relation by every discovery surface.
+ * A code constant rather than an env var on purpose: the rule is shared by
+ * the API and the separately deployed scheduler (weekly digest), and an env
+ * var set on one Railway service but not the other would hide a member from
+ * Discover yet still mail them out.
  */
-export function hiddenFromDiscoveryWhere(now: Date): Prisma.UserWhereInput {
+export const ALLOW_FREE_PRIVACY_CONTROLS = true;
+
+/**
+ * Members hidden from discovery: members who switched on "Hide My Profile".
+ * Stored in the `profileVisibleToPremiumOnly` column, which was repurposed to
+ * mean "hide my profile" rather than adding a second, overlapping flag.
+ *
+ * While [ALLOW_FREE_PRIVACY_CONTROLS] is on, the flag alone hides anyone. With it
+ * off, hiding is a premium feature: a member without an active premium
+ * subscription stays visible even with the flag set. Used as a `NOT` clause on
+ * the user relation by every discovery surface.
+ */
+export function hiddenFromDiscoveryWhere(
+  now: Date,
+  allowFreePrivacy: boolean = ALLOW_FREE_PRIVACY_CONTROLS,
+): Prisma.UserWhereInput {
+  if (allowFreePrivacy) return { profileVisibleToPremiumOnly: true };
   return {
     profileVisibleToPremiumOnly: true,
     subscriptions: { some: activePremiumSubscriptionWhere(now) },

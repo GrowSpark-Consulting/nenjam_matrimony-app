@@ -6236,24 +6236,6 @@ abstract class AppLocalizations {
   /// **'Don\'t show my profile in Discover, Search or Near Me'**
   String get privacyHideProfileSubtitle;
 
-  /// No description provided for @privacyPremiumLockedTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Premium privacy controls'**
-  String get privacyPremiumLockedTitle;
-
-  /// No description provided for @privacyPremiumLockedMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Hiding your profile or your photos is available with a Premium membership.'**
-  String get privacyPremiumLockedMessage;
-
-  /// No description provided for @privacyUpgradeCta.
-  ///
-  /// In en, this message translates to:
-  /// **'Upgrade to Premium'**
-  String get privacyUpgradeCta;
-
   /// No description provided for @privacyHidePhotosTitle.
   ///
   /// In en, this message translates to:

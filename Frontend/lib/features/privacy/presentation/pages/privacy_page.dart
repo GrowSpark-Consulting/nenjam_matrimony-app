@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/buttons/premium_button.dart';
 import '../../../../core/widgets/cards/interest_card.dart';
 import '../../../../core/widgets/feedback/empty_state.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
@@ -40,11 +37,14 @@ String _formatBlockedDate(DateTime date) =>
 /// reflects every member the caller has ever blocked, not just the ones
 /// reachable through an existing chat thread.
 ///
-/// Both visibility toggles are premium features, enforced by the backend.
-/// `isPremium` comes from the server (derived from the member's
-/// subscription), and the toggle values are what the server actually
-/// enforces — so a non-premium member sees them locked and off, with an
-/// upgrade prompt, never a switch that looks on but does nothing.
+/// Both visibility toggles are open to every member, and their values are
+/// what the server actually enforces.
+///
+/// TODO(premium): both controls are temporarily available to all users;
+/// restore premium gating when subscriptions/checkout are live, in step with
+/// the backend's `ALLOW_FREE_PRIVACY_CONTROLS` — the locked-toggle state and
+/// "Premium privacy controls" upgrade card this screen used to show are in
+/// git history.
 class PrivacyPage extends ConsumerStatefulWidget {
   const PrivacyPage({super.key});
 
@@ -53,27 +53,26 @@ class PrivacyPage extends ConsumerStatefulWidget {
 }
 
 class _PrivacyPageState extends ConsumerState<PrivacyPage> {
-  final Set<String> _saving = {};
+  /// Keys with a save in flight, mapped to the value being saved. The switch
+  /// shows that value but is disabled until the server answers; on success
+  /// the provider holds the confirmed value, on failure dropping the entry
+  /// puts the switch back to what the server last confirmed.
+  final Map<String, bool> _pending = {};
 
   Future<void> _toggle(String key, bool value) async {
-    if (_saving.contains(key)) return;
-    setState(() => _saving.add(key));
+    if (_pending.containsKey(key)) return;
+    setState(() => _pending[key] = value);
     try {
-      await ref.read(settingsRepositoryProvider).updatePrivacySettings({
-        key: value,
-      });
-      if (!mounted) return;
-      ref.invalidate(mySettingsProvider);
+      await ref.read(mySettingsProvider.notifier).updatePrivacy({key: value});
     } catch (_) {
       if (!mounted) return;
-      ref.invalidate(mySettingsProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context).privacySaveErrorMessage),
         ),
       );
     } finally {
-      if (mounted) setState(() => _saving.remove(key));
+      if (mounted) setState(() => _pending.remove(key));
     }
   }
 
@@ -102,33 +101,24 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
             const SizedBox(height: 8),
             settingsAsync.when(
               data: (settings) {
-                // Server-derived; a response without it (an older backend)
-                // reads as not premium, so the toggles stay locked.
-                final isPremium = settings['isPremium'] == true;
+                bool valueFor(String key) =>
+                    _pending[key] ?? settings[key] == true;
                 ValueChanged<bool>? onChangedFor(String key) =>
-                    !isPremium || _saving.contains(key)
-                    ? null
-                    : (v) => _toggle(key, v);
+                    _pending.containsKey(key) ? null : (v) => _toggle(key, v);
                 return Column(
                   children: [
-                    if (!isPremium)
-                      _PremiumPrivacyLockedCard(
-                        onUpgrade: () => context.go(RouteNames.premium),
-                      ),
                     NmToggleRow(
                       icon: Icons.visibility_off_outlined,
                       title: l10n.privacyHideProfileTitle,
                       subtitle: l10n.privacyHideProfileSubtitle,
-                      value: isPremium && settings['hideMyProfile'] == true,
+                      value: valueFor('hideMyProfile'),
                       onChanged: onChangedFor('hideMyProfile'),
                     ),
                     NmToggleRow(
                       icon: Icons.photo_library_outlined,
                       title: l10n.privacyHidePhotosTitle,
                       subtitle: l10n.privacyHidePhotosSubtitle,
-                      value:
-                          isPremium &&
-                          settings['hidePhotosFromNonConnections'] == true,
+                      value: valueFor('hidePhotosFromNonConnections'),
                       onChanged: onChangedFor('hidePhotosFromNonConnections'),
                     ),
                   ],
@@ -223,60 +213,6 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Shown above the (locked) visibility toggles for a member without an
-/// active premium subscription: says why they can't be switched on and
-/// offers the upgrade.
-class _PremiumPrivacyLockedCard extends StatelessWidget {
-  const _PremiumPrivacyLockedCard({required this.onUpgrade});
-
-  final VoidCallback onUpgrade;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      key: const ValueKey('privacy-premium-locked'),
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primarySurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primarySurfaceStrong),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.lock_outline_rounded, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  l10n.privacyPremiumLockedTitle,
-                  style: AppTypography.titleSmall,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.privacyPremiumLockedMessage,
-            style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          NmPremiumButton(
-            label: l10n.privacyUpgradeCta,
-            height: 48,
-            onPressed: onUpgrade,
-          ),
-        ],
       ),
     );
   }

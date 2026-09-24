@@ -1,16 +1,16 @@
 /**
  * Response for `GET /settings` and `PATCH /settings/privacy`.
  *
- * Both privacy features are premium-only, so every flag here is the EFFECTIVE
- * value — what the backend actually enforces — not merely what is stored: for
- * a member without an active premium subscription they always read `false`,
- * because the feed/search/photo queries ignore them. The app therefore never
- * shows a non-premium member a privacy feature as switched on.
+ * Every flag here is the EFFECTIVE value — what the backend actually enforces —
+ * not merely what is stored. While `ALLOW_FREE_PRIVACY_CONTROLS` is on, both
+ * flags are the stored value for every member. Otherwise both are
+ * premium-only and always read `false` without an active premium
+ * subscription, because discovery and the photo gate ignore them.
  */
 export interface PrivacySettingsResponse {
   /** Whether the caller has an active premium subscription, derived from
    *  their UserSubscription rows on every request — never client-supplied.
-   *  The app locks both toggles behind an upgrade prompt when false. */
+   *  Reported as-is; unlocking the privacy controls never changes it. */
   isPremium: boolean;
   /** Hidden from Discover, Search, Near Me and the weekly digest. */
   hideMyProfile: boolean;

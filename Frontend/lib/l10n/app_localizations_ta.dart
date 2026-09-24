@@ -3351,17 +3351,6 @@ class AppLocalizationsTa extends AppLocalizations {
       'டிஸ்கவர், தேடல், அருகில் உள்ளவர்கள் பகுதிகளில் எனது சுயவிவரத்தைக் காட்ட வேண்டாம்';
 
   @override
-  String get privacyPremiumLockedTitle =>
-      'பிரீமியம் தனியுரிமைக் கட்டுப்பாடுகள்';
-
-  @override
-  String get privacyPremiumLockedMessage =>
-      'உங்கள் சுயவிவரம் அல்லது புகைப்படங்களை மறைக்கும் வசதி பிரீமியம் உறுப்பினர்களுக்கு மட்டுமே கிடைக்கும்.';
-
-  @override
-  String get privacyUpgradeCta => 'பிரீமியத்திற்கு மேம்படுத்து';
-
-  @override
   String get privacyHidePhotosTitle =>
       'இணைப்பில்லாதவர்களிடமிருந்து புகைப்படங்களை மறை';
 

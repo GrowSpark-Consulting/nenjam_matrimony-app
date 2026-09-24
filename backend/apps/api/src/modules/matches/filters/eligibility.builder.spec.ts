@@ -64,40 +64,19 @@ describe('buildEligibilityConditions', () => {
     });
   });
 
-  describe('Hide My Profile (premium-only)', () => {
+  describe('Hide My Profile', () => {
     const hiddenRule = () =>
       (accountRules(conditions()).NOT as Where[]).find(
         (x) => 'profileVisibleToPremiumOnly' in x,
       ) as Record<string, unknown>;
 
-    it('excludes a member only when the flag is on AND they hold an active premium subscription', () => {
-      expect(hiddenRule()).toEqual({
-        profileVisibleToPremiumOnly: true,
-        subscriptions: {
-          some: {
-            status: 'ACTIVE',
-            startDate: { lte: FROZEN_NOW },
-            endDate: { gt: FROZEN_NOW },
-            plan: { name: { not: 'FREE' } },
-          },
-        },
-      });
+    it('excludes any member with the flag on while free hiding is enabled', () => {
+      // ALLOW_FREE_PRIVACY_CONTROLS: no premium subscription required.
+      expect(hiddenRule()).toEqual({ profileVisibleToPremiumOnly: true });
     });
 
     it('is the shared hiddenFromDiscoveryWhere rule, not a local copy', () => {
       expect(hiddenRule()).toEqual(hiddenFromDiscoveryWhere(FROZEN_NOW));
-    });
-
-    it('non-premium + flag on stays visible: the flag alone never excludes anyone', () => {
-      // The exclusion is a conjunction — without the premium EXISTS the
-      // flag matches nothing — and the flag is never a standalone clause.
-      const json = JSON.stringify(conditions());
-      const flagOnly = JSON.stringify({ profileVisibleToPremiumOnly: true });
-      expect(json).not.toContain(flagOnly);
-      expect(Object.keys(hiddenRule())).toEqual([
-        'profileVisibleToPremiumOnly',
-        'subscriptions',
-      ]);
     });
 
     it('lives in the single account-rule block (evaluated inside the same query)', () => {
