@@ -154,8 +154,8 @@ export class WeeklyDigestCron {
           // blocksReceived = blocks created against them.
           blocksMade: { none: { blockedUserId: user.id } },
           blocksReceived: { none: { blockerId: user.id } },
-          // A digest is a discovery surface: never mail out a premium member
-          // who chose "Hide My Profile" (same rule as Discover/Search/Near Me).
+          // A digest is a discovery surface: never mail out a member who
+          // chose "Hide My Profile" (same rule as Discover/Search/Near Me).
           NOT: hiddenFromDiscoveryWhere(now),
         },
       },

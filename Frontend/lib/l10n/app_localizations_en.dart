@@ -3301,16 +3301,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Don\'t show my profile in Discover, Search or Near Me';
 
   @override
-  String get privacyPremiumLockedTitle => 'Premium privacy controls';
-
-  @override
-  String get privacyPremiumLockedMessage =>
-      'Hiding your profile or your photos is available with a Premium membership.';
-
-  @override
-  String get privacyUpgradeCta => 'Upgrade to Premium';
-
-  @override
   String get privacyHidePhotosTitle => 'Hide Photos from Non-Connections';
 
   @override

@@ -1,4 +1,4 @@
-import type { PrismaService } from '@app/database';
+import { hiddenFromDiscoveryWhere, type PrismaService } from '@app/database';
 import type { MailService } from '@app/mail';
 import { WeeklyDigestCron, isoWeekKey } from '../cron/weekly-digest.cron';
 
@@ -133,16 +133,14 @@ describe('WeeklyDigestCron', () => {
     expect(where.blocksReceived).toEqual({ none: { blockerId: 'u1' } });
   });
 
-  it('never mails out a premium member who chose "Hide My Profile"', async () => {
+  it('never mails out a member who chose "Hide My Profile"', async () => {
     await cron.run();
 
     const where = findManyProfiles.mock.calls[0][0].where.user;
-    // The shared rule (flag AND active premium) — so a non-premium member
-    // with the flag set is still included, exactly as in Discover.
-    expect(where.NOT).toMatchObject({
-      profileVisibleToPremiumOnly: true,
-      subscriptions: { some: { status: 'ACTIVE' } },
-    });
+    // The shared rule, exactly as in Discover — while free hiding is on, the
+    // flag alone excludes a member, premium or not.
+    expect(where.NOT).toEqual(hiddenFromDiscoveryWhere(new Date()));
+    expect(where.NOT).toEqual({ profileVisibleToPremiumOnly: true });
   });
 
   it('skips members with no email or no finalized profile', async () => {

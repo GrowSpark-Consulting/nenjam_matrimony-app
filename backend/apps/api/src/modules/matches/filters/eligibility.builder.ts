@@ -49,9 +49,9 @@ export interface EligibilityParams {
  *  - never a SUSPENDED / DEACTIVATED / BANNED account;
  *  - never across a block, in either direction;
  *  - never across a declined interest, in either direction;
- *  - never a premium member who chose "Hide My Profile" — the flag is ignored
- *    for members without an active premium subscription, who stay visible
- *    (see hiddenFromDiscoveryWhere). Relationship surfaces (interests, chat,
+ *  - never a member who chose "Hide My Profile" (see hiddenFromDiscoveryWhere
+ *    — temporarily any member; premium-only again once
+ *    ALLOW_FREE_PRIVACY_CONTROLS is switched off). Relationship surfaces (interests, chat,
  *    shortlist, profile views, blocks) don't go through this builder, so an
  *    existing relationship keeps working after someone hides;
  *  - opposite gender only — and with the caller's own gender unknown, nobody
@@ -90,7 +90,7 @@ export function buildEligibilityConditions({
                 some: { receiverId: currentUserId, status: 'DECLINED' },
               },
             },
-            // A premium member who hid their profile.
+            // A member who hid their profile.
             hiddenFromDiscoveryWhere(now),
           ],
         },

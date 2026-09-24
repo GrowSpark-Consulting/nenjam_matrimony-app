@@ -1,4 +1,7 @@
-import { activePremiumSubscriptionWhere } from '@app/database';
+import {
+  ALLOW_FREE_PRIVACY_CONTROLS,
+  activePremiumSubscriptionWhere,
+} from '@app/database';
 import type { Prisma } from '../../../../../../libs/database/generated/client';
 
 /**
@@ -8,8 +11,9 @@ import type { Prisma } from '../../../../../../libs/database/generated/client';
  *
  * Rule: a member's photos are withheld from a viewer only when ALL hold:
  *  1. the member switched `hidePhotosFromNonConnections` on;
- *  2. the member has an active premium subscription — photo privacy is a
- *     premium feature, so for everyone else the flag is ignored;
+ *  2. the member has an active premium subscription — unless
+ *     `ALLOW_FREE_PRIVACY_CONTROLS` temporarily opens photo privacy to every
+ *     member, in which case this condition is skipped;
  *  3. the viewer is not a connection. A connection is an accepted interest in
  *     either direction, the app's own definition of a match.
  */
@@ -63,12 +67,17 @@ export interface PhotoPrivacyProbes {
  * photos rather than leaking them. The flag itself is always selected, so a
  * member who never turned it on is never affected by a missing probe.
  */
-export function arePhotosHidden(user: PhotoPrivacyProbes): boolean {
+export function arePhotosHidden(
+  user: PhotoPrivacyProbes,
+  allowFreePrivacy: boolean = ALLOW_FREE_PRIVACY_CONTROLS,
+): boolean {
   if (user.hidePhotosFromNonConnections !== true) return false;
 
-  const ownerIsPremium =
-    user.subscriptions === undefined || user.subscriptions.length > 0;
-  if (!ownerIsPremium) return false;
+  if (!allowFreePrivacy) {
+    const ownerIsPremium =
+      user.subscriptions === undefined || user.subscriptions.length > 0;
+    if (!ownerIsPremium) return false;
+  }
 
   const connected =
     (user.receivedInterests?.length ?? 0) > 0 ||

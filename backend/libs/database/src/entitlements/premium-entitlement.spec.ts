@@ -1,4 +1,5 @@
 import {
+  ALLOW_FREE_PRIVACY_CONTROLS,
   activePremiumSubscriptionWhere,
   hiddenFromDiscoveryWhere,
 } from './premium-entitlement';
@@ -84,8 +85,18 @@ describe('activePremiumSubscriptionWhere', () => {
 });
 
 describe('hiddenFromDiscoveryWhere', () => {
-  it('requires BOTH the hide flag and an active premium subscription', () => {
+  it('is temporarily open to every member (TODO(premium): flip back)', () => {
+    expect(ALLOW_FREE_PRIVACY_CONTROLS).toBe(true);
+  });
+
+  it('while free hiding is on, the hide flag alone hides a member', () => {
     expect(hiddenFromDiscoveryWhere(NOW)).toEqual({
+      profileVisibleToPremiumOnly: true,
+    });
+  });
+
+  it('with free hiding off, requires BOTH the hide flag and an active premium subscription', () => {
+    expect(hiddenFromDiscoveryWhere(NOW, false)).toEqual({
       profileVisibleToPremiumOnly: true,
       subscriptions: { some: activePremiumSubscriptionWhere(NOW) },
     });

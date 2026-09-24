@@ -7,8 +7,9 @@ import { IsBoolean, IsOptional } from 'class-validator';
  * other than the ones declared here is rejected with a 400 — in particular a
  * client cannot send an `isPremium` of its own.
  *
- * Both features are premium-only: switching one ON without an active premium
- * subscription is a 403. Switching one OFF is always allowed.
+ * Both features are open to every member while `ALLOW_FREE_PRIVACY_CONTROLS`
+ * is on. Otherwise they are premium-only: switching one ON without an active
+ * premium subscription is a 403. Switching one OFF is always allowed.
  */
 export class UpdatePrivacyDto {
   @IsOptional()

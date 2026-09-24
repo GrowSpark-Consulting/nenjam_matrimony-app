@@ -283,11 +283,21 @@ describe('NotificationsService.list', () => {
       expect(s3.getPresignedGetUrl).toHaveBeenCalledWith('photos/a.jpg');
     });
 
-    it('non-premium actor with the flag on: photo stays visible (premium-only feature)', async () => {
+    it('non-premium actor with the flag on: photo withheld from a stranger (free privacy)', async () => {
       const { actor } = await listWithActor({
         hidePhotosFromNonConnections: true,
         subscriptions: [],
         receivedInterests: [],
+        sentInterests: [],
+      });
+      expect(actor?.photoUrl).toBeNull();
+    });
+
+    it('non-premium actor with the flag on: photo visible to a connection', async () => {
+      const { actor } = await listWithActor({
+        hidePhotosFromNonConnections: true,
+        subscriptions: [],
+        receivedInterests: [{ id: 'i1' }],
         sentInterests: [],
       });
       expect(actor?.photoUrl).toBe('https://signed/photo.jpg');
