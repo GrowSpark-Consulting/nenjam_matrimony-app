@@ -1,5 +1,4 @@
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
-import '../../../psychology/domain/models/personality_result.dart';
 import 'family_info_entity.dart';
 import 'horoscope_info_entity.dart';
 import 'lifestyle_info_entity.dart';
@@ -26,7 +25,6 @@ class ProfileDetailEntity {
   final HoroscopeInfoEntity horoscope;
   final PartnerPreferencesEntity partnerPreferences;
   final VerificationChecklistEntity verification;
-  final PersonalityResult? personality;
   final List<TimelineEventEntity> timeline;
 
   const ProfileDetailEntity({
@@ -41,7 +39,6 @@ class ProfileDetailEntity {
     this.horoscope = const HoroscopeInfoEntity(),
     this.partnerPreferences = const PartnerPreferencesEntity(),
     this.verification = const VerificationChecklistEntity(),
-    this.personality,
     this.timeline = const [],
   });
 }

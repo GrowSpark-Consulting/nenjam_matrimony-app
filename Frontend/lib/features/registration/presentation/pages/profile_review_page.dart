@@ -14,7 +14,6 @@ import '../../../profile/presentation/providers/profile_dashboard_providers.dart
 import '../../../profile_completion/presentation/widgets/complete_profile_section.dart';
 import '../../../profile_photos/domain/models/user_photo.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
-import '../../../psychology/domain/models/personality_result.dart';
 import '../../../psychology/presentation/providers/personality_provider.dart';
 import '../../domain/models/profile_draft.dart';
 import '../providers/registration_provider.dart';
@@ -313,9 +312,7 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                           myPersonalityResultProvider,
                         );
                         return PsychologySection(
-                          result:
-                              personalityAsync.value ??
-                              const PersonalityResult(),
+                          result: personalityAsync.value,
                           onTakeQuizTap: () async {
                             await context.push(RouteNames.psychologyQuiz);
                             ref.invalidate(myPersonalityResultProvider);

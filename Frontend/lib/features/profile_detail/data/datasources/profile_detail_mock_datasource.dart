@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
-import '../../../psychology/domain/models/personality_result.dart';
 import '../../domain/entities/family_info_entity.dart';
 import '../../domain/entities/horoscope_info_entity.dart';
 import '../../domain/entities/lifestyle_info_entity.dart';
@@ -130,16 +129,6 @@ class ProfileDetailMockDataSource {
           ),
         ],
       ),
-      personality: base.isPsychologyCompleted
-          ? PersonalityResult(
-              completed: true,
-              openness: pickInt(55, 95),
-              conscientiousness: pickInt(55, 95),
-              extraversion: pickInt(40, 90),
-              agreeableness: pickInt(55, 95),
-              neuroticism: pickInt(15, 45),
-            )
-          : null,
       timeline: [
         TimelineEventEntity(
           icon: Icons.celebration_rounded,

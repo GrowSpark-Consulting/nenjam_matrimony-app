@@ -1176,7 +1176,7 @@
   "profileCompletionActionFamily": "Complete Your Family Details",
   "profileCompletionActionPsychology": "Take the Psychology Assessment",
   "profileCompletionGrowthPsychology": "Psychology Assessment",
-  "profileCompletionGrowthPsychologySubtitle": "Discover your personality profile.",
+  "profileCompletionGrowthPsychologySubtitle": "Share your expectations for married life.",
   "profileCompletionGrowthHoroscope": "Horoscope Compatibility",
   "profileCompletionGrowthHoroscopeSubtitle": "See your astrological match insights.",
   "profileCompletionGrowthPremium": "Nenjam Premium",
@@ -1499,9 +1499,9 @@
   "otpPasteCode": "Paste Code",
   "riYourHoroscope": "Your Horoscope",
   "riHoroscopeEmpty": "Add your horoscope details to enable compatibility matching.",
-  "riDiscoverPersonality": "Discover your personality",
+  "riDiscoverPersonality": "Share your marriage expectations",
   "riQuizTeaser": "3-minute quiz · improves match quality",
-  "riPersonalityProfile": "Personality Profile",
+  "riPersonalityProfile": "Marriage Compatibility Quiz",
   "riRetake": "Retake",
   "astroMatchingTitle": "Horoscope Matching",
   "astroLoadError": "Could not load your horoscope.",
@@ -1595,7 +1595,7 @@
   "profileDetailIdentityVerified": "Identity verified",
   "profileDetailActiveNow": "Active now",
   "psychologyQuizTitle": "Psychological Quiz",
-  "psychologyIntroBody": "A short OCEAN Big-Five assessment. Your results help us suggest more compatible matches.",
+  "psychologyIntroBody": "Short, scenario-based questions about everyday married life — money, family, conflict, careers and more. Your answers help us suggest matches whose expectations align with yours.",
   "psychologyTakesMinutes": "Takes about 3 minutes",
   "psychologyStartQuiz": "Start Quiz",
   "psychologyNoQuiz": "No quiz is available right now.",
@@ -1610,9 +1610,24 @@
       }
     }
   },
-  "psychologyYourProfile": "Your Personality Profile",
-  "psychologyOceanTitle": "OCEAN Personality Profile",
-  "psychologyOceanDescription": "A short assessment based on the Big Five personality model. Results help us find more compatible matches for you.",
+  "psychologyYourProfile": "Quiz completed",
+  "psychologyCompleted": "Completed",
+  "psychologyUpdatedOn": "Updated {date}",
+  "@psychologyUpdatedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "psychologyYourAnswers": "Your answers",
+  "psychologyRetakeQuiz": "Retake Quiz",
+  "psychologyNext": "Next",
+  "psychologySubmit": "Submit",
+  "psychologyLoadError": "Could not load the quiz. Check your connection and try again.",
+  "psychologyIncompleteError": "Please answer every question before submitting.",
+  "psychologyRejectedError": "The quiz has been updated. Please review your answers and submit again.",
+  "psychologySubmitError": "Could not submit your answers. Check your connection and try again.",
   "registrationSaveStepError": "Could not save this step. Check your connection.",
   "registrationSaveStepErrorDetail": "Could not save this step: {message}",
   "@registrationSaveStepErrorDetail": {

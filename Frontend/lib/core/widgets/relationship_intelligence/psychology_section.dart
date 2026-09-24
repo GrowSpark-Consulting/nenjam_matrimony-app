@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../features/psychology/domain/models/personality_result.dart';
 import '../../constants/app_spacing.dart';
@@ -7,13 +8,14 @@ import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
 import '../../../l10n/app_localizations.dart';
 
-/// Displays OCEAN Big-Five personality quiz status. When [result.completed]
-/// is false and [onTakeQuizTap] is provided, shows a "take the quiz" CTA.
-/// When completed, always shows the trait bars — used both right after quiz
-/// submission (result screen) and read-only elsewhere (`onTakeQuizTap: null`
-/// hides the CTA/retake affordance).
+/// Displays the signed-in user's psychology (Marriage Compatibility) quiz
+/// status. When [result] is null (not taken) and [onTakeQuizTap] is
+/// provided, shows a "take the quiz" CTA. When completed, shows a
+/// `Completed · Updated {date}` status — the backend has no single-user
+/// score to display (compatibility is scored pairwise, server-side).
+/// `onTakeQuizTap: null` hides the CTA/retake affordance.
 class PsychologySection extends StatelessWidget {
-  final PersonalityResult result;
+  final PsychologyQuizResponse? result;
   final VoidCallback? onTakeQuizTap;
 
   const PsychologySection({
@@ -22,9 +24,18 @@ class PsychologySection extends StatelessWidget {
     this.onTakeQuizTap,
   });
 
+  /// `Updated {date}` for a saved response, or null when there's no date.
+  static String? updatedLabel(AppLocalizations l10n, DateTime? at) {
+    if (at == null) return null;
+    return l10n.psychologyUpdatedOn(
+      DateFormat.yMMMd(l10n.localeName).format(at.toLocal()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (!result.completed) {
+    final result = this.result;
+    if (result == null) {
       if (onTakeQuizTap == null) return const SizedBox.shrink();
       return GestureDetector(
         onTap: onTakeQuizTap,
@@ -77,13 +88,11 @@ class PsychologySection extends StatelessWidget {
       );
     }
 
-    final traits = <String, int>{
-      'Openness': result.openness,
-      'Conscientiousness': result.conscientiousness,
-      'Extraversion': result.extraversion,
-      'Agreeableness': result.agreeableness,
-      'Emotional Balance': result.emotionalBalance,
-    };
+    final l10n = AppLocalizations.of(context);
+    final updated = updatedLabel(l10n, result.lastUpdatedAt);
+    final status = updated == null
+        ? l10n.psychologyCompleted
+        : '${l10n.psychologyCompleted} · $updated';
 
     return Container(
       width: double.infinity,
@@ -116,44 +125,24 @@ class PsychologySection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          ...traits.entries.map((entry) {
-            final value = entry.value.clamp(0, 100);
-            return Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          entry.key,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.labelMedium,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text('$value%', style: AppTypography.labelMedium),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  ClipRRect(
-                    borderRadius: AppSpacing.borderRadiusFull,
-                    child: LinearProgressIndicator(
-                      value: value / 100,
-                      minHeight: 6,
-                      backgroundColor: AppColors.surfaceVariantLight,
-                      valueColor: const AlwaysStoppedAnimation(
-                        AppColors.scorePsychology,
-                      ),
-                    ),
-                  ),
-                ],
+          Row(
+            children: [
+              const Icon(
+                Icons.check_circle_rounded,
+                color: AppColors.success,
+                size: 18,
               ),
-            );
-          }),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  status,
+                  style: AppTypography.labelMedium.copyWith(
+                    color: AppColors.textSecondaryLight,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

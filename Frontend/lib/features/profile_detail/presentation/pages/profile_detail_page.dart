@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../core/widgets/feedback/loading_widget.dart';
-import '../../../../core/widgets/relationship_intelligence/psychology_section.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../../profile/presentation/widgets/partner_preference_card.dart';
@@ -97,7 +96,7 @@ class _ProfileDetailPageState extends ConsumerState<ProfileDetailPage> {
 ///
 /// full-screen hero photo → about → basic information → photo gallery →
 /// section navigation → family → lifestyle → horoscope → compatibility →
-/// psychology → preferences → verification → similar profiles.
+/// preferences → verification → similar profiles.
 ///
 /// The hero occupies the entire first viewport, and the member's identity
 /// (name/age, profession, and the short profile chips) is overlaid across
@@ -515,10 +514,6 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
                 key: _sectionKeys[3],
                 child: CompatibilityCardSection(detail: detail),
               ),
-              if (detail.personality != null) ...[
-                const SizedBox(height: AppSpacing.md),
-                PsychologySection(result: detail.personality!),
-              ],
               const SizedBox(height: AppSpacing.md),
               KeyedSubtree(
                 key: _sectionKeys[4],

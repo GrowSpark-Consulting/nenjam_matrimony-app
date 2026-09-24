@@ -685,8 +685,8 @@ class RegistrationNotifier extends Notifier<ProfileDraft> {
   // maintaining a synchronized copy. The quiz UI itself never calls this
   // — it displays status by watching myPersonalityResultProvider directly,
   // the same as everywhere else.
-  Future<PersonalityResult?> psychologyQuizResult() {
-    return ref.read(personalityRepositoryProvider).getMyResult();
+  Future<PsychologyQuizResponse?> psychologyQuizResult() {
+    return ref.read(personalityRepositoryProvider).getMyResponse();
   }
 
   // ─── Step 11: Partner Preference ───────────────────────────────────

@@ -5975,7 +5975,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileCompletionGrowthPsychologySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Discover your personality profile.'**
+  /// **'Share your expectations for married life.'**
   String get profileCompletionGrowthPsychologySubtitle;
 
   /// No description provided for @profileCompletionGrowthHoroscope.
@@ -7535,7 +7535,7 @@ abstract class AppLocalizations {
   /// No description provided for @riDiscoverPersonality.
   ///
   /// In en, this message translates to:
-  /// **'Discover your personality'**
+  /// **'Share your marriage expectations'**
   String get riDiscoverPersonality;
 
   /// No description provided for @riQuizTeaser.
@@ -7547,7 +7547,7 @@ abstract class AppLocalizations {
   /// No description provided for @riPersonalityProfile.
   ///
   /// In en, this message translates to:
-  /// **'Personality Profile'**
+  /// **'Marriage Compatibility Quiz'**
   String get riPersonalityProfile;
 
   /// No description provided for @riRetake.
@@ -7943,7 +7943,7 @@ abstract class AppLocalizations {
   /// No description provided for @psychologyIntroBody.
   ///
   /// In en, this message translates to:
-  /// **'A short OCEAN Big-Five assessment. Your results help us suggest more compatible matches.'**
+  /// **'Short, scenario-based questions about everyday married life — money, family, conflict, careers and more. Your answers help us suggest matches whose expectations align with yours.'**
   String get psychologyIntroBody;
 
   /// No description provided for @psychologyTakesMinutes.
@@ -7973,20 +7973,68 @@ abstract class AppLocalizations {
   /// No description provided for @psychologyYourProfile.
   ///
   /// In en, this message translates to:
-  /// **'Your Personality Profile'**
+  /// **'Quiz completed'**
   String get psychologyYourProfile;
 
-  /// No description provided for @psychologyOceanTitle.
+  /// No description provided for @psychologyCompleted.
   ///
   /// In en, this message translates to:
-  /// **'OCEAN Personality Profile'**
-  String get psychologyOceanTitle;
+  /// **'Completed'**
+  String get psychologyCompleted;
 
-  /// No description provided for @psychologyOceanDescription.
+  /// No description provided for @psychologyUpdatedOn.
   ///
   /// In en, this message translates to:
-  /// **'A short assessment based on the Big Five personality model. Results help us find more compatible matches for you.'**
-  String get psychologyOceanDescription;
+  /// **'Updated {date}'**
+  String psychologyUpdatedOn(String date);
+
+  /// No description provided for @psychologyYourAnswers.
+  ///
+  /// In en, this message translates to:
+  /// **'Your answers'**
+  String get psychologyYourAnswers;
+
+  /// No description provided for @psychologyRetakeQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Retake Quiz'**
+  String get psychologyRetakeQuiz;
+
+  /// No description provided for @psychologyNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get psychologyNext;
+
+  /// No description provided for @psychologySubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get psychologySubmit;
+
+  /// No description provided for @psychologyLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the quiz. Check your connection and try again.'**
+  String get psychologyLoadError;
+
+  /// No description provided for @psychologyIncompleteError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please answer every question before submitting.'**
+  String get psychologyIncompleteError;
+
+  /// No description provided for @psychologyRejectedError.
+  ///
+  /// In en, this message translates to:
+  /// **'The quiz has been updated. Please review your answers and submit again.'**
+  String get psychologyRejectedError;
+
+  /// No description provided for @psychologySubmitError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not submit your answers. Check your connection and try again.'**
+  String get psychologySubmitError;
 
   /// No description provided for @registrationSaveStepError.
   ///

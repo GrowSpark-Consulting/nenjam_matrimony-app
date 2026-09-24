@@ -3132,7 +3132,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileCompletionGrowthPsychologySubtitle =>
-      'Discover your personality profile.';
+      'Share your expectations for married life.';
 
   @override
   String get profileCompletionGrowthHoroscope => 'Horoscope Compatibility';
@@ -3999,13 +3999,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add your horoscope details to enable compatibility matching.';
 
   @override
-  String get riDiscoverPersonality => 'Discover your personality';
+  String get riDiscoverPersonality => 'Share your marriage expectations';
 
   @override
   String get riQuizTeaser => '3-minute quiz · improves match quality';
 
   @override
-  String get riPersonalityProfile => 'Personality Profile';
+  String get riPersonalityProfile => 'Marriage Compatibility Quiz';
 
   @override
   String get riRetake => 'Retake';
@@ -4218,7 +4218,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get psychologyIntroBody =>
-      'A short OCEAN Big-Five assessment. Your results help us suggest more compatible matches.';
+      'Short, scenario-based questions about everyday married life — money, family, conflict, careers and more. Your answers help us suggest matches whose expectations align with yours.';
 
   @override
   String get psychologyTakesMinutes => 'Takes about 3 minutes';
@@ -4235,14 +4235,43 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get psychologyYourProfile => 'Your Personality Profile';
+  String get psychologyYourProfile => 'Quiz completed';
 
   @override
-  String get psychologyOceanTitle => 'OCEAN Personality Profile';
+  String get psychologyCompleted => 'Completed';
 
   @override
-  String get psychologyOceanDescription =>
-      'A short assessment based on the Big Five personality model. Results help us find more compatible matches for you.';
+  String psychologyUpdatedOn(String date) {
+    return 'Updated $date';
+  }
+
+  @override
+  String get psychologyYourAnswers => 'Your answers';
+
+  @override
+  String get psychologyRetakeQuiz => 'Retake Quiz';
+
+  @override
+  String get psychologyNext => 'Next';
+
+  @override
+  String get psychologySubmit => 'Submit';
+
+  @override
+  String get psychologyLoadError =>
+      'Could not load the quiz. Check your connection and try again.';
+
+  @override
+  String get psychologyIncompleteError =>
+      'Please answer every question before submitting.';
+
+  @override
+  String get psychologyRejectedError =>
+      'The quiz has been updated. Please review your answers and submit again.';
+
+  @override
+  String get psychologySubmitError =>
+      'Could not submit your answers. Check your connection and try again.';
 
   @override
   String get registrationSaveStepError =>

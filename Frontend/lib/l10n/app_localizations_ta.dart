@@ -3185,7 +3185,7 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get profileCompletionGrowthPsychologySubtitle =>
-      'உங்கள் ஆளுமை சுயவிவரத்தைக் கண்டறியுங்கள்.';
+      'திருமண வாழ்க்கை பற்றிய உங்கள் எதிர்பார்ப்புகளைப் பகிருங்கள்.';
 
   @override
   String get profileCompletionGrowthHoroscope => 'ஜாதக பொருத்தம்';
@@ -4065,14 +4065,15 @@ class AppLocalizationsTa extends AppLocalizations {
       'பொருத்தப் பரிசோதனையை இயக்க உங்கள் ஜாதக விவரங்களைச் சேர்க்கவும்.';
 
   @override
-  String get riDiscoverPersonality => 'உங்கள் ஆளுமையைக் கண்டறியுங்கள்';
+  String get riDiscoverPersonality =>
+      'உங்கள் திருமண எதிர்பார்ப்புகளைப் பகிருங்கள்';
 
   @override
   String get riQuizTeaser =>
       '3 நிமிடத் தேர்வு · பொருத்தத் தரத்தை மேம்படுத்தும்';
 
   @override
-  String get riPersonalityProfile => 'ஆளுமைச் சுயவிவரம்';
+  String get riPersonalityProfile => 'திருமணப் பொருத்தத் தேர்வு';
 
   @override
   String get riRetake => 'மீண்டும் எடுக்க';
@@ -4287,7 +4288,7 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get psychologyIntroBody =>
-      'ஒரு சுருக்கமான OCEAN பிக்-ஃபைவ் மதிப்பீடு. உங்கள் முடிவுகள் மேலும் பொருத்தமான ஜோடிகளைப் பரிந்துரைக்க உதவும்.';
+      'அன்றாடத் திருமண வாழ்க்கை பற்றிய சுருக்கமான, சூழ்நிலை அடிப்படையிலான கேள்விகள் — பணம், குடும்பம், கருத்து வேறுபாடுகள், வேலை மற்றும் பல. உங்கள் எதிர்பார்ப்புகளுடன் ஒத்துப்போகும் ஜோடிகளைப் பரிந்துரைக்க உங்கள் பதில்கள் எங்களுக்கு உதவும்.';
 
   @override
   String get psychologyTakesMinutes => 'சுமார் 3 நிமிடங்கள் ஆகும்';
@@ -4304,14 +4305,43 @@ class AppLocalizationsTa extends AppLocalizations {
   }
 
   @override
-  String get psychologyYourProfile => 'உங்கள் ஆளுமைச் சுயவிவரம்';
+  String get psychologyYourProfile => 'தேர்வு முடிந்தது';
 
   @override
-  String get psychologyOceanTitle => 'OCEAN ஆளுமைச் சுயவிவரம்';
+  String get psychologyCompleted => 'முடிந்தது';
 
   @override
-  String get psychologyOceanDescription =>
-      'பிக் ஃபைவ் ஆளுமை மாதிரியை அடிப்படையாகக் கொண்ட சுருக்கமான மதிப்பீடு. முடிவுகள் உங்களுக்கு மேலும் பொருத்தமான ஜோடிகளைக் கண்டறிய உதவும்.';
+  String psychologyUpdatedOn(String date) {
+    return 'புதுப்பிக்கப்பட்டது: $date';
+  }
+
+  @override
+  String get psychologyYourAnswers => 'உங்கள் பதில்கள்';
+
+  @override
+  String get psychologyRetakeQuiz => 'தேர்வை மீண்டும் எடுக்க';
+
+  @override
+  String get psychologyNext => 'அடுத்து';
+
+  @override
+  String get psychologySubmit => 'சமர்ப்பிக்கவும்';
+
+  @override
+  String get psychologyLoadError =>
+      'தேர்வை ஏற்ற முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get psychologyIncompleteError =>
+      'சமர்ப்பிக்கும் முன் எல்லாக் கேள்விகளுக்கும் பதிலளிக்கவும்.';
+
+  @override
+  String get psychologyRejectedError =>
+      'தேர்வு புதுப்பிக்கப்பட்டுள்ளது. உங்கள் பதில்களைச் சரிபார்த்து மீண்டும் சமர்ப்பிக்கவும்.';
+
+  @override
+  String get psychologySubmitError =>
+      'உங்கள் பதில்களைச் சமர்ப்பிக்க முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
 
   @override
   String get registrationSaveStepError =>

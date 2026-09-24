@@ -101,7 +101,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final AsyncValue<HoroscopeSummary> horoscopeAsync = ref.watch(
       myHoroscopeSummaryProvider,
     );
-    final AsyncValue<PersonalityResult?> personalityAsync = ref.watch(
+    final AsyncValue<PsychologyQuizResponse?> personalityAsync = ref.watch(
       myPersonalityResultProvider,
     );
 
@@ -385,7 +385,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                     error: (_, __) => const SizedBox.shrink(),
                     data: (result) => PsychologySection(
-                      result: result ?? const PersonalityResult(),
+                      result: result,
                     ),
                   ),
                 ),
