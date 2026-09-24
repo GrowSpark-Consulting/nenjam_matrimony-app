@@ -94,4 +94,94 @@ describe('PreferencesService', () => {
       expect('minAge' in data).toBe(false);
     });
   });
+
+  /**
+   * The advanced half of the Partner Preferences page used to be discarded in
+   * silence: the endpoint had no `extended`, so the client could not send it
+   * without the whole request being rejected, and every save reported success
+   * having written only the base fields.
+   */
+  describe('advanced preferences', () => {
+    const ADVANCED = {
+      diet: 'Vegetarian',
+      smoking: 'No',
+      drinking: 'No',
+      ethnicity: 'Iyer',
+      subCaste: 'Vadama',
+      importance: { diet: 'high', education: 'medium' },
+    };
+
+    it('persists the blob to the column the feed already reads', async () => {
+      const { service, upsert } = build({ minAge: 26 });
+
+      await service.update('me', { extended: ADVANCED });
+
+      // `extended` on the wire, `extendedPreferences` in the row — the same
+      // column the WHERE builder and the lifestyle scoring signal read.
+      expect(upsert).toHaveBeenCalledWith('me', {
+        extendedPreferences: ADVANCED,
+      });
+    });
+
+    it('returns it from the PUT response, so the page can hydrate what it saved', async () => {
+      const { service } = build({ minAge: 26 });
+
+      const saved = await service.update('me', { extended: ADVANCED });
+
+      expect(saved.extended).toEqual(ADVANCED);
+    });
+
+    it('returns it from GET', async () => {
+      const { service } = build({ extendedPreferences: ADVANCED });
+      await expect(service.get('me')).resolves.toMatchObject({
+        extended: ADVANCED,
+      });
+    });
+
+    it('reads as {} for a member who never saved one', async () => {
+      const { service } = build(null);
+      await expect(service.get('me')).resolves.toMatchObject({ extended: {} });
+    });
+
+    it('a non-object stored value reads as {} rather than reaching the client', async () => {
+      const { service } = build({ extendedPreferences: 'legacy-garbage' });
+      await expect(service.get('me')).resolves.toMatchObject({ extended: {} });
+    });
+
+    it('an omitted `extended` leaves the saved blob untouched', async () => {
+      const { service, upsert } = build({ extendedPreferences: ADVANCED });
+
+      await service.update('me', { minAge: 28 });
+
+      const data = upsert.mock.calls[0][1];
+      expect(data).toEqual({ minAge: 28 });
+      expect('extendedPreferences' in data).toBe(false);
+    });
+
+    it('an empty object clears it — an explicit choice, not an accident', async () => {
+      const { service, upsert } = build({ extendedPreferences: ADVANCED });
+
+      await service.update('me', { extended: {} });
+
+      expect(upsert).toHaveBeenCalledWith('me', { extendedPreferences: {} });
+    });
+
+    it('saves alongside the base fields in one request, as the page sends them', async () => {
+      const { service, upsert } = build(null);
+
+      await service.update('me', {
+        minAge: 25,
+        maxAge: 32,
+        preferredReligions: ['Hindu'],
+        extended: ADVANCED,
+      });
+
+      expect(upsert).toHaveBeenCalledWith('me', {
+        minAge: 25,
+        maxAge: 32,
+        preferredReligions: ['Hindu'],
+        extendedPreferences: ADVANCED,
+      });
+    });
+  });
 });

@@ -53,6 +53,13 @@ export class PreferencesService {
       ] as Array<keyof UpdatePartnerPreferenceDto>
     ).forEach(assign);
 
+    // The one field whose wire name differs from its column: the client sends
+    // `extended`, the row stores `extended_preferences`. Same partial rule as
+    // everything above — supplied replaces the blob, omitted leaves it alone.
+    if (dto.extended !== undefined) {
+      data.extendedPreferences = dto.extended;
+    }
+
     const row = await this.preferenceRepository.upsert(userId, data as never);
 
     // Preferences are half of the cached feed context, so the next feed
@@ -86,6 +93,7 @@ export class PreferencesService {
       preferredCities: asStringArray(row?.preferredCities),
       preferredStates: asStringArray(row?.preferredStates),
       maritalStatusPref: asStringArray(row?.maritalStatusPref),
+      extended: asRecord(row?.extendedPreferences),
     };
   }
 }
@@ -93,4 +101,13 @@ export class PreferencesService {
 function asStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((v): v is string => typeof v === 'string');
+}
+
+/** The stored JSON blob, or `{}` for a member who has never saved one. A
+ *  non-object (legacy row, hand-edited value) reads as empty rather than
+ *  being handed to the client as something it cannot use. */
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }
