@@ -1984,10 +1984,6 @@ class AppLocalizationsTa extends AppLocalizations {
       'விருப்பத்தேர்வுகளை சேமிக்க முடியவில்லை. இணைப்பை சரிபார்க்கவும்.';
 
   @override
-  String get partnerPrefAdvancedNotSyncedNotice =>
-      'வயது, உயரம், மதம், சாதி, கல்வி, தொழில், வருமானம், இடம் மற்றும் தாய்மொழி உங்கள் சுயவிவரத்தில் சேமிக்கப்படுகின்றன. கீழே உள்ள மேம்பட்ட விருப்பத்தேர்வுகள் இன்னும் சேவையகத்துடன் ஒத்திசைக்கப்படவில்லை.';
-
-  @override
   String get partnerPrefNotSetPlaceholder => 'அமைக்கப்படவில்லை';
 
   @override

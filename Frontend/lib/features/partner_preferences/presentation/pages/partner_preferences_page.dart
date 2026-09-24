@@ -112,20 +112,17 @@ Map<AcceptancePreference, String> _acceptanceMap(AppLocalizations l10n) => {
 ///    them; the registration draft is no longer written from this page.
 ///  * [PartnerPreference.extended] (religion/community, education/career,
 ///    family, lifestyle, location, special cases, verification — the
-///    "advanced" sections below) has no equivalent on `/discover/preferences`
-///    — that endpoint's DTO has no `extendedPreferences` field at all. It is
-///    still read from `registrationProvider`'s draft (hydrated by
-///    `openPartnerPreferences`'s `startEditMode()` before this page opens)
-///    purely for display continuity, but **Save no longer persists it** —
-///    there is no safe way to do so without also resending the registration
-///    draft's base-field strings, which would risk clobbering whatever this
-///    page's own `/discover/preferences` writes just saved (the draft's
-///    materialize step overwrites the live row's base columns
-///    unconditionally from draft data — see `writeProfileFromDraft` in
-///    `profile.service.ts`). The advanced sections stay visible and
-///    editable in this session but are marked below as not yet saved to the
-///    server; the correct fix is a backend change (exposing
-///    `extendedPreferences` on `/discover/preferences`), out of scope here.
+///    "advanced" sections below) saves to and loads from the SAME endpoint,
+///    as one JSON object landing in
+///    `partner_preferences.extended_preferences`. The feed reads it: diet,
+///    smoking, drinking, country, ethnicity and subCaste are applied by the
+///    WHERE builder, and lifestyle is scored.
+///
+/// It used to be otherwise — the endpoint had no `extended` field, so Save
+/// persisted only the base half and the advanced edits were dropped in
+/// silence. The registration draft is still what seeds the first frame (see
+/// `_draft` below), but the backend is authoritative from the moment its GET
+/// resolves.
 ///
 /// Edits happen on a local draft and are only persisted when the user taps
 /// Save (mirrors search_filter_sheet.dart's "edit locally, commit on
@@ -247,12 +244,12 @@ class _PartnerPreferencesPageState extends ConsumerState<PartnerPreferencesPage>
       final saved =
           await ref.read(partnerPreferencesProvider.notifier).save(_draft);
       if (!mounted) return;
-      // Adopt the server's response as the new baseline (authoritative —
-      // e.g. a value clamped to the DTO's min/max would otherwise silently
-      // diverge from what the form shows), while keeping `extended` exactly
-      // as the user left it — the backend never saw it and has nothing to
-      // say about it.
-      setState(() => _draft = saved.copyWith(extended: _ext));
+      // Adopt the server's response wholesale as the new baseline — a value
+      // clamped to the DTO's min/max would otherwise silently diverge from
+      // what the form shows. `extended` comes back from the same write now,
+      // so re-merging the local copy here would discard what the backend just
+      // confirmed it stored.
+      setState(() => _draft = saved);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.partnerPrefSavedSnackbar)));
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -291,7 +288,9 @@ class _PartnerPreferencesPageState extends ConsumerState<PartnerPreferencesPage>
       final saved = next.valueOrNull;
       if (saved == null) return;
       _hydratedBaseFromBackend = true;
-      setState(() => _draft = saved.copyWith(extended: _ext));
+      // Both halves come from the backend now, so the draft-seeded values
+      // (base placeholders AND advanced) give way to what is actually saved.
+      setState(() => _draft = saved);
     });
     final prefsAsync = ref.watch(partnerPreferencesProvider);
 
@@ -344,18 +343,8 @@ class _PartnerPreferencesPageState extends ConsumerState<PartnerPreferencesPage>
               initiallyExpanded: true,
               children: _basicRows(l10n),
             ),
-            // The 8 sections below this point (Religion & Community's
-            // ethnicity/subCaste/mangalik onward) are `extended` fields with
-            // no home on /discover/preferences — see the class doc comment.
-            // This note is the honest disclosure Save's docs promise: these
-            // stay locally editable, but tapping Save does not persist them.
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              child: Text(
-                l10n.partnerPrefAdvancedNotSyncedNotice,
-                style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondaryLight, height: 1.4),
-              ),
-            ),
+            // The 8 sections below are `extended` fields. They save with the
+            // rest now, so the notice that used to warn they did not is gone.
             NmExpandableSection(
               title: l10n.partnerPrefSectionReligionCommunity,
               children: _religionCommunityRows(l10n),

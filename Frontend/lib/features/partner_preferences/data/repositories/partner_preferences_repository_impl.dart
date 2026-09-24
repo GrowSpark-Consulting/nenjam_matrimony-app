@@ -9,6 +9,12 @@ import '../../domain/repositories/partner_preferences_repository.dart';
 /// Real backend implementation of [PartnerPreferencesRepository], over
 /// `GET`/`PUT /discover/preferences`.
 ///
+/// Carries BOTH halves of the model: the 10 base fields below, and
+/// [PartnerPreference.extended] — the advanced religion/education/family/
+/// lifestyle/location/verification preferences — which ride as one JSON
+/// object under `extended` and land in
+/// `partner_preferences.extended_preferences`.
+///
 /// The 10 base fields are free-text range/single-choice **strings** on the
 /// Flutter side (`"26-30"`, `"Same Caste"`, `"10-20 Lakhs"`, …) but numeric
 /// min/max ints and string arrays on the wire
@@ -90,6 +96,14 @@ class PartnerPreferencesRepositoryImpl implements PartnerPreferencesRepository {
       // comment on why "Same State" is still routed through this field.
       ..._arrayField('preferredCities', p.locationPref),
       ..._arrayField('maritalStatusPref', p.maritalStatusPref),
+      // The advanced half, sent whole. The endpoint stores it wholesale in
+      // `partner_preferences.extended_preferences` (supplying it replaces the
+      // blob, omitting it leaves the saved one alone), and this page owns
+      // every field in it — so the complete object is always the right thing
+      // to send. Until the backend declared `extended`, sending it would have
+      // been rejected outright by `forbidNonWhitelisted`, which is why these
+      // edits used to be dropped on the floor.
+      'extended': p.extended.toJson(),
     };
   }
 
@@ -123,9 +137,17 @@ class PartnerPreferencesRepositoryImpl implements PartnerPreferencesRepository {
       locationPref: _firstOf(data['preferredCities']),
       motherTonguePref: _firstOf(data['preferredMotherTongues']),
       maritalStatusPref: _firstOf(data['maritalStatusPref']),
-      // Not part of this endpoint's contract — see the class doc comment on
-      // [PartnerPreferencesRepository]. Callers merge in their own value.
-      extended: const PartnerPreferenceExtended(),
+      // The saved advanced preferences. Absent or malformed reads as empty
+      // rather than throwing: a member who has never saved any gets `{}` from
+      // the backend, and an older backend omits the key entirely.
+      extended: _extendedOf(data['extended']),
+    );
+  }
+
+  PartnerPreferenceExtended _extendedOf(dynamic value) {
+    if (value is! Map) return const PartnerPreferenceExtended();
+    return PartnerPreferenceExtended.fromJson(
+      Map<String, dynamic>.from(value),
     );
   }
 
