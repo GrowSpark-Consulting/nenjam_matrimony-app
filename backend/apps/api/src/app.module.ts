@@ -23,6 +23,7 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { FeedCacheModule } from './modules/matches/cache/feed-cache.module';
 import { ReferenceDataModule } from './modules/reference-data/reference-data.module';
 import { VerificationModule } from './modules/verification/verification.module';
+import { PsychologyModule } from './modules/psychology/psychology.module';
 import { throttlerConfig } from './throttling';
 
 @Module({
@@ -66,6 +67,10 @@ import { throttlerConfig } from './throttling';
     // Face verification. Off by default (FACE_VERIFICATION_ENABLED) and inert
     // without its AWS configuration — the routes answer 503, the app boots.
     VerificationModule,
+    // Marriage Compatibility Quiz — answer storage + validation only.
+    // Deliberately does not import or depend on MatchesModule: pairwise
+    // compatibility scoring is Phase 2, not built here.
+    PsychologyModule,
   ],
   controllers: [AppController],
   providers: [

@@ -4,7 +4,8 @@
  * These will change once there is real engagement data to tune against, and a
  * weight buried inside a service is a weight nobody dares to touch. Keeping
  * them here means retuning is a one-file diff, and the unit tests assert the
- * set still sums to 100 so a future edit cannot silently skew the scale.
+ * total (via `totalWeight()`) matches this file exactly, so a future edit
+ * cannot silently skew the scale without a deliberate, reviewed test change.
  */
 
 /**
@@ -25,8 +26,18 @@
  * picker options are categories ("B.E / B.Tech+", "Software / IT") mapped to
  * the profile values they cover (filters/preference-categories.ts); before,
  * every one was dropped as a UI label and the preference never counted.
+ *
+ * `v1.3-preference-psychology`: adds the `psychology` signal (the marriage
+ * compatibility quiz, scored pairwise by `psychology-compatibility.signal.ts`
+ * against the same approved matrix the standalone psychology engine uses).
+ * It is applicable, and only applicable, when BOTH the chooser and the
+ * candidate have completed the current active quiz — otherwise it is
+ * excluded from the denominator exactly like an unstated preference, per
+ * rule 2 below. Practically, that means this is a no-op for every pair today
+ * (nothing yet feeds real quiz answers into a live Discover request), and a
+ * real, additive signal the moment that data starts being supplied.
  */
-export const MATCHING_ALGORITHM_VERSION = 'v1.2-preference';
+export const MATCHING_ALGORITHM_VERSION = 'v1.3-preference-psychology';
 
 /** A single scored dimension. */
 export type ScoreKey =
@@ -42,7 +53,8 @@ export type ScoreKey =
   | 'lifestyle'
   | 'profileCompleteness'
   | 'verification'
-  | 'activity';
+  | 'activity'
+  | 'psychology';
 
 /**
  * Weights for the one-directional score (how well a candidate fits the
@@ -88,22 +100,36 @@ export type ScoreKey =
  *  activity 3              Weakest weight because the underlying data is a
  *                          proxy — see ACTIVITY_NOTE below. Raise it once a
  *                          real lastActiveAt exists.
+ *
+ *                    ── the following is psychology, a second compatibility
+ *                       signal alongside partner preference ──
+ *
+ *  psychology 15     Deliberately modest — this is a new, unvalidated signal,
+ *                    and the product's existing hard requirements (religion,
+ *                    community, age) should not be diluted by something that
+ *                    has not yet been shown to improve outcomes. Roughly the
+ *                    same order of magnitude as the entire candidate-quality
+ *                    bucket. Raise it only once real usage data (see the
+ *                    audit's validation-before-integration plan) shows it is
+ *                    worth more weight — never as a guess.
  */
-export const MATCHING_WEIGHTS: Readonly<Record<ScoreKey, number>> = Object.freeze({
-  age: 14,
-  religion: 12,
-  community: 11,
-  motherTongue: 9,
-  location: 9,
-  education: 8,
-  profession: 7,
-  maritalStatus: 6,
-  height: 5,
-  lifestyle: 4,
-  profileCompleteness: 6,
-  verification: 6,
-  activity: 3,
-});
+export const MATCHING_WEIGHTS: Readonly<Record<ScoreKey, number>> =
+  Object.freeze({
+    age: 14,
+    religion: 12,
+    community: 11,
+    motherTongue: 9,
+    location: 9,
+    education: 8,
+    profession: 7,
+    maritalStatus: 6,
+    height: 5,
+    lifestyle: 4,
+    profileCompleteness: 6,
+    verification: 6,
+    activity: 3,
+    psychology: 15,
+  });
 
 /**
  * There is no `lastActiveAt` column on User or UserProfile. `updatedAt` is
@@ -136,18 +162,19 @@ export const MUTUAL_BLEND = Object.freeze({
  * show a band: a member who sees 87 will ask why it is not 90, and there is no
  * defensible answer. 87 and 86 mean the same thing.
  */
-export const SCORE_BANDS: ReadonlyArray<{ min: number; label: string }> = Object.freeze([
-  { min: 80, label: 'Excellent' },
-  { min: 60, label: 'Very good' },
-  { min: 40, label: 'Good' },
-  { min: 0, label: 'Fair' },
-]);
+export const SCORE_BANDS: ReadonlyArray<{ min: number; label: string }> =
+  Object.freeze([
+    { min: 80, label: 'Excellent' },
+    { min: 60, label: 'Very good' },
+    { min: 40, label: 'Good' },
+    { min: 0, label: 'Fair' },
+  ]);
 
 export function scoreBand(score: number): string {
   return SCORE_BANDS.find((b) => score >= b.min)?.label ?? 'Fair';
 }
 
-/** Sum of all weights. Asserted by the unit tests to be exactly 100. */
+/** Sum of all weights. Asserted by the unit tests to match MATCHING_WEIGHTS exactly. */
 export function totalWeight(): number {
   return Object.values(MATCHING_WEIGHTS).reduce((a, b) => a + b, 0);
 }

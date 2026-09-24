@@ -478,7 +478,11 @@ model ProfileView {
   @@map("profile_views")
 }
 
-/// OCEAN quiz definition (versioned, one active quiz at a time).
+/// Psychology questionnaire definition (versioned, one active quiz at a
+/// time). Generic on purpose: as of the marriage-compatibility question set
+/// this holds no OCEAN-specific fields — question shape lives entirely on
+/// QuizQuestion, so retiring/replacing a questionnaire is a new PsychologyQuiz
+/// row (new id/version), never a column change here.
 model PsychologyQuiz {
   id          String             @id @default(uuid())
   title       String
@@ -493,32 +497,47 @@ model PsychologyQuiz {
   @@map("psychology_quizzes")
 }
 
-/// Individual OCEAN quiz question with domain tagging.
+/// A single scenario-based question. `options` carries the structured
+/// single-select choices ({key,label,value}[]); `pairRules` carries the
+/// scoring/flag rules for how two users' answers to this question compare
+/// (a small option-pair -> outcome table, not a generic distance formula —
+/// see the marriage-compatibility quiz spec). Both are opaque Json here
+/// because their shape is quiz-content, scored entirely by the psychology
+/// module — this table has no knowledge of scoring itself.
 model QuizQuestion {
-  id            String         @id @default(uuid())
-  quizId        String         @map("quiz_id")
-  oceanDomain   OceanDomain    @map("ocean_domain")
-  questionText  String         @map("question_text")
-  reverseScored Boolean        @default(false) @map("reverse_scored")
-  order         Int
-  createdAt     DateTime       @default(now()) @map("created_at")
-  quiz          PsychologyQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  id           String              @id @default(uuid())
+  quizId       String              @map("quiz_id")
+  dimension    String
+  scoringType  QuestionScoringType @map("scoring_type")
+  questionText String              @map("question_text")
+  /// [{ key: "A", label: "...", value: 1 }, ...]
+  options      Json
+  /// [{ pair: ["A","B"], type: "flag", severity: "soft", message: "..." }, ...]
+  pairRules    Json                @default("[]") @map("pair_rules")
+  order        Int
+  createdAt    DateTime            @default(now()) @map("created_at")
+  quiz         PsychologyQuiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
 
   @@index([quizId])
-  @@index([oceanDomain])
+  @@index([dimension])
   @@map("quiz_questions")
 }
 
-/// A user's completed quiz submission with computed OCEAN scores.
+/// A user's submitted answers to one quiz. No computed score is stored here:
+/// this quiz's scoring (pair-rule matrices, flags, hard-axis ceiling) is
+/// inherently pairwise, computed from two users' `answers` at compatibility
+/// time — there is no single-user result to cache. Re-taking the same
+/// (still-active) quiz upserts this row; a retired/replaced quiz gets a new
+/// PsychologyQuiz id, so old answers are never overwritten by a new
+/// questionnaire version.
 model UserQuizResponse {
   id          String         @id @default(uuid())
   userId      String         @map("user_id")
   quizId      String         @map("quiz_id")
-  /// Raw answers: { questionId: score (1-5) }
+  /// { questionId: selectedOptionKey }
   answers     Json
-  /// Computed scores: { O: 0-100, C: 0-100, E: 0-100, A: 0-100, N: 0-100 }
-  oceanScore  Json           @map("ocean_score")
   completedAt DateTime       @default(now()) @map("completed_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
   quiz        PsychologyQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1059,14 +1078,19 @@ enum PromptCategory {
   @@map("prompt_category")
 }
 
-enum OceanDomain {
-  O
-  C
-  E
-  A
-  N
+/// How two users' answers to a QuizQuestion should be compared.
+/// - MUST_ALIGN: score is high for same/adjacent answers, drops sharply for
+///   the specific opposite-pole pairs named in that question's pairRules.
+/// - COMPLEMENTARY_TOLERANT: certain different answers score as high as (or
+///   higher than) identical ones — encoded explicitly in pairRules.
+/// - HARD_AXIS: effectively binary; an opposed pair caps the overall
+///   compatibility score in addition to raising a dealbreaker flag.
+enum QuestionScoringType {
+  MUST_ALIGN
+  COMPLEMENTARY_TOLERANT
+  HARD_AXIS
 
-  @@map("ocean_domain")
+  @@map("question_scoring_type")
 }
 
 enum SubscriptionPlanName {

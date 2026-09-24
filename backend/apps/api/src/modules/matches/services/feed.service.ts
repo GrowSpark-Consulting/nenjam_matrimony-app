@@ -10,6 +10,7 @@ import { RankingService } from '../scoring/ranking.service';
 import { FeedSeenService } from '../cache/feed-seen.cache';
 import { FeedVersionService } from '../cache/feed-version.cache';
 import { decodeFeedCursor, encodeFeedCursor } from '../scoring/feed-cursor';
+import { PsychologyMatchContextService } from '../scoring/psychology/psychology-match-context.service';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -53,6 +54,7 @@ export class FeedService {
     private readonly ranking: RankingService,
     private readonly seen: FeedSeenService,
     private readonly feedVersion: FeedVersionService,
+    private readonly psychologyContext: PsychologyMatchContextService,
   ) {}
 
   async getFeed(
@@ -100,10 +102,39 @@ export class FeedService {
     // which case the feed is empty anyway and there is nothing to score.
     let scores: Map<string, CompatibilityBreakdown> | undefined;
     if (result.seeker && result.rows.length > 0) {
+      const seekerScorable = toScorable(
+        result.seeker as unknown as Record<string, unknown>,
+      );
+      const candidateScorables = result.rows.map((row) => toScorable(row));
+
+      // Psychology is the one signal CompatibilityService can't compute from
+      // ScorableProfile alone (see PSYCHOLOGY_COMPATIBILITY_SIGNAL) — it needs
+      // each side's quiz answers plus the quiz's own questions, fetched here
+      // and attached below. For virtually every request today the seeker
+      // hasn't completed the quiz, so this short-circuits to an empty
+      // context after two single-row lookups — no candidate-batch query, and
+      // every ScorableProfile ends up with `psychologyAnswers: undefined`,
+      // identical to before this signal existed.
+      const psychology = await this.psychologyContext.loadContext(
+        seekerScorable.userId,
+        candidateScorables.map((c) => c.userId),
+      );
+
+      const seekerWithPsychology = {
+        ...seekerScorable,
+        psychologyAnswers:
+          psychology.answersByUserId.get(seekerScorable.userId) ?? null,
+      };
+      const candidatesWithPsychology = candidateScorables.map((c) => ({
+        ...c,
+        psychologyAnswers: psychology.answersByUserId.get(c.userId) ?? null,
+      }));
+
       scores = this.compatibility.scoreMany(
-        toScorable(result.seeker as unknown as Record<string, unknown>),
+        seekerWithPsychology,
         result.seekerPreference ?? null,
-        result.rows.map((row) => toScorable(row)),
+        candidatesWithPsychology,
+        psychology.questions,
       );
     }
 

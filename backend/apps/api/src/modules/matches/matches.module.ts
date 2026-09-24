@@ -3,6 +3,7 @@ import { AppConfigModule } from '@app/config';
 import { StorageModule } from '@app/storage';
 import { InterestsModule } from '../interests/interests.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { PsychologyModule } from '../psychology/psychology.module';
 import { DiscoverController } from './controllers/discover.controller';
 import { NearbyController } from './controllers/nearby.controller';
 import { MatchesController } from './controllers/matches.controller';
@@ -28,6 +29,7 @@ import { FeedSeenService } from './cache/feed-seen.cache';
 
 import { RankingService } from './scoring/ranking.service';
 import { PostgresSearchStrategy } from './search/postgres-search.strategy';
+import { PsychologyMatchContextService } from './scoring/psychology/psychology-match-context.service';
 
 /**
  * Discover: preference-filtered feed + text search + partner-preference CRUD.
@@ -44,6 +46,10 @@ import { PostgresSearchStrategy } from './search/postgres-search.strategy';
     AppConfigModule,
     InterestsModule,
     NotificationsModule,
+    // Exports only PsychologyRepository (read-only quiz/response lookups for
+    // live scoring, see PsychologyMatchContextService) — one-directional,
+    // psychology never imports matches.
+    PsychologyModule,
   ],
   controllers: [DiscoverController, MatchesController, NearbyController],
   providers: [
@@ -51,6 +57,7 @@ import { PostgresSearchStrategy } from './search/postgres-search.strategy';
     FeedContextService,
     FeedSeenService,
     RankingService,
+    PsychologyMatchContextService,
     FeedService,
     NearbyService,
     SearchService,

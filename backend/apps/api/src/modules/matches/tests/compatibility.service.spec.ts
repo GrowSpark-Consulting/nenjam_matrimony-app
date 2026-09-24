@@ -10,6 +10,7 @@ import {
 } from '../scoring/matching-weights.config';
 import { PREFERENCE_COMPATIBILITY_SIGNAL } from '../scoring/preference/preference-compatibility.signal';
 import { CANDIDATE_QUALITY_SIGNAL } from '../scoring/quality/candidate-quality.signal';
+import { PSYCHOLOGY_COMPATIBILITY_SIGNAL } from '../scoring/psychology/psychology-compatibility.signal';
 import { buildFeedWhere } from '../filters/partner-preference-where.builder';
 
 const YEAR = 365.25 * 24 * 3600 * 1000;
@@ -65,8 +66,8 @@ describe('CompatibilityService', () => {
   });
 
   describe('weight configuration', () => {
-    it('sums to exactly 100 so the scale stays meaningful', () => {
-      expect(totalWeight()).toBe(100);
+    it('sums to exactly 115 (100 preference/quality + 15 psychology) so the scale stays meaningful', () => {
+      expect(totalWeight()).toBe(115);
     });
 
     it('maps scores onto display bands', () => {
@@ -93,7 +94,11 @@ describe('CompatibilityService', () => {
         currentCity: 'Madurai',
         profession: 'Teacher',
       });
-      const result = svc.score(profile({ userId: 'me' }), preference(), candidate);
+      const result = svc.score(
+        profile({ userId: 'me' }),
+        preference(),
+        candidate,
+      );
       expect(result.seekerFit).toBeGreaterThan(0);
       expect(result.seekerFit).toBeLessThan(100);
     });
@@ -114,7 +119,11 @@ describe('CompatibilityService', () => {
         profileCompletePct: 0,
         trustScore: 0,
       });
-      const result = svc.score(profile({ userId: 'me' }), preference(), candidate);
+      const result = svc.score(
+        profile({ userId: 'me' }),
+        preference(),
+        candidate,
+      );
       expect(result.seekerFit).toBeGreaterThanOrEqual(0);
       expect(result.seekerFit).toBeLessThan(30);
     });
@@ -133,7 +142,11 @@ describe('CompatibilityService', () => {
         preferredCastes: ['Any Caste'],
         preferredReligions: ['Any Religion'],
       });
-      const candidate = profile({ caste: 'Gounder', community: null, religion: 'Muslim' });
+      const candidate = profile({
+        caste: 'Gounder',
+        community: null,
+        religion: 'Muslim',
+      });
       const result = svc.score(profile({ userId: 'me' }), pref, candidate);
       // Caste and religion are inapplicable, so the mismatch costs nothing.
       const caste = result.components.find((c) => c.key === 'community');
@@ -145,8 +158,15 @@ describe('CompatibilityService', () => {
 
     it('resolves "Same X" against the seeker, matching the WHERE builder', () => {
       const seeker = profile({ userId: 'me', currentCity: 'Bengaluru' });
-      const pref = preference({ preferredCities: ['Same City'], preferredStates: [] });
-      const same = svc.score(seeker, pref, profile({ currentCity: 'Bengaluru' }));
+      const pref = preference({
+        preferredCities: ['Same City'],
+        preferredStates: [],
+      });
+      const same = svc.score(
+        seeker,
+        pref,
+        profile({ currentCity: 'Bengaluru' }),
+      );
       const diff = svc.score(seeker, pref, profile({ currentCity: 'Chennai' }));
       const a = same.components.find((c) => c.key === 'location');
       const b = diff.components.find((c) => c.key === 'location');
@@ -186,9 +206,9 @@ describe('CompatibilityService', () => {
       expect(
         match.components.find((c) => c.key === 'profession'),
       ).toMatchObject({ applicable: true, ratio: 1 });
-      expect(
-        miss.components.find((c) => c.key === 'profession'),
-      ).toMatchObject({ applicable: true, ratio: 0 });
+      expect(miss.components.find((c) => c.key === 'profession')).toMatchObject(
+        { applicable: true, ratio: 0 },
+      );
     });
 
     it('scores "B.E / B.Tech+" as this level or higher', () => {
@@ -215,9 +235,21 @@ describe('CompatibilityService', () => {
   describe('graceful degradation', () => {
     it('decays age rather than dropping off a cliff', () => {
       const pref = preference({ minAge: 25, maxAge: 30 });
-      const inBand = svc.score(profile({ userId: 'me' }), pref, profile({ dob: dobForAge(29) }));
-      const justOver = svc.score(profile({ userId: 'me' }), pref, profile({ dob: dobForAge(31) }));
-      const wayOver = svc.score(profile({ userId: 'me' }), pref, profile({ dob: dobForAge(40) }));
+      const inBand = svc.score(
+        profile({ userId: 'me' }),
+        pref,
+        profile({ dob: dobForAge(29) }),
+      );
+      const justOver = svc.score(
+        profile({ userId: 'me' }),
+        pref,
+        profile({ dob: dobForAge(31) }),
+      );
+      const wayOver = svc.score(
+        profile({ userId: 'me' }),
+        pref,
+        profile({ dob: dobForAge(40) }),
+      );
 
       const age = (r: typeof inBand): number =>
         r.components.find((c) => c.key === 'age')?.ratio ?? -1;
@@ -230,8 +262,15 @@ describe('CompatibilityService', () => {
 
     it('gives partial credit for the right state but the wrong city', () => {
       const seeker = profile({ userId: 'me', currentState: 'Tamil Nadu' });
-      const pref = preference({ preferredCities: ['Chennai'], preferredStates: [] });
-      const result = svc.score(seeker, pref, profile({ currentCity: 'Madurai', currentState: 'Tamil Nadu' }));
+      const pref = preference({
+        preferredCities: ['Chennai'],
+        preferredStates: [],
+      });
+      const result = svc.score(
+        seeker,
+        pref,
+        profile({ currentCity: 'Madurai', currentState: 'Tamil Nadu' }),
+      );
       const loc = result.components.find((c) => c.key === 'location');
       expect(loc?.ratio).toBe(0.5);
     });
@@ -249,7 +288,11 @@ describe('CompatibilityService', () => {
 
     it('scores a one-way match below a two-way match', () => {
       const seeker = profile({ userId: 'me' });
-      const twoWay = svc.score(seeker, preference(), profile({ preference: preference() }));
+      const twoWay = svc.score(
+        seeker,
+        preference(),
+        profile({ preference: preference() }),
+      );
       // Candidate's own preference excludes the seeker on every axis.
       const oneWay = svc.score(
         seeker,
@@ -273,14 +316,22 @@ describe('CompatibilityService', () => {
     });
 
     it('falls back to the one-way score when the candidate saved no preference', () => {
-      const result = svc.score(profile({ userId: 'me' }), preference(), profile({ preference: null }));
+      const result = svc.score(
+        profile({ userId: 'me' }),
+        preference(),
+        profile({ preference: null }),
+      );
       expect(result.mutualFit).toBeNull();
       expect(result.overall).toBe(result.seekerFit);
     });
 
     it('weights the seeker direction more heavily than the candidate direction', () => {
-      expect(MUTUAL_BLEND.seekerToCandidate).toBeGreaterThan(MUTUAL_BLEND.candidateToSeeker);
-      expect(MUTUAL_BLEND.seekerToCandidate + MUTUAL_BLEND.candidateToSeeker).toBeCloseTo(1);
+      expect(MUTUAL_BLEND.seekerToCandidate).toBeGreaterThan(
+        MUTUAL_BLEND.candidateToSeeker,
+      );
+      expect(
+        MUTUAL_BLEND.seekerToCandidate + MUTUAL_BLEND.candidateToSeeker,
+      ).toBeCloseTo(1);
     });
   });
 
@@ -300,7 +351,11 @@ describe('CompatibilityService', () => {
     });
 
     it('treats a missing activity timestamp as inapplicable, not as inactive', () => {
-      const result = svc.score(profile({ userId: 'me' }), null, profile({ updatedAt: null }));
+      const result = svc.score(
+        profile({ userId: 'me' }),
+        null,
+        profile({ updatedAt: null }),
+      );
       const activity = result.components.find((c) => c.key === 'activity');
       expect(activity?.applicable).toBe(false);
     });
@@ -325,7 +380,12 @@ describe('CompatibilityService', () => {
     const where = buildFeedWhere({
       currentUserId: 'me',
       myGender: 'MALE',
-      self: { caste: 'Iyer', currentCity: 'Chennai', currentState: 'TN', motherTongue: 'Tamil' },
+      self: {
+        caste: 'Iyer',
+        currentCity: 'Chennai',
+        currentState: 'TN',
+        motherTongue: 'Tamil',
+      },
       pref: null,
     });
     const json = JSON.stringify(where);
@@ -376,6 +436,7 @@ describe('CompatibilityService', () => {
         profileCompleteness: 6,
         verification: 6,
         activity: 3,
+        psychology: 15,
       });
       expect({ ...MUTUAL_BLEND }).toEqual({
         seekerToCandidate: 0.6,
@@ -396,23 +457,80 @@ describe('CompatibilityService', () => {
       );
     });
 
-    it('emits all 13 components once each, preference signal first, in a fixed order', () => {
+    it('emits all 14 components once each, preference then psychology then quality, in a fixed order', () => {
       const r = svc.score(profile({ userId: 'me' }), preference(), profile());
       expect(r.components.map((c) => c.key)).toEqual([
         ...PREFERENCE_COMPATIBILITY_SIGNAL.keys,
+        ...PSYCHOLOGY_COMPATIBILITY_SIGNAL.keys,
         ...CANDIDATE_QUALITY_SIGNAL.keys,
       ]);
       expect(new Set(r.components.map((c) => c.key))).toEqual(
         new Set(Object.keys(MATCHING_WEIGHTS)),
       );
       expect(PREFERENCE_COMPATIBILITY_SIGNAL.kind).toBe('compatibility');
+      expect(PSYCHOLOGY_COMPATIBILITY_SIGNAL.kind).toBe('compatibility');
       expect(CANDIDATE_QUALITY_SIGNAL.kind).toBe('quality');
     });
 
+    it('the psychology component is inapplicable whenever quiz data is absent — true for every caller today', () => {
+      const r = svc.score(profile({ userId: 'me' }), preference(), profile());
+      const psychology = r.components.find((c) => c.key === 'psychology');
+      expect(psychology).toEqual({
+        key: 'psychology',
+        ratio: 0,
+        weight: 15,
+        points: 0,
+        applicable: false,
+      });
+    });
+
+    it('the psychology component becomes applicable once both sides have quiz answers and the quiz questions are supplied', () => {
+      // Must be a real seeded question id — the approved matrix (which the
+      // real calculator reads) is keyed by these exact ids, not arbitrary
+      // test ids, so an unrecognised id would be skipped rather than scored.
+      const questionId = 'nenjam-mc-q01-v1';
+      const question = {
+        id: questionId,
+        quizId: 'marriage-compat-v1',
+        dimension: 'conflict_style',
+        scoringType: 'MUST_ALIGN',
+        questionText: 't',
+        options: [
+          { key: 'A', label: 'A', value: 1 },
+          { key: 'C', label: 'C', value: 3 },
+        ],
+        pairRules: [],
+        order: 1,
+        createdAt: new Date(),
+      } as unknown as import('../../../../../../libs/database/generated/client').QuizQuestion;
+
+      const seeker = profile({
+        userId: 'me',
+        psychologyAnswers: { [questionId]: 'C' },
+      });
+      const candidate = profile({
+        psychologyAnswers: { [questionId]: 'C' },
+      });
+
+      const r = svc.score(seeker, preference(), candidate, [question]);
+      const psychology = r.components.find((c) => c.key === 'psychology');
+      // C+C on the real Q1 (conflict_style) scores 95 in the approved matrix
+      // (see compatibility-matrix.data.ts) — asserting the exact number pins
+      // that this signal really calls the real calculator against the real
+      // approved matrix, rather than a stand-in.
+      expect(psychology).toEqual({
+        key: 'psychology',
+        ratio: 0.95,
+        weight: 15,
+        points: 14.25,
+        applicable: true,
+      });
+    });
+
     it('stamps the algorithm version on every result', () => {
-      expect(MATCHING_ALGORITHM_VERSION).toBe('v1.2-preference');
+      expect(MATCHING_ALGORITHM_VERSION).toBe('v1.3-preference-psychology');
       const r = svc.score(profile({ userId: 'me' }), null, profile());
-      expect(r.algorithmVersion).toBe('v1.2-preference');
+      expect(r.algorithmVersion).toBe('v1.3-preference-psychology');
     });
   });
 
@@ -529,7 +647,12 @@ describe('CompatibilityService', () => {
     it('agrees with the filter on every marital label the picker offers', () => {
       // One vocabulary, one interpretation: whatever the WHERE builder turns a
       // label into is what scoring compares against.
-      for (const label of ['Never Married', 'Divorced', 'Widowed', 'Awaiting Divorce']) {
+      for (const label of [
+        'Never Married',
+        'Divorced',
+        'Widowed',
+        'Awaiting Divorce',
+      ]) {
         const where = JSON.stringify(
           buildFeedWhere({
             currentUserId: 'me',
@@ -545,7 +668,9 @@ describe('CompatibilityService', () => {
           preference({ maritalStatusPref: [label] }),
           profile({ maritalStatus: stored }),
         );
-        expect(r.components.find((c) => c.key === 'maritalStatus')?.ratio).toBe(1);
+        expect(r.components.find((c) => c.key === 'maritalStatus')?.ratio).toBe(
+          1,
+        );
       }
     });
   });

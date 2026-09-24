@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { PreferenceFilters } from '../filters/partner-preference-where.builder';
+import type { QuizQuestion } from '../../../../../../libs/database/generated/client';
 import {
   MATCHING_ALGORITHM_VERSION,
   MUTUAL_BLEND,
@@ -14,6 +15,7 @@ import type {
 } from './compatibility-signal';
 import { PREFERENCE_COMPATIBILITY_SIGNAL } from './preference/preference-compatibility.signal';
 import { CANDIDATE_QUALITY_SIGNAL } from './quality/candidate-quality.signal';
+import { PSYCHOLOGY_COMPATIBILITY_SIGNAL } from './psychology/psychology-compatibility.signal';
 
 // Re-exported so existing importers keep one place to take scoring types from.
 export type { ScorableProfile, ScoreComponent } from './compatibility-signal';
@@ -46,11 +48,18 @@ export interface CompatibilityBreakdown {
  *
  * A new signal is added here and nowhere else — FeedService, RankingService,
  * the candidate query and the API response do not change. Its ScoreKeys and
- * weights go in matching-weights.config.ts (which keeps the total at 100), and
- * MATCHING_ALGORITHM_VERSION is bumped.
+ * weights go in matching-weights.config.ts, and MATCHING_ALGORITHM_VERSION is
+ * bumped.
+ *
+ * PSYCHOLOGY_COMPATIBILITY_SIGNAL is the one exception to "nothing else
+ * changes": it needs data no other signal does (each side's quiz answers,
+ * plus the quiz's questions as shared context), so `score()`/`scoreMany()`
+ * below take an optional extra argument for it. Every existing caller omits
+ * it, which is exactly what keeps this addition a no-op today.
  */
 const SIGNALS: readonly CompatibilitySignal[] = [
   PREFERENCE_COMPATIBILITY_SIGNAL,
+  PSYCHOLOGY_COMPATIBILITY_SIGNAL,
   CANDIDATE_QUALITY_SIGNAL,
 ];
 
@@ -82,16 +91,25 @@ const EXPLAINED_KEYS: ReadonlySet<ScoreKey> = new Set(
  */
 @Injectable()
 export class CompatibilityService {
-  /** Full breakdown for one pair. Pure — no I/O, safe to call in a loop. */
+  /**
+   * Full breakdown for one pair. Pure — no I/O, safe to call in a loop.
+   *
+   * `psychologyQuestions` is optional and unused by any caller today — see
+   * PSYCHOLOGY_COMPATIBILITY_SIGNAL's doc comment. Passing it (plus setting
+   * `psychologyAnswers` on both ScorableProfiles) is what a future, separate
+   * step would do to make that signal actually applicable for a real pair.
+   */
   score(
     seeker: ScorableProfile,
     seekerPreference: PreferenceFilters | null,
     candidate: ScorableProfile,
+    psychologyQuestions?: readonly QuizQuestion[],
   ): CompatibilityBreakdown {
     const components = this.components({
       chooser: seeker,
       preference: seekerPreference,
       candidate,
+      psychologyQuestions,
     });
     const seekerFit = this.total(components);
 
@@ -101,6 +119,7 @@ export class CompatibilityService {
             chooser: candidate,
             preference: candidate.preference,
             candidate: seeker,
+            psychologyQuestions,
           }),
         )
       : null;
@@ -138,10 +157,14 @@ export class CompatibilityService {
     seeker: ScorableProfile,
     seekerPreference: PreferenceFilters | null,
     candidates: ScorableProfile[],
+    psychologyQuestions?: readonly QuizQuestion[],
   ): Map<string, CompatibilityBreakdown> {
     const out = new Map<string, CompatibilityBreakdown>();
     for (const c of candidates) {
-      out.set(c.userId, this.score(seeker, seekerPreference, c));
+      out.set(
+        c.userId,
+        this.score(seeker, seekerPreference, c, psychologyQuestions),
+      );
     }
     return out;
   }
