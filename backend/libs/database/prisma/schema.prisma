@@ -537,7 +537,12 @@ model UserQuizResponse {
   /// { questionId: selectedOptionKey }
   answers     Json
   completedAt DateTime       @default(now()) @map("completed_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
+  // `@default(now())` mirrors the DEFAULT CURRENT_TIMESTAMP the migration had
+  // to give this column: it was added NOT NULL to a table with existing rows,
+  // which needs a default to backfill them. Declaring only `@updatedAt` left
+  // the schema saying "no default" while the database had one, and the CI
+  // drift check failed on exactly that.
+  updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at")
   quiz        PsychologyQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
