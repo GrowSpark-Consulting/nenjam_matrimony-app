@@ -3854,12 +3854,6 @@ abstract class AppLocalizations {
   /// **'Could not save preferences. Check your connection.'**
   String get partnerPrefSaveErrorSnackbar;
 
-  /// No description provided for @partnerPrefAdvancedNotSyncedNotice.
-  ///
-  /// In en, this message translates to:
-  /// **'Age, height, religion, caste, education, occupation, income, location and mother tongue are saved to your profile. The advanced preferences below are not synced to the server yet.'**
-  String get partnerPrefAdvancedNotSyncedNotice;
-
   /// No description provided for @partnerPrefNotSetPlaceholder.
   ///
   /// In en, this message translates to:

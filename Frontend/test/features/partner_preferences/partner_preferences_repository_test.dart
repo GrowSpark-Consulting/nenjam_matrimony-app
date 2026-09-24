@@ -4,6 +4,7 @@ import 'package:nenjam_matrimony/core/network/api_client.dart';
 import 'package:nenjam_matrimony/core/network/api_endpoints.dart';
 import 'package:nenjam_matrimony/core/network/api_exception.dart';
 import 'package:nenjam_matrimony/features/partner_preferences/data/repositories/partner_preferences_repository_impl.dart';
+import 'package:nenjam_matrimony/features/partner_preferences/domain/models/partner_preference_extended.dart';
 import 'package:nenjam_matrimony/features/registration/domain/models/profile_draft.dart';
 
 /// Records the method/path/body of every request and replays a canned
@@ -113,7 +114,7 @@ void main() {
       expect(result.educationPref, '');
     });
 
-    test('extended is always empty — this endpoint has no such field',
+    test('extended reads back empty for a member who never saved any',
         () async {
       final client = _StubClient(data: _defaultsResponse());
 
@@ -121,6 +122,44 @@ void main() {
           await PartnerPreferencesRepositoryImpl(client).getPreferences();
 
       expect(result.extended.isEmpty, isTrue);
+    });
+
+    test('extended is parsed from the response, not discarded', () async {
+      // The whole point of the fix: what the member saved comes back, so the
+      // page can show it instead of an empty form.
+      final client = _StubClient(data: {
+        ..._defaultsResponse(),
+        'extended': const {
+          'diet': 'Vegetarian',
+          'smoking': 'No',
+          'ethnicity': 'Iyer',
+        },
+      });
+
+      final result =
+          await PartnerPreferencesRepositoryImpl(client).getPreferences();
+
+      expect(result.extended.isEmpty, isFalse);
+      expect(result.extended.diet, 'Vegetarian');
+      expect(result.extended.smoking, 'No');
+      expect(result.extended.ethnicity, 'Iyer');
+    });
+
+    test('a missing or malformed extended reads as empty, never throws',
+        () async {
+      // An older backend omits the key entirely; a hand-edited row could hold
+      // something that is not an object at all.
+      for (final value in [null, 'garbage', 42, <dynamic>[]]) {
+        final client = _StubClient(data: {
+          ..._defaultsResponse(),
+          if (value != null) 'extended': value,
+        });
+
+        final result =
+            await PartnerPreferencesRepositoryImpl(client).getPreferences();
+
+        expect(result.extended.isEmpty, isTrue);
+      }
     });
 
     test('parses a fully-saved response back to the exact picker strings',
@@ -212,14 +251,20 @@ void main() {
       expect(client.paths, ['/discover/preferences']);
     });
 
-    test('an entirely-unset draft sends an empty body — never invents a '
-        'field', () async {
+    test('an entirely-unset draft sends only an empty advanced blob — never '
+        'invents a base field', () async {
       final client = _StubClient(data: _defaultsResponse());
 
       await PartnerPreferencesRepositoryImpl(client)
           .updatePreferences(const PartnerPreference());
 
-      expect(client.bodies.single, <String, dynamic>{});
+      // `extended` always travels (the page owns every field in it, so the
+      // whole object is the unit of save); the base fields stay omitted. An
+      // untouched blob still serializes its boolean flags, so the model's own
+      // toJson is the expectation rather than a hand-written {}.
+      expect(client.bodies.single, {
+        'extended': const PartnerPreferenceExtended().toJson(),
+      });
     });
 
     test('sends exactly the UpdatePartnerPreferenceDto field names, parsed '
@@ -255,6 +300,7 @@ void main() {
         'preferredOccupations': ['Doctor'],
         'preferredCities': ['Same City'],
         'maritalStatusPref': ['Never Married'],
+        'extended': const PartnerPreferenceExtended().toJson(),
       });
       // preferredStates is never sent — the UI has no control for it and
       // omitting it (rather than forcing []) preserves whatever the server
@@ -282,7 +328,53 @@ void main() {
         'minHeightCm': null,
         'maxHeightCm': null,
         'minIncomeLakhs': null,
+        'extended': const PartnerPreferenceExtended().toJson(),
       });
+    });
+
+    test('the advanced preferences reach the wire — the whole point of the '
+        'fix', () async {
+      // Before: `_toRequestBody` omitted `extended` entirely, so a member's
+      // advanced edits were discarded while Save reported success.
+      final client = _StubClient(data: _defaultsResponse());
+
+      await PartnerPreferencesRepositoryImpl(client).updatePreferences(
+        const PartnerPreference(
+          religionPref: 'Hindu',
+          extended: PartnerPreferenceExtended(
+            diet: 'Vegetarian',
+            smoking: 'No',
+            ethnicity: 'Iyer',
+          ),
+        ),
+      );
+
+      final body = client.bodies.single as Map<String, dynamic>;
+      final extended = body['extended'] as Map<String, dynamic>;
+      expect(extended['diet'], 'Vegetarian');
+      expect(extended['smoking'], 'No');
+      expect(extended['ethnicity'], 'Iyer');
+      // And the base half is unaffected by carrying it.
+      expect(body['preferredReligions'], ['Hindu']);
+    });
+
+    test('a save round-trips the advanced preferences back from the server',
+        () async {
+      final client = _StubClient(data: {
+        ..._defaultsResponse(),
+        'extended': const {'diet': 'Vegetarian'},
+      });
+
+      final saved =
+          await PartnerPreferencesRepositoryImpl(client).updatePreferences(
+        const PartnerPreference(
+          extended: PartnerPreferenceExtended(diet: 'Vegetarian'),
+        ),
+      );
+
+      // The response is authoritative, so the page can adopt it wholesale
+      // instead of re-merging its local copy.
+      expect(saved.extended.diet, 'Vegetarian');
     });
 
     test('an untouched range is still omitted — only "Any" clears', () async {

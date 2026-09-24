@@ -768,7 +768,6 @@
   "partnerPrefSaveButton": "Save Preferences",
   "partnerPrefSavedSnackbar": "Partner preferences saved",
   "partnerPrefSaveErrorSnackbar": "Could not save preferences. Check your connection.",
-  "partnerPrefAdvancedNotSyncedNotice": "Age, height, religion, caste, education, occupation, income, location and mother tongue are saved to your profile. The advanced preferences below are not synced to the server yet.",
   "partnerPrefNotSetPlaceholder": "Not set",
   "partnerPrefDoesntMatter": "Doesn't Matter",
   "partnerPrefSectionBasic": "Basic Preferences",

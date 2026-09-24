@@ -1965,10 +1965,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not save preferences. Check your connection.';
 
   @override
-  String get partnerPrefAdvancedNotSyncedNotice =>
-      'Age, height, religion, caste, education, occupation, income, location and mother tongue are saved to your profile. The advanced preferences below are not synced to the server yet.';
-
-  @override
   String get partnerPrefNotSetPlaceholder => 'Not set';
 
   @override
