@@ -47,8 +47,9 @@ class ApiPersonalityRepository implements PersonalityRepository {
     final response = await _apiClient.get<Map<String, dynamic>>(
       ApiEndpoints.psychologyQuizMe,
     );
-    // 404 is the backend's "not taken yet" (or "no active quiz") — either
-    // way the user has no current response, which is a normal state.
+    // 404 is the backend's "not taken yet" (or "saved answers no longer fit
+    // the active quiz", or "no active quiz") — either way the user has no
+    // current response, which is a normal state. Every other failure throws.
     if (response.statusCode == 404) return null;
     final data = unwrapOrThrow(response.statusCode, response.data);
     if (data == null || data.isEmpty) return null;

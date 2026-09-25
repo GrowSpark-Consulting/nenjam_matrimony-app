@@ -56,6 +56,18 @@ void main() {
     expect(taps, 1);
   });
 
+  testWidgets('a failed status check is neutral: Retry, never the take-quiz '
+      'prompt', (tester) async {
+    var retries = 0;
+    await _pump(tester, PsychologyStatusCheckFailed(onRetry: () => retries++));
+    expect(find.text("We couldn't check your quiz status."), findsOneWidget);
+    expect(find.text('Share your marriage expectations'), findsNothing);
+    expect(find.textContaining('Completed'), findsNothing);
+
+    await tester.tap(find.text('Retry'));
+    expect(retries, 1);
+  });
+
   testWidgets('completed without a callback hides Retake', (tester) async {
     await _pump(
       tester,

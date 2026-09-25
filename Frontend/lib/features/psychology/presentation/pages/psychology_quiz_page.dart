@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -32,13 +33,48 @@ class PsychologyQuizPage extends ConsumerWidget {
       ),
       body: SafeArea(
         child: switch (state.phase) {
-          QuizPhase.checking => const Center(
-            child: CircularProgressIndicator(),
-          ),
+          QuizPhase.checking =>
+            state.error == QuizError.checkFailed
+                ? const _CheckFailedView()
+                : const Center(child: CircularProgressIndicator()),
           QuizPhase.intro => const _IntroView(),
           QuizPhase.question => const _QuestionView(),
           QuizPhase.result => const _ResultView(),
         },
+      ),
+    );
+  }
+}
+
+// ─── Checking failed ────────────────────────────────────────────────────
+
+/// `GET /me` failed for a reason other than 404, so whether the user
+/// already has saved answers is unknown. Offer a retry rather than the
+/// intro — see [QuizError.checkFailed]. The app bar's back still works.
+class _CheckFailedView extends ConsumerWidget {
+  const _CheckFailedView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: SingleChildScrollView(
+        padding: AppSpacing.pagePadding,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l10n.psychologyCheckError,
+              key: const ValueKey('psychology-check-error'),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            NmOutlinedButton(
+              label: l10n.commonRetry,
+              onPressed: ref.read(personalityQuizProvider.notifier).retryCheck,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -144,13 +180,36 @@ class _IntroView extends ConsumerWidget {
 
 // ─── Question ───────────────────────────────────────────────────────────
 
-String _errorText(AppLocalizations l10n, QuizError error) => switch (error) {
-  QuizError.unavailable => l10n.psychologyNoQuiz,
-  QuizError.loadFailed => l10n.psychologyLoadError,
-  QuizError.incomplete => l10n.psychologyIncompleteError,
-  QuizError.rejected => l10n.psychologyRejectedError,
-  QuizError.submitFailed => l10n.psychologySubmitError,
-};
+/// Localized "you can change your answers again in …" for a retake cooldown
+/// of [seconds] (the server's `retryAfterSeconds`). Rounds up, so a positive
+/// wait never reads as zero: under a day it's whole hours (at least 1),
+/// otherwise whole days. The server's own English `message` is never shown.
+String psychologyRetakeCooldownMessage(AppLocalizations l10n, int seconds) {
+  final wait = seconds < 1 ? 1 : seconds;
+  if (wait < Duration.secondsPerDay) {
+    return l10n.psychologyRetakeCooldownHours(
+      (wait / Duration.secondsPerHour).ceil(),
+    );
+  }
+  return l10n.psychologyRetakeCooldownDays(
+    (wait / Duration.secondsPerDay).ceil(),
+  );
+}
+
+String _errorText(AppLocalizations l10n, PersonalityQuizState state) =>
+    switch (state.error!) {
+      QuizError.checkFailed => l10n.psychologyCheckError,
+      QuizError.unavailable => l10n.psychologyNoQuiz,
+      QuizError.loadFailed => l10n.psychologyLoadError,
+      QuizError.incomplete => l10n.psychologyIncompleteError,
+      QuizError.rejected => l10n.psychologyRejectedError,
+      QuizError.retakeCooldown => psychologyRetakeCooldownMessage(
+        l10n,
+        state.cooldownSeconds ?? 1,
+      ),
+      QuizError.rateLimited => l10n.apiError429,
+      QuizError.submitFailed => l10n.psychologySubmitError,
+    };
 
 class _QuestionView extends ConsumerWidget {
   const _QuestionView();
@@ -174,7 +233,7 @@ class _QuestionView extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                error != null ? _errorText(l10n, error) : l10n.psychologyNoQuiz,
+                error != null ? _errorText(l10n, state) : l10n.psychologyNoQuiz,
                 textAlign: TextAlign.center,
               ),
               if (error == QuizError.loadFailed) ...[
@@ -246,7 +305,7 @@ class _QuestionView extends ConsumerWidget {
           if (state.error != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              _errorText(l10n, state.error!),
+              _errorText(l10n, state),
               key: const ValueKey('psychology-error'),
               style: AppTypography.bodySmall.copyWith(color: AppColors.error),
             ),
@@ -268,7 +327,11 @@ class _QuestionView extends ConsumerWidget {
                       ? l10n.psychologySubmit
                       : l10n.psychologyNext,
                   isLoading: state.isSubmitting,
-                  onPressed: selectedKey == null
+                  // No resubmitting into an active cooldown; changing an
+                  // answer clears the error and re-enables it.
+                  onPressed:
+                      selectedKey == null ||
+                          state.error == QuizError.retakeCooldown
                       ? null
                       : () => state.isLastQuestion
                             ? notifier.submit()
@@ -353,6 +416,26 @@ class _ResultView extends ConsumerWidget {
     final result = state.result;
     final l10n = AppLocalizations.of(context);
     final updated = PsychologySection.updatedLabel(l10n, result?.lastUpdatedAt);
+    final notifier = ref.read(personalityQuizProvider.notifier);
+
+    // Retake gating. After a 429 the server's figure is authoritative and
+    // there is no way round it. Otherwise it's only a client hint
+    // (`completedAt` + the default cooldown — the real length is server
+    // config), so "Try anyway" still lets the server decide on submit.
+    final now = ref.watch(psychologyClockProvider)();
+    final availableAt = state.retakeAvailableAt;
+    final waiting = availableAt != null && now.isBefore(availableAt);
+    final serverSaysWait = waiting && state.serverRetakeAvailableAt != null;
+    final String? waitText = !waiting
+        ? null
+        : serverSaysWait
+        ? psychologyRetakeCooldownMessage(
+            l10n,
+            (availableAt.difference(now).inMilliseconds / 1000).ceil(),
+          )
+        : l10n.psychologyRetakeAvailableOn(
+            DateFormat.yMMMd(l10n.localeName).format(availableAt.toLocal()),
+          );
 
     return Padding(
       padding: AppSpacing.pagePadding,
@@ -389,14 +472,33 @@ class _ResultView extends ConsumerWidget {
               child: _AnswersCard(answers: result?.answers ?? const []),
             ),
           ),
+          if (waitText != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              waitText,
+              key: const ValueKey('psychology-retake-wait'),
+              textAlign: TextAlign.center,
+              style: AppTypography.labelMedium.copyWith(
+                color: AppColors.textSecondaryLight,
+              ),
+            ),
+            if (!serverSaysWait)
+              Center(
+                child: TextButton(
+                  key: const ValueKey('psychology-retake-try-anyway'),
+                  onPressed: notifier.retake,
+                  child: Text(l10n.psychologyRetakeTryAnyway),
+                ),
+              ),
+          ],
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
               Expanded(
                 child: NmOutlinedButton(
+                  key: const ValueKey('psychology-retake'),
                   label: l10n.psychologyRetakeQuiz,
-                  onPressed: () =>
-                      ref.read(personalityQuizProvider.notifier).retake(),
+                  onPressed: waiting ? null : notifier.retake,
                 ),
               ),
               const SizedBox(width: AppSpacing.md),

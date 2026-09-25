@@ -17,6 +17,12 @@ class DiscoveryProfileEntity {
   final List<String> photoUrls;
   final bool isVerified;
   final bool isPremium;
+
+  /// Reserved and intentionally unpopulated: the backend sends `false` for
+  /// every member, because exposing whether (or how) another member took the
+  /// psychology quiz would let their answers be inferred. Parsed only for
+  /// API compatibility — never render it, filter on it, or rank by it
+  /// (enforced by test/psychology_privacy_guard_test.dart).
   final bool isPsychologyCompleted;
   final bool isOnline;
   final bool horoscopeAvailable;
