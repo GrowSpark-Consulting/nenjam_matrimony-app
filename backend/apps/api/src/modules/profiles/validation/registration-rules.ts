@@ -163,14 +163,20 @@ export function isMatchableFromDraft(
 
 // ---- Steps 5, 6, 7: skippable, all-required-if-touched ----
 
-// `workLocation` is deliberately absent from the REQUIRED list: no screen in
-// the current registration flow asks for it. Onboarding's Education and
-// Income steps together fill every other field here, so requiring one the
-// product never collects made finalize reject every onboarding signup for a
-// field the member was never shown — the same class of bug that removed
-// `caste`/`motherTongue` from isMatchableFromDraft. It stays in TOUCH_FIELDS
-// so the full wizard's Education step, which does collect it, still counts as
-// engaged when it is the only thing filled in.
+// REQUIRED is exactly what onboarding requires: `qualification` (Education
+// step) and `annualIncome` (Income step). Everything else is offered there
+// but optional — College on the Education step; "You work with"
+// (`employmentType`), "You work as" (`occupation`) and Company on the Income
+// step, so a member who is not working can still finish — and `workLocation`
+// is not asked by any current screen at all. Requiring any of them made
+// finalize answer 400 to every signup that left one blank, stranding the
+// member on the verify-mobile step with a Retry that re-sent the same draft
+// and failed the same way. Same class of bug that removed `caste` and
+// `motherTongue` from isMatchableFromDraft: a gate on data the product does
+// not require is one members cannot be expected to satisfy.
+//
+// The optional fields stay in TOUCH_FIELDS, so filling any of them alone
+// still counts as engaging the section and still requires the two above.
 const EDUCATION_TOUCH_FIELDS = [
   'qualification',
   'college',
@@ -181,14 +187,7 @@ const EDUCATION_TOUCH_FIELDS = [
   'workLocation',
 ];
 
-const EDUCATION_REQUIRED_FIELDS = [
-  'qualification',
-  'college',
-  'occupation',
-  'company',
-  'employmentType',
-  'annualIncome',
-];
+const EDUCATION_REQUIRED_FIELDS = ['qualification', 'annualIncome'];
 
 export function isEducationSectionTouched(education: Section): boolean {
   return anyPresent(education, EDUCATION_TOUCH_FIELDS);

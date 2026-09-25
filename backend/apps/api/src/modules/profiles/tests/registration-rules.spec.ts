@@ -80,20 +80,49 @@ describe('isEducationDetailsValid', () => {
     );
   });
 
-  it('is invalid when College is missing', () => {
-    const { college: _college, ...rest } = complete;
-    expect(isEducationDetailsValid(rest)).toBe(false);
-  });
-
-  it('is invalid when Company is missing', () => {
-    const { company: _company, ...rest } = complete;
-    expect(isEducationDetailsValid(rest)).toBe(false);
-  });
-
   it('is invalid when Annual Income is missing', () => {
     const { annualIncome: _annualIncome, ...rest } = complete;
     expect(isEducationDetailsValid(rest)).toBe(false);
   });
+
+  it('is invalid when Qualification is missing', () => {
+    const rest: Record<string, unknown> = { ...complete };
+    delete rest.qualification;
+    expect(isEducationDetailsValid(rest)).toBe(false);
+  });
+
+  // Onboarding offers these but does not require them (OnboardingEducationForm
+  // requires only qualification; OnboardingIncomeForm only annualIncome), so
+  // finalize must not either — requiring them stranded every signup that left
+  // one blank on the verify-mobile step.
+  it.each(['college', 'occupation', 'company', 'employmentType'])(
+    'is valid when optional %s is missing',
+    (field) => {
+      const rest: Record<string, unknown> = { ...complete };
+      delete rest[field];
+      expect(isEducationDetailsValid(rest)).toBe(true);
+    },
+  );
+
+  // A member who is not working answers only the two required fields.
+  it('is valid for onboarding with every optional field left blank', () => {
+    expect(
+      isEducationDetailsValid({
+        qualification: "Bachelor's",
+        annualIncome: '10',
+      }),
+    ).toBe(true);
+  });
+
+  // An optional field alone still engages the section, and so still needs the
+  // two required ones — the all-or-nothing rule is narrowed, not removed.
+  it.each(['college', 'occupation', 'company', 'employmentType'])(
+    'is invalid when only optional %s is filled',
+    (field) => {
+      expect(isEducationSectionTouched({ [field]: 'x' })).toBe(true);
+      expect(isEducationDetailsValid({ [field]: 'x' })).toBe(false);
+    },
+  );
 
   // No screen in the current registration flow asks for Work Location, so it
   // cannot be required — requiring it rejected every onboarding signup for a
