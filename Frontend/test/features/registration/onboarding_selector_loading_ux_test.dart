@@ -1,9 +1,11 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nenjam_matrimony/core/router/route_names.dart';
 import 'package:nenjam_matrimony/core/widgets/feedback/selection_list_skeleton.dart';
+import 'package:nenjam_matrimony/core/widgets/indicators/nm_field_loader.dart';
 import 'package:nenjam_matrimony/features/authentication/presentation/providers/auth_providers.dart';
 import 'package:nenjam_matrimony/features/location/presentation/providers/location_providers.dart';
 import 'package:nenjam_matrimony/features/location/presentation/widgets/location_picker_field.dart';
@@ -98,6 +100,60 @@ void main() {
     await pumpPastTransition(tester);
   }
 
+  /// [text] as drawn inside the open sheet, as opposed to the same message
+  /// the field behind it shows in place of its hint while loading.
+  Finder inSheet(String text) =>
+      find.descendant(of: find.byType(BottomSheet), matching: find.text(text));
+
+  /// The field headed [label].
+  Finder field(String label) =>
+      find.ancestor(of: find.text(label), matching: find.byType(LocationPickerField));
+
+  /// Asserts nothing on screen — field, sheet or page — is drawing a stock
+  /// Material/Cupertino spinner while one of these lists loads.
+  void expectNoStockSpinner() {
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(CupertinoActivityIndicator), findsNothing);
+    expect(find.byType(RefreshProgressIndicator), findsNothing);
+  }
+
+  /// Asserts the field headed [label] shows the small trailing loader and
+  /// [message] in place of its hint — and not its idle chevron or any stock
+  /// spinner.
+  void expectFieldLoading(
+    WidgetTester tester,
+    String label,
+    String message,
+  ) {
+    expectNoStockSpinner();
+    expect(
+      find.descendant(of: field(label), matching: find.byType(NmFieldLoader)),
+      findsOneWidget,
+    );
+    // The ring itself stays 18x18 — the suffix slot's 32x32 minimum must not
+    // stretch it into a field-height spinner against the border.
+    expect(
+      tester.getSize(
+        find.descendant(
+          of: find.byType(NmFieldLoader),
+          matching: find.byType(CustomPaint),
+        ),
+      ),
+      const Size(18, 18),
+    );
+    expect(
+      find.descendant(of: field(label), matching: find.text(message)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: field(label),
+        matching: find.byIcon(Icons.keyboard_arrow_down_rounded),
+      ),
+      findsNothing,
+    );
+  }
+
   /// Picks [option] from the field headed [label] without `pumpAndSettle` —
   /// for use right before a child field's fetch is held indefinitely by a
   /// test fake, where the resulting perpetual spinner would otherwise hang
@@ -127,9 +183,15 @@ void main() {
       await tester.pumpWidget(harness(container, basicsRouter()));
       await pumpPastTransition(tester);
 
+      expectFieldLoading(tester, 'State *', 'Loading states...');
+
       await openWhileLoading(tester, 'State *');
 
-      expect(find.text('Loading states...'), findsOneWidget);
+      expect(inSheet('Loading states...'), findsOneWidget);
+      // The sheet's own loading state is a skeleton, and the field behind it
+      // keeps its NmFieldLoader — neither is a stock spinner.
+      expectNoStockSpinner();
+      expect(find.byType(NmFieldLoader), findsOneWidget);
       final skeleton = tester.widget<SelectionListSkeleton>(
         find.byType(SelectionListSkeleton),
       );
@@ -142,6 +204,9 @@ void main() {
 
       expect(find.byType(SelectionListSkeleton), findsNothing);
       expect(find.widgetWithText(ListTile, 'Gujarat'), findsOneWidget);
+      // The loader leaves with the request, and the hint comes back.
+      expect(find.byType(NmFieldLoader), findsNothing);
+      expect(find.text('Loading states...'), findsNothing);
     });
 
     testWidgets('an empty state list shows its own message, not a blank sheet',
@@ -164,6 +229,7 @@ void main() {
 
       expect(find.text('No states available'), findsOneWidget);
       expect(find.byType(ListTile), findsNothing);
+      expect(find.byType(NmFieldLoader), findsNothing);
     });
 
     testWidgets(
@@ -183,6 +249,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text("Couldn't load states"), findsOneWidget);
+      // A failure never leaves the field spinning.
+      expect(find.byType(NmFieldLoader), findsNothing);
       final retry = find.widgetWithText(TextButton, 'Retry');
       expect(retry, findsOneWidget);
 
@@ -234,9 +302,15 @@ void main() {
       // and closing the State sheet with `pumpAndSettle` would then hang on
       // the City field's resulting perpetual spinner.
       await pickBounded(tester, 'State *', 'Gujarat');
+      expectFieldLoading(tester, 'City *', 'Finding cities in Gujarat...');
+
       await openWhileLoading(tester, 'City *');
 
-      expect(find.text('Finding cities in Gujarat...'), findsOneWidget);
+      expect(inSheet('Finding cities in Gujarat...'), findsOneWidget);
+      // The sheet's own loading state is a skeleton, and the field behind it
+      // keeps its NmFieldLoader — neither is a stock spinner.
+      expectNoStockSpinner();
+      expect(find.byType(NmFieldLoader), findsOneWidget);
       expect(find.byType(SelectionListSkeleton), findsOneWidget);
       expect(find.byType(ListTile), findsNothing);
 
@@ -244,6 +318,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.widgetWithText(ListTile, 'Bhavnagar'), findsOneWidget);
+      expect(find.byType(NmFieldLoader), findsNothing);
     });
 
     testWidgets('an empty city list names the state it found nothing for',
@@ -351,9 +426,15 @@ void main() {
       await tester.pumpWidget(harness(container, religionRouter()));
       await pumpPastTransition(tester);
 
+      expectFieldLoading(tester, 'Religion *', 'Loading religions...');
+
       await openWhileLoading(tester, 'Religion *');
 
-      expect(find.text('Loading religions...'), findsOneWidget);
+      expect(inSheet('Loading religions...'), findsOneWidget);
+      // The sheet's own loading state is a skeleton, and the field behind it
+      // keeps its NmFieldLoader — neither is a stock spinner.
+      expectNoStockSpinner();
+      expect(find.byType(NmFieldLoader), findsOneWidget);
       expect(find.byType(SelectionListSkeleton), findsOneWidget);
       expect(find.byType(ListTile), findsNothing);
 
@@ -361,6 +442,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.widgetWithText(ListTile, 'Hindu'), findsOneWidget);
+      expect(find.byType(NmFieldLoader), findsNothing);
     });
 
     testWidgets(
@@ -425,15 +507,22 @@ void main() {
       // fetch, and closing the Religion sheet with `pumpAndSettle` would then
       // hang on the Community field's resulting perpetual spinner.
       await pickBounded(tester, 'Religion *', 'Hindu');
+      expectFieldLoading(tester, 'Community *', 'Loading communities...');
+
       await openWhileLoading(tester, 'Community *');
 
-      expect(find.text('Loading communities...'), findsOneWidget);
+      expect(inSheet('Loading communities...'), findsOneWidget);
+      // The sheet's own loading state is a skeleton, and the field behind it
+      // keeps its NmFieldLoader — neither is a stock spinner.
+      expectNoStockSpinner();
+      expect(find.byType(NmFieldLoader), findsOneWidget);
       expect(find.byType(SelectionListSkeleton), findsOneWidget);
 
       religions.releaseCommunities();
       await tester.pumpAndSettle();
 
       expect(find.widgetWithText(ListTile, 'Iyer'), findsOneWidget);
+      expect(find.byType(NmFieldLoader), findsNothing);
     });
 
     testWidgets('an empty community list says so', (tester) async {
