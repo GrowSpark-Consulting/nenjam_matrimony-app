@@ -1,5 +1,6 @@
 import {
   decodeFeedCursor,
+  deriveCursorKey,
   encodeFeedCursor,
   isAfterCursor,
   type FeedCursor,
@@ -9,6 +10,11 @@ import type { RankedCandidate } from '../scoring/ranking.service';
 import type { CompatibilityBreakdown } from '../scoring/compatibility.service';
 
 const CURSOR: FeedCursor = { score: 80, createdAt: 1_700_000_000_000, userId: 'u5' };
+const KEY = deriveCursorKey('a-test-secret-of-sufficient-length');
+const VIEWER = 'viewer-1';
+const seal = (c: FeedCursor = CURSOR): string => encodeFeedCursor(c, KEY, VIEWER);
+const open = (raw: string | undefined | null): FeedCursor | null =>
+  decodeFeedCursor(raw, KEY, VIEWER);
 
 function candidate(
   userId: string,
@@ -33,11 +39,62 @@ const ids = (rs: RankedCandidate[]): string[] =>
 
 describe('feed cursor', () => {
   it('round-trips exactly', () => {
-    expect(decodeFeedCursor(encodeFeedCursor(CURSOR))).toEqual(CURSOR);
+    expect(open(seal())).toEqual(CURSOR);
   });
 
   it('is opaque — not readable as plain JSON', () => {
-    expect(encodeFeedCursor(CURSOR)).not.toContain('userId');
+    expect(seal()).not.toContain('userId');
+  });
+
+  describe('is sealed: the ranking score can be neither read out nor probed in', () => {
+    const decodeBase64Json = (raw: string) =>
+      Buffer.from(raw.replace(/^c1./, ''), 'base64url').toString('utf8');
+
+    it('does not contain the score, timestamp or user id in any decodable form', () => {
+      const sealed = seal({
+        score: 87.35,
+        createdAt: 1_700_000_000_000,
+        userId: 'candidate-42',
+      });
+      const decoded = decodeBase64Json(sealed);
+      for (const secret of ['87.35', '1700000000000', 'candidate-42']) {
+        expect(sealed).not.toContain(secret);
+        expect(decoded).not.toContain(secret);
+      }
+    });
+
+    it('is different every time for the same cursor (random IV)', () => {
+      expect(seal()).not.toBe(seal());
+    });
+
+    it('rejects a hand-built plain cursor — the old format can no longer be forged', () => {
+      const plain = Buffer.from(JSON.stringify(CURSOR)).toString('base64url');
+      expect(open(plain)).toBeNull();
+      expect(open('c1.' + plain)).toBeNull();
+    });
+
+    it('rejects a cursor with any byte changed', () => {
+      const sealed = seal();
+      const bytes = Buffer.from(sealed.slice(3), 'base64url');
+      for (const index of [0, 13, bytes.length - 1]) {
+        const tampered = Buffer.from(bytes);
+        tampered[index] ^= 1;
+        expect(open('c1.' + tampered.toString('base64url'))).toBeNull();
+      }
+    });
+
+    it('rejects a truncated cursor', () => {
+      expect(open(seal().slice(0, 20))).toBeNull();
+    });
+
+    it('is bound to the member it was issued to', () => {
+      expect(decodeFeedCursor(seal(), KEY, 'someone-else')).toBeNull();
+    });
+
+    it('is bound to the server secret', () => {
+      const other = deriveCursorKey('a-different-secret-entirely-here');
+      expect(decodeFeedCursor(seal(), other, VIEWER)).toBeNull();
+    });
   });
 
   describe('rejects anything malformed, degrading to "first page"', () => {
@@ -50,7 +107,18 @@ describe('feed cursor', () => {
       ['JSON with wrong types', Buffer.from(JSON.stringify({ score: 'x', createdAt: 2, userId: 'a' })).toString('base64url')],
       ['NaN score', Buffer.from(JSON.stringify({ score: null, createdAt: 2, userId: 'a' })).toString('base64url')],
     ])('%s → null', (_label, input) => {
-      expect(decodeFeedCursor(input as string | undefined)).toBeNull();
+      expect(open(input)).toBeNull();
+    });
+  });
+
+  describe('a sealed payload that is not a valid cursor is still rejected', () => {
+    it.each([
+      ['missing userId', { score: 1, createdAt: 2 }],
+      ['wrong types', { score: 'x', createdAt: 2, userId: 'a' }],
+      ['null score', { score: null, createdAt: 2, userId: 'a' }],
+      ['empty userId', { score: 1, createdAt: 2, userId: '' }],
+    ])('%s → null', (_label, payload) => {
+      expect(open(seal(payload as unknown as FeedCursor))).toBeNull();
     });
   });
 

@@ -302,11 +302,11 @@ describe('calculatePsychologyCompatibility', () => {
   });
 
   describe('Q10 <-> Q9 escalation (cross-question rule 1)', () => {
-    it('escalates Q10 medium -> high when Q9 also flags a conflict', () => {
+    it('escalates Q10 medium -> high when Q9 shows a meaningful conflict (a hard dealbreaker)', () => {
       const result = calculatePsychologyCompatibility(
         [Q9, Q10],
         { [Q9.id]: 'A', [Q10.id]: 'B' },
-        { [Q9.id]: 'C', [Q10.id]: 'D' }, // Q9 = A+C -> soft flag; Q10 = B+D -> medium flag
+        { [Q9.id]: 'D', [Q10.id]: 'D' }, // Q9 = A+D -> hard dealbreaker; Q10 = B+D -> medium flag
       );
       const q10Flag = result.flags.find(
         (f) => f.dimension === 'life_stage_timeline',
@@ -314,6 +314,41 @@ describe('calculatePsychologyCompatibility', () => {
       expect(q10Flag).toBeDefined();
       expect(q10Flag?.severity).toBe('high');
       expect(q10Flag?.message).toContain('escalated');
+    });
+
+    it('does NOT escalate Q10 for a merely soft Q9 flag ("open either way" vs "want children soon")', () => {
+      const result = calculatePsychologyCompatibility(
+        [Q9, Q10],
+        { [Q9.id]: 'A', [Q10.id]: 'B' },
+        { [Q9.id]: 'C', [Q10.id]: 'D' }, // Q9 = A+C -> soft flag; Q10 = B+D -> medium flag
+      );
+      expect(
+        result.flags.find((f) => f.dimension === 'children')?.severity,
+      ).toBe('soft');
+      const q10Flag = result.flags.find(
+        (f) => f.dimension === 'life_stage_timeline',
+      );
+      expect(q10Flag?.severity).toBe('medium');
+      expect(q10Flag?.message).not.toContain('escalated');
+    });
+
+    it('reports the hard-axis conflict independently of the overall score and ceiling', () => {
+      const conflict = calculatePsychologyCompatibility(
+        [Q9],
+        { [Q9.id]: 'A' },
+        { [Q9.id]: 'D' },
+      );
+      // Only one question: the average (0) is already below the ceiling, so
+      // the ceiling did not need to bite — but the conflict is still reported.
+      expect(conflict.ceilingApplied).toBe(false);
+      expect(conflict.hardAxisConflict).toBe(true);
+
+      const fine = calculatePsychologyCompatibility(
+        [Q9],
+        { [Q9.id]: 'A' },
+        { [Q9.id]: 'A' },
+      );
+      expect(fine.hardAxisConflict).toBe(false);
     });
 
     it('does NOT escalate Q10 when Q9 has no flag at all', () => {

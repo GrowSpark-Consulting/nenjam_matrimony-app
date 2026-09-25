@@ -81,6 +81,10 @@ export class AppConfigService implements OnModuleInit {
     return this.configService.get('fallback', { infer: true });
   }
 
+  get psychology(): AppConfig['psychology'] {
+    return this.configService.get('psychology', { infer: true });
+  }
+
   checkHealth(): ConfigHealth {
     const details: Record<string, boolean> = {
       envFileLoaded: Boolean(this.nodeEnv),

@@ -223,13 +223,6 @@ exports[`compatibility + ranking golden master seeker with full-preference score
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -327,13 +320,6 @@ exports[`compatibility + ranking golden master seeker with full-preference score
         "points": 4,
         "ratio": 1,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -435,13 +421,6 @@ exports[`compatibility + ranking golden master seeker with full-preference score
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -539,13 +518,6 @@ exports[`compatibility + ranking golden master seeker with full-preference score
         "points": 4,
         "ratio": 1,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -647,13 +619,6 @@ exports[`compatibility + ranking golden master seeker with full-preference score
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -751,13 +716,6 @@ exports[`compatibility + ranking golden master seeker with full-preference score
         "points": 4,
         "ratio": 1,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -859,13 +817,6 @@ exports[`compatibility + ranking golden master seeker with full-preference score
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -963,13 +914,6 @@ exports[`compatibility + ranking golden master seeker with full-preference score
         "points": 4,
         "ratio": 1,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -1071,13 +1015,6 @@ exports[`compatibility + ranking golden master seeker with full-preference score
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -1175,13 +1112,6 @@ exports[`compatibility + ranking golden master seeker with full-preference score
         "points": 4,
         "ratio": 1,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -1283,13 +1213,6 @@ exports[`compatibility + ranking golden master seeker with full-preference score
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -1387,13 +1310,6 @@ exports[`compatibility + ranking golden master seeker with full-preference score
         "points": 4,
         "ratio": 1,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -1495,13 +1411,6 @@ exports[`compatibility + ranking golden master seeker with full-preference score
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -1599,13 +1508,6 @@ exports[`compatibility + ranking golden master seeker with full-preference score
         "points": 4,
         "ratio": 1,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -1859,13 +1761,6 @@ exports[`compatibility + ranking golden master seeker with no-preference scores 
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -1963,13 +1858,6 @@ exports[`compatibility + ranking golden master seeker with no-preference scores 
         "points": 0,
         "ratio": 0,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -2071,13 +1959,6 @@ exports[`compatibility + ranking golden master seeker with no-preference scores 
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -2175,13 +2056,6 @@ exports[`compatibility + ranking golden master seeker with no-preference scores 
         "points": 0,
         "ratio": 0,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -2283,13 +2157,6 @@ exports[`compatibility + ranking golden master seeker with no-preference scores 
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -2387,13 +2254,6 @@ exports[`compatibility + ranking golden master seeker with no-preference scores 
         "points": 0,
         "ratio": 0,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -2495,13 +2355,6 @@ exports[`compatibility + ranking golden master seeker with no-preference scores 
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -2599,13 +2452,6 @@ exports[`compatibility + ranking golden master seeker with no-preference scores 
         "points": 0,
         "ratio": 0,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -2707,13 +2553,6 @@ exports[`compatibility + ranking golden master seeker with no-preference scores 
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -2811,13 +2650,6 @@ exports[`compatibility + ranking golden master seeker with no-preference scores 
         "points": 0,
         "ratio": 0,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -2919,13 +2751,6 @@ exports[`compatibility + ranking golden master seeker with no-preference scores 
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -3023,13 +2848,6 @@ exports[`compatibility + ranking golden master seeker with no-preference scores 
         "points": 0,
         "ratio": 0,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -3131,13 +2949,6 @@ exports[`compatibility + ranking golden master seeker with no-preference scores 
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -3235,13 +3046,6 @@ exports[`compatibility + ranking golden master seeker with no-preference scores 
         "points": 0,
         "ratio": 0,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -3495,13 +3299,6 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -3599,13 +3396,6 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
         "points": 0,
         "ratio": 0,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -3707,13 +3497,6 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -3811,13 +3594,6 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
         "points": 0,
         "ratio": 0,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -3919,13 +3695,6 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -4023,13 +3792,6 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
         "points": 0,
         "ratio": 0,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -4131,13 +3893,6 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -4235,13 +3990,6 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
         "points": 0,
         "ratio": 0,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -4343,13 +4091,6 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -4447,13 +4188,6 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
         "points": 0,
         "ratio": 0,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -4555,13 +4289,6 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -4659,13 +4386,6 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
         "points": 0,
         "ratio": 0,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,
@@ -4767,13 +4487,6 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
         "weight": 4,
       },
       {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
-      },
-      {
         "applicable": true,
         "key": "profileCompleteness",
         "points": 4.800000000000001,
@@ -4871,13 +4584,6 @@ exports[`compatibility + ranking golden master seeker with onboarding-labels sco
         "points": 0,
         "ratio": 0,
         "weight": 4,
-      },
-      {
-        "applicable": false,
-        "key": "psychology",
-        "points": 0,
-        "ratio": 0,
-        "weight": 15,
       },
       {
         "applicable": true,

@@ -1,5 +1,4 @@
 import type { PreferenceFilters } from '../filters/partner-preference-where.builder';
-import type { QuizQuestion } from '../../../../../../libs/database/generated/client';
 import { MATCHING_WEIGHTS, type ScoreKey } from './matching-weights.config';
 
 /**
@@ -33,11 +32,11 @@ export interface ScorableProfile {
   preference: PreferenceFilters | null;
   /**
    * This person's raw answers to the CURRENT active psychology quiz
-   * (`{ questionId: selectedOptionKey }`), if they've completed it.
-   * Undefined/null on every ScorableProfile built today — nothing populates
-   * this field yet (see psychology-compatibility.signal.ts), which is what
-   * keeps that signal inapplicable, and therefore this addition a no-op,
-   * until a separate, later step wires real data in.
+   * (`{ questionId: selectedOptionKey }`), if they have completed it.
+   * toScorable() leaves it unset; FeedService fills it from
+   * PsychologyMatchContextService. It is read by the psychology REFINEMENT
+   * (psychology/psychology-refinement.ts), not by any signal: it is not part of
+   * the weighted model, so its absence removes nothing from a score.
    */
   psychologyAnswers?: Record<string, string> | null;
 }
@@ -69,13 +68,6 @@ export interface CompatibilityInput {
   chooser: ScorableProfile;
   preference: PreferenceFilters | null;
   candidate: ScorableProfile;
-  /**
-   * The current active psychology quiz's questions (with their `pairRules`),
-   * shared context rather than a per-profile attribute. Undefined unless the
-   * caller explicitly supplies it via CompatibilityService.score()'s optional
-   * fourth argument — see that method's doc comment.
-   */
-  psychologyQuestions?: readonly QuizQuestion[];
 }
 
 /**
@@ -83,9 +75,8 @@ export interface CompatibilityInput {
  *
  * `compatibility` signals describe the PAIR — does this candidate fit what
  * this chooser asked for. They are what `matchedPreferences` and
- * `unmatchedPreferences` explain. Partner preferences are one;
- * psychology-compatibility.signal.ts (the marriage-compatibility quiz,
- * pairwise) is another. A horoscope signal would be a third, not yet built.
+ * `unmatchedPreferences` explain. Partner preferences are the only one today;
+ * a horoscope or psychology signal would be another.
  *
  * `quality` signals describe the CANDIDATE alone, whoever is looking —
  * completeness, trust, activity. Verification results belong here.
