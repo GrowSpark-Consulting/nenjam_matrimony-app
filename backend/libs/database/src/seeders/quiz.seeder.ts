@@ -15,20 +15,20 @@ import {
 // content and the pairRules metadata that engine will read.
 // ─────────────────────────────────────────────────────────────
 
-interface OptionDefinition {
+export interface OptionDefinition {
   key: 'A' | 'B' | 'C' | 'D';
   label: string;
   value: 1 | 2 | 3 | 4;
 }
 
-interface PairRuleDefinition {
+export interface PairRuleDefinition {
   pair: [string, string];
   type: 'flag' | 'dealbreaker';
   severity: 'soft' | 'medium' | 'high' | 'hard';
   message: string;
 }
 
-interface QuestionDefinition {
+export interface QuestionDefinition {
   id: string;
   dimension: string;
   scoringType: QuestionScoringType;
@@ -38,7 +38,20 @@ interface QuestionDefinition {
   order: number;
 }
 
-const QUESTIONS: QuestionDefinition[] = [
+export const QUIZ_ID = 'marriage-compat-v1';
+
+/**
+ * Exported for the content-integrity spec, which checks these definitions
+ * against the psychology scoring matrix.
+ *
+ * IMMUTABILITY RULE: a question id's option KEYS, meaning and scoring are
+ * frozen once released — the scoring matrix is keyed by question id and stored
+ * answers are keyed by option key, so editing them in place silently
+ * re-scores every existing answer. Changing what a question asks or offers
+ * means a NEW question id (and a new matrix entry), or a new quiz id. Only
+ * wording (labels, messages) may change in place.
+ */
+export const QUESTIONS: QuestionDefinition[] = [
   {
     id: 'nenjam-mc-q01-v1',
     dimension: 'conflict_style',
@@ -420,12 +433,16 @@ const QUESTIONS: QuestionDefinition[] = [
  * migration, not by this seeder (a seeder should never delete content; see
  * the marriage_psychology_questionnaire migration).
  * Safe to re-run: uses upsert so existing data is not duplicated.
+ *
+ * Re-running never changes whether the quiz is active: `isActive` is set only
+ * when the quiz is first created. An operator who retires it (or activates a
+ * newer quiz in its place) must not have that undone by the next seed.
  */
 export async function seedQuiz(prisma: PrismaClient): Promise<void> {
   console.log('\n💑  Seeding Marriage Compatibility quiz…');
 
   const quiz = await prisma.psychologyQuiz.upsert({
-    where: { id: 'marriage-compat-v1' },
+    where: { id: QUIZ_ID },
     update: {
       title: 'Marriage Compatibility Quiz',
       description:
@@ -434,10 +451,9 @@ export async function seedQuiz(prisma: PrismaClient): Promise<void> {
         'household division, emotional support, personal space, decision-making, children, and ' +
         'life-stage timeline. Answers are scored pairwise against a match, not individually.',
       version: '1.0',
-      isActive: true,
     },
     create: {
-      id: 'marriage-compat-v1',
+      id: QUIZ_ID,
       title: 'Marriage Compatibility Quiz',
       description:
         '10 scenario-based questions covering the dimensions most predictive of marital strain: ' +
@@ -450,8 +466,21 @@ export async function seedQuiz(prisma: PrismaClient): Promise<void> {
   });
 
   console.log(
-    `  ✅  Quiz created: "${quiz.title}" v${quiz.version}  [id: ${quiz.id}]`,
+    `  ✅  Quiz upserted: "${quiz.title}" v${quiz.version}  [id: ${quiz.id}, active: ${quiz.isActive}]`,
   );
+
+  // Two active quizzes is a content-ops mistake, not a state the app is built
+  // for (Discover and quiz submission both take "the" active quiz). Report it
+  // loudly; never resolve it here — which one should stay active is the
+  // operator's call, and a seeder must not deactivate content.
+  const activeCount = await prisma.psychologyQuiz.count({
+    where: { isActive: true },
+  });
+  if (activeCount > 1) {
+    console.warn(
+      `  ⚠️   ${activeCount} psychology quizzes are active. The most recently created one is used; deactivate the others.`,
+    );
+  }
 
   let upsertCount = 0;
   for (const q of QUESTIONS) {

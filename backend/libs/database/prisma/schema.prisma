@@ -518,6 +518,11 @@ model QuizQuestion {
   createdAt    DateTime            @default(now()) @map("created_at")
   quiz         PsychologyQuiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
 
+  // A quiz has one question per position and per dimension. The scorer keys
+  // cross-question rules by dimension, so a duplicate would silently overwrite
+  // another question's result; a duplicate order makes "the quiz" ambiguous.
+  @@unique([quizId, order])
+  @@unique([quizId, dimension])
   @@index([quizId])
   @@index([dimension])
   @@map("quiz_questions")
@@ -536,6 +541,15 @@ model UserQuizResponse {
   quizId      String         @map("quiz_id")
   /// { questionId: selectedOptionKey }
   answers     Json
+  /// PsychologyQuiz.version the answers were given against. Null on rows that
+  /// predate this column, which are treated as current. Bumping a quiz's
+  /// version is how a content change invalidates existing answers without a
+  /// new quiz id: scoring ignores a response whose version differs from the
+  /// active quiz's. (A CHECK constraint, added in SQL, keeps `answers` an
+  /// object.)
+  quizVersion String?        @map("quiz_version")
+  /// When this set of answers was completed — refreshed on a retake, and what
+  /// the retake cooldown counts from.
   completedAt DateTime       @default(now()) @map("completed_at")
   // `@default(now())` mirrors the DEFAULT CURRENT_TIMESTAMP the migration had
   // to give this column: it was added NOT NULL to a table with existing rows,
@@ -543,7 +557,9 @@ model UserQuizResponse {
   // the schema saying "no default" while the database had one, and the CI
   // drift check failed on exactly that.
   updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at")
-  quiz        PsychologyQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  // Restrict, not Cascade: deleting a quiz must not silently delete every
+  // member's answers to it (a retired quiz is deactivated, never deleted).
+  quiz        PsychologyQuiz @relation(fields: [quizId], references: [id], onDelete: Restrict)
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, quizId])

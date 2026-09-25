@@ -86,10 +86,18 @@ export class ProfileFeedMapper {
         // blends both directions (60/40) when the candidate has saved a
         // preference; otherwise it is the one-way score.
         aiMatchPercent: score?.seekerFit ?? 0,
-        // Astrology and psychology engines do not exist yet. Left at 0
-        // deliberately rather than folded into the number above — a score that
-        // silently means something different from its name is worse than a
-        // zero that plainly says "not computed".
+        // No astrology engine exists yet, and `psychologyMatchPercent` is
+        // deliberately NOT exposed: both stay at 0.
+        //
+        // This is a privacy boundary, not a placeholder. The marriage-
+        // compatibility quiz only ever affects the ORDER of the feed (via the
+        // ranking key — see CompatibilityBreakdown.ranking); every number in
+        // this object is the visible score, which is identical with or without
+        // quiz data. Surfacing a psychology percentage, or anything derived
+        // from it, would let one member read another's quiz answers back out
+        // of the app by re-answering and watching the number move. Do not add
+        // one without a privacy review.
+        // `isPsychologyCompleted` is likewise not populated.
         astroMatchPercent: 0,
         psychologyMatchPercent: 0,
         overallCompatibility: score?.overall ?? 0,

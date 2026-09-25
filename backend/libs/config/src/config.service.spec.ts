@@ -45,6 +45,7 @@ describe('AppConfigService', () => {
       ageRelaxStep2: 5,
       maxTier: 10,
     },
+    psychology: { enabled: true, timeoutMs: 800, retakeCooldownDays: 7 },
   };
 
   async function buildService(

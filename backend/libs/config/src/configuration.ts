@@ -108,6 +108,22 @@ export interface AppConfig {
     ageRelaxStep2: number;
     maxTier: number;
   };
+  /** Psychology as an optional Discover ranking signal (see
+   *  PsychologyMatchContextService). It can never fail a Discover request;
+   *  these only bound how much of a request it may spend. */
+  psychology: {
+    /** Kill switch. When false Discover scores exactly as it did before the
+     *  psychology signal existed, and no psychology query is issued. */
+    enabled: boolean;
+    /** Wall-clock budget per psychology lookup phase, in ms. Past it the
+     *  request carries on without psychology. */
+    timeoutMs: number;
+    /** Days a member must wait before changing their quiz answers again. The
+     *  first submission is never delayed, nor is a retake of answers that have
+     *  gone stale. 0 disables the cooldown. Bounds how fast one member can
+     *  probe another's answers by re-answering and watching the feed. */
+    retakeCooldownDays: number;
+  };
 }
 
 /** A numeric env var, or `fallback` when it is absent/blank/not a number. */
@@ -224,5 +240,13 @@ export default (): AppConfig => ({
     ageRelaxStep1: parseInt(process.env.AGE_RELAX_STEP_1 ?? '2', 10),
     ageRelaxStep2: parseInt(process.env.AGE_RELAX_STEP_2 ?? '5', 10),
     maxTier: parseInt(process.env.MAX_FALLBACK_TIER ?? '10', 10),
+  },
+  psychology: {
+    enabled: (process.env.PSYCHOLOGY_MATCHING_ENABLED ?? 'true') !== 'false',
+    timeoutMs: numberOr(process.env.PSYCHOLOGY_TIMEOUT_MS, 800),
+    retakeCooldownDays: numberOr(
+      process.env.PSYCHOLOGY_RETAKE_COOLDOWN_DAYS,
+      7,
+    ),
   },
 });

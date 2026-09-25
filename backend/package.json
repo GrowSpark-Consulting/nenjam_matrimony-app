@@ -47,6 +47,7 @@
     "db:seed": "ts-node libs/database/src/seed.ts",
     "seed:locations": "ts-node libs/database/src/seed-locations.ts",
     "seed:religions": "ts-node libs/database/src/seed-religions.ts",
+    "seed:quiz": "ts-node libs/database/src/seed-quiz.ts",
     "analyze:locations": "ts-node libs/database/src/analyze-location-migration.ts",
     "seed:fake": "ts-node libs/database/src/seed-fake.ts",
     "verify:fake-seed": "ts-node libs/database/src/verify-fake-seed.ts",

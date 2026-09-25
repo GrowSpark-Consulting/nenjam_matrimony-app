@@ -101,5 +101,6 @@ export class FeedInvalidationService {
 export type FeedInvalidationReason =
   | 'profile_updated'
   | 'preferences_updated'
+  | 'psychology_updated'
   | 'block_created'
   | 'block_removed';

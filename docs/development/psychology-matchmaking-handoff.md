@@ -1,5 +1,7 @@
 # Nenjam Matrimony — Psychology-Based Matchmaking: Complete Technical & Product Handoff
 
+> **⚠ Partly superseded (2026-09-25).** The matching model, answer storage/retake behaviour and API behaviour described in Parts 2, 6, 7, 8, 13, 14, 16, 17, 20 and 22 below were redesigned. Psychology is now a bounded *ranking-only refinement* on top of the unchanged 100-point model (not a 15-weight component / "115 total"), retakes are cooldown-limited, and no psychology-derived number is exposed. **Read [psychology-backend-contract.md](psychology-backend-contract.md) first; it wins wherever the two disagree.** Quiz content, matrices and flag rules here are still accurate.
+
 **Status as of this document:** Backend fully implemented, tested, and connected to live Discover matching. Flutter/frontend implementation has **not started** — see Part 17.
 
 This document is the single source of truth for the psychology matchmaking feature. It was written by directly inspecting the current codebase (schema, migrations, seed data, backend modules, tests, and the Flutter repository) on 2026-09-24, not by summarizing prior conversation. Every claim below is grounded in a specific file; where the Flutter side was verified, it was verified by reading the actual files, not assumed.

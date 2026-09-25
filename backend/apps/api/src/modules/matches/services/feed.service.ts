@@ -9,7 +9,12 @@ import { toScorable } from '../scoring/scorable.mapper';
 import { RankingService } from '../scoring/ranking.service';
 import { FeedSeenService } from '../cache/feed-seen.cache';
 import { FeedVersionService } from '../cache/feed-version.cache';
-import { decodeFeedCursor, encodeFeedCursor } from '../scoring/feed-cursor';
+import {
+  decodeFeedCursor,
+  deriveCursorKey,
+  encodeFeedCursor,
+} from '../scoring/feed-cursor';
+import { AppConfigService } from '@app/config';
 import { PsychologyMatchContextService } from '../scoring/psychology/psychology-match-context.service';
 
 const DEFAULT_LIMIT = 20;
@@ -55,7 +60,13 @@ export class FeedService {
     private readonly seen: FeedSeenService,
     private readonly feedVersion: FeedVersionService,
     private readonly psychologyContext: PsychologyMatchContextService,
-  ) {}
+    config: AppConfigService,
+  ) {
+    this.cursorKey = deriveCursorKey(config.jwt.secret);
+  }
+
+  /** Seals feed cursors — see feed-cursor.ts for why they are not plain. */
+  private readonly cursorKey: Buffer;
 
   async getFeed(
     currentUserId: string,
@@ -77,7 +88,11 @@ export class FeedService {
     // `page` is ignored, but every existing client that sends page/limit keeps
     // working unchanged. A malformed cursor decodes to null and simply starts
     // from the beginning rather than erroring.
-    const cursor = decodeFeedCursor(query.cursor);
+    const cursor = decodeFeedCursor(
+      query.cursor,
+      this.cursorKey,
+      currentUserId,
+    );
 
     // Fetch the pool from the top, not the page — the page is cut after
     // ranking, so asking the database for rows 20-40 of ITS ordering would
@@ -88,6 +103,15 @@ export class FeedService {
     // COUNT over the entire matching set, which ran on every request to
     // produce a `total` no Discover client ever read.
     const poolSize = Math.max(CANDIDATE_POOL, skip + limit) + 1;
+
+    // Psychology's seeker-side lookup is independent of the candidate query,
+    // so it starts now and overlaps it: for a member who hasn't taken the quiz
+    // — the common case — it costs no extra latency. The promise never
+    // rejects (see PsychologyMatchContextService), so leaving it unawaited if
+    // the candidate query throws is safe.
+    const psychologySeeker =
+      this.psychologyContext.prefetchSeeker(currentUserId);
+
     const result = await this.recommendation.getFeedForUser(currentUserId, {
       skip: 0,
       take: poolSize,
@@ -109,21 +133,21 @@ export class FeedService {
 
       // Psychology is the one signal CompatibilityService can't compute from
       // ScorableProfile alone (see PSYCHOLOGY_COMPATIBILITY_SIGNAL) — it needs
-      // each side's quiz answers plus the quiz's own questions, fetched here
-      // and attached below. For virtually every request today the seeker
-      // hasn't completed the quiz, so this short-circuits to an empty
-      // context after two single-row lookups — no candidate-batch query, and
-      // every ScorableProfile ends up with `psychologyAnswers: undefined`,
-      // identical to before this signal existed.
+      // each side's quiz answers plus the quiz's own questions, attached
+      // below. It is OPTIONAL: loadContext never throws, and on any failure,
+      // timeout or bad data it returns an empty context, so every
+      // ScorableProfile ends up with `psychologyAnswers: null` and the feed is
+      // ranked exactly as it was before this signal existed.
       const psychology = await this.psychologyContext.loadContext(
-        seekerScorable.userId,
+        currentUserId,
         candidateScorables.map((c) => c.userId),
+        psychologySeeker,
       );
 
       const seekerWithPsychology = {
         ...seekerScorable,
         psychologyAnswers:
-          psychology.answersByUserId.get(seekerScorable.userId) ?? null,
+          psychology.answersByUserId.get(currentUserId) ?? null,
       };
       const candidatesWithPsychology = candidateScorables.map((c) => ({
         ...c,
@@ -178,7 +202,11 @@ export class FeedService {
     const last = ranked.at(-1);
     const nextCursor =
       last && ranked.length === limit
-        ? encodeFeedCursor(this.ranking.cursorFor(last, strategy))
+        ? encodeFeedCursor(
+            this.ranking.cursorFor(last, strategy),
+            this.cursorKey,
+            currentUserId,
+          )
         : null;
 
     return {

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { PreferenceFilters } from '../filters/partner-preference-where.builder';
-import type { QuizQuestion } from '../../../../../../libs/database/generated/client';
+import type { ScoringQuestion } from '../../psychology/scoring/psychology-compatibility.types';
 import {
   MATCHING_ALGORITHM_VERSION,
   MUTUAL_BLEND,
@@ -15,7 +15,10 @@ import type {
 } from './compatibility-signal';
 import { PREFERENCE_COMPATIBILITY_SIGNAL } from './preference/preference-compatibility.signal';
 import { CANDIDATE_QUALITY_SIGNAL } from './quality/candidate-quality.signal';
-import { PSYCHOLOGY_COMPATIBILITY_SIGNAL } from './psychology/psychology-compatibility.signal';
+import {
+  psychologyPairScore,
+  psychologyRefinement,
+} from './psychology/psychology-refinement';
 
 // Re-exported so existing importers keep one place to take scoring types from.
 export type { ScorableProfile, ScoreComponent } from './compatibility-signal';
@@ -41,25 +44,40 @@ export interface CompatibilityBreakdown {
   unmatchedPreferences: ScoreKey[];
   /** The formula that produced this result — see MATCHING_ALGORITHM_VERSION. */
   algorithmVersion: string;
+  /**
+   * The score RankingService orders by: the member-visible score above plus the
+   * marriage-compatibility refinement (see PSYCHOLOGY_REFINEMENT).
+   *
+   * Every field above is exactly what it was before psychology existed, for
+   * every pair — including pairs where both members took the quiz. Only this
+   * one moves, and it is never sent to a client: exposing it would let a member
+   * read another's quiz answers back out of a score, one retake at a time.
+   * `psychologyRefinement` is 0 whenever psychology does not apply, which makes
+   * `ranking` equal the visible score. Always set by CompatibilityService;
+   * optional only so a hand-built breakdown (tests) stays valid, in which case
+   * RankingService orders by the visible score.
+   */
+  ranking?: {
+    overall: number;
+    mutualFit: number | null;
+    psychologyRefinement: number;
+  };
 }
+
+/** What CompatibilityService returns: a breakdown whose ranking key is set. */
+export type ScoredBreakdown = CompatibilityBreakdown &
+  Required<Pick<CompatibilityBreakdown, 'ranking'>>;
 
 /**
  * Every signal the score is built from, in the order their components appear.
  *
  * A new signal is added here and nowhere else — FeedService, RankingService,
  * the candidate query and the API response do not change. Its ScoreKeys and
- * weights go in matching-weights.config.ts, and MATCHING_ALGORITHM_VERSION is
- * bumped.
- *
- * PSYCHOLOGY_COMPATIBILITY_SIGNAL is the one exception to "nothing else
- * changes": it needs data no other signal does (each side's quiz answers,
- * plus the quiz's questions as shared context), so `score()`/`scoreMany()`
- * below take an optional extra argument for it. Every existing caller omits
- * it, which is exactly what keeps this addition a no-op today.
+ * weights go in matching-weights.config.ts (which keeps the total at 100), and
+ * MATCHING_ALGORITHM_VERSION is bumped.
  */
 const SIGNALS: readonly CompatibilitySignal[] = [
   PREFERENCE_COMPATIBILITY_SIGNAL,
-  PSYCHOLOGY_COMPATIBILITY_SIGNAL,
   CANDIDATE_QUALITY_SIGNAL,
 ];
 
@@ -88,28 +106,34 @@ const EXPLAINED_KEYS: ReadonlySet<ScoreKey> = new Set(
  *  3. Both directions run the same signals. "Does she meet my preferences" and
  *     "do I meet hers" are one CompatibilityInput with the roles swapped, so
  *     they can never drift apart.
+ *
+ *  4. Psychology is a refinement of ORDER, not a component of the score. The
+ *     marriage-compatibility quiz is not in SIGNALS, has no weight, and enters
+ *     no numerator or denominator, so the 100-point model and every
+ *     member-visible number are exactly what they are without it. A pair with
+ *     no usable quiz data — either member hasn't taken it, data is stale or
+ *     malformed, scoring fails — gets no refinement, never a penalty. See
+ *     PSYCHOLOGY_REFINEMENT for the numbers and why.
  */
 @Injectable()
 export class CompatibilityService {
   /**
    * Full breakdown for one pair. Pure — no I/O, safe to call in a loop.
    *
-   * `psychologyQuestions` is optional and unused by any caller today — see
-   * PSYCHOLOGY_COMPATIBILITY_SIGNAL's doc comment. Passing it (plus setting
-   * `psychologyAnswers` on both ScorableProfiles) is what a future, separate
-   * step would do to make that signal actually applicable for a real pair.
+   * `psychologyQuestions` (with `psychologyAnswers` on both profiles) enables
+   * the psychology refinement of the ranking key; omit it and the result is
+   * exactly the pre-psychology one.
    */
   score(
     seeker: ScorableProfile,
     seekerPreference: PreferenceFilters | null,
     candidate: ScorableProfile,
-    psychologyQuestions?: readonly QuizQuestion[],
-  ): CompatibilityBreakdown {
+    psychologyQuestions?: readonly ScoringQuestion[],
+  ): ScoredBreakdown {
     const components = this.components({
       chooser: seeker,
       preference: seekerPreference,
       candidate,
-      psychologyQuestions,
     });
     const seekerFit = this.total(components);
 
@@ -119,7 +143,6 @@ export class CompatibilityService {
             chooser: candidate,
             preference: candidate.preference,
             candidate: seeker,
-            psychologyQuestions,
           }),
         )
       : null;
@@ -131,6 +154,17 @@ export class CompatibilityService {
             seekerFit * MUTUAL_BLEND.seekerToCandidate +
               mutualFit * MUTUAL_BLEND.candidateToSeeker,
           );
+
+    // Psychology is symmetric — the pair scores the same whichever member is
+    // the seeker — so it is computed once and added to the ordering key only.
+    // It is not a component, so it is in no numerator or denominator above.
+    const refinement = psychologyRefinement(
+      psychologyPairScore(
+        seeker.psychologyAnswers,
+        candidate.psychologyAnswers,
+        psychologyQuestions,
+      ),
+    );
 
     const explained = components.filter(
       (c) => c.applicable && EXPLAINED_KEYS.has(c.key),
@@ -149,6 +183,12 @@ export class CompatibilityService {
         .filter((c) => c.ratio < 1)
         .map((c) => c.key),
       algorithmVersion: MATCHING_ALGORITHM_VERSION,
+      ranking: {
+        overall: rankingScore(overall, refinement),
+        mutualFit:
+          mutualFit === null ? null : rankingScore(mutualFit, refinement),
+        psychologyRefinement: refinement,
+      },
     };
   }
 
@@ -157,9 +197,9 @@ export class CompatibilityService {
     seeker: ScorableProfile,
     seekerPreference: PreferenceFilters | null,
     candidates: ScorableProfile[],
-    psychologyQuestions?: readonly QuizQuestion[],
-  ): Map<string, CompatibilityBreakdown> {
-    const out = new Map<string, CompatibilityBreakdown>();
+    psychologyQuestions?: readonly ScoringQuestion[],
+  ): Map<string, ScoredBreakdown> {
+    const out = new Map<string, ScoredBreakdown>();
     for (const c of candidates) {
       out.set(
         c.userId,
@@ -191,4 +231,14 @@ export class CompatibilityService {
     if (possible === 0) return 0;
     return Math.round((earned / possible) * 100);
   }
+}
+
+/**
+ * A visible score plus its refinement, as the ordering key. Floored at 0 and
+ * deliberately NOT capped at 100: a perfect-fit pair with excellent psychology
+ * should still sort ahead of a perfect-fit pair without it, which a cap would
+ * flatten. The key is internal, so it may exceed the 0-100 display range.
+ */
+function rankingScore(visible: number, refinement: number): number {
+  return Math.max(0, Math.round((visible + refinement) * 100) / 100);
 }

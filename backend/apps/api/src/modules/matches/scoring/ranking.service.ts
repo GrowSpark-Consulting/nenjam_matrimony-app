@@ -116,13 +116,21 @@ export class RankingService {
     return this.idOf(a).localeCompare(this.idOf(b));
   }
 
+  /**
+   * Orders by the ranking key, which is the visible score plus the psychology
+   * refinement (0 when psychology doesn't apply, so identical to the visible
+   * score for every pair without quiz data). Falls back to the visible score
+   * for a breakdown that predates the key.
+   */
   private overallOf(c: RankedCandidate): number {
-    return c.score?.overall ?? 0;
+    return c.score?.ranking?.overall ?? c.score?.overall ?? 0;
   }
 
   /** Falls back to the blended score when the candidate saved no preference,
    *  so a member without preferences is ordered, not dumped at the bottom. */
   private mutualOf(c: RankedCandidate): number {
+    const ranking = c.score?.ranking;
+    if (ranking) return ranking.mutualFit ?? ranking.overall;
     return c.score?.mutualFit ?? c.score?.overall ?? 0;
   }
 

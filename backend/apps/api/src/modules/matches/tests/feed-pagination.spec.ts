@@ -8,6 +8,7 @@ import type { FeedVersionService } from '../cache/feed-version.cache';
 import type { RecommendationService } from '../recommendation/recommendation.service';
 import type { FeedProfileRow } from '../repositories/feed.repository';
 import type { PsychologyMatchContextService } from '../scoring/psychology/psychology-match-context.service';
+import type { AppConfigService } from '@app/config';
 
 /**
  * `hasMore` without a COUNT.
@@ -66,8 +67,12 @@ function build(poolRows: FeedProfileRow[]) {
     // Every fixture here has `seeker: null`, so the psychology block is
     // never reached — this mock exists only to satisfy the constructor.
     {
+      prefetchSeeker: jest.fn().mockResolvedValue(null),
       loadContext: jest.fn(),
     } as unknown as PsychologyMatchContextService,
+    {
+      jwt: { secret: 'test-secret-of-sufficient-length' },
+    } as unknown as AppConfigService,
   );
 
   return { service, getFeedForUser };

@@ -4,8 +4,7 @@
  * These will change once there is real engagement data to tune against, and a
  * weight buried inside a service is a weight nobody dares to touch. Keeping
  * them here means retuning is a one-file diff, and the unit tests assert the
- * total (via `totalWeight()`) matches this file exactly, so a future edit
- * cannot silently skew the scale without a deliberate, reviewed test change.
+ * set still sums to 100 so a future edit cannot silently skew the scale.
  */
 
 /**
@@ -27,17 +26,15 @@
  * the profile values they cover (filters/preference-categories.ts); before,
  * every one was dropped as a UI label and the preference never counted.
  *
- * `v1.3-preference-psychology`: adds the `psychology` signal (the marriage
- * compatibility quiz, scored pairwise by `psychology-compatibility.signal.ts`
- * against the same approved matrix the standalone psychology engine uses).
- * It is applicable, and only applicable, when BOTH the chooser and the
- * candidate have completed the current active quiz — otherwise it is
- * excluded from the denominator exactly like an unstated preference, per
- * rule 2 below. Practically, that means this is a no-op for every pair today
- * (nothing yet feeds real quiz answers into a live Discover request), and a
- * real, additive signal the moment that data starts being supplied.
+ * `v1.3-psychology-refinement`: adds the marriage-compatibility quiz as a
+ * bounded refinement of the RANKING key only (see PSYCHOLOGY_REFINEMENT below).
+ * The weighted 100-point model, every member-visible score and the band are
+ * untouched: a pair with no usable quiz data scores exactly as under
+ * `v1.2-preference`, and a pair with it has the same visible score plus a
+ * small ordering nudge. (An earlier build added psychology as a 15-weight
+ * component, taking the total to 115; that model is gone.)
  */
-export const MATCHING_ALGORITHM_VERSION = 'v1.3-preference-psychology';
+export const MATCHING_ALGORITHM_VERSION = 'v1.3-psychology-refinement';
 
 /** A single scored dimension. */
 export type ScoreKey =
@@ -53,8 +50,7 @@ export type ScoreKey =
   | 'lifestyle'
   | 'profileCompleteness'
   | 'verification'
-  | 'activity'
-  | 'psychology';
+  | 'activity';
 
 /**
  * Weights for the one-directional score (how well a candidate fits the
@@ -100,18 +96,6 @@ export type ScoreKey =
  *  activity 3              Weakest weight because the underlying data is a
  *                          proxy — see ACTIVITY_NOTE below. Raise it once a
  *                          real lastActiveAt exists.
- *
- *                    ── the following is psychology, a second compatibility
- *                       signal alongside partner preference ──
- *
- *  psychology 15     Deliberately modest — this is a new, unvalidated signal,
- *                    and the product's existing hard requirements (religion,
- *                    community, age) should not be diluted by something that
- *                    has not yet been shown to improve outcomes. Roughly the
- *                    same order of magnitude as the entire candidate-quality
- *                    bucket. Raise it only once real usage data (see the
- *                    audit's validation-before-integration plan) shows it is
- *                    worth more weight — never as a guess.
  */
 export const MATCHING_WEIGHTS: Readonly<Record<ScoreKey, number>> =
   Object.freeze({
@@ -128,7 +112,6 @@ export const MATCHING_WEIGHTS: Readonly<Record<ScoreKey, number>> =
     profileCompleteness: 6,
     verification: 6,
     activity: 3,
-    psychology: 15,
   });
 
 /**
@@ -174,7 +157,45 @@ export function scoreBand(score: number): string {
   return SCORE_BANDS.find((b) => score >= b.min)?.label ?? 'Fair';
 }
 
-/** Sum of all weights. Asserted by the unit tests to match MATCHING_WEIGHTS exactly. */
+/**
+ * How the marriage-compatibility quiz nudges ORDER. It is deliberately not a
+ * weight in the model above.
+ *
+ * Why not a weight. Any weight enters the weighted mean's numerator AND
+ * denominator, and only for pairs where both members took the quiz. That makes
+ * two populations incomparable in one ranked list: a quiz score below a
+ * member's preference fit (typical, since preference fit inside a filtered
+ * feed is high) pulls that member's mean DOWN, so completing the quiz cost
+ * rank. And when a seeker has stated few preferences, the same weight became
+ * half the whole score. A refinement added to the finished score has neither
+ * problem: it never touches the denominator, and no quiz data means +0.
+ *
+ * The rule, in ranking points on the same 0-100 scale as the score:
+ *
+ *   - Never negative for merely being an average or unremarkable pair. Below
+ *     `neutralScore` the refinement is 0, exactly what a member who did not
+ *     take the quiz gets. (`neutralScore` sits below the ~66 mean of a random
+ *     pair on purpose, so a typical pair is never penalised.)
+ *   - Above it, a bonus rising linearly to `maxBonus` at a perfect 100.
+ *   - The one negative case is a hard-axis conflict (the children question's
+ *     dealbreaker pair): `hardAxisPenalty`. That is a declared, specific
+ *     incompatibility between two members who BOTH answered — not a penalty for
+ *     taking the quiz, and never applied to anyone who did not.
+ *
+ * Bounds, so it can refine but never dominate: the bonus is at most
+ * `maxBonus` (6) and the penalty at most `hardAxisPenalty` (10), on a base that
+ * keeps its full 0-100 range. A candidate more than 16 base points ahead can
+ * never be overtaken by psychology alone (asserted in the tests).
+ *
+ * Retuning: change these numbers and bump MATCHING_ALGORITHM_VERSION.
+ */
+export const PSYCHOLOGY_REFINEMENT = Object.freeze({
+  neutralScore: 60,
+  maxBonus: 6,
+  hardAxisPenalty: 10,
+});
+
+/** Sum of all weights. Asserted by the unit tests to be exactly 100. */
 export function totalWeight(): number {
   return Object.values(MATCHING_WEIGHTS).reduce((a, b) => a + b, 0);
 }
