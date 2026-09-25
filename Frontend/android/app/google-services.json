@@ -66,6 +66,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1060875646049-9tqdp4belqghj4ap906ak24fjp2205u9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.growspark.nenjam",
+            "certificate_hash": "4eb4caeb25893c65e555db61d590beb8542174bb"
+          }
+        },
+        {
           "client_id": "1060875646049-sv04d4cmsv8offuu1fhn53ngmoik668p.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
