@@ -1,10 +1,17 @@
 package com.growspark.nenjam.liveness
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.ui.Modifier
@@ -32,6 +39,15 @@ class LivenessActivity : ComponentActivity() {
     private var resultDelivered = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // targetSdk 35+ forces edge-to-edge on Android 15+, so without this
+        // the window draws under the status and navigation bars on those
+        // devices only. Opting in explicitly makes every API level behave the
+        // same, and the light styles keep dark bar icons over the SDK's light
+        // screen. The content itself is inset below — see setContent.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+        )
         super.onCreate(savedInstanceState)
 
         // Back press during capture is a cancel, not a bypass (handoff doc
@@ -56,24 +72,39 @@ class LivenessActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme {
+                // The Surface fills the whole window (so the bar areas get its
+                // background), and the detector is laid out only inside the
+                // safe-drawing area: below the status bar and cutout, above the
+                // navigation bar. FaceLivenessDetector takes no Modifier and
+                // fills whatever it is given, so constraining its parent is the
+                // SDK's only supported layout hook. Its oval, preview and
+                // button placement are its own: the oval is computed from the
+                // AWS session's face-target parameters relative to the camera
+                // frame, and no public API resizes it.
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    FaceLivenessDetector(
-                        sessionId = sessionId,
-                        region = region,
-                        credentialsProvider = BackendIssuedCredentialsProvider(),
-                        // false: show Amplify's own "get ready" instructions
-                        // screen before the check starts, per the component's
-                        // default, documented UX.
-                        disableStartView = false,
-                        onComplete = {
-                            // The capture finished; AWS still has to be asked
-                            // for the result — see the backend's
-                            // GetFaceLivenessSessionResults call, triggered by
-                            // /complete. This is not a pass/fail signal.
-                            finishWith(FaceLivenessChannel.Outcome.COMPLETED, null, null)
-                        },
-                        onError = { exception -> handleError(exception) },
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .windowInsetsPadding(WindowInsets.safeDrawing),
+                    ) {
+                        FaceLivenessDetector(
+                            sessionId = sessionId,
+                            region = region,
+                            credentialsProvider = BackendIssuedCredentialsProvider(),
+                            // false: show Amplify's own "get ready" instructions
+                            // screen before the check starts, per the component's
+                            // default, documented UX.
+                            disableStartView = false,
+                            onComplete = {
+                                // The capture finished; AWS still has to be asked
+                                // for the result — see the backend's
+                                // GetFaceLivenessSessionResults call, triggered by
+                                // /complete. This is not a pass/fail signal.
+                                finishWith(FaceLivenessChannel.Outcome.COMPLETED, null, null)
+                            },
+                            onError = { exception -> handleError(exception) },
+                        )
+                    }
                 }
             }
         }
