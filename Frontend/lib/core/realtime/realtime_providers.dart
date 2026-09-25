@@ -58,9 +58,14 @@ final realtimeSyncProvider = Provider<void>((ref) {
       case RealtimeEvent.notificationCreated:
         ref.invalidate(notificationsNotifierProvider);
       case RealtimeEvent.feedInvalidate:
-        // The caller's own profile, preferences, or blocks changed — every
-        // provider that reads GET /discover or GET /discover/search can now
-        // be serving a stale eligibility set. Each invalidated provider is
+        // The caller's own profile, preferences, blocks or psychology quiz
+        // answers changed — every provider that reads GET /discover or
+        // GET /discover/search can now be serving a stale eligibility set
+        // or order. The payload's `reason` is deliberately ignored: every
+        // reason means the same thing here. (A successful psychology submit
+        // also invalidates these three locally — see
+        // PersonalityQuizNotifier — because this socket delivery is
+        // best-effort.) Each invalidated provider is
         // autoDispose (reelFeedProvider, searchResultsProvider) or, for
         // discoverFeedProvider, only rebuilds if actively watched — so this
         // is a safe no-op for whichever of the three the user isn't
@@ -76,10 +81,11 @@ final realtimeSyncProvider = Provider<void>((ref) {
         //
         // Never a loop: none of GET /discover, GET /discover/search, or
         // GET /discover (again, via reelFeedProvider) ever calls
-        // FeedInvalidationService — only profile/preferences/blocks WRITES
-        // do (confirmed by reading every call site in profile.service.ts,
-        // preferences.service.ts and blocks.service.ts). A refetch this
-        // event triggers can never cause the backend to emit it again.
+        // FeedInvalidationService — only profile/preferences/blocks and
+        // psychology-submit WRITES do (profile.service.ts,
+        // preferences.service.ts, blocks.service.ts, psychology.service.ts).
+        // A refetch this event triggers can never cause the backend to emit
+        // it again.
         ref.invalidate(discoverFeedProvider);
         ref.invalidate(reelFeedProvider);
         ref.invalidate(searchResultsProvider);

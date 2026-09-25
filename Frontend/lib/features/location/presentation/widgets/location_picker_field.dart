@@ -5,6 +5,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/feedback/selection_list_skeleton.dart';
+import '../../../../core/widgets/indicators/nm_field_loader.dart';
 import '../../../../core/widgets/sheets/app_sheets.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/location_models.dart';
@@ -91,9 +92,11 @@ class LocationPickerField extends ConsumerWidget {
   final VoidCallback? onRetry;
 
   /// Shown inside the sheet, above a [SelectionListSkeleton], while the
-  /// options are loading. Callers give this the specific noun ("Loading
-  /// states...", "Finding cities in Gujarat...") so the member always knows
-  /// what is being fetched rather than staring at a generic spinner.
+  /// options are loading — and in the field itself, in place of the hint,
+  /// while it has no answer to show. Callers give this the specific noun
+  /// ("Loading states...", "Finding cities in Gujarat...") so the member
+  /// always knows what is being fetched rather than staring at a generic
+  /// spinner.
   final String? loadingMessage;
 
   /// Shown inside the sheet when the options resolved with no items.
@@ -125,11 +128,7 @@ class LocationPickerField extends ConsumerWidget {
               suffixIcon: Padding(
                 padding: const EdgeInsets.only(right: 4),
                 child: loading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? const NmFieldLoader()
                     : Icon(
                         failed
                             ? Icons.error_outline_rounded
@@ -180,6 +179,9 @@ class LocationPickerField extends ConsumerWidget {
     if (legacyValue.isNotEmpty) return legacyValue;
     if (!enabled) return disabledHint ?? hint;
     if (options.hasError && !options.isLoading) return 'Could not load';
+    // Same single ellipsized line, same hint colour — the text changes, the
+    // field's size does not.
+    if (options.isLoading && loadingMessage != null) return loadingMessage!;
     return hint;
   }
 

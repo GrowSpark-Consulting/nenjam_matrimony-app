@@ -14,6 +14,10 @@ import '../../../l10n/app_localizations.dart';
 /// `Completed · Updated {date}` status — the backend has no single-user
 /// score to display (compatibility is scored pairwise, server-side).
 /// `onTakeQuizTap: null` hides the CTA/retake affordance.
+///
+/// [result] null must mean a genuine "not taken" (`GET /me` 404). When the
+/// status check itself failed, show [PsychologyStatusCheckFailed] instead —
+/// a failed check is not proof the quiz wasn't taken.
 class PsychologySection extends StatelessWidget {
   final PsychologyQuizResponse? result;
   final VoidCallback? onTakeQuizTap;
@@ -143,6 +147,45 @@ class PsychologySection extends StatelessWidget {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Neutral stand-in for [PsychologySection] when the user's quiz status
+/// couldn't be checked (`GET /me` failed for a reason other than 404).
+/// Deliberately not the "take the quiz" CTA — the user may well have taken
+/// it — and it never blocks the rest of the page.
+class PsychologyStatusCheckFailed extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const PsychologyStatusCheckFailed({super.key, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPaddingLarge,
+      decoration: AppDecorations.card(),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.psychology_alt_rounded,
+            color: AppColors.textTertiaryLight,
+            size: 22,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              l10n.psychologyStatusCheckFailed,
+              style: AppTypography.labelMedium.copyWith(
+                color: AppColors.textSecondaryLight,
+              ),
+            ),
+          ),
+          TextButton(onPressed: onRetry, child: Text(l10n.commonRetry)),
         ],
       ),
     );

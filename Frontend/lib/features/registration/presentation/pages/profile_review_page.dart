@@ -311,12 +311,28 @@ class _ProfileReviewPageState extends ConsumerState<ProfileReviewPage> {
                         final personalityAsync = ref.watch(
                           myPersonalityResultProvider,
                         );
-                        return PsychologySection(
-                          result: personalityAsync.value,
-                          onTakeQuizTap: () async {
-                            await context.push(RouteNames.psychologyQuiz);
-                            ref.invalidate(myPersonalityResultProvider);
-                          },
+                        Future<void> openQuiz() async {
+                          await context.push(RouteNames.psychologyQuiz);
+                          ref.invalidate(myPersonalityResultProvider);
+                        }
+
+                        // Only a genuine "not taken" (404 -> null) gets the
+                        // take-the-quiz prompt; a failed check gets a
+                        // neutral retry. Optional either way — nothing
+                        // here gates registration.
+                        return personalityAsync.when(
+                          loading: () => const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                          error: (_, __) => PsychologyStatusCheckFailed(
+                            onRetry: () =>
+                                ref.invalidate(myPersonalityResultProvider),
+                          ),
+                          data: (result) => PsychologySection(
+                            result: result,
+                            onTakeQuizTap: openQuiz,
+                          ),
                         );
                       },
                     ),

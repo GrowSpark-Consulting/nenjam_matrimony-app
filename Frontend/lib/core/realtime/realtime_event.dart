@@ -10,8 +10,9 @@ enum RealtimeEvent {
   notificationCreated('notification.created'),
   shortlistCreated('shortlist.created'),
 
-  /// The caller's Discover feed may no longer be accurate — their profile or
-  /// partner preferences changed, or a block was created/removed (see
+  /// The caller's Discover feed may no longer be accurate — their profile,
+  /// partner preferences or psychology quiz answers changed, or a block was
+  /// created/removed (see
   /// backend `FeedInvalidationService`/`FeedInvalidationReason`). Payload is
   /// `{ version: number, reason: string, at: string }` — deliberately not
   /// modeled here, same as every other [RealtimeEvent]: this is a refresh

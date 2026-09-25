@@ -324,9 +324,6 @@ class AppLocalizationsTa extends AppLocalizations {
   String get discoverPremiumLabel => 'பிரீமியம்';
 
   @override
-  String get homePsychologyCompletedLabel => 'உளவியல் மதிப்பீடு முடிந்தது';
-
-  @override
   String get discoverChipVerifiedIdentity => 'சரிபார்க்கப்பட்ட அடையாளம்';
 
   @override
@@ -352,9 +349,6 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get homeAstroMatchScoreLabel => 'ஜோதிட பொருத்தம்';
-
-  @override
-  String get homePsychologyMatchScoreLabel => 'உளவியல் பொருத்தம்';
 
   @override
   String get discoverCompatibilityLabel => 'பொருத்தம்';
@@ -3007,7 +3001,7 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get registrationWizardQuizHook =>
-      'உண்மையிலேயே பொருந்தக்கூடிய ஒருவரைக் கண்டறிய உதவும் ஒரு குறுகிய ஆளுமை மதிப்பீடு.';
+      'திருமண வாழ்க்கையில் நீங்கள் எதிர்பார்ப்பவை பற்றிய சுருக்கமான, சூழ்நிலை அடிப்படையிலான கேள்விகள்.';
 
   @override
   String get registrationWizardPartnerHeadline =>
@@ -4284,11 +4278,11 @@ class AppLocalizationsTa extends AppLocalizations {
   String get profileDetailActiveNow => 'இப்போது செயலில்';
 
   @override
-  String get psychologyQuizTitle => 'உளவியல் தேர்வு';
+  String get psychologyQuizTitle => 'திருமணப் பொருத்தத் தேர்வு';
 
   @override
   String get psychologyIntroBody =>
-      'அன்றாடத் திருமண வாழ்க்கை பற்றிய சுருக்கமான, சூழ்நிலை அடிப்படையிலான கேள்விகள் — பணம், குடும்பம், கருத்து வேறுபாடுகள், வேலை மற்றும் பல. உங்கள் எதிர்பார்ப்புகளுடன் ஒத்துப்போகும் ஜோடிகளைப் பரிந்துரைக்க உங்கள் பதில்கள் எங்களுக்கு உதவும்.';
+      'அன்றாடத் திருமண வாழ்க்கை பற்றிய சுருக்கமான, சூழ்நிலை அடிப்படையிலான கேள்விகள் — பணம், குடும்பம், கருத்து வேறுபாடுகள், வேலை மற்றும் பல. உங்கள் எதிர்பார்ப்புகளுடன் ஒத்துப்போகும் ஜோடிகளைப் பரிந்துரைக்க உங்கள் பதில்கள் எங்களுக்கு உதவும்.\n\nஇந்தத் தேர்வு கட்டாயமில்லை. உங்கள் பதில்கள் தனிப்பட்டவை; மற்ற உறுப்பினர்களுக்கு ஒருபோதும் காட்டப்படாது. சேமித்த பிறகு, ஒரு காத்திருப்புக் காலம் முடிந்த பின்னரே அவற்றை மீண்டும் மாற்ற முடியும்.';
 
   @override
   String get psychologyTakesMinutes => 'சுமார் 3 நிமிடங்கள் ஆகும்';
@@ -4342,6 +4336,44 @@ class AppLocalizationsTa extends AppLocalizations {
   @override
   String get psychologySubmitError =>
       'உங்கள் பதில்களைச் சமர்ப்பிக்க முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get psychologyCheckError =>
+      'நீங்கள் சேமித்த பதில்களைச் சரிபார்க்க முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String psychologyRetakeCooldownDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days நாட்களில்',
+      one: '1 நாளில்',
+    );
+    return '$_temp0 உங்கள் பதில்களை மீண்டும் மாற்றலாம்.';
+  }
+
+  @override
+  String psychologyRetakeCooldownHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours மணி நேரத்தில்',
+      one: '1 மணி நேரத்தில்',
+    );
+    return '$_temp0 உங்கள் பதில்களை மீண்டும் மாற்றலாம்.';
+  }
+
+  @override
+  String psychologyRetakeAvailableOn(String date) {
+    return '$date முதல் தேர்வை மீண்டும் எடுக்கலாம்.';
+  }
+
+  @override
+  String get psychologyRetakeTryAnyway => 'இருப்பினும் முயற்சிக்கவும்';
+
+  @override
+  String get psychologyStatusCheckFailed =>
+      'உங்கள் தேர்வு நிலையைச் சரிபார்க்க முடியவில்லை.';
 
   @override
   String get registrationSaveStepError =>
@@ -4954,7 +4986,8 @@ class AppLocalizationsTa extends AppLocalizations {
   String get completionCardTitlePsychology => 'உளவியல் தேர்வு';
 
   @override
-  String get completionCardBodyPsychology => 'உங்கள் ஆள்மையைக் கண்டறியுங்கள்.';
+  String get completionCardBodyPsychology =>
+      'திருமண வாழ்க்கைக்கான உங்கள் எதிர்பார்ப்புகளைப் பகிருங்கள்.';
 
   @override
   String get completionCardShortTitlePhoto => 'புகைப்படம் சேர்';

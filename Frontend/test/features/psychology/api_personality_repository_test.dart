@@ -127,6 +127,48 @@ void main() {
         throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 400)),
       );
     });
+
+    test('the retake-cooldown 429 keeps retryAfterSeconds', () async {
+      final client = _StubClient(
+        status: 429,
+        data: {
+          'statusCode': 429,
+          'error': 'Too Many Requests',
+          'message': 'You can change your quiz answers again in 7 days.',
+          'retryAfterSeconds': 604800,
+        },
+      );
+      await expectLater(
+        ApiPersonalityRepository(
+          client,
+        ).submitAnswers(quizId: 'live-id', answers: {'q1': 'A'}),
+        throwsA(
+          isA<ApiException>()
+              .having((e) => e.statusCode, 'status', 429)
+              .having((e) => e.retryAfterSeconds, 'retryAfterSeconds', 604800),
+        ),
+      );
+    });
+
+    test('the plain rate-limit 429 has no retryAfterSeconds', () async {
+      final client = _StubClient(
+        status: 429,
+        data: {
+          'statusCode': 429,
+          'message': 'ThrottlerException: Too Many Requests',
+        },
+      );
+      await expectLater(
+        ApiPersonalityRepository(
+          client,
+        ).submitAnswers(quizId: 'live-id', answers: {'q1': 'A'}),
+        throwsA(
+          isA<ApiException>()
+              .having((e) => e.statusCode, 'status', 429)
+              .having((e) => e.retryAfterSeconds, 'retryAfterSeconds', isNull),
+        ),
+      );
+    });
   });
 
   group('GET /psychology/quiz/me', () {

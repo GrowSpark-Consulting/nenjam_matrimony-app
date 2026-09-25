@@ -30,9 +30,17 @@ class PsychologyQuizAnswer {
 ///
 /// This is answers only — the backend scores this quiz pairwise against a
 /// match, so there is no single-user result (no score, no traits) to show.
-/// A retake overwrites the answers in place and moves [updatedAt]; the
-/// backend leaves [completedAt] at the first submission, so "last taken"
-/// UI reads [lastUpdatedAt].
+///
+/// Timestamps:
+/// - [completedAt] is when the *current* set of answers was completed. The
+///   backend refreshes it on every submit that actually changes the answers
+///   (an identical resubmission changes nothing), and counts the retake
+///   cooldown from it — so [retakeHintAvailableAt] reads it, never
+///   [updatedAt].
+/// - [updatedAt] is general last-write metadata. It is never earlier than
+///   [completedAt]; for responses saved before the backend began refreshing
+///   [completedAt] it can be later. The "Updated {date}" label reads
+///   [lastUpdatedAt] (the last write to the answers).
 class PsychologyQuizResponse {
   final String quizId;
   final List<PsychologyQuizAnswer> answers;
@@ -46,7 +54,20 @@ class PsychologyQuizResponse {
     this.updatedAt,
   });
 
+  /// The backend's *default* retake cooldown
+  /// (`PSYCHOLOGY_RETAKE_COOLDOWN_DAYS`). The real value is server config
+  /// and is not exposed, so anything derived from this is only a hint — a
+  /// `429` with `retryAfterSeconds` from submit is the authority.
+  static const defaultRetakeCooldown = Duration(days: 7);
+
   DateTime? get lastUpdatedAt => updatedAt ?? completedAt;
+
+  /// Client-side estimate of when these answers can next be changed:
+  /// [completedAt] + [cooldown]. Null when [completedAt] is unknown (then no
+  /// hint is shown and the server decides on submit).
+  DateTime? retakeHintAvailableAt({
+    Duration cooldown = defaultRetakeCooldown,
+  }) => completedAt?.add(cooldown);
 
   /// questionId -> selectedKey, for pre-filling a retake.
   Map<String, String> get selectedKeys => {

@@ -114,8 +114,10 @@ abstract final class AppColors {
   static const Color disabled = Color(0xFFC9BFD1);
 
   // ─── Nenjam 3-Score Match System ─────────────────────────────────
-  /// Deep purple keys astrology, magenta keys psychology (OCEAN), and rose
-  /// keys the demographic score — so the three read apart at a glance.
+  /// Deep purple keys astrology, magenta keys the Marriage Compatibility
+  /// (psychology) quiz — the user's own quiz UI only, never a score on
+  /// another member — and rose keys the demographic score, so the three
+  /// read apart at a glance.
   static const Color scoreAstrology = brandDeepPurple;
   static const Color scorePsychology = secondary;
   static const Color scoreDemographic = accent;

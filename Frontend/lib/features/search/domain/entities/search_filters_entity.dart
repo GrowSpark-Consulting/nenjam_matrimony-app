@@ -37,6 +37,9 @@ class SearchFilters {
   final bool nriVerified;
   final bool premiumOnly;
   final bool withPhoto;
+
+  /// "Completed Profile": keeps only members whose profile is 100% complete
+  /// ([DiscoveryProfileEntity.profileComplete]).
   final bool completedProfile;
 
   const SearchFilters({
@@ -281,7 +284,10 @@ class SearchFilters {
     if (nriVerified && !profile.tags.contains('NRI')) return false;
     if (premiumOnly && !profile.isPremium) return false;
     if (withPhoto && profile.photoUrls.isEmpty) return false;
-    if (completedProfile && !profile.isPsychologyCompleted) return false;
+    // The backend's full-profile completeness flag. Never Psychology: its
+    // fields are deliberately unpopulated for every member (privacy), and
+    // not taking the quiz must never hide anyone.
+    if (completedProfile && !profile.profileComplete) return false;
 
     return true;
   }

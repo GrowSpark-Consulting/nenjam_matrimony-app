@@ -383,9 +383,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       padding: EdgeInsets.symmetric(vertical: 16),
                       child: Center(child: CircularProgressIndicator()),
                     ),
-                    error: (_, __) => const SizedBox.shrink(),
+                    // A failed check isn't "not taken" — a neutral retry,
+                    // never the take-the-quiz prompt.
+                    error: (_, __) => PsychologyStatusCheckFailed(
+                      onRetry: () => ref.invalidate(
+                        myPersonalityResultProvider,
+                      ),
+                    ),
+                    // Not taken (404): a soft, optional prompt. Completed:
+                    // status only (retake lives on the quiz page).
                     data: (result) => PsychologySection(
                       result: result,
+                      onTakeQuizTap: result != null
+                          ? null
+                          : () async {
+                              await context.push(RouteNames.psychologyQuiz);
+                              ref.invalidate(myPersonalityResultProvider);
+                            },
                     ),
                   ),
                 ),

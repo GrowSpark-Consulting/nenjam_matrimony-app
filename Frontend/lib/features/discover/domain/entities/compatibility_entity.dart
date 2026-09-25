@@ -4,6 +4,13 @@
 class CompatibilityEntity {
   final int aiMatchPercent;
   final int astroMatchPercent;
+
+  /// Reserved and intentionally unpopulated: the backend sends `0` for every
+  /// member — a psychology score would let one member infer another's quiz
+  /// answers. Psychology never changes [aiMatchPercent] or
+  /// [overallCompatibility] either. Parsed only for API compatibility; never
+  /// render or branch on it (enforced by
+  /// test/psychology_privacy_guard_test.dart).
   final int psychologyMatchPercent;
   final int overallCompatibility;
 

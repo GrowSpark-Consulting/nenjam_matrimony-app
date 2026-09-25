@@ -199,4 +199,79 @@ void main() {
       expect(filters.matches(profile), isTrue);
     });
   });
+
+  // Regression: the toggle used to test isPsychologyCompleted, which the
+  // backend sends as false for everyone (privacy) — so it hid every member.
+  group('SearchFilters.matches — Completed Profile', () {
+    DiscoveryProfileEntity profile({
+      required bool profileComplete,
+      bool isPsychologyCompleted = false,
+    }) => DiscoveryProfileEntity(
+      id: 'p1',
+      matrimonyId: 'P1',
+      name: 'Member',
+      age: 28,
+      location: 'Chennai, Tamil Nadu',
+      profession: 'Engineer',
+      education: 'B.E.',
+      photoUrls: const ['https://example.test/photo.jpg'],
+      profileComplete: profileComplete,
+      isPsychologyCompleted: isPsychologyCompleted,
+    );
+
+    const on = SearchFilters(completedProfile: true);
+    const off = SearchFilters();
+
+    test('a complete profile passes regardless of Psychology fields', () {
+      for (final psychology in [false, true]) {
+        expect(
+          on.matches(
+            profile(profileComplete: true, isPsychologyCompleted: psychology),
+          ),
+          isTrue,
+          reason: 'isPsychologyCompleted: $psychology',
+        );
+      }
+    });
+
+    test('an incomplete profile is excluded when the toggle is on — even with '
+        'isPsychologyCompleted true', () {
+      expect(on.matches(profile(profileComplete: false)), isFalse);
+      expect(
+        on.matches(
+          profile(profileComplete: false, isPsychologyCompleted: true),
+        ),
+        isFalse,
+      );
+    });
+
+    test('a member who never took Psychology (the backend default) is not '
+        'hidden when complete', () {
+      // DiscoveryProfileEntity's default for isPsychologyCompleted is false,
+      // matching what the backend sends for every member.
+      expect(on.matches(profile(profileComplete: true)), isTrue);
+    });
+
+    test('with the toggle off, nothing is filtered on completeness', () {
+      expect(off.isEmpty, isTrue);
+      for (final complete in [false, true]) {
+        for (final psychology in [false, true]) {
+          expect(
+            off.matches(
+              profile(
+                profileComplete: complete,
+                isPsychologyCompleted: psychology,
+              ),
+            ),
+            isTrue,
+          );
+        }
+      }
+    });
+
+    test('the toggle counts as an active filter', () {
+      expect(on.isEmpty, isFalse);
+      expect(on.activeCount, 1);
+    });
+  });
 }

@@ -6,7 +6,12 @@
 /// went wrong". Every repository that talks to [ApiClient] should throw
 /// this (via [unwrapOrThrow]) rather than defining its own copy.
 class ApiException implements Exception {
-  ApiException(this.statusCode, this.message, {this.code});
+  ApiException(
+    this.statusCode,
+    this.message, {
+    this.code,
+    this.retryAfterSeconds,
+  });
   final int? statusCode;
   final String message;
 
@@ -16,6 +21,13 @@ class ApiException implements Exception {
   /// never on [message] — messages are human-readable and may change. Null
   /// for endpoints that only use Nest's default `{ statusCode, message }`.
   final String? code;
+
+  /// Positive whole seconds from the response body's `retryAfterSeconds`
+  /// field, when the endpoint sends one — e.g. the psychology quiz's retake
+  /// cooldown (`429 { ..., retryAfterSeconds }`). Null otherwise, including
+  /// for the global per-IP rate limit, whose 429 carries no such field — so
+  /// a 429 alone never implies a cooldown.
+  final int? retryAfterSeconds;
 
   @override
   String toString() => 'ApiException($statusCode): $message';
@@ -33,6 +45,7 @@ T? unwrapOrThrow<T>(int? statusCode, T? data) {
   if (statusCode != null && statusCode >= 400) {
     final dynamic message = data is Map ? data['message'] : null;
     final dynamic code = data is Map ? data['code'] : null;
+    final dynamic retryAfter = data is Map ? data['retryAfterSeconds'] : null;
     throw ApiException(
       statusCode,
       message is String
@@ -41,6 +54,10 @@ T? unwrapOrThrow<T>(int? statusCode, T? data) {
           ? message.join(', ')
           : 'Request failed ($statusCode).',
       code: code is String && code.isNotEmpty ? code : null,
+      retryAfterSeconds:
+          retryAfter is num && retryAfter.isFinite && retryAfter > 0
+          ? retryAfter.ceil()
+          : null,
     );
   }
   return data;

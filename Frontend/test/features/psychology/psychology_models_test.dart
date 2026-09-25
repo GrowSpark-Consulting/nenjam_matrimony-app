@@ -81,9 +81,38 @@ void main() {
       expect(r.updatedAt, DateTime.utc(2026, 9, 23, 10));
     });
 
-    test('"last taken" reads updatedAt, not completedAt', () {
+    test('the "Updated" label reads the last write (updatedAt), falling back '
+        'to completedAt', () {
       final r = PsychologyQuizResponse.fromJson(myResponseJson());
       expect(r.lastUpdatedAt, DateTime.utc(2026, 9, 23, 10));
+
+      final noUpdatedAt = PsychologyQuizResponse.fromJson(
+        myResponseJson()..remove('updatedAt'),
+      );
+      expect(noUpdatedAt.lastUpdatedAt, DateTime.utc(2026, 9, 20, 10));
+    });
+
+    test('the retake hint is completedAt + 7 days — never updatedAt', () {
+      // completedAt (Sep 20) is when the current answers were completed and
+      // what the backend counts the cooldown from; updatedAt (Sep 23) must
+      // not move the hint.
+      final r = PsychologyQuizResponse.fromJson(myResponseJson());
+      expect(r.retakeHintAvailableAt(), DateTime.utc(2026, 9, 27, 10));
+      expect(
+        r.retakeHintAvailableAt(cooldown: const Duration(days: 1)),
+        DateTime.utc(2026, 9, 21, 10),
+      );
+      expect(
+        PsychologyQuizResponse.defaultRetakeCooldown,
+        const Duration(days: 7),
+      );
+    });
+
+    test('no completedAt -> no retake hint (the server decides)', () {
+      final r = PsychologyQuizResponse.fromJson(
+        myResponseJson()..remove('completedAt'),
+      );
+      expect(r.retakeHintAvailableAt(), isNull);
     });
 
     test('selectedKeys maps questionId -> selectedKey', () {

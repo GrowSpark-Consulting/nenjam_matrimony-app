@@ -322,9 +322,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverPremiumLabel => 'Premium';
 
   @override
-  String get homePsychologyCompletedLabel => 'Psychology Completed';
-
-  @override
   String get discoverChipVerifiedIdentity => 'Verified Identity';
 
   @override
@@ -350,9 +347,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeAstroMatchScoreLabel => 'Astro Match';
-
-  @override
-  String get homePsychologyMatchScoreLabel => 'Psychology Match';
 
   @override
   String get discoverCompatibilityLabel => 'Compatibility';
@@ -2967,7 +2961,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get registrationWizardQuizHook =>
-      'A short personality assessment to help us find someone truly compatible.';
+      'Short, scenario-based questions about what you expect from married life.';
 
   @override
   String get registrationWizardPartnerHeadline => 'Who are you hoping to meet?';
@@ -4214,11 +4208,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileDetailActiveNow => 'Active now';
 
   @override
-  String get psychologyQuizTitle => 'Psychological Quiz';
+  String get psychologyQuizTitle => 'Marriage Compatibility Quiz';
 
   @override
   String get psychologyIntroBody =>
-      'Short, scenario-based questions about everyday married life — money, family, conflict, careers and more. Your answers help us suggest matches whose expectations align with yours.';
+      'Short, scenario-based questions about everyday married life — money, family, conflict, careers and more. Your answers help us suggest matches whose expectations align with yours.\n\nThis quiz is optional. Your answers are private and are never shown to other members. Once saved, you can change them again only after a waiting period.';
 
   @override
   String get psychologyTakesMinutes => 'Takes about 3 minutes';
@@ -4272,6 +4266,44 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get psychologySubmitError =>
       'Could not submit your answers. Check your connection and try again.';
+
+  @override
+  String get psychologyCheckError =>
+      'We couldn\'t check your saved answers. Check your connection and try again.';
+
+  @override
+  String psychologyRetakeCooldownDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return 'You can change your answers again in $_temp0.';
+  }
+
+  @override
+  String psychologyRetakeCooldownHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours hours',
+      one: '1 hour',
+    );
+    return 'You can change your answers again in $_temp0.';
+  }
+
+  @override
+  String psychologyRetakeAvailableOn(String date) {
+    return 'You can retake the quiz from $date.';
+  }
+
+  @override
+  String get psychologyRetakeTryAnyway => 'Try anyway';
+
+  @override
+  String get psychologyStatusCheckFailed =>
+      'We couldn\'t check your quiz status.';
 
   @override
   String get registrationSaveStepError =>
@@ -4874,7 +4906,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get completionCardBodyPsychology =>
-      'Discover your personality profile.';
+      'Share your expectations for married life.';
 
   @override
   String get completionCardShortTitlePhoto => 'Add Photos';

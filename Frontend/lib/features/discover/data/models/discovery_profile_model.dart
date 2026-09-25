@@ -57,6 +57,8 @@ class DiscoveryProfileModel extends DiscoveryProfileEntity {
       photoUrls: (json['photoUrls'] as List).cast<String>(),
       isVerified: json['isVerified'] as bool? ?? false,
       isPremium: json['isPremium'] as bool? ?? false,
+      // Always false from the backend, by design (privacy) — tolerated if
+      // absent. See DiscoveryProfileEntity.isPsychologyCompleted.
       isPsychologyCompleted: json['isPsychologyCompleted'] as bool? ?? false,
       isOnline: json['isOnline'] as bool? ?? false,
       horoscopeAvailable: json['horoscopeAvailable'] as bool? ?? false,
@@ -67,6 +69,7 @@ class DiscoveryProfileModel extends DiscoveryProfileEntity {
           : CompatibilityEntity(
               aiMatchPercent: compatibilityJson['aiMatchPercent'] as int? ?? 0,
               astroMatchPercent: compatibilityJson['astroMatchPercent'] as int? ?? 0,
+              // Always 0 from the backend, by design (privacy).
               psychologyMatchPercent:
                   compatibilityJson['psychologyMatchPercent'] as int? ?? 0,
               overallCompatibility:

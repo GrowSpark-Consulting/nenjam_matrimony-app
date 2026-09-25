@@ -686,12 +686,6 @@ abstract class AppLocalizations {
   /// **'Premium'**
   String get discoverPremiumLabel;
 
-  /// No description provided for @homePsychologyCompletedLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Psychology Completed'**
-  String get homePsychologyCompletedLabel;
-
   /// No description provided for @discoverChipVerifiedIdentity.
   ///
   /// In en, this message translates to:
@@ -745,12 +739,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Astro Match'**
   String get homeAstroMatchScoreLabel;
-
-  /// No description provided for @homePsychologyMatchScoreLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Psychology Match'**
-  String get homePsychologyMatchScoreLabel;
 
   /// No description provided for @discoverCompatibilityLabel.
   ///
@@ -5681,7 +5669,7 @@ abstract class AppLocalizations {
   /// No description provided for @registrationWizardQuizHook.
   ///
   /// In en, this message translates to:
-  /// **'A short personality assessment to help us find someone truly compatible.'**
+  /// **'Short, scenario-based questions about what you expect from married life.'**
   String get registrationWizardQuizHook;
 
   /// No description provided for @registrationWizardPartnerHeadline.
@@ -7937,13 +7925,13 @@ abstract class AppLocalizations {
   /// No description provided for @psychologyQuizTitle.
   ///
   /// In en, this message translates to:
-  /// **'Psychological Quiz'**
+  /// **'Marriage Compatibility Quiz'**
   String get psychologyQuizTitle;
 
   /// No description provided for @psychologyIntroBody.
   ///
   /// In en, this message translates to:
-  /// **'Short, scenario-based questions about everyday married life — money, family, conflict, careers and more. Your answers help us suggest matches whose expectations align with yours.'**
+  /// **'Short, scenario-based questions about everyday married life — money, family, conflict, careers and more. Your answers help us suggest matches whose expectations align with yours.\n\nThis quiz is optional. Your answers are private and are never shown to other members. Once saved, you can change them again only after a waiting period.'**
   String get psychologyIntroBody;
 
   /// No description provided for @psychologyTakesMinutes.
@@ -8035,6 +8023,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not submit your answers. Check your connection and try again.'**
   String get psychologySubmitError;
+
+  /// No description provided for @psychologyCheckError.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t check your saved answers. Check your connection and try again.'**
+  String get psychologyCheckError;
+
+  /// No description provided for @psychologyRetakeCooldownDays.
+  ///
+  /// In en, this message translates to:
+  /// **'You can change your answers again in {days,plural, =1{1 day} other{{days} days}}.'**
+  String psychologyRetakeCooldownDays(int days);
+
+  /// No description provided for @psychologyRetakeCooldownHours.
+  ///
+  /// In en, this message translates to:
+  /// **'You can change your answers again in {hours,plural, =1{1 hour} other{{hours} hours}}.'**
+  String psychologyRetakeCooldownHours(int hours);
+
+  /// No description provided for @psychologyRetakeAvailableOn.
+  ///
+  /// In en, this message translates to:
+  /// **'You can retake the quiz from {date}.'**
+  String psychologyRetakeAvailableOn(String date);
+
+  /// No description provided for @psychologyRetakeTryAnyway.
+  ///
+  /// In en, this message translates to:
+  /// **'Try anyway'**
+  String get psychologyRetakeTryAnyway;
+
+  /// No description provided for @psychologyStatusCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t check your quiz status.'**
+  String get psychologyStatusCheckFailed;
 
   /// No description provided for @registrationSaveStepError.
   ///
@@ -9005,7 +9029,7 @@ abstract class AppLocalizations {
   /// No description provided for @completionCardBodyPsychology.
   ///
   /// In en, this message translates to:
-  /// **'Discover your personality profile.'**
+  /// **'Share your expectations for married life.'**
   String get completionCardBodyPsychology;
 
   /// No description provided for @completionCardShortTitlePhoto.

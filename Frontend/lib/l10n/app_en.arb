@@ -138,7 +138,6 @@
   "discoverFallbackBannerLabel": "We widened your preferences slightly to show more matches.",
   "discoverVerifiedLabel": "Verified",
   "discoverPremiumLabel": "Premium",
-  "homePsychologyCompletedLabel": "Psychology Completed",
   "discoverChipVerifiedIdentity": "Verified Identity",
   "discoverChipPremiumPlus": "Premium Plus",
   "discoverChipNri": "NRI",
@@ -148,7 +147,6 @@
   "discoverRespondToInterest": "Respond to Interest",
   "homeAiMatchScoreLabel": "AI Match",
   "homeAstroMatchScoreLabel": "Astro Match",
-  "homePsychologyMatchScoreLabel": "Psychology Match",
   "discoverCompatibilityLabel": "Compatibility",
   "actionInterested": "Interested",
   "actionViewProfile": "View Profile",
@@ -1120,7 +1118,7 @@
   "registrationWizardHoroscopeHeadline": "Your stars can tell part of the story",
   "registrationWizardHoroscopeHook": "This step is optional but helps us improve compatibility.",
   "registrationWizardQuizHeadline": "What makes you, you?",
-  "registrationWizardQuizHook": "A short personality assessment to help us find someone truly compatible.",
+  "registrationWizardQuizHook": "Short, scenario-based questions about what you expect from married life.",
   "registrationWizardPartnerHeadline": "Who are you hoping to meet?",
   "registrationWizardPartnerHook": "Tell us about the kind of person you're looking for.",
   "registrationWizardPhotosHeadline": "Let your smile tell your story",
@@ -1594,8 +1592,8 @@
   "profileDetailProfileUpdated": "Profile updated",
   "profileDetailIdentityVerified": "Identity verified",
   "profileDetailActiveNow": "Active now",
-  "psychologyQuizTitle": "Psychological Quiz",
-  "psychologyIntroBody": "Short, scenario-based questions about everyday married life — money, family, conflict, careers and more. Your answers help us suggest matches whose expectations align with yours.",
+  "psychologyQuizTitle": "Marriage Compatibility Quiz",
+  "psychologyIntroBody": "Short, scenario-based questions about everyday married life — money, family, conflict, careers and more. Your answers help us suggest matches whose expectations align with yours.\n\nThis quiz is optional. Your answers are private and are never shown to other members. Once saved, you can change them again only after a waiting period.",
   "psychologyTakesMinutes": "Takes about 3 minutes",
   "psychologyStartQuiz": "Start Quiz",
   "psychologyNoQuiz": "No quiz is available right now.",
@@ -1628,6 +1626,33 @@
   "psychologyIncompleteError": "Please answer every question before submitting.",
   "psychologyRejectedError": "The quiz has been updated. Please review your answers and submit again.",
   "psychologySubmitError": "Could not submit your answers. Check your connection and try again.",
+  "psychologyCheckError": "We couldn't check your saved answers. Check your connection and try again.",
+  "psychologyRetakeCooldownDays": "You can change your answers again in {days,plural, =1{1 day} other{{days} days}}.",
+  "@psychologyRetakeCooldownDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "psychologyRetakeCooldownHours": "You can change your answers again in {hours,plural, =1{1 hour} other{{hours} hours}}.",
+  "@psychologyRetakeCooldownHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "psychologyRetakeAvailableOn": "You can retake the quiz from {date}.",
+  "@psychologyRetakeAvailableOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "psychologyRetakeTryAnyway": "Try anyway",
+  "psychologyStatusCheckFailed": "We couldn't check your quiz status.",
   "registrationSaveStepError": "Could not save this step. Check your connection.",
   "registrationSaveStepErrorDetail": "Could not save this step: {message}",
   "@registrationSaveStepErrorDetail": {
@@ -1960,7 +1985,7 @@
   "completionCardTitleVerification": "Verification",
   "completionCardBodyVerification": "Get verified to earn more trust.",
   "completionCardTitlePsychology": "Psychology Test",
-  "completionCardBodyPsychology": "Discover your personality profile.",
+  "completionCardBodyPsychology": "Share your expectations for married life.",
   "completionCardShortTitlePhoto": "Add Photos",
   "completionCardShortTitlePsychology": "Psychology",
   "completionCardTitlePartnerPreference": "Partner Preferences",
