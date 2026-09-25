@@ -9,6 +9,8 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/widgets/buttons/icon_button.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
 import '../../../../core/widgets/sheets/app_sheets.dart';
+import '../../../profile_photos/presentation/providers/photo_providers.dart';
+import '../../../profile_photos/presentation/providers/primary_photo_updater.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/face_verification.dart';
 import '../providers/face_verification_providers.dart';
@@ -168,6 +170,13 @@ class _FaceVerificationBodyState extends ConsumerState<_FaceVerificationBody> {
         flow.phase == FaceVerificationFlowPhase.capturing ||
         flow.phase == FaceVerificationFlowPhase.completing;
 
+    // A photo update in flight must not race a liveness attempt: the backend
+    // matches against whichever photo is primary at capture time, so starting
+    // one mid-update could compare against the photo being replaced. Covers
+    // the pick/crop legs too, not just the upload request.
+    final photoBusy = ref.watch(primaryPhotoUpdateInProgressProvider) ||
+        ref.watch(myPhotosProvider).isLoading;
+
     // The mismatch/failure card describes the outcome of a *finished*
     // attempt. `idle` is also the phase a member lands on when they first
     // open this page, so anything error-shaped stays hidden until the flow
@@ -286,6 +295,7 @@ class _FaceVerificationBodyState extends ConsumerState<_FaceVerificationBody> {
           onPressed:
               flow.phase == FaceVerificationFlowPhase.blocked ||
                   busy ||
+                  photoBusy ||
                   !_consentChecked
               ? null
               : () => ref
@@ -375,9 +385,7 @@ class _BlockedMessage extends StatelessWidget {
       color: AppColors.textSecondary,
       background: AppColors.primarySurface,
       actionLabel: offersPhotoUpdate ? l10n.faceVerificationUpdatePhoto : null,
-      onAction: offersPhotoUpdate
-          ? () => context.push(RouteNames.photosEdit)
-          : null,
+      updatesPrimaryPhoto: offersPhotoUpdate,
     );
   }
 }
@@ -419,9 +427,7 @@ class _FailedMessage extends ConsumerWidget {
       actionLabel: reason?.suggestsPhotoUpdate == true
           ? l10n.faceVerificationUpdatePhoto
           : null,
-      onAction: reason?.suggestsPhotoUpdate == true
-          ? () => context.push(RouteNames.photosEdit)
-          : null,
+      updatesPrimaryPhoto: reason?.suggestsPhotoUpdate == true,
     );
   }
 }
@@ -464,13 +470,14 @@ class _NetworkErrorMessage extends StatelessWidget {
   }
 }
 
-class _InlineMessage extends StatelessWidget {
+class _InlineMessage extends ConsumerStatefulWidget {
   const _InlineMessage({
     required this.message,
     required this.color,
     required this.background,
     this.actionLabel,
     this.onAction,
+    this.updatesPrimaryPhoto = false,
   });
 
   final String message;
@@ -479,26 +486,96 @@ class _InlineMessage extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
 
+  /// When true the action runs the in-place "update main photo" flow instead
+  /// of invoking [onAction]. Deliberately stays on this page: navigating to
+  /// the photo editor from here would leave the Face Verification gate and,
+  /// from the post-OTP landing, re-enter onboarding/OTP routing.
+  final bool updatesPrimaryPhoto;
+
+  @override
+  ConsumerState<_InlineMessage> createState() => _InlineMessageState();
+}
+
+class _InlineMessageState extends ConsumerState<_InlineMessage> {
+  bool _uploading = false;
+
+  Future<void> _updatePrimaryPhoto() async {
+    // Local re-entrancy guard on top of PhotosController's own `_busy`: this
+    // one also covers the pick/crop leg, before any upload starts.
+    if (_uploading) return;
+    setState(() => _uploading = true);
+    ref.read(primaryPhotoUpdateInProgressProvider.notifier).set(running: true);
+
+    final l10n = AppLocalizations.of(context);
+    try {
+      final result = await ref
+          .read(primaryPhotoUpdaterProvider)
+          .pickAndUpload(context: context);
+      if (!mounted) return;
+
+      if (result.isSuccess) {
+        // Clear only the previous attempt's result, returning the page to its
+        // initial state so "Verify with Selfie" is available again. This does
+        // NOT mark the member verified and does not start liveness — the next
+        // attempt is theirs to trigger.
+        ref.read(faceVerificationFlowProvider.notifier).reset();
+        return;
+      }
+      if (result.isFailure) {
+        _snack(result.message ?? l10n.authGenericError);
+      }
+    } finally {
+      ref
+          .read(primaryPhotoUpdateInProgressProvider.notifier)
+          .set(running: false);
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final label = widget.actionLabel;
+    final hasAction =
+        label != null && (widget.updatesPrimaryPhoto || widget.onAction != null);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.base),
       decoration: BoxDecoration(
-        color: background,
+        color: widget.background,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            message,
+            widget.message,
             textAlign: TextAlign.center,
-            style: AppTypography.bodyMedium.copyWith(color: color),
+            style: AppTypography.bodyMedium.copyWith(color: widget.color),
           ),
-          if (actionLabel != null && onAction != null) ...[
+          if (hasAction) ...[
             const SizedBox(height: AppSpacing.sm),
-            TextButton(onPressed: onAction, child: Text(actionLabel!)),
+            TextButton(
+              onPressed: _uploading
+                  ? null
+                  : widget.updatesPrimaryPhoto
+                  ? _updatePrimaryPhoto
+                  : widget.onAction,
+              child: _uploading
+                  ? const SizedBox(
+                      height: AppSpacing.base,
+                      width: AppSpacing.base,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(label),
+            ),
           ],
         ],
       ),
