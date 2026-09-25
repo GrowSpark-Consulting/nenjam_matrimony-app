@@ -1107,6 +1107,147 @@ describe('ProfileService', () => {
       await expect(service.finalize('user-1')).resolves.toBeDefined();
     });
 
+    // The exact draft the Flutter onboarding flush sends for a member who
+    // answers only the required fields: `ProfileDraft.toJson()` omits every
+    // blank field, so College (Education step) and Work with / Work as /
+    // Company (Income step) arrive as absent keys, and Language goes out as
+    // `{}` because onboarding no longer asks for a mother tongue. Finalize
+    // used to reject this with a 400 on educationDetails, which left the
+    // member stuck on verify-mobile with a Retry that could never succeed.
+    describe('onboarding draft with the optional education fields blank', () => {
+      const onboardingDraft = (): DraftResponse => ({
+        ...buildValidDraft(),
+        data: {
+          basicDetails: {
+            profileCreatedFor: 'Myself',
+            gender: 'MALE',
+            firstName: 'Arjun',
+            lastName: 'Krishnan',
+            dob: '1994-06-18',
+            maritalStatus: 'NEVER_MARRIED',
+          },
+          religionDetails: {
+            religion: 'Hindu',
+            community: 'Vellalar',
+            religionCode: 'hindu',
+            communityCode: 'hindu-vellalar',
+          },
+          languageDetails: {},
+          locationDetails: {
+            country: 'India',
+            countryCode: 'IN',
+            state: 'Tamil Nadu',
+            stateCode: 'IN-TN',
+            city: 'Chennai',
+            cityCode: 'IN-TN-CHENNAI',
+          },
+          physicalDetails: { height: `5'9" (175 cm)` },
+          educationDetails: {
+            qualification: 'B.E / B.Tech',
+            annualIncome: '10 - 20 Lakhs',
+          },
+          lifestyleDetails: {
+            eatingHabit: 'Vegetarian',
+            aboutMe: 'A short description.',
+          },
+        },
+      });
+
+      it('finalizes, marking the registration complete', async () => {
+        const upsertProfile = jest.fn().mockResolvedValue(buildProfile());
+        const markComplete = jest.fn();
+        const service = buildService({
+          getDraft: jest.fn().mockResolvedValue(onboardingDraft()),
+          upsertProfile,
+          markComplete,
+          findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+        });
+
+        await expect(service.finalize('user-1')).resolves.toBeDefined();
+        expect(markComplete).toHaveBeenCalledWith('user-1');
+        // Blank optional fields are stored as NULL, never as a placeholder.
+        const [[, written]] = upsertProfile.mock.calls as [
+          [string, Record<string, unknown>],
+        ];
+        expect(written).toMatchObject({
+          highestEducation: 'B.E / B.Tech',
+          college: null,
+          profession: null,
+          employerName: null,
+          educationDetails: null,
+        });
+      });
+
+      it.each(['college', 'occupation', 'company', 'employmentType'])(
+        'still finalizes when only %s is filled in besides the required two',
+        async (field) => {
+          const draft = onboardingDraft();
+          draft.data.educationDetails = {
+            ...(draft.data.educationDetails as Record<string, unknown>),
+            [field]: 'x',
+          };
+          const service = buildService({
+            getDraft: jest.fn().mockResolvedValue(draft),
+            upsertProfile: jest.fn().mockResolvedValue(buildProfile()),
+            findProfileByUserId: jest.fn().mockResolvedValue(buildProfile()),
+          });
+
+          await expect(service.finalize('user-1')).resolves.toBeDefined();
+        },
+      );
+
+      // The two fields onboarding does require stay required: a section that
+      // is engaged without them is still rejected, and nothing is written.
+      it.each(['qualification', 'annualIncome'])(
+        'rejects without %s and writes nothing',
+        async (field) => {
+          const draft = onboardingDraft();
+          const education = {
+            ...(draft.data.educationDetails as Record<string, unknown>),
+            college: 'Anna University',
+          };
+          delete education[field];
+          draft.data.educationDetails = education;
+          const upsertProfile = jest.fn();
+          const markComplete = jest.fn();
+          const service = buildService({
+            getDraft: jest.fn().mockResolvedValue(draft),
+            upsertProfile,
+            markComplete,
+          });
+
+          await expect(service.finalize('user-1')).rejects.toThrow(
+            /educationDetails/,
+          );
+          expect(upsertProfile).not.toHaveBeenCalled();
+          expect(markComplete).not.toHaveBeenCalled();
+        },
+      );
+
+      // Relaxing education must not loosen the mandatory profile minimum.
+      it('still rejects a draft missing a mandatory field, and writes nothing', async () => {
+        const draft = onboardingDraft();
+        const basic = {
+          ...(draft.data.basicDetails as Record<string, unknown>),
+        };
+        delete basic.maritalStatus;
+        draft.data.basicDetails = basic;
+        const upsertProfile = jest.fn();
+        const markComplete = jest.fn();
+        const service = buildService({
+          getDraft: jest.fn().mockResolvedValue(draft),
+          upsertProfile,
+          markComplete,
+        });
+
+        await expect(service.finalize('user-1')).rejects.toThrow(
+          /missing required fields: basicDetails/,
+        );
+        expect(upsertProfile).not.toHaveBeenCalled();
+        expect(markComplete).not.toHaveBeenCalled();
+      });
+    });
+
     it('does not throw when Education is left entirely empty (skipped)', async () => {
       const service = buildService({
         getDraft: jest

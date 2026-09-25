@@ -331,7 +331,7 @@ export class ProfileService {
     }
     if (!isEducationDetailsValid(data.educationDetails ?? {})) {
       incomplete.push(
-        'educationDetails (once started, every field is required — finish it or clear it)',
+        'educationDetails (once started, qualification and annualIncome are required — finish it or clear it)',
       );
     }
     if (!isLifestyleDetailsValid(data.lifestyleDetails ?? {})) {
