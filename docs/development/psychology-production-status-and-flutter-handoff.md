@@ -221,7 +221,7 @@ A new migration, `20260925120000_psychology_integrity_hardening`, is **additive 
 - **Seeding:** `pnpm seed:quiz` seeds only the quiz; re-running never re-activates a retired quiz and warns if two are active.
 - **Content is pinned by a test** so released questions can't be edited in place.
 
-**Verified on a real Postgres engine** (an in-process build, never the shared database): all 27 migrations replay from empty; the "no schema drift" check used by CI reports no difference; and a 29-check integration run passed 29/29, including 8 simultaneous first submissions (exactly one saved row, no errors) and 6 simultaneous retakes (one rewrite).
+**Verified on a real Postgres engine** (an in-process build, never the shared database): all 31 migrations replay from empty; the "no schema drift" check used by CI reports no difference; and a 29-check integration run passed 29/29, including 8 simultaneous first submissions (exactly one saved row, no errors) and 6 simultaneous retakes (one rewrite).
 
 Pre-deploy note: the migration fails cleanly (changing nothing) if a hand-edited database already has two active quizzes or duplicate question positions. The queries to check are at the top of the migration file.
 
@@ -284,7 +284,7 @@ Pre-deploy note: the migration fails cleanly (changing nothing) if a hand-edited
 | Golden regression file vs. pre-Psychology commit | **Identical**; passes unchanged |
 | Psychology-specific specs | Fail-open, refinement/ordering properties, calculator hardening, content integrity, quiz provider, repository, service (cooldown / idempotency / races / safe errors), cursor sealing, config, seeder, module wiring |
 | Discover fail-open (fault injection) | 10 faults, all return the normal feed identically; mutation check confirms the tests bite |
-| Migration replay on a real Postgres engine | All 27 migrations apply from empty |
+| Migration replay on a real Postgres engine | All 31 migrations apply from empty |
 | Schema-drift check (as CI runs it) | No difference detected |
 | Real-database integration script | **29 / 29 passed** (constraints, seeder, cooldown, stale retake, concurrent submits/retakes, restrict/cascade, real Discover context) |
 | Lint | Files created: clean. Files edited: no worse than before |
