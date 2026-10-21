@@ -36,7 +36,9 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+/build/*
+# Flutter web release output is deliberately tracked (deployed as-is to Vercel).
+!/build/web/
 /coverage/
 
 # pubspec.lock is intentionally tracked (NOT ignored) — this is an
