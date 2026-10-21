@@ -69,7 +69,9 @@ key.properties
 # ─── Node / NestJS (repo-wide backstop) ────────────────────────────
 node_modules/
 dist/
-build/
+build/*
+# Flutter web release output is deliberately tracked (deployed as-is to Vercel).
+!Frontend/build/web/
 coverage/
 logs/
 *.log
