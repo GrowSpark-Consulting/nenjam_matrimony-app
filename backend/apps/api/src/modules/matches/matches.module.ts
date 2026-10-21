@@ -10,6 +10,7 @@ import { MatchesController } from './controllers/matches.controller';
 import { FeedService } from './services/feed.service';
 import { NearbyService } from './services/nearby.service';
 import { SearchService } from './services/search.service';
+import { ProfileLookupService } from './services/profile-lookup.service';
 import { PreferencesService } from './services/preferences.service';
 import { ShortlistService } from './services/shortlist.service';
 import { ProfileViewService } from './services/profile-view.service';
@@ -61,6 +62,7 @@ import { PsychologyMatchContextService } from './scoring/psychology/psychology-m
     FeedService,
     NearbyService,
     SearchService,
+    ProfileLookupService,
     PreferencesService,
     ShortlistService,
     ProfileViewService,

@@ -1,3 +1,4 @@
+import { audioMimeMatches, sniffAudioKind, sniffImageMime } from '@app/common';
 import {
   BadRequestException,
   Injectable,
@@ -73,6 +74,12 @@ export class AttachmentsService {
       );
     }
 
+    // The declared type is client-chosen, so the bytes decide: content that is
+    // not an allowed image/audio format is refused, and an allowed one is
+    // stored under its real type even if it was mislabelled.
+    const mimetype = this.resolveMimeType(kind, file);
+    file = { ...file, mimetype };
+
     await this.scanner.assertClean(file);
 
     if (!this.s3.isConfigured()) {
@@ -98,6 +105,23 @@ export class AttachmentsService {
     });
 
     return { mediaUrl: key, contentType: file.mimetype, size: file.size };
+  }
+
+  private resolveMimeType(
+    kind: AttachmentKind,
+    file: UploadedAttachmentFile,
+  ): string {
+    if (kind === 'IMAGE') {
+      const image = sniffImageMime(file.buffer);
+      if (image && MIME_BY_KIND.IMAGE.includes(image)) return image;
+      throw new BadRequestException('The file is not a valid image.');
+    }
+    const audio = sniffAudioKind(file.buffer);
+    if (!audio) {
+      throw new BadRequestException('The file is not a valid audio message.');
+    }
+    if (audioMimeMatches(file.mimetype, audio)) return file.mimetype;
+    return audio === 'aac' ? 'audio/aac' : 'audio/mp4';
   }
 
   private parseKind(rawType: string | undefined): AttachmentKind {

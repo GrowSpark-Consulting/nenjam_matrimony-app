@@ -1,11 +1,23 @@
-import { Body, Controller, Get, Put, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser, FirebaseAuthGuard } from '@app/common';
 import { READ_LIMIT, SEARCH_LIMIT } from '../../../throttling';
 import { FeedService } from '../services/feed.service';
 import { SearchService } from '../services/search.service';
+import { ProfileLookupService } from '../services/profile-lookup.service';
 import { PreferencesService } from '../services/preferences.service';
-import { DiscoverFeedResponseDto } from '../dto/discover-profile.response.dto';
+import {
+  DiscoverFeedResponseDto,
+  DiscoverProfileDto,
+} from '../dto/discover-profile.response.dto';
 import {
   PartnerPreferenceResponseDto,
   UpdatePartnerPreferenceDto,
@@ -22,6 +34,7 @@ export class DiscoverController {
     private readonly feedService: FeedService,
     private readonly searchService: SearchService,
     private readonly preferencesService: PreferencesService,
+    private readonly profileLookupService: ProfileLookupService,
   ) {}
 
   // Preference-filtered feed. Same contract as Phase 1 — Flutter is unchanged;
@@ -45,6 +58,18 @@ export class DiscoverController {
       category,
       cursor,
     });
+  }
+
+  // One profile by member id — see ProfileLookupService for the visibility
+  // rules (the feed's own eligibility; 404 for anything not visible). Rate
+  // limited like the feed: it also returns another member's profile.
+  @Throttle(READ_LIMIT)
+  @Get('profiles/:userId')
+  getProfile(
+    @CurrentUser('id') userId: string,
+    @Param('userId') profileUserId: string,
+  ): Promise<DiscoverProfileDto> {
+    return this.profileLookupService.getVisibleProfile(userId, profileUserId);
   }
 
   @Get('preferences')

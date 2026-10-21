@@ -1,9 +1,15 @@
+import type { IncomingMessage } from 'node:http';
 import { INestApplicationContext, Logger } from '@nestjs/common';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import type { Redis } from 'ioredis';
 import type { Server, ServerOptions } from 'socket.io';
 import { RedisService } from '@app/cache';
+import {
+  corsOriginOption,
+  isOriginAllowed,
+  type OriginPolicy,
+} from './cors-origin';
 
 // Bound the initial connect so a hung/blackholed Redis can never stall boot —
 // on timeout we simply degrade to the in-memory adapter.
@@ -28,6 +34,7 @@ export class RedisIoAdapter extends IoAdapter {
   constructor(
     app: INestApplicationContext,
     private readonly redis: RedisService,
+    private readonly originPolicy: OriginPolicy,
   ) {
     super(app);
   }
@@ -72,7 +79,20 @@ export class RedisIoAdapter extends IoAdapter {
   }
 
   createIOServer(port: number, options?: ServerOptions): Server {
-    const server = super.createIOServer(port, options) as Server;
+    const policy = this.originPolicy;
+    const serverOptions: Partial<ServerOptions> = {
+      ...options,
+      // The same allowlist as the HTTP layer. Authentication is a Firebase ID
+      // token in the handshake, never a cookie, so credentialed cross-origin
+      // requests are not needed and not enabled.
+      cors: { origin: corsOriginOption(policy), credentials: false },
+      // The CORS headers above only govern long-polling. A browser's WebSocket
+      // upgrade ignores them, so the Origin header is checked here for every
+      // handshake, whatever the transport.
+      allowRequest: (req: IncomingMessage, callback) =>
+        callback(null, isOriginAllowed(req.headers.origin, policy)),
+    };
+    const server = super.createIOServer(port, serverOptions) as Server;
     if (this.adapterConstructor) server.adapter(this.adapterConstructor);
     return server;
   }
