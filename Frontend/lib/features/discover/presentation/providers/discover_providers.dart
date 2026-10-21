@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_providers.dart';
+import '../../data/repositories/profile_by_id_repository.dart';
 import '../../data/repositories/discover_repository_impl.dart';
 import '../../domain/entities/discovery_profile_entity.dart';
 import '../../domain/entities/discover_feed_entity.dart';
@@ -9,6 +10,10 @@ import '../../../nearby/presentation/providers/nearby_providers.dart';
 
 /// Real backend-backed repository — fetches `GET /discover` (the
 /// preference-filtered feed) via the shared authenticated [ApiClient].
+final profileByIdRepositoryProvider = Provider<ProfileByIdRepository>(
+  (ref) => ProfileByIdRepository(ref.watch(apiClientProvider)),
+);
+
 final discoverRepositoryProvider = Provider<DiscoverRepository>(
   (ref) => DiscoverRepositoryImpl(ref.watch(apiClientProvider)),
 );

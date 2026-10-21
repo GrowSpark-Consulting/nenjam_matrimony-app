@@ -191,6 +191,11 @@ class _FaceVerificationBodyState extends ConsumerState<_FaceVerificationBody> {
         l10n: l10n,
       ),
       FaceVerificationFlowPhase.networkError => _NetworkErrorMessage(l10n: l10n),
+      FaceVerificationFlowPhase.unsupported => _InlineMessage(
+        message: l10n.faceVerificationUnsupported,
+        color: AppColors.error,
+        background: AppColors.errorLight,
+      ),
       _ => null,
     };
 

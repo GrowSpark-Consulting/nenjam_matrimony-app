@@ -69,6 +69,11 @@ enum FaceVerificationFlowPhase {
   failed,
   blocked,
   networkError,
+
+  /// This platform has no face-liveness capture (the browser, iOS today —
+  /// only the Android native bridge exists). Said outright, with no camera
+  /// prompt and no paid session created.
+  unsupported,
 }
 
 class FaceVerificationFlowState {
@@ -135,6 +140,16 @@ class FaceVerificationFlowController
       // Double-tap protection (handoff doc §6.3): each start can create a
       // paid AWS session, so a second concurrent tap is dropped rather than
       // queued.
+      return;
+    }
+
+    // Before anything else: no camera prompt and no session for a platform
+    // that cannot run the capture at all.
+    if (!ref.read(faceLivenessLauncherProvider).isSupported) {
+      state = const FaceVerificationFlowState(
+        phase: FaceVerificationFlowPhase.unsupported,
+        canRetry: false,
+      );
       return;
     }
 

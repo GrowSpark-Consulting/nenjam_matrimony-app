@@ -71,6 +71,21 @@ abstract final class ResponsiveUtils {
   static double maxContentWidth(BuildContext context) =>
       adaptive(context, phone: double.infinity, tablet: 720.0, desktop: 960.0);
 
+  // ─── App Frame (web / large screens) ─────────────────────────────
+  /// Width of the desktop navigation rail (see `AppBottomNavShell`).
+  static const double navRailWidth = 96;
+
+  /// Widest the whole app is allowed to be. Phones are unbounded; on larger
+  /// screens it is [maxContentWidth] (plus the rail on desktop) so every route
+  /// — pushed pages, dialogs, sheets — sits in one centered column rather than
+  /// stretching edge to edge. Applied once by `NmAppFrame`.
+  static double appFrameMaxWidth(BuildContext context) => adaptive(
+    context,
+    phone: double.infinity,
+    tablet: maxContentWidth(context),
+    desktop: maxContentWidth(context) + navRailWidth,
+  );
+
   // ─── Responsive Font Scale ───────────────────────────────────────
   static double fontScale(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;

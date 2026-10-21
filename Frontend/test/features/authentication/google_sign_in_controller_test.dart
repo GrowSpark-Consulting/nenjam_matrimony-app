@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -276,6 +278,30 @@ void main() {
         container.read(registrationProvider).basicDetails.profileCreatedFor,
         'Son',
       );
+    });
+
+    test('a second tap while one is open starts nothing and stays silent',
+        () async {
+      var calls = 0;
+      final gate = Completer<AuthUser>();
+      final container = _containerReturning(() {
+        calls++;
+        return gate.future;
+      });
+      final controller =
+          container.read(googleSignInControllerProvider.notifier);
+
+      final first = controller.signIn(intent: GoogleAuthIntent.login);
+      final second = await controller.signIn(intent: GoogleAuthIntent.login);
+
+      expect(calls, 1);
+      expect(second.success, isFalse);
+      expect(second.cancelled, isTrue);
+      expect(second.errorMessage, isNull);
+
+      gate.complete(_googleUser);
+      expect((await first).success, isTrue);
+      expect(container.read(googleSignInControllerProvider), isFalse);
     });
   });
 }

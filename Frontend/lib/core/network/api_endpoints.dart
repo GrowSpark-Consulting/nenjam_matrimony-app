@@ -110,6 +110,12 @@ abstract final class ApiEndpoints {
   /// profiles). It is the feed, narrowed by a term — not a separate index.
   static const String discoverSearch = '/discover/search';
 
+  /// One member's profile by id (`DiscoverController.getProfile`). Subject to
+  /// the feed's own eligibility rules and answers 404 for anything the viewer
+  /// may not see — see the backend's `ProfileLookupService`.
+  static String discoverProfile(String userId) =>
+      '/discover/profiles/${Uri.encodeComponent(userId)}';
+
   /// The saved-partner-preference CRUD pair (`DiscoverController.getPreferences`
   /// / `.updatePreferences`, backed by `PreferencesService` and the
   /// `partner_preferences` table). This — not the registration draft's

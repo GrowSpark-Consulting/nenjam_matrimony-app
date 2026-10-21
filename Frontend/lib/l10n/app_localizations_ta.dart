@@ -958,6 +958,10 @@ class AppLocalizationsTa extends AppLocalizations {
   String get premiumProceedToPayment => 'கட்டணத்திற்குத் தொடரவும்';
 
   @override
+  String get premiumUnavailableNotice =>
+      'ஆன்லைன் வாங்குதல் இன்னும் கிடைக்கவில்லை. இங்கே காட்டப்படும் திட்டங்கள் தகவலுக்காக மட்டுமே: பணம் செலுத்த முடியாது, பிரீமியம் அணுகலும் வழங்கப்படாது.';
+
+  @override
   String get settingsTitle => 'அமைப்புகள்';
 
   @override
@@ -4079,6 +4083,13 @@ class AppLocalizationsTa extends AppLocalizations {
   String get astroLoadError => 'உங்கள் ஜாதகத்தை ஏற்ற முடியவில்லை.';
 
   @override
+  String get astroUnavailableTitle => 'ஜாதகப் பொருத்தம் இன்னும் கிடைக்கவில்லை';
+
+  @override
+  String get astroUnavailableMessage =>
+      'இந்த வசதியை நாங்கள் இன்னும் உருவாக்கி வருகிறோம். உங்கள் ஜாதக விவரங்கள் உங்கள் சுயவிவரத்துடன் சேமிக்கப்பட்டுள்ளன; உண்மையான பொருத்தம் தயாராகும் வரை எந்த பொருத்த முடிவுகளும் காட்டப்படாது.';
+
+  @override
   String get astroYourDetailsTitle => 'உங்கள் ஜாதக விவரங்கள்';
 
   @override
@@ -4669,6 +4680,26 @@ class AppLocalizationsTa extends AppLocalizations {
       'நெட்வொர்க் பிழை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
 
   @override
+  String get authErrorPopupBlocked =>
+      'உங்கள் உலாவி உள்நுழைவு சாளரத்தைத் தடுத்துள்ளது. இந்தத் தளத்திற்கு பாப்-அப்களை அனுமதித்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get authErrorCaptchaFailed =>
+      'நீங்கள் ரோபோ இல்லை என்பதை எங்களால் சரிபார்க்க இயலவில்லை. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get authErrorUnauthorizedDomain =>
+      'இந்த இணைய முகவரிக்கு உள்நுழைவு இன்னும் இயக்கப்படவில்லை. உதவியைத் தொடர்புகொள்ளவும்.';
+
+  @override
+  String get authErrorSmsQuota =>
+      'இப்போது கூடுதல் சரிபார்ப்புக் குறியீடுகளை அனுப்ப இயலாது. பின்னர் மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get authErrorBrowserStorage =>
+      'உள்நுழைவுக்குத் தேவையான சேமிப்பகத்தை உங்கள் உலாவி தடுக்கிறது. குக்கீகள் மற்றும் தளத் தரவை அனுமதித்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
   String get authErrorReauthRequired =>
       'இந்தச் செயலை முடிக்க மீண்டும் உள்நுழையவும்.';
 
@@ -5103,6 +5134,10 @@ class AppLocalizationsTa extends AppLocalizations {
   @override
   String get faceVerificationNetworkError =>
       'உங்கள் முடிவை உறுதிப்படுத்த முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get faceVerificationUnsupported =>
+      'இணைய உலாவியில் முக சரிபார்ப்பு கிடைக்காது. உங்கள் முகத்தைச் சரிபார்க்க Nenjam Matrimony ஆண்ட்ராய்டு செயலியைப் பயன்படுத்தவும்.';
 
   @override
   String get faceVerificationCameraPermissionDenied =>

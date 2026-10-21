@@ -950,6 +950,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get premiumProceedToPayment => 'Proceed to Payment';
 
   @override
+  String get premiumUnavailableNotice =>
+      'Online purchase isn\'t available yet. The plans shown here are for information only: no payment can be made and no premium access is granted.';
+
+  @override
   String get settingsTitle => 'Settings';
 
   @override
@@ -4011,6 +4015,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get astroLoadError => 'Could not load your horoscope.';
 
   @override
+  String get astroUnavailableTitle => 'Horoscope matching isn\'t available yet';
+
+  @override
+  String get astroUnavailableMessage =>
+      'We\'re still building this feature. Your horoscope details are saved with your profile, and no compatibility results are shown until real matching is ready.';
+
+  @override
   String get astroYourDetailsTitle => 'Your Horoscope Details';
 
   @override
@@ -4595,6 +4606,26 @@ class AppLocalizationsEn extends AppLocalizations {
       'Network error. Please check your connection and try again.';
 
   @override
+  String get authErrorPopupBlocked =>
+      'Your browser blocked the sign-in window. Allow pop-ups for this site and try again.';
+
+  @override
+  String get authErrorCaptchaFailed =>
+      'We couldn\'t verify that you\'re not a robot. Please try again.';
+
+  @override
+  String get authErrorUnauthorizedDomain =>
+      'Sign-in isn\'t enabled for this website address yet. Please contact support.';
+
+  @override
+  String get authErrorSmsQuota =>
+      'We can\'t send more verification codes right now. Please try again later.';
+
+  @override
+  String get authErrorBrowserStorage =>
+      'Your browser is blocking the storage sign-in needs. Allow cookies and site data, then try again.';
+
+  @override
   String get authErrorReauthRequired =>
       'Please log in again to complete this action.';
 
@@ -5021,6 +5052,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get faceVerificationNetworkError =>
       'We couldn\'t confirm your result. Please check your connection and try again.';
+
+  @override
+  String get faceVerificationUnsupported =>
+      'Face verification isn\'t available in a web browser. Please use the Nenjam Matrimony Android app to verify your face.';
 
   @override
   String get faceVerificationCameraPermissionDenied =>

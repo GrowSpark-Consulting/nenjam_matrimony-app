@@ -116,7 +116,7 @@ void openProfileDetailOnRouter(
   bool isBlocked = false,
 }) {
   router.push(
-    RouteNames.profileDetail,
+    RouteNames.profileDetailPath(profile.id),
     extra: ProfileDetailArgs(profile, heroTag: heroTag, isBlocked: isBlocked),
   );
 }

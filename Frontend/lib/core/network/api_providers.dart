@@ -33,14 +33,9 @@ final apiClientProvider = Provider<ApiClient>((ref) {
       refreshAccessToken: () =>
           tokenService.getFirebaseToken(forceRefresh: true),
       onSessionExpired: () => ref.read(authRepositoryProvider).logout(),
-      // The dummy-OTP bridge. LocalAuthSession is the app's single
-      // representation of "signed in without a Firebase credential"; this is
-      // what finally makes the requests it authorises actually authenticate,
-      // rather than looking signed in while every call goes out bare.
-      //
-      // Null unless this build uses the dummy OTP, so a normal release never
-      // sends the header. The backend accepts it only under its own flags,
-      // and in production only for whitelisted numbers — see dev-auth.ts.
+      // Marks a local-only (dummy-OTP) session so a 401 on it is not turned
+      // into a refresh/sign-out storm. Null unless this build uses the dummy
+      // OTP. No header is sent for it — the backend does not read one.
       devAuthPhone: () => dummyOtpEnabled
           ? ref.read(localAuthSessionProvider).identifier
           : null,

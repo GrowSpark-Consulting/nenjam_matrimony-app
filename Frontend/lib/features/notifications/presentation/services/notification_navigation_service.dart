@@ -79,9 +79,9 @@ class NotificationNavigationService {
     GoRouter? Function()? routerResolver,
     Duration duplicateTapWindow = _duplicateTapWindow,
     Duration deliveryDedupeWindow = _deliveryDedupeWindow,
-  })  : _routerResolver = routerResolver ?? (() => appRouterOrNull),
-        _duplicateTapWindowOf = duplicateTapWindow,
-        _deliveryDedupeWindowOf = deliveryDedupeWindow {
+  }) : _routerResolver = routerResolver ?? (() => appRouterOrNull),
+       _duplicateTapWindowOf = duplicateTapWindow,
+       _deliveryDedupeWindowOf = deliveryDedupeWindow {
     _attachRouterListener();
   }
 
@@ -280,8 +280,10 @@ class NotificationNavigationService {
             RouteNames.openedFromNotificationParam: 'true',
           },
         );
-        _log('${atNotifications ? 'already at ${RouteNames.notifications}' : 'go ${RouteNames.notifications}'} '
-            '+ push ${RouteNames.profileViewers}');
+        _log(
+          '${atNotifications ? 'already at ${RouteNames.notifications}' : 'go ${RouteNames.notifications}'} '
+          '+ push ${RouteNames.profileViewers}',
+        );
       case NotificationDeepLinkKind.verificationApproved:
         _goTo(router, RouteNames.verificationName, RouteNames.verification);
       case NotificationDeepLinkKind.subscriptionExpiring:
@@ -351,7 +353,7 @@ class NotificationNavigationService {
     // Already reading this exact thread — a repeat tap must not push a
     // second copy of it.
     if (link.conversationId != null &&
-        _currentLocation == RouteNames.chatDetail &&
+        RouteNames.isChatDetailLocation(_currentLocation) &&
         _ref.read(chatActiveThreadsProvider).contains(link.conversationId)) {
       _log('skip: conversation ${link.conversationId} already open');
       return;
@@ -370,7 +372,11 @@ class NotificationNavigationService {
     router.goNamed(RouteNames.messagesName);
     await _branchSwitchApplied();
     if (_isStale(sequence)) return;
-    router.pushNamed(RouteNames.chatDetailName, extra: conversation);
+    router.pushNamed(
+      RouteNames.chatDetailName,
+      pathParameters: {'conversationId': conversation.id},
+      extra: conversation,
+    );
     _log('go ${RouteNames.messages} + push chat ${conversation.id}');
   }
 
@@ -411,8 +417,10 @@ class NotificationNavigationService {
       // A notification for a conversation that started after this device
       // last fetched the list — refetch once before giving up.
       await _ref.read(conversationsNotifierProvider.notifier).refresh();
-      return findIn(_ref.read(conversationsNotifierProvider).valueOrNull ??
-          const <ConversationEntity>[]);
+      return findIn(
+        _ref.read(conversationsNotifierProvider).valueOrNull ??
+            const <ConversationEntity>[],
+      );
     } catch (error) {
       // Offline / backend error — the Inbox itself will surface that; never
       // let it escape into the tap handler.
@@ -538,7 +546,7 @@ class NotificationNavigationService {
 /// in-app taps.
 final notificationNavigationServiceProvider =
     Provider<NotificationNavigationService>((ref) {
-  final service = NotificationNavigationService(ref);
-  ref.onDispose(service.dispose);
-  return service;
-});
+      final service = NotificationNavigationService(ref);
+      ref.onDispose(service.dispose);
+      return service;
+    });

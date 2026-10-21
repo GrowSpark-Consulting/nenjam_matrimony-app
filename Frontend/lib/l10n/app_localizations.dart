@@ -1868,6 +1868,12 @@ abstract class AppLocalizations {
   /// **'Proceed to Payment'**
   String get premiumProceedToPayment;
 
+  /// No description provided for @premiumUnavailableNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Online purchase isn\'t available yet. The plans shown here are for information only: no payment can be made and no premium access is granted.'**
+  String get premiumUnavailableNotice;
+
   /// No description provided for @settingsTitle.
   ///
   /// In en, this message translates to:
@@ -7556,6 +7562,18 @@ abstract class AppLocalizations {
   /// **'Could not load your horoscope.'**
   String get astroLoadError;
 
+  /// No description provided for @astroUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Horoscope matching isn\'t available yet'**
+  String get astroUnavailableTitle;
+
+  /// No description provided for @astroUnavailableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'re still building this feature. Your horoscope details are saved with your profile, and no compatibility results are shown until real matching is ready.'**
+  String get astroUnavailableMessage;
+
   /// No description provided for @astroYourDetailsTitle.
   ///
   /// In en, this message translates to:
@@ -8498,6 +8516,36 @@ abstract class AppLocalizations {
   /// **'Network error. Please check your connection and try again.'**
   String get authErrorNetwork;
 
+  /// No description provided for @authErrorPopupBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Your browser blocked the sign-in window. Allow pop-ups for this site and try again.'**
+  String get authErrorPopupBlocked;
+
+  /// No description provided for @authErrorCaptchaFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t verify that you\'re not a robot. Please try again.'**
+  String get authErrorCaptchaFailed;
+
+  /// No description provided for @authErrorUnauthorizedDomain.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in isn\'t enabled for this website address yet. Please contact support.'**
+  String get authErrorUnauthorizedDomain;
+
+  /// No description provided for @authErrorSmsQuota.
+  ///
+  /// In en, this message translates to:
+  /// **'We can\'t send more verification codes right now. Please try again later.'**
+  String get authErrorSmsQuota;
+
+  /// No description provided for @authErrorBrowserStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your browser is blocking the storage sign-in needs. Allow cookies and site data, then try again.'**
+  String get authErrorBrowserStorage;
+
   /// No description provided for @authErrorReauthRequired.
   ///
   /// In en, this message translates to:
@@ -9217,6 +9265,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'We couldn\'t confirm your result. Please check your connection and try again.'**
   String get faceVerificationNetworkError;
+
+  /// No description provided for @faceVerificationUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Face verification isn\'t available in a web browser. Please use the Nenjam Matrimony Android app to verify your face.'**
+  String get faceVerificationUnsupported;
 
   /// No description provided for @faceVerificationCameraPermissionDenied.
   ///

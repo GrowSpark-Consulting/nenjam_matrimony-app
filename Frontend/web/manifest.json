@@ -1,12 +1,12 @@
 {
-    "name": "nenjam_matrimony",
-    "short_name": "nenjam_matrimony",
+    "name": "Nenjam Matrimony",
+    "short_name": "Nenjam",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#FFF9FC",
+    "theme_color": "#6B21A8",
+    "description": "Nenjam Matrimony — Find Your Forever. A premium Indian matrimony app.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

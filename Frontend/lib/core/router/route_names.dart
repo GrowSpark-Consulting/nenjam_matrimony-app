@@ -71,8 +71,30 @@ abstract final class RouteNames {
   static const String shortlisted = '/shortlisted';
   static const String nearby = '/nearby';
   static const String profileViewers = '/profile-viewers';
+
+  /// Base paths of the two id-carrying routes. The routes themselves are
+  /// registered at [profileDetailPattern] / [chatDetailPattern] so the id is
+  /// in the URL — a browser refresh, a copied link or a bookmark then still
+  /// says *which* profile or conversation, instead of depending on the
+  /// in-memory `extra` object a reload throws away.
   static const String profileDetail = '/profile-detail';
   static const String chatDetail = '/chat-detail';
+  static const String profileDetailPattern = '$profileDetail/:profileId';
+  static const String chatDetailPattern = '$chatDetail/:conversationId';
+
+  /// Concrete locations for the two patterns above.
+  static String profileDetailPath(String profileId) =>
+      '$profileDetail/${Uri.encodeComponent(profileId)}';
+  static String chatDetailPath(String conversationId) =>
+      '$chatDetail/${Uri.encodeComponent(conversationId)}';
+
+  /// Whether [location] is a Chat Detail / Profile Detail location, with or
+  /// without an id segment.
+  static bool isChatDetailLocation(String? location) =>
+      location == chatDetail || (location?.startsWith('$chatDetail/') ?? false);
+  static bool isProfileDetailLocation(String? location) =>
+      location == profileDetail ||
+      (location?.startsWith('$profileDetail/') ?? false);
 
   // ─── Relationship Intelligence (independent of registration) ──────
   static const String horoscopeMatching = '/horoscope-matching';

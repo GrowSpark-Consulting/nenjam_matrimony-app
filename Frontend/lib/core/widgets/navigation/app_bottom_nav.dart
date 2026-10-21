@@ -9,6 +9,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_shadows.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/tokens/app_radius.dart';
+import '../../utils/responsive_utils.dart';
 import 'nav_badge.dart';
 
 /// Bottom clearance a page's scrollable content needs so its last item can
@@ -85,6 +86,41 @@ class AppBottomNavShell extends ConsumerWidget {
     // top of any branch (Search, Edit Profile, wizard steps, ...) are
     // unaffected — they live above this as root-navigator pages, so the OS
     // back button already pops them first as normal.
+    // Built once and placed either in the bottom pill (phones/tablets) or in
+    // the desktop rail, so both navigations share labels, badge and tap
+    // behaviour.
+    List<Widget> items(Color badgeBorderColor) =>
+        List<Widget>.generate(_tabs.length, (index) {
+          final tab = _tabs[index];
+          return _NavItem(
+            icon: tab.icon,
+            activeIcon: tab.activeIcon,
+            label: labels[index],
+            isActive: index == currentIndex,
+            badgeCount: index == _inboxTabIndex ? unreadMessages : 0,
+            // Announced instead of the bare count, so the badge reads
+            // as "Inbox, 3 unread messages" rather than "Inbox" and a
+            // loose "3" (see [NavBadge]'s own ExcludeSemantics).
+            badgeSemanticLabel: l10n.navUnreadMessagesSemanticLabel(
+              unreadMessages,
+            ),
+            // The badge's ring should read as a cut-out in the bar,
+            // so it takes the bar's own colour rather than a hardcoded
+            // white that would look like a sticker in dark mode.
+            badgeBorderColor: badgeBorderColor,
+            // initialLocation resets the branch to its starting
+            // route when re-tapping the tab you're already on —
+            // the standard go_router pattern — while switching
+            // between different tabs preserves each one's state.
+            onTap: () => navigationShell.goBranch(
+              index,
+              initialLocation: index == currentIndex,
+            ),
+          );
+        });
+
+    final useRail = ResponsiveUtils.isDesktop(context);
+
     return PopScope(
       canPop: currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
@@ -100,57 +136,78 @@ class AppBottomNavShell extends ConsumerWidget {
         // of that page's own background. With it, only the pill itself
         // paints, and whatever page is underneath shows through beside it.
         extendBody: true,
-        body: navigationShell,
-        bottomNavigationBar: SafeArea(
-          top: false,
-          minimum: const EdgeInsets.fromLTRB(
-            AppSpacing.base,
-            0,
-            AppSpacing.base,
-            AppSpacing.sm,
-          ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-            decoration: BoxDecoration(
-              color: surfaceColor,
-              borderRadius: AppRadius.pill,
-              boxShadow: AppShadows.floatingLight,
-            ),
-            // No fixed height — the bar sizes itself to each _NavItem's
-            // intrinsic content (icon badge + label), so it can never clip
-            // at large text-scale settings the way a hardcoded height did.
-            child: Row(
-              children: List.generate(_tabs.length, (index) {
-                final tab = _tabs[index];
-                return Expanded(
-                  child: _NavItem(
-                    icon: tab.icon,
-                    activeIcon: tab.activeIcon,
-                    label: labels[index],
-                    isActive: index == currentIndex,
-                    badgeCount: index == _inboxTabIndex ? unreadMessages : 0,
-                    // Announced instead of the bare count, so the badge reads
-                    // as "Inbox, 3 unread messages" rather than "Inbox" and a
-                    // loose "3" (see [NavBadge]'s own ExcludeSemantics).
-                    badgeSemanticLabel: l10n.navUnreadMessagesSemanticLabel(
-                      unreadMessages,
-                    ),
-                    // The badge's ring should read as a cut-out in the bar,
-                    // so it takes the bar's own colour rather than a hardcoded
-                    // white that would look like a sticker in dark mode.
-                    badgeBorderColor: surfaceColor,
-                    // initialLocation resets the branch to its starting
-                    // route when re-tapping the tab you're already on —
-                    // the standard go_router pattern — while switching
-                    // between different tabs preserves each one's state.
-                    onTap: () => navigationShell.goBranch(
-                      index,
-                      initialLocation: index == currentIndex,
-                    ),
+        body: useRail
+            ? Row(
+                children: [
+                  _DesktopRail(children: items(AppColors.surfaceLight)),
+                  Expanded(child: navigationShell),
+                ],
+              )
+            : navigationShell,
+        bottomNavigationBar: useRail
+            ? null
+            : SafeArea(
+                top: false,
+                minimum: const EdgeInsets.fromLTRB(
+                  AppSpacing.base,
+                  0,
+                  AppSpacing.base,
+                  AppSpacing.sm,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
                   ),
-                );
-              }),
-            ),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: AppRadius.pill,
+                    boxShadow: AppShadows.floatingLight,
+                  ),
+                  // No fixed height — the bar sizes itself to each _NavItem's
+                  // intrinsic content (icon badge + label), so it can never clip
+                  // at large text-scale settings the way a hardcoded height did.
+                  child: Row(
+                    children: [
+                      for (final item in items(surfaceColor))
+                        Expanded(child: item),
+                    ],
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+/// Left-hand navigation for desktop widths, in place of the floating pill.
+/// Same items as the pill, stacked; separated from the page by surface colour
+/// rather than a border.
+class _DesktopRail extends StatelessWidget {
+  final List<Widget> children;
+
+  const _DesktopRail({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('desktop-nav-rail'),
+      width: ResponsiveUtils.navRailWidth,
+      color: AppColors.surfaceLight,
+      child: SafeArea(
+        right: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xl,
+          ),
+          child: Column(
+            children: [
+              for (final item in children)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: item,
+                ),
+            ],
           ),
         ),
       ),
