@@ -45,10 +45,14 @@ class AuthInterceptor extends Interceptor {
   final Future<String?> Function() refreshAccessToken;
   final Future<void> Function() onSessionExpired;
 
-  /// Supplies the dummy-OTP identifier when there is no Firebase session, for
-  /// builds that use the dummy OTP. Optional, and returns null on a build that
-  /// does not, so the header is never sent by an ordinary release. See
-  /// `local_auth_session.dart` and the backend's `dev-auth.ts`.
+  /// Non-null while the member is on a local, dummy-OTP session — one with no
+  /// Firebase credential behind it. Used only to stop a 401 on such a session
+  /// from triggering token refresh and sign-out (there is nothing to refresh).
+  ///
+  /// It is no longer sent anywhere: the `X-Dev-Auth-Phone` header this used to
+  /// feed was removed from the backend's guard, and sending it made every
+  /// cross-origin browser request fail its CORS preflight. See
+  /// `local_auth_session.dart`.
   final String? Function()? devAuthPhone;
 
   AuthInterceptor({
@@ -94,16 +98,6 @@ class AuthInterceptor extends Interceptor {
     }
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
-    } else {
-      // The dummy-OTP bridge, supplied from LocalAuthSession — null unless
-      // this build uses the dummy OTP, so a normal release sends nothing.
-      // Deliberately in the `else`: a real Firebase token always wins, and
-      // the two headers are never sent together, which is also the condition
-      // the backend guard requires before it will look at this header.
-      final devPhone = devAuthPhone?.call();
-      if (devPhone != null && devPhone.isNotEmpty) {
-        options.headers['X-Dev-Auth-Phone'] = devPhone;
-      }
     }
     handler.next(options);
   }

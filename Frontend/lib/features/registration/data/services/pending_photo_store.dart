@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cross_file/cross_file.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -92,6 +93,50 @@ class FilePendingPhotoStore implements PendingPhotoStore {
   }
 }
 
+/// Web [PendingPhotoStore]. A browser has no app-support directory —
+/// `getApplicationSupportDirectory` has no web implementation and `File` is
+/// unavailable — so the photo stays where `XFile.fromData` already put it: in
+/// the page's memory, addressed by a `blob:` object URL that lives until the
+/// tab is closed or reloaded.
+///
+/// That is enough for every in-app step between the photo screen and OTP (all
+/// of them are route changes inside the same page). It is *not* durable across
+/// a reload or a closed tab; [read] then returns null and the member picks the
+/// photo again — the same outcome the mobile store gives for a lost file, so
+/// the uploader's `missing` handling covers it.
+class BlobPendingPhotoStore implements PendingPhotoStore {
+  const BlobPendingPhotoStore();
+
+  @override
+  Future<String> stage(XFile photo) async {
+    final path = photo.path;
+    // Reading it back now proves the blob really holds bytes before the
+    // caller records the path as the only copy.
+    if (path.isEmpty || await photo.length() == 0) {
+      throw StateError('The selected photo has no data.');
+    }
+    return path;
+  }
+
+  @override
+  Future<XFile?> read(String path) async {
+    if (path.isEmpty) return null;
+    try {
+      final file = XFile(path);
+      return await file.length() == 0 ? null : file;
+    } catch (_) {
+      // A revoked or expired blob URL — the page was reloaded since staging.
+      return null;
+    }
+  }
+
+  @override
+  Future<void> discard(String path) async {
+    // Nothing on disk to delete; the browser frees the blob with the page.
+  }
+}
+
 final pendingPhotoStoreProvider = Provider<PendingPhotoStore>(
-  (ref) => const FilePendingPhotoStore(),
+  (ref) =>
+      kIsWeb ? const BlobPendingPhotoStore() : const FilePendingPhotoStore(),
 );

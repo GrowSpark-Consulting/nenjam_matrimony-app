@@ -142,21 +142,6 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Create flavour env files
-        # pubspec.yaml declares .env.dev/.qa/.staging/.production as assets and
-        # .gitignore correctly excludes them, so a fresh clone has none —
-        # `flutter analyze` then emits four `asset_does_not_exist` warnings and
-        # exits 1. Seeding them from the committed .env.example is what a
-        # developer does locally anyway, and keeps warnings fatal rather than
-        # weakening the gate with --no-fatal-warnings.
-        #
-        # These carry no secrets: .env.example holds placeholders only, and the
-        # values are never used because CI does not run the app.
-        run: |
-          for f in .env.dev .env.qa .env.staging .env.production; do
-            cp .env.example "$f"
-          done
-
       - name: Install dependencies
         run: flutter pub get
 
@@ -191,6 +176,14 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: flutter test --tags=heavy
 
-      # No `flutter build` here on purpose — an Android build pulls the whole
+      - name: Build web (release)
+        # The web build is what Vercel serves, and it catches a different class
+        # of breakage from analyze: a dart:io / native-only import that compiles
+        # for Android but not for the browser. It needs no Gradle or native
+        # toolchain, so it is cheap. Uses only committed files (pubspec bundles
+        # .env.example, never the git-ignored per-flavour .env.* files).
+        run: flutter build web --release
+
+      # No Android `flutter build` here on purpose — it pulls the whole
       # Gradle/AGP toolchain and adds several minutes for little extra signal
-      # over analyze. Revisit if a build-only breakage ever ships.
+      # over analyze. Revisit if an Android-only build breakage ever ships.

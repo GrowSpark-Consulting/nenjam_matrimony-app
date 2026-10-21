@@ -59,6 +59,19 @@ abstract final class AuthErrorMapper {
       case 'account-exists-with-different-credential':
         return l10n.authErrorPhoneLinked;
 
+      // ─── Browser-only (web sign-in popup, reCAPTCHA, storage) ──────
+      case 'popup-blocked':
+        return l10n.authErrorPopupBlocked;
+      case 'captcha-check-failed':
+      case 'web-context-cancelled':
+        return l10n.authErrorCaptchaFailed;
+      case 'unauthorized-domain':
+        return l10n.authErrorUnauthorizedDomain;
+      case 'quota-exceeded':
+        return l10n.authErrorSmsQuota;
+      case 'web-storage-unsupported':
+        return l10n.authErrorBrowserStorage;
+
       // ─── Throttling / network ──────────────────────────────────────
       case 'too-many-requests':
         return l10n.authErrorTooManyAttempts;

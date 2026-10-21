@@ -41,12 +41,16 @@ class _FakeRepository implements FaceVerificationRepository {
       'attemptId': 'attempt-1',
       'sessionId': 'session-1',
       'region': 'ap-south-1',
-      'expiresAt': DateTime.now().add(const Duration(minutes: 3)).toIso8601String(),
+      'expiresAt': DateTime.now()
+          .add(const Duration(minutes: 3))
+          .toIso8601String(),
       'credentials': {
         'accessKeyId': 'a',
         'secretAccessKey': 'b',
         'sessionToken': 'c',
-        'expiration': DateTime.now().add(const Duration(minutes: 15)).toIso8601String(),
+        'expiration': DateTime.now()
+            .add(const Duration(minutes: 15))
+            .toIso8601String(),
       },
     });
   }
@@ -76,11 +80,12 @@ class _FakeRepository implements FaceVerificationRepository {
 }
 
 class _FakeLauncher implements FaceLivenessLauncher {
-  _FakeLauncher(this.result);
+  _FakeLauncher(this.result, {this.supported = true});
   final LivenessCaptureResult result;
+  final bool supported;
 
   @override
-  bool get isSupported => true;
+  bool get isSupported => supported;
 
   @override
   Future<LivenessCaptureResult> start(LivenessSessionTicket ticket) async =>
@@ -111,8 +116,8 @@ class _DeniedPermissions implements AppPermissionService {
   @override
   Future<NmPermissionStatus> request(NmPermission permission) async =>
       permanentlyDenied
-          ? NmPermissionStatus.permanentlyDenied
-          : NmPermissionStatus.denied;
+      ? NmPermissionStatus.permanentlyDenied
+      : NmPermissionStatus.denied;
 
   @override
   Future<bool> openSettings() async => true;
@@ -132,9 +137,7 @@ void main() {
               ),
             ),
           ),
-          appPermissionServiceProvider.overrideWithValue(
-            _GrantedPermissions(),
-          ),
+          appPermissionServiceProvider.overrideWithValue(_GrantedPermissions()),
         ],
       );
       addTearDown(container.dispose);
@@ -171,9 +174,7 @@ void main() {
               ),
             ),
           ),
-          appPermissionServiceProvider.overrideWithValue(
-            _GrantedPermissions(),
-          ),
+          appPermissionServiceProvider.overrideWithValue(_GrantedPermissions()),
         ],
       );
       addTearDown(container.dispose);
@@ -209,9 +210,7 @@ void main() {
               ),
             ),
           ),
-          appPermissionServiceProvider.overrideWithValue(
-            _GrantedPermissions(),
-          ),
+          appPermissionServiceProvider.overrideWithValue(_GrantedPermissions()),
         ],
       );
       addTearDown(container.dispose);
@@ -243,9 +242,7 @@ void main() {
               ),
             ),
           ),
-          appPermissionServiceProvider.overrideWithValue(
-            _GrantedPermissions(),
-          ),
+          appPermissionServiceProvider.overrideWithValue(_GrantedPermissions()),
         ],
       );
       addTearDown(container.dispose);
@@ -284,9 +281,7 @@ void main() {
               ),
             ),
           ),
-          appPermissionServiceProvider.overrideWithValue(
-            _GrantedPermissions(),
-          ),
+          appPermissionServiceProvider.overrideWithValue(_GrantedPermissions()),
         ],
       );
       addTearDown(container.dispose);
@@ -313,9 +308,7 @@ void main() {
               ),
             ),
           ),
-          appPermissionServiceProvider.overrideWithValue(
-            _DeniedPermissions(),
-          ),
+          appPermissionServiceProvider.overrideWithValue(_DeniedPermissions()),
         ],
       );
       addTearDown(container.dispose);
@@ -331,35 +324,37 @@ void main() {
       );
     });
 
-    test('permanently denied permission surfaces the open-settings path',
-        () async {
-      final repo = _FakeRepository();
-      final container = ProviderContainer(
-        overrides: [
-          faceVerificationRepositoryProvider.overrideWithValue(repo),
-          faceLivenessLauncherProvider.overrideWithValue(
-            _FakeLauncher(
-              const LivenessCaptureResult(
-                outcome: ClientLivenessOutcome.completed,
+    test(
+      'permanently denied permission surfaces the open-settings path',
+      () async {
+        final repo = _FakeRepository();
+        final container = ProviderContainer(
+          overrides: [
+            faceVerificationRepositoryProvider.overrideWithValue(repo),
+            faceLivenessLauncherProvider.overrideWithValue(
+              _FakeLauncher(
+                const LivenessCaptureResult(
+                  outcome: ClientLivenessOutcome.completed,
+                ),
               ),
             ),
-          ),
-          appPermissionServiceProvider.overrideWithValue(
-            _DeniedPermissions(permanentlyDenied: true),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
+            appPermissionServiceProvider.overrideWithValue(
+              _DeniedPermissions(permanentlyDenied: true),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      await container
-          .read(faceVerificationFlowProvider.notifier)
-          .startVerification();
+        await container
+            .read(faceVerificationFlowProvider.notifier)
+            .startVerification();
 
-      expect(repo.startCalls, 0);
-      final state = container.read(faceVerificationFlowProvider);
-      expect(state.phase, FaceVerificationFlowPhase.permissionDenied);
-      expect(state.permanentlyDenied, isTrue);
-    });
+        expect(repo.startCalls, 0);
+        final state = container.read(faceVerificationFlowProvider);
+        expect(state.phase, FaceVerificationFlowPhase.permissionDenied);
+        expect(state.permanentlyDenied, isTrue);
+      },
+    );
 
     test('double-tap creates only one session', () async {
       final repo = _FakeRepository();
@@ -373,9 +368,7 @@ void main() {
               ),
             ),
           ),
-          appPermissionServiceProvider.overrideWithValue(
-            _GrantedPermissions(),
-          ),
+          appPermissionServiceProvider.overrideWithValue(_GrantedPermissions()),
         ],
       );
       addTearDown(container.dispose);
@@ -387,5 +380,37 @@ void main() {
 
       expect(repo.startCalls, 1);
     });
+
+    test(
+      'an unsupported platform is said outright: no camera prompt, no paid session',
+      () async {
+        final repo = _FakeRepository();
+        final permissions = _GrantedPermissions();
+        final container = ProviderContainer(
+          overrides: [
+            faceVerificationRepositoryProvider.overrideWithValue(repo),
+            faceLivenessLauncherProvider.overrideWithValue(
+              _FakeLauncher(
+                const LivenessCaptureResult(
+                  outcome: ClientLivenessOutcome.completed,
+                ),
+                supported: false,
+              ),
+            ),
+            appPermissionServiceProvider.overrideWithValue(permissions),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await container
+            .read(faceVerificationFlowProvider.notifier)
+            .startVerification();
+
+        final state = container.read(faceVerificationFlowProvider);
+        expect(state.phase, FaceVerificationFlowPhase.unsupported);
+        expect(state.canRetry, isFalse);
+        expect(repo.startCalls, 0, reason: 'no AWS session may be created');
+      },
+    );
   });
 }

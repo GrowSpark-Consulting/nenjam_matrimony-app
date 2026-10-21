@@ -18,6 +18,7 @@ import '../../../../core/widgets/images/sized_network_photo.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
 import '../../../../core/widgets/navigation/app_bottom_nav.dart';
 import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../interests/presentation/providers/interests_provider.dart';
 import '../../../interests/presentation/utils/interest_button_copy.dart';
@@ -1598,13 +1599,13 @@ class _NearYouLoading extends StatelessWidget {
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: ResponsiveUtils.isDesktop(context) ? 4 : 2,
           crossAxisSpacing: AppSpacing.base,
           mainAxisSpacing: AppSpacing.base,
           childAspectRatio: 0.75,
         ),
-        itemCount: 2,
+        itemCount: ResponsiveUtils.isDesktop(context) ? 4 : 2,
         itemBuilder: (_, __) => const NmShimmer.card(),
       ),
     );
@@ -1695,8 +1696,8 @@ class _NearYouGrid extends StatelessWidget {
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: ResponsiveUtils.isDesktop(context) ? 4 : 2,
           crossAxisSpacing: AppSpacing.base,
           mainAxisSpacing: AppSpacing.base,
           childAspectRatio: 0.75,

@@ -45,11 +45,10 @@ interface AuthedSocketData {
  * instances. Injected by the domain services, which call [emitToUser] only
  * AFTER their DB transaction commits.
  */
-@WebSocketGateway({
-  // Same permissive dev CORS as the HTTP app; a deployed origin allowlist
-  // tightens both together.
-  cors: { origin: true, credentials: true },
-})
+// Origin policy is applied by RedisIoAdapter (apps/api/src/adapters), from the
+// same CORS_ORIGINS allowlist as the HTTP layer — not declared here, where it
+// would be fixed at import time and could not see configuration.
+@WebSocketGateway()
 export class RealtimeGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {

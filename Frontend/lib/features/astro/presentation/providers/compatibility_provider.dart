@@ -4,9 +4,11 @@ import '../../domain/models/compatibility_result.dart';
 import '../../domain/repositories/compatibility_repository.dart';
 import '../../data/repositories/mock_compatibility_repository.dart';
 
-/// Default implementation is the in-memory mock. Override this provider
-/// with an `ApiCompatibilityRepository` once the backend team's endpoints
-/// are ready — no other code needs to change.
+/// In-memory MOCK — returns invented data, so no screen may present it as a
+/// member's real horoscope or a real match. `HoroscopeMatchingPage` no longer
+/// reads it (it says the feature is unavailable). Override this provider with
+/// an `ApiCompatibilityRepository` once the backend's `astro` endpoints exist
+/// and are mounted.
 final compatibilityRepositoryProvider = Provider<CompatibilityRepository>(
   (ref) => MockCompatibilityRepository(),
 );

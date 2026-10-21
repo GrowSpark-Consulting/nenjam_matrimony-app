@@ -321,6 +321,10 @@ class GoogleSignInController extends Notifier<bool> {
   Future<LoginResult> signIn({
     required GoogleAuthIntent intent,
   }) async {
+    // A second tap while the first is still open would start a second Google
+    // popup (a browser blocks or stacks it) or a second account chooser.
+    // Treated like a dismissal: silent, and the first attempt stays in charge.
+    if (state) return const LoginResult(success: false, cancelled: true);
     state = true;
     try {
       final user = await ref.read(authRepositoryProvider).loginWithGoogle();

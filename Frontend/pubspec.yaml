@@ -18,6 +18,9 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  # usePathUrlStrategy() — clean /path URLs on the web instead of /#/path.
+  flutter_web_plugins:
+    sdk: flutter
 
   # State Management
   flutter_riverpod: ^2.6.1
@@ -98,8 +101,9 @@ flutter:
   generate: true
 
   assets:
-    - .env.dev
-    - .env.qa
-    - .env.staging
-    - .env.production
+    # Only the committed, placeholder-only file is bundled. The per-flavour
+    # .env.dev/.qa/.staging/.production files are git-ignored, so declaring
+    # them as assets made a fresh clone fail `flutter build` outright. Nothing
+    # here is secret and a web bundle is public — never add a real key.
+    - .env.example
     - assets/images/

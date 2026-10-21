@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -106,11 +104,22 @@ class PremiumPage extends StatelessWidget {
               ),
               const SizedBox(height: 32),
 
-              // Proceed CTA
+              // No purchase flow exists: the backend has no mounted plans,
+              // checkout or payment-confirmation endpoints. The button stays
+              // visible but disabled, with the reason beside it, rather than
+              // leading to a screen that pretends a payment happened.
+              Text(
+                l10n.premiumUnavailableNotice,
+                textAlign: TextAlign.center,
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textSecondaryLight,
+                ),
+              ),
+              const SizedBox(height: 12),
               NmGradientButton(
                 label: l10n.premiumProceedToPayment,
                 useAccentGradient: true,
-                onPressed: () => context.push(RouteNames.subscription),
+                onPressed: null,
               ),
               const SizedBox(height: 24),
             ],

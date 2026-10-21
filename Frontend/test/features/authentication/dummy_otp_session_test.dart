@@ -20,14 +20,13 @@ void main() {
   AuthInterceptor build({
     String? firebaseToken,
     String? Function()? devAuthPhone,
-  }) =>
-      AuthInterceptor(
-        dio: Dio(),
-        getAccessToken: () async => firebaseToken,
-        refreshAccessToken: () async => firebaseToken,
-        onSessionExpired: () async {},
-        devAuthPhone: devAuthPhone,
-      );
+  }) => AuthInterceptor(
+    dio: Dio(),
+    getAccessToken: () async => firebaseToken,
+    refreshAccessToken: () async => firebaseToken,
+    onSessionExpired: () async {},
+    devAuthPhone: devAuthPhone,
+  );
 
   Future<RequestOptions> send(AuthInterceptor interceptor) async {
     final options = RequestOptions(path: '/profiles/draft/basic-details');
@@ -36,13 +35,17 @@ void main() {
     return options;
   }
 
-  group('the dummy-OTP header', () {
-    test('is sent when there is no Firebase token', () async {
+  group('the retired dummy-OTP header', () {
+    test('is NOT sent even on a local dummy session', () async {
+      // The backend's guard no longer reads this header (only a Firebase ID
+      // token authenticates), and sending it made every cross-origin browser
+      // request fail its CORS preflight, because the API does not allow it.
+      // The local session now only suppresses 401 refresh/sign-out storms.
       final options = await send(
         build(firebaseToken: null, devAuthPhone: () => phone),
       );
 
-      expect(options.headers[devHeader], phone);
+      expect(options.headers.containsKey(devHeader), isFalse);
       expect(options.headers.containsKey('Authorization'), isFalse);
     });
 

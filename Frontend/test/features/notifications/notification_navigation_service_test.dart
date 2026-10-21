@@ -181,7 +181,7 @@ void main() {
       });
       await tester.pumpAndSettle();
 
-      expect(h.location, RouteNames.chatDetail);
+      expect(h.location, RouteNames.chatDetailPath('c1'));
       expect(h.container.read(inboxTabProvider), InboxTab.messages);
     });
 
@@ -192,7 +192,7 @@ void main() {
       h.service.handle({'type': 'chat', 'senderId': 'u1'});
       await tester.pumpAndSettle();
 
-      expect(h.location, RouteNames.chatDetail);
+      expect(h.location, RouteNames.chatDetailPath('c1'));
     });
 
     testWidgets('chat with an unresolvable conversation falls back to Inbox',
@@ -281,7 +281,7 @@ void main() {
       h.service.handle({'type': 'SHORTLIST_ADDED', 'userId': 'u2'});
       await tester.pumpAndSettle();
 
-      expect(h.location, RouteNames.profileDetail);
+      expect(h.location, RouteNames.profileDetailPath('u2'));
     });
 
     testWidgets('shortlist_added resolves a profile from the conversations too',
@@ -292,7 +292,7 @@ void main() {
       h.service.handle({'type': 'SHORTLIST_ADDED', 'userId': 'u2'});
       await tester.pumpAndSettle();
 
-      expect(h.location, RouteNames.profileDetail);
+      expect(h.location, RouteNames.profileDetailPath('u2'));
     });
 
     testWidgets('shortlist_added for an unknown member falls back to '
@@ -542,7 +542,7 @@ void main() {
 
       h.service.handle({'type': 'chat', 'conversationId': 'c1'});
       await tester.pumpAndSettle();
-      expect(h.location, RouteNames.chatDetail);
+      expect(h.location, RouteNames.chatDetailPath('c1'));
 
       // Chat Detail registers its thread as active while it's mounted; the
       // stub page in this router doesn't, so seed it directly.
@@ -552,7 +552,7 @@ void main() {
       h.service.handle({'type': 'chat', 'conversationId': 'c1'});
       await tester.pumpAndSettle();
 
-      expect(h.location, RouteNames.chatDetail);
+      expect(h.location, RouteNames.chatDetailPath('c1'));
       // Short-circuited before any lookup — no second thread pushed.
       expect(h.conversationRepository.fetchCount, fetchesBefore);
     });
@@ -736,8 +736,8 @@ GoRouter _buildRouter(String initialLocation) {
       stub(RouteNames.shortlisted, RouteNames.shortlistedName),
       stub(RouteNames.profileViewers, RouteNames.profileViewersName),
       stub(RouteNames.profileCompletion, RouteNames.profileCompletionName),
-      stub(RouteNames.chatDetail, RouteNames.chatDetailName),
-      stub(RouteNames.profileDetail, RouteNames.profileDetailName),
+      stub(RouteNames.chatDetailPattern, RouteNames.chatDetailName),
+      stub(RouteNames.profileDetailPattern, RouteNames.profileDetailName),
     ],
   );
 }

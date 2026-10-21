@@ -9,5 +9,5 @@ import '../../domain/entities/conversation_entity.dart';
 /// conversation-tap call site pushes the same way instead of each one
 /// hand-rolling `context.push(RouteNames.chatDetail, extra: ...)`.
 void openChatDetail(BuildContext context, ConversationEntity conversation) {
-  context.push(RouteNames.chatDetail, extra: conversation);
+  context.push(RouteNames.chatDetailPath(conversation.id), extra: conversation);
 }

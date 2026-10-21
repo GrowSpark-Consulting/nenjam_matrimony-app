@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -14,13 +15,13 @@ import '../../features/authentication/presentation/pages/phone_verify_screen.dar
 import '../../features/authentication/presentation/pages/registration_landing_page.dart';
 import '../../features/discover/domain/entities/discovery_profile_entity.dart';
 import 'profile_navigation.dart';
+import 'route_entity_pages.dart';
 import '../../features/discover/presentation/pages/discover_page.dart';
 import '../../features/help/presentation/pages/help_page.dart';
 import '../../features/support/domain/models/support_ticket.dart';
 import '../../features/support/presentation/pages/support_ticket_form_page.dart';
 import '../../features/support/presentation/pages/ticket_history_page.dart';
 import '../../features/inbox/domain/entities/conversation_entity.dart';
-import '../../features/inbox/presentation/pages/chat_detail_page.dart';
 import '../../features/inbox/presentation/pages/inbox_page.dart';
 import '../../features/interests/presentation/pages/interests_received_page.dart';
 import '../../features/interests/presentation/pages/interests_sent_page.dart';
@@ -66,7 +67,6 @@ import '../../features/verification/presentation/pages/face_verification_page.da
 import '../../features/authentication/domain/services/local_auth_session.dart';
 import '../../features/authentication/presentation/providers/auth_providers.dart';
 import '../../features/authentication/presentation/utils/post_auth_destination.dart';
-import '../../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../widgets/navigation/app_bottom_nav.dart';
 import 'route_names.dart';
@@ -184,6 +184,12 @@ bool _signedInLocally() =>
     _onboardingCompletedLocally() || hasLocalAuthSession();
 
 GoRouter createRouter(WidgetRef ref) {
+  // On the web, make a pushed route (profile, chat, settings, ...) show up in
+  // the address bar. By default only go() does, so refreshing a pushed page
+  // reloaded whichever tab it was opened from. Native builds have no URL, so
+  // they are left exactly as they were.
+  if (kIsWeb) GoRouter.optionURLReflectsImperativeAPIs = true;
+
   return _appRouter = GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: RouteNames.splash,
@@ -227,7 +233,9 @@ GoRouter createRouter(WidgetRef ref) {
       // pays for a draft/profile fetch just to reconfirm what is already
       // known. Only an incomplete-or-unknown device asks the resolver.
       if (!_onboardingCompletedLocally()) {
-        final destination = await ref.read(postAuthDestinationProvider).resolve();
+        final destination = await ref
+            .read(postAuthDestinationProvider)
+            .resolve();
         // Only a public route (an onboarding step, or verifyEmail — every
         // real gate PostAuthDestination guards with) is a genuine block.
         // RouteNames.discover, the one non-public route it can return, means
@@ -581,7 +589,7 @@ GoRouter createRouter(WidgetRef ref) {
         ),
       ),
       GoRoute(
-        path: RouteNames.profileDetail,
+        path: RouteNames.profileDetailPattern,
         name: RouteNames.profileDetailName,
         // pageBuilder (not builder) so this route's Page can carry its
         // own unique `key:` — see ProfileDetailArgs.pageKey's doc comment
@@ -602,19 +610,13 @@ GoRouter createRouter(WidgetRef ref) {
             _ => null,
           };
           if (args == null) {
-            // Defensive fallback — nothing in-app pushes this route
-            // without `extra`, but a raw/deep link could theoretically
-            // hit it directly.
+            // A reload, copied link or bookmark: the URL names the profile
+            // but there is no in-memory entity. Look it up by id, with
+            // loading / not-available / retry states.
             return MaterialPage<void>(
               key: state.pageKey,
-              child: Scaffold(
-                body: Center(
-                  child: Text(
-                    AppLocalizations.of(
-                      context,
-                    ).profileDetailProfileNotAvailable,
-                  ),
-                ),
+              child: ProfileDetailRoutePage(
+                profileId: state.pathParameters['profileId']!,
               ),
             );
           }
@@ -631,24 +633,16 @@ GoRouter createRouter(WidgetRef ref) {
         },
       ),
       GoRoute(
-        path: RouteNames.chatDetail,
+        path: RouteNames.chatDetailPattern,
         name: RouteNames.chatDetailName,
-        builder: (context, state) {
-          final extra = state.extra;
-          if (extra is! ConversationEntity) {
-            // Defensive fallback — nothing in-app pushes this route
-            // without `extra`, but a raw/deep link could theoretically
-            // hit it directly.
-            return Scaffold(
-              body: Center(
-                child: Text(
-                  AppLocalizations.of(context).profileDetailProfileNotAvailable,
-                ),
-              ),
-            );
-          }
-          return ChatDetailPage(conversation: extra);
-        },
+        builder: (context, state) => ChatDetailRoutePage(
+          conversationId: state.pathParameters['conversationId']!,
+          // Present for in-app navigation; absent after a reload or for a
+          // copied link, in which case the page looks the thread up by id.
+          initial: state.extra is ConversationEntity
+              ? state.extra! as ConversationEntity
+              : null,
+        ),
       ),
       // Search, Notifications and Profile are *reached from* the bottom-nav
       // branches (and, for Search, from more than one branch — Discover's

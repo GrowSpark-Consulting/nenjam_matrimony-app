@@ -22,12 +22,9 @@ class AppConfig {
   /// its default.
   Future<void> init(AppEnvironment env) async {
     environment = env;
-    final envFileName = switch (env) {
-      AppEnvironment.dev => '.env.dev',
-      AppEnvironment.qa => '.env.qa',
-      AppEnvironment.staging => '.env.staging',
-      AppEnvironment.production => '.env.production',
-    };
+    // The per-flavour .env.* files are git-ignored and no longer bundled (see
+    // pubspec.yaml), so the one asset every build has is the placeholder file.
+    const envFileName = '.env.example';
 
     try {
       await dotenv.load(fileName: envFileName);
@@ -39,7 +36,9 @@ class AppConfig {
     }
 
     envConfig = EnvConfig(
+      // Never on in a production build, whatever the placeholder file says.
       enableLogging:
+          !env.isProduction &&
           (dotenv.env['ENABLE_LOGGING'] ?? 'false').toLowerCase() == 'true',
       s3BucketName: dotenv.env['S3_BUCKET_NAME'] ?? '',
       stripePublishableKey: dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? '',

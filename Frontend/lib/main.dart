@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 
 import 'core/config/app_config.dart';
 import 'core/config/app_environment.dart';
@@ -25,6 +26,7 @@ import 'core/utils/photo_trace.dart';
 import 'core/services/storage_service.dart';
 import 'core/utils/story_perf.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/layout/responsive_layout.dart';
 import 'features/authentication/domain/services/local_auth_session.dart';
 import 'features/authentication/presentation/providers/auth_providers.dart';
 import 'features/profile/presentation/providers/profile_dashboard_providers.dart';
@@ -36,6 +38,10 @@ import 'l10n/app_localizations.dart';
 export 'core/services/storage_service.dart' show storageService;
 
 void main() async {
+  // Clean URLs (/chat-detail/abc, not /#/chat-detail/abc). Must run before
+  // the router is created. Needs the host to serve index.html for unknown
+  // paths — see web/vercel.json. A no-op outside the browser.
+  if (kIsWeb) usePathUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
   StoryPerf.start('main() entered');
 
@@ -248,7 +254,8 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
     // for a mobile login that could not mint a Firebase session — without
     // it, resuming the app would bounce that member to the landing screen
     // from a screen the router itself considers theirs.
-    final signedIn = ref.read(authRepositoryProvider).currentUser != null ||
+    final signedIn =
+        ref.read(authRepositoryProvider).currentUser != null ||
         hasLocalAuthSession();
     final location = _currentLocation;
     final willRedirect =
@@ -370,6 +377,11 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
 
           // Routing
           routerConfig: router,
+
+          // Centers the app in a bounded column on tablets/desktops (no-op
+          // on phones) — see NmAppFrame.
+          builder: (context, child) =>
+              NmAppFrame(child: child ?? const SizedBox.shrink()),
         );
       },
     );

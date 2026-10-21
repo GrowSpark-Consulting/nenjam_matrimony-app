@@ -8,6 +8,7 @@ import { AppConfigService } from '@app/config';
 import { RedisService } from '@app/cache';
 import { AppModule } from './app.module';
 import { RedisIoAdapter } from './adapters/redis-io.adapter';
+import { corsOriginOption } from './adapters/cors-origin';
 
 /**
  * Interactive API docs. Documents the existing API — it never changes routes or
@@ -92,7 +93,11 @@ async function bootstrap() {
   // Real-time WebSocket transport. The Redis adapter fans emits out across API
   // instances when Redis is available; otherwise it's a single-instance
   // in-memory adapter. Must be set before the gateways start.
-  const redisAdapter = new RedisIoAdapter(app, app.get(RedisService));
+  const appConfig = app.get(AppConfigService);
+  const redisAdapter = new RedisIoAdapter(app, app.get(RedisService), {
+    allowedOrigins: appConfig.cors.origins,
+    isDevelopment: appConfig.isDevelopment,
+  });
   await redisAdapter.connect();
   app.useWebSocketAdapter(redisAdapter);
 
@@ -114,8 +119,10 @@ async function bootstrap() {
   // fail-closed until an allowlist is configured, never fail-open.
   const { origins: allowedOrigins } = configForCors.cors;
   app.enableCors({
-    origin:
-      allowedOrigins.length > 0 ? allowedOrigins : configForCors.isDevelopment,
+    origin: corsOriginOption({
+      allowedOrigins,
+      isDevelopment: configForCors.isDevelopment,
+    }),
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: [
       'Content-Type',
