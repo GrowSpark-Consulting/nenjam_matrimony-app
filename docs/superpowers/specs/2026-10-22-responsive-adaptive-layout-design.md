@@ -170,6 +170,36 @@ produce a few absurdly wide cards. Existing profile-card composition and photo
 
 ### 6.2 Chat master-detail (own commit)
 
+> **DECISION 2026-10-22 — §6.2 is PARTIALLY DEFERRED (user-approved).**
+>
+> **Delivered:** responsive master-detail chat at >=900 available width, rendered
+> *inside the existing route widgets*.
+>
+> **Deferred:** the left navigation rail beside a chat opened directly via a
+> push-notification deep link. **Out of scope:** any router restructuring to
+> achieve that rail.
+>
+> **Why.** The original design moved `/chat-detail/:conversationId` into the
+> Inbox `StatefulShellBranch` and switched `openChatDetail` from `push` to `go`.
+> Both halves proved unsafe, verified by spike:
+>
+> * With the route as a branch sibling, `go` yields `canPop == false` and **zero
+>   back buttons** — `ChatDetailPage`'s app bar has no explicit `leading`, so
+>   mobile chat would lose its back arrow. The shell's
+>   `PopScope(canPop: currentIndex == 0)` sends Android back to Discover, not to
+>   `/messages`.
+> * `push` of a shell-branch route is a **known production crash** in this repo:
+>   commit `8b27aeb` fixed `!keyReservation.contains(key)` caused by exactly
+>   that, and `interest_button_copy.dart` carries a comment stating `push` is
+>   safe *because* chat is root-level rather than a branch.
+>
+> Both routes therefore stay root-level and unchanged, `push` is preserved, and
+> the two-pane composition is rendered within the existing route bodies.
+>
+> **Accepted limitation:** a desktop user arriving via deep link sees the
+> two-pane chat without the left rail until they navigate to `/messages`. This
+> is a deliberate trade, not an accidental omission.
+
 At `expanded`/`large`: conversation list in a ~360px pane + chat in the
 remainder. Below that: unchanged two-route push navigation.
 
