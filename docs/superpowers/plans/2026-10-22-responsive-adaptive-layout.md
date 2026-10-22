@@ -635,7 +635,7 @@
       final errors = await pumpAtSize(
         tester,
         const Size(100, 100),
-        Row(children: const [SizedBox(width: 500, height: 10)]),
+        const Row(children: [SizedBox(width: 500, height: 10)]),
       );
       expect(errors, isNotEmpty, reason: 'a 500px child in a 100px row overflows');
       expect(shortError(errors.first), contains('overflow'));
@@ -651,7 +651,7 @@
         final errors = await pumpAtSize(
           tester,
           size,
-          Row(children: const [SizedBox(width: 500, height: 10)]),
+          const Row(children: [SizedBox(width: 500, height: 10)]),
         );
         if (errors.isNotEmpty) reported.add(size.width);
       }
