@@ -57,10 +57,20 @@ const List<double> kBoundaryWidths = [
 /// plus a tall page most easily overflows.
 const Size kShortDesktop = Size(900, 600);
 
-/// Collects every pending framework exception.
+/// Takes every exception the binding will hand over, as a list.
 ///
-/// [WidgetTester.takeException] returns one at a time, so a single call can
-/// hide later overflows behind the first.
+/// Note what the framework can and cannot give you here. `flutter_test`'s
+/// binding holds a SINGLE pending exception, not a queue: when a second
+/// exception arrives un-taken it dumps both to the console and replaces the
+/// slot with a synthetic "Multiple exceptions (N) were detected..." summary
+/// (see `binding.dart`'s `FlutterError.onError` override). So a single pump
+/// yields at most ONE entry — either the real error, or that summary when
+/// several fired at once.
+///
+/// The loop therefore matters across repeated `takeException` availability
+/// rather than for enumerating simultaneous failures. For overflow detection
+/// that is sufficient: one entry fails the assertion, and the console dump
+/// still shows every individual overflow.
 List<Object> drainExceptions(WidgetTester tester) {
   final found = <Object>[];
   while (true) {
@@ -153,8 +163,29 @@ Future<List<Object>> resizeTo(WidgetTester tester, Size size) async {
   return drainExceptions(tester);
 }
 
-/// Fails if the framework reported a layout exception. Never "fix" a failure
-/// here by deleting the call — fix the layout.
+/// Fails if [errors] (from [pumpAtSize] or [resizeTo]) is not empty.
+///
+/// This is the primary single-size check. Prefer it over [expectNoOverflow]:
+/// [pumpAtSize] drains the exception queue to build its return value, so a
+/// `pumpAtSize(...); expectNoOverflow(tester);` sequence would find the queue
+/// already empty and pass even on a real overflow.
+void expectNoOverflowIn(List<Object> errors) {
+  if (errors.isEmpty) return;
+  fail(
+    'Unexpected layout exception(s), likely a RenderFlex overflow:\n'
+    '${errors.map(shortError).join('\n')}',
+  );
+}
+
+/// Fails if the framework has a pending layout exception RIGHT NOW.
+///
+/// Use this only for exceptions raised by pumps you perform yourself after
+/// [pumpAtSize] returns — for example after a `tester.tap` that re-lays out
+/// the tree. It canNOT see the exceptions from [pumpAtSize]'s own pumps:
+/// that function drains the queue to build its return value, so those are
+/// already gone. For those, use [expectNoOverflowIn] on the returned list.
+///
+/// Never "fix" a failure here by deleting the call — fix the layout.
 void expectNoOverflow(WidgetTester tester) {
   final found = drainExceptions(tester);
   if (found.isEmpty) return;

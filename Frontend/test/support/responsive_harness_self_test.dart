@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'responsive_harness.dart';
@@ -63,7 +64,7 @@ void main() {
       const Center(child: Text('fits')),
     );
     expect(errors, isEmpty);
-    expectNoOverflow(tester);
+    expectNoOverflowIn(errors);
   });
 
   testWidgets('pumpAtSize surfaces a real overflow', (tester) async {
@@ -96,5 +97,72 @@ void main() {
       if (errors.isNotEmpty) reported.add(size.width);
     }
     expect(reported, [100, 120]);
+  });
+
+  test('expectNoOverflowIn fails when errors are present', () {
+    expect(
+      () =>
+          expectNoOverflowIn(<Object>['a RenderFlex overflowed by 42 pixels']),
+      throwsA(isA<TestFailure>()),
+    );
+  });
+
+  test('expectNoOverflowIn passes on an empty list', () {
+    expectNoOverflowIn(<Object>[]);
+  });
+
+  testWidgets('keyboard sets viewInsets.bottom in the pumped tree', (
+    tester,
+  ) async {
+    late double seen;
+    await pumpAtSize(
+      tester,
+      const Size(390, 844),
+      Builder(
+        builder: (context) {
+          seen = MediaQuery.viewInsetsOf(context).bottom;
+          return const SizedBox.shrink();
+        },
+      ),
+      keyboard: 300,
+    );
+    expect(seen, 300);
+  });
+
+  testWidgets('view padding 44/34 reaches the pumped tree', (tester) async {
+    late EdgeInsets seen;
+    await pumpAtSize(
+      tester,
+      const Size(390, 844),
+      Builder(
+        builder: (context) {
+          seen = MediaQuery.paddingOf(context);
+          return const SizedBox.shrink();
+        },
+      ),
+    );
+    // Observed value, not forced: MaterialApp passes the view padding through
+    // to home unchanged, so the builder sees the full 44/34.
+    expect(seen.top, 44);
+    expect(seen.bottom, 34);
+  });
+
+  testWidgets('overrides reach ref.watch inside the pumped tree', (
+    tester,
+  ) async {
+    final valueProvider = Provider<int>((ref) => 1);
+    final seen = <int>[];
+    await pumpAtSize(
+      tester,
+      const Size(390, 844),
+      Consumer(
+        builder: (context, ref, _) {
+          seen.add(ref.watch(valueProvider));
+          return const SizedBox.shrink();
+        },
+      ),
+      overrides: [valueProvider.overrideWithValue(7)],
+    );
+    expect(seen.last, 7);
   });
 }
