@@ -1,18 +1,38 @@
 import 'package:flutter/material.dart';
 
-import '../constants/app_constants.dart';
+import '../layout/window_class.dart';
 
-/// Responsive utilities for adaptive layouts across all device types.
+/// Legacy responsive helpers, kept as a compatibility facade.
 ///
-/// Supports phones, tablets, foldables, landscape/portrait,
-/// and varying pixel densities.
+/// Superseded by `core/layout/window_class.dart` (classification) and
+/// `core/layout/content_width.dart` (max-width tokens). The replacement
+/// classifies from local `BoxConstraints`, so a surface in a narrow pane on a
+/// wide monitor sees its pane rather than the window — which the
+/// `MediaQuery`-based helpers here cannot do.
+///
+/// Existing call sites keep working unchanged; they migrate per surface. The
+/// behavior below is pinned by `test/core/utils/responsive_utils_legacy_test.dart`
+/// so it cannot drift mid-migration.
+@Deprecated(
+  'Use WindowClass (core/layout/window_class.dart) for classification and '
+  'ContentWidth (core/layout/content_width.dart) for max widths. '
+  'Classify from LayoutBuilder constraints, not MediaQuery.',
+)
 abstract final class ResponsiveUtils {
   // ─── Breakpoints ─────────────────────────────────────────────────
   static const double phoneSmall = 320;
   static const double phoneMedium = 375;
   static const double phoneLarge = 414;
-  static const double tablet = AppConstants.tabletBreakpoint;
-  static const double desktop = AppConstants.desktopBreakpoint;
+
+  /// 600 — unchanged, and now the same number as
+  /// [WindowClassBreakpoints.mediumMin].
+  static const double tablet = WindowClassBreakpoints.mediumMin;
+
+  /// 1024 — deliberately *not* [WindowClassBreakpoints.largeMin]. The legacy
+  /// "desktop" threshold stays 1024 so existing callers are unaffected; the
+  /// navigation rail's own threshold moves to 900 in the shell, which reads
+  /// [WindowClass] directly rather than this value.
+  static const double desktop = 1024;
 
   // ─── Device Type Detection ───────────────────────────────────────
   static DeviceType getDeviceType(BuildContext context) {
@@ -73,12 +93,16 @@ abstract final class ResponsiveUtils {
 
   // ─── App Frame (web / large screens) ─────────────────────────────
   /// Width of the desktop navigation rail (see `AppBottomNavShell`).
+  // Superseded by NavRailMetrics in app_bottom_nav.dart; kept until Task 5 migrates the call site.
   static const double navRailWidth = 96;
 
   /// Widest the whole app is allowed to be. Phones are unbounded; on larger
   /// screens it is [maxContentWidth] (plus the rail on desktop) so every route
   /// — pushed pages, dialogs, sheets — sits in one centered column rather than
-  /// stretching edge to edge. Applied once by `NmAppFrame`.
+  /// stretching edge to edge.
+  ///
+  /// `NmAppFrame` has been removed, so this now has no caller; Task 5 deletes it
+  /// together with [navRailWidth].
   static double appFrameMaxWidth(BuildContext context) => adaptive(
     context,
     phone: double.infinity,

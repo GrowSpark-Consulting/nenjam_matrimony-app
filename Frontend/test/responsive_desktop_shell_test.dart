@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nenjam_matrimony/core/theme/app_theme.dart';
-import 'package:nenjam_matrimony/core/widgets/layout/responsive_layout.dart';
 import 'package:nenjam_matrimony/core/widgets/navigation/app_bottom_nav.dart';
 import 'package:nenjam_matrimony/features/inbox/presentation/providers/inbox_providers.dart';
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
@@ -59,8 +58,6 @@ Future<void> _pump(WidgetTester tester, Size size) async {
         routerConfig: router,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        builder: (context, child) =>
-            NmAppFrame(child: child ?? const SizedBox.shrink()),
       ),
     ),
   );
