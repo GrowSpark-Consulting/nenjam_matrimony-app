@@ -26,7 +26,6 @@ import 'core/utils/photo_trace.dart';
 import 'core/services/storage_service.dart';
 import 'core/utils/story_perf.dart';
 import 'core/theme/app_theme.dart';
-import 'core/widgets/layout/responsive_layout.dart';
 import 'features/authentication/domain/services/local_auth_session.dart';
 import 'features/authentication/presentation/providers/auth_providers.dart';
 import 'features/profile/presentation/providers/profile_dashboard_providers.dart';
@@ -377,11 +376,6 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
 
           // Routing
           routerConfig: router,
-
-          // Centers the app in a bounded column on tablets/desktops (no-op
-          // on phones) — see NmAppFrame.
-          builder: (context, child) =>
-              NmAppFrame(child: child ?? const SizedBox.shrink()),
         );
       },
     );
