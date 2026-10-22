@@ -130,13 +130,21 @@
             data: const MediaQueryData(size: Size(1920, 1080)),
             child: Directionality(
               textDirection: TextDirection.ltr,
-              child: SizedBox(
-                width: 400,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    paneClass = WindowClass.fromWidth(constraints.maxWidth);
-                    return const SizedBox.shrink();
-                  },
+              // Align loosens the incoming constraint. Without it the SizedBox
+              // is the direct child of pumpWidget's root, receives a TIGHT
+              // constraint equal to the test surface, and cannot narrow itself
+              // -- the LayoutBuilder would then see the surface width (800),
+              // classify as medium, and prove nothing about a narrow pane.
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: 400,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      paneClass = WindowClass.fromWidth(constraints.maxWidth);
+                      return const SizedBox.shrink();
+                    },
+                  ),
                 ),
               ),
             ),
