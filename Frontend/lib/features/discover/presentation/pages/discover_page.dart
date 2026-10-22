@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/layout/adaptive_grid.dart';
 import '../../../../core/router/profile_navigation.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -18,7 +19,6 @@ import '../../../../core/widgets/images/sized_network_photo.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
 import '../../../../core/widgets/navigation/app_bottom_nav.dart';
 import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
-import '../../../../core/utils/responsive_utils.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../interests/presentation/providers/interests_provider.dart';
 import '../../../interests/presentation/utils/interest_button_copy.dart';
@@ -1587,27 +1587,64 @@ class _NearYouSectionState extends ConsumerState<_NearYouSection> {
       NearbyRepositoryImpl.defaultRadiusKm.round().toString();
 }
 
-/// Placeholder while a fix is being acquired, shaped like the 2x2 grid it
+/// Target tile width for the Near You grid.
+///
+/// Deliberately smaller than [AdaptiveGrid.resolve]'s default: with the
+/// default, a 360px phone would get one full-width column, where this section
+/// has always been two-up on phones. 136 is the narrowest tile the two-up
+/// phone layout already uses (320px wide: (320 - 32 - 16) / 2), so every
+/// width keeps tiles at least that wide and 320px stays two columns.
+const double _kNearYouTargetTileWidth = 136;
+
+/// Near You is a one-row teaser (see [_NearYouGrid]'s four-item cap), so the
+/// grid never grows past four columns however wide the surface gets.
+const int _kNearYouMaxColumns = 4;
+
+/// Column count for the Near You grid and its shimmer placeholder, derived
+/// from the width the section actually has rather than the window's.
+int _nearYouColumns(double availableWidth) => AdaptiveGrid.resolve(
+  availableWidth: availableWidth,
+  horizontalPadding: AppSpacing.base * 2,
+  spacing: AppSpacing.base,
+  targetTileWidth: _kNearYouTargetTileWidth,
+  maxColumns: _kNearYouMaxColumns,
+).columns;
+
+/// Shared by the placeholder and the real grid so their cards have the same
+/// shape and the feed does not jump when results land.
+SliverGridDelegate _nearYouGridDelegate(int columns) =>
+    SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: columns,
+      crossAxisSpacing: AppSpacing.base,
+      mainAxisSpacing: AppSpacing.base,
+      childAspectRatio: 0.75,
+    );
+
+/// Placeholder while a fix is being acquired, shaped like the grid it
 /// resolves into so the feed does not jump when results land.
+///
+/// This never touches profile data: it renders one [NmShimmer.card] per
+/// column, which is exactly one row of the real grid.
 class _NearYouLoading extends StatelessWidget {
   const _NearYouLoading();
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: ResponsiveUtils.isDesktop(context) ? 4 : 2,
-          crossAxisSpacing: AppSpacing.base,
-          mainAxisSpacing: AppSpacing.base,
-          childAspectRatio: 0.75,
-        ),
-        itemCount: ResponsiveUtils.isDesktop(context) ? 4 : 2,
-        itemBuilder: (_, __) => const NmShimmer.card(),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = _nearYouColumns(constraints.maxWidth);
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: _nearYouGridDelegate(columns),
+            // One row of placeholders, deliberately equal to the column count.
+            itemCount: columns,
+            itemBuilder: (_, __) => const NmShimmer.card(),
+          ),
+        );
+      },
     );
   }
 }
@@ -1690,21 +1727,23 @@ class _NearYouGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A teaser, not the full list: the dedicated Near Me screen carries the
+    // rest. The cap is a product decision, independent of the column count.
     final capped = profiles.take(4).toList();
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: ResponsiveUtils.isDesktop(context) ? 4 : 2,
-          crossAxisSpacing: AppSpacing.base,
-          mainAxisSpacing: AppSpacing.base,
-          childAspectRatio: 0.75,
-        ),
-        itemCount: capped.length,
-        itemBuilder: (_, i) => _NearYouCard(profile: capped[i]),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = _nearYouColumns(constraints.maxWidth);
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: _nearYouGridDelegate(columns),
+            itemCount: capped.length,
+            itemBuilder: (_, i) => _NearYouCard(profile: capped[i]),
+          ),
+        );
+      },
     );
   }
 }

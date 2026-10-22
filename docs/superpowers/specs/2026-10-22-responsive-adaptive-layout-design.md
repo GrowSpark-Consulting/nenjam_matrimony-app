@@ -170,6 +170,36 @@ produce a few absurdly wide cards. Existing profile-card composition and photo
 
 ### 6.2 Chat master-detail (own commit)
 
+> **DECISION 2026-10-22 — §6.2 is PARTIALLY DEFERRED (user-approved).**
+>
+> **Delivered:** responsive master-detail chat at >=900 available width, rendered
+> *inside the existing route widgets*.
+>
+> **Deferred:** the left navigation rail beside a chat opened directly via a
+> push-notification deep link. **Out of scope:** any router restructuring to
+> achieve that rail.
+>
+> **Why.** The original design moved `/chat-detail/:conversationId` into the
+> Inbox `StatefulShellBranch` and switched `openChatDetail` from `push` to `go`.
+> Both halves proved unsafe, verified by spike:
+>
+> * With the route as a branch sibling, `go` yields `canPop == false` and **zero
+>   back buttons** — `ChatDetailPage`'s app bar has no explicit `leading`, so
+>   mobile chat would lose its back arrow. The shell's
+>   `PopScope(canPop: currentIndex == 0)` sends Android back to Discover, not to
+>   `/messages`.
+> * `push` of a shell-branch route is a **known production crash** in this repo:
+>   commit `8b27aeb` fixed `!keyReservation.contains(key)` caused by exactly
+>   that, and `interest_button_copy.dart` carries a comment stating `push` is
+>   safe *because* chat is root-level rather than a branch.
+>
+> Both routes therefore stay root-level and unchanged, `push` is preserved, and
+> the two-pane composition is rendered within the existing route bodies.
+>
+> **Accepted limitation:** a desktop user arriving via deep link sees the
+> two-pane chat without the left rail until they navigate to `/messages`. This
+> is a deliberate trade, not an accidental omission.
+
 At `expanded`/`large`: conversation list in a ~360px pane + chat in the
 remainder. Below that: unchanged two-route push navigation.
 
@@ -198,6 +228,33 @@ resize-transition, and authorization regression tests. It is **not** merged into
 the shell change.
 
 ### 6.3 Profile detail (`detail`, ~1200)
+
+> **DECISION 2026-10-22 — §6.3 two-column layout is DEFERRED (user-approved).**
+>
+> **Delivered:** the single scrolling column, bounded to `ContentWidth.detail`
+> (1200px) and centred beyond that. Measured: 375 -> 343, 768 -> 736,
+> 1024 -> 992, and 1440/1920/3440 -> 1200 centred.
+>
+> **Deferred:** the two-column split at `large`.
+>
+> **Why.** `profile_detail_page.dart` is a `CustomScrollView` whose sections sit
+> in two `SliverList`s either side of a **pinned** `SliverPersistentHeader`
+> holding `ProfileDetailSectionTabBar`. Tapping a tab runs
+> `_scrollToSection` -> `_revealSection`, which walks the viewport *vertically*
+> in bounded steps using `_directionToSection`'s +1/-1 ("the target sits below
+> / above everything currently mounted") to force lazy slivers to build before
+> `Scrollable.ensureVisible`. Across a horizontal split "above/below" is
+> undefined for the second column, so tab navigation to a right-column section
+> would break — and that code's own doc comment records that a naive earlier
+> version silently did nothing for any off-screen section.
+>
+> Shipping two columns therefore needs a product decision about the section tab
+> bar first (drop it at `large`, or redesign it for per-column scrolling). The
+> user elected to keep the tab bar and its current behaviour.
+>
+> **Accepted limitation:** profile detail is readable and centred on wide
+> screens but single-column. This is a deliberate trade, not an accidental
+> omission.
 
 At `large`: photo gallery + key facts in a left column; detail sections
 (family, lifestyle, horoscope, preferences, verification, timeline) in a right

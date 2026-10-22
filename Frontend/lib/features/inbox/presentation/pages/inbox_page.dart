@@ -6,11 +6,13 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/navigation/app_bottom_nav.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../interests/presentation/widgets/interest_list_view.dart';
+import '../../domain/entities/conversation_entity.dart';
 import '../providers/inbox_providers.dart';
 import '../widgets/conversation_card.dart';
 import '../widgets/empty_inbox.dart';
 import '../widgets/inbox_app_bar.dart';
 import '../widgets/inbox_search_bar.dart';
+import '../widgets/inbox_selection_scope.dart';
 import '../widgets/inbox_shimmer.dart';
 import '../widgets/inbox_tabs.dart';
 import '../widgets/premium_conversation_card.dart';
@@ -18,13 +20,36 @@ import '../widgets/premium_conversation_card.dart';
 /// The Inbox — replaces the old placeholder Chat tab. AppBar + search +
 /// animated tabs (Interests Received / Interests Sent / Messages) over a
 /// scrollable, pull-to-refreshable conversation list.
+///
+/// Passing [onSelectConversation] puts the page in master-detail mode: a row
+/// tap calls it (and [selectedConversationId] marks the open row) instead of
+/// pushing the full-screen chat route. Both are optional; without them the page
+/// behaves exactly as the single-pane inbox.
 class InboxPage extends ConsumerWidget {
-  const InboxPage({super.key});
+  final String? selectedConversationId;
+  final ValueChanged<ConversationEntity>? onSelectConversation;
+
+  const InboxPage({
+    super.key,
+    this.selectedConversationId,
+    this.onSelectConversation,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeTab = ref.watch(inboxTabProvider);
 
+    final page = _buildPage(activeTab);
+    final onSelect = onSelectConversation;
+    if (onSelect == null) return page;
+    return InboxSelectionScope(
+      selectedConversationId: selectedConversationId,
+      onSelect: onSelect,
+      child: page,
+    );
+  }
+
+  Widget _buildPage(InboxTab activeTab) {
     return Scaffold(
       appBar: const InboxAppBar(),
       body: Column(

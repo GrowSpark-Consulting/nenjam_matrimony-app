@@ -22,7 +22,7 @@ import '../../features/support/domain/models/support_ticket.dart';
 import '../../features/support/presentation/pages/support_ticket_form_page.dart';
 import '../../features/support/presentation/pages/ticket_history_page.dart';
 import '../../features/inbox/domain/entities/conversation_entity.dart';
-import '../../features/inbox/presentation/pages/inbox_page.dart';
+import '../../features/inbox/presentation/pages/inbox_shell_page.dart';
 import '../../features/interests/presentation/pages/interests_received_page.dart';
 import '../../features/interests/presentation/pages/interests_sent_page.dart';
 import '../../features/language/presentation/pages/language_page.dart';
@@ -635,11 +635,11 @@ GoRouter createRouter(WidgetRef ref) {
       GoRoute(
         path: RouteNames.chatDetailPattern,
         name: RouteNames.chatDetailName,
-        builder: (context, state) => ChatDetailRoutePage(
-          conversationId: state.pathParameters['conversationId']!,
+        builder: (context, state) => InboxShellPage(
+          selectedConversationId: state.pathParameters['conversationId']!,
           // Present for in-app navigation; absent after a reload or for a
           // copied link, in which case the page looks the thread up by id.
-          initial: state.extra is ConversationEntity
+          initialConversation: state.extra is ConversationEntity
               ? state.extra! as ConversationEntity
               : null,
         ),
@@ -720,7 +720,7 @@ GoRouter createRouter(WidgetRef ref) {
                 path: RouteNames.messages,
                 name: RouteNames.messagesName,
                 pageBuilder: (context, state) =>
-                    const NoTransitionPage(child: InboxPage()),
+                    const NoTransitionPage(child: InboxShellPage()),
               ),
             ],
           ),

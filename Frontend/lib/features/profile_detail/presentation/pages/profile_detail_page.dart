@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/layout/content_width.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../core/widgets/feedback/loading_widget.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -391,7 +392,11 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
 
         return Stack(
           children: [
-            _buildScrollView(context, viewportHeight: constraints.maxHeight),
+            _buildScrollView(
+              context,
+              viewportHeight: constraints.maxHeight,
+              viewportWidth: constraints.maxWidth,
+            ),
 
             // Floats over the content rather than taking a
             // Scaffold.bottomNavigationBar slot: the hero is meant to run
@@ -428,6 +433,7 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
   Widget _buildScrollView(
     BuildContext context, {
     required double viewportHeight,
+    required double viewportWidth,
   }) {
     final l10n = AppLocalizations.of(context);
     final detail = widget.detail;
@@ -437,6 +443,19 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
     // the gallery below is specifically "their *other* photos".
     final additionalPhotos =
         base.photoUrls.isEmpty ? const <String>[] : base.photoUrls.sublist(1);
+
+    // Keeps the single vertical scroll column from stretching across a wide
+    // window. The content slivers are inset rather than the scroll view being
+    // narrowed, so the hero stays full-bleed, the tab bar stays pinned, and
+    // the section keys `_revealSection` walks to are untouched.
+    final contentWidth = NmContentWidth.usableWidth(
+      availableWidth: viewportWidth,
+      horizontalPadding: AppSpacing.base * 2,
+      maxWidth: ContentWidth.detail,
+    );
+    final sideInset = viewportWidth.isFinite
+        ? (viewportWidth - contentWidth) / 2
+        : AppSpacing.base;
 
     return CustomScrollView(
       controller: _scrollController,
@@ -450,10 +469,10 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
 
         // ── About and the details behind it, then their photos ───────
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: EdgeInsets.fromLTRB(
+            sideInset,
             AppSpacing.base,
-            AppSpacing.base,
-            AppSpacing.base,
+            sideInset,
             AppSpacing.md,
           ),
           sliver: SliverList(
@@ -471,12 +490,18 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
         SliverPersistentHeader(
           pinned: true,
           delegate: ProfileDetailTabBarDelegate(
-            child: ProfileDetailSectionTabBar(
-              controller: _tabBarScrollController,
-              labels: _tabLabels(l10n),
-              itemKeys: _tabKeys,
-              selectedIndex: _selectedTab,
-              onTap: _scrollToSection,
+            // The bar carries its own horizontal padding, so it spans the
+            // content plus that padding to keep its first tab aligned with
+            // the content's left edge.
+            child: NmContentWidth(
+              maxWidth: contentWidth + AppSpacing.base * 2,
+              child: ProfileDetailSectionTabBar(
+                controller: _tabBarScrollController,
+                labels: _tabLabels(l10n),
+                itemKeys: _tabKeys,
+                selectedIndex: _selectedTab,
+                onTap: _scrollToSection,
+              ),
             ),
           ),
         ),
@@ -487,9 +512,9 @@ class _ProfileDetailScrollViewState extends State<_ProfileDetailScrollView> {
           // last card is never left underneath it once it appears.
           // `reservedHeight` already folds in the device's bottom inset.
           padding: EdgeInsets.fromLTRB(
-            AppSpacing.base,
+            sideInset,
             AppSpacing.md,
-            AppSpacing.base,
+            sideInset,
             AppSpacing.base +
                 ProfileDetailBottomActionBar.reservedHeight(context),
           ),

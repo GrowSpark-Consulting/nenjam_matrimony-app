@@ -14,6 +14,7 @@ import '../providers/presence_providers.dart';
 import '../utils/handle_unblock_conversation.dart';
 import '../utils/inbox_date_format.dart';
 import '../utils/open_chat_detail.dart';
+import 'inbox_selection_scope.dart';
 import 'smart_indicator_chip.dart';
 
 /// Configures the shared [NmChatCard] from a [ConversationEntity] and adds
@@ -145,6 +146,8 @@ class ConversationCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final notifier = ref.read(conversationsNotifierProvider.notifier);
+    // Non-null only when the Inbox sits beside a detail pane (expanded widths).
+    final selection = InboxSelectionScope.maybeOf(context);
 
     // Live presence for this peer only — a narrow `select` so just this row
     // rebuilds (and only when its peer's online/typing flips), never the list.
@@ -170,6 +173,7 @@ class ConversationCard extends ConsumerWidget {
       isPinned: conversation.isPinned,
       isMuted: conversation.isMuted,
       isTyping: isTyping,
+      isSelected: selection?.selectedConversationId == conversation.id,
       readStatus: _readStatus(),
       indicator: conversation.smartIndicator == ConversationSmartIndicator.none
           ? null
@@ -183,7 +187,9 @@ class ConversationCard extends ConsumerWidget {
       // Marking read now happens in ChatDetailPage's own lifecycle (entry-
       // point-agnostic — also covers Profile Detail's Message button and any
       // future deep link/push route), not here, so it can't double-fire.
-      onTap: () => openChatDetail(context, conversation),
+      onTap: () => selection != null
+          ? selection.onSelect(conversation)
+          : openChatDetail(context, conversation),
     );
 
     return Slidable(

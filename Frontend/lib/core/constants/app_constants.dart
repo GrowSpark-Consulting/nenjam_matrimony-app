@@ -35,7 +35,7 @@ abstract final class AppConstants {
   // override is what you reach for to point somewhere else.
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://nenjammatrimony-app-production.up.railway.app',
+    defaultValue: 'https://nenjam-matrimony.onrender.com',
   );
   static const Duration apiConnectTimeout = Duration(seconds: 20);
   static const Duration apiReceiveTimeout = Duration(seconds: 20);
