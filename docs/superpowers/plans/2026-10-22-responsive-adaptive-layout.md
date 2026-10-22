@@ -635,7 +635,7 @@
       final errors = await pumpAtSize(
         tester,
         const Size(100, 100),
-        Row(children: [Container(width: 500, height: 10)]),
+        Row(children: const [SizedBox(width: 500, height: 10)]),
       );
       expect(errors, isNotEmpty, reason: 'a 500px child in a 100px row overflows');
       expect(shortError(errors.first), contains('overflow'));
@@ -651,7 +651,7 @@
         final errors = await pumpAtSize(
           tester,
           size,
-          Row(children: [Container(width: 500, height: 10)]),
+          Row(children: const [SizedBox(width: 500, height: 10)]),
         );
         if (errors.isNotEmpty) reported.add(size.width);
       }
@@ -739,7 +739,10 @@
   List<Object> drainExceptions(WidgetTester tester) {
     final found = <Object>[];
     while (true) {
-      final e = tester.takeException();
+      // Explicit cast: takeException() returns `dynamic`, which strict-casts
+      // rejects as an argument to List<Object>.add. Same form as the existing
+      // harness in responsive_pages_audit_test.dart.
+      final Object? e = tester.takeException() as Object?;
       if (e == null) return found;
       found.add(e);
     }
