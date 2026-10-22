@@ -70,7 +70,7 @@ void main() {
     final errors = await pumpAtSize(
       tester,
       const Size(100, 100),
-      Row(children: [Container(width: 500, height: 10)]),
+      const Row(children: [SizedBox(width: 500, height: 10)]),
     );
     expect(
       errors,
@@ -91,7 +91,7 @@ void main() {
       final errors = await pumpAtSize(
         tester,
         size,
-        Row(children: [Container(width: 500, height: 10)]),
+        const Row(children: [SizedBox(width: 500, height: 10)]),
       );
       if (errors.isNotEmpty) reported.add(size.width);
     }
