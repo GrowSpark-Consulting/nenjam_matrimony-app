@@ -732,10 +732,15 @@
   /// plus a tall page most easily overflows.
   const Size kShortDesktop = Size(900, 600);
 
-  /// Collects every pending framework exception.
+  /// Takes every exception the binding will hand over, as a list.
   ///
-  /// [WidgetTester.takeException] returns one at a time, so a single call can
-  /// hide later overflows behind the first.
+  /// Note what the framework can and cannot give you. `flutter_test`'s binding
+  /// holds a SINGLE pending exception, not a queue: when a second arrives
+  /// un-taken it dumps both to console and replaces the slot with a synthetic
+  /// "Multiple exceptions (N) were detected..." summary (see binding.dart's
+  /// `FlutterError.onError` override). A single pump therefore yields at most
+  /// ONE entry. That is enough for overflow detection — one entry fails the
+  /// assertion, and the console dump still shows every individual overflow.
   List<Object> drainExceptions(WidgetTester tester) {
     final found = <Object>[];
     while (true) {
