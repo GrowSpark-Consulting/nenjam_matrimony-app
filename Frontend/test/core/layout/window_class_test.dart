@@ -67,6 +67,7 @@ void main() {
     testWidgets('a narrow pane on a large window classifies as compact '
         'when read from local constraints', (tester) async {
       late WindowClass paneClass;
+      late double paneWidth;
       await tester.pumpWidget(
         MediaQuery(
           data: const MediaQueryData(size: Size(1920, 1080)),
@@ -83,7 +84,8 @@ void main() {
                 width: 400,
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    paneClass = WindowClass.fromWidth(constraints.maxWidth);
+                    paneWidth = constraints.maxWidth;
+                    paneClass = WindowClass.fromWidth(paneWidth);
                     return const SizedBox.shrink();
                   },
                 ),
@@ -92,6 +94,9 @@ void main() {
           ),
         ),
       );
+      // Pin the premise: the LayoutBuilder must really see the 400px pane.
+      // Without this assertion the class check alone would not show that.
+      expect(paneWidth, 400);
       expect(
         paneClass,
         WindowClass.compact,

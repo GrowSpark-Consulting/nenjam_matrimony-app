@@ -9,6 +9,13 @@ void main() {
       expect(ContentWidth.prose, lessThan(ContentWidth.formWide));
       expect(ContentWidth.formWide, lessThan(ContentWidth.detail));
     });
+
+    test('token values are pinned', () {
+      expect(ContentWidth.prose, 680);
+      expect(ContentWidth.form, 560);
+      expect(ContentWidth.formWide, 900);
+      expect(ContentWidth.detail, 1200);
+    });
   });
 
   group('usableWidth', () {
@@ -92,6 +99,32 @@ void main() {
       await pumpAt(tester, const Size(1920, 1080));
       final left = tester.getTopLeft(find.byKey(const ValueKey('body'))).dx;
       expect(left, closeTo((1920 - ContentWidth.prose) / 2, 0.5));
+    });
+
+    testWidgets('padded content width matches usableWidth', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1920, 1080));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NmContentWidth(
+            maxWidth: ContentWidth.prose,
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Container(key: const ValueKey('padded'), color: Colors.red),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(find.byKey(const ValueKey('padded'))).width,
+        NmContentWidth.usableWidth(
+          availableWidth: 1920,
+          horizontalPadding: 64,
+          maxWidth: ContentWidth.prose,
+        ),
+        reason:
+            'the widget and usableWidth must agree, or grid maths '
+            'over-estimates the available space',
+      );
     });
   });
 }

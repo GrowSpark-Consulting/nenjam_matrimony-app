@@ -61,14 +61,20 @@ class NmContentWidth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final body = padding == null
-        ? child
-        : Padding(padding: padding!, child: child);
+    // Padding sits OUTSIDE the constraint so [maxWidth] always means the width
+    // of the CONTENT, matching [usableWidth]. With the Padding inside the
+    // ConstrainedBox the two disagreed by the padding amount on any surface
+    // wider than the token (1920px available, 32px/side, prose 680: the widget
+    // rendered 616 while usableWidth predicted 680), which would have made
+    // grid column maths over-estimate the space available.
+    final constrained = ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: child,
+    );
     return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        child: body,
-      ),
+      child: padding == null
+          ? constrained
+          : Padding(padding: padding!, child: constrained),
     );
   }
 }
