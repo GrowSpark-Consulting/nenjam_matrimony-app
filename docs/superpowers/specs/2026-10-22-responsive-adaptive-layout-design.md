@@ -229,6 +229,33 @@ the shell change.
 
 ### 6.3 Profile detail (`detail`, ~1200)
 
+> **DECISION 2026-10-22 — §6.3 two-column layout is DEFERRED (user-approved).**
+>
+> **Delivered:** the single scrolling column, bounded to `ContentWidth.detail`
+> (1200px) and centred beyond that. Measured: 375 -> 343, 768 -> 736,
+> 1024 -> 992, and 1440/1920/3440 -> 1200 centred.
+>
+> **Deferred:** the two-column split at `large`.
+>
+> **Why.** `profile_detail_page.dart` is a `CustomScrollView` whose sections sit
+> in two `SliverList`s either side of a **pinned** `SliverPersistentHeader`
+> holding `ProfileDetailSectionTabBar`. Tapping a tab runs
+> `_scrollToSection` -> `_revealSection`, which walks the viewport *vertically*
+> in bounded steps using `_directionToSection`'s +1/-1 ("the target sits below
+> / above everything currently mounted") to force lazy slivers to build before
+> `Scrollable.ensureVisible`. Across a horizontal split "above/below" is
+> undefined for the second column, so tab navigation to a right-column section
+> would break — and that code's own doc comment records that a naive earlier
+> version silently did nothing for any off-screen section.
+>
+> Shipping two columns therefore needs a product decision about the section tab
+> bar first (drop it at `large`, or redesign it for per-column scrolling). The
+> user elected to keep the tab bar and its current behaviour.
+>
+> **Accepted limitation:** profile detail is readable and centred on wide
+> screens but single-column. This is a deliberate trade, not an accidental
+> omission.
+
 At `large`: photo gallery + key facts in a left column; detail sections
 (family, lifestyle, horoscope, preferences, verification, timeline) in a right
 column; max 1200px, centered beyond. At `expanded` and below: unchanged single
