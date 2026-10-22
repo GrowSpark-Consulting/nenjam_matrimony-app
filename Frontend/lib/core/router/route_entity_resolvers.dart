@@ -25,7 +25,11 @@ final chatConversationByIdProvider = FutureProvider.autoDispose
         return null;
       }
 
-      final loaded = await ref.watch(conversationsNotifierProvider.future);
+      // read, not watch: the re-fetch below changes the list's state, and a
+      // watch would re-run this provider on that change -- re-fetching again,
+      // forever -- for any id that is not in the list, so the unavailable
+      // state could never be reached.
+      final loaded = await ref.read(conversationsNotifierProvider.future);
       final hit = find(loaded);
       if (hit != null) return hit;
 

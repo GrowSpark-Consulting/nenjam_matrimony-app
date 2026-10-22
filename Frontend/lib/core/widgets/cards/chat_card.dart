@@ -44,6 +44,10 @@ class NmChatCard extends StatelessWidget {
   final bool isTyping;
   final NmReadStatus readStatus;
 
+  /// Whether this row is the conversation open in a neighbouring detail pane
+  /// (master-detail layouts). Always false in the single-pane inbox.
+  final bool isSelected;
+
   /// Optional small chip slot (e.g. a "New Match" indicator) shown above
   /// the name.
   final Widget? indicator;
@@ -71,6 +75,7 @@ class NmChatCard extends StatelessWidget {
     this.isMuted = false,
     this.isTyping = false,
     this.readStatus = NmReadStatus.none,
+    this.isSelected = false,
     this.indicator,
     this.heroTag,
   });
@@ -90,10 +95,13 @@ class NmChatCard extends StatelessWidget {
 
     return Semantics(
       button: onTap != null,
+      selected: isSelected,
       label: semanticParts.join(', '),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        color: unreadCount > 0
+        color: isSelected
+            ? AppColors.primarySurfaceStrong.withValues(alpha: 0.6)
+            : unreadCount > 0
             ? unreadTint.withValues(alpha: 0.4)
             : Colors.transparent,
         child: InkWell(
