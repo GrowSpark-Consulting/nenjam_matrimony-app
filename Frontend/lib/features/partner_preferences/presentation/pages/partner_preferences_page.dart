@@ -312,17 +312,25 @@ class _PartnerPreferencesPageState extends ConsumerState<PartnerPreferencesPage>
                 ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(AppSpacing.base),
-        child: NmContentWidth(
-          maxWidth: ContentWidth.form,
-          fill: true,
-          child: NmPrimaryButton(
-            label: l10n.partnerPrefSaveButton,
-            isLoading: _saving,
-            // Disabled until the real saved values have loaded once — tapping
-            // Save before then would PUT the placeholder draft values (from
-            // registrationProvider, not necessarily what's actually saved)
-            // and could overwrite genuine preferences with empty/stale ones.
-            onPressed: _hydratedBaseFromBackend ? _save : null,
+        // heightFactor 1: a bar slot would otherwise give this the whole
+        // screen's height and squeeze the page body out.
+        child: Align(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: ContentWidth.form),
+            child: SizedBox(
+              width: double.infinity,
+              child: NmPrimaryButton(
+                label: l10n.partnerPrefSaveButton,
+                isLoading: _saving,
+                // Disabled until the real saved values have loaded once —
+                // tapping Save before then would PUT the placeholder draft
+                // values (from registrationProvider, not necessarily what's
+                // actually saved) and could overwrite genuine preferences
+                // with empty/stale ones.
+                onPressed: _hydratedBaseFromBackend ? _save : null,
+              ),
+            ),
           ),
         ),
       ),

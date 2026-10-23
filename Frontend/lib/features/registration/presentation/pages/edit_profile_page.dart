@@ -238,16 +238,25 @@ class _SectionList extends ConsumerWidget {
           ),
           children: twoColumns
               ? [
-                  // Alternating, so the columns stay in reading order and
-                  // roughly balanced however tall each card is.
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: _column(cards, start: 0)),
-                      const SizedBox(width: AppSpacing.base),
-                      Expanded(child: _column(cards, start: 1)),
-                    ],
-                  ),
+                  // Rows of two, each as tall as its taller card, so reading
+                  // order stays left-to-right, top-to-bottom.
+                  for (var i = 0; i < cards.length; i += 2) ...[
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: cards[i]),
+                          const SizedBox(width: AppSpacing.base),
+                          Expanded(
+                            child: i + 1 < cards.length
+                                ? cards[i + 1]
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.base),
+                  ],
                 ]
               : [
                   for (final card in cards) ...[
@@ -259,15 +268,6 @@ class _SectionList extends ConsumerWidget {
       },
     );
   }
-
-  Widget _column(List<Widget> cards, {required int start}) => Column(
-    children: [
-      for (var i = start; i < cards.length; i += 2) ...[
-        cards[i],
-        const SizedBox(height: AppSpacing.base),
-      ],
-    ],
-  );
 }
 
 /// One section as a read-only card: icon, title and Edit on top, a divider,

@@ -46,12 +46,21 @@ void main() {
         'lifestyle',
         'photos',
       ];
-      var lastDy = double.negativeInfinity;
+      // Reading order: each card is on a lower row, or on the same row further
+      // right — the harness's 1200px surface shows the cards two to a row.
+      var last = const Offset(
+        double.negativeInfinity,
+        double.negativeInfinity,
+      );
       for (final id in ids) {
         expect(row(id), findsOneWidget, reason: 'missing row "$id"');
-        final dy = tester.getTopLeft(row(id)).dy;
-        expect(dy, greaterThan(lastDy), reason: '"$id" is out of order');
-        lastDy = dy;
+        final at = tester.getTopLeft(row(id));
+        expect(
+          at.dy > last.dy || (at.dy == last.dy && at.dx > last.dx),
+          isTrue,
+          reason: '"$id" is out of order',
+        );
+        last = at;
       }
       expect(EditProfileSection.all.map((s) => s.id).toList(), ids);
     });
