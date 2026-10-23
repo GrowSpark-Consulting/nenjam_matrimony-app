@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/layout/content_width.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../widgets/interest_list_view.dart';
 
@@ -15,7 +16,13 @@ class InterestsReceivedPage extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.drawerInterestReceived)),
-      body: const SafeArea(child: InterestListView(isReceived: true)),
+      body: const SafeArea(
+        child: NmContentWidth(
+          maxWidth: ContentWidth.prose,
+          fill: true,
+          child: InterestListView(isReceived: true),
+        ),
+      ),
     );
   }
 }

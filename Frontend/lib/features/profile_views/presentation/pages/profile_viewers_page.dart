@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/layout/content_width.dart';
 import '../../../../core/router/profile_navigation.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -108,7 +109,7 @@ class ProfileViewersPage extends ConsumerWidget {
                         .refresh(),
                     child: ListView.separated(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.all(16),
+                      padding: NmContentWidth.pagePadding(context, const EdgeInsets.all(16)),
                       itemCount: viewers.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) => _ViewerCard(
@@ -248,7 +249,7 @@ class _LoadingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      padding: NmContentWidth.pagePadding(context, const EdgeInsets.all(16)),
       itemCount: 5,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) => const NmShimmer.card(),

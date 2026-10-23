@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/layout/window_class.dart';
 import '../../../../core/router/profile_navigation.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -82,32 +83,65 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
       child: Scaffold(
         backgroundColor: AppColors.primary,
         extendBodyBehindAppBar: true,
-        body: feedAsync.when(
-          data: (feed) {
-            if (feed.profiles.isEmpty) {
-              return const _EmptyReel();
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final reel = feedAsync.when(
+              data: (feed) {
+                if (feed.profiles.isEmpty) {
+                  return const _EmptyReel();
+                }
+                return _ReelFeed(
+                  profiles: feed.profiles,
+                  controller: _pageController,
+                  hasMore: feed.hasMore,
+                  onNearEnd: () =>
+                      ref.read(reelFeedProvider.notifier).loadMore(),
+                );
+              },
+              loading: () => const _ReelLoading(),
+              // See discover_page.dart's identical flag for why: keeps the
+              // reel on screen through a failed background refresh (e.g. a
+              // realtime `feed.invalidate`) instead of replacing it with an
+              // error state.
+              skipError: true,
+              error: (_, __) => Center(
+                child: NmErrorWidget(
+                  onRetry: () => ref.invalidate(reelFeedProvider),
+                ),
+              ),
+            );
+
+            // On a wide page, a full-bleed reel crops portrait photos to a
+            // landscape strip; show it as a centered portrait column instead,
+            // over the same plum background.
+            if (!WindowClass.fromWidth(
+              constraints.maxWidth,
+            ).isAtLeastExpanded) {
+              return reel;
             }
-            return _ReelFeed(
-              profiles: feed.profiles,
-              controller: _pageController,
-              hasMore: feed.hasMore,
-              onNearEnd: () => ref.read(reelFeedProvider.notifier).loadMore(),
+            final columnWidth = (constraints.maxHeight * 9 / 16).clamp(
+              ReelColumnMetrics.minWidth,
+              ReelColumnMetrics.maxWidth,
+            );
+            return Center(
+              child: SizedBox(
+                key: const ValueKey('matches-reel-column'),
+                width: columnWidth,
+                child: reel,
+              ),
             );
           },
-          loading: () => const _ReelLoading(),
-          // See discover_page.dart's identical flag for why: keeps the reel
-          // on screen through a failed background refresh (e.g. a realtime
-          // `feed.invalidate`) instead of replacing it with an error state.
-          skipError: true,
-          error: (_, __) => Center(
-            child: NmErrorWidget(
-              onRetry: () => ref.invalidate(reelFeedProvider),
-            ),
-          ),
         ),
       ),
     );
   }
+}
+
+/// Bounds for the centered reel column on wide pages. Its width follows the
+/// page height at the photos' 9:16 portrait shape, within these limits.
+abstract final class ReelColumnMetrics {
+  static const double minWidth = 360;
+  static const double maxWidth = 560;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

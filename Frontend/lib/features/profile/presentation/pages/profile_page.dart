@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/layout/content_width.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../verification/domain/models/face_verification.dart';
 import '../../../verification/presentation/providers/face_verification_providers.dart';
@@ -150,8 +151,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         ),
         slivers: [
           SliverPadding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
+            padding: EdgeInsets.symmetric(
+              // A full-screen route over the shell, so the window is its width.
+              horizontal: NmContentWidth.sidePadding(
+                availableWidth: MediaQuery.sizeOf(context).width,
+                maxWidth: ContentWidth.prose,
+                minPadding: AppSpacing.lg,
+              ),
               vertical: AppSpacing.base,
             ),
             sliver: SliverList(

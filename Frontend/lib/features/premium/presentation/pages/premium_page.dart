@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/layout/content_width.dart';
+import '../../../../core/layout/window_class.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -25,89 +27,130 @@ class PremiumPage extends StatelessWidget {
       // around the pill while the CTA below still comes to rest clear of it.
       body: SafeArea(
         bottom: false,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, navContentInset(context)),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, navContentInset(context)),
+            child: NmContentWidth(
+              maxWidth: ContentWidth.formWide,
+              child: _content(
+                context,
+                l10n,
+                plansSideBySide: WindowClass.fromWidth(
+                  constraints.maxWidth,
+                ).isAtLeastExpanded,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _content(
+    BuildContext context,
+    AppLocalizations l10n, {
+    required bool plansSideBySide,
+  }) {
+    const goldPlan = NmSubscriptionCard(
+      planName: 'Gold Luxury',
+      price: '₹4,999',
+      duration: '3 Months',
+      isPopular: true,
+      isSelected: true,
+      features: [
+        'Send 100 direct messages',
+        'View 50 verified contact numbers',
+        'AI Compatibility & Horoscope report',
+        'Priority profile listing',
+      ],
+    );
+    const platinumPlan = NmSubscriptionCard(
+      planName: 'Platinum VIP',
+      price: '₹9,999',
+      duration: '6 Months',
+      features: [
+        'Unlimited direct messages',
+        'Unlimited contact views',
+        'Dedicated Relationship Manager',
+        'Guaranteed top tier placement',
+      ],
+    );
+
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: AppGradients.premiumCard,
+            borderRadius: BorderRadius.circular(24),
+          ),
           child: Column(
             children: [
               Container(
-                padding: const EdgeInsets.all(24),
+                width: 76,
+                height: 76,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  gradient: AppGradients.premiumCard,
-                  borderRadius: BorderRadius.circular(24),
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.12),
+                  border: Border.all(
+                    color: AppColors.premiumCream.withValues(alpha: 0.35),
+                  ),
                 ),
-                child: Column(
-                  children: [
-                    Container(
-                      width: 76,
-                      height: 76,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withValues(alpha: 0.12),
-                        border: Border.all(
-                          color: AppColors.premiumCream.withValues(alpha: 0.35),
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.workspace_premium_rounded,
-                        size: 40,
-                        color: AppColors.premiumCream,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      l10n.premiumHeroTitle,
-                      style: AppTypography.headlineSmall.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.premiumHeroSubtitle,
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: Colors.white70,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                child: const Icon(
+                  Icons.workspace_premium_rounded,
+                  size: 40,
+                  color: AppColors.premiumCream,
                 ),
               ),
-              const SizedBox(height: 32),
-
-              // Plans
-              const NmSubscriptionCard(
-                planName: 'Gold Luxury',
-                price: '₹4,999',
-                duration: '3 Months',
-                isPopular: true,
-                isSelected: true,
-                features: [
-                  'Send 100 direct messages',
-                  'View 50 verified contact numbers',
-                  'AI Compatibility & Horoscope report',
-                  'Priority profile listing',
-                ],
+              const SizedBox(height: 16),
+              Text(
+                l10n.premiumHeroTitle,
+                style: AppTypography.headlineSmall.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 20),
-              const NmSubscriptionCard(
-                planName: 'Platinum VIP',
-                price: '₹9,999',
-                duration: '6 Months',
-                features: [
-                  'Unlimited direct messages',
-                  'Unlimited contact views',
-                  'Dedicated Relationship Manager',
-                  'Guaranteed top tier placement',
-                ],
+              const SizedBox(height: 8),
+              Text(
+                l10n.premiumHeroSubtitle,
+                style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+        const SizedBox(height: 32),
 
-              // No purchase flow exists: the backend has no mounted plans,
-              // checkout or payment-confirmation endpoints. The button stays
-              // visible but disabled, with the reason beside it, rather than
-              // leading to a screen that pretends a payment happened.
+        // Plans
+        if (plansSideBySide)
+          const IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: goldPlan),
+                SizedBox(width: 20),
+                Expanded(child: platinumPlan),
+              ],
+            ),
+          )
+        else ...[
+          goldPlan,
+          const SizedBox(height: 20),
+          platinumPlan,
+        ],
+        const SizedBox(height: 32),
+
+        // No purchase flow exists: the backend has no mounted plans,
+        // checkout or payment-confirmation endpoints. The button stays
+        // visible but disabled, with the reason beside it, rather than
+        // leading to a screen that pretends a payment happened.
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: ContentWidth.form),
+          child: Column(
+            children: [
               Text(
                 l10n.premiumUnavailableNotice,
                 textAlign: TextAlign.center,
@@ -121,11 +164,11 @@ class PremiumPage extends StatelessWidget {
                 useAccentGradient: true,
                 onPressed: null,
               ),
-              const SizedBox(height: 24),
             ],
           ),
         ),
-      ),
+        const SizedBox(height: 24),
+      ],
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/layout/content_width.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/cards/feedback_cards.dart';
@@ -75,7 +76,7 @@ class _LoadingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
-      padding: const EdgeInsets.all(20),
+      padding: NmContentWidth.pagePadding(context, const EdgeInsets.all(20)),
       itemCount: 6,
       separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (context, index) => const Row(
@@ -147,7 +148,7 @@ class _NotificationList extends ConsumerWidget {
     ].where((s) => sections[s]?.isNotEmpty ?? false).toList();
 
     return ListView.builder(
-      padding: const EdgeInsets.all(20),
+      padding: NmContentWidth.pagePadding(context, const EdgeInsets.all(20)),
       itemCount: orderedSections.length,
       itemBuilder: (context, sectionIndex) {
         final section = orderedSections[sectionIndex];

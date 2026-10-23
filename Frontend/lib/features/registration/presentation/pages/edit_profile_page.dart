@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/layout/content_width.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decorations.dart';
@@ -208,22 +209,65 @@ class _SectionList extends ConsumerWidget {
     final photos =
         ref.watch(myPhotosProvider).valueOrNull ?? const <UserPhoto>[];
 
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      children: [
-        for (final section in EditProfileSection.all) ...[
-          _SectionCard(
-            key: ValueKey('edit-profile-section-${section.id}'),
-            icon: section.icon,
-            title: _title(l10n, section.id),
-            rows: _rows(l10n, section.id, draft, photos),
-            onEdit: () => context.push(section.route),
+    final cards = [
+      for (final section in EditProfileSection.all)
+        _SectionCard(
+          key: ValueKey('edit-profile-section-${section.id}'),
+          icon: section.icon,
+          title: _title(l10n, section.id),
+          rows: _rows(l10n, section.id, draft, photos),
+          onEdit: () => context.push(section.route),
+        ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final side = NmContentWidth.sidePadding(
+          availableWidth: constraints.maxWidth,
+          maxWidth: ContentWidth.formWide,
+          minPadding: AppSpacing.lg,
+        );
+        final twoColumns =
+            constraints.maxWidth - side * 2 >= ContentWidth.formWide;
+        return ListView(
+          padding: EdgeInsets.fromLTRB(
+            side,
+            AppSpacing.lg,
+            side,
+            AppSpacing.lg,
           ),
-          const SizedBox(height: AppSpacing.base),
-        ],
-      ],
+          children: twoColumns
+              ? [
+                  // Alternating, so the columns stay in reading order and
+                  // roughly balanced however tall each card is.
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _column(cards, start: 0)),
+                      const SizedBox(width: AppSpacing.base),
+                      Expanded(child: _column(cards, start: 1)),
+                    ],
+                  ),
+                ]
+              : [
+                  for (final card in cards) ...[
+                    card,
+                    const SizedBox(height: AppSpacing.base),
+                  ],
+                ],
+        );
+      },
     );
   }
+
+  Widget _column(List<Widget> cards, {required int start}) => Column(
+    children: [
+      for (var i = start; i < cards.length; i += 2) ...[
+        cards[i],
+        const SizedBox(height: AppSpacing.base),
+      ],
+    ],
+  );
 }
 
 /// One section as a read-only card: icon, title and Edit on top, a divider,

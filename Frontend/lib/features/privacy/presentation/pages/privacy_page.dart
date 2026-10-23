@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/layout/content_width.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/cards/interest_card.dart';
@@ -92,7 +93,10 @@ class _PrivacyPageState extends ConsumerState<PrivacyPage> {
         ]),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
+          padding: NmContentWidth.pagePadding(
+            context,
+            const EdgeInsets.all(20),
+          ),
           children: [
             Text(
               l10n.privacyVisibilitySection,

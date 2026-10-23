@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/layout/content_width.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../registration/domain/models/profile_draft.dart';
@@ -40,7 +41,7 @@ class VerificationPage extends ConsumerWidget {
           onRefresh: () =>
               ref.read(verificationStatusesProvider.notifier).refresh(),
           child: ListView(
-            padding: const EdgeInsets.all(0),
+            padding: NmContentWidth.pagePadding(context, EdgeInsets.zero),
             children: const [
               FaceVerificationCard(),
               StepVerification(status: VerificationStatus(), onChanged: _noop),

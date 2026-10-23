@@ -11,6 +11,16 @@ import 'chat_image_viewer_page.dart';
 import 'chat_media_image.dart';
 import '../../../../core/widgets/images/local_media_image.dart';
 
+/// Widest a bubble may grow. Only binds above ~750px of window, so phones keep
+/// the 75%-of-screen rule while a long message in a wide desktop chat pane
+/// still wraps at a readable measure.
+const double kMaxBubbleWidth = 560;
+
+double bubbleMaxWidth(BuildContext context) {
+  final byScreen = MediaQuery.sizeOf(context).width * 0.75;
+  return byScreen < kMaxBubbleWidth ? byScreen : kMaxBubbleWidth;
+}
+
 /// A single chat bubble — right-aligned/primary-filled for the current
 /// user's own messages, left-aligned/surface-filled for the other person's,
 /// with a small time + delivery-tick footer on outgoing messages.
@@ -148,9 +158,7 @@ class _MessageBubbleContent extends StatelessWidget {
 
     final bubble = AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width * 0.75,
-      ),
+      constraints: BoxConstraints(maxWidth: bubbleMaxWidth(context)),
       margin: const EdgeInsets.symmetric(vertical: 3),
       padding: EdgeInsets.fromLTRB(
         message.type == MessageType.image ? 6 : 14,
@@ -423,9 +431,7 @@ class _DeletedBubble extends StatelessWidget {
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
+        constraints: BoxConstraints(maxWidth: bubbleMaxWidth(context)),
         margin: const EdgeInsets.symmetric(vertical: 3),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(

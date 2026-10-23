@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/profile_options.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/layout/content_width.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -305,25 +306,41 @@ class _PartnerPreferencesPageState extends ConsumerState<PartnerPreferencesPage>
                         ref.read(partnerPreferencesProvider.notifier).retry(),
                   ),
                 )
-              : _buildForm(context, l10n),
+              : LayoutBuilder(
+                  builder: (context, constraints) =>
+                      _buildForm(context, l10n, constraints.maxWidth),
+                ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(AppSpacing.base),
-        child: NmPrimaryButton(
-          label: l10n.partnerPrefSaveButton,
-          isLoading: _saving,
-          // Disabled until the real saved values have loaded once — tapping
-          // Save before then would PUT the placeholder draft values (from
-          // registrationProvider, not necessarily what's actually saved)
-          // and could overwrite genuine preferences with empty/stale ones.
-          onPressed: _hydratedBaseFromBackend ? _save : null,
+        child: NmContentWidth(
+          maxWidth: ContentWidth.form,
+          fill: true,
+          child: NmPrimaryButton(
+            label: l10n.partnerPrefSaveButton,
+            isLoading: _saving,
+            // Disabled until the real saved values have loaded once — tapping
+            // Save before then would PUT the placeholder draft values (from
+            // registrationProvider, not necessarily what's actually saved)
+            // and could overwrite genuine preferences with empty/stale ones.
+            onPressed: _hydratedBaseFromBackend ? _save : null,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildForm(BuildContext context, AppLocalizations l10n) {
+  Widget _buildForm(
+    BuildContext context,
+    AppLocalizations l10n,
+    double availableWidth,
+  ) {
+    final side = NmContentWidth.sidePadding(
+      availableWidth: availableWidth,
+      maxWidth: ContentWidth.form,
+      minPadding: AppSpacing.pagePadding.left,
+    );
     return SingleChildScrollView(
-        padding: AppSpacing.pagePadding,
+        padding: AppSpacing.pagePadding.copyWith(left: side, right: side),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

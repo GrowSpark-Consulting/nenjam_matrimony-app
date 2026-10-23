@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/layout/content_width.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -29,7 +30,7 @@ class HelpPage extends StatelessWidget {
       appBar: AppBar(title: Text(AppLocalizations.of(context).drawerHelp)),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: NmContentWidth.pagePadding(context, const EdgeInsets.all(20)),
           children: [
             Text(AppLocalizations.of(context).helpFaqTitle, style: AppTypography.titleLarge),
             const SizedBox(height: 16),

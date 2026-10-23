@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/layout/content_width.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
 import '../../../../core/widgets/feedback/empty_state.dart';
@@ -89,7 +90,7 @@ class _ShortlistedList extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
+      padding: NmContentWidth.pagePadding(context, const EdgeInsets.all(16)),
       scrollCacheExtent: const ScrollCacheExtent.pixels(600),
       itemCount: profiles.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -112,7 +113,7 @@ class _LoadingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      padding: NmContentWidth.pagePadding(context, const EdgeInsets.all(16)),
       itemCount: 4,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) => const NmShimmer.card(),

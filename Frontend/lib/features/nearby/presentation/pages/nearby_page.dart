@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/layout/content_width.dart';
 import '../../../../core/permissions/permission_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -90,7 +91,7 @@ class _LoadingView extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          padding: NmContentWidth.pagePadding(context, const EdgeInsets.fromLTRB(16, 16, 16, 8)),
           child: Row(
             children: [
               const SizedBox(
@@ -112,7 +113,7 @@ class _LoadingView extends StatelessWidget {
         // so the layout does not jump when results arrive.
         Expanded(
           child: ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: NmContentWidth.pagePadding(context, const EdgeInsets.all(16)),
             itemCount: 5,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) => const NmShimmer.card(),
@@ -139,7 +140,7 @@ class _NearbyList extends ConsumerWidget {
       onRefresh: () => ref.read(nearbyNotifierProvider.notifier).refresh(),
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: NmContentWidth.pagePadding(context, const EdgeInsets.all(16)),
         // One extra leading item when the fix was coarse, so the header scrolls
         // with the list instead of pinning a banner over it.
         itemCount: profiles.length + (isApproximate ? 1 : 0),

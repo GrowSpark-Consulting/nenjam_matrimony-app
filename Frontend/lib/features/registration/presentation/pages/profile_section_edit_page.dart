@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/layout/content_width.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/widgets/feedback/error_widget.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -180,7 +181,13 @@ class PhotosEditPage extends StatelessWidget {
       appBar: AppBar(
         title: Text(AppLocalizations.of(context).registrationPhotosTitle),
       ),
-      body: const SafeArea(child: StepPhotos()),
+      body: const SafeArea(
+        child: NmContentWidth(
+          maxWidth: ContentWidth.form,
+          fill: true,
+          child: StepPhotos(),
+        ),
+      ),
     );
   }
 }
@@ -454,7 +461,11 @@ class _SectionEditorState<T> extends ConsumerState<_SectionEditor<T>> {
                       padding: widget.bodyPadding,
                       keyboardDismissBehavior:
                           ScrollViewKeyboardDismissBehavior.onDrag,
-                      child: _form,
+                      child: NmContentWidth(
+                        maxWidth: ContentWidth.form,
+                        fill: true,
+                        child: _form,
+                      ),
                     ),
                   ),
                   RegistrationStickyBottomBar(

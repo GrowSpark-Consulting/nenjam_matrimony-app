@@ -36,12 +36,46 @@ class NmContentWidth extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
 
+  /// Give [child] exactly the capped width instead of letting it shrink to its
+  /// own size — what a form or a column of full-width cards expects.
+  final bool fill;
+
   const NmContentWidth({
     super.key,
     required this.maxWidth,
     required this.child,
     this.padding,
+    this.fill = false,
   });
+
+  /// Side padding that centers content no wider than [maxWidth] inside a
+  /// full-width scrollable, never less than [minPadding]. Keeping the
+  /// scrollable full width means a mouse wheel over the margins still scrolls.
+  static double sidePadding({
+    required double availableWidth,
+    required double maxWidth,
+    double minPadding = 0,
+  }) {
+    final centered = (availableWidth - maxWidth) / 2;
+    return centered > minPadding ? centered : minPadding;
+  }
+
+  /// [base] with its sides widened by [sidePadding], for a page pushed over
+  /// the shell — such a page is as wide as the window, so the window is the
+  /// width to center within. Below [maxWidth] plus [base]'s sides this is
+  /// [base] unchanged.
+  static EdgeInsets pagePadding(
+    BuildContext context,
+    EdgeInsets base, {
+    double maxWidth = ContentWidth.prose,
+  }) {
+    final side = sidePadding(
+      availableWidth: MediaQuery.sizeOf(context).width,
+      maxWidth: maxWidth,
+      minPadding: base.left,
+    );
+    return base.copyWith(left: side, right: side);
+  }
 
   /// The §4.1 derivation: how much width content actually gets.
   ///
@@ -73,7 +107,7 @@ class NmContentWidth extends StatelessWidget {
     // grid column maths over-estimate the space available.
     final constrained = ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
-      child: child,
+      child: fill ? SizedBox(width: double.infinity, child: child) : child,
     );
     return Center(
       child: padding == null

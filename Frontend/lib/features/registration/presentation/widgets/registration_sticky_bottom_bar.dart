@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/animations/app_animations.dart';
+import '../../../../core/layout/content_width.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons/gradient_button.dart';
@@ -77,63 +78,69 @@ class RegistrationStickyBottomBar extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (validationHint != null) ...[
+      // The bar's surface spans the window; its buttons line up with the
+      // centered form above them.
+      child: NmContentWidth(
+        maxWidth: ContentWidth.form,
+        fill: true,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (validationHint != null) ...[
+              Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    size: 16,
+                    color: AppColors.error,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      validationHint!,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.error,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
             Row(
               children: [
-                const Icon(
-                  Icons.info_outline_rounded,
-                  size: 16,
-                  color: AppColors.error,
+                Tooltip(
+                  message: backLabel,
+                  child: SizedBox(
+                    width: 56,
+                    height: 56,
+                    child: OutlinedButton(
+                      onPressed: isLoading ? null : onBack,
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Icon(Icons.arrow_back_rounded),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 16),
                 Expanded(
-                  child: Text(
-                    validationHint!,
-                    style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.error,
+                  child: AppAnimations.buttonPress(
+                    NmGradientButton(
+                      label: continueLabel,
+                      icon: continueIcon,
+                      isLoading: isLoading,
+                      onPressed: isLoading ? null : onNext,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
           ],
-          Row(
-            children: [
-              Tooltip(
-                message: backLabel,
-                child: SizedBox(
-                  width: 56,
-                  height: 56,
-                  child: OutlinedButton(
-                    onPressed: isLoading ? null : onBack,
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: const Icon(Icons.arrow_back_rounded),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: AppAnimations.buttonPress(
-                  NmGradientButton(
-                    label: continueLabel,
-                    icon: continueIcon,
-                    isLoading: isLoading,
-                    onPressed: isLoading ? null : onNext,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -153,38 +160,42 @@ class RegistrationStickyBottomBar extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Tooltip(
-            message: backLabel,
-            child: SizedBox(
-              width: 48,
-              height: 48,
-              child: OutlinedButton(
-                onPressed: isLoading ? null : onBack,
-                style: OutlinedButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+      child: NmContentWidth(
+        maxWidth: ContentWidth.form,
+        fill: true,
+        child: Row(
+          children: [
+            Tooltip(
+              message: backLabel,
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: isLoading ? null : onBack,
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
+                  child: const Icon(Icons.arrow_back_rounded),
                 ),
-                child: const Icon(Icons.arrow_back_rounded),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: SizedBox(
-              height: 48,
-              child: NmGradientButton(
-                label: continueLabel,
-                icon: continueIcon,
-                isLoading: isLoading,
-                onPressed: isLoading ? null : onNext,
+            const SizedBox(width: 8),
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: NmGradientButton(
+                  label: continueLabel,
+                  icon: continueIcon,
+                  isLoading: isLoading,
+                  onPressed: isLoading ? null : onNext,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

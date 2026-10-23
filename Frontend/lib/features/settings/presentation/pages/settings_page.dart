@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/layout/content_width.dart';
 import '../../../../core/permissions/nm_permission.dart';
 import '../../../../core/permissions/permission_providers.dart';
 import '../../../../core/router/route_names.dart';
@@ -139,7 +140,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: NmContentWidth.pagePadding(context, const EdgeInsets.all(20)),
           children: [
             Text(
               l10n.settingsAccountSecuritySection,
