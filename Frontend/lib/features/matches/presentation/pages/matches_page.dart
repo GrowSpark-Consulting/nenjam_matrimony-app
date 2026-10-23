@@ -85,6 +85,11 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
         extendBodyBehindAppBar: true,
         body: LayoutBuilder(
           builder: (context, constraints) {
+            // Width alone would also catch a landscape phone, too short for
+            // the action column beside a card; it keeps the full-bleed reel.
+            final desktop =
+                WindowClass.fromWidth(constraints.maxWidth).isAtLeastExpanded &&
+                constraints.maxHeight >= ReelColumnMetrics.minDesktopHeight;
             final reel = feedAsync.when(
               data: (feed) {
                 if (feed.profiles.isEmpty) {
@@ -94,6 +99,7 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
                   profiles: feed.profiles,
                   controller: _pageController,
                   hasMore: feed.hasMore,
+                  desktop: desktop,
                   onNearEnd: () =>
                       ref.read(reelFeedProvider.notifier).loadMore(),
                 );
@@ -111,23 +117,46 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
               ),
             );
 
-            // On a wide page, a full-bleed reel crops portrait photos to a
-            // landscape strip; show it as a centered portrait column instead,
-            // over the same plum background.
-            if (!WindowClass.fromWidth(
-              constraints.maxWidth,
-            ).isAtLeastExpanded) {
-              return reel;
-            }
-            final columnWidth = (constraints.maxHeight * 9 / 16).clamp(
-              ReelColumnMetrics.minWidth,
-              ReelColumnMetrics.maxWidth,
-            );
-            return Center(
-              child: SizedBox(
-                key: const ValueKey('matches-reel-column'),
-                width: columnWidth,
-                child: reel,
+            if (!desktop) return reel;
+
+            // On a wide page a full-bleed reel crops portrait photos to a
+            // landscape strip. Instead: the category bar as a page toolbar,
+            // and under it each profile as a portrait card in the photos'
+            // 9:16 shape, centered, with its actions beside it.
+            return SafeArea(
+              child: Column(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.base,
+                      AppSpacing.base,
+                      AppSpacing.base,
+                      AppSpacing.md,
+                    ),
+                    child: Center(child: _MatchesCategoryBar()),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.base),
+                      child: LayoutBuilder(
+                        builder: (context, region) {
+                          final cardWidth = (region.maxHeight * 9 / 16).clamp(
+                            ReelColumnMetrics.minWidth,
+                            ReelColumnMetrics.maxWidth,
+                          );
+                          return Center(
+                            child: SizedBox(
+                              key: const ValueKey('matches-reel-column'),
+                              width:
+                                  cardWidth + ReelColumnMetrics.sideWidth * 2,
+                              child: reel,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ),
             );
           },
@@ -137,11 +166,22 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
   }
 }
 
-/// Bounds for the centered reel column on wide pages. Its width follows the
-/// page height at the photos' 9:16 portrait shape, within these limits.
+/// The desktop reel: card bounds, and the band either side of the card — the
+/// actions on the right, an equal band on the left so the card itself is
+/// centered under the toolbar.
 abstract final class ReelColumnMetrics {
+  /// The card's width follows the page height at the photos' 9:16 shape,
+  /// within these limits.
   static const double minWidth = 360;
   static const double maxWidth = 560;
+
+  /// Page height the desktop layout needs: the toolbar, plus a card tall
+  /// enough for the four actions stacked beside it.
+  static const double minDesktopHeight = 560;
+
+  static const double actionsWidth = 80;
+  static const double actionsGap = AppSpacing.base;
+  static const double sideWidth = actionsWidth + actionsGap;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -154,11 +194,16 @@ class _ReelFeed extends StatelessWidget {
   final bool hasMore;
   final VoidCallback onNearEnd;
 
+  /// Desktop layout: the category bar is the page's toolbar instead of an
+  /// overlay, and each card's actions sit beside it.
+  final bool desktop;
+
   const _ReelFeed({
     required this.profiles,
     required this.controller,
     required this.hasMore,
     required this.onNearEnd,
+    this.desktop = false,
   });
 
   @override
@@ -181,13 +226,14 @@ class _ReelFeed extends StatelessWidget {
           itemBuilder: (context, index) {
             return _KeepAlivePage(
               key: ValueKey(profiles[index].id),
-              child: _ReelCard(profile: profiles[index]),
+              child: _ReelCard(profile: profiles[index], sideActions: desktop),
             );
           },
         ),
 
         // ── Fixed header overlay ─────────────────────────────────────
-        const Positioned(top: 0, left: 0, right: 0, child: _ReelHeader()),
+        if (!desktop)
+          const Positioned(top: 0, left: 0, right: 0, child: _ReelHeader()),
       ],
     );
   }
@@ -420,7 +466,10 @@ class _MatchesCategoryChip extends StatelessWidget {
 class _ReelCard extends ConsumerStatefulWidget {
   final DiscoveryProfileEntity profile;
 
-  const _ReelCard({required this.profile});
+  /// Actions beside the card (desktop) instead of over the photo.
+  final bool sideActions;
+
+  const _ReelCard({required this.profile, this.sideActions = false});
 
   @override
   ConsumerState<_ReelCard> createState() => _ReelCardState();
@@ -510,7 +559,32 @@ class _ReelCardState extends ConsumerState<_ReelCard>
     final settled = interestButtonIsSettled(status);
     final shortlisted = ref.watch(isShortlistedProvider(widget.profile.id));
 
-    return GestureDetector(
+    final actions = _ActionColumn(
+      interested: settled,
+      interestedLabel: interestButtonLabel(
+        status,
+        AppLocalizations.of(context),
+      ),
+      shortlisted: shortlisted,
+      onInterested: _sendInterest,
+      onShortlist: () => handleShortlistToggle(context, ref, widget.profile),
+      onShare: () {},
+      onMore: () => showSafetyActionSheet(
+        context,
+        ref,
+        userId: widget.profile.id,
+        userName: widget.profile.name,
+        onBlocked: () {
+          ref.read(reelFeedProvider.notifier).removeProfile(widget.profile.id);
+          // So this member shows up next time the Blocked Users list
+          // (Privacy & Safety) is opened, even if it was already loaded
+          // before this block happened.
+          ref.invalidate(blockedUsersNotifierProvider);
+        },
+      ),
+    );
+
+    final card = GestureDetector(
       // Tapping anywhere on the card (outside the action column and the
       // action buttons, which win the gesture arena for their own taps
       // as the deeper/more-specific recognizers) opens Profile Detail.
@@ -546,37 +620,12 @@ class _ReelCardState extends ConsumerState<_ReelCard>
             // draws the floating nav over it), so the pill's own height is
             // added to the offset — otherwise the lowest buttons sit behind
             // the pill, which also swallows their taps.
-            Positioned(
-              right: 16,
-              bottom: 48 + MediaQuery.paddingOf(context).bottom,
-              child: _ActionColumn(
-                interested: settled,
-                interestedLabel: interestButtonLabel(
-                  status,
-                  AppLocalizations.of(context),
-                ),
-                shortlisted: shortlisted,
-                onInterested: _sendInterest,
-                onShortlist: () =>
-                    handleShortlistToggle(context, ref, widget.profile),
-                onShare: () {},
-                onMore: () => showSafetyActionSheet(
-                  context,
-                  ref,
-                  userId: widget.profile.id,
-                  userName: widget.profile.name,
-                  onBlocked: () {
-                    ref
-                        .read(reelFeedProvider.notifier)
-                        .removeProfile(widget.profile.id);
-                    // So this member shows up next time the Blocked Users
-                    // list (Privacy & Safety) is opened, even if it was
-                    // already loaded before this block happened.
-                    ref.invalidate(blockedUsersNotifierProvider);
-                  },
-                ),
+            if (!widget.sideActions)
+              Positioned(
+                right: 16,
+                bottom: 48 + MediaQuery.paddingOf(context).bottom,
+                child: actions,
               ),
-            ),
 
             // ── Bottom info area ─────────────────────────────────────
             // Same widget Profile Detail's hero uses; the gutter it leaves on
@@ -615,6 +664,35 @@ class _ReelCardState extends ConsumerState<_ReelCard>
               ),
           ],
         ),
+      ),
+    );
+
+    if (!widget.sideActions) return card;
+
+    // Desktop: a rounded card with its actions beside it, an equal band on
+    // the left keeping the card centered, and a gap between consecutive
+    // cards.
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          const SizedBox(width: ReelColumnMetrics.sideWidth),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+              child: card,
+            ),
+          ),
+          const SizedBox(width: ReelColumnMetrics.actionsGap),
+          SizedBox(
+            width: ReelColumnMetrics.actionsWidth,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+              child: actions,
+            ),
+          ),
+        ],
       ),
     );
   }

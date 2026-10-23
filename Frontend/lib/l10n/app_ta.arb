@@ -146,6 +146,7 @@
   "navDiscover": "கண்டறி",
   "navMessages": "இன்பாக்ஸ்",
   "navPremium": "பிரீமியம்",
+  "navMore": "மேலும்",
   "navUnreadMessagesSemanticLabel": "{count,plural, =1{1 படிக்காத செய்தி} other{{count} படிக்காத செய்திகள்}}",
   "discoverForYouTab": "உங்களுக்காக",
   "discoverNearMeTab": "என் அருகில்",

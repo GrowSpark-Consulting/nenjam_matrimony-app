@@ -3,6 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nenjam_matrimony/core/services/storage_service.dart';
 import 'package:nenjam_matrimony/core/widgets/cards/subscription_card.dart';
+import 'package:nenjam_matrimony/features/discover/domain/entities/discover_feed_entity.dart';
+import 'package:nenjam_matrimony/features/discover/domain/entities/discover_profile_page.dart';
+import 'package:nenjam_matrimony/features/discover/domain/entities/discovery_profile_entity.dart';
+import 'package:nenjam_matrimony/features/discover/domain/repositories/discover_repository.dart';
+import 'package:nenjam_matrimony/features/discover/presentation/providers/discover_providers.dart';
 import 'package:nenjam_matrimony/features/inbox/presentation/widgets/message_bubble.dart';
 import 'package:nenjam_matrimony/features/matches/presentation/pages/matches_page.dart';
 import 'package:nenjam_matrimony/features/premium/presentation/pages/premium_page.dart';
@@ -143,32 +148,70 @@ void main() {
 
   group('Matches reel', () {
     final column = find.byKey(const ValueKey('matches-reel-column'));
+    // The first profile's photo fills its card, so its rect is the card's.
+    final card = find.byWidgetPredicate(
+      (w) => w is Hero && w.tag == 'profile-photo-matches-p1',
+    );
+    final reelOverrides = [
+      discoverRepositoryProvider.overrideWithValue(_ReelBackend()),
+    ];
+
+    Future<void> pumpMatches(WidgetTester tester, Size size) async =>
+        expectNoOverflowIn(
+          await pumpAtSize(
+            tester,
+            size,
+            const MatchesPage(),
+            overrides: reelOverrides,
+          ),
+        );
 
     testWidgets('phones and portrait tablets keep the full-bleed reel', (
       tester,
     ) async {
       for (final size in [const Size(390, 844), const Size(820, 1180)]) {
-        expectNoOverflowIn(await pumpAtSize(tester, size, const MatchesPage()));
+        await pumpMatches(tester, size);
         expect(column, findsNothing, reason: '$size');
+        expect(tester.getRect(card).width, size.width, reason: '$size');
       }
     });
 
-    testWidgets('wide pages show a centered 9:16 column', (tester) async {
-      expectNoOverflowIn(
-        await pumpAtSize(tester, const Size(1440, 900), const MatchesPage()),
-      );
-      // 900 * 9 / 16, centered in 1440.
-      expect(tester.getSize(column).width, 506.25);
-      expect(tester.getTopLeft(column).dx, 466.875);
+    testWidgets('desktop: toolbar, then a centered portrait card with its '
+        'actions beside it', (tester) async {
+      await pumpMatches(tester, const Size(1440, 900));
+      final cardRect = tester.getRect(card);
+
+      // Centered in the page, in the photos' portrait shape (the 16px gap
+      // between consecutive cards makes it slightly taller than 9:16).
+      expect(cardRect.center.dx, 720);
+      expect(cardRect.width / cardRect.height, closeTo(9 / 16, 0.02));
+
+      // The category bar is a toolbar above the card, not over the photo.
+      final search = tester.getRect(find.byIcon(Icons.search_rounded));
+      expect(search.bottom, lessThan(cardRect.top));
+
+      // Interest, shortlist, share and more sit to the right of the card.
+      for (final icon in [
+        Icons.favorite_rounded,
+        Icons.bookmark_border_rounded,
+        Icons.share_rounded,
+        Icons.flag_rounded,
+      ]) {
+        expect(
+          tester.getCenter(find.byIcon(icon).first).dx,
+          greaterThan(cardRect.right),
+          reason: '$icon',
+        );
+      }
     });
 
-    testWidgets('the column stays within its bounds', (tester) async {
-      // Short window: 600 * 9 / 16 = 337.5, held at the 360 minimum.
-      await pumpAtSize(tester, const Size(1280, 600), const MatchesPage());
-      expect(tester.getSize(column).width, 360);
-      // Tall window: 1440 * 9 / 16 = 810, held at the 560 maximum.
-      await pumpAtSize(tester, const Size(2560, 1440), const MatchesPage());
-      expect(tester.getSize(column).width, 560);
+    testWidgets('the card stays within its width bounds', (tester) async {
+      // Short window: held at the 360 minimum.
+      await pumpMatches(tester, const Size(1280, 600));
+      expect(tester.getSize(card).width, 360);
+      // Tall window: held at the 560 maximum.
+      await pumpMatches(tester, const Size(2560, 1440));
+      expect(tester.getSize(card).width, 560);
     });
   });
 
@@ -230,4 +273,45 @@ void main() {
       expect(tester.getTopLeft(card(2)).dx, 270);
     });
   });
+}
+
+/// Serves a short, finished reel: three profiles and no further pages.
+class _ReelBackend implements DiscoverRepository {
+  @override
+  Future<DiscoverProfilePage> getDiscoverProfilesPage({
+    int page = 1,
+    int limit = 20,
+    String? cursor,
+  }) async => DiscoverProfilePage(
+    items: [
+      for (var i = 1; i <= 3; i++)
+        DiscoveryProfileEntity(
+          id: 'p$i',
+          matrimonyId: 'NM-P$i',
+          name: 'Profile $i',
+          age: 28,
+          location: 'Chennai',
+          profession: 'Engineer',
+          education: 'B.E.',
+          photoUrls: const [],
+        ),
+    ],
+    page: 1,
+    hasMore: false,
+  );
+
+  @override
+  Future<DiscoverFeedEntity> getDiscoverFeed() async =>
+      const DiscoverFeedEntity(
+        aiRecommended: [],
+        recentlyJoined: [],
+        stories: [],
+        verifiedProfiles: [],
+        nearYou: [],
+        premiumMembers: [],
+        profileCompletionPercent: 0,
+      );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

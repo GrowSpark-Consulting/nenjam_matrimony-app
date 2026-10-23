@@ -158,6 +158,7 @@
   "navDiscover": "Discover",
   "navMessages": "Inbox",
   "navPremium": "Premium",
+  "navMore": "More",
   "navUnreadMessagesSemanticLabel": "{count,plural, =1{1 unread message} other{{count} unread messages}}",
   "@navUnreadMessagesSemanticLabel": {
     "description": "Screen-reader announcement for the unread badge on the bottom nav Inbox icon. Appended to the tab label, e.g. 'Inbox, 3 unread messages'.",

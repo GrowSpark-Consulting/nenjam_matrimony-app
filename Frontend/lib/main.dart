@@ -26,6 +26,7 @@ import 'core/utils/photo_trace.dart';
 import 'core/services/storage_service.dart';
 import 'core/utils/story_perf.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/navigation/app_bottom_nav.dart';
 import 'features/authentication/domain/services/local_auth_session.dart';
 import 'features/authentication/presentation/providers/auth_providers.dart';
 import 'features/profile/presentation/providers/profile_dashboard_providers.dart';
@@ -376,6 +377,9 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
 
           // Routing
           routerConfig: router,
+          // The desktop navigation rail, beside every signed-in page.
+          builder: (context, child) =>
+              NmDesktopFrame(router: router, child: child!),
         );
       },
     );

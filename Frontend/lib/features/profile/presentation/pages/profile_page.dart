@@ -151,14 +151,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         ),
         slivers: [
           SliverPadding(
-            padding: EdgeInsets.symmetric(
-              // A full-screen route over the shell, so the window is its width.
-              horizontal: NmContentWidth.sidePadding(
-                availableWidth: MediaQuery.sizeOf(context).width,
-                maxWidth: ContentWidth.prose,
-                minPadding: AppSpacing.lg,
+            padding: NmContentWidth.pagePadding(
+              context,
+              const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.base,
               ),
-              vertical: AppSpacing.base,
             ),
             sliver: SliverList(
               delegate: SliverChildListDelegate([

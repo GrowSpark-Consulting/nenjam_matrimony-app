@@ -2,29 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nenjam_matrimony/core/layout/rail_inset.dart';
+import 'package:nenjam_matrimony/core/router/route_names.dart';
 import 'package:nenjam_matrimony/core/theme/app_theme.dart';
 import 'package:nenjam_matrimony/core/widgets/navigation/app_bottom_nav.dart';
 import 'package:nenjam_matrimony/features/inbox/presentation/providers/inbox_providers.dart';
+import 'package:nenjam_matrimony/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 
 import 'support/responsive_harness.dart';
 
-/// The navigation shell at every window class: phones keep the bottom pill and
-/// the full width, 900-1199 gets the 96px icon rail, 1200+ gets the 240px
-/// extended rail. Content is whatever is left of the window after the rail; it
-/// is never capped.
+/// The app's navigation at every window class: phones and narrow tablets keep
+/// the bottom pill at full width; from 900px the app-level [NmDesktopFrame]
+/// draws one 96px rail beside every signed-in page — the tabs and the pages
+/// pushed over them — and none on public routes. Content is whatever is left
+/// of the window after the rail; it is never capped.
 const _probe = ValueKey('probe');
 const _rail = ValueKey('desktop-nav-rail');
-const _extendedRail = ValueKey('desktop-nav-rail-extended');
+const _tabPaths = ['/a', '/b', '/c', '/d'];
 
-/// The rail width expected at [width]: 0 below 900 (the pill overlays the
-/// content via extendBody, so nothing is subtracted).
-double _expectedRailWidth(double width) {
-  if (width >= 1200) return NavRailMetrics.extendedWidth;
-  if (width >= 900) return NavRailMetrics.compactWidth;
-  return 0;
-}
+double _expectedRailWidth(double width) => width >= 900 ? 96 : 0;
 
+/// The tabs in a real [AppBottomNavShell], a page pushed over them, the
+/// footer destinations, and one public route — under the frame, exactly as
+/// main.dart installs it.
 Future<GoRouter> _pump(
   WidgetTester tester,
   Size size, {
@@ -34,6 +35,10 @@ Future<GoRouter> _pump(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
+  Widget page(String name) => Scaffold(
+    body: SizedBox.expand(key: _probe, child: Text('page $name')),
+  );
+
   final router = GoRouter(
     initialLocation: '/a',
     routes: [
@@ -41,7 +46,7 @@ Future<GoRouter> _pump(
         builder: (context, state, shell) =>
             AppBottomNavShell(navigationShell: shell),
         branches: [
-          for (final path in ['/a', '/b', '/c', '/d'])
+          for (final path in _tabPaths)
             StatefulShellBranch(
               routes: [
                 GoRoute(
@@ -53,17 +58,34 @@ Future<GoRouter> _pump(
             ),
         ],
       ),
+      GoRoute(path: '/pushed', builder: (context, state) => page('pushed')),
+      for (final path in [
+        RouteNames.notifications,
+        RouteNames.profile,
+        RouteNames.profileMenu,
+      ])
+        GoRoute(path: path, builder: (context, state) => page(path)),
+      // Public: no rail.
+      GoRoute(
+        path: RouteNames.login,
+        builder: (context, state) => page('login'),
+      ),
     ],
   );
   addTearDown(router.dispose);
 
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [unreadMessagesCountProvider.overrideWithValue(3)],
+      overrides: [
+        unreadMessagesCountProvider.overrideWithValue(3),
+        unreadNotificationsCountProvider.overrideWithValue(2),
+      ],
       child: MaterialApp.router(
         theme: AppTheme.light,
         locale: locale,
         routerConfig: router,
+        builder: (context, child) =>
+            NmDesktopFrame(router: router, tabPaths: _tabPaths, child: child!),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       ),
@@ -73,62 +95,130 @@ Future<GoRouter> _pump(
   return router;
 }
 
-String _path(GoRouter router) =>
-    router.routerDelegate.currentConfiguration.uri.path;
+String _location(GoRouter router) =>
+    router.routerDelegate.currentConfiguration.last.matchedLocation;
+
+/// The pill's own label row; the rail's labels live under [_rail].
+Finder _pillLabel(String text) => find.descendant(
+  of: find.byType(AppBottomNavShell),
+  matching: find.text(text),
+);
+
+Finder _railLabel(String text) =>
+    find.descendant(of: find.byKey(_rail), matching: find.text(text));
 
 void main() {
-  group('shell navigation affordance by window class', () {
+  group('navigation affordance by window class', () {
     // The boundary widths plus the two common desktop sizes.
     for (final width in [...kBoundaryWidths, 1440.0, 1920.0]) {
       testWidgets('at ${width.toInt()}px', (tester) async {
         await _pump(tester, Size(width, 900));
         expect(tester.takeException(), isNull);
 
-        final rail = find.byKey(_rail);
-        final extended = find.byKey(_extendedRail);
-        final probe = tester.getSize(find.byKey(_probe));
-
-        if (width >= 1200) {
-          expect(rail, findsOneWidget, reason: 'extended rail at large');
-          expect(extended, findsOneWidget);
-        } else if (width >= 900) {
-          expect(rail, findsOneWidget, reason: 'icon rail at expanded');
-          expect(extended, findsNothing);
+        if (width >= 900) {
+          expect(find.byKey(_rail), findsOneWidget);
+          expect(_pillLabel('Discover'), findsNothing, reason: 'never both');
         } else {
-          expect(rail, findsNothing, reason: 'bottom pill below 900');
+          expect(find.byKey(_rail), findsNothing);
+          expect(_pillLabel('Discover'), findsOneWidget);
         }
         expect(
-          probe.width,
+          tester.getSize(find.byKey(_probe)).width,
           width - _expectedRailWidth(width),
-          reason:
-              'content fills the window minus the rail; the old '
-              'assertion capped it at 720/960, which encoded the removed '
-              'global clamp',
+          reason: 'content fills the window minus the rail, uncapped',
         );
       });
     }
   });
 
-  group('content is not clamped', () {
-    for (final size in const [
-      Size(768, 1024),
-      Size(1366, 768),
-      Size(1440, 900),
-      Size(1920, 1080),
-      Size(2560, 1440),
-    ]) {
-      testWidgets('fills ${size.width.toInt()}px minus the rail', (
-        tester,
-      ) async {
-        await _pump(tester, size);
-        expect(tester.takeException(), isNull);
-        final probeWidth = tester.getSize(find.byKey(_probe)).width;
-        expect(probeWidth, size.width - _expectedRailWidth(size.width));
-        // Explicitly not the removed 720 (tablet) / 960 (desktop) caps.
-        if (size.width == 768) expect(probeWidth, 768);
-        if (size.width >= 1366) expect(probeWidth, greaterThan(960));
-      });
-    }
+  testWidgets('the rail runs the full height of the left edge', (tester) async {
+    await _pump(tester, const Size(1440, 900));
+    expect(
+      tester.getRect(find.byKey(_rail)),
+      const Rect.fromLTWH(0, 0, 96, 900),
+    );
+    // Footer pinned to the bottom, tabs near the top.
+    expect(tester.getTopLeft(_railLabel('Discover')).dy, lessThan(200));
+    expect(tester.getBottomLeft(_railLabel('More')).dy, greaterThan(800));
+  });
+
+  group('pages pushed over the tabs', () {
+    testWidgets('keep the rail beside them', (tester) async {
+      final router = await _pump(tester, const Size(1440, 900));
+      router.push('/pushed');
+      await tester.pumpAndSettle();
+      expect(find.text('page pushed'), findsOneWidget);
+      expect(find.byKey(_rail), findsOneWidget);
+      expect(tester.getTopLeft(find.text('page pushed')).dx, 96);
+    });
+
+    testWidgets('report the rail to layout that measures the window', (
+      tester,
+    ) async {
+      final router = await _pump(tester, const Size(1440, 900));
+      router.push('/pushed');
+      await tester.pumpAndSettle();
+      final context = tester.element(find.text('page pushed'));
+      expect(NmRailInset.of(context), 96);
+    });
+
+    testWidgets('a rail tab leaves them for that tab', (tester) async {
+      final router = await _pump(tester, const Size(1440, 900));
+      router.push('/pushed');
+      await tester.pumpAndSettle();
+      await tester.tap(_railLabel('Matches'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(_location(router), '/b');
+      expect(find.text('page pushed'), findsNothing);
+    });
+  });
+
+  testWidgets('public routes get no rail', (tester) async {
+    final router = await _pump(tester, const Size(1440, 900));
+    router.go(RouteNames.login);
+    await tester.pumpAndSettle();
+    expect(find.byKey(_rail), findsNothing);
+    expect(tester.getSize(find.byKey(_probe)).width, 1440);
+  });
+
+  group('rail destinations', () {
+    testWidgets('tabs switch branches', (tester) async {
+      final router = await _pump(tester, const Size(1440, 900));
+      await tester.tap(_railLabel('Premium'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(_location(router), '/d');
+    });
+
+    testWidgets('notifications, profile and more open their pages', (
+      tester,
+    ) async {
+      final router = await _pump(tester, const Size(1440, 900));
+      for (final (label, path) in [
+        ('Notifications', RouteNames.notifications),
+        ('Profile', RouteNames.profile),
+        ('More', RouteNames.profileMenu),
+      ]) {
+        await tester.tap(_railLabel(label));
+        await tester.pumpAndSettle();
+        expect(_location(router), path, reason: label);
+      }
+      // Pushed, so Back returns through them.
+      expect(router.canPop(), isTrue);
+    });
+
+    testWidgets('badges are announced with their item', (tester) async {
+      await _pump(tester, const Size(1440, 900));
+      expect(
+        find.bySemanticsLabel(RegExp('Inbox, 3 unread messages')),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(RegExp('^Notifications, 2')),
+        findsOneWidget,
+      );
+    });
   });
 
   group('phones keep the floating pill at full width', () {
@@ -136,56 +226,28 @@ void main() {
       testWidgets('at ${size.width.toInt()}x${size.height.toInt()}', (
         tester,
       ) async {
-        await _pump(tester, size);
+        final router = await _pump(tester, size);
         expect(tester.takeException(), isNull);
         expect(find.byKey(_rail), findsNothing);
         expect(tester.getSize(find.byKey(_probe)).width, size.width);
-        expect(find.text('Discover'), findsOneWidget);
-        // The unread-count announcement is unchanged.
         expect(
           find.bySemanticsLabel(RegExp('Inbox, 3 unread messages')),
           findsOneWidget,
         );
+        await tester.tap(_pillLabel('Matches'));
+        await tester.pumpAndSettle();
+        expect(_location(router), '/b');
       });
     }
   });
 
-  group('navigation switches tabs', () {
-    testWidgets('extended rail', (tester) async {
-      final router = await _pump(tester, const Size(1440, 900));
-      expect(find.byKey(_extendedRail), findsOneWidget);
-      await tester.tap(find.text('Premium'));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      expect(_path(router), '/d');
-    });
-
-    testWidgets('icon rail at expanded width', (tester) async {
-      final router = await _pump(tester, const Size(1024, 768));
-      expect(find.byKey(_rail), findsOneWidget);
-      expect(find.byKey(_extendedRail), findsNothing);
-      await tester.tap(find.text('Premium'));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      expect(_path(router), '/d');
-    });
-
-    testWidgets('bottom pill below 900', (tester) async {
-      final router = await _pump(tester, const Size(600, 800));
-      await tester.tap(find.text('Matches'));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      expect(_path(router), '/b');
-    });
-  });
-
-  testWidgets('extended rail ellipsizes long Tamil labels without overflow', (
+  testWidgets('long Tamil labels fit the rail without overflow', (
     tester,
   ) async {
-    await _pump(tester, const Size(1200, 800), locale: const Locale('ta'));
+    await _pump(tester, const Size(900, 800), locale: const Locale('ta'));
     expectNoOverflowIn(drainExceptions(tester));
-    expect(find.byKey(_extendedRail), findsOneWidget);
-    expect(find.text('பொருத்தங்கள்'), findsOneWidget);
+    expect(_railLabel('பொருத்தங்கள்'), findsOneWidget);
+    expect(_railLabel('மேலும்'), findsOneWidget);
   });
 
   testWidgets('rail and page remain usable on a short window', (tester) async {
@@ -193,15 +255,19 @@ void main() {
     expect(find.byKey(_rail), findsOneWidget);
     expect(tester.takeException(), isNull);
     // Every item stays reachable: the rail scrolls instead of overflowing.
-    expect(find.text('Premium'), findsOneWidget);
+    expect(find.text('More', skipOffstage: false), findsOneWidget);
   });
 
-  testWidgets('repeated resizes across every boundary leave a valid layout', (
+  testWidgets('the page keeps its state while the rail comes and goes', (
     tester,
   ) async {
-    await _pump(tester, const Size(360, 800));
+    final router = await _pump(tester, const Size(360, 800));
+    router.push('/pushed');
+    await tester.pumpAndSettle();
     for (final width in [...kBoundaryWidths, ...kBoundaryWidths.reversed]) {
       expectNoOverflowIn(await resizeTo(tester, Size(width, 800)));
+      // Still on the pushed page: the Navigator was not rebuilt.
+      expect(_location(router), '/pushed', reason: '${width.toInt()}px');
       expect(
         tester.getSize(find.byKey(_probe)).width,
         width - _expectedRailWidth(width),

@@ -57,8 +57,8 @@ class DiscoverPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final feedAsync = ref.watch(discoverFeedProvider);
 
-    // Measured on the window, like the shell's rail, so the inbox panel
-    // arrives at exactly the width the rail switches to its extended form.
+    // Measured on the window, so the inbox panel arrives at a 1200px window
+    // whatever the navigation rail beside the page takes.
     final wide = WindowClass.of(context).isLarge;
 
     final feedBody = feedAsync.when(

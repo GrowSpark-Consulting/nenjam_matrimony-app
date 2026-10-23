@@ -11,7 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// which is why this scans the source instead.
 void main() {
   group('the global app-width clamp stays removed', () {
-    test('MaterialApp.router declares no builder in main.dart', () {
+    test('MaterialApp.router\'s only builder is the desktop rail frame', () {
       final source = File('lib/main.dart').readAsStringSync();
       final routerStart = source.indexOf('MaterialApp.router(');
       expect(
@@ -26,16 +26,28 @@ void main() {
       final end = routerBody.indexOf('\n        );');
       final args = end == -1 ? routerBody : routerBody.substring(0, end);
 
+      // A builder on MaterialApp.router is how the removed NmAppFrame clamp
+      // was installed: it capped the app at ~1056px AND overrode the inner
+      // MediaQuery, making every wider layout impossible. The one builder
+      // allowed is NmDesktopFrame, which caps nothing — pages get the window
+      // minus the rail, uncapped (responsive_desktop_shell_test) — and
+      // overrides no MediaQuery (the size check below).
+      final builders = 'builder:'.allMatches(args).length;
       expect(
-        args.contains('builder:'),
-        isFalse,
-        reason:
-            'A builder on MaterialApp.router is how the removed NmAppFrame '
-            'clamp was installed. It capped the app at ~1056px AND overrode '
-            'the inner MediaQuery, making every wider layout impossible. If a '
-            'builder is genuinely needed here, it must not constrain width or '
-            'override MediaQuery.size.',
+        builders,
+        lessThanOrEqualTo(1),
+        reason: 'only the desktop frame may wrap the router',
       );
+      if (builders == 1) {
+        expect(
+          args,
+          contains('NmDesktopFrame(router: router, child: child!)'),
+          reason:
+              'A builder here must not constrain width or override '
+              'MediaQuery.size; the desktop frame is the one that does '
+              'neither.',
+        );
+      }
     });
 
     test('NmAppFrame is not re-declared anywhere under lib/', () {

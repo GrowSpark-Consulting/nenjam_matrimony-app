@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import 'rail_inset.dart';
+
 /// Maximum content widths, named by the **role of the content** rather than by
 /// device, so each surface has one obvious choice.
 ///
@@ -60,9 +62,9 @@ class NmContentWidth extends StatelessWidget {
     return centered > minPadding ? centered : minPadding;
   }
 
-  /// [base] with its sides widened by [sidePadding], for a page pushed over
-  /// the shell — such a page is as wide as the window, so the window is the
-  /// width to center within. Below [maxWidth] plus [base]'s sides this is
+  /// [base] with its sides widened by [sidePadding], for a full-page route:
+  /// such a page is the window less any navigation rail beside it, so that is
+  /// the width to center within. Below [maxWidth] plus [base]'s sides this is
   /// [base] unchanged.
   static EdgeInsets pagePadding(
     BuildContext context,
@@ -70,7 +72,8 @@ class NmContentWidth extends StatelessWidget {
     double maxWidth = ContentWidth.prose,
   }) {
     final side = sidePadding(
-      availableWidth: MediaQuery.sizeOf(context).width,
+      availableWidth:
+          MediaQuery.sizeOf(context).width - NmRailInset.of(context),
       maxWidth: maxWidth,
       minPadding: base.left,
     );

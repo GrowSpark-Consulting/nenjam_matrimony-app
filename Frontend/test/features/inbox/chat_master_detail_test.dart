@@ -59,7 +59,7 @@ void main() {
       expect(find.byType(InboxPage), findsOneWidget);
       expect(find.byType(NmEmptyState), findsOneWidget);
       expect(find.byType(ChatDetailPage), findsNothing);
-      // The shell rail is still there on /messages.
+      // The rail is still there on /messages.
       expect(find.byKey(const ValueKey('desktop-nav-rail')), findsOneWidget);
     });
 
@@ -80,9 +80,9 @@ void main() {
       expect(find.byType(InboxPage), findsOneWidget);
       expect(_openChatId(tester), 'c1');
       expect(_selectedRowIds(tester), ['c1']);
-      // Accepted limitation: the chat route sits outside the shell, so a
-      // directly-entered chat URL has no navigation rail.
-      expect(find.byKey(const ValueKey('desktop-nav-rail')), findsNothing);
+      // The chat route sits outside the shell, but the app-level desktop
+      // frame still draws the rail beside it.
+      expect(find.byKey(const ValueKey('desktop-nav-rail')), findsOneWidget);
     });
   });
 
@@ -603,6 +603,9 @@ Future<GoRouter> _pump(
       container: container,
       child: MaterialApp.router(
         routerConfig: router,
+        // As main.dart installs it.
+        builder: (context, child) =>
+            NmDesktopFrame(router: router, child: child!),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       ),
