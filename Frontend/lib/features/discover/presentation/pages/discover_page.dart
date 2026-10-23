@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/layout/adaptive_grid.dart';
+import '../../../../core/layout/content_width.dart';
+import '../../../../core/layout/window_class.dart';
 import '../../../../core/router/profile_navigation.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -20,6 +22,7 @@ import '../../../../core/widgets/buttons/primary_button.dart';
 import '../../../../core/widgets/navigation/app_bottom_nav.dart';
 import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../inbox/presentation/widgets/inbox_preview_panel.dart';
 import '../../../interests/presentation/providers/interests_provider.dart';
 import '../../../interests/presentation/utils/interest_button_copy.dart';
 import '../../../notifications/presentation/providers/notification_providers.dart';
@@ -54,6 +57,33 @@ class DiscoverPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final feedAsync = ref.watch(discoverFeedProvider);
 
+    // Measured on the window, like the shell's rail, so the inbox panel
+    // arrives at exactly the width the rail switches to its extended form.
+    final wide = WindowClass.of(context).isLarge;
+
+    final feedBody = feedAsync.when(
+      data: (feed) => _DiscoverFeedView(feed: feed, centered: wide),
+      loading: () => wide
+          ? const NmContentWidth(
+              maxWidth: ContentWidth.feed,
+              child: _DiscoverLoading(),
+            )
+          : const _DiscoverLoading(),
+      // skipError: a background refresh this provider's own `.invalidate`
+      // (pull-to-refresh, or a realtime `feed.invalidate` signal — see
+      // realtime_providers.dart) can fail without replacing an
+      // already-visible feed with a full error screen; only a genuine
+      // first-load failure (no previous value to fall back on) reaches
+      // this branch regardless of the flag — see AsyncValue.when's own
+      // doc comment.
+      skipError: true,
+      error: (error, _) => Center(
+        child: NmErrorWidget(
+          onRetry: () => ref.invalidate(discoverFeedProvider),
+        ),
+      ),
+    );
+
     // Explicit rather than left to AppBarTheme: the Scaffold below is
     // hardcoded to a light background in every app theme, but
     // AppBarTheme.systemOverlayStyle flips to light (white) icons in dark
@@ -63,23 +93,18 @@ class DiscoverPage extends ConsumerWidget {
       background: AppColors.backgroundLight,
       child: Scaffold(
         backgroundColor: AppColors.backgroundLight,
-        body: feedAsync.when(
-          data: (feed) => _DiscoverFeedView(feed: feed),
-          loading: () => const _DiscoverLoading(),
-          // skipError: a background refresh this provider's own `.invalidate`
-          // (pull-to-refresh, or a realtime `feed.invalidate` signal — see
-          // realtime_providers.dart) can fail without replacing an
-          // already-visible feed with a full error screen; only a genuine
-          // first-load failure (no previous value to fall back on) reaches
-          // this branch regardless of the flag — see AsyncValue.when's own
-          // doc comment.
-          skipError: true,
-          error: (error, _) => Center(
-            child: NmErrorWidget(
-              onRetry: () => ref.invalidate(discoverFeedProvider),
-            ),
-          ),
-        ),
+        body: wide
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: feedBody),
+                  const SizedBox(
+                    width: InboxPreviewPanel.width,
+                    child: InboxPreviewPanel(),
+                  ),
+                ],
+              )
+            : feedBody,
       ),
     );
   }
@@ -117,7 +142,12 @@ class _DiscoverLoading extends StatelessWidget {
 class _DiscoverFeedView extends ConsumerWidget {
   final DiscoverFeedEntity feed;
 
-  const _DiscoverFeedView({required this.feed});
+  /// Whether to center the feed at [ContentWidth.feed] when it has more room
+  /// than that. The scroll view itself stays full width, so a mouse wheel over
+  /// the side gutters still scrolls the feed.
+  final bool centered;
+
+  const _DiscoverFeedView({required this.feed, this.centered = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -144,124 +174,136 @@ class _DiscoverFeedView extends ConsumerWidget {
     // cannot simply be appended after the branch.
     const nearYouSliver = SliverToBoxAdapter(child: _NearYouSection());
 
+    // Everything below the sticky app bar (section 1).
+    final contentSlivers = <Widget>[
+      // ── 2. New Today stories ───────────────────────────────────
+      // Hoisted above the isEmpty/feed-content split rather than left
+      // inside the non-empty branch: `feed.stories.isNotEmpty` already
+      // implies `isEmpty == false` (stories is one of the six conditions
+      // isEmpty checks), so this renders in exactly the same case either
+      // way — but living up here keeps it a sibling of, not nested
+      // inside, the branch that used to also hide the card below.
+      if (feed.stories.isNotEmpty)
+        SliverToBoxAdapter(child: _NewTodaySection(stories: feed.stories)),
+
+      // ── 2b. Complete Your Profile reminder ──────────────────────
+      // Deliberately a sibling of the isEmpty/feed-content branch below,
+      // not nested inside either side of it: this card reflects the
+      // profile-completion response, never Discover's match results, so
+      // an empty or errored feed must not take it down with it. Renders
+      // nothing on its own when every section is done or the card was
+      // dismissed this session — see CompleteProfileCard.
+      const SliverToBoxAdapter(child: CompleteProfileCard()),
+
+      // An empty preference-filtered feed no longer takes the whole page.
+      // `SliverFillRemaining(hasScrollBody: false)` used to, which meant a
+      // user with no preference matches also lost Near You — even though
+      // Near Me applies completely different rules (gender and safety
+      // only, no partner preferences, a radius instead) and may well have
+      // people to show. Sized to its content now, with Near You below it.
+      if (isEmpty) ...[
+        const SliverToBoxAdapter(child: _DiscoverEmptyState()),
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.base,
+              vertical: AppSpacing.sm,
+            ),
+            child: Divider(height: 1),
+          ),
+        ),
+        nearYouSliver,
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl3)),
+      ] else ...[
+        // ── Fallback banner (backend widened the search) ───────────
+        if (feed.fallbackUsed)
+          const SliverToBoxAdapter(child: _FallbackBanner()),
+
+        // ── 3. AI Recommended card ────────────────────────────────
+        if (feed.aiRecommended.isNotEmpty)
+          SliverToBoxAdapter(
+            child: _SectionPadding(
+              child: _FeedSection(
+                title: l10n.discoverAiRecommendedTitle,
+                icon: Icons.auto_awesome_rounded,
+                iconColor: AppColors.secondary,
+                child: _LargeProfileCard(
+                  profile: feed.aiRecommended.first,
+                  showStats: false,
+                ),
+              ),
+            ),
+          ),
+
+        // ── 4. Recently Joined ─────────────────────────────────────
+        if (feed.recentlyJoined.isNotEmpty)
+          SliverToBoxAdapter(
+            child: _SectionPadding(
+              child: _FeedSection(
+                title: l10n.discoverRecentlyJoinedTitle,
+                child: _HorizontalCompactCards(profiles: feed.recentlyJoined),
+              ),
+            ),
+          ),
+
+        // ── 5. Verified Profiles card ─────────────────────────────
+        if (feed.verifiedProfiles.isNotEmpty)
+          SliverToBoxAdapter(
+            child: _SectionPadding(
+              child: _FeedSection(
+                title: l10n.discoverVerifiedProfilesTitle,
+                icon: Icons.verified_rounded,
+                iconColor: AppColors.verifiedBlue,
+                child: _LargeProfileCard(
+                  profile: feed.verifiedProfiles.first,
+                  showStats: true,
+                ),
+              ),
+            ),
+          ),
+
+        // ── 6. Near You — real device-location results ─────────────
+        nearYouSliver,
+
+        // ── 7. Premium Members ─────────────────────────────────────
+        if (feed.premiumMembers.isNotEmpty)
+          SliverToBoxAdapter(
+            child: _PremiumMembersSection(profiles: feed.premiumMembers),
+          ),
+
+        // ── Footer ────────────────────────────────────────────────
+        const SliverToBoxAdapter(child: _FeedFooter()),
+
+        // Clearance for the floating nav pill. Measured from the shell
+        // rather than the fixed 40 this used to be — that guessed number
+        // was shorter than the pill on most devices, so the footer ended
+        // up partly behind it.
+        SliverToBoxAdapter(child: SizedBox(height: navContentInset(context))),
+      ],
+    ];
+
     return RefreshIndicator(
       color: AppColors.secondary,
       onRefresh: () => ref.refresh(discoverFeedProvider.future),
-      child: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // ── 1. Sticky App Bar ──────────────────────────────────────
-          const _DiscoverAppBar(),
-
-          // ── 2. New Today stories ───────────────────────────────────
-          // Hoisted above the isEmpty/feed-content split rather than left
-          // inside the non-empty branch: `feed.stories.isNotEmpty` already
-          // implies `isEmpty == false` (stories is one of the six conditions
-          // isEmpty checks), so this renders in exactly the same case either
-          // way — but living up here keeps it a sibling of, not nested
-          // inside, the branch that used to also hide the card below.
-          if (feed.stories.isNotEmpty)
-            SliverToBoxAdapter(child: _NewTodaySection(stories: feed.stories)),
-
-          // ── 2b. Complete Your Profile reminder ──────────────────────
-          // Deliberately a sibling of the isEmpty/feed-content branch below,
-          // not nested inside either side of it: this card reflects the
-          // profile-completion response, never Discover's match results, so
-          // an empty or errored feed must not take it down with it. Renders
-          // nothing on its own when every section is done or the card was
-          // dismissed this session — see CompleteProfileCard.
-          const SliverToBoxAdapter(child: CompleteProfileCard()),
-
-          // An empty preference-filtered feed no longer takes the whole page.
-          // `SliverFillRemaining(hasScrollBody: false)` used to, which meant a
-          // user with no preference matches also lost Near You — even though
-          // Near Me applies completely different rules (gender and safety
-          // only, no partner preferences, a radius instead) and may well have
-          // people to show. Sized to its content now, with Near You below it.
-          if (isEmpty) ...[
-            const SliverToBoxAdapter(child: _DiscoverEmptyState()),
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.base,
-                  vertical: AppSpacing.sm,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final surplus = constraints.maxWidth - ContentWidth.feed;
+          final inset = centered && surplus > 0 ? surplus / 2 : 0.0;
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // ── 1. Sticky App Bar ──────────────────────────────────
+              _DiscoverAppBar(horizontalInset: inset),
+              if (inset == 0)
+                ...contentSlivers
+              else
+                SliverPadding(
+                  padding: EdgeInsets.symmetric(horizontal: inset),
+                  sliver: SliverMainAxisGroup(slivers: contentSlivers),
                 ),
-                child: Divider(height: 1),
-              ),
-            ),
-            nearYouSliver,
-            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl3)),
-          ] else ...[
-            // ── Fallback banner (backend widened the search) ───────────
-            if (feed.fallbackUsed)
-              const SliverToBoxAdapter(child: _FallbackBanner()),
-
-            // ── 3. AI Recommended card ────────────────────────────────
-            if (feed.aiRecommended.isNotEmpty)
-              SliverToBoxAdapter(
-                child: _SectionPadding(
-                  child: _FeedSection(
-                    title: l10n.discoverAiRecommendedTitle,
-                    icon: Icons.auto_awesome_rounded,
-                    iconColor: AppColors.secondary,
-                    child: _LargeProfileCard(
-                      profile: feed.aiRecommended.first,
-                      showStats: false,
-                    ),
-                  ),
-                ),
-              ),
-
-            // ── 4. Recently Joined ─────────────────────────────────────
-            if (feed.recentlyJoined.isNotEmpty)
-              SliverToBoxAdapter(
-                child: _SectionPadding(
-                  child: _FeedSection(
-                    title: l10n.discoverRecentlyJoinedTitle,
-                    child: _HorizontalCompactCards(
-                      profiles: feed.recentlyJoined,
-                    ),
-                  ),
-                ),
-              ),
-
-            // ── 5. Verified Profiles card ─────────────────────────────
-            if (feed.verifiedProfiles.isNotEmpty)
-              SliverToBoxAdapter(
-                child: _SectionPadding(
-                  child: _FeedSection(
-                    title: l10n.discoverVerifiedProfilesTitle,
-                    icon: Icons.verified_rounded,
-                    iconColor: AppColors.verifiedBlue,
-                    child: _LargeProfileCard(
-                      profile: feed.verifiedProfiles.first,
-                      showStats: true,
-                    ),
-                  ),
-                ),
-              ),
-
-            // ── 6. Near You — real device-location results ─────────────
-            nearYouSliver,
-
-            // ── 7. Premium Members ─────────────────────────────────────
-            if (feed.premiumMembers.isNotEmpty)
-              SliverToBoxAdapter(
-                child: _PremiumMembersSection(profiles: feed.premiumMembers),
-              ),
-
-            // ── Footer ────────────────────────────────────────────────
-            const SliverToBoxAdapter(child: _FeedFooter()),
-
-            // Clearance for the floating nav pill. Measured from the shell
-            // rather than the fixed 40 this used to be — that guessed number
-            // was shorter than the pill on most devices, so the footer ended
-            // up partly behind it.
-            SliverToBoxAdapter(
-              child: SizedBox(height: navContentInset(context)),
-            ),
-          ],
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -273,16 +315,27 @@ class _DiscoverFeedView extends ConsumerWidget {
 
 /// Translucent sticky app bar: avatar + "Nenjam Matrimony" + search + bell.
 class _DiscoverAppBar extends StatelessWidget {
-  const _DiscoverAppBar();
+  /// Extra space on each side so the bar's contents line up with a feed that
+  /// is centered narrower than the bar's full-width background.
+  final double horizontalInset;
+
+  const _DiscoverAppBar({this.horizontalInset = 0});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final inset = horizontalInset > 0;
 
     return SliverAppBar(
       pinned: true,
       floating: false,
       automaticallyImplyLeading: false,
+      titleSpacing: inset
+          ? NavigationToolbar.kMiddleSpacing + horizontalInset
+          : null,
+      actionsPadding: inset
+          ? EdgeInsetsDirectional.only(end: horizontalInset)
+          : null,
       backgroundColor: AppColors.backgroundLight.withValues(alpha: 0.88),
       surfaceTintColor: Colors.transparent,
       elevation: 0,

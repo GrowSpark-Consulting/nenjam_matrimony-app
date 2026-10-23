@@ -1,16 +1,26 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:nenjam_matrimony/core/router/route_names.dart';
 import 'package:nenjam_matrimony/core/services/location/device_location_service.dart';
 import 'package:nenjam_matrimony/core/services/location/location_providers.dart';
+import 'package:nenjam_matrimony/core/widgets/buttons/primary_button.dart';
 import 'package:nenjam_matrimony/core/widgets/feedback/shimmer_widget.dart';
 import 'package:nenjam_matrimony/features/discover/domain/entities/discover_feed_entity.dart';
 import 'package:nenjam_matrimony/features/discover/domain/entities/discovery_profile_entity.dart';
 import 'package:nenjam_matrimony/features/discover/presentation/pages/discover_page.dart';
 import 'package:nenjam_matrimony/features/discover/presentation/providers/discover_providers.dart';
+import 'package:nenjam_matrimony/features/inbox/domain/entities/conversation_entity.dart';
+import 'package:nenjam_matrimony/features/inbox/domain/repositories/conversation_repository.dart';
+import 'package:nenjam_matrimony/features/inbox/presentation/providers/inbox_providers.dart';
+import 'package:nenjam_matrimony/features/inbox/presentation/widgets/empty_inbox.dart';
+import 'package:nenjam_matrimony/features/inbox/presentation/widgets/inbox_preview_panel.dart';
 import 'package:nenjam_matrimony/features/nearby/domain/repositories/nearby_repository.dart';
 import 'package:nenjam_matrimony/features/nearby/presentation/providers/nearby_providers.dart';
+import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 
 import '../../support/responsive_harness.dart';
 
@@ -303,6 +313,208 @@ void main() {
       expect(_columnsOf(tester), 2);
     });
   });
+
+  group('Inbox panel on wide Discover', () {
+    for (final width in [360.0, 768.0, 1024.0, 1199.0]) {
+      testWidgets('${width.toInt()}px: no panel', (tester) async {
+        final errors = await _pumpDiscover(
+          tester,
+          Size(width, 900),
+          nearby: _FakeNearbyRepository(_profiles(4)),
+        );
+        expectNoOverflowIn(errors);
+        expect(_panelFinder, findsNothing);
+      });
+    }
+
+    for (final width in [1200.0, 1440.0, 1920.0, 3440.0]) {
+      testWidgets('${width.toInt()}px: one 320px panel', (tester) async {
+        final errors = await _pumpDiscover(
+          tester,
+          Size(width, 900),
+          nearby: _FakeNearbyRepository(_profiles(4)),
+        );
+        expectNoOverflowIn(errors);
+        expect(_panelFinder, findsOneWidget);
+        expect(tester.getSize(_panelFinder).width, 320);
+        // The panel sits on the right edge of the page.
+        expect(tester.getTopRight(_panelFinder).dx, width);
+      });
+    }
+
+    testWidgets('a live resize across 1200px adds and removes it', (
+      tester,
+    ) async {
+      final errors = await _pumpDiscover(
+        tester,
+        const Size(1199, 900),
+        nearby: _FakeNearbyRepository(_profiles(4)),
+      );
+      expectNoOverflowIn(errors);
+      expect(_panelFinder, findsNothing);
+
+      expectNoOverflowIn(await resizeTo(tester, const Size(1200, 900)));
+      expect(_panelFinder, findsOneWidget);
+
+      expectNoOverflowIn(await resizeTo(tester, const Size(1199, 900)));
+      expect(_panelFinder, findsNothing);
+    });
+
+    testWidgets('beside the panel, the feed is centered at the feed width', (
+      tester,
+    ) async {
+      final errors = await _pumpDiscover(
+        tester,
+        const Size(1920, 900),
+        nearby: _FakeNearbyRepository(_profiles(4)),
+      );
+      expectNoOverflowIn(errors);
+      // Feed column: 1920 - 320 panel = 1600. Feed content: 680, centered, so
+      // a 460px gutter each side. Near You pads itself 16px inside that.
+      expect(tester.getSize(_gridFinder).width, 648);
+      expect(tester.getTopLeft(_gridFinder).dx, 476);
+      expect(_columnsOf(tester), 4);
+    });
+
+    testWidgets('without the panel, the feed keeps its full width', (
+      tester,
+    ) async {
+      final errors = await _pumpDiscover(
+        tester,
+        const Size(1199, 900),
+        nearby: _FakeNearbyRepository(_profiles(4)),
+      );
+      expectNoOverflowIn(errors);
+      // Unchanged from before the panel existed: 1199 - 2 * 16.
+      expect(tester.getSize(_gridFinder).width, 1167);
+      expect(tester.getTopLeft(_gridFinder).dx, 16);
+    });
+
+    testWidgets('lists conversations newest first', (tester) async {
+      final errors = await _pumpDiscover(
+        tester,
+        const Size(1440, 900),
+        nearby: _FakeNearbyRepository(_profiles(4)),
+        conversations: [
+          _conversation('c1', hoursAgo: 3),
+          _conversation('c2', hoursAgo: 1),
+        ],
+      );
+      expectNoOverflowIn(errors);
+      expect(_inPanel('Member c1'), findsOneWidget);
+      expect(_inPanel('Member c2'), findsOneWidget);
+      expect(
+        tester.getTopLeft(_inPanel('Member c2')).dy,
+        lessThan(tester.getTopLeft(_inPanel('Member c1')).dy),
+      );
+    });
+
+    testWidgets('ignores the Inbox page search and filters, keeps its rules', (
+      tester,
+    ) async {
+      final errors = await _pumpDiscover(
+        tester,
+        const Size(1440, 900),
+        nearby: _FakeNearbyRepository(_profiles(4)),
+        conversations: [
+          _conversation('c1'),
+          _conversation('c2', isArchived: true),
+        ],
+        extraOverrides: [
+          // State a member could have left behind on the Inbox page.
+          inboxSearchQueryProvider.overrideWith((ref) => 'nobody matches'),
+          inboxFilterProvider.overrideWith((ref) => {InboxFilter.unread}),
+        ],
+      );
+      expectNoOverflowIn(errors);
+      expect(_inPanel('Member c1'), findsOneWidget);
+      // The Inbox's default view still hides archived conversations.
+      expect(_inPanel('Member c2'), findsNothing);
+    });
+
+    testWidgets('empty: the inbox empty state, without the Discover button', (
+      tester,
+    ) async {
+      final errors = await _pumpDiscover(
+        tester,
+        const Size(1440, 900),
+        nearby: _FakeNearbyRepository(_profiles(4)),
+      );
+      expectNoOverflowIn(errors);
+      final empty = find.descendant(
+        of: _panelFinder,
+        matching: find.byType(EmptyInbox),
+      );
+      expect(empty, findsOneWidget);
+      expect(tester.widget<EmptyInbox>(empty).showAction, isFalse);
+      expect(
+        find.descendant(
+          of: _panelFinder,
+          matching: find.byType(NmPrimaryButton),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('tapping a conversation opens the existing chat route', (
+      tester,
+    ) async {
+      const size = Size(1440, 900);
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1.0;
+      await tester.binding.setSurfaceSize(size);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final router = GoRouter(
+        initialLocation: RouteNames.discover,
+        routes: [
+          GoRoute(
+            path: RouteNames.discover,
+            builder: (context, state) => const DiscoverPage(),
+          ),
+          GoRoute(
+            path: RouteNames.chatDetailPattern,
+            builder: (context, state) => Scaffold(
+              body: Text('chat ${state.pathParameters['conversationId']}'),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _discoverOverrides(
+            nearby: _FakeNearbyRepository(_profiles(4)),
+            conversations: [_conversation('c1'), _conversation('c2')],
+          ),
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      await tester.tap(_inPanel('Member c2'));
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(find.text('chat c2'), findsOneWidget);
+      // Pushed on top of Discover (not a replacement), as the Inbox does.
+      expect(
+        router.routerDelegate.currentConfiguration.last.matchedLocation,
+        RouteNames.chatDetailPath('c2'),
+      );
+      expect(router.canPop(), isTrue);
+    });
+  });
 }
 
 // --- helpers ----------------------------------------------------------------
@@ -358,26 +570,98 @@ DiscoverFeedEntity _feed() => const DiscoverFeedEntity(
   premiumMembers: [],
 );
 
-/// Pumps the real [DiscoverPage] at [size] with only its location and nearby
-/// sources faked, and returns the exceptions the pump produced.
+/// Pumps the real [DiscoverPage] at [size] with only its data sources faked,
+/// and returns the exceptions the pump produced.
+///
+/// [conversations] feeds the inbox panel shown at large widths; it defaults to
+/// none so the Near You assertions see an empty, shimmer-free panel.
 Future<List<Object>> _pumpDiscover(
   WidgetTester tester,
   Size size, {
   required NearbyRepository nearby,
   DeviceLocationService? location,
+  List<ConversationEntity> conversations = const [],
+  List<Override> extraOverrides = const [],
 }) {
   return pumpAtSize(
     tester,
     size,
     const DiscoverPage(),
     overrides: [
-      deviceLocationServiceProvider.overrideWithValue(
-        location ?? _FakeLocationService(_granted),
+      ..._discoverOverrides(
+        nearby: nearby,
+        location: location,
+        conversations: conversations,
       ),
-      nearbyRepositoryProvider.overrideWithValue(nearby),
-      discoverFeedProvider.overrideWith((ref) async => _feed()),
+      ...extraOverrides,
     ],
   );
+}
+
+List<Override> _discoverOverrides({
+  required NearbyRepository nearby,
+  DeviceLocationService? location,
+  List<ConversationEntity> conversations = const [],
+}) => [
+  deviceLocationServiceProvider.overrideWithValue(
+    location ?? _FakeLocationService(_granted),
+  ),
+  nearbyRepositoryProvider.overrideWithValue(nearby),
+  discoverFeedProvider.overrideWith((ref) async => _feed()),
+  conversationRepositoryProvider.overrideWithValue(
+    _FakeConversationRepository(conversations),
+  ),
+];
+
+final Finder _panelFinder = find.byType(InboxPreviewPanel);
+
+/// Text inside the inbox panel only, so a name elsewhere on the page can't
+/// satisfy the assertion.
+Finder _inPanel(String text) =>
+    find.descendant(of: _panelFinder, matching: find.text(text));
+
+ConversationEntity _conversation(
+  String id, {
+  int hoursAgo = 1,
+  bool isArchived = false,
+}) => ConversationEntity(
+  id: id,
+  profile: DiscoveryProfileEntity(
+    id: 'peer-$id',
+    matrimonyId: 'NM-$id',
+    name: 'Member $id',
+    age: 28,
+    location: 'Chennai',
+    profession: 'Engineer',
+    education: 'B.E.',
+    photoUrls: const [],
+  ),
+  lastMessage: 'hello from $id',
+  lastMessageAt: DateTime(2026, 1, 1).subtract(Duration(hours: hoursAgo)),
+  isArchived: isArchived,
+);
+
+/// Hand-written fake (no mocking library in this repo). Anything the panel
+/// does not need is left to `noSuchMethod`, so an unexpected call fails loudly.
+class _FakeConversationRepository implements ConversationRepository {
+  _FakeConversationRepository(this.conversations);
+
+  final List<ConversationEntity> conversations;
+
+  @override
+  Future<ConversationResultPage> getConversations({
+    int page = 1,
+    int limit = 20,
+  }) async => ConversationResultPage(
+    items: conversations,
+    page: 1,
+    limit: limit,
+    total: conversations.length,
+    hasMore: false,
+  );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 const _granted = LocationSuccess(

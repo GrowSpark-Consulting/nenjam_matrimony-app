@@ -1,21 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/navigation/app_bottom_nav.dart';
-import '../../../../l10n/app_localizations.dart';
 import '../../../interests/presentation/widgets/interest_list_view.dart';
 import '../../domain/entities/conversation_entity.dart';
 import '../providers/inbox_providers.dart';
-import '../widgets/conversation_card.dart';
-import '../widgets/empty_inbox.dart';
+import '../widgets/conversation_list_view.dart';
 import '../widgets/inbox_app_bar.dart';
 import '../widgets/inbox_search_bar.dart';
 import '../widgets/inbox_selection_scope.dart';
-import '../widgets/inbox_shimmer.dart';
 import '../widgets/inbox_tabs.dart';
-import '../widgets/premium_conversation_card.dart';
 
 /// The Inbox — replaces the old placeholder Chat tab. AppBar + search +
 /// animated tabs (Interests Received / Interests Sent / Messages) over a
@@ -69,11 +62,17 @@ class InboxPage extends ConsumerWidget {
               switchInCurve: Curves.easeOut,
               switchOutCurve: Curves.easeIn,
               child: switch (activeTab) {
-                InboxTab.messages => const _MessagesTabView(key: ValueKey('messages')),
-                InboxTab.interestsReceived =>
-                  const InterestListView(key: ValueKey('received'), isReceived: true),
-                InboxTab.interestsSent =>
-                  const InterestListView(key: ValueKey('sent'), isReceived: false),
+                InboxTab.messages => const _MessagesTabView(
+                  key: ValueKey('messages'),
+                ),
+                InboxTab.interestsReceived => const InterestListView(
+                  key: ValueKey('received'),
+                  isReceived: true,
+                ),
+                InboxTab.interestsSent => const InterestListView(
+                  key: ValueKey('sent'),
+                  isReceived: false,
+                ),
               },
             ),
           ),
@@ -88,89 +87,8 @@ class _MessagesTabView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final conversationsAsync = ref.watch(filteredConversationsProvider);
-
-    return RefreshIndicator(
-      color: AppColors.primary,
-      onRefresh: () => ref.read(conversationsNotifierProvider.notifier).refresh(),
-      child: conversationsAsync.when(
-        loading: () => const InboxShimmer(),
-        error: (error, _) => ListView(
-          children: [
-            const SizedBox(height: 80),
-            Center(child: Text(AppLocalizations.of(context).inboxLoadError)),
-          ],
-        ),
-        data: (conversations) {
-          if (conversations.isEmpty) {
-            return ListView(
-              // Keeps RefreshIndicator's pull-to-refresh working even when
-              // the empty state doesn't otherwise fill/scroll the viewport.
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: const [
-                SizedBox(height: 48),
-                _FadeIn(child: EmptyInbox()),
-              ],
-            );
-          }
-          return ListView.separated(
-            physics: const AlwaysScrollableScrollPhysics(),
-            // Bottom padding clears the floating nav pill, which is drawn over
-            // this list — without it the last conversation cannot be scrolled
-            // out from under the pill.
-            padding: EdgeInsets.fromLTRB(0, 8, 0, navContentInset(context)),
-            // A conversation row is comfortably taller than the default
-            // 250px lookahead — widen it so swiping/scrolling never briefly
-            // shows an unbuilt gap on a fast fling.
-            scrollCacheExtent: const ScrollCacheExtent.pixels(600),
-            itemCount: conversations.length,
-            separatorBuilder: (_, __) => const Divider(height: 1, indent: 90),
-            itemBuilder: (context, index) {
-              final conversation = conversations[index];
-              return RepaintBoundary(
-                key: ValueKey(conversation.id),
-                child: conversation.isLocked
-                    ? PremiumConversationCard(conversation: conversation)
-                    : ConversationCard(conversation: conversation),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// One-shot fade-in on first build — used for the empty state so it settles
-/// in gently instead of popping in the instant the list resolves to zero
-/// items.
-class _FadeIn extends StatefulWidget {
-  final Widget child;
-
-  const _FadeIn({required this.child});
-
-  @override
-  State<_FadeIn> createState() => _FadeInState();
-}
-
-class _FadeInState extends State<_FadeIn> {
-  double _opacity = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _opacity = 1);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedOpacity(
-      opacity: _opacity,
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeOut,
-      child: widget.child,
+    return ConversationListView(
+      conversations: ref.watch(filteredConversationsProvider),
     );
   }
 }

@@ -333,57 +333,75 @@ final conversationsNotifierProvider =
   ConversationsNotifier.new,
 );
 
-/// Search + filter + pinned-first sort applied to the raw conversations
-/// list — same "derive, don't duplicate" style as
+/// Search + filter + pinned-first sort applied to a raw conversations list.
+///
+/// With no [query] and no [filters] this is the Inbox's default view:
+/// archived and blocked conversations hidden, pinned first, newest next.
+List<ConversationEntity> filterConversations(
+  Iterable<ConversationEntity> all, {
+  String query = '',
+  Set<InboxFilter> filters = const {},
+}) {
+  final normalizedQuery = query.trim().toLowerCase();
+  final showArchived = filters.contains(InboxFilter.archived);
+  final showBlocked = filters.contains(InboxFilter.blocked);
+
+  var result = all.where((c) {
+    if (c.isArchived && !showArchived) return false;
+    if (c.isBlocked && !showBlocked) return false;
+    if (showArchived && !c.isArchived) return false;
+    if (showBlocked && !c.isBlocked) return false;
+    return true;
+  });
+
+  if (filters.contains(InboxFilter.unread)) {
+    result = result.where((c) => c.unreadCount > 0);
+  }
+  if (filters.contains(InboxFilter.online)) {
+    result = result.where((c) => c.profile.isOnline);
+  }
+  if (filters.contains(InboxFilter.verified)) {
+    result = result.where((c) => c.profile.isVerified);
+  }
+  if (filters.contains(InboxFilter.premium)) {
+    result = result.where((c) => c.profile.isPremium);
+  }
+  if (filters.contains(InboxFilter.recent)) {
+    final cutoff = DateTime.now().subtract(const Duration(hours: 24));
+    result = result.where((c) => c.lastMessageAt.isAfter(cutoff));
+  }
+
+  if (normalizedQuery.isNotEmpty) {
+    result = result.where((c) =>
+        c.profile.name.toLowerCase().contains(normalizedQuery) ||
+        c.profile.matrimonyId.toLowerCase().contains(normalizedQuery) ||
+        c.lastMessage.toLowerCase().contains(normalizedQuery));
+  }
+
+  return result.toList()
+    ..sort((a, b) {
+      if (a.isPinned != b.isPinned) return a.isPinned ? -1 : 1;
+      return b.lastMessageAt.compareTo(a.lastMessageAt);
+    });
+}
+
+/// The Inbox page's list: [filterConversations] driven by its own search box
+/// and filter sheet — same "derive, don't duplicate" style as
 /// `discover_providers.dart`'s `discoverProfilesProvider`.
 final filteredConversationsProvider = Provider<AsyncValue<List<ConversationEntity>>>((ref) {
-  final query = ref.watch(inboxSearchQueryProvider).trim().toLowerCase();
+  final query = ref.watch(inboxSearchQueryProvider);
   final filters = ref.watch(inboxFilterProvider);
-  final conversationsAsync = ref.watch(conversationsNotifierProvider);
+  return ref.watch(conversationsNotifierProvider).whenData(
+        (all) => filterConversations(all, query: query, filters: filters),
+      );
+});
 
-  return conversationsAsync.whenData((all) {
-    final showArchived = filters.contains(InboxFilter.archived);
-    final showBlocked = filters.contains(InboxFilter.blocked);
-
-    var result = all.where((c) {
-      if (c.isArchived && !showArchived) return false;
-      if (c.isBlocked && !showBlocked) return false;
-      if (showArchived && !c.isArchived) return false;
-      if (showBlocked && !c.isBlocked) return false;
-      return true;
-    });
-
-    if (filters.contains(InboxFilter.unread)) {
-      result = result.where((c) => c.unreadCount > 0);
-    }
-    if (filters.contains(InboxFilter.online)) {
-      result = result.where((c) => c.profile.isOnline);
-    }
-    if (filters.contains(InboxFilter.verified)) {
-      result = result.where((c) => c.profile.isVerified);
-    }
-    if (filters.contains(InboxFilter.premium)) {
-      result = result.where((c) => c.profile.isPremium);
-    }
-    if (filters.contains(InboxFilter.recent)) {
-      final cutoff = DateTime.now().subtract(const Duration(hours: 24));
-      result = result.where((c) => c.lastMessageAt.isAfter(cutoff));
-    }
-
-    if (query.isNotEmpty) {
-      result = result.where((c) =>
-          c.profile.name.toLowerCase().contains(query) ||
-          c.profile.matrimonyId.toLowerCase().contains(query) ||
-          c.lastMessage.toLowerCase().contains(query));
-    }
-
-    final list = result.toList()
-      ..sort((a, b) {
-        if (a.isPinned != b.isPinned) return a.isPinned ? -1 : 1;
-        return b.lastMessageAt.compareTo(a.lastMessageAt);
-      });
-    return list;
-  });
+/// The Inbox's default view, deliberately blind to the Inbox page's search box
+/// and filter sheet: a query typed there must not empty a preview shown
+/// somewhere else.
+final inboxPreviewConversationsProvider =
+    Provider<AsyncValue<List<ConversationEntity>>>((ref) {
+  return ref.watch(conversationsNotifierProvider).whenData(filterConversations);
 });
 
 /// Unread conversation count for the Messages tab's badge.

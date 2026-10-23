@@ -9,7 +9,11 @@ import '../../../../l10n/app_localizations.dart';
 /// constructor — that constructor hardcodes English copy with no l10n hook,
 /// and this feature needs both languages.
 class EmptyInbox extends StatelessWidget {
-  const EmptyInbox({super.key});
+  /// Whether to offer the "go to Discover" button. Off where the empty inbox is
+  /// already shown on Discover, where the button would lead nowhere.
+  final bool showAction;
+
+  const EmptyInbox({super.key, this.showAction = true});
 
   @override
   Widget build(BuildContext context) {
@@ -19,18 +23,20 @@ class EmptyInbox extends StatelessWidget {
       title: l10n.inboxEmptyTitle,
       message: l10n.inboxEmptySubtitle,
       icon: Icons.forum_outlined,
-      action: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 280),
-        child: NmPrimaryButton(
-          label: l10n.inboxEmptyCta,
-          onPressed: () {
-            // The Inbox tab is a StatefulShellRoute branch — jump to the
-            // Discover branch (index 0) rather than pushing a new route on
-            // top of this one.
-            StatefulNavigationShell.maybeOf(context)?.goBranch(0);
-          },
-        ),
-      ),
+      action: showAction
+          ? ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 280),
+              child: NmPrimaryButton(
+                label: l10n.inboxEmptyCta,
+                onPressed: () {
+                  // The Inbox tab is a StatefulShellRoute branch — jump to the
+                  // Discover branch (index 0) rather than pushing a new route
+                  // on top of this one.
+                  StatefulNavigationShell.maybeOf(context)?.goBranch(0);
+                },
+              ),
+            )
+          : null,
     );
   }
 }

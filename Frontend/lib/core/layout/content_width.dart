@@ -19,6 +19,10 @@ abstract final class ContentWidth {
 
   /// A two-column detail surface (profile detail).
   static const double detail = 1200;
+
+  /// A vertical feed of profile cards (Discover). Wide enough for Near You's
+  /// four-up row (624px), narrow enough that a large card keeps its shape.
+  static const double feed = 680;
 }
 
 /// Centers [child] in a column no wider than [maxWidth].
