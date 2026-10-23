@@ -2039,5 +2039,9 @@
   "faceVerificationUpdatePhoto": "Update main photo",
   "faceVerificationCenterVerified": "Verified",
   "faceVerificationCenterReverify": "Your main photo changed — re-verify",
-  "faceVerificationCenterIncomplete": "Not verified yet"
+  "faceVerificationCenterIncomplete": "Not verified yet",
+  "photoViewerPrevious": "Previous photo",
+  "photoViewerNext": "Next photo",
+  "nearbyPermissionBlockedMessageWeb": "Location is blocked for this site. Allow it in your browser's site settings (next to the address bar), then try again.",
+  "profileLinkCopied": "Profile link copied"
 }

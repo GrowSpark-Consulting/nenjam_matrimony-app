@@ -9313,6 +9313,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not verified yet'**
   String get faceVerificationCenterIncomplete;
+
+  /// No description provided for @photoViewerPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous photo'**
+  String get photoViewerPrevious;
+
+  /// No description provided for @photoViewerNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next photo'**
+  String get photoViewerNext;
+
+  /// No description provided for @nearbyPermissionBlockedMessageWeb.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is blocked for this site. Allow it in your browser\'s site settings (next to the address bar), then try again.'**
+  String get nearbyPermissionBlockedMessageWeb;
+
+  /// No description provided for @profileLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile link copied'**
+  String get profileLinkCopied;
 }
 
 class _AppLocalizationsDelegate

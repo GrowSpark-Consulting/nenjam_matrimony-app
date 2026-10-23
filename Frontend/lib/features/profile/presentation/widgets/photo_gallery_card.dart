@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../core/widgets/images/sized_network_photo.dart';
+import '../../../../core/layout/mouse_drag_scroll.dart';
 
 /// Photo Gallery card — horizontal scroll of photo thumbnails with an
 /// add-photo dashed placeholder at the end.
@@ -82,28 +83,30 @@ class NmPhotoGalleryCard extends StatelessWidget {
           // Horizontal scroll
           SizedBox(
             height: 148,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              children: [
-                // Existing photos
-                ...photoUrls.asMap().entries.map(
-                  (entry) => Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.sm),
-                    child: GestureDetector(
-                      onTap: onPhotoTap == null ? null : () => onPhotoTap!(entry.key),
-                      child: _PhotoThumbnail(url: entry.value),
+            child: NmMouseDragScroll(
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  // Existing photos
+                  ...photoUrls.asMap().entries.map(
+                    (entry) => Padding(
+                      padding: const EdgeInsets.only(right: AppSpacing.sm),
+                      child: GestureDetector(
+                        onTap: onPhotoTap == null ? null : () => onPhotoTap!(entry.key),
+                        child: _PhotoThumbnail(url: entry.value),
+                      ),
                     ),
                   ),
-                ),
 
-                // Add placeholder
-                if (canAddMore)
-                  GestureDetector(
-                    onTap: onAddTap,
-                    child: const _AddThumbnail(),
-                  ),
-              ],
+                  // Add placeholder
+                  if (canAddMore)
+                    GestureDetector(
+                      onTap: onAddTap,
+                      child: const _AddThumbnail(),
+                    ),
+                ],
+              ),
             ),
           ),
         ],

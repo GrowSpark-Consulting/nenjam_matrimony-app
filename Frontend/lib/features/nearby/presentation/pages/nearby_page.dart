@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -274,6 +275,19 @@ class _PermissionView extends ConsumerWidget {
 
     // Once the OS has stopped showing its dialog, "Enable Location" would do
     // nothing at all — the only honest offer left is the settings screen.
+    // A browser has no settings screen an app can open — the site's
+    // location permission lives beside the address bar — so on the web the
+    // honest offer is to say where, and re-check once they have allowed it.
+    if (isPermanentlyDenied && kIsWeb) {
+      return _MessageView(
+        title: l10n.nearbyPermissionTitle,
+        message: l10n.nearbyPermissionBlockedMessageWeb,
+        icon: Icons.location_off_rounded,
+        actionLabel: l10n.nearbyRetry,
+        onAction: () => ref.read(nearbyNotifierProvider.notifier).refresh(),
+      );
+    }
+
     if (isPermanentlyDenied) {
       return _MessageView(
         title: l10n.nearbyPermissionTitle,
@@ -303,6 +317,19 @@ class _ServicesOffView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+
+    // In a browser this means the page is not getting location at all (no
+    // Geolocation API, e.g. an insecure origin); there is no OS screen to
+    // open from here, so say where the setting is and offer a re-check.
+    if (kIsWeb) {
+      return _MessageView(
+        title: l10n.nearbyServicesOffTitle,
+        message: l10n.nearbyPermissionBlockedMessageWeb,
+        icon: Icons.gps_off_rounded,
+        actionLabel: l10n.nearbyRetry,
+        onAction: () => ref.read(nearbyNotifierProvider.notifier).refresh(),
+      );
+    }
 
     return _MessageView(
       title: l10n.nearbyServicesOffTitle,

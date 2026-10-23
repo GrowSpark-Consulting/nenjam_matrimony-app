@@ -5162,4 +5162,17 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get faceVerificationCenterIncomplete => 'இன்னும் சரிபார்க்கப்படவில்லை';
+
+  @override
+  String get photoViewerPrevious => 'முந்தைய புகைப்படம்';
+
+  @override
+  String get photoViewerNext => 'அடுத்த புகைப்படம்';
+
+  @override
+  String get nearbyPermissionBlockedMessageWeb =>
+      'இந்தத் தளத்திற்கு இருப்பிட அனுமதி தடுக்கப்பட்டுள்ளது. உங்கள் உலாவியின் தள அமைப்புகளில் (முகவரிப் பட்டிக்கு அருகில்) அதை அனுமதித்து, மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get profileLinkCopied => 'சுயவிவர இணைப்பு நகலெடுக்கப்பட்டது';
 }

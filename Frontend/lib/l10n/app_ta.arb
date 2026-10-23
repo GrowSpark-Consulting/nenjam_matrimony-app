@@ -1706,5 +1706,9 @@
   "faceVerificationUpdatePhoto": "முதன்மை புகைப்படத்தைப் புதுப்பிக்கவும்",
   "faceVerificationCenterVerified": "சரிபார்க்கப்பட்டது",
   "faceVerificationCenterReverify": "உங்கள் முதன்மை புகைப்படம் மாறியது — மீண்டும் சரிபார்க்கவும்",
-  "faceVerificationCenterIncomplete": "இன்னும் சரிபார்க்கப்படவில்லை"
+  "faceVerificationCenterIncomplete": "இன்னும் சரிபார்க்கப்படவில்லை",
+  "photoViewerPrevious": "முந்தைய புகைப்படம்",
+  "photoViewerNext": "அடுத்த புகைப்படம்",
+  "nearbyPermissionBlockedMessageWeb": "இந்தத் தளத்திற்கு இருப்பிட அனுமதி தடுக்கப்பட்டுள்ளது. உங்கள் உலாவியின் தள அமைப்புகளில் (முகவரிப் பட்டிக்கு அருகில்) அதை அனுமதித்து, மீண்டும் முயற்சிக்கவும்.",
+  "profileLinkCopied": "சுயவிவர இணைப்பு நகலெடுக்கப்பட்டது"
 }

@@ -4,6 +4,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../core/layout/mouse_drag_scroll.dart';
 
 /// Match Journey section — a horizontally scrollable milestone timeline.
 ///
@@ -72,15 +73,17 @@ class NmMatchJourneyCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           LayoutBuilder(
             builder: (context, constraints) {
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                  child: _JourneyTimeline(
-                    steps: _stepsFor(AppLocalizations.of(context)),
-                    currentStep: currentStep,
-                    minWidth: constraints.maxWidth,
+              return NmMouseDragScroll(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                    child: _JourneyTimeline(
+                      steps: _stepsFor(AppLocalizations.of(context)),
+                      currentStep: currentStep,
+                      minWidth: constraints.maxWidth,
+                    ),
                   ),
                 ),
               );

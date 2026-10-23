@@ -14,6 +14,7 @@ import '../../domain/completion_recommendation.dart';
 import '../providers/completion_recommendation_provider.dart';
 import '../providers/profile_completeness_provider.dart';
 import '../utils/module_copy.dart';
+import '../../../../core/layout/mouse_drag_scroll.dart';
 
 /// Whether this Home card has been closed for the current app session.
 ///
@@ -242,20 +243,22 @@ class CompleteProfileCard extends ConsumerWidget {
             // regardless of how many tiles there are — a taller card was
             // exactly what made the first version feel like a section
             // rather than a nudge.
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (var i = 0; i < items.length; i++) ...[
-                    if (i > 0) const SizedBox(width: AppSpacing.xs),
-                    _CompleteProfileTile(
-                      key: ValueKey('home-complete-profile-${items[i].key}'),
-                      item: items[i],
-                    ),
+            NmMouseDragScroll(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var i = 0; i < items.length; i++) ...[
+                      if (i > 0) const SizedBox(width: AppSpacing.xs),
+                      _CompleteProfileTile(
+                        key: ValueKey('home-complete-profile-${items[i].key}'),
+                        item: items[i],
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ],

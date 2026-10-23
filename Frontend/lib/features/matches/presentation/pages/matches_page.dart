@@ -1,4 +1,7 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -25,6 +28,7 @@ import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 import '../../../shortlist/presentation/utils/shortlist_toggle.dart';
 import '../providers/matches_providers.dart';
 import '../providers/reel_feed_provider.dart';
+import '../../../../core/layout/mouse_drag_scroll.dart';
 
 /// Nenjam Matches — Instagram Reels-style vertical swipeable feed.
 ///
@@ -46,11 +50,13 @@ class MatchesPage extends ConsumerStatefulWidget {
 
 class _MatchesPageState extends ConsumerState<MatchesPage> {
   late final PageController _pageController;
+  late final ReelWheelPager _wheelPager;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
+    _wheelPager = ReelWheelPager(_pageController);
   }
 
   @override
@@ -98,6 +104,7 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
                 return _ReelFeed(
                   profiles: feed.profiles,
                   controller: _pageController,
+                  wheelPager: _wheelPager,
                   hasMore: feed.hasMore,
                   desktop: desktop,
                   onNearEnd: () =>
@@ -184,6 +191,54 @@ abstract final class ReelColumnMetrics {
   static const double sideWidth = actionsWidth + actionsGap;
 }
 
+/// Moves the reel one whole profile per mouse-wheel notch.
+///
+/// The [PageView]'s own wheel handling scrolls by the notch's pixels and then
+/// springs back to the nearest page, so on a tall reel one notch snapped back
+/// to where it started and a mouse could barely leave the first profile.
+/// Small trackpad deltas are summed until they add up to a notch, and nothing
+/// moves again until the page animation has had time to finish, so one
+/// trackpad swipe moves one profile rather than several.
+class ReelWheelPager {
+  final PageController controller;
+  final DateTime Function() _now;
+
+  ReelWheelPager(this.controller, {DateTime Function()? now})
+    : _now = now ?? DateTime.now;
+
+  static const double _notch = 50;
+  static const Duration _cooldown = Duration(milliseconds: 450);
+
+  double _pending = 0;
+  DateTime _lastMove = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Wire to a [Listener.onPointerSignal] *inside* the [PageView]'s items:
+  /// the deepest registrant wins [PointerSignalResolver], so registering
+  /// there takes the event before the PageView's own handler can.
+  void handle(PointerSignalEvent event, int pageCount) {
+    if (event is! PointerScrollEvent) return;
+    final dy = event.scrollDelta.dy;
+    if (dy == 0) return;
+    GestureBinding.instance.pointerSignalResolver.register(event, (_) {
+      if (!controller.hasClients) return;
+      final now = _now();
+      if (now.difference(_lastMove) < _cooldown) return;
+      _pending += dy;
+      if (_pending.abs() < _notch) return;
+      final page = controller.page?.round() ?? 0;
+      final target = _pending > 0 ? page + 1 : page - 1;
+      _pending = 0;
+      if (target < 0 || target >= pageCount) return;
+      _lastMove = now;
+      controller.animateToPage(
+        target,
+        duration: AppAnimationTokens.normal,
+        curve: AppAnimationTokens.buttonPressCurve,
+      );
+    });
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Feed container
 // ─────────────────────────────────────────────────────────────────────────────
@@ -191,6 +246,7 @@ abstract final class ReelColumnMetrics {
 class _ReelFeed extends StatelessWidget {
   final List<DiscoveryProfileEntity> profiles;
   final PageController controller;
+  final ReelWheelPager wheelPager;
   final bool hasMore;
   final VoidCallback onNearEnd;
 
@@ -201,6 +257,7 @@ class _ReelFeed extends StatelessWidget {
   const _ReelFeed({
     required this.profiles,
     required this.controller,
+    required this.wheelPager,
     required this.hasMore,
     required this.onNearEnd,
     this.desktop = false,
@@ -226,7 +283,14 @@ class _ReelFeed extends StatelessWidget {
           itemBuilder: (context, index) {
             return _KeepAlivePage(
               key: ValueKey(profiles[index].id),
-              child: _ReelCard(profile: profiles[index], sideActions: desktop),
+              child: Listener(
+                onPointerSignal: (event) =>
+                    wheelPager.handle(event, profiles.length),
+                child: _ReelCard(
+                  profile: profiles[index],
+                  sideActions: desktop,
+                ),
+              ),
             );
           },
         ),
@@ -343,36 +407,38 @@ class _MatchesCategoryBarState extends ConsumerState<_MatchesCategoryBar> {
     final l10n = AppLocalizations.of(context);
     final selected = ref.watch(matchCategoryProvider);
 
-    return SingleChildScrollView(
-      controller: _scrollController,
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Search is a pure navigation shortcut — not a MatchCategory, so
-          // it never carries selected state. Pushed (not `go`) so Matches
-          // stays on the navigator stack — back returns to this exact
-          // instance with its state intact, per the app-wide rule that
-          // temporary/secondary pages use push, not replace.
-          _MatchesCategoryChip(
-            label: l10n.matchesCategorySearch,
-            icon: Icons.search_rounded,
-            isSelected: false,
-            onTap: () => context.push(RouteNames.search),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          for (final category in MatchCategory.values) ...[
+    return NmMouseDragScroll(
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Search is a pure navigation shortcut — not a MatchCategory, so
+            // it never carries selected state. Pushed (not `go`) so Matches
+            // stays on the navigator stack — back returns to this exact
+            // instance with its state intact, per the app-wide rule that
+            // temporary/secondary pages use push, not replace.
             _MatchesCategoryChip(
-              key: _chipKeys[category],
-              label: _labelFor(category, l10n),
-              isSelected: category == selected,
-              onTap: () => _onCategorySelected(category),
+              label: l10n.matchesCategorySearch,
+              icon: Icons.search_rounded,
+              isSelected: false,
+              onTap: () => context.push(RouteNames.search),
             ),
-            if (category != MatchCategory.values.last)
-              const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: AppSpacing.sm),
+            for (final category in MatchCategory.values) ...[
+              _MatchesCategoryChip(
+                key: _chipKeys[category],
+                label: _labelFor(category, l10n),
+                isSelected: category == selected,
+                onTap: () => _onCategorySelected(category),
+              ),
+              if (category != MatchCategory.values.last)
+                const SizedBox(width: AppSpacing.sm),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -530,6 +596,21 @@ class _ReelCardState extends ConsumerState<_ReelCard>
     _sendInterest();
   }
 
+  /// Web only: the browser has an address for every profile
+  /// (`/profile-detail/:id`), so Share copies it. The link is still behind
+  /// the sign-in guard, so it shows the profile only to a signed-in member.
+  Future<void> _copyProfileLink() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    final link = Uri.base
+        .resolve(RouteNames.profileDetailPath(widget.profile.id))
+        .toString();
+    await Clipboard.setData(ClipboardData(text: link));
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l10n.profileLinkCopied)));
+  }
+
   Future<void> _sendInterest() async {
     if (_isSending) return;
     final status = ref.read(
@@ -568,7 +649,7 @@ class _ReelCardState extends ConsumerState<_ReelCard>
       shortlisted: shortlisted,
       onInterested: _sendInterest,
       onShortlist: () => handleShortlistToggle(context, ref, widget.profile),
-      onShare: () {},
+      onShare: kIsWeb ? _copyProfileLink : () {},
       onMore: () => showSafetyActionSheet(
         context,
         ref,

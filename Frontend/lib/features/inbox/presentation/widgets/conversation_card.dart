@@ -68,6 +68,18 @@ class ConversationCard extends ConsumerWidget {
             isBlocked: conversation.isBlocked,
           ),
         ),
+        // Pin and Mark Unread are also swipe actions, but a swipe is a touch
+        // gesture — listing them here keeps them reachable with a mouse.
+        AppSheetAction(
+          icon: Icons.push_pin_outlined,
+          label: l10n.inboxActionPin,
+          onTap: () => notifier.pin(conversation.id, !conversation.isPinned),
+        ),
+        AppSheetAction(
+          icon: Icons.mark_chat_unread_outlined,
+          label: l10n.inboxActionMarkUnread,
+          onTap: () => notifier.markUnread(conversation.id),
+        ),
         AppSheetAction(
           icon: conversation.isMuted
               ? Icons.notifications_active_outlined

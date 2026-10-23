@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/network/api_providers.dart';
+import '../../../../core/router/auth_return_location.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -172,8 +173,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // straight to Discover. An email login has one, and takes the same
     // route every other Firebase sign-in takes.
     if (result.user == null) {
-      AuthTrace.navigate(RouteNames.discover, reason: 'mobile + password login');
-      context.go(RouteNames.discover);
+      final route = AuthReturnLocation.afterLogin(RouteNames.discover);
+      AuthTrace.navigate(route, reason: 'mobile + password login');
+      context.go(route);
       return;
     }
     await _routeAfterLogin(result.needsVerification);
@@ -234,9 +236,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
 
     // Everything else is a real member: Discover when registration is
-    // finished, or the step they stopped on when it is not.
-    AuthTrace.navigate(route, reason: 'PostAuthDestination');
-    context.go(route);
+    // finished (or the link the guard sent them here from), or the step
+    // they stopped on when it is not.
+    final destination = AuthReturnLocation.afterLogin(route);
+    AuthTrace.navigate(destination, reason: 'PostAuthDestination');
+    context.go(destination);
   }
 
   Future<void> _routeAfterLogin(bool needsVerification) async {
@@ -260,7 +264,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // half-finished (or absent) profile belongs back in the registration
     // flow, not in Discover with nothing to show. PostAuthDestination is
     // the single place that decision is made — see its doc comment.
-    final route = await ref.read(postAuthDestinationProvider).resolve();
+    final route = AuthReturnLocation.afterLogin(
+      await ref.read(postAuthDestinationProvider).resolve(),
+    );
     if (!mounted) return;
     AuthTrace.navigate(route, reason: 'PostAuthDestination');
     context.go(route);

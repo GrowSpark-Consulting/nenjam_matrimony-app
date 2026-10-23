@@ -4,6 +4,7 @@ import '../../constants/app_spacing.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_decorations.dart';
 import '../../theme/app_typography.dart';
+import '../../layout/mouse_drag_scroll.dart';
 
 /// One compact "Complete Your Profile" recommendation — a tinted icon tile, a
 /// short title beneath it, and a dismiss cross.
@@ -203,19 +204,21 @@ class NmCompletionCardRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      padding: padding,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var i = 0; i < cards.length; i++) ...[
-              if (i > 0) const SizedBox(width: AppSpacing.md),
-              cards[i],
+    return NmMouseDragScroll(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: padding,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < cards.length; i++) ...[
+                if (i > 0) const SizedBox(width: AppSpacing.md),
+                cards[i],
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

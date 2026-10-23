@@ -89,5 +89,18 @@ public Firebase web key (see "Restrict the web API key").
 - Web push notifications are not implemented (FCM is skipped on web).
 - A photo chosen during sign-up is held in the page's memory until OTP; a
   reload before that loses it and the member picks it again.
-- A signed-out visitor to a protected link lands on the sign-up page and is not
-  returned to the original link after logging in.
+- A signed-out visitor to a protected link lands on the sign-up page; logging
+  in (not signing up) returns them to that link, held in memory only — a
+  reload of the sign-up page forgets it. A link reached by signing out is
+  never remembered.
+- Location blocked for the site cannot be fixed from inside the page: Near Me
+  says where the browser setting is and offers Try Again instead of an
+  "Open Settings" button that browsers cannot honour.
+- Swipe-only gestures have mouse equivalents: horizontal chip bars and
+  carousels scroll with a mouse drag, the Matches reel moves one profile per
+  wheel notch, the photo viewer has previous/next buttons and arrow keys, and
+  the Inbox options sheet (long-press, or press-and-hold with a mouse) lists
+  Pin and Mark Unread. Right-click is not used: the browser's own context
+  menu would open on top of it.
+- Share on Matches copies the profile's link (`/profile-detail/<id>`) on the
+  web; it is still a no-op in the native apps.

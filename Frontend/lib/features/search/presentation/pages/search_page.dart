@@ -23,6 +23,7 @@ import '../providers/search_providers.dart';
 import '../widgets/search_filter_sheet.dart';
 import '../widgets/search_result_card.dart';
 import '../widgets/search_suggestions.dart';
+import '../../../../core/layout/mouse_drag_scroll.dart';
 
 /// Premium matrimony search: a debounced query issued to the backend
 /// (`GET /discover/search`), an advanced filter bottom sheet, recent/popular
@@ -233,15 +234,17 @@ class _QuickFilterChips extends ConsumerWidget {
 
     return SizedBox(
       height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
-        itemCount: sections.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
-        itemBuilder: (context, index) {
-          final title = sections[index];
-          return NmFilterChip(label: title, onSelected: (_) => onSelectSection(title));
-        },
+      child: NmMouseDragScroll(
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+          itemCount: sections.length,
+          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+          itemBuilder: (context, index) {
+            final title = sections[index];
+            return NmFilterChip(label: title, onSelected: (_) => onSelectSection(title));
+          },
+        ),
       ),
     );
   }

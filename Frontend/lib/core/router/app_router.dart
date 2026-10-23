@@ -69,6 +69,7 @@ import '../../features/authentication/presentation/providers/auth_providers.dart
 import '../../features/authentication/presentation/utils/post_auth_destination.dart';
 import '../services/storage_service.dart';
 import '../widgets/navigation/app_bottom_nav.dart';
+import 'auth_return_location.dart';
 import 'route_names.dart';
 
 /// Nenjam Matrimony — GoRouter Configuration
@@ -190,6 +191,12 @@ GoRouter createRouter(WidgetRef ref) {
   // they are left exactly as they were.
   if (kIsWeb) GoRouter.optionURLReflectsImperativeAPIs = true;
 
+  // Whether anyone has been signed in since the app started. Tells a visitor
+  // who arrived signed out (a link to remember for after login) from one who
+  // just signed out (whose page must not become the next login's
+  // destination) — see AuthReturnLocation.
+  var hadSession = false;
+
   return _appRouter = GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: RouteNames.splash,
@@ -209,11 +216,17 @@ GoRouter createRouter(WidgetRef ref) {
 
       final user = await ref.read(authStateChangesProvider.future);
       if (user == null && !_signedInLocally()) {
+        if (hadSession) {
+          AuthReturnLocation.clear();
+        } else {
+          AuthReturnLocation.remember(state.uri.toString());
+        }
         // The landing screen, not Login: a signed-out visitor is far more
         // often someone who has never had an account than someone whose
         // session lapsed, and Login is one tap away from there anyway.
         return RouteNames.registrationLanding;
       }
+      hadSession = true;
 
       // Signed in (Firebase or a development bridge — see _signedInLocally)
       // and asking for a protected, non-onboarding route (every onboarding

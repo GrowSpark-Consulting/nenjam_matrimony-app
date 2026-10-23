@@ -5079,4 +5079,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get faceVerificationCenterIncomplete => 'Not verified yet';
+
+  @override
+  String get photoViewerPrevious => 'Previous photo';
+
+  @override
+  String get photoViewerNext => 'Next photo';
+
+  @override
+  String get nearbyPermissionBlockedMessageWeb =>
+      'Location is blocked for this site. Allow it in your browser\'s site settings (next to the address bar), then try again.';
+
+  @override
+  String get profileLinkCopied => 'Profile link copied';
 }

@@ -7,6 +7,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/avatars/gender_placeholder.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../core/widgets/images/sized_network_photo.dart';
+import '../../../../core/layout/mouse_drag_scroll.dart';
 
 /// Discover Opportunities section — horizontally scrollable list of match
 /// recommendation cards with name, profession, and compatibility %.
@@ -67,20 +68,22 @@ class NmDiscoverOpportunitiesCard extends StatelessWidget {
         // clip when their text grows under large font scaling.
         matches.isEmpty
             ? const SizedBox(height: 140, child: _EmptyState())
-            : SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: IntrinsicHeight(
-                  child: Row(
-                    children: [
-                      for (var i = 0; i < matches.length; i++) ...[
-                        if (i > 0) const SizedBox(width: AppSpacing.md),
-                        _MatchCard(match: matches[i]),
+            : NmMouseDragScroll(
+              child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < matches.length; i++) ...[
+                          if (i > 0) const SizedBox(width: AppSpacing.md),
+                          _MatchCard(match: matches[i]),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
+            ),
       ],
     );
   }

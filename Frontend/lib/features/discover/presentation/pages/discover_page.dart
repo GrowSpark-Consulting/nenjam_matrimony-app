@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -38,6 +39,7 @@ import '../../domain/entities/discover_feed_entity.dart';
 import '../../domain/entities/story_entity.dart';
 import '../providers/discover_providers.dart';
 import '../widgets/compatibility_badge.dart';
+import '../../../../core/layout/mouse_drag_scroll.dart';
 
 /// Nenjam Discover Page — pixel-faithful Flutter translation of the
 /// "Nenjam Home Feed" Stitch screen.
@@ -554,15 +556,17 @@ class _NewTodaySection extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           SizedBox(
             height: 112,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
-              itemCount: stories.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(width: AppSpacing.base),
-              itemBuilder: (context, index) =>
-                  _StoryBubble(story: stories[index]),
+            child: NmMouseDragScroll(
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+                itemCount: stories.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(width: AppSpacing.base),
+                itemBuilder: (context, index) =>
+                    _StoryBubble(story: stories[index]),
+              ),
             ),
           ),
         ],
@@ -1281,18 +1285,20 @@ class _HorizontalCompactCards extends StatelessWidget {
     // natural height, so larger text-scale settings or longer localized
     // profession/location strings simply make the row taller instead of
     // overflowing a fixed box.
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (var i = 0; i < profiles.length; i++) ...[
-            if (i > 0) const SizedBox(width: AppSpacing.base),
-            _CompactProfileCard(profile: profiles[i]),
+    return NmMouseDragScroll(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < profiles.length; i++) ...[
+              if (i > 0) const SizedBox(width: AppSpacing.base),
+              _CompactProfileCard(profile: profiles[i]),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -1590,12 +1596,28 @@ class _NearYouSectionState extends ConsumerState<_NearYouSection> {
       ),
       // Denied for good: the OS shows nothing on a retry, so offering one
       // would be a button that cannot work. Settings is the only way back.
+      // A browser has no settings screen to open: say where the site's
+      // permission lives and re-check once it has been allowed.
+      NearbyPermissionRequired() when kIsWeb => _NearYouPrompt(
+        icon: Icons.location_off_rounded,
+        title: l10n.nearbyPermissionTitle,
+        message: l10n.nearbyPermissionBlockedMessageWeb,
+        actionLabel: l10n.nearbyRetry,
+        onAction: notifier.refresh,
+      ),
       NearbyPermissionRequired() => _NearYouPrompt(
         icon: Icons.location_off_rounded,
         title: l10n.nearbyPermissionTitle,
         message: l10n.nearbyPermissionBlockedMessage,
         actionLabel: l10n.nearbyOpenSettings,
         onAction: ref.read(appPermissionServiceProvider).openSettings,
+      ),
+      NearbyLocationServicesOff() when kIsWeb => _NearYouPrompt(
+        icon: Icons.gps_off_rounded,
+        title: l10n.nearbyServicesOffTitle,
+        message: l10n.nearbyPermissionBlockedMessageWeb,
+        actionLabel: l10n.nearbyRetry,
+        onAction: notifier.refresh,
       ),
       // Permission is irrelevant here — location is off device-wide, and the
       // fix lives on a different settings screen.
@@ -1999,13 +2021,15 @@ class _PremiumMembersSection extends StatelessWidget {
             // Horizontal premium cards
             SizedBox(
               height: 296,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: profiles.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(width: AppSpacing.base),
-                itemBuilder: (_, i) => _PremiumMemberCard(profile: profiles[i]),
+              child: NmMouseDragScroll(
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: profiles.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(width: AppSpacing.base),
+                  itemBuilder: (_, i) => _PremiumMemberCard(profile: profiles[i]),
+                ),
               ),
             ),
           ],

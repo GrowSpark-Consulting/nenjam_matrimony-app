@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/layout/mouse_drag_scroll.dart';
 
 /// Horizontally-scrollable underline tab row pinned under the collapsed
 /// hero. Tapping a tab scrolls the page to the matching section — the
@@ -47,23 +48,25 @@ class ProfileDetailSectionTabBar extends StatelessWidget {
           ),
         ),
       ),
-      child: ListView.separated(
-        controller: controller,
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
-        itemCount: labels.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.lg),
-        itemBuilder: (context, index) {
-          final selected = index == selectedIndex;
-          return KeyedSubtree(
-            key: itemKeys[index],
-            child: _UnderlineTab(
-              label: labels[index],
-              selected: selected,
-              onTap: () => onTap(index),
-            ),
-          );
-        },
+      child: NmMouseDragScroll(
+        child: ListView.separated(
+          controller: controller,
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+          itemCount: labels.length,
+          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.lg),
+          itemBuilder: (context, index) {
+            final selected = index == selectedIndex;
+            return KeyedSubtree(
+              key: itemKeys[index],
+              child: _UnderlineTab(
+                label: labels[index],
+                selected: selected,
+                onTap: () => onTap(index),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

@@ -9,6 +9,7 @@ import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../providers/profile_detail_providers.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../core/layout/mouse_drag_scroll.dart';
 
 /// Horizontal shelf of profiles similar to the one being viewed.
 /// Tapping a card recurses into the same route — the back stack grows
@@ -40,32 +41,34 @@ class SimilarProfilesSection extends ConsumerWidget {
           child: similarAsync.when(
             data: (profiles) {
               if (profiles.isEmpty) return const SizedBox.shrink();
-              return ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: profiles.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(width: AppSpacing.sm),
-                itemBuilder: (context, index) {
-                  final profile = profiles[index];
-                  return SizedBox(
-                    width: _cardWidth,
-                    child: NmProfileCard(
-                      name: profile.name,
-                      age: '${profile.age}',
-                      location: profile.location,
-                      imageUrl: profile.photoUrls.isNotEmpty
-                          ? profile.photoUrls.first
-                          : null,
-                      profession: profile.profession,
-                      gender: profile.gender,
-                      isVerified: profile.isVerified,
-                      isPremium: profile.isPremium,
-                      isOnline: profile.isOnline,
-                      onTap: () => openProfileDetail(context, profile),
-                      heroTag: 'profile-photo-${profile.id}',
-                    ),
-                  );
-                },
+              return NmMouseDragScroll(
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: profiles.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(width: AppSpacing.sm),
+                  itemBuilder: (context, index) {
+                    final profile = profiles[index];
+                    return SizedBox(
+                      width: _cardWidth,
+                      child: NmProfileCard(
+                        name: profile.name,
+                        age: '${profile.age}',
+                        location: profile.location,
+                        imageUrl: profile.photoUrls.isNotEmpty
+                            ? profile.photoUrls.first
+                            : null,
+                        profession: profile.profession,
+                        gender: profile.gender,
+                        isVerified: profile.isVerified,
+                        isPremium: profile.isPremium,
+                        isOnline: profile.isOnline,
+                        onTap: () => openProfileDetail(context, profile),
+                        heroTag: 'profile-photo-${profile.id}',
+                      ),
+                    );
+                  },
+                ),
               );
             },
             loading: () => ListView.separated(

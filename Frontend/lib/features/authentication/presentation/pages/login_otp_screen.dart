@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/auth_return_location.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/services/storage_service.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -111,8 +112,8 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
 
     // `go`, not `push` — authentication is over, so this screen and the
     // login screen under it must not remain on the stack for Back to
-    // return to.
-    context.go(RouteNames.discover);
+    // return to. Discover, unless the guard sent them here from a link.
+    context.go(AuthReturnLocation.afterLogin(RouteNames.discover));
   }
 
   @override
