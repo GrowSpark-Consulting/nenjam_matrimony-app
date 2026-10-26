@@ -45,6 +45,10 @@ class DiscoveryProfileEntity {
   /// profile skipped some of the optional sections; the card shows a
   /// "Building profile" badge in that case.
   final bool profileComplete;
+  /// When this member's profile was created (backend `joinedAt`). The only
+  /// basis for showing them under "New Today" / "Recently Joined"; null when
+  /// the backend did not send it, in which case they are never labelled new.
+  final DateTime? joinedAt;
 
   // Additional backend-driven profile fields the card / detail view render.
   // Empty string / [] when the (optional) source field wasn't filled.
@@ -85,6 +89,7 @@ class DiscoveryProfileEntity {
     this.distanceKm,
     this.gender = '',
     this.profileComplete = false,
+    this.joinedAt,
     this.maritalStatus = '',
     this.motherTongue = '',
     this.smoking = '',

@@ -10,7 +10,9 @@ import '../../../l10n/app_localizations.dart';
 
 /// Horoscope Compatibility — dual-mode display:
 ///  * **Self-summary** (default, [compatibilityScore] == null): shows the
-///    member's own rasi/nakshatra/dosham + matching opt-in status. Used in
+///    member's own rasi/nakshatra/dosham + whether they have a horoscope
+///    ([matchingEnabled] carries their "horoscope available" answer — there
+///    is no separate matching opt-in setting). Used in
 ///    the registration wizard (Step 15) and on [ProfilePage] — there is no
 ///    partner to compare against on your own profile.
 ///  * **Comparison** ([compatibilityScore] != null): reuses [NmHoroscopeCard]
@@ -120,8 +122,8 @@ class HoroscopeCompatibilitySection extends StatelessWidget {
               Flexible(
                 child: Text(
                   matchingEnabled
-                      ? 'Horoscope matching enabled'
-                      : 'Horoscope matching disabled',
+                      ? AppLocalizations.of(context).riHoroscopeAvailable
+                      : AppLocalizations.of(context).riHoroscopeNotAvailable,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.labelSmall,

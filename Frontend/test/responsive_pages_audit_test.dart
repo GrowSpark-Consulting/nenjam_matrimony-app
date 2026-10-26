@@ -42,6 +42,8 @@ import 'package:nenjam_matrimony/features/authentication/presentation/providers/
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'features/profile_detail/fake_profile_detail_repository.dart';
+
 /// Pre-release responsive audit for whole screens.
 ///
 /// `responsive_audit_test.dart` covers individual Profile cards in
@@ -289,6 +291,7 @@ void main() {
       tester,
       'ProfileDetailPage',
       () => ProfileDetailPage(profile: _profile()),
+      overrides: [fakeProfileDetailOverride],
     );
   });
 

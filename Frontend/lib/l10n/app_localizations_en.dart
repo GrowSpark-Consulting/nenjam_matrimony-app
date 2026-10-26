@@ -4000,6 +4000,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add your horoscope details to enable compatibility matching.';
 
   @override
+  String get riHoroscopeAvailable => 'Horoscope available';
+
+  @override
+  String get riHoroscopeNotAvailable => 'Horoscope not available';
+
+  @override
   String get riDiscoverPersonality => 'Share your marriage expectations';
 
   @override

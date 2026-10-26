@@ -1,8 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { S3Service } from '@app/storage';
-import { DiscoverProfileDto } from '../dto/discover-profile.response.dto';
+import {
+  DiscoverProfileDto,
+  ProfileDetailExtrasDto,
+} from '../dto/discover-profile.response.dto';
 import type { CompatibilityBreakdown } from '../scoring/compatibility.service';
-import type { FeedProfileRow } from '../repositories/feed.repository';
+import type {
+  FeedProfileRow,
+  ProfileDetailExtrasRow,
+} from '../repositories/feed.repository';
 import {
   arePhotosHidden,
   isPremiumMember,
@@ -111,6 +117,7 @@ export class ProfileFeedMapper {
       distanceKm: null,
       gender: String(row.gender ?? '').toLowerCase(),
       profileComplete: Number(row.profileCompletePct ?? 0) >= 100,
+      joinedAt: this.isoOrNull(row.createdAt),
       maritalStatus: this.humanizeEnum(row.maritalStatus as string | null),
       motherTongue: (row.motherTongue as string) ?? '',
       smoking: (row.smokingHabits as string) ?? '',
@@ -122,6 +129,75 @@ export class ProfileFeedMapper {
       languages: this.toStringArray(row.languagesKnown),
       hobbies: this.toStringArray(row.hobbies),
     };
+  }
+
+  /**
+   * The detail-only block, exactly as saved. A null row (no profile — not
+   * reachable after a visibility check, but typed as possible) maps to the
+   * same all-empty shape a member who filled in nothing would get.
+   */
+  toDetailExtras(row: ProfileDetailExtrasRow | null): ProfileDetailExtrasDto {
+    const astro = row?.user?.astrologyProfile ?? null;
+    const pref = row?.user?.partnerPreference ?? null;
+    const siblings = Array.isArray(row?.siblingDetails)
+      ? (row.siblingDetails as Array<{ relation?: unknown }>)
+      : [];
+    const countOf = (relation: string) =>
+      siblings.filter((s) => s?.relation === relation).length;
+    const num = (value: unknown): number | null => {
+      const n = value == null ? NaN : Number(value);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    return {
+      family: {
+        fatherName: row?.fatherName ?? '',
+        fatherOccupation: row?.fatherOccupation ?? '',
+        motherName: row?.motherName ?? '',
+        motherOccupation: row?.motherOccupation ?? '',
+        familyType: row?.familyType ?? '',
+        familyValues: row?.familyValues ?? '',
+        familyStatus: row?.familyStatus ?? '',
+        brothers: countOf('BROTHER'),
+        sisters: countOf('SISTER'),
+      },
+      fitness: row?.fitness ?? '',
+      horoscope: {
+        rasi: astro?.rasi ?? '',
+        nakshatra: astro?.nakshatra ?? '',
+        dosham:
+          astro?.dosham && astro.dosham !== 'NONE'
+            ? this.humanizeEnum(astro.dosham)
+            : '',
+        horoscopeAvailable: astro?.horoscopeAvailable ?? false,
+      },
+      partnerPreference: pref
+        ? {
+            minAge: pref.minAge,
+            maxAge: pref.maxAge,
+            minHeightCm: pref.minHeightCm,
+            maxHeightCm: pref.maxHeightCm,
+            religions: this.toStringArray(pref.preferredReligions),
+            castes: this.toStringArray(pref.preferredCastes),
+            education: this.toStringArray(pref.preferredEducation),
+            occupations: this.toStringArray(pref.preferredOccupations),
+            minIncomeLakhs: num(pref.minIncomeLakhs),
+            cities: this.toStringArray(pref.preferredCities),
+            states: this.toStringArray(pref.preferredStates),
+            motherTongues: this.toStringArray(pref.preferredMotherTongues),
+            maritalStatuses: this.toStringArray(pref.maritalStatusPref).map(
+              (s) => this.humanizeEnum(s),
+            ),
+          }
+        : null,
+    };
+  }
+
+  /** A Date (or date string) column -> ISO 8601, or null when absent/invalid. */
+  private isoOrNull(value: unknown): string | null {
+    if (!(value instanceof Date) && typeof value !== 'string') return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
   }
 
   /** "NEVER_MARRIED" -> "Never Married". Empty for a null enum. */

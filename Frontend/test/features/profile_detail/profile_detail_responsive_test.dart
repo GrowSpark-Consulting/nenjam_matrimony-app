@@ -19,6 +19,7 @@ import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/ve
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 
 import '../../support/responsive_harness.dart';
+import 'fake_profile_detail_repository.dart';
 
 /// Profile detail stays ONE vertical scroll column with a pinned section tab
 /// bar; on wide windows its content is bounded to [ContentWidth.detail]
@@ -237,7 +238,7 @@ DiscoveryProfileEntity _profile() => const DiscoveryProfileEntity(
 /// shader asset that the widget-test bundle does not contain, so the theme
 /// must turn splashes off. Everything else mirrors the harness.
 ///
-/// With [detail] unset the page resolves through its real mock data source.
+/// With [detail] unset the page resolves through [FakeProfileDetailRepository].
 Future<List<Object>> _pumpDetail(
   WidgetTester tester,
   Size size, {
@@ -269,7 +270,9 @@ Future<List<Object>> _pumpDetail(
           ),
         ),
         if (detail != null)
-          profileDetailProvider.overrideWith((ref, base) => detail()),
+          profileDetailProvider.overrideWith((ref, base) => detail())
+        else
+          fakeProfileDetailOverride,
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -284,7 +287,7 @@ Future<List<Object>> _pumpDetail(
     ),
   );
 
-  // The mock data source answers after 350ms.
+  // Let the detail FutureProvider resolve.
   for (var i = 0; i < 12; i++) {
     await tester.pump(const Duration(milliseconds: 100));
   }

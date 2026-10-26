@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_exception.dart';
@@ -14,7 +16,9 @@ import '../models/story_model.dart';
 /// The Discover screen renders several sections (New Today, AI Recommended,
 /// Recently Joined, Verified, Premium) — a presentation concept the
 /// backend doesn't model as separate lists yet. So the one flat feed is
-/// *partitioned*, round-robin, into those buckets: every profile lands in
+/// *partitioned*, round-robin, into those buckets (see [partitionFeedSections]
+/// for how Verified, Premium, Recently Joined and New Today only take qualifying
+/// members): every profile lands in
 /// exactly one section. That fills each section with real people and — because
 /// every card shares a `Hero(tag: 'profile-photo-$id')` — guarantees no
 /// profile id is ever shown twice on the same screen, which Flutter would
@@ -50,14 +54,7 @@ class DiscoverRepositoryImpl implements DiscoverRepository {
 
     final profiles = _parseProfiles(data);
 
-    // Round-robin into disjoint buckets so ids never repeat across sections.
-    final buckets = List.generate(
-      _sectionCount,
-      (_) => <DiscoveryProfileModel>[],
-    );
-    for (var i = 0; i < profiles.length; i++) {
-      buckets[i % _sectionCount].add(profiles[i]);
-    }
+    final buckets = partitionFeedSections(profiles);
 
     return DiscoverFeedEntity(
       aiRecommended: buckets[0],
@@ -131,13 +128,75 @@ class DiscoverRepositoryImpl implements DiscoverRepository {
     return profiles;
   }
 
+  /// Round-robin into disjoint buckets so ids never repeat across sections —
+  /// but a section that names an attribute only ever holds members who have
+  /// it. "Verified Profiles" (bucket 2) takes only `isVerified` members and
+  /// "Premium Members" (bucket 3) only `isPremium` ones; a profile whose turn
+  /// lands on a section it does not qualify for moves on to the next section
+  /// in the rotation that it does. "AI Recommended" (bucket 0) accepts anyone,
+  /// so every profile is still placed exactly once. When every member qualifies this
+  /// is the plain round-robin; when none do, those sections stay empty and the
+  /// screen hides them, rather than badging an unverified or non-premium
+  /// member as verified or premium.
+  ///
+  /// The same rule covers the two sections that claim someone is new: "Recently
+  /// Joined" (bucket 1) takes only members whose backend `joinedAt` is within
+  /// [recentlyJoinedWindow], and "New Today" (bucket 4) only those within
+  /// [newTodayWindow]. A member with no `joinedAt` is never labelled new.
+  @visibleForTesting
+  static List<List<DiscoveryProfileModel>> partitionFeedSections(
+    List<DiscoveryProfileModel> profiles, {
+    DateTime? now,
+  }) {
+    final at = now ?? DateTime.now();
+    bool accepts(int bucket, DiscoveryProfileModel p) => switch (bucket) {
+      1 => joinedWithin(p, recentlyJoinedWindow, at),
+      2 => p.isVerified,
+      3 => p.isPremium,
+      4 => joinedWithin(p, newTodayWindow, at),
+      _ => true,
+    };
+    final buckets = List.generate(
+      _sectionCount,
+      (_) => <DiscoveryProfileModel>[],
+    );
+    for (var i = 0; i < profiles.length; i++) {
+      final p = profiles[i];
+      for (var step = 0; step < _sectionCount; step++) {
+        final bucket = (i + step) % _sectionCount;
+        if (accepts(bucket, p)) {
+          buckets[bucket].add(p);
+          break;
+        }
+      }
+    }
+    return buckets;
+  }
+
+  static const recentlyJoinedWindow = Duration(days: 30);
+  static const newTodayWindow = Duration(hours: 24);
+
+  /// Whether [p] joined within [window] before [now]. False without a
+  /// `joinedAt`, and for a timestamp in the future (clock skew).
+  static bool joinedWithin(
+    DiscoveryProfileModel p,
+    Duration window,
+    DateTime now,
+  ) {
+    final joined = p.joinedAt;
+    if (joined == null || joined.isAfter(now)) return false;
+    return now.difference(joined) <= window;
+  }
+
   /// A "New Today" bubble wraps a real profile so tapping it opens Profile
   /// Detail exactly like any card. First name only, to fit the 76px bubble.
   StoryModel _toStory(DiscoveryProfileModel p) => StoryModel(
         id: p.id,
         name: p.name.isEmpty ? p.name : p.name.split(' ').first,
         imageUrl: p.photoUrls.isNotEmpty ? p.photoUrls.first : '',
-        hasNewStory: true,
+        // Only members who joined within [newTodayWindow] reach this bucket,
+        // so the "new" ring states a fact; recomputed rather than assumed.
+        hasNewStory: joinedWithin(p, newTodayWindow, DateTime.now()),
         gender: p.gender,
         profile: p,
       );
