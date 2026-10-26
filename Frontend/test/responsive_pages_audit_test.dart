@@ -42,6 +42,7 @@ import 'package:nenjam_matrimony/features/authentication/presentation/providers/
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'features/matches/fake_reel_backend.dart';
 import 'features/profile_detail/fake_profile_detail_repository.dart';
 
 /// Pre-release responsive audit for whole screens.
@@ -283,7 +284,14 @@ void main() {
   });
 
   testWidgets('Matches is responsive across phone sizes', (tester) async {
-    await _audit(tester, 'MatchesPage', () => const MatchesPage());
+    // With real-shaped cards: without data this only ever audited the
+    // loading spinner.
+    await _audit(
+      tester,
+      'MatchesPage',
+      () => const MatchesPage(),
+      overrides: [fakeReelOverride],
+    );
   });
 
   testWidgets('Profile Detail is responsive across phone sizes', (tester) async {

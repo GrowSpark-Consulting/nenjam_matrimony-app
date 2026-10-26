@@ -310,16 +310,28 @@ class _ReelFeed extends StatelessWidget {
 class _ReelHeader extends StatelessWidget {
   const _ReelHeader();
 
+  static const double _topGap = 8;
+  static const double _bottomGap = 12;
+
+  /// Distance from the top of the reel card to the header's bottom edge —
+  /// what the action column must stay below. The category chips are held to
+  /// at least [AppTouchTarget.minSize] tall (see [_MatchesCategoryChip]).
+  static double extentOf(BuildContext context) =>
+      MediaQuery.paddingOf(context).top +
+      _topGap +
+      AppTouchTarget.minSize +
+      _bottomGap;
+
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
 
     return Container(
       padding: EdgeInsets.only(
-        top: top + 8,
+        top: top + _topGap,
         left: AppSpacing.base,
         right: AppSpacing.base,
-        bottom: 12,
+        bottom: _bottomGap,
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -640,7 +652,8 @@ class _ReelCardState extends ConsumerState<_ReelCard>
     final settled = interestButtonIsSettled(status);
     final shortlisted = ref.watch(isShortlistedProvider(widget.profile.id));
 
-    final actions = _ActionColumn(
+    Widget actionColumn({bool compact = false}) => _ActionColumn(
+      compact: compact,
       interested: settled,
       interestedLabel: interestButtonLabel(
         status,
@@ -701,11 +714,37 @@ class _ReelCardState extends ConsumerState<_ReelCard>
             // draws the floating nav over it), so the pill's own height is
             // added to the offset — otherwise the lowest buttons sit behind
             // the pill, which also swallows their taps.
+            //
+            // It is also held below the category header. Anchored only at the
+            // bottom, the column ran up behind the header — which absorbs the
+            // taps — and off the top of the screen on any window shorter than
+            // ~450px (a phone browser in landscape, a short laptop window).
+            // When the full column does not fit that band it switches to its
+            // compact form; the scale-down is only a last guard for windows
+            // too short even for that. Where it already fitted, nothing moves.
             if (!widget.sideActions)
-              Positioned(
-                right: 16,
-                bottom: 48 + MediaQuery.paddingOf(context).bottom,
-                child: actions,
+              Positioned.fill(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: _ReelHeader.extentOf(context),
+                    right: 16,
+                    bottom: 48 + MediaQuery.paddingOf(context).bottom,
+                  ),
+                  child: Align(
+                    alignment: Alignment.bottomRight,
+                    child: LayoutBuilder(
+                      builder: (context, band) => FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.bottomRight,
+                        child: actionColumn(
+                          compact:
+                              band.maxHeight <
+                              _ActionColumn.fullHeightOf(context),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
 
             // ── Bottom info area ─────────────────────────────────────
@@ -770,7 +809,7 @@ class _ReelCardState extends ConsumerState<_ReelCard>
             width: ReelColumnMetrics.actionsWidth,
             child: Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.xl),
-              child: actions,
+              child: actionColumn(),
             ),
           ),
         ],
@@ -784,6 +823,10 @@ class _ReelCardState extends ConsumerState<_ReelCard>
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ActionColumn extends StatelessWidget {
+  /// Tighter gaps and no captions, for a band too short for the full column.
+  /// Buttons keep their 48px size, and each caption stays as the button's
+  /// accessibility label.
+  final bool compact;
   final bool interested;
   final String interestedLabel;
   final bool shortlisted;
@@ -793,6 +836,7 @@ class _ActionColumn extends StatelessWidget {
   final VoidCallback onMore;
 
   const _ActionColumn({
+    this.compact = false,
     required this.interested,
     required this.interestedLabel,
     required this.shortlisted,
@@ -802,9 +846,25 @@ class _ActionColumn extends StatelessWidget {
     required this.onMore,
   });
 
+  static const int _buttonCount = 4;
+  static const double _gap = 24;
+  static const double _compactGap = 8;
+
+  /// Height of the full (non-compact) column at the current text scale:
+  /// four 48px buttons, the gaps between them, and a caption under each.
+  static double fullHeightOf(BuildContext context) {
+    final caption = MediaQuery.textScalerOf(context).scale(
+      _ActionButton.captionFontSize * _ActionButton.captionLineHeight,
+    );
+    return _buttonCount * _ActionButton.size +
+        (_buttonCount - 1) * _gap +
+        _buttonCount * (_ActionButton.captionGap + caption);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final gap = SizedBox(height: compact ? _compactGap : _gap);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -812,11 +872,12 @@ class _ActionColumn extends StatelessWidget {
         _ActionButton(
           icon: Icons.favorite_rounded,
           label: interestedLabel,
+          showLabel: !compact,
           active: interested,
           activeColor: AppColors.accentLight,
           onTap: onInterested,
         ),
-        const SizedBox(height: 24),
+        gap,
         _ActionButton(
           // Bookmark (not star) to match Discover/Search's icon for the
           // same concept — filled once shortlisted, outlined otherwise.
@@ -824,20 +885,23 @@ class _ActionColumn extends StatelessWidget {
               ? Icons.bookmark_rounded
               : Icons.bookmark_border_rounded,
           label: l10n.profileCardShortlist,
+          showLabel: !compact,
           active: shortlisted,
           activeColor: AppColors.accentLight,
           onTap: onShortlist,
         ),
-        const SizedBox(height: 24),
+        gap,
         _ActionButton(
           icon: Icons.share_rounded,
           label: l10n.actionShare,
+          showLabel: !compact,
           onTap: onShare,
         ),
-        const SizedBox(height: 24),
+        gap,
         _ActionButton(
           icon: Icons.flag_rounded,
           label: l10n.profileDetailMoreLabel,
+          showLabel: !compact,
           onTap: onMore,
         ),
       ],
@@ -852,25 +916,38 @@ class _ActionButton extends StatelessWidget {
   final bool active;
   final Color activeColor;
 
+  /// False in the compact column: the caption is not drawn, but remains the
+  /// button's accessibility label.
+  final bool showLabel;
+
+  static const double size = 48;
+  static const double captionGap = 4;
+  static const double captionFontSize = 9;
+
+  /// Line height of the caption as a multiple of its font size, used only to
+  /// budget its space in [_ActionColumn.fullHeightOf].
+  static const double captionLineHeight = 1.4;
+
   const _ActionButton({
     required this.icon,
     required this.label,
     required this.onTap,
     this.active = false,
     this.activeColor = Colors.white,
+    this.showLabel = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final button = GestureDetector(
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            width: 48,
-            height: 48,
+            width: size,
+            height: size,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: active
@@ -888,8 +965,8 @@ class _ActionButton extends StatelessWidget {
               color: active ? activeColor : Colors.white,
             ),
           ),
-          if (label.isNotEmpty) ...[
-            const SizedBox(height: 4),
+          if (showLabel && label.isNotEmpty) ...[
+            const SizedBox(height: captionGap),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 64),
               child: Text(
@@ -899,7 +976,7 @@ class _ActionButton extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: AppTypography.labelSmall.copyWith(
                   color: Colors.white,
-                  fontSize: 9,
+                  fontSize: captionFontSize,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.2,
                   shadows: const [
@@ -912,6 +989,8 @@ class _ActionButton extends StatelessWidget {
         ],
       ),
     );
+    if (showLabel || label.isEmpty) return button;
+    return Semantics(button: true, label: label, child: button);
   }
 }
 
