@@ -1410,6 +1410,8 @@
   "otpPasteCode": "குறியீட்டை ஒட்டவும்",
   "riYourHoroscope": "உங்கள் ஜாதகம்",
   "riHoroscopeEmpty": "பொருத்தப் பரிசோதனையை இயக்க உங்கள் ஜாதக விவரங்களைச் சேர்க்கவும்.",
+  "riHoroscopeAvailable": "ஜாதகம் உள்ளது",
+  "riHoroscopeNotAvailable": "ஜாதகம் இல்லை",
   "riDiscoverPersonality": "உங்கள் திருமண எதிர்பார்ப்புகளைப் பகிருங்கள்",
   "riQuizTeaser": "3 நிமிடத் தேர்வு · பொருத்தத் தரத்தை மேம்படுத்தும்",
   "riPersonalityProfile": "திருமணப் பொருத்தத் தேர்வு",

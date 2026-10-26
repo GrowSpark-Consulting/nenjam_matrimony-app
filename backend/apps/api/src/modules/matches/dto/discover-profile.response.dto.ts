@@ -55,6 +55,61 @@ export interface DiscoverProfileDto {
   // can be feed-eligible with profileComplete: false; the client shows a
   // "Building profile" badge in that case.
   profileComplete: boolean;
+  // When this member's profile was created (UserProfile.createdAt), ISO 8601.
+  // The only source for the client's "New Today" / "Recently Joined"
+  // sections, which must not label anyone new without it. Null only for a
+  // row selected without the column.
+  joinedAt: string | null;
+}
+
+// What a profile-detail screen shows beyond a feed card — returned ONLY by
+// `GET /discover/profiles/:userId`, and only after that profile has passed the
+// feed's own visibility rules. Every value is exactly what the member saved:
+// empty string / 0 / [] / null when they never filled it in, never a default.
+//
+// Deliberately absent: birth time, birth place and coordinates, parents' ages,
+// and sibling names/occupations. The detail screen shows none of them, and
+// they are more identifying than anything it does show.
+export interface ProfileDetailExtrasDto {
+  family: {
+    fatherName: string;
+    fatherOccupation: string;
+    motherName: string;
+    motherOccupation: string;
+    familyType: string;
+    familyValues: string;
+    familyStatus: string;
+    brothers: number;
+    sisters: number;
+  };
+  fitness: string;
+  horoscope: {
+    rasi: string;
+    nakshatra: string;
+    /** Humanized DoshamType ("Chevvai"), or "" for NONE / no astrology row. */
+    dosham: string;
+    horoscopeAvailable: boolean;
+  };
+  /** Null when the member has never saved a partner preference. */
+  partnerPreference: {
+    minAge: number | null;
+    maxAge: number | null;
+    minHeightCm: number | null;
+    maxHeightCm: number | null;
+    religions: string[];
+    castes: string[];
+    education: string[];
+    occupations: string[];
+    minIncomeLakhs: number | null;
+    cities: string[];
+    states: string[];
+    motherTongues: string[];
+    maritalStatuses: string[];
+  } | null;
+}
+
+export interface DiscoverProfileDetailDto extends DiscoverProfileDto {
+  detail: ProfileDetailExtrasDto;
 }
 
 // Paginated envelope. `hasMore` lets the client drive infinite scroll without

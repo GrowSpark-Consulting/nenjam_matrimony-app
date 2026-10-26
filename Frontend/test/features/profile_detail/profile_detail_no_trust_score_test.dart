@@ -9,6 +9,8 @@ import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/si
 import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/verification_section.dart';
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 
+import 'fake_profile_detail_repository.dart';
+
 /// Trust Score was removed from the app entirely. The verification
 /// checklist — a different feature — stays, so these tests assert the score
 /// headline and every piece of trust copy is gone *without* taking the
@@ -43,6 +45,7 @@ Future<void> _pumpDetailPage(WidgetTester tester) async {
 
   await tester.pumpWidget(
     ProviderScope(
+      overrides: [fakeProfileDetailOverride],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -56,7 +59,7 @@ Future<void> _pumpDetailPage(WidgetTester tester) async {
     ),
   );
 
-  // Let the FutureProvider's 350ms mock delay resolve.
+  // Let the detail FutureProvider resolve.
   await tester.pump(const Duration(milliseconds: 400));
   await tester.pump(const Duration(milliseconds: 400));
 }

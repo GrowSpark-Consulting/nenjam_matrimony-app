@@ -259,4 +259,62 @@ export class FeedRepository {
     });
     return rows as FeedProfileRow[];
   }
+
+  /**
+   * The profile-detail-only columns for ONE member. Not a visibility check —
+   * callers must already have confirmed this member is visible to the viewer
+   * (ProfileLookupService does, via [findMatching]). Kept out of the feed
+   * select so feed pages don't pay for columns no card renders.
+   */
+  findDetailExtras(userId: string) {
+    return this.prisma.userProfile.findUnique({
+      where: { userId },
+      select: PROFILE_DETAIL_EXTRAS_SELECT,
+    });
+  }
 }
+
+const PROFILE_DETAIL_EXTRAS_SELECT = {
+  fatherName: true,
+  fatherOccupation: true,
+  motherName: true,
+  motherOccupation: true,
+  familyType: true,
+  familyValues: true,
+  familyStatus: true,
+  siblingDetails: true,
+  fitness: true,
+  user: {
+    select: {
+      astrologyProfile: {
+        select: {
+          rasi: true,
+          nakshatra: true,
+          dosham: true,
+          horoscopeAvailable: true,
+        },
+      },
+      partnerPreference: {
+        select: {
+          minAge: true,
+          maxAge: true,
+          minHeightCm: true,
+          maxHeightCm: true,
+          preferredReligions: true,
+          preferredCastes: true,
+          preferredEducation: true,
+          preferredOccupations: true,
+          minIncomeLakhs: true,
+          preferredCities: true,
+          preferredStates: true,
+          preferredMotherTongues: true,
+          maritalStatusPref: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.UserProfileSelect;
+
+export type ProfileDetailExtrasRow = Prisma.UserProfileGetPayload<{
+  select: typeof PROFILE_DETAIL_EXTRAS_SELECT;
+}>;

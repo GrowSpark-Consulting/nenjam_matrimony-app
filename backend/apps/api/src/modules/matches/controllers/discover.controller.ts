@@ -16,7 +16,7 @@ import { ProfileLookupService } from '../services/profile-lookup.service';
 import { PreferencesService } from '../services/preferences.service';
 import {
   DiscoverFeedResponseDto,
-  DiscoverProfileDto,
+  DiscoverProfileDetailDto,
 } from '../dto/discover-profile.response.dto';
 import {
   PartnerPreferenceResponseDto,
@@ -68,7 +68,7 @@ export class DiscoverController {
   getProfile(
     @CurrentUser('id') userId: string,
     @Param('userId') profileUserId: string,
-  ): Promise<DiscoverProfileDto> {
+  ): Promise<DiscoverProfileDetailDto> {
     return this.profileLookupService.getVisibleProfile(userId, profileUserId);
   }
 

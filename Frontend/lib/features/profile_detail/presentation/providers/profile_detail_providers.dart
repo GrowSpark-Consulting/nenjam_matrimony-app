@@ -1,18 +1,22 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_providers.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../../discover/presentation/providers/discover_providers.dart';
-import '../../data/datasources/profile_detail_mock_datasource.dart';
+import '../../data/datasources/profile_detail_remote_datasource.dart';
 import '../../data/repositories/profile_detail_repository_impl.dart';
 import '../../domain/entities/profile_detail_entity.dart';
 import '../../domain/repositories/profile_detail_repository.dart';
 
-final profileDetailMockDataSourceProvider = Provider<ProfileDetailMockDataSource>(
-  (ref) => ProfileDetailMockDataSource(),
+final profileDetailRemoteDataSourceProvider =
+    Provider<ProfileDetailRemoteDataSource>(
+  (ref) => ProfileDetailRemoteDataSource(ref.watch(apiClientProvider)),
 );
 
 final profileDetailRepositoryProvider = Provider<ProfileDetailRepository>(
-  (ref) => ProfileDetailRepositoryImpl(ref.watch(profileDetailMockDataSourceProvider)),
+  (ref) => ProfileDetailRepositoryImpl(
+    ref.watch(profileDetailRemoteDataSourceProvider),
+  ),
 );
 
 /// Family-keyed by the base profile so navigating Discover → Detail(A) →

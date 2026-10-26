@@ -7532,6 +7532,18 @@ abstract class AppLocalizations {
   /// **'Add your horoscope details to enable compatibility matching.'**
   String get riHoroscopeEmpty;
 
+  /// No description provided for @riHoroscopeAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Horoscope available'**
+  String get riHoroscopeAvailable;
+
+  /// No description provided for @riHoroscopeNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Horoscope not available'**
+  String get riHoroscopeNotAvailable;
+
   /// No description provided for @riDiscoverPersonality.
   ///
   /// In en, this message translates to:

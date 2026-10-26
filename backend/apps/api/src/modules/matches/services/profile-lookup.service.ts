@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DiscoverProfileDto } from '../dto/discover-profile.response.dto';
+import { DiscoverProfileDetailDto } from '../dto/discover-profile.response.dto';
 import { buildEligibilityConditions } from '../filters/eligibility.builder';
 import { ProfileFeedMapper } from '../mappers/profile-feed.mapper';
 import { FeedRepository } from '../repositories/feed.repository';
@@ -32,7 +32,7 @@ export class ProfileLookupService {
   async getVisibleProfile(
     viewerId: string,
     profileUserId: string,
-  ): Promise<DiscoverProfileDto> {
+  ): Promise<DiscoverProfileDetailDto> {
     const notFound = () => new NotFoundException('Profile not available.');
     if (!profileUserId || profileUserId === viewerId) throw notFound();
 
@@ -53,6 +53,14 @@ export class ProfileLookupService {
       viewerId,
     );
     if (rows.length === 0) throw notFound();
-    return this.mapper.toDto(rows[0]);
+
+    // Detail-only columns are read strictly AFTER the visibility check above
+    // has passed, so nothing about a hidden member is ever queried for this
+    // viewer, let alone returned.
+    const [card, extras] = await Promise.all([
+      this.mapper.toDto(rows[0]),
+      this.feedRepository.findDetailExtras(profileUserId),
+    ]);
+    return { ...card, detail: this.mapper.toDetailExtras(extras) };
   }
 }

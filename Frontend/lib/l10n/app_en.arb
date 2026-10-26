@@ -1499,6 +1499,8 @@
   "otpPasteCode": "Paste Code",
   "riYourHoroscope": "Your Horoscope",
   "riHoroscopeEmpty": "Add your horoscope details to enable compatibility matching.",
+  "riHoroscopeAvailable": "Horoscope available",
+  "riHoroscopeNotAvailable": "Horoscope not available",
   "riDiscoverPersonality": "Share your marriage expectations",
   "riQuizTeaser": "3-minute quiz · improves match quality",
   "riPersonalityProfile": "Marriage Compatibility Quiz",

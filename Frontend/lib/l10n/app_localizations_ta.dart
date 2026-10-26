@@ -4066,6 +4066,12 @@ class AppLocalizationsTa extends AppLocalizations {
       'பொருத்தப் பரிசோதனையை இயக்க உங்கள் ஜாதக விவரங்களைச் சேர்க்கவும்.';
 
   @override
+  String get riHoroscopeAvailable => 'ஜாதகம் உள்ளது';
+
+  @override
+  String get riHoroscopeNotAvailable => 'ஜாதகம் இல்லை';
+
+  @override
   String get riDiscoverPersonality =>
       'உங்கள் திருமண எதிர்பார்ப்புகளைப் பகிருங்கள்';
 

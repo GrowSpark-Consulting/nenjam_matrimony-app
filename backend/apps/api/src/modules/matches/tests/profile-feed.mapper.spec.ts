@@ -92,3 +92,21 @@ describe('ProfileFeedMapper isVerified', () => {
     expect(dto.isVerified).toBe(false);
   });
 });
+
+describe('ProfileFeedMapper joinedAt', () => {
+  const mapper = new ProfileFeedMapper(s3);
+
+  it('is the profile creation time, as ISO 8601', async () => {
+    const created = new Date('2026-10-20T08:15:00.000Z');
+    const dto = await mapper.toDto({ ...row({}), createdAt: created });
+    expect(dto.joinedAt).toBe('2026-10-20T08:15:00.000Z');
+  });
+
+  // Never defaulted to "now": that would label every member as new.
+  it('is null when the row carries no creation time', async () => {
+    expect((await mapper.toDto(row({}))).joinedAt).toBeNull();
+    expect(
+      (await mapper.toDto({ ...row({}), createdAt: 'not a date' })).joinedAt,
+    ).toBeNull();
+  });
+});

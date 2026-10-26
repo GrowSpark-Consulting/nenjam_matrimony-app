@@ -29,6 +29,8 @@ import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/si
 import 'package:nenjam_matrimony/features/profile_detail/presentation/widgets/verification_section.dart';
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 
+import 'fake_profile_detail_repository.dart';
+
 DiscoveryProfileEntity _buildProfile({List<String> photoUrls = const []}) {
   return DiscoveryProfileEntity(
     photoUrls: photoUrls,
@@ -153,6 +155,7 @@ Future<void> _pumpPage(
 
   await tester.pumpWidget(
     ProviderScope(
+      overrides: [fakeProfileDetailOverride],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -173,7 +176,7 @@ Future<void> _pumpPage(
     ),
   );
 
-  // Let the FutureProvider (350ms mock delay) resolve.
+  // Let the detail FutureProvider resolve.
   await tester.pump(const Duration(milliseconds: 400));
   await tester.pump(const Duration(milliseconds: 400));
 }
