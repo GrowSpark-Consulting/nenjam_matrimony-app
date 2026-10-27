@@ -2,6 +2,7 @@ import {
   AGENT_REFERRAL_VIEW_FIELDS,
   COMMISSION_STATUS_PUBLIC_MAP,
   FULLY_MASKED_PHONE,
+  IST_OFFSET_MS,
   InternalCommissionStatus,
   maskPhone,
   ReferralViewSource,
@@ -111,12 +112,46 @@ describe('toAgentReferralView', () => {
     expect(toAgentReferralView(stuffed).id).toBe('attr-1');
   });
 
-  it('outputs date-only strings', () => {
-    const view = toAgentReferralView(
-      source({ signedUpAt: '2026-10-01T23:59:59Z', purchasedAt: new Date(0) }),
-    );
-    expect(view.signedUpAt).toBe('2026-10-01');
-    expect(view.purchasedAt).toBe('1970-01-01');
+  describe('dates in Indian time (UTC+05:30)', () => {
+    const signedUp = (value: Date | string) =>
+      toAgentReferralView(source({ signedUpAt: value })).signedUpAt;
+
+    it('uses a fixed +05:30 offset', () => {
+      expect(IST_OFFSET_MS).toBe(19_800_000);
+    });
+
+    it('rolls to the next day after 18:30 UTC', () => {
+      expect(signedUp('2026-10-27T19:00:00Z')).toBe('2026-10-28');
+      expect(signedUp('2026-10-27T18:30:00Z')).toBe('2026-10-28');
+    });
+
+    it('stays on the same day just before 18:30 UTC', () => {
+      expect(signedUp('2026-10-27T18:29:59Z')).toBe('2026-10-27');
+    });
+
+    it('is the same day for the rest of the IST day', () => {
+      expect(signedUp('2026-10-27T00:00:00Z')).toBe('2026-10-27');
+      expect(signedUp('2026-10-26T18:30:00Z')).toBe('2026-10-27');
+    });
+
+    it('rolls over month and year ends', () => {
+      expect(signedUp('2026-12-31T20:00:00Z')).toBe('2027-01-01');
+    });
+
+    it('accepts a Date and applies it to purchasedAt too', () => {
+      const view = toAgentReferralView(
+        source({
+          signedUpAt: new Date('2026-10-27T19:00:00Z'),
+          purchasedAt: new Date('2026-10-27T19:00:00Z'),
+        }),
+      );
+      expect(view.signedUpAt).toBe('2026-10-28');
+      expect(view.purchasedAt).toBe('2026-10-28');
+    });
+
+    it('outputs date-only strings', () => {
+      expect(signedUp('2026-10-01T08:30:00Z')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
   });
 
   it('throws on an invalid date rather than emitting garbage', () => {
@@ -192,8 +227,9 @@ describe('toDisplayName', () => {
     expect(toDisplayName('  Priya  ', '  Sharma  ')).toBe('Priya S.');
   });
 
-  it('uses the last word of a multi-word last name', () => {
-    expect(toDisplayName('Priya', 'Kumar Sharma')).toBe('Priya S.');
+  it('does not split either field: the initial is the start of the last name field', () => {
+    expect(toDisplayName('Priya', 'Kumar Sharma')).toBe('Priya K.');
+    expect(toDisplayName('Mary Ann', 'Sharma')).toBe('Mary Ann S.');
   });
 
   it('upper-cases a lower-case Latin initial', () => {

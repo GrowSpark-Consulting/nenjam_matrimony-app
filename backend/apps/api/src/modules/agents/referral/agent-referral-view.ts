@@ -117,17 +117,18 @@ function firstGrapheme(value: string): string {
 }
 
 /**
- * First name plus last initial: "Priya Sharma" -> "Priya S.". First name only
- * when there is no last name. The initial is the first grapheme, not
- * `string[0]`, so Tamil (and other combining-mark scripts) are not split.
+ * First name plus last initial: ("Priya", "Sharma") -> "Priya S.". The profile
+ * stores the two separately (`UserProfile.firstName` / `lastName`), so nothing
+ * is split here. First name only when the last name is blank. The initial is
+ * the first grapheme, not `string[0]`, so Tamil (and other combining-mark
+ * scripts) are not split.
  */
 export function toDisplayName(
   firstName: string,
   lastName?: string | null,
 ): string {
-  const first = firstName.trim().split(/\s+/)[0] ?? '';
-  const lastParts = (lastName ?? '').trim().split(/\s+/).filter(Boolean);
-  const last = lastParts[lastParts.length - 1];
+  const first = firstName.trim();
+  const last = (lastName ?? '').trim();
   if (!last) return first;
   return `${first} ${firstGrapheme(last).toLocaleUpperCase()}.`;
 }
@@ -140,13 +141,16 @@ export function toPublicCommissionStatus(
   return COMMISSION_STATUS_PUBLIC_MAP[status] ?? 'ON_HOLD';
 }
 
-/** Date-only, YYYY-MM-DD (UTC). */
+/** Indian Standard Time: a fixed UTC+05:30 offset (India has no DST). */
+export const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+
+/** Date-only, YYYY-MM-DD, as the calendar date in Indian time. */
 function toDateOnly(value: Date | string): string {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) {
     throw new RangeError('Invalid date.');
   }
-  return date.toISOString().slice(0, 10);
+  return new Date(date.getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
 }
 
 function clampPct(value: number): number {
