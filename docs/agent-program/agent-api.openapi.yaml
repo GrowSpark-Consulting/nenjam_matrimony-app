@@ -17,6 +17,12 @@ info:
       and an agent is not a member. OTP is delivered/verified through the shared
       `OtpService` (owned by the payments/admin side) with purpose
       `AGENT_SIGN_IN`; we do not change OTP behaviour.
+    - *Applicant*: a phone with no agent record yet. Signs in the same way but
+      gets an access token ONLY (`scope: APPLICANT`, no refresh token). If it
+      expires before they apply, the applicant verifies by OTP again. A
+      successful `POST /agent/application` returns a full agent session (access
+      plus refresh token), so no second OTP is needed after applying. Token
+      lifetimes are settings, not constants.
     - *Member*: the existing Firebase ID token (`Authorization: Bearer ...`).
 
     **Conventions**
@@ -43,7 +49,7 @@ info:
 
     | Status | Sign-in | Allowed |
     |---|---|---|
-    | (no agent yet) | yes, `scope: APPLICANT` | `POST /agent/application`, `GET /agent/me` (404) |
+    | (no agent yet) | yes, `scope: APPLICANT`, **access token only** (no refresh; verify by OTP again if it expires before applying) | `POST /agent/application` (returns an agent session), `GET /agent/me` (404) |
     | `PENDING_APPROVAL` | yes | `GET /agent/me`, `GET /agent/config`, refresh, logout |
     | `REJECTED` | yes | as above; `rejectionReason` is returned; may re-apply |
     | `ACTIVE` | yes | everything |
@@ -109,10 +115,23 @@ paths:
       tags: [Agent auth]
       summary: Verify the OTP and get our own agent tokens
       description: |
-        On success returns an access token and a refresh token **in the body**.
-        If the phone has no agent record yet, the tokens carry
-        `scope: APPLICANT` and only allow `POST /agent/application`. A
-        `TERMINATED` agent can still sign in, read-only (see the state table).
+        Tokens are returned **in the body**. What comes back depends on whether
+        the phone already has an agent record:
+
+        - **Existing agent, in any status** (`PENDING_APPROVAL`, `REJECTED`,
+          `ACTIVE`, `SUSPENDED`, `TERMINATED`): an `AgentSession` with an
+          access token **and** a rotating refresh token, `scope: AGENT`.
+          A `TERMINATED` agent signs in read-only (see the state table).
+        - **Applicant** (no agent record yet): an `ApplicantSession` with an
+          access token **only**, `scope: APPLICANT`, and its expiry. There is
+          no refresh token, so `POST /agent/auth/refresh` cannot extend it.
+          The token only allows `POST /agent/application` and `GET /agent/me`
+          (404). If it expires before applying, the applicant verifies by OTP
+          again. A successful `POST /agent/application` returns a full
+          `AgentSession`, so no second OTP is needed after applying.
+
+        Branch on `scope`. Access and refresh token lifetimes are settings,
+        not constants; `expiresInSeconds` reports the access token's.
       operationId: agentOtpVerify
       security: []
       parameters:
@@ -133,10 +152,45 @@ paths:
                   example: '123456'
       responses:
         '200':
-          description: Signed in.
+          description: Signed in. An `AgentSession` for an existing agent, an `ApplicantSession` otherwise.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AgentSession' }
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AgentSession'
+                  - $ref: '#/components/schemas/ApplicantSession'
+                discriminator:
+                  propertyName: scope
+                  mapping:
+                    AGENT: '#/components/schemas/AgentSession'
+                    APPLICANT: '#/components/schemas/ApplicantSession'
+              examples:
+                agent:
+                  summary: Existing agent (any status)
+                  value:
+                    accessToken: '<agent access token>'
+                    refreshToken: '<opaque refresh token>'
+                    expiresInSeconds: 900
+                    scope: AGENT
+                    agent:
+                      id: 3f1c2b9e-0d5a-4e7b-9c1a-2b6d8e4f7a10
+                      name: Ravi Kumar
+                      phoneMasked: '+91 98***210'
+                      city: Coimbatore
+                      state: Tamil Nadu
+                      status: PENDING_APPROVAL
+                      statusLabel: { en: Under review, ta: '<to be supplied>' }
+                      rejectionReason: null
+                      approvedAt: null
+                      panLast4: null
+                      payoutDetailsSet: false
+                      primaryCode: null
+                applicant:
+                  summary: Applicant (no agent record yet)
+                  value:
+                    accessToken: '<applicant access token>'
+                    expiresInSeconds: 900
+                    scope: APPLICANT
         '400': { $ref: '#/components/responses/ValidationFailed' }
         '401':
           description: OTP wrong or expired (`OTP_INVALID`, `OTP_EXPIRED`).
@@ -153,6 +207,9 @@ paths:
         Refresh tokens rotate: each use returns a new pair and invalidates the
         old refresh token. Presenting an already-used refresh token revokes the
         whole chain (`REFRESH_TOKEN_REUSED`) and the agent must sign in again.
+        Agent sessions only: applicants have no refresh token and verify by OTP
+        again when their access token expires. The refresh token lifetime is a
+        setting.
       operationId: agentRefresh
       security: []
       parameters:
@@ -187,7 +244,9 @@ paths:
       description: |
         Revokes the given refresh token's whole chain. Optionally deactivates
         this device's push token. Idempotent: an unknown or already-revoked
-        token still returns 204.
+        token still returns 204. Agent sessions only: an applicant has no
+        refresh token and nothing to revoke, so the app simply discards the
+        applicant access token.
       operationId: agentLogout
       security:
         - agentBearer: []
@@ -221,6 +280,16 @@ paths:
         `PENDING_APPROVAL` and the old `rejectionReason` is cleared). The phone
         is the verified sign-in phone; it is never taken from the body.
 
+        **On success it returns an `AgentSession`** for the agent record just
+        created (`CREATE_PENDING`) or resubmitted (`RESUBMIT_PENDING`): an
+        access token plus a rotating refresh token, `scope: AGENT`, and the
+        agent's profile in `agent` (status `PENDING_APPROVAL`). The app stores
+        these tokens in place of the ones it used to call this endpoint, so no
+        second OTP is needed. An applicant's old access token is not upgraded;
+        it simply stops being used. When a `REJECTED` agent resubmits, the new
+        session starts a new refresh token family and the previous family is
+        revoked. Token lifetimes are settings.
+
         **PAN is optional on the application, but it is required, together
         with verified payout details, before the first payout can be created.**
         Until both are on file an admin cannot create that agent's first
@@ -251,10 +320,34 @@ paths:
                   description: Optional. Stored encrypted; only the last 4 are ever shown.
       responses:
         '201':
-          description: Application received.
+          description: |
+            Application received. Returns an agent session (access plus
+            refresh token) for the new or resubmitted agent; `agent` is its
+            profile, now `PENDING_APPROVAL`.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AgentProfile' }
+              schema: { $ref: '#/components/schemas/AgentSession' }
+              examples:
+                created:
+                  summary: New application (CREATE_PENDING)
+                  value:
+                    accessToken: '<agent access token>'
+                    refreshToken: '<opaque refresh token>'
+                    expiresInSeconds: 900
+                    scope: AGENT
+                    agent:
+                      id: 3f1c2b9e-0d5a-4e7b-9c1a-2b6d8e4f7a10
+                      name: Ravi Kumar
+                      phoneMasked: '+91 98***210'
+                      city: Coimbatore
+                      state: Tamil Nadu
+                      status: PENDING_APPROVAL
+                      statusLabel: { en: Under review, ta: '<to be supplied>' }
+                      rejectionReason: null
+                      approvedAt: null
+                      panLast4: '234F'
+                      payoutDetailsSet: false
+                      primaryCode: null
         '400': { $ref: '#/components/responses/ValidationFailed' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409':
@@ -699,7 +792,10 @@ components:
       type: http
       scheme: bearer
       bearerFormat: Agent access token (our own, not Firebase)
-      description: Issued by `POST /agent/auth/otp/verify`, short-lived.
+      description: |
+        Issued by `POST /agent/auth/otp/verify` (and renewed by
+        `POST /agent/auth/refresh` for agent sessions), short-lived. Carries
+        `scope: AGENT` or `scope: APPLICANT`.
     memberBearer:
       type: http
       scheme: bearer
@@ -830,20 +926,37 @@ components:
 
     AgentSession:
       type: object
+      description: Session for a phone that has an agent record, in any status.
       required: [accessToken, refreshToken, expiresInSeconds, scope, agent]
       properties:
         accessToken: { type: string, description: Agent access token. }
-        refreshToken: { type: string, description: Opaque, single use, rotates on every refresh. }
-        expiresInSeconds: { type: integer, example: 900 }
+        refreshToken: { type: string, description: 'Opaque, single use, rotates on every refresh. Lifetime is a setting.' }
+        expiresInSeconds:
+          type: integer
+          description: Access token lifetime in seconds (a setting).
+          example: 900
         scope:
           type: string
-          enum: [APPLICANT, AGENT]
-          description: '`APPLICANT` when the phone has no agent record yet.'
-        agent:
-          allOf:
-            - $ref: '#/components/schemas/AgentProfile'
-          nullable: true
-          description: Null for `APPLICANT`.
+          enum: [AGENT]
+        agent: { $ref: '#/components/schemas/AgentProfile' }
+
+    ApplicantSession:
+      type: object
+      description: |
+        Session for a phone with no agent record yet. Access token only: there
+        is no refresh token, and it cannot be refreshed. When it expires the
+        applicant verifies by OTP again.
+      required: [accessToken, expiresInSeconds, scope]
+      additionalProperties: false
+      properties:
+        accessToken: { type: string, description: Applicant access token. }
+        expiresInSeconds:
+          type: integer
+          description: Access token lifetime in seconds (a setting).
+          example: 900
+        scope:
+          type: string
+          enum: [APPLICANT]
 
     AgentProfile:
       type: object
