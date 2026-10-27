@@ -22,6 +22,14 @@ class DiscoverFeedEntity {
   /// otherwise.
   final String fallbackReason;
 
+  /// Where the feed continues after this page, as the backend named it. Null
+  /// once the feed is exhausted. AI Recommended pages on from here — see
+  /// `discoverMoreProfilesProvider`.
+  final String? nextCursor;
+
+  /// Whether the backend reported more matches past this page.
+  final bool hasMore;
+
   const DiscoverFeedEntity({
     required this.stories,
     required this.profileCompletionPercent,
@@ -32,5 +40,18 @@ class DiscoverFeedEntity {
     required this.premiumMembers,
     this.fallbackUsed = false,
     this.fallbackReason = '',
+    this.nextCursor,
+    this.hasMore = false,
   });
+
+  /// Every profile id this page placed anywhere on the screen, so a later
+  /// page can skip members already shown (each card's Hero tag must be unique).
+  Set<String> get profileIds => {
+    for (final s in stories) s.id,
+    for (final p in aiRecommended) p.id,
+    for (final p in recentlyJoined) p.id,
+    for (final p in verifiedProfiles) p.id,
+    for (final p in nearYou) p.id,
+    for (final p in premiumMembers) p.id,
+  };
 }

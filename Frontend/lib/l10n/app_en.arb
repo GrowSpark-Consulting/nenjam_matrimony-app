@@ -2045,5 +2045,15 @@
   "photoViewerPrevious": "Previous photo",
   "photoViewerNext": "Next photo",
   "nearbyPermissionBlockedMessageWeb": "Location is blocked for this site. Allow it in your browser's site settings (next to the address bar), then try again.",
-  "profileLinkCopied": "Profile link copied"
+  "profileLinkCopied": "Profile link copied",
+  "discoverPreviousProfile": "Previous profile",
+  "discoverNextProfile": "Next profile",
+  "discoverProfilePosition": "{current} of {total}",
+  "@discoverProfilePosition": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "discoverLoadMoreFailed": "Couldn't load more profiles."
 }

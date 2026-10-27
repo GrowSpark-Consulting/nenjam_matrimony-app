@@ -24,6 +24,92 @@ final discoverFeedProvider = FutureProvider<DiscoverFeedEntity>(
   (ref) => ref.watch(discoverRepositoryProvider).getDiscoverFeed(),
 );
 
+/// Profiles AI Recommended has paged in past [discoverFeedProvider]'s first
+/// page, and whether it can page further.
+class DiscoverMoreState {
+  final List<DiscoveryProfileEntity> profiles;
+  final String? cursor;
+  final bool hasMore;
+  final bool isLoadingMore;
+
+  /// The last [DiscoverMoreNotifier.loadMore] failed. Cleared by the next try.
+  final bool loadFailed;
+
+  const DiscoverMoreState({
+    this.profiles = const [],
+    this.cursor,
+    this.hasMore = false,
+    this.isLoadingMore = false,
+    this.loadFailed = false,
+  });
+}
+
+/// Continues AI Recommended from the cursor the sectioned feed's own page
+/// handed back, so a member can keep going past the first 50 profiles.
+///
+/// Rebuilds — dropping everything it appended — whenever [discoverFeedProvider]
+/// does (pull-to-refresh, a realtime `feed.invalidate`), so a refreshed feed
+/// never carries pages that belong to an older ranking. Skips any profile the
+/// screen already shows, in any section, and never overlaps two requests.
+class DiscoverMoreNotifier extends Notifier<DiscoverMoreState> {
+  static const _pageSize = 20;
+
+  @override
+  DiscoverMoreState build() {
+    final feed = ref.watch(discoverFeedProvider).valueOrNull;
+    final cursor = feed?.nextCursor;
+    return DiscoverMoreState(
+      cursor: cursor,
+      hasMore: (feed?.hasMore ?? false) && cursor != null,
+    );
+  }
+
+  Future<void> loadMore() async {
+    final current = state;
+    final cursor = current.cursor;
+    if (!current.hasMore || current.isLoadingMore || cursor == null) return;
+    final feed = ref.read(discoverFeedProvider).valueOrNull;
+    if (feed == null) return;
+
+    state = DiscoverMoreState(
+      profiles: current.profiles,
+      cursor: cursor,
+      hasMore: true,
+      isLoadingMore: true,
+    );
+    try {
+      final page = await ref
+          .read(discoverRepositoryProvider)
+          .getDiscoverProfilesPage(limit: _pageSize, cursor: cursor);
+      // A refresh landed while this page was in flight: build() has already
+      // reset the state for the new feed, and this page belongs to the old one.
+      if (!identical(ref.read(discoverFeedProvider).valueOrNull, feed)) return;
+      final seen = {...feed.profileIds, for (final p in current.profiles) p.id};
+      state = DiscoverMoreState(
+        profiles: [
+          ...current.profiles,
+          ...page.items.where((p) => seen.add(p.id)),
+        ],
+        cursor: page.nextCursor,
+        hasMore: page.hasMore && page.nextCursor != null,
+      );
+    } catch (_) {
+      if (!identical(ref.read(discoverFeedProvider).valueOrNull, feed)) return;
+      state = DiscoverMoreState(
+        profiles: current.profiles,
+        cursor: cursor,
+        hasMore: true,
+        loadFailed: true,
+      );
+    }
+  }
+}
+
+final discoverMoreProfilesProvider =
+    NotifierProvider<DiscoverMoreNotifier, DiscoverMoreState>(
+      DiscoverMoreNotifier.new,
+    );
+
 /// Which of the three Discover tabs is active.
 enum DiscoverFilter { forYou, nearMe, newProfiles }
 
@@ -33,7 +119,9 @@ final discoverFilterProvider = StateProvider<DiscoverFilter>(
 
 /// Re-projects the discover feed into one continuous swipeable stream per
 /// filter tab — no parallel repository, datasource, or duplicate model.
-final discoverProfilesProvider = Provider<AsyncValue<List<DiscoveryProfileEntity>>>((ref) {
+final discoverProfilesProvider = Provider<AsyncValue<List<DiscoveryProfileEntity>>>((
+  ref,
+) {
   final filter = ref.watch(discoverFilterProvider);
   final feedAsync = ref.watch(discoverFeedProvider);
 

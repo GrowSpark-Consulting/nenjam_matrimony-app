@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,6 +18,7 @@ import '../../../../core/widgets/indicators/nm_gradient_progress_bar.dart';
 import '../../../../core/widgets/avatars/app_avatars.dart';
 import '../../../../core/widgets/feedback/shimmer_widget.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../authentication/data/models/auth_user.dart';
 import '../../../authentication/presentation/providers/auth_providers.dart';
 import '../../../authentication/presentation/utils/logout_flow.dart';
 import '../../../inbox/presentation/widgets/unread_badge.dart';
@@ -27,6 +29,7 @@ import '../../../profile/presentation/providers/profile_dashboard_providers.dart
 import '../../../profile/presentation/utils/profile_dashboard_mapper.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
 import '../../../profile_photos/presentation/widgets/photo_manager_bottom_sheet.dart';
+import '../../../registration/domain/models/profile_draft.dart';
 import '../../../registration/presentation/utils/open_edit_profile.dart';
 import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 
@@ -62,6 +65,14 @@ import '../../../shortlist/presentation/providers/shortlist_provider.dart';
 //   └─────────────────────────────────────────────────────────────────────┘
 //   4. Premium upgrade strip   (pinned; compact, cream hairline)
 //   5. Fixed bottom footer     (pinned; real app version + Rate Us)
+//
+// Width: every section sits in one centred column, capped at
+// [ProfileMenuPage.contentMaxWidth] and inset by a single shared gutter
+// (16 phone / 24 tablet / 32 desktop), so the card, the rows, the premium
+// strip and the footer always share the same left and right edges. Both are
+// measured off the page's own constraints, not MediaQuery: on desktop the
+// navigation rail is drawn beside the Navigator, so the window is wider than
+// the page.
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ProfileMenuPage extends ConsumerStatefulWidget {
@@ -70,6 +81,11 @@ class ProfileMenuPage extends ConsumerStatefulWidget {
   /// TODO(backend): no subscription/premium-status endpoint is wired yet —
   /// the same placeholder the Discover and Profile pages already use.
   final bool isPremium;
+
+  /// Widest the content column grows, gutters included. Past this the page
+  /// centres it and leaves the rest as margin, rather than stretching a
+  /// strength card and 54dp menu rows across a desktop window.
+  static const double contentMaxWidth = 960;
 
   const ProfileMenuPage({super.key, this.isPremium = false});
 
@@ -119,14 +135,70 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
     final identityLoading = draftAsync.isLoading && !draftAsync.hasValue;
     final identityError = draftAsync.hasError && !draftAsync.hasValue;
 
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final pageWidth = constraints.maxWidth;
+        final gutter = _gutterFor(pageWidth);
+        // Empty space either side of the capped column — 0 below the cap.
+        final sideInset = math.max(
+          0.0,
+          (pageWidth - ProfileMenuPage.contentMaxWidth) / 2,
+        );
+        // Shifts the back arrow by exactly as much as the content moved in,
+        // so it stays over the column's left edge. 0 on a phone, where the
+        // AppBar's own leading slot is unchanged.
+        final backInset = sideInset + gutter - AppSpacing.base;
+        // The same test AppBar uses to imply its own back button.
+        final canPop = ModalRoute.of(context)?.impliesAppBarDismissal ?? false;
+
+        return _MenuMetrics(
+          gutter: gutter,
+          child: _buildScaffold(
+            context,
+            l10n: l10n,
+            draft: draft,
+            authUser: authUser,
+            completionPercent: completionAsync.valueOrNull ?? 0,
+            identityLoading: identityLoading,
+            identityError: identityError,
+            backInset: backInset,
+            canPop: canPop,
+            gutter: gutter,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildScaffold(
+    BuildContext context, {
+    required AppLocalizations l10n,
+    required ProfileDraft? draft,
+    required AuthUser? authUser,
+    required int completionPercent,
+    required bool identityLoading,
+    required bool identityError,
+    required double backInset,
+    required bool canPop,
+    required double gutter,
+  }) {
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       // Bare AppBar — no title, just the platform back button. It inherits the
       // app-wide AppBarTheme (this page's own background, elevation 0,
       // SystemUiOverlayStyle.dark/light), which is what keeps the status bar
       // behaving exactly as on every other pushed page: no hardcoded inset,
-      // no immersive mode, no bespoke overlay style.
-      appBar: AppBar(),
+      // no immersive mode, no bespoke overlay style. Only the leading slot is
+      // widened, to keep the back arrow aligned with the centred content.
+      appBar: AppBar(
+        leadingWidth: kToolbarHeight + backInset,
+        leading: canPop
+            ? Padding(
+                padding: EdgeInsets.only(left: backInset),
+                child: const Center(child: BackButton()),
+              )
+            : null,
+      ),
       // top: false — the AppBar already consumed the status-bar inset. This is
       // here so the pinned footer clears the gesture bar / home indicator.
       body: SafeArea(
@@ -152,201 +224,210 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
               child: RefreshIndicator(
                 onRefresh: _onRefresh,
                 color: AppColors.secondary,
+                // The scroll view itself stays full-width, so a wheel or drag
+                // in the side margins still scrolls the page; only its
+                // content is capped.
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (identityLoading)
-                        const _IdentitySkeleton()
-                      else if (identityError)
-                        _IdentityError(
-                          onRetry: () =>
-                              ref.invalidate(profileDraftResponseProvider),
-                        )
-                      else ...[
-                        _ProfileHeader(
-                          imageUrl: null,
-                          gender: draft?.basicDetails.gender ?? '',
-                          name: profileDisplayName(draft, authUser, l10n),
-                          age: profileDisplayAge(draft) ?? 0,
-                          location: profileDisplayLocation(draft, l10n),
-                          community: draft?.religionDetails.community ?? '',
-                          profileId: profileDisplayId(authUser),
-                          profileCopyValue: profileCopyId(authUser),
-                          isVerified: authUser?.isFullyVerified ?? false,
-                          isPremium: widget.isPremium,
-                          onAvatarTap: () =>
-                              showPhotoManagerBottomSheet(context),
+                  child: _MenuColumn(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (identityLoading)
+                          const _IdentitySkeleton()
+                        else if (identityError)
+                          _IdentityError(
+                            onRetry: () =>
+                                ref.invalidate(profileDraftResponseProvider),
+                          )
+                        else ...[
+                          _ProfileHeader(
+                            imageUrl: null,
+                            gender: draft?.basicDetails.gender ?? '',
+                            name: profileDisplayName(draft, authUser, l10n),
+                            age: profileDisplayAge(draft) ?? 0,
+                            location: profileDisplayLocation(draft, l10n),
+                            community: draft?.religionDetails.community ?? '',
+                            profileId: profileDisplayId(authUser),
+                            profileCopyValue: profileCopyId(authUser),
+                            isVerified: authUser?.isFullyVerified ?? false,
+                            isPremium: widget.isPremium,
+                            onAvatarTap: () =>
+                                showPhotoManagerBottomSheet(context),
+                          ),
+                          _ProfileStrengthBar(
+                            // The backend's `completionPercentage`, straight
+                            // off the same GET /profiles/draft response the
+                            // header above reads — never a number this page
+                            // derives. 0 while it is genuinely unknown, rather
+                            // than a flattering placeholder.
+                            percent: completionPercent,
+                            l10n: l10n,
+                            onTap: () =>
+                                context.push(RouteNames.profileCompletion),
+                          ),
+                        ],
+
+                        // Thin divider
+                        Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: AppColors.dividerLight,
+                          indent: gutter,
+                          endIndent: gutter,
                         ),
-                        _ProfileStrengthBar(
-                          // The backend's `completionPercentage`, straight
-                          // off the same GET /profiles/draft response the
-                          // header above reads — never a number this page
-                          // derives. 0 while it is genuinely unknown, rather
-                          // than a flattering placeholder.
-                          percent: completionAsync.valueOrNull ?? 0,
-                          l10n: l10n,
+
+                        const SizedBox(height: AppSpacing.xs),
+
+                        // Profile group
+                        _DrawerItem(
+                          icon: Icons.person_outline_rounded,
+                          label: l10n.drawerProfile,
+                          isActive: true,
+                          onTap: () => context.push(RouteNames.profile),
+                        ),
+                        _DrawerItem(
+                          icon: Icons.edit_outlined,
+                          label: l10n.drawerEditProfile,
+                          onTap: () => openEditProfile(context, ref),
+                        ),
+                        _DrawerItem(
+                          icon: Icons.favorite_border_rounded,
+                          label: l10n.drawerPartnerPreferences,
+                          onTap: () => openPartnerPreferences(context, ref),
+                        ),
+                        _DrawerItem(
+                          icon: Icons.stars_rounded,
+                          label: l10n.drawerHoroscope,
                           onTap: () =>
-                              context.push(RouteNames.profileCompletion),
+                              openEditProfile(context, ref, wizardStep: 8),
                         ),
+                        _DrawerItem(
+                          icon: Icons.family_restroom_rounded,
+                          label: l10n.drawerFamilyDetails,
+                          onTap: () =>
+                              openEditProfile(context, ref, wizardStep: 7),
+                        ),
+                        _DrawerItem(
+                          icon: Icons.psychology_alt_rounded,
+                          label: l10n.drawerPsychology,
+                          onTap: () =>
+                              openEditProfile(context, ref, wizardStep: 9),
+                        ),
+                        _DrawerItem(
+                          icon: Icons.shield_outlined,
+                          label: l10n.drawerVerificationCenter,
+                          onTap: () =>
+                              openEditProfile(context, ref, wizardStep: 12),
+                        ),
+
+                        _MenuSectionHeader(
+                          label: l10n.drawerSectionMatchActivity,
+                        ),
+
+                        // Match Activity group
+                        Consumer(
+                          builder: (context, ref, _) => _DrawerItem(
+                            icon: Icons.outbox_outlined,
+                            label: l10n.drawerInterestSent,
+                            count: ref
+                                .watch(sentInterestsProvider)
+                                .valueOrNull
+                                ?.where(
+                                  (r) => r.status == InterestStatus.pending,
+                                )
+                                .length,
+                            onTap: () => context.push(RouteNames.interestsSent),
+                          ),
+                        ),
+                        Consumer(
+                          builder: (context, ref, _) => _DrawerItem(
+                            icon: Icons.move_to_inbox_outlined,
+                            label: l10n.drawerInterestReceived,
+                            count: ref
+                                .watch(receivedInterestsProvider)
+                                .valueOrNull
+                                ?.where(
+                                  (r) => r.status == InterestStatus.pending,
+                                )
+                                .length,
+                            onTap: () =>
+                                context.push(RouteNames.interestsReceived),
+                          ),
+                        ),
+                        Consumer(
+                          builder: (context, ref, _) => _DrawerItem(
+                            // Bookmark (not the heart already used by Partner
+                            // Preferences above) to match the icon used
+                            // everywhere else for this exact concept — Discover,
+                            // Matches, Search, Profile Detail.
+                            icon: Icons.bookmark_border_rounded,
+                            label: l10n.drawerShortlist,
+                            count: ref.watch(shortlistCountProvider),
+                            onTap: () => context.push(RouteNames.shortlisted),
+                          ),
+                        ),
+                        // Near Me is withdrawn from this menu for now. The
+                        // feature itself is untouched — the `/nearby` route,
+                        // NearbyPage, the location providers and
+                        // `GET /profiles/nearby` all remain, and the Matches
+                        // "Near Me" chip still opens it — so restoring this row
+                        // is re-adding these six lines and nothing else.
+                        _DrawerItem(
+                          // Same eye used by the Profile Viewers empty state and
+                          // by the PROFILE_VIEW notification icon.
+                          icon: Icons.visibility_outlined,
+                          label: l10n.profileViewersTitle,
+                          // push (not go), and deliberately without
+                          // `openedFromNotification` — that omission is what
+                          // makes Back fall back here rather than to the
+                          // Notification Center.
+                          onTap: () => context.push(RouteNames.profileViewers),
+                        ),
+
+                        _MenuSectionHeader(label: l10n.drawerSectionSettings),
+
+                        // Settings group
+                        _DrawerItem(
+                          icon: Icons.language_outlined,
+                          label: l10n.drawerLanguage,
+                          onTap: () => context.push(RouteNames.language),
+                        ),
+                        _DrawerItem(
+                          icon: Icons.settings_outlined,
+                          label: l10n.drawerSettings,
+                          onTap: () => context.push(RouteNames.settings),
+                        ),
+                        _DrawerItem(
+                          icon: Icons.lock_outline_rounded,
+                          label: l10n.drawerPrivacy,
+                          onTap: () => context.push(RouteNames.privacy),
+                        ),
+                        _DrawerItem(
+                          icon: Icons.help_outline_rounded,
+                          label: l10n.drawerHelp,
+                          onTap: () => context.push(RouteNames.help),
+                        ),
+
+                        _MenuDivider(),
+
+                        // Logout — confirmAndLogout shows its confirm dialog over
+                        // this page, and its final context.go(RouteNames.login)
+                        // replaces the whole stack (this page included) once
+                        // confirmed, so there is nothing to pop first.
+                        _DrawerItem(
+                          icon: Icons.logout_rounded,
+                          label: l10n.drawerLogout,
+                          labelColor: AppColors.error,
+                          iconColor: AppColors.error,
+                          showChevron: false,
+                          isLoading: _loggingOut,
+                          onTap: _handleLogout,
+                        ),
+
+                        const SizedBox(height: AppSpacing.sm),
                       ],
-
-                      // Thin divider
-                      const Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: AppColors.dividerLight,
-                        indent: AppSpacing.base,
-                        endIndent: AppSpacing.base,
-                      ),
-
-                      const SizedBox(height: AppSpacing.xs),
-
-                      // Profile group
-                      _DrawerItem(
-                        icon: Icons.person_outline_rounded,
-                        label: l10n.drawerProfile,
-                        isActive: true,
-                        onTap: () => context.push(RouteNames.profile),
-                      ),
-                      _DrawerItem(
-                        icon: Icons.edit_outlined,
-                        label: l10n.drawerEditProfile,
-                        onTap: () => openEditProfile(context, ref),
-                      ),
-                      _DrawerItem(
-                        icon: Icons.favorite_border_rounded,
-                        label: l10n.drawerPartnerPreferences,
-                        onTap: () => openPartnerPreferences(context, ref),
-                      ),
-                      _DrawerItem(
-                        icon: Icons.stars_rounded,
-                        label: l10n.drawerHoroscope,
-                        onTap: () =>
-                            openEditProfile(context, ref, wizardStep: 8),
-                      ),
-                      _DrawerItem(
-                        icon: Icons.family_restroom_rounded,
-                        label: l10n.drawerFamilyDetails,
-                        onTap: () =>
-                            openEditProfile(context, ref, wizardStep: 7),
-                      ),
-                      _DrawerItem(
-                        icon: Icons.psychology_alt_rounded,
-                        label: l10n.drawerPsychology,
-                        onTap: () =>
-                            openEditProfile(context, ref, wizardStep: 9),
-                      ),
-                      _DrawerItem(
-                        icon: Icons.shield_outlined,
-                        label: l10n.drawerVerificationCenter,
-                        onTap: () =>
-                            openEditProfile(context, ref, wizardStep: 12),
-                      ),
-
-                      _MenuSectionHeader(
-                        label: l10n.drawerSectionMatchActivity,
-                      ),
-
-                      // Match Activity group
-                      Consumer(
-                        builder: (context, ref, _) => _DrawerItem(
-                          icon: Icons.outbox_outlined,
-                          label: l10n.drawerInterestSent,
-                          count: ref
-                              .watch(sentInterestsProvider)
-                              .valueOrNull
-                              ?.where((r) => r.status == InterestStatus.pending)
-                              .length,
-                          onTap: () => context.push(RouteNames.interestsSent),
-                        ),
-                      ),
-                      Consumer(
-                        builder: (context, ref, _) => _DrawerItem(
-                          icon: Icons.move_to_inbox_outlined,
-                          label: l10n.drawerInterestReceived,
-                          count: ref
-                              .watch(receivedInterestsProvider)
-                              .valueOrNull
-                              ?.where((r) => r.status == InterestStatus.pending)
-                              .length,
-                          onTap: () =>
-                              context.push(RouteNames.interestsReceived),
-                        ),
-                      ),
-                      Consumer(
-                        builder: (context, ref, _) => _DrawerItem(
-                          // Bookmark (not the heart already used by Partner
-                          // Preferences above) to match the icon used
-                          // everywhere else for this exact concept — Discover,
-                          // Matches, Search, Profile Detail.
-                          icon: Icons.bookmark_border_rounded,
-                          label: l10n.drawerShortlist,
-                          count: ref.watch(shortlistCountProvider),
-                          onTap: () => context.push(RouteNames.shortlisted),
-                        ),
-                      ),
-                      // Near Me is withdrawn from this menu for now. The
-                      // feature itself is untouched — the `/nearby` route,
-                      // NearbyPage, the location providers and
-                      // `GET /profiles/nearby` all remain, and the Matches
-                      // "Near Me" chip still opens it — so restoring this row
-                      // is re-adding these six lines and nothing else.
-                      _DrawerItem(
-                        // Same eye used by the Profile Viewers empty state and
-                        // by the PROFILE_VIEW notification icon.
-                        icon: Icons.visibility_outlined,
-                        label: l10n.profileViewersTitle,
-                        // push (not go), and deliberately without
-                        // `openedFromNotification` — that omission is what
-                        // makes Back fall back here rather than to the
-                        // Notification Center.
-                        onTap: () => context.push(RouteNames.profileViewers),
-                      ),
-
-                      _MenuSectionHeader(label: l10n.drawerSectionSettings),
-
-                      // Settings group
-                      _DrawerItem(
-                        icon: Icons.language_outlined,
-                        label: l10n.drawerLanguage,
-                        onTap: () => context.push(RouteNames.language),
-                      ),
-                      _DrawerItem(
-                        icon: Icons.settings_outlined,
-                        label: l10n.drawerSettings,
-                        onTap: () => context.push(RouteNames.settings),
-                      ),
-                      _DrawerItem(
-                        icon: Icons.lock_outline_rounded,
-                        label: l10n.drawerPrivacy,
-                        onTap: () => context.push(RouteNames.privacy),
-                      ),
-                      _DrawerItem(
-                        icon: Icons.help_outline_rounded,
-                        label: l10n.drawerHelp,
-                        onTap: () => context.push(RouteNames.help),
-                      ),
-
-                      _MenuDivider(),
-
-                      // Logout — confirmAndLogout shows its confirm dialog over
-                      // this page, and its final context.go(RouteNames.login)
-                      // replaces the whole stack (this page included) once
-                      // confirmed, so there is nothing to pop first.
-                      _DrawerItem(
-                        icon: Icons.logout_rounded,
-                        label: l10n.drawerLogout,
-                        labelColor: AppColors.error,
-                        iconColor: AppColors.error,
-                        showChevron: false,
-                        isLoading: _loggingOut,
-                        onTap: _handleLogout,
-                      ),
-
-                      const SizedBox(height: AppSpacing.sm),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -354,11 +435,13 @@ class _ProfileMenuPageState extends ConsumerState<ProfileMenuPage> {
 
             // ── 4. Premium upgrade strip ───────────────────────────────────
             if (!widget.isPremium)
-              _PremiumStrip(
-                l10n: l10n,
-                // go (not push): Premium is a bottom-nav branch, so this
-                // switches to that tab and drops this page off the stack.
-                onTap: () => context.go(RouteNames.premium),
+              _MenuColumn(
+                child: _PremiumStrip(
+                  l10n: l10n,
+                  // go (not push): Premium is a bottom-nav branch, so this
+                  // switches to that tab and drops this page off the stack.
+                  onTap: () => context.go(RouteNames.premium),
+                ),
               ),
 
             // ── 5. Fixed footer ────────────────────────────────────────────
@@ -421,7 +504,10 @@ class _IdentityError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.base),
+      padding: EdgeInsets.symmetric(
+        horizontal: _MenuMetrics.gutterOf(context),
+        vertical: AppSpacing.base,
+      ),
       child: Row(
         children: [
           const Icon(
@@ -490,16 +576,57 @@ double _avatarDiameter(BuildContext context) =>
 double _avatarBadgeSize(double avatarDiameter) =>
     (avatarDiameter * 0.26).clamp(20.0, 26.0);
 
-/// Horizontal padding for the header and the Profile Strength card. Phones
-/// keep the existing 16dp; only tablets/desktop widen, via the project's
-/// existing [ResponsiveUtils.adaptive] convention.
+/// Horizontal padding for the header and the Profile Strength card — the
+/// page's shared gutter, so both line up with the menu rows below them.
 double _headerHorizontalPadding(BuildContext context) =>
-    ResponsiveUtils.adaptive(
-      context,
-      phone: AppSpacing.base,
-      tablet: AppSpacing.xl,
-      desktop: AppSpacing.xl2,
+    _MenuMetrics.gutterOf(context);
+
+/// The page's side gutter for a given page width. Phones keep the existing
+/// 16dp; tablets and desktop widen at the project's [ResponsiveUtils]
+/// breakpoints. Takes the page's measured width, not MediaQuery's, so the
+/// desktop navigation rail is already accounted for.
+double _gutterFor(double pageWidth) {
+  if (pageWidth >= ResponsiveUtils.desktop) return AppSpacing.xl2;
+  if (pageWidth >= ResponsiveUtils.tablet) return AppSpacing.xl;
+  return AppSpacing.base;
+}
+
+/// Publishes the page's gutter to every section below it, so the header,
+/// the strength card, the rows, the premium strip and the footer cannot
+/// drift onto different edges.
+class _MenuMetrics extends InheritedWidget {
+  final double gutter;
+
+  const _MenuMetrics({required this.gutter, required super.child});
+
+  static double gutterOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_MenuMetrics>()?.gutter ??
+      AppSpacing.base;
+
+  @override
+  bool updateShouldNotify(_MenuMetrics oldWidget) => gutter != oldWidget.gutter;
+}
+
+/// Centres [child] and caps it at [ProfileMenuPage.contentMaxWidth]. Below
+/// the cap it is exactly the available width — never narrower — so
+/// start-aligned content still starts at the column's left edge.
+class _MenuColumn extends StatelessWidget {
+  final Widget child;
+
+  const _MenuColumn({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: ProfileMenuPage.contentMaxWidth,
+        ),
+        child: SizedBox(width: double.infinity, child: child),
+      ),
     );
+  }
+}
 
 class _ProfileHeader extends StatelessWidget {
   final String? imageUrl;
@@ -723,10 +850,7 @@ class _ProfileHeader extends StatelessWidget {
           // itself and says so.
           if (profileId.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xs),
-            _ProfileIdChip(
-              profileId: profileId,
-              copyValue: profileCopyValue,
-            ),
+            _ProfileIdChip(profileId: profileId, copyValue: profileCopyValue),
           ],
         ],
       ),
@@ -774,8 +898,9 @@ class _ProfileIdChipState extends State<_ProfileIdChip> {
     // into a support chat should be the identifier alone. And the *full*
     // uid, not the 8-character form on screen: support can't resolve a
     // prefix, and a prefix isn't guaranteed unique.
-    final copyText =
-        widget.copyValue.isNotEmpty ? widget.copyValue : widget.profileId;
+    final copyText = widget.copyValue.isNotEmpty
+        ? widget.copyValue
+        : widget.profileId;
     await Clipboard.setData(ClipboardData(text: copyText));
     if (!mounted) return;
 
@@ -977,13 +1102,17 @@ class _MenuSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Lines up with the row icons and the strength card's text: both sit one
+    // `md` inside the gutter.
+    final inset = _MenuMetrics.gutterOf(context) + AppSpacing.md;
+
     return Padding(
       // Generous above, tight below: the space belongs to the boundary with
       // the group that ended, not between this title and the rows it heads.
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
+        inset,
         AppSpacing.base,
-        AppSpacing.base,
-        AppSpacing.base,
+        inset,
         AppSpacing.xs,
       ),
       child: Semantics(
@@ -1009,12 +1138,14 @@ class _MenuSectionHeader extends StatelessWidget {
 class _MenuDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const Divider(
+    final gutter = _MenuMetrics.gutterOf(context);
+
+    return Divider(
       height: 12,
       thickness: 1,
       color: AppColors.dividerLight,
-      indent: AppSpacing.base,
-      endIndent: AppSpacing.base,
+      indent: gutter,
+      endIndent: gutter,
     );
   }
 }
@@ -1115,7 +1246,11 @@ class _DrawerItemState extends State<_DrawerItem>
                   : null,
               child: Container(
                 height: 54,
-                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                // The page gutter, so every row spans exactly the strength
+                // card's width above it.
+                margin: EdgeInsets.symmetric(
+                  horizontal: _MenuMetrics.gutterOf(context),
+                ),
                 decoration: BoxDecoration(
                   color: widget.isActive
                       ? AppColors.softLavender.withValues(alpha: 1.0)
@@ -1197,11 +1332,9 @@ class _PremiumStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.base,
-        AppSpacing.xs,
-        AppSpacing.base,
-        AppSpacing.xs,
+      padding: EdgeInsets.symmetric(
+        horizontal: _MenuMetrics.gutterOf(context),
+        vertical: AppSpacing.xs,
       ),
       child: Material(
         color: Colors.transparent,
@@ -1325,67 +1458,73 @@ class _DrawerFooter extends StatelessWidget {
     // ending in a year that has already passed is the classic dead-footer
     // tell, and there is nothing here worth caching to avoid it.
     final year = DateTime.now().year.toString();
+    // Same left edge as the section headers and row icons above.
+    final inset = _MenuMetrics.gutterOf(context) + AppSpacing.md;
 
+    // The hairline spans the page; the text inside it sits in the same
+    // capped column as everything else.
     return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.base,
-        AppSpacing.sm,
-        AppSpacing.base,
-        AppSpacing.sm,
-      ),
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: AppColors.dividerLight)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ── Legal + Rate Us ──────────────────────────────────────────
-          //
-          // One row, because both are actions; the two lines under it are
-          // facts about the build and are never tappable.
-          Row(
+      child: _MenuColumn(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: inset,
+            vertical: AppSpacing.sm,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Flexible(
-                child: _FooterLink(
-                  label: l10n.drawerTerms,
-                  underline: true,
-                  // The screen the app already has for this. Not a new
-                  // page, and not an external URL - the content lives in
-                  // the app.
-                  onTap: () => context.push(RouteNames.privacy),
-                ),
+              // ── Legal + Rate Us ──────────────────────────────────────────
+              //
+              // One row, because both are actions; the two lines under it are
+              // facts about the build and are never tappable.
+              Row(
+                children: [
+                  Flexible(
+                    child: _FooterLink(
+                      label: l10n.drawerTerms,
+                      underline: true,
+                      // The screen the app already has for this. Not a new
+                      // page, and not an external URL - the content lives in
+                      // the app.
+                      onTap: () => context.push(RouteNames.privacy),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  // The label used to be inert - the old drawer's `onRateUsTap`
+                  // hook was never wired by any caller. There is no in-app
+                  // review flow in the project to reuse, so this opens the
+                  // store listing with the url_launcher the Help screen already
+                  // uses, rather than pulling in a review SDK.
+                  Flexible(
+                    child: _FooterLink(
+                      label: l10n.drawerRateUs,
+                      onTap: () => _rateUs(context),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: AppSpacing.sm),
-              // The label used to be inert - the old drawer's `onRateUsTap`
-              // hook was never wired by any caller. There is no in-app
-              // review flow in the project to reuse, so this opens the
-              // store listing with the url_launcher the Help screen already
-              // uses, rather than pulling in a review SDK.
-              Flexible(
-                child: _FooterLink(
-                  label: l10n.drawerRateUs,
-                  onTap: () => _rateUs(context),
-                ),
+              const SizedBox(height: 2),
+              Text(
+                l10n.drawerCopyright(year),
+                style: _footerTextStyle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                // The build's real version, from the single constant the rest
+                // of the app already reads - never a number typed in here.
+                l10n.drawerVersion(AppConstants.appVersion),
+                style: _footerTextStyle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
-          const SizedBox(height: 2),
-          Text(
-            l10n.drawerCopyright(year),
-            style: _footerTextStyle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            // The build's real version, from the single constant the rest
-            // of the app already reads - never a number typed in here.
-            l10n.drawerVersion(AppConstants.appVersion),
-            style: _footerTextStyle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -63,14 +63,15 @@ class DiscoverPage extends ConsumerWidget {
     // whatever the navigation rail beside the page takes.
     final wide = WindowClass.of(context).isLarge;
 
+    // The feed is held at [ContentWidth.feed] at every width, not only beside
+    // the inbox panel: on a tablet or a small laptop window a full-width large
+    // card became a wide landscape crop with its actions stretched across it.
     final feedBody = feedAsync.when(
-      data: (feed) => _DiscoverFeedView(feed: feed, centered: wide),
-      loading: () => wide
-          ? const NmContentWidth(
-              maxWidth: ContentWidth.feed,
-              child: _DiscoverLoading(),
-            )
-          : const _DiscoverLoading(),
+      data: (feed) => _DiscoverFeedView(feed: feed),
+      loading: () => const NmContentWidth(
+        maxWidth: ContentWidth.feed,
+        child: _DiscoverLoading(),
+      ),
       // skipError: a background refresh this provider's own `.invalidate`
       // (pull-to-refresh, or a realtime `feed.invalidate` signal — see
       // realtime_providers.dart) can fail without replacing an
@@ -142,14 +143,12 @@ class _DiscoverLoading extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _DiscoverFeedView extends ConsumerWidget {
+  /// Centered at [ContentWidth.feed] whenever it has more room than that. The
+  /// scroll view itself stays full width, so a mouse wheel over the side
+  /// gutters still scrolls the feed.
   final DiscoverFeedEntity feed;
 
-  /// Whether to center the feed at [ContentWidth.feed] when it has more room
-  /// than that. The scroll view itself stays full width, so a mouse wheel over
-  /// the side gutters still scrolls the feed.
-  final bool centered;
-
-  const _DiscoverFeedView({required this.feed, this.centered = false});
+  const _DiscoverFeedView({required this.feed});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -229,10 +228,7 @@ class _DiscoverFeedView extends ConsumerWidget {
                 title: l10n.discoverAiRecommendedTitle,
                 icon: Icons.auto_awesome_rounded,
                 iconColor: AppColors.secondary,
-                child: _LargeProfileCard(
-                  profile: feed.aiRecommended.first,
-                  showStats: false,
-                ),
+                child: _AiRecommendedCarousel(feed: feed),
               ),
             ),
           ),
@@ -256,8 +252,8 @@ class _DiscoverFeedView extends ConsumerWidget {
                 title: l10n.discoverVerifiedProfilesTitle,
                 icon: Icons.verified_rounded,
                 iconColor: AppColors.verifiedBlue,
-                child: _LargeProfileCard(
-                  profile: feed.verifiedProfiles.first,
+                child: _ProfileCarousel(
+                  profiles: feed.verifiedProfiles,
                   showStats: true,
                 ),
               ),
@@ -290,7 +286,7 @@ class _DiscoverFeedView extends ConsumerWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final surplus = constraints.maxWidth - ContentWidth.feed;
-          final inset = centered && surplus > 0 ? surplus / 2 : 0.0;
+          final inset = surplus > 0 ? surplus / 2 : 0.0;
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
@@ -314,6 +310,8 @@ class _DiscoverFeedView extends ConsumerWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // App Bar
 // ─────────────────────────────────────────────────────────────────────────────
+
+const double _appBarHeight = 64;
 
 /// Translucent sticky app bar: avatar + "Nenjam Matrimony" + search + bell.
 class _DiscoverAppBar extends StatelessWidget {
@@ -342,7 +340,7 @@ class _DiscoverAppBar extends StatelessWidget {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       shadowColor: Colors.transparent,
-      toolbarHeight: 64,
+      toolbarHeight: _appBarHeight,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(
@@ -560,7 +558,9 @@ class _NewTodaySection extends StatelessWidget {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.base,
+                ),
                 itemCount: stories.length,
                 separatorBuilder: (_, __) =>
                     const SizedBox(width: AppSpacing.base),
@@ -770,17 +770,53 @@ class _FeedSection extends StatelessWidget {
 // Large Profile Card (AI Recommended / Verified Profiles)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Full-bleed profile card — 75vh height, radius-32, matching Stitch design.
+/// Full-bleed profile card — radius-32, matching Stitch design. Its height
+/// comes from [heightFor], shared with the carousel that hosts it.
 class _LargeProfileCard extends StatelessWidget {
   final DiscoveryProfileEntity profile;
   final bool showStats;
+  final double height;
 
-  const _LargeProfileCard({required this.profile, required this.showStats});
+  const _LargeProfileCard({
+    super.key,
+    required this.profile,
+    required this.showStats,
+    required this.height,
+  });
+
+  /// Floor and cap for [heightFor]. The floor holds the name, a row of tags
+  /// and all three actions at their full touch size; the cap keeps the card's
+  /// portrait shape on a tall monitor, where the feed column is only 680 wide.
+  static const double minHeight = 420;
+  static const double maxHeight = 760;
+
+  /// Room the badge row takes at the top of the card; the info block below
+  /// never grows into it.
+  static const double _badgeReserve = 56;
+
+  /// 72% of the window, as the card always was, but no taller than what is
+  /// left below the sticky app bar once the carousel controls and the nav
+  /// clearance are taken out, so on a short window the whole card, actions
+  /// included, fits on screen at once. Clamped to [minHeight]..[maxHeight]:
+  /// below the floor the page scrolls rather than squeezing the actions.
+  static double heightFor(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final h = media.size.height;
+    final available =
+        h -
+        media.padding.top -
+        _appBarHeight -
+        _CarouselControls.height -
+        navContentInset(context) -
+        AppSpacing.base;
+    final target = h * 0.72 < available ? h * 0.72 : available;
+    return target.clamp(minHeight, maxHeight);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final cardHeight = MediaQuery.sizeOf(context).height * 0.72;
+    final cardHeight = height;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
@@ -839,87 +875,109 @@ class _LargeProfileCard extends StatelessWidget {
                 ),
 
                 // ── Bottom info + buttons ──────────────────────────────
+                // Held below the badge row. If larger text or a long Tamil
+                // name still makes the block taller than that band, it scales
+                // down as a whole instead of running off the card's top edge,
+                // so the actions are never the part that gets cut.
                 Positioned(
+                  top: _badgeReserve,
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Name + verified
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                '${profile.name}, ${profile.age}',
-                                style: AppTypography.headlineMedium.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: LayoutBuilder(
+                      builder: (context, box) => FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.bottomLeft,
+                        child: SizedBox(
+                          width: box.maxWidth,
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Name + verified
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        '${profile.name}, ${profile.age}',
+                                        style: AppTypography.headlineMedium
+                                            .copyWith(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (profile.isVerified) ...[
+                                      const SizedBox(width: 6),
+                                      const Icon(
+                                        Icons.verified_rounded,
+                                        size: 20,
+                                        color: AppColors.accentLight,
+                                      ),
+                                    ],
+                                  ],
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                                const SizedBox(height: 4),
+
+                                // Location • Profession
+                                if (profile.location.isNotEmpty ||
+                                    profile.profession.isNotEmpty)
+                                  Text(
+                                    [
+                                      if (profile.location.isNotEmpty)
+                                        profile.location,
+                                      if (profile.profession.isNotEmpty)
+                                        profile.profession,
+                                    ].join(' • '),
+                                    style: AppTypography.bodyMedium.copyWith(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+
+                                // Stats row (Match / Astro) for verified card
+                                if (showStats &&
+                                    profile.compatibility.aiMatchPercent >
+                                        0) ...[
+                                  const SizedBox(height: AppSpacing.sm),
+                                  _StatsRow(
+                                    l10n: l10n,
+                                    compatibility: profile.compatibility,
+                                  ),
+                                ],
+
+                                // Tag pills
+                                if (_tagPills(l10n, profile).isNotEmpty) ...[
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 5,
+                                    children: _tagPills(
+                                      l10n,
+                                      profile,
+                                    ).map((t) => _TagPill(label: t)).toList(),
+                                  ),
+                                ],
+
+                                const SizedBox(height: AppSpacing.base),
+
+                                // Buttons
+                                _CardButtons(profile: profile),
+                              ],
                             ),
-                            if (profile.isVerified) ...[
-                              const SizedBox(width: 6),
-                              const Icon(
-                                Icons.verified_rounded,
-                                size: 20,
-                                color: AppColors.accentLight,
-                              ),
-                            ],
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: 4),
-
-                        // Location • Profession
-                        if (profile.location.isNotEmpty ||
-                            profile.profession.isNotEmpty)
-                          Text(
-                            [
-                              if (profile.location.isNotEmpty) profile.location,
-                              if (profile.profession.isNotEmpty)
-                                profile.profession,
-                            ].join(' • '),
-                            style: AppTypography.bodyMedium.copyWith(
-                              color: Colors.white.withValues(alpha: 0.8),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-
-                        // Stats row (Match / Astro) for verified card
-                        if (showStats &&
-                            profile.compatibility.aiMatchPercent > 0) ...[
-                          const SizedBox(height: AppSpacing.sm),
-                          _StatsRow(
-                            l10n: l10n,
-                            compatibility: profile.compatibility,
-                          ),
-                        ],
-
-                        // Tag pills
-                        if (_tagPills(l10n, profile).isNotEmpty) ...[
-                          const SizedBox(height: AppSpacing.sm),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 5,
-                            children: _tagPills(
-                              l10n,
-                              profile,
-                            ).map((t) => _TagPill(label: t)).toList(),
-                          ),
-                        ],
-
-                        const SizedBox(height: AppSpacing.base),
-
-                        // Buttons
-                        _CardButtons(profile: profile),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -938,6 +996,256 @@ class _LargeProfileCard extends StatelessWidget {
     }
     if (p.isPremium && !list.contains('Premium Plus')) list.add('Premium Plus');
     return list.take(4).map((tag) => _localizedTag(l10n, tag)).toList();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Large-card carousel (AI Recommended / Verified Profiles)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// AI Recommended: this page's recommendations, then whatever
+/// [discoverMoreProfilesProvider] has paged in after them.
+class _AiRecommendedCarousel extends ConsumerWidget {
+  final DiscoverFeedEntity feed;
+
+  const _AiRecommendedCarousel({required this.feed});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final more = ref.watch(discoverMoreProfilesProvider);
+    return _ProfileCarousel(
+      profiles: [...feed.aiRecommended, ...more.profiles],
+      showStats: false,
+      hasMore: more.hasMore,
+      isLoadingMore: more.isLoadingMore,
+      loadFailed: more.loadFailed,
+      onLoadMore: ref.read(discoverMoreProfilesProvider.notifier).loadMore,
+    );
+  }
+}
+
+/// Every profile in a section, one large card at a time: swipe (or drag with
+/// a mouse) between them, or use the previous/next controls underneath.
+///
+/// These sections used to render only their first profile. Since the feed's
+/// Verified, Premium and New sections began taking only members who qualify,
+/// everyone else lands in AI Recommended — so on a typical feed that one card
+/// was the only profile on the screen and the rest were never shown.
+class _ProfileCarousel extends StatefulWidget {
+  final List<DiscoveryProfileEntity> profiles;
+  final bool showStats;
+  final bool hasMore;
+  final bool isLoadingMore;
+  final bool loadFailed;
+
+  /// Asks for the next page. Called as the member nears the last card, and
+  /// when they press next on it.
+  final VoidCallback? onLoadMore;
+
+  const _ProfileCarousel({
+    required this.profiles,
+    required this.showStats,
+    this.hasMore = false,
+    this.isLoadingMore = false,
+    this.loadFailed = false,
+    this.onLoadMore,
+  });
+
+  /// How close to the last card the next page is requested, so it is usually
+  /// there before the member reaches the end.
+  static const _prefetchDistance = 3;
+
+  @override
+  State<_ProfileCarousel> createState() => _ProfileCarouselState();
+}
+
+class _ProfileCarouselState extends State<_ProfileCarousel> {
+  final _controller = PageController();
+  int _index = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onPageChanged(int index) {
+    setState(() => _index = index);
+    if (index >= widget.profiles.length - _ProfileCarousel._prefetchDistance) {
+      _loadMore();
+    }
+  }
+
+  void _loadMore() {
+    if (widget.hasMore && !widget.isLoadingMore) widget.onLoadMore?.call();
+  }
+
+  void _go(int delta) {
+    final target = _current + delta;
+    if (target >= widget.profiles.length) {
+      _loadMore();
+      return;
+    }
+    if (target < 0) return;
+    _controller.animateToPage(
+      target,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  /// [_index], kept in range when a refresh hands back a shorter list.
+  int get _current =>
+      widget.profiles.isEmpty ? 0 : _index.clamp(0, widget.profiles.length - 1);
+
+  @override
+  Widget build(BuildContext context) {
+    final height = _LargeProfileCard.heightFor(context);
+    final profiles = widget.profiles;
+    final showControls =
+        profiles.length > 1 || widget.hasMore || widget.loadFailed;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: height,
+          child: NmMouseDragScroll(
+            child: PageView.builder(
+              controller: _controller,
+              itemCount: profiles.length,
+              onPageChanged: _onPageChanged,
+              itemBuilder: (context, i) => _LargeProfileCard(
+                key: ValueKey(profiles[i].id),
+                profile: profiles[i],
+                showStats: widget.showStats,
+                height: height,
+              ),
+            ),
+          ),
+        ),
+        if (showControls)
+          _CarouselControls(
+            current: _current,
+            total: profiles.length,
+            canGoBack: _current > 0,
+            canGoForward: _current < profiles.length - 1 || widget.hasMore,
+            isLoadingMore: widget.isLoadingMore,
+            loadFailed: widget.loadFailed,
+            onPrevious: () => _go(-1),
+            onNext: () => _go(1),
+            onRetry: _loadMore,
+          ),
+      ],
+    );
+  }
+}
+
+/// Previous / "3 of 14" / next under a carousel, plus its paging state.
+class _CarouselControls extends StatelessWidget {
+  static const double height = 56;
+
+  final int current;
+  final int total;
+  final bool canGoBack;
+  final bool canGoForward;
+  final bool isLoadingMore;
+  final bool loadFailed;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
+  final VoidCallback onRetry;
+
+  const _CarouselControls({
+    required this.current,
+    required this.total,
+    required this.canGoBack,
+    required this.canGoForward,
+    required this.isLoadingMore,
+    required this.loadFailed,
+    required this.onPrevious,
+    required this.onNext,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final status = loadFailed
+        ? <Widget>[
+            Flexible(
+              child: Text(
+                l10n.discoverLoadMoreFailed,
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.error,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            TextButton(
+              onPressed: onRetry,
+              child: Text(
+                l10n.commonRetry,
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.secondary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ]
+        : <Widget>[
+            Flexible(
+              child: Text(
+                l10n.discoverProfilePosition(current + 1, total),
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (isLoadingMore) ...[
+              const SizedBox(width: AppSpacing.sm),
+              const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.secondary,
+                ),
+              ),
+            ],
+          ];
+
+    return SizedBox(
+      height: height,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: l10n.discoverPreviousProfile,
+              onPressed: canGoBack ? onPrevious : null,
+              color: AppColors.primary,
+              icon: const Icon(Icons.chevron_left_rounded),
+            ),
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: status,
+              ),
+            ),
+            IconButton(
+              tooltip: l10n.discoverNextProfile,
+              onPressed: canGoForward ? onNext : null,
+              color: AppColors.primary,
+              icon: const Icon(Icons.chevron_right_rounded),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -2028,7 +2336,8 @@ class _PremiumMembersSection extends StatelessWidget {
                   itemCount: profiles.length,
                   separatorBuilder: (_, __) =>
                       const SizedBox(width: AppSpacing.base),
-                  itemBuilder: (_, i) => _PremiumMemberCard(profile: profiles[i]),
+                  itemBuilder: (_, i) =>
+                      _PremiumMemberCard(profile: profiles[i]),
                 ),
               ),
             ),

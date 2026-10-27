@@ -49,8 +49,7 @@ class DiscoverRepositoryImpl implements DiscoverRepository {
       ApiEndpoints.discover,
       queryParameters: const {'page': 1, 'limit': _feedLimit},
     );
-    final data =
-        unwrapOrThrow(response.statusCode, response.data) ?? const {};
+    final data = unwrapOrThrow(response.statusCode, response.data) ?? const {};
 
     final profiles = _parseProfiles(data);
 
@@ -80,7 +79,14 @@ class DiscoverRepositoryImpl implements DiscoverRepository {
       profileCompletionPercent: 0,
       fallbackUsed: data['fallbackUsed'] == true,
       fallbackReason: (data['reason'] as String?) ?? '',
+      nextCursor: _cursorOf(data),
+      hasMore: data['hasMore'] == true,
     );
+  }
+
+  static String? _cursorOf(Map<String, dynamic> data) {
+    final cursor = data['nextCursor'];
+    return cursor is String && cursor.isNotEmpty ? cursor : null;
   }
 
   @override
@@ -99,16 +105,12 @@ class DiscoverRepositoryImpl implements DiscoverRepository {
         if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
       },
     );
-    final data =
-        unwrapOrThrow(response.statusCode, response.data) ?? const {};
-    final nextCursor = data['nextCursor'];
+    final data = unwrapOrThrow(response.statusCode, response.data) ?? const {};
     return DiscoverProfilePage(
       items: _parseProfiles(data),
       page: (data['page'] as num?)?.toInt() ?? page,
       hasMore: data['hasMore'] == true,
-      nextCursor: nextCursor is String && nextCursor.isNotEmpty
-          ? nextCursor
-          : null,
+      nextCursor: _cursorOf(data),
     );
   }
 
@@ -191,13 +193,13 @@ class DiscoverRepositoryImpl implements DiscoverRepository {
   /// A "New Today" bubble wraps a real profile so tapping it opens Profile
   /// Detail exactly like any card. First name only, to fit the 76px bubble.
   StoryModel _toStory(DiscoveryProfileModel p) => StoryModel(
-        id: p.id,
-        name: p.name.isEmpty ? p.name : p.name.split(' ').first,
-        imageUrl: p.photoUrls.isNotEmpty ? p.photoUrls.first : '',
-        // Only members who joined within [newTodayWindow] reach this bucket,
-        // so the "new" ring states a fact; recomputed rather than assumed.
-        hasNewStory: joinedWithin(p, newTodayWindow, DateTime.now()),
-        gender: p.gender,
-        profile: p,
-      );
+    id: p.id,
+    name: p.name.isEmpty ? p.name : p.name.split(' ').first,
+    imageUrl: p.photoUrls.isNotEmpty ? p.photoUrls.first : '',
+    // Only members who joined within [newTodayWindow] reach this bucket,
+    // so the "new" ring states a fact; recomputed rather than assumed.
+    hasNewStory: joinedWithin(p, newTodayWindow, DateTime.now()),
+    gender: p.gender,
+    profile: p,
+  );
 }

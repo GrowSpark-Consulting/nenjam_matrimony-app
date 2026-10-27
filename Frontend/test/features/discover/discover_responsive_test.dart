@@ -376,7 +376,7 @@ void main() {
       expect(_columnsOf(tester), 4);
     });
 
-    testWidgets('without the panel, the feed keeps its full width', (
+    testWidgets('without the panel, the feed is still centered at its cap', (
       tester,
     ) async {
       final errors = await _pumpDiscover(
@@ -385,9 +385,10 @@ void main() {
         nearby: _FakeNearbyRepository(_profiles(4)),
       );
       expectNoOverflowIn(errors);
-      // Unchanged from before the panel existed: 1199 - 2 * 16.
-      expect(tester.getSize(_gridFinder).width, 1167);
-      expect(tester.getTopLeft(_gridFinder).dx, 16);
+      // Feed content: 680, centered in 1199, so a 259.5px gutter each side.
+      // Near You pads itself 16px inside that.
+      expect(tester.getSize(_gridFinder).width, 648);
+      expect(tester.getTopLeft(_gridFinder).dx, 275.5);
     });
 
     testWidgets('lists conversations newest first', (tester) async {

@@ -79,7 +79,7 @@ class NmPremiumMembershipCard extends StatelessWidget {
                         size: 32,
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.base * 4),
+                    const SizedBox(width: AppSpacing.base),
 
                     // Text
                     Expanded(
@@ -145,12 +145,13 @@ class NmPremiumMembershipCard extends StatelessWidget {
                   return Row(
                     children: [
                       Expanded(child: content),
-                      const SizedBox(width: AppSpacing.base * 4),
+                      const SizedBox(width: AppSpacing.xl),
                       button,
                     ],
                   );
                 } else {
                   return Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       content,

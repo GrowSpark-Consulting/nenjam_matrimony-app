@@ -5181,4 +5181,18 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get profileLinkCopied => 'சுயவிவர இணைப்பு நகலெடுக்கப்பட்டது';
+
+  @override
+  String get discoverPreviousProfile => 'முந்தைய சுயவிவரம்';
+
+  @override
+  String get discoverNextProfile => 'அடுத்த சுயவிவரம்';
+
+  @override
+  String discoverProfilePosition(int current, int total) {
+    return '$total இல் $current';
+  }
+
+  @override
+  String get discoverLoadMoreFailed => 'மேலும் சுயவிவரங்களை ஏற்ற முடியவில்லை.';
 }

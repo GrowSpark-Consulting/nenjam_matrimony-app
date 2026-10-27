@@ -9349,6 +9349,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Profile link copied'**
   String get profileLinkCopied;
+
+  /// No description provided for @discoverPreviousProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous profile'**
+  String get discoverPreviousProfile;
+
+  /// No description provided for @discoverNextProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Next profile'**
+  String get discoverNextProfile;
+
+  /// No description provided for @discoverProfilePosition.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} of {total}'**
+  String discoverProfilePosition(int current, int total);
+
+  /// No description provided for @discoverLoadMoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load more profiles.'**
+  String get discoverLoadMoreFailed;
 }
 
 class _AppLocalizationsDelegate

@@ -201,7 +201,10 @@ void main() {
       await _pumpMenu(tester);
 
       expect(find.text('Dhatri Patel'), findsOneWidget);
-      expect(find.textContaining('Bengaluru, Karnataka, India'), findsOneWidget);
+      expect(
+        find.textContaining('Bengaluru, Karnataka, India'),
+        findsOneWidget,
+      );
       expect(find.text('Patidar Community'), findsOneWidget);
 
       double sizeOf(Finder f) => tester.widget<Text>(f).style!.fontSize!;
@@ -273,7 +276,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            profileDraftResponseProvider.overrideWith((ref) async => _draft(72)),
+            profileDraftResponseProvider.overrideWith(
+              (ref) async => _draft(72),
+            ),
           ],
           child: MaterialApp(
             locale: const Locale('en'),
