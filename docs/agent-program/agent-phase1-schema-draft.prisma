@@ -1,0 +1,215 @@
+// ============================================================================
+// Nenjam Agent / Partner Program — PHASE 1 schema DRAFT
+//
+// NOT applied. This file is a proposal for review; it is not read by Prisma
+// from this location and must not be copied into libs/database/prisma/
+// schema.prisma without a real migration (pnpm prisma:migrate:dev).
+//
+// Scope: Agent, ReferralCode, ReferralAttribution, AgentRefreshToken,
+// AgentDeviceToken. Commission, payout and policy tables come later.
+//
+// Rules this draft follows
+//   - Same style as schema.prisma: uuid string ids, camelCase fields with
+//     snake_case @map, createdAt/updatedAt, enums with a snake_case @@map.
+//   - Our tables may point at Shaaz's (User, and his DevicePlatform enum).
+//     His tables never point at ours.
+//   - Agent has NO userId and NO link to User: an agent signs in with their
+//     own phone + OTP and their own agent JWT, and is not a member.
+//   - Phones are stored twice on purpose: `phone` (E.164, to contact and show
+//     masked) and `phoneHash` (hashIdentifier(kind, value) from libs/common,
+//     for lookup and uniqueness). Do not write a second hash helper.
+//   - PAN and payout details are stored as ENCRYPTED strings; the plaintext
+//     never reaches the database. Only the last 4 of the PAN is kept clear.
+//
+// One mechanical consequence of ReferralAttribution -> User: Prisma requires
+// the opposite relation field on User. That is a single line and is listed in
+// "Required edit to User" at the bottom. It adds NO column to `users`.
+// ============================================================================
+
+/// Lifecycle of an agent's account. SUSPENDED is shown to the agent as "Paused".
+enum AgentStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  REJECTED
+  SUSPENDED
+  TERMINATED
+
+  @@map("agent_status")
+}
+
+/// How a member came to be attributed to an agent.
+enum ReferralSource {
+  CODE_AT_SIGNUP
+  LINK_OR_QR
+  ADDED_BY_AGENT
+  ENTERED_AT_PAYMENT
+  ADMIN_SET
+
+  @@map("referral_source")
+}
+
+/// Whether an attribution still counts. Value names match Shaaz's Revision 3;
+/// the one-line meanings below are ASSUMED and should be confirmed against it.
+/// ACTIVE    - credited, inside the window, no purchase yet.
+/// CONVERTED - the member bought; commission was created.
+/// EXPIRED   - the credit window ended without a purchase.
+/// REJECTED  - not credited (e.g. self-referral or an agent that cannot earn).
+enum AttributionStatus {
+  ACTIVE
+  CONVERTED
+  EXPIRED
+  REJECTED
+
+  @@map("attribution_status")
+}
+
+/// A partner who refers members. Separate identity from User by design.
+model Agent {
+  id                    String       @id @default(uuid())
+  /// E.164, e.g. +919876543210.
+  phone                 String       @unique
+  /// hashIdentifier(kind, phone) — see libs/common. Used for lookup.
+  phoneHash             String       @unique @map("phone_hash")
+  name                  String
+  city                  String
+  state                 String
+  /// Last 4 characters of the PAN, the only part kept in clear.
+  panLast4              String?      @map("pan_last4") @db.VarChar(4)
+  /// Encrypted PAN (ciphertext string). Null until supplied.
+  panEncrypted          String?      @map("pan_encrypted")
+  /// Encrypted payout details (bank / UPI) as one ciphertext string.
+  payoutDetailsEncrypted String?     @map("payout_details_encrypted")
+  status                AgentStatus  @default(PENDING_APPROVAL)
+  /// Set when status = REJECTED; shown to the applicant.
+  rejectionReason       String?      @map("rejection_reason")
+  approvedAt            DateTime?    @map("approved_at")
+  createdAt             DateTime     @default(now()) @map("created_at")
+  updatedAt             DateTime     @updatedAt @map("updated_at")
+
+  referralCodes         ReferralCode[]
+  attributions          ReferralAttribution[]
+  refreshTokens         AgentRefreshToken[]
+  deviceTokens          AgentDeviceToken[]
+
+  @@index([status])
+  @@map("agents")
+}
+
+/// An "NM" + 6 character code an agent shares. An agent may hold several
+/// (e.g. per campaign) but only one is primary.
+model ReferralCode {
+  id           String   @id @default(uuid())
+  agentId      String   @map("agent_id")
+  /// NM + 6 chars from 23456789ABCDEFGHJKMNPQRSTUVWXYZ. See the CHECK below.
+  code         String   @unique @db.VarChar(8)
+  isPrimary    Boolean  @default(false) @map("is_primary")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  agent        Agent                 @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  attributions ReferralAttribution[]
+
+  @@index([agentId])
+  @@map("referral_codes")
+}
+
+/// Which agent a member is credited to. Keyed on the phone HASH, not the user,
+/// so an attribution can exist before the person registers (link / QR /
+/// added-by-agent) and survives account deletion. One attribution per phone.
+model ReferralAttribution {
+  id           String            @id @default(uuid())
+  /// Null until the person signs up and is matched by phoneHash.
+  userId       String?           @unique @map("user_id")
+  /// hashIdentifier(kind, phone). One attribution per person, ever.
+  phoneHash    String            @unique @map("phone_hash")
+  agentId      String            @map("agent_id")
+  /// The code used, when there was one. Null for ADDED_BY_AGENT / ADMIN_SET.
+  codeId       String?           @map("code_id")
+  source       ReferralSource
+  status       AttributionStatus @default(ACTIVE)
+  /// End of the credit window (60 days by setting, snapshotted here).
+  windowEndsAt DateTime          @map("window_ends_at")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+
+  agent        Agent             @relation(fields: [agentId], references: [id])
+  code         ReferralCode?     @relation(fields: [codeId], references: [id], onDelete: SetNull)
+  /// Points at Shaaz's User. SetNull: deleting a member must not delete the
+  /// attribution row (it carries commission history).
+  user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([agentId, createdAt])
+  @@index([codeId])
+  @@index([status, windowEndsAt])
+  @@map("referral_attributions")
+}
+
+/// Rotating refresh tokens for the agent's own session (not Firebase).
+/// Only a hash of the token is stored. Every token in one login chain shares
+/// a familyId so reuse of a rotated token revokes the whole chain.
+model AgentRefreshToken {
+  id         String    @id @default(uuid())
+  agentId    String    @map("agent_id")
+  familyId   String    @map("family_id")
+  /// SHA-256 of the opaque token; the token itself is never stored.
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  /// Set on rotation, logout, or reuse detection.
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  agent      Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("agent_refresh_tokens")
+}
+
+/// FCM tokens for push to the agent app. Mirrors DevicePushToken but keyed on
+/// Agent. Reuses Shaaz's DevicePlatform enum (our table points at his enum).
+model AgentDeviceToken {
+  id        String         @id @default(uuid())
+  agentId   String         @map("agent_id")
+  fcmToken  String         @unique @map("fcm_token")
+  platform  DevicePlatform
+  isActive  Boolean        @default(true) @map("is_active")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  agent     Agent          @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@map("agent_device_tokens")
+}
+
+// ============================================================================
+// Required edit to User (one line, no column; Prisma needs the back-relation)
+//
+//   model User {
+//     ...
+//     referralAttribution ReferralAttribution?
+//   }
+//
+// ============================================================================
+// Raw SQL Prisma cannot express — add to the migration by hand
+//
+// 1. Code format. The generator emits NM + 6 chars from
+//    23456789ABCDEFGHJKMNPQRSTUVWXYZ (no 0, O, 1, I, L); enforce it in the DB
+//    so no other writer can store a malformed code.
+//
+//    ALTER TABLE referral_codes
+//      ADD CONSTRAINT referral_codes_code_format_chk
+//      CHECK (code ~ '^NM[2-9A-HJKMNP-Z]{6}$');
+//
+// 2. At most one primary code per agent (partial unique index).
+//
+//    CREATE UNIQUE INDEX referral_codes_one_primary_per_agent_uq
+//      ON referral_codes (agent_id)
+//      WHERE is_primary = true;
+//
+// Note: Prisma will not know about either; keep them in the migration SQL and
+// do not let `prisma migrate dev` drop them (they are not diffed).
+// ============================================================================
