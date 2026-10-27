@@ -30,6 +30,11 @@ export interface RefundEffectInput {
 }
 
 export interface RefundEffectPlan {
+  /**
+   * UNCHANGED also covers a partial reversal of an APPROVED / PAID commission:
+   * the status stays, and the caller writes a reversal entry for
+   * `reversalPaise`.
+   */
   commissionNext: 'CANCELLED' | 'REVERSED' | 'UNCHANGED';
   reversalPaise: number;
   balanceMayGoNegative: boolean;
@@ -81,15 +86,30 @@ export function planRefundEffect(input: RefundEffectInput): RefundEffectPlan {
     };
   }
 
-  // APPROVED or PAID: claw back what was credited.
-  const stillReversible = input.creditedPaise - input.alreadyReversedPaise;
+  // APPROVED or PAID. Nothing credited, nothing to claw back.
+  if (input.creditedPaise === 0) return unchanged();
+
+  // Claw back in proportion to what has been refunded so far, minus what was
+  // already reversed by earlier refunds, never more than is still reversible.
   const target = input.isFullRefund
-    ? stillReversible
-    : proportionalReversal(input) - input.alreadyReversedPaise;
-  const reversalPaise = Math.max(0, Math.min(target, stillReversible));
+    ? input.creditedPaise
+    : proportionalReversal(input);
+  const reversalPaise = Math.max(
+    0,
+    Math.min(
+      target - input.alreadyReversedPaise,
+      input.creditedPaise - input.alreadyReversedPaise,
+    ),
+  );
+
+  // The status only becomes REVERSED once the credit is fully reversed. Until
+  // then it stays APPROVED / PAID (UNCHANGED) and the caller records a partial
+  // reversal entry for `reversalPaise`.
+  const fullyReversed =
+    input.alreadyReversedPaise + reversalPaise >= input.creditedPaise;
 
   return {
-    commissionNext: 'REVERSED',
+    commissionNext: fullyReversed ? 'REVERSED' : 'UNCHANGED',
     reversalPaise,
     balanceMayGoNegative: input.payoutStatus === 'PAID' && reversalPaise > 0,
   };
