@@ -54,9 +54,23 @@ class DiscoverMoreState {
 class DiscoverMoreNotifier extends Notifier<DiscoverMoreState> {
   static const _pageSize = 20;
 
+  /// The feed page [build] last ran for. [loadMore] dedupes against it.
+  DiscoverFeedEntity? _feed;
+
+  /// Bumped by every [build]. A page that comes back under a different
+  /// generation was requested for a feed that has since been refreshed, and
+  /// is dropped. Checked without `ref`: after a refresh Riverpod forbids `ref`
+  /// calls until this provider rebuilds, and the response can land first.
+  int _generation = 0;
+
   @override
   DiscoverMoreState build() {
-    final feed = ref.watch(discoverFeedProvider).valueOrNull;
+    _generation++;
+    final feedAsync = ref.watch(discoverFeedProvider);
+    // Nothing to page while a refresh is in flight: the previous feed's
+    // cursor would fetch a page that the new feed is about to replace.
+    final feed = feedAsync.isLoading ? null : feedAsync.valueOrNull;
+    _feed = feed;
     final cursor = feed?.nextCursor;
     return DiscoverMoreState(
       cursor: cursor,
@@ -67,9 +81,11 @@ class DiscoverMoreNotifier extends Notifier<DiscoverMoreState> {
   Future<void> loadMore() async {
     final current = state;
     final cursor = current.cursor;
+    final feed = _feed;
     if (!current.hasMore || current.isLoadingMore || cursor == null) return;
-    final feed = ref.read(discoverFeedProvider).valueOrNull;
     if (feed == null) return;
+    final generation = _generation;
+    final repository = ref.read(discoverRepositoryProvider);
 
     state = DiscoverMoreState(
       profiles: current.profiles,
@@ -78,12 +94,11 @@ class DiscoverMoreNotifier extends Notifier<DiscoverMoreState> {
       isLoadingMore: true,
     );
     try {
-      final page = await ref
-          .read(discoverRepositoryProvider)
-          .getDiscoverProfilesPage(limit: _pageSize, cursor: cursor);
-      // A refresh landed while this page was in flight: build() has already
-      // reset the state for the new feed, and this page belongs to the old one.
-      if (!identical(ref.read(discoverFeedProvider).valueOrNull, feed)) return;
+      final page = await repository.getDiscoverProfilesPage(
+        limit: _pageSize,
+        cursor: cursor,
+      );
+      if (generation != _generation) return;
       final seen = {...feed.profileIds, for (final p in current.profiles) p.id};
       state = DiscoverMoreState(
         profiles: [
@@ -94,7 +109,7 @@ class DiscoverMoreNotifier extends Notifier<DiscoverMoreState> {
         hasMore: page.hasMore && page.nextCursor != null,
       );
     } catch (_) {
-      if (!identical(ref.read(discoverFeedProvider).valueOrNull, feed)) return;
+      if (generation != _generation) return;
       state = DiscoverMoreState(
         profiles: current.profiles,
         cursor: cursor,

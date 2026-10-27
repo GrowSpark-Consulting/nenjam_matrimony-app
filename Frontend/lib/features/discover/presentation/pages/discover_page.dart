@@ -154,6 +154,18 @@ class _DiscoverFeedView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
 
+    // AI Recommended continues past this page as the member scrolls: whatever
+    // discoverMoreProfilesProvider has paged in is appended to its cards.
+    final more = ref.watch(discoverMoreProfilesProvider);
+    final aiProfiles = [...feed.aiRecommended, ...more.profiles];
+    // Reads the provider before calling it: the call can land just after a
+    // refresh, when the provider has not yet rebuilt for the new feed, and
+    // reading it is what brings it up to date (dropping the old pages).
+    void loadMore() {
+      ref.read(discoverMoreProfilesProvider);
+      ref.read(discoverMoreProfilesProvider.notifier).loadMore();
+    }
+
     // A feed with no profiles in any section is a legitimate state — the
     // caller hasn't finalized their own profile (backend fails the mandatory
     // opposite-gender rule closed), or nobody matches even after the backend's
@@ -220,18 +232,33 @@ class _DiscoverFeedView extends ConsumerWidget {
         if (feed.fallbackUsed)
           const SliverToBoxAdapter(child: _FallbackBanner()),
 
-        // ── 3. AI Recommended card ────────────────────────────────
-        if (feed.aiRecommended.isNotEmpty)
+        // ── 3. AI Recommended — every profile, one card after another ──
+        if (aiProfiles.isNotEmpty) ...[
           SliverToBoxAdapter(
             child: _SectionPadding(
               child: _FeedSection(
                 title: l10n.discoverAiRecommendedTitle,
                 icon: Icons.auto_awesome_rounded,
                 iconColor: AppColors.secondary,
-                child: _AiRecommendedCarousel(feed: feed),
+                child: const SizedBox.shrink(),
               ),
             ),
           ),
+          _LargeCardList(
+            profiles: aiProfiles,
+            showStats: false,
+            onNearEnd: more.hasMore && !more.isLoadingMore && !more.loadFailed
+                ? loadMore
+                : null,
+          ),
+          if (more.isLoadingMore || more.loadFailed)
+            SliverToBoxAdapter(
+              child: _LoadMoreStatus(
+                failed: more.loadFailed,
+                onRetry: loadMore,
+              ),
+            ),
+        ],
 
         // ── 4. Recently Joined ─────────────────────────────────────
         if (feed.recentlyJoined.isNotEmpty)
@@ -244,21 +271,20 @@ class _DiscoverFeedView extends ConsumerWidget {
             ),
           ),
 
-        // ── 5. Verified Profiles card ─────────────────────────────
-        if (feed.verifiedProfiles.isNotEmpty)
+        // ── 5. Verified Profiles — every verified member ──────────
+        if (feed.verifiedProfiles.isNotEmpty) ...[
           SliverToBoxAdapter(
             child: _SectionPadding(
               child: _FeedSection(
                 title: l10n.discoverVerifiedProfilesTitle,
                 icon: Icons.verified_rounded,
                 iconColor: AppColors.verifiedBlue,
-                child: _ProfileCarousel(
-                  profiles: feed.verifiedProfiles,
-                  showStats: true,
-                ),
+                child: const SizedBox.shrink(),
               ),
             ),
           ),
+          _LargeCardList(profiles: feed.verifiedProfiles, showStats: true),
+        ],
 
         // ── 6. Near You — real device-location results ─────────────
         nearYouSliver,
@@ -330,6 +356,10 @@ class _DiscoverAppBar extends StatelessWidget {
       pinned: true,
       floating: false,
       automaticallyImplyLeading: false,
+      // The theme centres titles; this one is a start-aligned avatar +
+      // wordmark row. Centred, the toolbar narrowed it by the actions' width
+      // and pushed it right, off the feed's left edge, on wide windows.
+      centerTitle: false,
       titleSpacing: inset
           ? NavigationToolbar.kMiddleSpacing + horizontalInset
           : null,
@@ -771,7 +801,7 @@ class _FeedSection extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Full-bleed profile card — radius-32, matching Stitch design. Its height
-/// comes from [heightFor], shared with the carousel that hosts it.
+/// comes from [heightFor], shared by every card in a list.
 class _LargeProfileCard extends StatelessWidget {
   final DiscoveryProfileEntity profile;
   final bool showStats;
@@ -795,9 +825,8 @@ class _LargeProfileCard extends StatelessWidget {
   static const double _badgeReserve = 56;
 
   /// 72% of the window, as the card always was, but no taller than what is
-  /// left below the sticky app bar once the carousel controls and the nav
-  /// clearance are taken out, so on a short window the whole card, actions
-  /// included, fits on screen at once. Clamped to [minHeight]..[maxHeight]:
+  /// left below the sticky app bar once the nav clearance is taken out, so on
+  /// a short window the whole card, actions included, fits on screen at once. Clamped to [minHeight]..[maxHeight]:
   /// below the floor the page scrolls rather than squeezing the actions.
   static double heightFor(BuildContext context) {
     final media = MediaQuery.of(context);
@@ -806,7 +835,6 @@ class _LargeProfileCard extends StatelessWidget {
         h -
         media.padding.top -
         _appBarHeight -
-        _CarouselControls.height -
         navContentInset(context) -
         AppSpacing.base;
     final target = h * 0.72 < available ? h * 0.72 : available;
@@ -1000,250 +1028,106 @@ class _LargeProfileCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Large-card carousel (AI Recommended / Verified Profiles)
+// Large-card list (AI Recommended / Verified Profiles)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// AI Recommended: this page's recommendations, then whatever
-/// [discoverMoreProfilesProvider] has paged in after them.
-class _AiRecommendedCarousel extends ConsumerWidget {
-  final DiscoverFeedEntity feed;
-
-  const _AiRecommendedCarousel({required this.feed});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final more = ref.watch(discoverMoreProfilesProvider);
-    return _ProfileCarousel(
-      profiles: [...feed.aiRecommended, ...more.profiles],
-      showStats: false,
-      hasMore: more.hasMore,
-      isLoadingMore: more.isLoadingMore,
-      loadFailed: more.loadFailed,
-      onLoadMore: ref.read(discoverMoreProfilesProvider.notifier).loadMore,
-    );
-  }
-}
-
-/// Every profile in a section, one large card at a time: swipe (or drag with
-/// a mouse) between them, or use the previous/next controls underneath.
+/// Every profile in a section as a full-size card, one below the other in the
+/// feed's own scroll.
 ///
 /// These sections used to render only their first profile. Since the feed's
 /// Verified, Premium and New sections began taking only members who qualify,
 /// everyone else lands in AI Recommended — so on a typical feed that one card
 /// was the only profile on the screen and the rest were never shown.
-class _ProfileCarousel extends StatefulWidget {
+///
+/// Built lazily: a card is only laid out (and its photo only requested) as it
+/// scrolls near the viewport.
+class _LargeCardList extends StatelessWidget {
   final List<DiscoveryProfileEntity> profiles;
   final bool showStats;
-  final bool hasMore;
-  final bool isLoadingMore;
-  final bool loadFailed;
 
-  /// Asks for the next page. Called as the member nears the last card, and
-  /// when they press next on it.
-  final VoidCallback? onLoadMore;
+  /// Asks for the next page once a card within [_prefetchDistance] of the end
+  /// is built. Null when there is nothing more to ask for.
+  final VoidCallback? onNearEnd;
 
-  const _ProfileCarousel({
+  const _LargeCardList({
     required this.profiles,
     required this.showStats,
-    this.hasMore = false,
-    this.isLoadingMore = false,
-    this.loadFailed = false,
-    this.onLoadMore,
+    this.onNearEnd,
   });
 
-  /// How close to the last card the next page is requested, so it is usually
-  /// there before the member reaches the end.
   static const _prefetchDistance = 3;
-
-  @override
-  State<_ProfileCarousel> createState() => _ProfileCarouselState();
-}
-
-class _ProfileCarouselState extends State<_ProfileCarousel> {
-  final _controller = PageController();
-  int _index = 0;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _onPageChanged(int index) {
-    setState(() => _index = index);
-    if (index >= widget.profiles.length - _ProfileCarousel._prefetchDistance) {
-      _loadMore();
-    }
-  }
-
-  void _loadMore() {
-    if (widget.hasMore && !widget.isLoadingMore) widget.onLoadMore?.call();
-  }
-
-  void _go(int delta) {
-    final target = _current + delta;
-    if (target >= widget.profiles.length) {
-      _loadMore();
-      return;
-    }
-    if (target < 0) return;
-    _controller.animateToPage(
-      target,
-      duration: const Duration(milliseconds: 320),
-      curve: Curves.easeOutCubic,
-    );
-  }
-
-  /// [_index], kept in range when a refresh hands back a shorter list.
-  int get _current =>
-      widget.profiles.isEmpty ? 0 : _index.clamp(0, widget.profiles.length - 1);
 
   @override
   Widget build(BuildContext context) {
     final height = _LargeProfileCard.heightFor(context);
-    final profiles = widget.profiles;
-    final showControls =
-        profiles.length > 1 || widget.hasMore || widget.loadFailed;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          height: height,
-          child: NmMouseDragScroll(
-            child: PageView.builder(
-              controller: _controller,
-              itemCount: profiles.length,
-              onPageChanged: _onPageChanged,
-              itemBuilder: (context, i) => _LargeProfileCard(
-                key: ValueKey(profiles[i].id),
-                profile: profiles[i],
-                showStats: widget.showStats,
-                height: height,
-              ),
-            ),
+    final onNearEnd = this.onNearEnd;
+    return SliverList.builder(
+      itemCount: profiles.length,
+      itemBuilder: (context, i) {
+        if (onNearEnd != null && i >= profiles.length - _prefetchDistance) {
+          // After the frame: the request changes provider state, which must
+          // not happen while this list is being built.
+          WidgetsBinding.instance.addPostFrameCallback((_) => onNearEnd());
+        }
+        return Padding(
+          padding: EdgeInsets.only(top: i == 0 ? 0 : AppSpacing.xl),
+          child: _LargeProfileCard(
+            key: ValueKey(profiles[i].id),
+            profile: profiles[i],
+            showStats: showStats,
+            height: height,
           ),
-        ),
-        if (showControls)
-          _CarouselControls(
-            current: _current,
-            total: profiles.length,
-            canGoBack: _current > 0,
-            canGoForward: _current < profiles.length - 1 || widget.hasMore,
-            isLoadingMore: widget.isLoadingMore,
-            loadFailed: widget.loadFailed,
-            onPrevious: () => _go(-1),
-            onNext: () => _go(1),
-            onRetry: _loadMore,
-          ),
-      ],
+        );
+      },
     );
   }
 }
 
-/// Previous / "3 of 14" / next under a carousel, plus its paging state.
-class _CarouselControls extends StatelessWidget {
-  static const double height = 56;
-
-  final int current;
-  final int total;
-  final bool canGoBack;
-  final bool canGoForward;
-  final bool isLoadingMore;
-  final bool loadFailed;
-  final VoidCallback onPrevious;
-  final VoidCallback onNext;
+/// Under the last AI Recommended card while the next page loads, or with a
+/// retry when it failed. The cards already shown stay either way.
+class _LoadMoreStatus extends StatelessWidget {
+  final bool failed;
   final VoidCallback onRetry;
 
-  const _CarouselControls({
-    required this.current,
-    required this.total,
-    required this.canGoBack,
-    required this.canGoForward,
-    required this.isLoadingMore,
-    required this.loadFailed,
-    required this.onPrevious,
-    required this.onNext,
-    required this.onRetry,
-  });
+  const _LoadMoreStatus({required this.failed, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final status = loadFailed
-        ? <Widget>[
-            Flexible(
-              child: Text(
-                l10n.discoverLoadMoreFailed,
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.error,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            TextButton(
-              onPressed: onRetry,
-              child: Text(
-                l10n.commonRetry,
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.secondary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ]
-        : <Widget>[
-            Flexible(
-              child: Text(
-                l10n.discoverProfilePosition(current + 1, total),
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (isLoadingMore) ...[
-              const SizedBox(width: AppSpacing.sm),
-              const SizedBox(
-                width: 14,
-                height: 14,
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.base),
+      child: Center(
+        child: failed
+            ? Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    l10n.discoverLoadMoreFailed,
+                    style: AppTypography.labelMedium.copyWith(
+                      color: AppColors.error,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: onRetry,
+                    child: Text(
+                      l10n.commonRetry,
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.secondary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : const SizedBox(
+                width: 20,
+                height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   color: AppColors.secondary,
                 ),
               ),
-            ],
-          ];
-
-    return SizedBox(
-      height: height,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: l10n.discoverPreviousProfile,
-              onPressed: canGoBack ? onPrevious : null,
-              color: AppColors.primary,
-              icon: const Icon(Icons.chevron_left_rounded),
-            ),
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: status,
-              ),
-            ),
-            IconButton(
-              tooltip: l10n.discoverNextProfile,
-              onPressed: canGoForward ? onNext : null,
-              color: AppColors.primary,
-              icon: const Icon(Icons.chevron_right_rounded),
-            ),
-          ],
-        ),
       ),
     );
   }

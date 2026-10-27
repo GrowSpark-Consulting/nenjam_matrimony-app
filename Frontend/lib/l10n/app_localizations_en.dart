@@ -5100,16 +5100,5 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileLinkCopied => 'Profile link copied';
 
   @override
-  String get discoverPreviousProfile => 'Previous profile';
-
-  @override
-  String get discoverNextProfile => 'Next profile';
-
-  @override
-  String discoverProfilePosition(int current, int total) {
-    return '$current of $total';
-  }
-
-  @override
   String get discoverLoadMoreFailed => 'Couldn\'t load more profiles.';
 }

@@ -1713,8 +1713,5 @@
   "photoViewerNext": "அடுத்த புகைப்படம்",
   "nearbyPermissionBlockedMessageWeb": "இந்தத் தளத்திற்கு இருப்பிட அனுமதி தடுக்கப்பட்டுள்ளது. உங்கள் உலாவியின் தள அமைப்புகளில் (முகவரிப் பட்டிக்கு அருகில்) அதை அனுமதித்து, மீண்டும் முயற்சிக்கவும்.",
   "profileLinkCopied": "சுயவிவர இணைப்பு நகலெடுக்கப்பட்டது",
-  "discoverPreviousProfile": "முந்தைய சுயவிவரம்",
-  "discoverNextProfile": "அடுத்த சுயவிவரம்",
-  "discoverProfilePosition": "{total} இல் {current}",
   "discoverLoadMoreFailed": "மேலும் சுயவிவரங்களை ஏற்ற முடியவில்லை."
 }

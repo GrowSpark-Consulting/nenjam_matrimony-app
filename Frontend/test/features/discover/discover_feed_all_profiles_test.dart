@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,56 +30,48 @@ import '../../support/responsive_harness.dart';
 /// Everyone else — on a typical feed, nearly everyone — lands in AI
 /// Recommended, which rendered `aiRecommended.first` and nothing else.
 ///
-/// These run the real [DiscoverRepositoryImpl] over a stubbed [ApiClient], so
-/// the partitioning that produced the bug is part of what is tested, not
-/// assumed away by a hand-built feed.
+/// The fix keeps the feed layout — full-size cards in one vertical scroll —
+/// and gives every profile its own card. These run the real
+/// [DiscoverRepositoryImpl] over a stubbed [ApiClient], so the partitioning
+/// that produced the bug is part of what is tested, not assumed away by a
+/// hand-built feed.
 void main() {
-  group('every profile the backend returns is reachable', () {
-    testWidgets('twelve ordinary members: all twelve, one card at a time', (
+  group('every profile the backend returns is in the feed', () {
+    testWidgets('twelve ordinary members: twelve cards, in order', (
       tester,
     ) async {
       final api = _FeedApi(firstPage: _page(_members(1, 12)));
       expectNoOverflowIn(await _pump(tester, const Size(390, 844), api));
 
-      expect(_position, findsOneWidget);
-      expect(find.text('1 of 12'), findsOneWidget);
       expect(_name(1), findsOneWidget);
-
+      var previousTop = tester.getTopLeft(_name(1)).dy;
       for (var i = 2; i <= 12; i++) {
-        await _next(tester);
-        expect(find.text('$i of 12'), findsOneWidget);
-        expect(_name(i), findsOneWidget, reason: 'card $i after next');
+        await _scrollTo(tester, _name(i));
+        expect(_name(i), findsOneWidget, reason: 'card $i reachable');
+        // Cards stack downward: each one starts below where the last one did
+        // once both are measured in the same scroll position.
+        final top = tester.getTopLeft(_name(i)).dy;
+        if (_name(i - 1).evaluate().isNotEmpty) {
+          expect(top, greaterThan(tester.getTopLeft(_name(i - 1)).dy));
+        }
+        previousTop = top;
       }
+      expect(previousTop, isNonNegative);
 
-      // At the last card of an exhausted feed, next is disabled.
-      expect(_nextButton(tester).onPressed, isNull);
-      await _previous(tester);
-      expect(find.text('11 of 12'), findsOneWidget);
-      expect(_name(11), findsOneWidget);
+      // The feed layout, not a carousel.
+      expect(find.byType(PageView), findsNothing);
+      expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
     });
 
-    testWidgets('a swipe moves to the next profile', (tester) async {
-      final api = _FeedApi(firstPage: _page(_members(1, 5)));
-      expectNoOverflowIn(await _pump(tester, const Size(390, 844), api));
-
-      await tester.drag(_cardPager, const Offset(-300, 0));
-      await _settle(tester);
-
-      expect(find.text('2 of 5'), findsOneWidget);
-      expect(_name(2), findsOneWidget);
-    });
-
-    testWidgets('one profile: one card and no carousel controls', (
-      tester,
-    ) async {
+    testWidgets('one profile: one card', (tester) async {
       final api = _FeedApi(firstPage: _page(_members(1, 1)));
       expectNoOverflowIn(await _pump(tester, const Size(390, 844), api));
 
       expect(_name(1), findsOneWidget);
-      expect(_position, findsNothing);
+      expect(_viewProfile, findsOneWidget);
     });
 
-    testWidgets('verified members are browsable in their own section', (
+    testWidgets('verified members fill their own section, all of them', (
       tester,
     ) async {
       final api = _FeedApi(
@@ -89,65 +83,43 @@ void main() {
 
       // Round-robin over 5 sections with nobody new or premium: m2, m3, m7
       // and m8 land in Verified Profiles, the other six in AI Recommended.
+      // Every one of the ten is reachable.
+      for (final i in [1, 4, 5, 6, 9, 10, 2, 3, 7, 8]) {
+        await _scrollTo(tester, _name(i));
+        expect(_name(i), findsOneWidget, reason: 'member m$i');
+      }
       expect(
-        find.text('Verified Profiles', skipOffstage: false),
-        findsOneWidget,
-      );
-      expect(find.text('1 of 6', skipOffstage: false), findsOneWidget);
-      expect(
-        find.text('1 of 4', skipOffstage: false),
-        findsOneWidget,
-        reason: 'the Verified carousel holds all four of its members',
+        tester.getTopLeft(_name(8)).dy,
+        greaterThan(
+          tester
+              .getTopLeft(find.text('Verified Profiles', skipOffstage: false))
+              .dy,
+        ),
       );
     });
   });
 
   group('next pages', () {
-    testWidgets('nearing the end loads the next page by cursor', (
+    testWidgets('scrolling near the end loads the next page by cursor', (
       tester,
     ) async {
       final api = _FeedApi(
-        firstPage: _page(_members(1, 5), nextCursor: 'c1'),
-        pages: {'c1': _page(_members(6, 9))},
+        firstPage: _page(_members(1, 6), nextCursor: 'c1'),
+        pages: {'c1': _page(_members(7, 10))},
       );
       expectNoOverflowIn(await _pump(tester, const Size(390, 844), api));
-      expect(find.text('1 of 5'), findsOneWidget);
       expect(api.cursors, isEmpty, reason: 'nothing prefetched on arrival');
 
-      await _next(tester); // 2 of 5: still 3 from the end
-      expect(api.cursors, isEmpty);
-
-      await _next(tester); // 3 of 5: within 3 of the end -> prefetch
+      await _scrollTo(tester, _name(6));
       expect(api.cursors, ['c1']);
-      expect(find.text('3 of 9'), findsOneWidget);
 
-      for (var i = 4; i <= 9; i++) {
-        await _next(tester);
-      }
-      expect(find.text('9 of 9'), findsOneWidget);
-      expect(_name(9), findsOneWidget);
-      // The second page reported no cursor: the feed is exhausted.
+      await _scrollTo(tester, _name(10));
+      expect(_name(10), findsOneWidget);
+
+      // The second page reported no cursor: the feed is exhausted, and
+      // scrolling to its end asks for nothing more.
+      await _scrollToEnd(tester);
       expect(api.cursors, ['c1']);
-      expect(_nextButton(tester).onPressed, isNull);
-    });
-
-    testWidgets('next on the last card asks for more when there is more', (
-      tester,
-    ) async {
-      final api = _FeedApi(
-        firstPage: _page(_members(1, 1), nextCursor: 'c1'),
-        pages: {'c1': _page(_members(2, 3))},
-      );
-      expectNoOverflowIn(await _pump(tester, const Size(390, 844), api));
-      expect(find.text('1 of 1'), findsOneWidget);
-      expect(_nextButton(tester).onPressed, isNotNull);
-
-      await _next(tester);
-      expect(api.cursors, ['c1']);
-      expect(find.text('1 of 3'), findsOneWidget);
-
-      await _next(tester);
-      expect(_name(2), findsOneWidget);
     });
 
     testWidgets('profiles already on screen are never shown twice', (
@@ -168,13 +140,10 @@ void main() {
         },
       );
       expectNoOverflowIn(await _pump(tester, const Size(390, 844), api));
+      await _scrollToEnd(tester);
+      expect(api.cursors, ['c1']);
 
-      await _next(tester); // 2 of 4: within 3 of the end -> prefetch
-      expect(find.text('2 of 6'), findsOneWidget);
-
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(DiscoverPage)),
-      );
+      final container = _container(tester);
       final feed = container.read(discoverFeedProvider).requireValue;
       final shown = [
         ...feed.aiRecommended.map((p) => p.id),
@@ -195,37 +164,84 @@ void main() {
         failCursorOnce: 'c1',
       );
       expectNoOverflowIn(await _pump(tester, const Size(390, 844), api));
+      await _scrollToEnd(tester);
 
-      await _next(tester); // prefetch fails
-      expect(find.text("Couldn't load more profiles."), findsOneWidget);
+      final failed = find.text("Couldn't load more profiles.");
+      await _scrollTo(tester, failed);
+      expect(failed, findsOneWidget);
+      // Not retried on its own: one request, until the member asks.
+      expect(api.cursors, ['c1']);
+      await _scrollTo(tester, _name(2));
       expect(_name(2), findsOneWidget, reason: 'loaded cards survive');
 
+      await _scrollTo(tester, find.widgetWithText(TextButton, 'Retry'));
       await tester.tap(find.widgetWithText(TextButton, 'Retry'));
       await _settle(tester);
-      expect(find.text('2 of 4'), findsOneWidget);
       expect(api.cursors, ['c1', 'c1']);
+      await _scrollTo(tester, _name(4));
+      expect(_name(4), findsOneWidget);
     });
 
     testWidgets('a refresh drops appended pages and starts over', (
       tester,
     ) async {
       final api = _FeedApi(
-        firstPage: _page(_members(1, 3), nextCursor: 'c1'),
-        pages: {'c1': _page(_members(4, 6))},
+        firstPage: _page(_members(1, 8), nextCursor: 'c1'),
+        pages: {'c1': _page(_members(9, 11))},
       );
       expectNoOverflowIn(await _pump(tester, const Size(390, 844), api));
-      await _next(tester);
-      expect(find.text('2 of 6'), findsOneWidget);
-
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(DiscoverPage)),
+      await _scrollToEnd(tester);
+      final container = _container(tester);
+      expect(
+        container.read(discoverMoreProfilesProvider).profiles,
+        hasLength(3),
       );
+
+      // Pull-to-refresh happens at the top of the feed.
+      tester.state<ScrollableState>(_feedScrollable).position.jumpTo(0);
+      await _settle(tester);
       container.invalidate(discoverFeedProvider);
       await _settle(tester);
 
       expect(container.read(discoverMoreProfilesProvider).profiles, isEmpty);
-      expect(find.textContaining(' of 3'), findsOneWidget);
       expect(api.feedRequests, 2);
+      expect(api.cursors, ['c1'], reason: 'nothing paged in at the top');
+      // Not stuck: the refreshed feed's own cards are all there again.
+      for (var i = 1; i <= 8; i++) {
+        await _scrollTo(tester, _name(i));
+        expect(_name(i), findsOneWidget);
+      }
+    });
+
+    testWidgets('a page still loading when the feed refreshes is dropped', (
+      tester,
+    ) async {
+      final gate = Completer<void>();
+      final api = _FeedApi(
+        firstPage: _page(_members(1, 8), nextCursor: 'c1'),
+        pages: {'c1': _page(_members(9, 11))},
+        cursorGate: gate,
+      );
+      expectNoOverflowIn(await _pump(tester, const Size(390, 844), api));
+      await _scrollToEnd(tester);
+      expect(api.cursors, ['c1']);
+      final container = _container(tester);
+      expect(
+        container.read(discoverMoreProfilesProvider).isLoadingMore,
+        isTrue,
+      );
+
+      tester.state<ScrollableState>(_feedScrollable).position.jumpTo(0);
+      await _settle(tester);
+      container.invalidate(discoverFeedProvider);
+      gate.complete();
+      await _settle(tester);
+
+      // No Riverpod "ref after dependency changed" error, and the old feed's
+      // page is not grafted onto the new one.
+      expect(tester.takeException(), isNull);
+      expect(container.read(discoverMoreProfilesProvider).profiles, isEmpty);
+      expect(_name(1), findsOneWidget);
     });
   });
 
@@ -237,7 +253,7 @@ void main() {
       expectNoOverflowIn(await _pump(tester, const Size(390, 844), api));
 
       expect(find.text('No matching profiles found.'), findsOneWidget);
-      expect(_cardPager, findsNothing);
+      expect(_viewProfile, findsNothing);
     });
 
     testWidgets('a failed first load shows retry, and retry recovers', (
@@ -249,12 +265,12 @@ void main() {
       );
       expectNoOverflowIn(await _pump(tester, const Size(390, 844), api));
 
-      expect(_cardPager, findsNothing);
+      expect(_viewProfile, findsNothing);
       expect(find.text('Retry'), findsOneWidget);
 
       await tester.tap(find.text('Retry'));
       await _settle(tester);
-      expect(find.text('1 of 3'), findsOneWidget);
+      expect(_name(1), findsOneWidget);
     });
   });
 
@@ -276,13 +292,13 @@ void main() {
         expectNoOverflowIn(await _pump(tester, size, api));
 
         // The feed column never exceeds its 680px cap and never spills.
-        final pager = tester.getRect(_cardPager);
-        expect(pager.left, greaterThanOrEqualTo(0));
-        expect(pager.width, lessThanOrEqualTo(680));
+        final card = tester.getRect(_firstCard);
+        expect(card.left, greaterThanOrEqualTo(0));
+        expect(card.width, lessThanOrEqualTo(680));
         final feedRight = size.width >= 1200
             ? size.width - InboxPreviewPanel.width
             : size.width;
-        expect(pager.right, lessThanOrEqualTo(feedRight));
+        expect(card.right, lessThanOrEqualTo(feedRight));
 
         // Inbox preview only beside a wide feed.
         expect(
@@ -293,32 +309,28 @@ void main() {
         // Bring the card's actions into view the way a member would, then
         // check each sits below the sticky bar and inside the window, at full
         // size, and actually receives a tap at its center.
-        await _reveal(tester, _viewProfile);
-        await _settle(tester);
+        await _reveal(tester, _viewProfile.first);
         const appBarBottom = 44 + 64.0; // status bar inset + toolbar
         for (final action in [_interested, _shortlist, _viewProfile]) {
-          final r = tester.getRect(action);
+          final r = tester.getRect(action.first);
           expect(r.top, greaterThanOrEqualTo(appBarBottom), reason: '$action');
           expect(r.bottom, lessThanOrEqualTo(size.height), reason: '$action');
-          _expectHittable(tester, action);
+          _expectHittable(tester, action.first);
         }
         // Not shrunk by the card's scale-down guard: real touch targets.
         expect(tester.getRect(_interestedButton).height, closeTo(54, 0.5));
 
-        // On any window tall enough, the whole card and its controls fit
-        // between the sticky bar and the bottom inset at once.
+        // On any window tall enough, a whole card fits between the sticky bar
+        // and the bottom inset at once.
         if (size.height >= 700) {
-          final card = tester.getRect(_cardPager);
-          final controls = tester.getRect(_position);
           expect(
-            controls.bottom - card.top,
+            tester.getRect(_firstCard).height,
             lessThanOrEqualTo(size.height - appBarBottom - 34),
           );
         }
 
-        // Navigable at every size.
-        await _next(tester);
-        expect(find.text('2 of 12'), findsOneWidget);
+        // The next profile is right below, at every size.
+        await _scrollTo(tester, _name(2));
         expect(_name(2), findsOneWidget);
       });
     }
@@ -333,7 +345,7 @@ void main() {
           locale: const Locale('ta'),
         ),
       );
-      expect(_cardPager, findsOneWidget);
+      expect(_name(1), findsOneWidget);
     });
   });
 
@@ -375,11 +387,13 @@ void main() {
     );
     await _settle(tester);
 
-    await _next(tester);
-    await _next(tester);
-    await _reveal(tester, _viewProfile);
-    await _settle(tester);
-    await tester.tap(_viewProfile);
+    final thirdCardButton = find.descendant(
+      of: find.byKey(const ValueKey('m3')),
+      matching: find.text('View Profile'),
+    );
+    await _scrollTo(tester, thirdCardButton);
+    await _reveal(tester, thirdCardButton);
+    await tester.tap(thirdCardButton);
     await _settle(tester);
 
     expect(find.text('detail m3'), findsOneWidget);
@@ -388,47 +402,40 @@ void main() {
 
 // --- finders ----------------------------------------------------------------
 
-final Finder _cardPager = find.byType(PageView);
-final Finder _position = find.textContaining(RegExp(r'^\d+ of \d+$'));
-final Finder _viewProfile = find.descendant(
-  of: _cardPager,
-  matching: find.text('View Profile'),
-);
-final Finder _shortlist = find.descendant(
-  of: _cardPager,
-  matching: find.text('Shortlist'),
-);
-final Finder _interested = find.descendant(
-  of: _cardPager,
-  matching: find.byIcon(Icons.favorite_rounded),
-);
+final Finder _feedScrollable = find
+    .byWidgetPredicate(
+      (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+    )
+    .first;
 
-/// The 54px gradient button around the heart icon.
+final Finder _firstCard = find.byKey(const ValueKey('m1'));
+final Finder _viewProfile = find.text('View Profile');
+final Finder _shortlist = find.text('Shortlist');
+final Finder _interested = find.byIcon(Icons.favorite_rounded);
+
+/// The 54px gradient button around the first card's heart icon.
 final Finder _interestedButton = find
-    .ancestor(of: _interested, matching: find.byType(InkWell))
+    .ancestor(of: _interested.first, matching: find.byType(InkWell))
     .first;
 
 Finder _name(int i) =>
     find.text('${_names[(i - 1) % _names.length]}, ${26 + i % 6}');
 
-IconButton _nextButton(WidgetTester tester) => tester.widget<IconButton>(
-  find
-      .ancestor(
-        of: find.byIcon(Icons.chevron_right_rounded),
-        matching: find.byType(IconButton),
-      )
-      .first,
-);
+ProviderContainer _container(WidgetTester tester) =>
+    ProviderScope.containerOf(tester.element(find.byType(DiscoverPage)));
 
-Future<void> _next(WidgetTester tester) async {
-  await _reveal(tester, find.byTooltip('Next profile').first);
-  await tester.tap(find.byTooltip('Next profile').first);
+Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(
+    finder,
+    300,
+    scrollable: _feedScrollable,
+    maxScrolls: 200,
+  );
   await _settle(tester);
 }
 
-Future<void> _previous(WidgetTester tester) async {
-  await tester.tap(find.byTooltip('Previous profile').first);
-  await _settle(tester);
+Future<void> _scrollToEnd(WidgetTester tester) async {
+  await _scrollTo(tester, find.text('Searching for more souls…'));
 }
 
 /// Scrolls [finder] into view with its bottom at the bottom of the viewport.
@@ -525,12 +532,16 @@ class _FeedApi extends ApiClient {
     this.pages = const {},
     this.failFirstFeed = false,
     this.failCursorOnce,
+    this.cursorGate,
   });
 
   final Map<String, dynamic> firstPage;
   final Map<String, Map<String, dynamic>> pages;
   bool failFirstFeed;
   String? failCursorOnce;
+
+  /// When set, a cursor request waits on it — a next page still in flight.
+  final Completer<void>? cursorGate;
 
   final List<String> cursors = [];
   int feedRequests = 0;
@@ -555,6 +566,7 @@ class _FeedApi extends ApiClient {
       return _ok<T>(path, firstPage);
     }
     cursors.add(cursor);
+    await cursorGate?.future;
     if (failCursorOnce == cursor) {
       failCursorOnce = null;
       throw DioException(
