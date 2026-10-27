@@ -48,14 +48,18 @@
  * admits nobody. A malformed number is never an identity.
  *
  * Nothing here forges a Firebase ID token, and `verifyIdToken` is never called
- * with anything this module produced. FirebaseAuthGuard consults it only when
- * a request carries no `Authorization` header at all, so bearer-token
- * verification is untouched in every mode.
+ * with anything this module produced. FirebaseAuthGuard does NOT consult this
+ * module at all: it always requires a verified bearer token. The only live
+ * caller of [dummyAuthAllows] is `POST /auth/dummy-otp/session`, which mints a
+ * real Firebase custom token for an allowed number; the resulting session is
+ * then verified like any other. [readDevAuthPhone] and [DEV_AUTH_HEADER] have
+ * no call sites outside this file and its spec.
  *
  * ## Removal
  *
- * Delete this file, its call sites in FirebaseAuthGuard, and the Flutter
- * `DevAuthSession` together once real phone verification is switched on.
+ * Delete this file, `DummyOtpSessionController`/`DummyOtpSessionService`, and
+ * the Flutter `DevAuthSession` together once real phone verification is
+ * switched on.
  */
 
 /** The header a dummy-authenticated client sends instead of a bearer token. */
@@ -139,8 +143,9 @@ export function devAuthUid(phoneE164: string): string {
  * Whether the dummy-OTP arrangement may vouch for [phoneE164] at all — the
  * policy above, stated once so that every entry point answers it identically.
  *
- * [readDevAuthPhone] applies it to the header a request carries.
- * `POST /auth/dummy-otp/session` applies it to the number in a request body:
+ * [readDevAuthPhone] applies it to a header value but is currently unused by
+ * the running app. `POST /auth/dummy-otp/session` applies it to the number in
+ * a request body:
  * that endpoint mints a REAL Firebase session for a number nobody has sent an
  * SMS to, which is the same bypass this file already governs and must never be
  * a wider one. Same flags, same optional narrowing.

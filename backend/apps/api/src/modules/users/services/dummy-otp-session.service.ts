@@ -34,7 +34,9 @@ import { DummyOtpSessionResponseDto } from '../dto/dummy-otp-session.dto';
  * Minting a session for a number nobody sent an SMS to is a genuine
  * authentication bypass — the same one `dev-auth.ts` already governs — so it
  * answers to the same policy ([dummyAuthAllows]): both flags default to off,
- * production mode is a whitelist, and `USE_REAL_OTP=true` disables it outright.
+ * a non-empty `DUMMY_OTP_PHONES` narrows it to those numbers (empty admits any
+ * well-formed number, in production too), and `USE_REAL_OTP=true` disables it
+ * outright.
  * It is deliberately not a second, looser switch.
  */
 @Injectable()
