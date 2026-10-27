@@ -1,0 +1,1053 @@
+openapi: 3.0.3
+info:
+  title: Nenjam Agent / Partner Program API
+  version: 0.1.0-draft
+  description: |
+    DRAFT contract for the agent-facing and referral-related member endpoints.
+    Nothing here is implemented yet.
+
+    **Scope.** Agent sign-in, application, profile, referral links, referred
+    members, commissions, balance, payouts (read-only), push devices, plus the
+    two member endpoints (validate a code, attach a code after sign-in).
+    Agent-added clients ("Way 2") are deliberately left out and come later.
+
+    **Two kinds of caller.**
+    - *Agent*: signs in with phone + OTP and gets our own access token and a
+      rotating refresh token in the response body. It is NOT a Firebase token
+      and an agent is not a member. OTP is delivered/verified through the shared
+      `OtpService` (owned by the payments/admin side) with purpose
+      `AGENT_SIGN_IN`; we do not change OTP behaviour.
+    - *Member*: the existing Firebase ID token (`Authorization: Bearer ...`).
+
+    **Conventions**
+    - Money is always an integer number of **paise** (Rs. 500 = `50000`).
+    - Dates the agent sees are calendar dates in Indian time (UTC+05:30),
+      formatted `YYYY-MM-DD`. Timestamps are ISO-8601 UTC.
+    - Lists use **cursor pagination**: `?cursor=&limit=` ->
+      `{ items, nextCursor }`. `nextCursor` is `null` on the last page. The
+      cursor is opaque; pass it back unchanged.
+    - **Versioning.** Send `Accept-Version: 1` on every request. The API is
+      unversioned today; the server treats a missing header as `1` and an
+      unsupported value as `406 UNSUPPORTED_VERSION`. Responses echo
+      `Content-Version`.
+    - **Errors** use the existing Nest shape `{ statusCode, message, error }`
+      plus a stable machine-readable `code`. Clients branch on `code`, never on
+      `message`.
+    - **Settings are not constants.** Hold days, credit window, minimum payout,
+      referred-member discount and commission rate are settings; clients read
+      the ones they display from `GET /agent/config`.
+
+    **Agent account states and what they may call**
+
+    | Status | Sign-in | Allowed |
+    |---|---|---|
+    | (no agent yet) | yes, `scope: APPLICANT` | `POST /agent/application`, `GET /agent/me` (404) |
+    | `PENDING_APPROVAL` | yes | `GET /agent/me`, `GET /agent/config`, refresh, logout |
+    | `REJECTED` | yes | as above; `rejectionReason` is returned; may re-apply |
+    | `ACTIVE` | yes | everything |
+    | `SUSPENDED` (shown as "Paused") | yes | all reads; new referrals are not credited; payout-details edits blocked |
+    | `TERMINATED` | no (`403 AGENT_TERMINATED`) | nothing |
+
+    Calls not allowed in the caller's state get `403 AGENT_NOT_ACTIVE`.
+  contact:
+    name: Backend (agent program)
+
+servers:
+  - url: https://api.example.invalid
+    description: Placeholder; use the Render service URL. Local - http://127.0.0.1:3000
+
+tags:
+  - name: Agent auth
+  - name: Agent
+  - name: Referrals
+  - name: Money
+  - name: Member
+
+paths:
+  /agent/auth/otp/request:
+    post:
+      tags: [Agent auth]
+      summary: Send a sign-in OTP to an agent's phone
+      description: |
+        Starts sign-in or application. Same response whether or not the phone
+        already belongs to an agent, so the endpoint cannot be used to find out
+        who is an agent. Delegates to `OtpService` with purpose
+        `AGENT_SIGN_IN`. Rate limited per IP and per phone.
+      operationId: agentOtpRequest
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              additionalProperties: false
+              properties:
+                phone:
+                  $ref: '#/components/schemas/PhoneE164'
+      responses:
+        '200':
+          description: OTP sent (or, with the dummy OTP, accepted).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [expiresInSeconds, resendAfterSeconds]
+                properties:
+                  expiresInSeconds: { type: integer, example: 300 }
+                  resendAfterSeconds: { type: integer, example: 30 }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /agent/auth/otp/verify:
+    post:
+      tags: [Agent auth]
+      summary: Verify the OTP and get our own agent tokens
+      description: |
+        On success returns an access token and a refresh token **in the body**.
+        If the phone has no agent record yet, the tokens carry
+        `scope: APPLICANT` and only allow `POST /agent/application`. A
+        `TERMINATED` agent is refused.
+      operationId: agentOtpVerify
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code]
+              additionalProperties: false
+              properties:
+                phone: { $ref: '#/components/schemas/PhoneE164' }
+                code:
+                  type: string
+                  pattern: '^[0-9]{4,8}$'
+                  example: '123456'
+      responses:
+        '200':
+          description: Signed in.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentSession' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401':
+          description: OTP wrong or expired (`OTP_INVALID`, `OTP_EXPIRED`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Agent is terminated (`AGENT_TERMINATED`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /agent/auth/refresh:
+    post:
+      tags: [Agent auth]
+      summary: Exchange a refresh token for a new token pair
+      description: |
+        Refresh tokens rotate: each use returns a new pair and invalidates the
+        old refresh token. Presenting an already-used refresh token revokes the
+        whole chain (`REFRESH_TOKEN_REUSED`) and the agent must sign in again.
+      operationId: agentRefresh
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              additionalProperties: false
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: New pair.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentSession' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401':
+          description: '`REFRESH_TOKEN_INVALID`, `REFRESH_TOKEN_EXPIRED` or `REFRESH_TOKEN_REUSED`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Agent is terminated (`AGENT_TERMINATED`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /agent/auth/logout:
+    post:
+      tags: [Agent auth]
+      summary: Revoke this session's refresh token
+      description: |
+        Revokes the given refresh token's whole chain. Optionally deactivates
+        this device's push token. Idempotent: an unknown or already-revoked
+        token still returns 204.
+      operationId: agentLogout
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              additionalProperties: false
+              properties:
+                refreshToken: { type: string }
+                fcmToken:
+                  type: string
+                  description: If given, this device stops receiving pushes.
+      responses:
+        '204': { description: Signed out. }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /agent/application:
+    post:
+      tags: [Agent]
+      summary: Apply to become an agent
+      description: |
+        Needs an `APPLICANT` or `REJECTED` session. Creates the agent as
+        `PENDING_APPROVAL` (a `REJECTED` agent re-applying goes back to
+        `PENDING_APPROVAL` and the old `rejectionReason` is cleared). The phone
+        is the verified sign-in phone; it is never taken from the body. PAN and
+        payout details are optional at this stage and may be added later
+        (`PATCH /agent/me/payout-details`).
+      operationId: agentApply
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, city, state]
+              additionalProperties: false
+              properties:
+                name: { type: string, minLength: 2, maxLength: 100, example: Ravi Kumar }
+                city: { type: string, minLength: 1, maxLength: 80, example: Coimbatore }
+                state: { type: string, minLength: 1, maxLength: 80, example: Tamil Nadu }
+                pan:
+                  type: string
+                  pattern: '^[A-Z]{5}[0-9]{4}[A-Z]$'
+                  example: ABCDE1234F
+                  description: Optional. Stored encrypted; only the last 4 are ever shown.
+      responses:
+        '201':
+          description: Application received.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentProfile' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: An application already exists and is not rejected (`APPLICATION_EXISTS`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /agent/me:
+    get:
+      tags: [Agent]
+      summary: The signed-in agent's profile and status
+      description: |
+        Returns the status the app should render. For `REJECTED`,
+        `rejectionReason` is set. `SUSPENDED` is labelled "Paused" via
+        `statusLabel`. An `APPLICANT` session with no application gets
+        `404 AGENT_NOT_FOUND`.
+      operationId: agentMe
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      responses:
+        '200':
+          description: Profile.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentProfile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: No application yet (`AGENT_NOT_FOUND`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /agent/me/payout-details:
+    patch:
+      tags: [Agent]
+      summary: Set or change where commission is paid
+      description: |
+        Needs `ACTIVE`. Exactly one of `upi` or `bank`. Stored encrypted. The
+        response never echoes the full account number or UPI id. Agents cannot
+        create payouts; this only says where an admin-created payout goes.
+      operationId: agentUpdatePayoutDetails
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              maxProperties: 1
+              properties:
+                upi:
+                  type: object
+                  required: [vpa]
+                  additionalProperties: false
+                  properties:
+                    vpa:
+                      type: string
+                      example: ravi@okbank
+                bank:
+                  type: object
+                  required: [accountHolderName, accountNumber, ifsc]
+                  additionalProperties: false
+                  properties:
+                    accountHolderName: { type: string, maxLength: 100 }
+                    accountNumber: { type: string, pattern: '^[0-9]{9,18}$' }
+                    ifsc: { type: string, pattern: '^[A-Z]{4}0[A-Z0-9]{6}$', example: HDFC0001234 }
+      responses:
+        '200':
+          description: Saved. Masked summary only.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PayoutDetailsSummary' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/AgentNotActive' }
+
+  /agent/config:
+    get:
+      tags: [Agent]
+      summary: Labels, stage names, share messages and displayed settings
+      description: |
+        One call the app makes after sign-in (and may cache). Everything the
+        app would otherwise hard-code: display labels in English and Tamil, and
+        the setting values it shows. Values are read from settings at request
+        time, so they can change without an app release. Available to any
+        non-terminated agent, including `PENDING_APPROVAL`.
+      operationId: agentConfig
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      responses:
+        '200':
+          description: Config.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentConfig' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /agent/referral-links:
+    get:
+      tags: [Referrals]
+      summary: The agent's codes, links and QR payloads
+      description: |
+        Bounded list (an agent holds a handful of codes), so not paginated.
+        Needs `ACTIVE`; a `SUSPENDED` agent gets the list with
+        `shareable: false` on every item.
+      operationId: agentReferralLinks
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      responses:
+        '200':
+          description: Codes.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/ReferralLink' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/AgentNotActive' }
+
+  /agent/referrals:
+    get:
+      tags: [Referrals]
+      summary: Members this agent referred
+      description: |
+        Newest first. Each item is the allow-listed `AgentReferralView` and
+        nothing else: no email, photos, income, family, horoscope, full phone,
+        user id or internal review state.
+      operationId: agentReferralsList
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: stage
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/ReferralStage' }
+      responses:
+        '200':
+          description: A page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AgentReferralView' }
+                  nextCursor:
+                    type: string
+                    nullable: true
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/AgentNotActive' }
+
+  /agent/referrals/{id}:
+    get:
+      tags: [Referrals]
+      summary: One referred member
+      description: '`id` is the attribution id (the `id` in the list), never a user id.'
+      operationId: agentReferralGet
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The referral.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentReferralView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/AgentNotActive' }
+        '404':
+          description: Not found, or belongs to another agent (`REFERRAL_NOT_FOUND`). Both look identical.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /agent/commissions:
+    get:
+      tags: [Money]
+      summary: Commission entries
+      description: Newest first. Statuses are the public set only.
+      operationId: agentCommissionsList
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/PublicCommissionStatus' }
+      responses:
+        '200':
+          description: A page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Commission' }
+                  nextCursor:
+                    type: string
+                    nullable: true
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/AgentNotActive' }
+
+  /agent/balance:
+    get:
+      tags: [Money]
+      summary: Totals by commission status, and payout eligibility
+      description: |
+        All amounts in paise. `availablePaise` is approved commission not yet
+        paid out; `canRequestPayout` is informational (agents cannot create
+        payouts; an admin does) and is true when `availablePaise` reaches
+        `minPayoutPaise`.
+      operationId: agentBalance
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      responses:
+        '200':
+          description: Balance.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Balance' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/AgentNotActive' }
+
+  /agent/payouts:
+    get:
+      tags: [Money]
+      summary: Payout history (read-only)
+      description: |
+        Payouts are created by an admin. There is no agent-side create,
+        update or cancel.
+      operationId: agentPayoutsList
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Payout' }
+                  nextCursor:
+                    type: string
+                    nullable: true
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/AgentNotActive' }
+
+  /agent/devices:
+    post:
+      tags: [Agent]
+      summary: Register this device for push notifications
+      description: |
+        Idempotent upsert on `fcmToken`: calling it again with a token that
+        belongs to another agent moves it to this agent. Allowed for any
+        non-terminated agent so a pending applicant gets the approval push.
+      operationId: agentRegisterDevice
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fcmToken, platform]
+              additionalProperties: false
+              properties:
+                fcmToken: { type: string, minLength: 20, maxLength: 4096 }
+                platform:
+                  type: string
+                  enum: [ANDROID, IOS]
+      responses:
+        '204': { description: Registered. }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /referrals/codes/validate:
+    post:
+      tags: [Member]
+      summary: Check a referral code before sign-up
+      description: |
+        Called by the app while a person is typing a code, before they have an
+        account, so **no token is needed**. Because it reveals an agent's first
+        name and last initial it is attempt-limited **per IP and per code**.
+        Exceeding either returns `429` with `Retry-After`. The limits are
+        settings (suggested start: 10 requests / minute / IP and 5 distinct
+        failed lookups / minute / IP; 20 lookups / hour / code).
+
+        An unknown, inactive, malformed or not-ACTIVE-agent code all return the
+        same `200 { valid: false, agentDisplayName: null }` so the response
+        cannot be used to tell them apart. Only these two fields are returned.
+      operationId: referralCodeValidate
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              additionalProperties: false
+              properties:
+                code:
+                  $ref: '#/components/schemas/ReferralCodeInput'
+      responses:
+        '200':
+          description: Result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [valid, agentDisplayName]
+                properties:
+                  valid: { type: boolean }
+                  agentDisplayName:
+                    type: string
+                    nullable: true
+                    description: 'First name and last initial, e.g. "Ravi K.". Null when `valid` is false.'
+                    example: Ravi K.
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /registration/referral-code:
+    post:
+      tags: [Member]
+      summary: Attach a referral code after sign-in
+      description: |
+        Member endpoint (Firebase ID token). Credits the signed-in member to
+        the code's agent when no attribution exists for their phone yet. The
+        first attribution wins; it is never silently replaced. An agent cannot
+        attribute their own phone. Also attempt-limited per user.
+      operationId: registrationReferralCodeAttach
+      security:
+        - memberBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              additionalProperties: false
+              properties:
+                code:
+                  $ref: '#/components/schemas/ReferralCodeInput'
+      responses:
+        '200':
+          description: Attached.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [attached, agentDisplayName, windowEndsAt]
+                properties:
+                  attached: { type: boolean, example: true }
+                  agentDisplayName: { type: string, example: Ravi K. }
+                  windowEndsAt:
+                    type: string
+                    format: date
+                    description: Last day the credit window covers (IST).
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: Code does not exist or its agent is not active (`CODE_NOT_FOUND`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Member already attributed (`ALREADY_ATTRIBUTED`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: Not allowed for this member (`SELF_REFERRAL`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+components:
+  securitySchemes:
+    agentBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: Agent access token (our own, not Firebase)
+      description: Issued by `POST /agent/auth/otp/verify`, short-lived.
+    memberBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: Firebase ID token
+      description: The existing member token.
+
+  parameters:
+    AcceptVersion:
+      name: Accept-Version
+      in: header
+      required: false
+      description: API version. Defaults to `1` when missing.
+      schema:
+        type: string
+        enum: ['1']
+        default: '1'
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque cursor from the previous page's `nextCursor`.
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+
+  responses:
+    ValidationFailed:
+      description: Body or query failed validation (`VALIDATION_FAILED`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Missing, invalid or expired token (`UNAUTHORIZED`, `TOKEN_EXPIRED`). On `TOKEN_EXPIRED` the agent app should refresh once and retry.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    AgentNotActive:
+      description: The agent's status does not allow this call (`AGENT_NOT_ACTIVE`). The body includes the current `agentStatus`.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooManyRequests:
+      description: Rate or attempt limit hit (`RATE_LIMITED`).
+      headers:
+        Retry-After:
+          description: Seconds to wait.
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Error:
+      type: object
+      required: [statusCode, message, error, code]
+      properties:
+        statusCode: { type: integer, example: 403 }
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items: { type: string }
+          description: Human readable; may be a list for validation errors. Not for branching.
+        error: { type: string, example: Forbidden }
+        code:
+          type: string
+          description: Stable machine-readable code.
+          enum:
+            - VALIDATION_FAILED
+            - UNAUTHORIZED
+            - TOKEN_EXPIRED
+            - UNSUPPORTED_VERSION
+            - RATE_LIMITED
+            - OTP_INVALID
+            - OTP_EXPIRED
+            - REFRESH_TOKEN_INVALID
+            - REFRESH_TOKEN_EXPIRED
+            - REFRESH_TOKEN_REUSED
+            - AGENT_TERMINATED
+            - AGENT_NOT_ACTIVE
+            - AGENT_NOT_FOUND
+            - APPLICATION_EXISTS
+            - REFERRAL_NOT_FOUND
+            - CODE_NOT_FOUND
+            - ALREADY_ATTRIBUTED
+            - SELF_REFERRAL
+        agentStatus:
+          allOf:
+            - $ref: '#/components/schemas/AgentStatus'
+          description: Present on `AGENT_NOT_ACTIVE`.
+
+    PhoneE164:
+      type: string
+      pattern: '^\+[1-9][0-9]{7,14}$'
+      example: '+919876543210'
+
+    ReferralCodeInput:
+      type: string
+      description: Case-insensitive on input; the server upper-cases and trims.
+      pattern: '^[Nn][Mm][2-9A-HJKMNP-Za-hjkmnp-z]{6}$'
+      example: NM7K2P9X
+
+    AgentStatus:
+      type: string
+      enum: [PENDING_APPROVAL, ACTIVE, REJECTED, SUSPENDED, TERMINATED]
+      description: '`SUSPENDED` is displayed as "Paused" (see `statusLabel`).'
+
+    ReferralStage:
+      type: string
+      enum: [REGISTERED, PROFILE_COMPLETE, PURCHASED]
+
+    PublicCommissionStatus:
+      type: string
+      enum: [ON_HOLD, APPROVED, PAID, CANCELLED]
+      description: |
+        The only commission states an agent sees. Internal review and fraud
+        states are folded into `ON_HOLD`; `REVERSED` is shown as `CANCELLED`.
+
+    PayoutStatus:
+      type: string
+      enum: [PROCESSING, PAID, FAILED]
+
+    AgentSession:
+      type: object
+      required: [accessToken, refreshToken, expiresInSeconds, scope, agent]
+      properties:
+        accessToken: { type: string, description: Agent access token. }
+        refreshToken: { type: string, description: Opaque, single use, rotates on every refresh. }
+        expiresInSeconds: { type: integer, example: 900 }
+        scope:
+          type: string
+          enum: [APPLICANT, AGENT]
+          description: '`APPLICANT` when the phone has no agent record yet.'
+        agent:
+          allOf:
+            - $ref: '#/components/schemas/AgentProfile'
+          nullable: true
+          description: Null for `APPLICANT`.
+
+    AgentProfile:
+      type: object
+      required: [id, name, phoneMasked, city, state, status, statusLabel, rejectionReason, approvedAt, panLast4, payoutDetailsSet, primaryCode]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        phoneMasked:
+          type: string
+          example: '+91 98***210'
+        city: { type: string }
+        state: { type: string }
+        status: { $ref: '#/components/schemas/AgentStatus' }
+        statusLabel:
+          $ref: '#/components/schemas/LocalizedText'
+        rejectionReason:
+          type: string
+          nullable: true
+          description: Set only when `status` is `REJECTED`.
+        approvedAt:
+          type: string
+          format: date
+          nullable: true
+        panLast4:
+          type: string
+          nullable: true
+          example: '234F'
+        payoutDetailsSet: { type: boolean }
+        primaryCode:
+          type: string
+          nullable: true
+          description: Null until approved.
+          example: NM7K2P9X
+
+    PayoutDetailsSummary:
+      type: object
+      required: [method, display]
+      properties:
+        method: { type: string, enum: [UPI, BANK] }
+        display:
+          type: string
+          description: Masked, never the full value.
+          example: 'HDFC ****6789'
+
+    LocalizedText:
+      type: object
+      required: [en, ta]
+      properties:
+        en: { type: string }
+        ta: { type: string }
+
+    AgentConfig:
+      type: object
+      required: [statusLabels, stageLabels, commissionStatusLabels, shareMessages, settings]
+      properties:
+        statusLabels:
+          type: object
+          description: Keyed by `AgentStatus`.
+          additionalProperties: { $ref: '#/components/schemas/LocalizedText' }
+          example:
+            PENDING_APPROVAL: { en: Under review, ta: '<to be supplied>' }
+            SUSPENDED: { en: Paused, ta: '<to be supplied>' }
+        stageLabels:
+          type: object
+          description: Keyed by `ReferralStage`.
+          additionalProperties: { $ref: '#/components/schemas/LocalizedText' }
+        commissionStatusLabels:
+          type: object
+          description: Keyed by `PublicCommissionStatus`.
+          additionalProperties: { $ref: '#/components/schemas/LocalizedText' }
+        shareMessages:
+          type: array
+          description: |
+            Ready-to-send texts. `{code}` and `{link}` are placeholders the app
+            fills in. Wording and the Tamil translation are content, supplied
+            by the product team.
+          items:
+            type: object
+            required: [id, text]
+            properties:
+              id: { type: string, example: default }
+              text: { $ref: '#/components/schemas/LocalizedText' }
+        settings:
+          type: object
+          required: [holdDays, creditWindowDays, minPayoutPaise, referredMemberDiscountPercent]
+          properties:
+            holdDays: { type: integer, example: 14 }
+            creditWindowDays: { type: integer, example: 60 }
+            minPayoutPaise: { type: integer, example: 50000 }
+            referredMemberDiscountPercent: { type: integer, example: 5 }
+
+    ReferralLink:
+      type: object
+      required: [codeId, code, isPrimary, link, qrPayload, shareable]
+      properties:
+        codeId: { type: string, format: uuid }
+        code: { type: string, example: NM7K2P9X }
+        isPrimary: { type: boolean }
+        link: { type: string, format: uri }
+        qrPayload:
+          type: string
+          description: The string to encode into a QR code (the same as `link`).
+        shareable:
+          type: boolean
+          description: False while the agent is paused.
+
+    AgentReferralView:
+      type: object
+      description: |
+        The ONLY shape an agent sees about a referred member. Mirrors
+        `agent-referral-view.ts`; the schema is closed.
+      additionalProperties: false
+      required: [id, displayName, age, city, signedUpAt, stage, profileCompletenessPct, planName, purchasedAt, commissionStatus, maskedPhone]
+      properties:
+        id:
+          type: string
+          description: The attribution id, never the user id.
+        displayName:
+          type: string
+          description: First name and last initial.
+          example: Priya S.
+        age: { type: integer, example: 27 }
+        city: { type: string, example: Chennai }
+        signedUpAt:
+          type: string
+          format: date
+          description: Date only, Indian time.
+        stage: { $ref: '#/components/schemas/ReferralStage' }
+        profileCompletenessPct: { type: integer, minimum: 0, maximum: 100 }
+        planName: { type: string, nullable: true }
+        purchasedAt:
+          type: string
+          format: date
+          nullable: true
+        commissionStatus:
+          allOf:
+            - $ref: '#/components/schemas/PublicCommissionStatus'
+          nullable: true
+        maskedPhone:
+          type: string
+          description: '+91, first 2 digits, ***, last 3. Fully masked if malformed.'
+          example: '+91 98***210'
+
+    Commission:
+      type: object
+      required: [id, referralId, referralDisplayName, planName, basePaise, amountPaise, rate, status, earnedOn, holdEndsOn, approvedOn, paidOn]
+      properties:
+        id: { type: string, format: uuid }
+        referralId:
+          type: string
+          description: The attribution id (as in `AgentReferralView.id`).
+        referralDisplayName: { type: string, example: Priya S. }
+        planName: { type: string }
+        basePaise:
+          type: integer
+          description: Amount the commission was calculated on (may exclude tax).
+          example: 99900
+        amountPaise:
+          type: integer
+          description: The commission itself, never above what the member paid.
+          example: 9990
+        rate:
+          type: object
+          description: The rule snapshotted when the commission was created.
+          required: [calcType, value]
+          properties:
+            calcType: { type: string, enum: [PERCENTAGE] }
+            value:
+              type: integer
+              description: Basis points for `PERCENTAGE` (1000 = 10%).
+              example: 1000
+        status: { $ref: '#/components/schemas/PublicCommissionStatus' }
+        earnedOn: { type: string, format: date }
+        holdEndsOn:
+          type: string
+          format: date
+          nullable: true
+        approvedOn:
+          type: string
+          format: date
+          nullable: true
+        paidOn:
+          type: string
+          format: date
+          nullable: true
+
+    Balance:
+      type: object
+      required: [onHoldPaise, availablePaise, paidPaise, minPayoutPaise, canRequestPayout]
+      properties:
+        onHoldPaise: { type: integer, example: 19980 }
+        availablePaise: { type: integer, example: 60000 }
+        paidPaise: { type: integer, example: 150000 }
+        minPayoutPaise: { type: integer, example: 50000 }
+        canRequestPayout:
+          type: boolean
+          description: Informational only; agents cannot create payouts.
+
+    Payout:
+      type: object
+      required: [id, amountPaise, status, reference, createdOn, paidOn, commissionCount]
+      properties:
+        id: { type: string, format: uuid }
+        amountPaise: { type: integer, example: 60000 }
+        status: { $ref: '#/components/schemas/PayoutStatus' }
+        reference:
+          type: string
+          nullable: true
+          description: Bank / UPI transaction reference once paid.
+        createdOn: { type: string, format: date }
+        paidOn:
+          type: string
+          format: date
+          nullable: true
+        commissionCount: { type: integer }
