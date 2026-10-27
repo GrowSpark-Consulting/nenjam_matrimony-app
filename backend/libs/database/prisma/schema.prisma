@@ -34,6 +34,7 @@ model User {
   chatRoomsAsUser1  ChatRoom[]           @relation("ChatUser1")
   chatRoomsAsUser2  ChatRoom[]           @relation("ChatUser2")
   deviceTokens      DevicePushToken[]
+  referralAttribution ReferralAttribution?
   receivedInterests ExpressInterest[]    @relation("ReceivedInterests")
   sentInterests     ExpressInterest[]    @relation("SentInterests")
   faceVerification  FaceVerification?
@@ -1500,4 +1501,166 @@ model Community {
   // only, ordered by label — the one query the endpoint issues.
   @@index([religionCode, isActive, label])
   @@map("communities")
+}
+
+// ============================================================================
+// Agent / Partner Program — phase 1.
+// These tables may point at existing ones (User, DevicePlatform); no existing
+// model points at them except the single User.referralAttribution
+// back-relation, which adds no column. Two constraints Prisma cannot express
+// live only in the migration SQL: the referral code format CHECK and the
+// one-primary-code-per-agent partial unique index.
+// ============================================================================
+
+/// Lifecycle of an agent's account. SUSPENDED is shown to the agent as "Paused".
+enum AgentStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  REJECTED
+  SUSPENDED
+  TERMINATED
+
+  @@map("agent_status")
+}
+
+/// How a member came to be attributed to an agent.
+enum ReferralSource {
+  CODE_AT_SIGNUP
+  LINK_OR_QR
+  ADDED_BY_AGENT
+  ENTERED_AT_PAYMENT
+  ADMIN_SET
+
+  @@map("referral_source")
+}
+
+/// Whether an attribution still counts.
+enum AttributionStatus {
+  ACTIVE
+  CONVERTED
+  EXPIRED
+  REJECTED
+
+  @@map("attribution_status")
+}
+
+/// A partner who refers members. A separate identity from User by design: no
+/// userId, signs in with their own phone + OTP and agent token.
+model Agent {
+  id                     String      @id @default(uuid())
+  /// E.164, e.g. +919876543210.
+  phone                  String      @unique
+  /// hashIdentifier(kind, phone) from libs/common. Used for lookup.
+  phoneHash              String      @unique @map("phone_hash")
+  name                   String
+  city                   String
+  state                  String
+  /// Last 4 characters of the PAN, the only part kept in clear.
+  panLast4               String?     @map("pan_last4") @db.VarChar(4)
+  /// Encrypted PAN (ciphertext). Null until supplied.
+  panEncrypted           String?     @map("pan_encrypted")
+  /// Encrypted payout details (bank / UPI) as one ciphertext string.
+  payoutDetailsEncrypted String?     @map("payout_details_encrypted")
+  status                 AgentStatus @default(PENDING_APPROVAL)
+  /// Set when status = REJECTED; shown to the applicant.
+  rejectionReason        String?     @map("rejection_reason")
+  approvedAt             DateTime?   @map("approved_at")
+  createdAt              DateTime    @default(now()) @map("created_at")
+  updatedAt              DateTime    @updatedAt @map("updated_at")
+
+  referralCodes ReferralCode[]
+  attributions  ReferralAttribution[]
+  refreshTokens AgentRefreshToken[]
+  deviceTokens  AgentDeviceToken[]
+
+  @@index([status])
+  @@map("agents")
+}
+
+/// An "NM" + 6 character code an agent shares. An agent may hold several but
+/// only one is primary (partial unique index in the migration SQL).
+model ReferralCode {
+  id        String   @id @default(uuid())
+  agentId   String   @map("agent_id")
+  /// NM + 6 chars from 23456789ABCDEFGHJKMNPQRSTUVWXYZ (CHECK in the migration SQL).
+  code      String   @unique @db.VarChar(8)
+  isPrimary Boolean  @default(false) @map("is_primary")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  agent        Agent                 @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  attributions ReferralAttribution[]
+
+  @@index([agentId])
+  @@map("referral_codes")
+}
+
+/// Which agent a member is credited to. Keyed on the phone HASH so it can exist
+/// before the person registers and survives account deletion. One per phone.
+model ReferralAttribution {
+  id           String            @id @default(uuid())
+  /// Null until the person signs up and is matched by phoneHash.
+  userId       String?           @unique @map("user_id")
+  /// hashIdentifier(kind, phone). One attribution per person, ever.
+  phoneHash    String            @unique @map("phone_hash")
+  agentId      String            @map("agent_id")
+  /// The code used, when there was one.
+  codeId       String?           @map("code_id")
+  source       ReferralSource
+  status       AttributionStatus @default(ACTIVE)
+  /// End of the credit window, snapshotted from the setting when created.
+  windowEndsAt DateTime          @map("window_ends_at")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+
+  agent Agent         @relation(fields: [agentId], references: [id])
+  code  ReferralCode? @relation(fields: [codeId], references: [id], onDelete: SetNull)
+  /// SetNull: deleting a member must not delete the attribution (it carries
+  /// commission history).
+  user  User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([agentId, createdAt])
+  @@index([codeId])
+  @@index([status, windowEndsAt])
+  @@map("referral_attributions")
+}
+
+/// Rotating refresh tokens for the agent's own session (not Firebase). Only a
+/// hash is stored; tokens in one login chain share a familyId so reuse of a
+/// rotated token can revoke the whole chain.
+model AgentRefreshToken {
+  id        String    @id @default(uuid())
+  agentId   String    @map("agent_id")
+  familyId  String    @map("family_id")
+  /// SHA-256 of the opaque token; the token itself is never stored.
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  /// Set on rotation, logout, or reuse detection.
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("agent_refresh_tokens")
+}
+
+/// FCM tokens for push to the agent app. Mirrors DevicePushToken, keyed on Agent.
+model AgentDeviceToken {
+  id        String         @id @default(uuid())
+  agentId   String         @map("agent_id")
+  fcmToken  String         @unique @map("fcm_token")
+  platform  DevicePlatform
+  isActive  Boolean        @default(true) @map("is_active")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@map("agent_device_tokens")
 }
