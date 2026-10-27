@@ -30,9 +30,11 @@ info:
       unversioned today; the server treats a missing header as `1` and an
       unsupported value as `406 UNSUPPORTED_VERSION`. Responses echo
       `Content-Version`.
-    - **Errors** use the existing Nest shape `{ statusCode, message, error }`
-      plus a stable machine-readable `code`. Clients branch on `code`, never on
-      `message`.
+    - **Errors** keep Nest's existing shape `{ statusCode, message, error }`
+      and add one field, a stable machine-readable `code`. We do not introduce
+      a new envelope because the live Flutter app already parses the current
+      shape; the added `code` is additive and safe for it to ignore. New
+      clients branch on `code`, never on `message`.
     - **Settings are not constants.** Hold days, credit window, minimum payout,
       referred-member discount and commission rate are settings; clients read
       the ones they display from `GET /agent/config`.
@@ -46,7 +48,7 @@ info:
     | `REJECTED` | yes | as above; `rejectionReason` is returned; may re-apply |
     | `ACTIVE` | yes | everything |
     | `SUSPENDED` (shown as "Paused") | yes | all reads; new referrals are not credited; payout-details edits blocked |
-    | `TERMINATED` | no (`403 AGENT_TERMINATED`) | nothing |
+    | `TERMINATED` | yes, **read-only** | `GET /agent/me` (status), `GET /agent/config`, `GET /agent/commissions`, `GET /agent/balance`, `GET /agent/payouts`, refresh, logout. No new credit, cannot add members, no referral links, no payout-details edits. Approved balance is still paid. |
 
     Calls not allowed in the caller's state get `403 AGENT_NOT_ACTIVE`.
   contact:
@@ -110,7 +112,7 @@ paths:
         On success returns an access token and a refresh token **in the body**.
         If the phone has no agent record yet, the tokens carry
         `scope: APPLICANT` and only allow `POST /agent/application`. A
-        `TERMINATED` agent is refused.
+        `TERMINATED` agent can still sign in, read-only (see the state table).
       operationId: agentOtpVerify
       security: []
       parameters:
@@ -138,11 +140,6 @@ paths:
         '400': { $ref: '#/components/responses/ValidationFailed' }
         '401':
           description: OTP wrong or expired (`OTP_INVALID`, `OTP_EXPIRED`).
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-        '403':
-          description: Agent is terminated (`AGENT_TERMINATED`).
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -179,11 +176,6 @@ paths:
         '400': { $ref: '#/components/responses/ValidationFailed' }
         '401':
           description: '`REFRESH_TOKEN_INVALID`, `REFRESH_TOKEN_EXPIRED` or `REFRESH_TOKEN_REUSED`.'
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-        '403':
-          description: Agent is terminated (`AGENT_TERMINATED`).
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -227,9 +219,14 @@ paths:
         Needs an `APPLICANT` or `REJECTED` session. Creates the agent as
         `PENDING_APPROVAL` (a `REJECTED` agent re-applying goes back to
         `PENDING_APPROVAL` and the old `rejectionReason` is cleared). The phone
-        is the verified sign-in phone; it is never taken from the body. PAN and
-        payout details are optional at this stage and may be added later
-        (`PATCH /agent/me/payout-details`).
+        is the verified sign-in phone; it is never taken from the body.
+
+        **PAN is optional on the application, but it is required, together
+        with verified payout details, before the first payout can be created.**
+        Until both are on file an admin cannot create that agent's first
+        payout (the admin side shows what is missing); commission still
+        accrues meanwhile. Payout details are added later through
+        `PATCH /agent/me/payout-details`.
       operationId: agentApply
       security:
         - agentBearer: []
@@ -351,7 +348,8 @@ paths:
         app would otherwise hard-code: display labels in English and Tamil, and
         the setting values it shows. Values are read from settings at request
         time, so they can change without an app release. Available to any
-        non-terminated agent, including `PENDING_APPROVAL`.
+        agent in any status, including `PENDING_APPROVAL` and `TERMINATED`
+        (the app needs the labels to show the status).
       operationId: agentConfig
       security:
         - agentBearer: []
@@ -373,6 +371,13 @@ paths:
         Bounded list (an agent holds a handful of codes), so not paginated.
         Needs `ACTIVE`; a `SUSPENDED` agent gets the list with
         `shareable: false` on every item.
+
+        The public web address is not decided yet, so `link` and `qrPayload`
+        are **nullable** and are `null` until it is. The `code` and the
+        `shareMessages` are **always** returned. While `link` is null the
+        share messages are the code-only wording; once a link exists they
+        include it. Clients must render the code (and a "copy code" action)
+        whether or not a link is present, and hide QR when `qrPayload` is null.
       operationId: agentReferralLinks
       security:
         - agentBearer: []
@@ -522,8 +527,8 @@ paths:
       tags: [Money]
       summary: Payout history (read-only)
       description: |
-        Payouts are created by an admin. There is no agent-side create,
-        update or cancel.
+        Payouts are manual and created by an admin. There is no agent-side
+        create, update or cancel. Also available to a `TERMINATED` agent.
       operationId: agentPayoutsList
       security:
         - agentBearer: []
@@ -557,7 +562,7 @@ paths:
       description: |
         Idempotent upsert on `fcmToken`: calling it again with a token that
         belongs to another agent moves it to this agent. Allowed for any
-        non-terminated agent so a pending applicant gets the approval push.
+        agent except `TERMINATED`, so a pending applicant gets the approval push.
       operationId: agentRegisterDevice
       security:
         - agentBearer: []
@@ -776,7 +781,6 @@ components:
             - REFRESH_TOKEN_INVALID
             - REFRESH_TOKEN_EXPIRED
             - REFRESH_TOKEN_REUSED
-            - AGENT_TERMINATED
             - AGENT_NOT_ACTIVE
             - AGENT_NOT_FOUND
             - APPLICATION_EXISTS
@@ -818,7 +822,11 @@ components:
 
     PayoutStatus:
       type: string
-      enum: [PROCESSING, PAID, FAILED]
+      enum: [CREATED, PAID, CANCELLED]
+      description: |
+        Payouts are manual: an admin creates one (`CREATED`, shown as
+        "Processing"), pays it outside the app, then marks it `PAID` or
+        `CANCELLED`.
 
     AgentSession:
       type: object
@@ -889,7 +897,7 @@ components:
 
     AgentConfig:
       type: object
-      required: [statusLabels, stageLabels, commissionStatusLabels, shareMessages, settings]
+      required: [statusLabels, stageLabels, commissionStatusLabels, payoutStatusLabels, shareMessages, settings]
       properties:
         statusLabels:
           type: object
@@ -906,6 +914,14 @@ components:
           type: object
           description: Keyed by `PublicCommissionStatus`.
           additionalProperties: { $ref: '#/components/schemas/LocalizedText' }
+        payoutStatusLabels:
+          type: object
+          description: Keyed by `PayoutStatus`. `CREATED` is displayed as "Processing".
+          additionalProperties: { $ref: '#/components/schemas/LocalizedText' }
+          example:
+            CREATED: { en: Processing, ta: '<to be supplied>' }
+            PAID: { en: Paid, ta: '<to be supplied>' }
+            CANCELLED: { en: Cancelled, ta: '<to be supplied>' }
         shareMessages:
           type: array
           description: |
@@ -929,15 +945,29 @@ components:
 
     ReferralLink:
       type: object
-      required: [codeId, code, isPrimary, link, qrPayload, shareable]
+      required: [codeId, code, isPrimary, link, qrPayload, shareMessages, shareable]
       properties:
         codeId: { type: string, format: uuid }
         code: { type: string, example: NM7K2P9X }
         isPrimary: { type: boolean }
-        link: { type: string, format: uri }
+        link:
+          type: string
+          format: uri
+          nullable: true
+          description: Null until the public web address is decided.
         qrPayload:
           type: string
-          description: The string to encode into a QR code (the same as `link`).
+          nullable: true
+          description: The string to encode into a QR code (the same as `link`). Null whenever `link` is null.
+        shareMessages:
+          type: array
+          description: Ready-to-send texts for this code, with `{code}` (and `{link}` when there is one) already filled in. Always present.
+          items:
+            type: object
+            required: [id, text]
+            properties:
+              id: { type: string, example: default }
+              text: { $ref: '#/components/schemas/LocalizedText' }
         shareable:
           type: boolean
           description: False while the agent is paused.

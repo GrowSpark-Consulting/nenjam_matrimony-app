@@ -48,12 +48,17 @@ enum ReferralSource {
   @@map("referral_source")
 }
 
-/// Whether an attribution still counts. Commission rules read this together
-/// with windowEndsAt.
+/// Whether an attribution still counts. Value names match Shaaz's Revision 3;
+/// the one-line meanings below are ASSUMED and should be confirmed against it.
+/// ACTIVE    - credited, inside the window, no purchase yet.
+/// CONVERTED - the member bought; commission was created.
+/// EXPIRED   - the credit window ended without a purchase.
+/// REJECTED  - not credited (e.g. self-referral or an agent that cannot earn).
 enum AttributionStatus {
   ACTIVE
+  CONVERTED
   EXPIRED
-  CANCELLED
+  REJECTED
 
   @@map("attribution_status")
 }
