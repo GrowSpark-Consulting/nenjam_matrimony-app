@@ -66,7 +66,7 @@ confirm the full-suite total rose by that count.
 | Dummy OTP policy | `backend/libs/common/src/auth/dev-auth.ts`, `POST /auth/dummy-otp/session` |
 | Remote | `https://github.com/GrowSpark-Consulting/nenjam_matrimony-app.git` |
 
-Merged PRs: #100 (OTP docs) … #115, #117–#121. #116 is open (Draft per Ishu).
+Merged PRs: #100 (OTP docs) … #115, #117–#121 (checked against `git log --merges origin/main`). #116 is open: its number is confirmed (`refs/pull/116/head` = `feat/agent-phase1-migration`); its Draft status is per Ishu, To be confirmed on GitHub.
 
 ---
 
@@ -107,7 +107,9 @@ Interface with Shaaz: `quoteReferral()` (Ishu, read-only, at checkout); his `Pay
 | Tax withholding (CA) | `planPayout()` in `payout/plan-payout.ts` refuses any set value with `TAX_RULE_UNSUPPORTED` — **must change when the CA answers** |
 | Commission base (CA) | `commission.base` setting; `buildCommissionDraft()` returns `amountPaise: null` while it is `null` |
 
-Other decisions still open: plan prices, how an agent pays for a client's plan, Tamil share text, referral link web address, agent KYC, whether the app shows a Partner Program button. Values not yet decided for keys: `commission.auto_approve`, `agent.payout_details_wait_hours`, `referral.discount_only_in_credit_window`.
+Other decisions still open: plan prices, how an agent pays for a client's plan, Tamil share text, referral link web address, agent KYC, whether the app shows a Partner Program button.
+
+Setting values decided (Final Build Spec §4): `commission.auto_approve` = `true` (an admin can switch to manual later without a deploy); `agent.payout_details_wait_hours` = `72`; `referral.discount_only_in_credit_window` = `true` as the default, still pending Raja's confirmation; `commission.require_verified_profile` = `false` (decided by the team). None are stored yet — `PlatformSetting` is Shaaz's and does not exist yet.
 
 ---
 
@@ -154,7 +156,7 @@ Then **stop and wait**.
 - **Risk** — "Not wired into any module, no schema change, no migration, no new dependency, no behaviour change. Merging to main triggers a deploy to the live Render site, with no effect on users." (adjust when true)
 - **Decisions to confirm**
 - **Not included**
-- End with the attribution line from the system reminder.
+- End each PR description with the attribution line your Claude Code setup requires.
 
 **Before any push** (only when permitted): `git remote -v`; `git log --oneline origin/main..<branch>`; `git diff --stat origin/main...<branch>`; dry-run merge (`git merge-tree --write-tree origin/main <branch>`); secret scan of added lines (keys, tokens, connection strings, emails, phone numbers, PAN); confirm nothing from the scratchpad is included.
 

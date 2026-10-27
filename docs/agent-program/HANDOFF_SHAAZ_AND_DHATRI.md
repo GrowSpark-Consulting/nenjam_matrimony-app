@@ -99,10 +99,10 @@ in code. The setting keys below are the ones defined in
 | Referred member discount | 5%, first paid plan only | `referral.member_discount_bps` = `500` | Decided |
 | Open client drafts | 10 | `agent.client_draft_limit` = `10` | Decided (agent-added clients come later) |
 | PAN before the first payout | required | A rule in `decidePayoutEligibility()` (`PAN_NOT_VERIFIED`), not a setting | Done (merged) |
-| Verified profile needed for commission | OFF (no KYC yet) | `commission.require_verified_profile` = `false` | Decided |
-| Auto-approve commissions after the hold | — | `commission.auto_approve` | **Pending decision** |
-| Wait after payout details change | — | `agent.payout_details_wait_hours` | **Pending decision** |
-| Discount only inside the credit window | — | `referral.discount_only_in_credit_window` | **Pending decision** |
+| Verified profile needed for commission | OFF (no KYC yet) | `commission.require_verified_profile` = `false` | Decided by the team |
+| Auto-approve commissions after the hold | On (an admin can switch to manual later, without a deploy) | `commission.auto_approve` = `true` | Decided |
+| Wait after payout details change | 72 hours | `agent.payout_details_wait_hours` = `72` | Decided |
+| Discount only inside the credit window | Yes (default) | `referral.discount_only_in_credit_window` = `true` | Default set; **Pending decision** (Raja to confirm) |
 | Commission base (with or without GST) | — | `commission.base` (`null`, `AMOUNT_PAID` or `AMOUNT_PAID_EXCLUDING_GST`) and `commission.base_provisional` | **Pending decision** (CA) |
 | Tax withholding (TDS) | — | `payout.tax_withholding` (shape unknown, passed through as-is) | **Pending decision** (CA) |
 
@@ -138,7 +138,8 @@ Everything merged so far is **pure functions with tests**. None of it is wired
 into a NestJS module yet (checked: `app.module.ts` does not reference it and
 nothing outside `modules/agents/` imports it), so **none of it is live**.
 
-All files are under `backend/apps/api/src/modules/agents/`.
+All files are under `backend/apps/api/src/modules/agents/`. PR numbers and
+branch names were checked against `git log --merges origin/main`.
 
 | Item | File | PR | Status |
 |---|---|---|---|
@@ -162,7 +163,7 @@ All files are under `backend/apps/api/src/modules/agents/`.
 | Access token claims | `auth/agent-access-claims.ts` | #118 | Done (merged) |
 | `decideApplicationSubmit` | `auth/decide-application-submit.ts` | #119 | Done (merged) |
 | Code validation helpers, `computeReferralDiscount`, ledger entry builders, `planPayout` | `referral/code-validation.ts`, `referral/compute-referral-discount.ts`, `commission/ledger-entries.ts`, `payout/plan-payout.ts` | #121 | Done (merged) |
-| Phase 1 database migration (agents, referral codes, attribution, tokens) | branch `feat/agent-phase1-migration` | #116 | **In review** (Draft per Ishu; To be confirmed on GitHub). **Waiting on Shaaz**'s Day 1 migration. |
+| Phase 1 database migration (agents, referral codes, attribution, tokens) | branch `feat/agent-phase1-migration` | #116 (confirmed: GitHub's `refs/pull/116/head` is this branch) | **In review** (Draft per Ishu; Draft status To be confirmed on GitHub). **Waiting on Shaaz**'s Day 1 migration. |
 
 Next, in order:
 
