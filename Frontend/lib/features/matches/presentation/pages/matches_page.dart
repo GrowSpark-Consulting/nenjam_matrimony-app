@@ -124,50 +124,139 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
               ),
             );
 
-            if (!desktop) return reel;
+            final pageCount = feedAsync.valueOrNull?.profiles.length ?? 0;
+
+            // The header is drawn over every state, not just a populated
+            // reel: without it an empty feed left a phone with no Search
+            // and no categories to switch to — nothing on screen to tap.
+            if (!desktop) {
+              return _ReelSurface(
+                controller: _pageController,
+                wheelPager: _wheelPager,
+                pageCount: pageCount,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    reel,
+                    const Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: _ReelHeader(),
+                    ),
+                  ],
+                ),
+              );
+            }
 
             // On a wide page a full-bleed reel crops portrait photos to a
             // landscape strip. Instead: the category bar as a page toolbar,
             // and under it each profile as a portrait card in the photos'
             // 9:16 shape, centered, with its actions beside it.
-            return SafeArea(
-              child: Column(
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      AppSpacing.base,
-                      AppSpacing.base,
-                      AppSpacing.base,
-                      AppSpacing.md,
+            return _ReelSurface(
+              controller: _pageController,
+              wheelPager: _wheelPager,
+              pageCount: pageCount,
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        AppSpacing.base,
+                        AppSpacing.base,
+                        AppSpacing.base,
+                        AppSpacing.md,
+                      ),
+                      child: Center(child: _MatchesCategoryBar()),
                     ),
-                    child: Center(child: _MatchesCategoryBar()),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.base),
-                      child: LayoutBuilder(
-                        builder: (context, region) {
-                          final cardWidth = (region.maxHeight * 9 / 16).clamp(
-                            ReelColumnMetrics.minWidth,
-                            ReelColumnMetrics.maxWidth,
-                          );
-                          return Center(
-                            child: SizedBox(
-                              key: const ValueKey('matches-reel-column'),
-                              width:
-                                  cardWidth + ReelColumnMetrics.sideWidth * 2,
-                              child: reel,
-                            ),
-                          );
-                        },
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.base),
+                        child: LayoutBuilder(
+                          builder: (context, region) {
+                            final cardWidth = (region.maxHeight * 9 / 16).clamp(
+                              ReelColumnMetrics.minWidth,
+                              ReelColumnMetrics.maxWidth,
+                            );
+                            return Center(
+                              child: SizedBox(
+                                key: const ValueKey('matches-reel-column'),
+                                width:
+                                    cardWidth + ReelColumnMetrics.sideWidth * 2,
+                                child: reel,
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// Moves the reel from anywhere on the page, not only over the card.
+///
+/// The [PageView] only receives gestures that land on it, and both layouts
+/// put something else in the way: the category header drawn over the top of
+/// the full-bleed reel (a sibling in a [Stack], so it took the touch and the
+/// reel never saw it), and on desktop the toolbar and the wide margins either
+/// side of the centered card column. A swipe or wheel notch there did
+/// nothing. This forwards vertical drags and wheel notches that nothing
+/// deeper claimed to the same [PageController]: over the card the
+/// [PageView]'s own recognizer and the card's [ReelWheelPager] listener are
+/// deeper, so they still win and nothing is handled twice. Horizontal drags
+/// stay with the category bar, and taps are untouched.
+class _ReelSurface extends StatefulWidget {
+  final PageController controller;
+  final ReelWheelPager wheelPager;
+  final int pageCount;
+  final Widget child;
+
+  const _ReelSurface({
+    required this.controller,
+    required this.wheelPager,
+    required this.pageCount,
+    required this.child,
+  });
+
+  @override
+  State<_ReelSurface> createState() => _ReelSurfaceState();
+}
+
+class _ReelSurfaceState extends State<_ReelSurface> {
+  Drag? _drag;
+
+  void _start(DragStartDetails details) {
+    // No reel attached — loading, empty or error: there is nothing to move.
+    if (!widget.controller.hasClients) return;
+    _drag = widget.controller.position.drag(details, () => _drag = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Translucent: the desktop margins are empty space with nothing for a
+    // deferring hit test to land on.
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerSignal: (event) =>
+          widget.wheelPager.handle(event, widget.pageCount),
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        // The same devices the reel itself may be dragged with, so a mouse
+        // drag on the margin does not scroll when one on the card would not.
+        supportedDevices: ScrollConfiguration.of(context).dragDevices,
+        onVerticalDragStart: _start,
+        onVerticalDragUpdate: (details) => _drag?.update(details),
+        onVerticalDragEnd: (details) => _drag?.end(details),
+        onVerticalDragCancel: () => _drag?.cancel(),
+        child: widget.child,
       ),
     );
   }
@@ -265,40 +354,29 @@ class _ReelFeed extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // ── Reel PageView ────────────────────────────────────────────
-        PageView.builder(
-          controller: controller,
-          scrollDirection: Axis.vertical,
-          physics: const PageScrollPhysics(parent: BouncingScrollPhysics()),
-          itemCount: profiles.length,
-          // Fetch the next page as the user nears the end of the loaded set
-          // (loadMore is a safe no-op when a request is in flight or the feed
-          // is exhausted). Infinite scroll without reloading existing cards.
-          onPageChanged: (index) {
-            if (hasMore && index >= profiles.length - 3) onNearEnd();
-          },
-          itemBuilder: (context, index) {
-            return _KeepAlivePage(
-              key: ValueKey(profiles[index].id),
-              child: Listener(
-                onPointerSignal: (event) =>
-                    wheelPager.handle(event, profiles.length),
-                child: _ReelCard(
-                  profile: profiles[index],
-                  sideActions: desktop,
-                ),
-              ),
-            );
-          },
-        ),
-
-        // ── Fixed header overlay ─────────────────────────────────────
-        if (!desktop)
-          const Positioned(top: 0, left: 0, right: 0, child: _ReelHeader()),
-      ],
+    // The full-bleed layout's header is drawn over this by MatchesPage, so it
+    // stays on screen through the loading, empty and error states too.
+    return PageView.builder(
+      controller: controller,
+      scrollDirection: Axis.vertical,
+      physics: const PageScrollPhysics(parent: BouncingScrollPhysics()),
+      itemCount: profiles.length,
+      // Fetch the next page as the user nears the end of the loaded set
+      // (loadMore is a safe no-op when a request is in flight or the feed
+      // is exhausted). Infinite scroll without reloading existing cards.
+      onPageChanged: (index) {
+        if (hasMore && index >= profiles.length - 3) onNearEnd();
+      },
+      itemBuilder: (context, index) {
+        return _KeepAlivePage(
+          key: ValueKey(profiles[index].id),
+          child: Listener(
+            onPointerSignal: (event) =>
+                wheelPager.handle(event, profiles.length),
+            child: _ReelCard(profile: profiles[index], sideActions: desktop),
+          ),
+        );
+      },
     );
   }
 }
@@ -853,9 +931,9 @@ class _ActionColumn extends StatelessWidget {
   /// Height of the full (non-compact) column at the current text scale:
   /// four 48px buttons, the gaps between them, and a caption under each.
   static double fullHeightOf(BuildContext context) {
-    final caption = MediaQuery.textScalerOf(context).scale(
-      _ActionButton.captionFontSize * _ActionButton.captionLineHeight,
-    );
+    final caption = MediaQuery.textScalerOf(
+      context,
+    ).scale(_ActionButton.captionFontSize * _ActionButton.captionLineHeight);
     return _buttonCount * _ActionButton.size +
         (_buttonCount - 1) * _gap +
         _buttonCount * (_ActionButton.captionGap + caption);
