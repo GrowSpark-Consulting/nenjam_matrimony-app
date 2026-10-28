@@ -6,9 +6,13 @@
  */
 import type { ReferralViewSource } from '../referral/agent-referral-view';
 import {
+  AgentApplicantRecord,
+  AgentApplicantRepository,
   AgentConflictError,
   AgentMemberReadPort,
   AgentMemberSnapshot,
+  AgentPayoutDetailsRecord,
+  AgentPayoutDetailsRepository,
   AgentRecord,
   AgentRefreshTokenRecord,
   AgentRefreshTokenRepository,
@@ -179,6 +183,17 @@ export class FakeAgentRefreshTokenRepository implements AgentRefreshTokenReposit
     return Promise.resolve(copy(next));
   }
 
+  revoke(tokenId: string, at: Date, tx?: AgentTx): Promise<boolean> {
+    const track = trackWrite(tx);
+    const row = this.rows.get(tokenId);
+    if (!row || row.revokedAt !== null) return Promise.resolve(false);
+    row.revokedAt = new Date(at.getTime());
+    track(() => {
+      row.revokedAt = null;
+    });
+    return Promise.resolve(true);
+  }
+
   revokeAllForAgent(agentId: string, at: Date, tx?: AgentTx): Promise<number> {
     const track = trackWrite(tx);
     const revoked: AgentRefreshTokenRecord[] = [];
@@ -234,6 +249,56 @@ export class FakeReferralAttributionRepository implements ReferralAttributionRep
       this.rows.delete(attribution.id);
     });
     return Promise.resolve(copy(attribution));
+  }
+}
+
+export class FakeAgentApplicantRepository implements AgentApplicantRepository {
+  private readonly rows = new Map<string, AgentApplicantRecord>();
+
+  save(record: AgentApplicantRecord, tx?: AgentTx): Promise<void> {
+    const track = trackWrite(tx);
+    const before = this.rows.get(record.phoneHash);
+    this.rows.set(record.phoneHash, copy(record));
+    track(() => {
+      if (before) this.rows.set(record.phoneHash, before);
+      else this.rows.delete(record.phoneHash);
+    });
+    return Promise.resolve();
+  }
+
+  find(phoneHash: string): Promise<AgentApplicantRecord | null> {
+    const row = this.rows.get(phoneHash);
+    return Promise.resolve(row ? copy(row) : null);
+  }
+
+  delete(phoneHash: string, tx?: AgentTx): Promise<void> {
+    const track = trackWrite(tx);
+    const before = this.rows.get(phoneHash);
+    this.rows.delete(phoneHash);
+    track(() => {
+      if (before) this.rows.set(phoneHash, before);
+    });
+    return Promise.resolve();
+  }
+}
+
+export class FakeAgentPayoutDetailsRepository implements AgentPayoutDetailsRepository {
+  private readonly rows = new Map<string, AgentPayoutDetailsRecord>();
+
+  find(agentId: string): Promise<AgentPayoutDetailsRecord | null> {
+    const row = this.rows.get(agentId);
+    return Promise.resolve(row ? copy(row) : null);
+  }
+
+  save(record: AgentPayoutDetailsRecord, tx?: AgentTx): Promise<void> {
+    const track = trackWrite(tx);
+    const before = this.rows.get(record.agentId);
+    this.rows.set(record.agentId, copy(record));
+    track(() => {
+      if (before) this.rows.set(record.agentId, before);
+      else this.rows.delete(record.agentId);
+    });
+    return Promise.resolve();
   }
 }
 
