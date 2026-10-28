@@ -11,6 +11,8 @@ import {
   AgentConflictError,
   AgentMemberReadPort,
   AgentMemberSnapshot,
+  AgentPayoutDetailsRecord,
+  AgentPayoutDetailsRepository,
   AgentRecord,
   AgentRefreshTokenRecord,
   AgentRefreshTokenRepository,
@@ -275,6 +277,26 @@ export class FakeAgentApplicantRepository implements AgentApplicantRepository {
     this.rows.delete(phoneHash);
     track(() => {
       if (before) this.rows.set(phoneHash, before);
+    });
+    return Promise.resolve();
+  }
+}
+
+export class FakeAgentPayoutDetailsRepository implements AgentPayoutDetailsRepository {
+  private readonly rows = new Map<string, AgentPayoutDetailsRecord>();
+
+  find(agentId: string): Promise<AgentPayoutDetailsRecord | null> {
+    const row = this.rows.get(agentId);
+    return Promise.resolve(row ? copy(row) : null);
+  }
+
+  save(record: AgentPayoutDetailsRecord, tx?: AgentTx): Promise<void> {
+    const track = trackWrite(tx);
+    const before = this.rows.get(record.agentId);
+    this.rows.set(record.agentId, copy(record));
+    track(() => {
+      if (before) this.rows.set(record.agentId, before);
+      else this.rows.delete(record.agentId);
     });
     return Promise.resolve();
   }

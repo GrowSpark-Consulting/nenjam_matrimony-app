@@ -3,6 +3,7 @@
  * service specs read as behaviour and not as set-up. Tests only.
  */
 import { AgentApplicationService } from '../application/agent-application.service';
+import { AgentMeService } from '../agent/agent-me.service';
 import { AgentProfileBuilder } from '../agent/agent-profile-builder';
 import type { AgentStatus } from '../agent/agent-status';
 import type { AgentAccessClaims } from '../auth/agent-access-claims';
@@ -29,6 +30,7 @@ import {
 } from './fake-agent-platform';
 import {
   FakeAgentApplicantRepository,
+  FakeAgentPayoutDetailsRepository,
   FakeAgentRefreshTokenRepository,
   FakeAgentRepository,
   FakeReferralCodeRepository,
@@ -89,6 +91,7 @@ export function makeAgentHarness(
   const codes = new FakeReferralCodeRepository();
   const tokens = new FakeAgentRefreshTokenRepository();
   const applicants = new FakeAgentApplicantRepository();
+  const payoutDetails = new FakeAgentPayoutDetailsRepository();
   const sealer = new FakeAgentSecretSealer();
   const audit = new FakeAgentAudit();
   const permission = new FakeAgentPermission();
@@ -121,6 +124,15 @@ export function makeAgentHarness(
     options: AUTH_OPTIONS,
   });
 
+  const me = new AgentMeService({
+    agents,
+    payoutDetails,
+    profiles,
+    sealer,
+    uow,
+    audit,
+    clock,
+  });
   let agentCounter = 0;
   const application = new AgentApplicationService({
     agents,
@@ -180,6 +192,7 @@ export function makeAgentHarness(
     codes,
     tokens,
     applicants,
+    payoutDetails,
     sealer,
     audit,
     permission,
@@ -190,6 +203,7 @@ export function makeAgentHarness(
     issuer,
     signIn,
     application,
+    me,
     claimsOf,
     seedAgent,
     signInAs,

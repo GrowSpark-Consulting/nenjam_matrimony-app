@@ -166,6 +166,29 @@ export interface AgentApplicantRepository {
   delete(phoneHash: string, tx?: AgentTx): Promise<void>;
 }
 
+// --- Payout details --------------------------------------------------------
+
+export type AgentPayoutMethod = 'UPI' | 'BANK';
+
+export interface AgentPayoutDetailsRecord {
+  agentId: string;
+  method: AgentPayoutMethod;
+  /** The UPI id or bank account, sealed by `AgentSecretSealer`. */
+  detailsSealed: string;
+  /** Masked text that is safe to show, e.g. "r***@okbank". */
+  display: string;
+  /** Null until an admin verifies the details; cleared on every change. */
+  verifiedAt: Date | null;
+  /** When the details last changed; the payout wait counts from here. */
+  changedAt: Date;
+}
+
+/** At most one record per agent: `save` inserts or replaces it. */
+export interface AgentPayoutDetailsRepository {
+  find(agentId: string, tx?: AgentTx): Promise<AgentPayoutDetailsRecord | null>;
+  save(record: AgentPayoutDetailsRecord, tx?: AgentTx): Promise<void>;
+}
+
 // --- Attribution -----------------------------------------------------------
 
 export interface ReferralAttributionRecord {
