@@ -1038,9 +1038,14 @@ components:
         shareMessages:
           type: array
           description: |
-            Ready-to-send texts. `{code}` and `{link}` are placeholders the app
-            fills in. Wording and the Tamil translation are content, supplied
-            by the product team.
+            The share-message templates, rendered by the backend. The wording
+            (English and Tamil) is final (Raja, 28 Oct). Placeholders are
+            `{agent_name}`, `{code}`, `{discount_percent}` (from the settings)
+            and `{link}`; here `{discount_percent}` is already filled in. Each
+            message ends with the link on its own line, which is omitted when
+            there is no link. The client never types or fills in this text: to
+            send a message, use the fully rendered `shareMessages` on each
+            `ReferralLink`.
           items:
             type: object
             required: [id, text]
@@ -1074,7 +1079,12 @@ components:
           description: The string to encode into a QR code (the same as `link`). Null whenever `link` is null.
         shareMessages:
           type: array
-          description: Ready-to-send texts for this code, with `{code}` (and `{link}` when there is one) already filled in. Always present.
+          description: |
+            Ready-to-send texts for this code, rendered by the backend with
+            `{agent_name}`, `{code}`, `{discount_percent}` (from the settings)
+            and `{link}` already filled in. The wording (English and Tamil) is
+            final (Raja, 28 Oct). The link line is omitted when there is no
+            link. The client never types or fills in the text. Always present.
           items:
             type: object
             required: [id, text]
