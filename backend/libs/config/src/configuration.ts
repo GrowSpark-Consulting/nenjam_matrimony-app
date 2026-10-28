@@ -124,6 +124,38 @@ export interface AppConfig {
      *  probe another's answers by re-answering and watching the feed. */
     retakeCooldownDays: number;
   };
+  /** Membership plans (see docs/membership/README.md). */
+  membership: {
+    /** How plan limits are applied:
+     *  - `off`: no membership check runs; behaviour is exactly pre-membership.
+     *  - `shadow`: plans are resolved and usage recorded; anything that would
+     *    be denied is logged and ALLOWED. The default: safe to deploy before
+     *    checkout is live, and it measures who would hit which limit.
+     *  - `enforce`: limits and paid features are enforced (403). */
+    enforcementMode: MembershipEnforcementMode;
+  };
+  /** Razorpay. All optional — absent, the app boots and the checkout and
+   *  webhook routes answer 503, mirroring face verification. */
+  razorpay: {
+    keyId?: string;
+    keySecret?: string;
+    webhookSecret?: string;
+  };
+}
+
+export type MembershipEnforcementMode = 'off' | 'shadow' | 'enforce';
+
+const ENFORCEMENT_MODES: readonly MembershipEnforcementMode[] = [
+  'off',
+  'shadow',
+  'enforce',
+];
+
+/** MEMBERSHIP_ENFORCEMENT_MODE, defaulting to `shadow` — never to `enforce`,
+ *  so a missing or mistyped value can't start denying members. */
+function enforcementModeOf(raw: string | undefined): MembershipEnforcementMode {
+  const value = raw?.trim().toLowerCase();
+  return ENFORCEMENT_MODES.find((mode) => mode === value) ?? 'shadow';
 }
 
 /** A numeric env var, or `fallback` when it is absent/blank/not a number. */
@@ -248,5 +280,13 @@ export default (): AppConfig => ({
       process.env.PSYCHOLOGY_RETAKE_COOLDOWN_DAYS,
       7,
     ),
+  },
+  membership: {
+    enforcementMode: enforcementModeOf(process.env.MEMBERSHIP_ENFORCEMENT_MODE),
+  },
+  razorpay: {
+    keyId: process.env.RAZORPAY_KEY_ID?.trim() || undefined,
+    keySecret: process.env.RAZORPAY_KEY_SECRET?.trim() || undefined,
+    webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET?.trim() || undefined,
   },
 });

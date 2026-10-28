@@ -1,7 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/database';
-import type { ProfilePhoto } from '../../../../../../libs/database/generated/client';
+import type {
+  Prisma,
+  ProfilePhoto,
+} from '../../../../../../libs/database/generated/client';
 import { PhotoEntity } from '../entities/photo.entity';
+
+type NewPhoto = {
+  s3Key: string;
+  cdnUrl: string;
+  isPrimary: boolean;
+  order: number;
+};
 
 @Injectable()
 export class PhotoRepository {
@@ -30,20 +40,39 @@ export class PhotoRepository {
     return this.prisma.profilePhoto.count({ where: { userId } });
   }
 
-  async create(
+  async create(userId: string, data: NewPhoto): Promise<PhotoEntity> {
+    const row = await this.prisma.$transaction((tx) =>
+      this.insert(tx, userId, data),
+    );
+    return this.toEntity(row);
+  }
+
+  /** [create], but runs [check] first inside the same transaction — for a
+   *  cap that must hold even when two uploads land at once. */
+  async createWithinCap(
     userId: string,
-    data: { s3Key: string; cdnUrl: string; isPrimary: boolean; order: number },
+    data: NewPhoto,
+    check: (tx: Prisma.TransactionClient) => Promise<void>,
   ): Promise<PhotoEntity> {
     const row = await this.prisma.$transaction(async (tx) => {
-      if (data.isPrimary) {
-        await tx.profilePhoto.updateMany({
-          where: { userId, isPrimary: true },
-          data: { isPrimary: false },
-        });
-      }
-      return tx.profilePhoto.create({ data: { userId, ...data } });
+      await check(tx);
+      return this.insert(tx, userId, data);
     });
     return this.toEntity(row);
+  }
+
+  private async insert(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    data: NewPhoto,
+  ): Promise<ProfilePhoto> {
+    if (data.isPrimary) {
+      await tx.profilePhoto.updateMany({
+        where: { userId, isPrimary: true },
+        data: { isPrimary: false },
+      });
+    }
+    return tx.profilePhoto.create({ data: { userId, ...data } });
   }
 
   /** Replace the stored object of an existing (already ownership-checked) row. */

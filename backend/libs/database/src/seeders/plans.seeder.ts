@@ -1,88 +1,43 @@
 import { PrismaClient } from '../../generated/client';
 
 /**
- * Seeds the subscription_plans table with Silver and Gold plans.
+ * Reports the membership plan catalogue. Deliberately writes NOTHING.
  *
- * Pricing convention: stored in **paise** (₹1 = 100 paise) to match
- * Razorpay's integer-paise convention and avoid floating-point drift.
- *
- *   Silver → ₹499  → 49900 paise  / 30 days
- *   Gold   → ₹999  → 99900 paise  / 90 days
+ * The catalogue (Free / Gold / Platinum, their entitlement versions and
+ * durations) is created by the migration 20261027120100_membership_catalog —
+ * so it exists wherever `prisma migrate deploy` has run — and is changed only
+ * through PlanCatalogAdminService, which versions and audits every change.
+ * This seeder used to upsert SILVER (₹499/30d) and GOLD (₹999/90d) with its
+ * own limits; re-running that would re-activate the retired SILVER plan and
+ * overwrite an administrator's pricing on every `pnpm db:seed`.
  */
 export async function seedPlans(prisma: PrismaClient): Promise<void> {
-  const plans = [
-    {
-      name: 'SILVER' as const,
-      displayName: 'Silver Plan',
-      priceInr: 49_900, // ₹499 in paise
-      durationDays: 30,
-      features: [
-        'View up to 10 contact numbers per month',
-        'Send up to 5 Express Interests per day',
-        'Upload up to 4 profile photos',
-        'See verified badge status of profiles',
-        'Basic search filters (age, religion, city)',
-        'Email & chat support',
-      ],
-      limits: {
-        contactsPerMonth: 10,
-        expressInterestsPerDay: 5,
-        photoUploads: 4,
-        aiCompatibilityReports: 0,
-        priorityDiscovery: false,
-        dedicatedManager: false,
-      },
-      isActive: true,
+  console.log('\n📦  Membership plans (managed by migration — not seeded)…');
+
+  const plans = await prisma.subscriptionPlan.findMany({
+    orderBy: [{ displayOrder: 'asc' }, { tier: 'asc' }],
+    include: {
+      versions: { orderBy: { version: 'desc' }, take: 1 },
+      durations: { orderBy: { months: 'asc' } },
     },
-    {
-      name: 'GOLD' as const,
-      displayName: 'Gold Plan',
-      priceInr: 99_900, // ₹999 in paise
-      durationDays: 90,
-      features: [
-        'Unlimited contact number views',
-        'Unlimited Express Interests per day',
-        'Upload up to 10 profile photos',
-        'AI Compatibility Score for every match',
-        'Horoscope Porutham match report (10-point)',
-        'Priority placement in daily discovery feed',
-        'See who shortlisted your profile',
-        'Dedicated Royal Relationship Manager',
-        'Priority email, chat & phone support',
-      ],
-      limits: {
-        contactsPerMonth: -1, // -1 = unlimited
-        expressInterestsPerDay: -1,
-        photoUploads: 10,
-        aiCompatibilityReports: -1,
-        priorityDiscovery: true,
-        dedicatedManager: true,
-      },
-      isActive: true,
-    },
-  ];
+  });
 
-  console.log('\n📦  Seeding subscription plans…');
-
-  for (const plan of plans) {
-    const result = await prisma.subscriptionPlan.upsert({
-      where: { name: plan.name },
-      update: {
-        displayName: plan.displayName,
-        priceInr: plan.priceInr,
-        durationDays: plan.durationDays,
-        features: plan.features,
-        limits: plan.limits,
-        isActive: plan.isActive,
-      },
-      create: plan,
-    });
-
-    const priceRupees = (plan.priceInr / 100).toFixed(2);
-    console.log(
-      `  ✅  ${result.name} — ₹${priceRupees} / ${plan.durationDays} days  [id: ${result.id}]`,
+  if (!plans.some((plan) => plan.name === 'FREE')) {
+    console.warn(
+      '  ⚠️  No FREE plan found — run `pnpm prisma:migrate:deploy`. Until then membership checks fail open.',
     );
   }
-
-  console.log('  Subscription plans seeded successfully.');
+  for (const plan of plans) {
+    const latest = plan.versions[0]?.version ?? 'none';
+    const durations =
+      plan.durations
+        .map(
+          (d) =>
+            `${d.months}m ${d.priceInPaise === null ? 'unpriced' : `₹${(d.priceInPaise / 100).toFixed(2)}`}${d.isActive ? '' : ' (inactive)'}`,
+        )
+        .join(', ') || '—';
+    console.log(
+      `  ${plan.isActive ? '✅' : '⏸️ '}  ${plan.name} — v${latest} — ${durations}`,
+    );
+  }
 }

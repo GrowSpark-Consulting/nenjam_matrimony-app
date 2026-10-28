@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { MessagesService } from '../services/messages.service';
+import { membershipServiceInMode } from '../../entitlements/tests/membership-test-doubles';
 import type {
   ChatMessage,
   ChatRoom,
@@ -106,6 +107,7 @@ function build() {
     notifications as never,
     emailDispatch as never,
     activeConversation as never,
+    membershipServiceInMode('off'),
   );
   return {
     service,

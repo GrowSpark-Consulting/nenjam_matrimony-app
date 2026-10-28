@@ -24,6 +24,7 @@ import { FeedCacheModule } from './modules/matches/cache/feed-cache.module';
 import { ReferenceDataModule } from './modules/reference-data/reference-data.module';
 import { VerificationModule } from './modules/verification/verification.module';
 import { PsychologyModule } from './modules/psychology/psychology.module';
+import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { throttlerConfig } from './throttling';
 
 @Module({
@@ -71,6 +72,10 @@ import { throttlerConfig } from './throttling';
     // Deliberately does not import or depend on MatchesModule: pairwise
     // compatibility scoring is Phase 2, not built here.
     PsychologyModule,
+    // Membership plans: /membership/* (plans, me, history, checkout) and the
+    // Razorpay webhook. Checkout and the webhook answer 503 until Razorpay is
+    // configured; the rest works without it.
+    SubscriptionModule,
   ],
   controllers: [AppController],
   providers: [

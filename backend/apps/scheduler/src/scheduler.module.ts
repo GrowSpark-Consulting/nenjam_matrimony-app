@@ -7,6 +7,7 @@ import { ElasticsearchModule } from '@app/search';
 import { QueueModule } from '@app/queue';
 import { MailModule } from '@app/mail';
 import { WeeklyDigestCron } from './cron/weekly-digest.cron';
+import { SubscriptionExpiryCron } from './cron/subscription-expiry.cron';
 
 @Module({
   imports: [
@@ -21,6 +22,6 @@ import { WeeklyDigestCron } from './cron/weekly-digest.cron';
     // them — the worker stays the single consumer.
     MailModule.forRoot(),
   ],
-  providers: [WeeklyDigestCron],
+  providers: [WeeklyDigestCron, SubscriptionExpiryCron],
 })
 export class SchedulerModule {}

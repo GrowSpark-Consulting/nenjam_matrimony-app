@@ -5,6 +5,7 @@ import { PhotoRepository } from '../repositories/photo.repository';
 import { ProfileService } from '../services/profile.service';
 import { PhotoEntity } from '../entities/photo.entity';
 import type { UploadedImageFile } from '../pipes/photo-file.pipe';
+import { membershipServiceInMode } from '../../entitlements/tests/membership-test-doubles';
 
 function buildPhoto(overrides: Partial<PhotoEntity> = {}): PhotoEntity {
   const p = new PhotoEntity();
@@ -100,6 +101,7 @@ function setup(repoOverrides: Partial<RepoMock> = {}) {
     repo as unknown as PhotoRepository,
     s3 as unknown as S3Service,
     profileService,
+    membershipServiceInMode('off'),
   );
   return { service, repo, s3, recalculateCompletionIfMaterialized };
 }

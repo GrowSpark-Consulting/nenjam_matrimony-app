@@ -14,6 +14,7 @@ import { MessageRepository } from './repositories/message.repository';
 import { ConversationParticipantGuard } from './guards/conversation-participant.guard';
 import { ChatGateway } from './gateways/chat.gateway';
 import { ProfileFeedMapper } from '../matches/mappers/profile-feed.mapper';
+import { EntitlementsModule } from '../entitlements/entitlements.module';
 
 /**
  * Chat: conversations, messages, attachment upload, and the typing socket
@@ -23,10 +24,11 @@ import { ProfileFeedMapper } from '../matches/mappers/profile-feed.mapper';
  * NotificationsService, used by MessagesService to raise a NEW_MESSAGE
  * notification (+ push) the same way Interests/Shortlist already do.
  * ProfileFeedMapper is provided here (own stateless instance) so conversation
- * rows carry the exact Discover card.
+ * rows carry the exact Discover card. EntitlementsModule decides who may
+ * start a conversation (MessagesService).
  */
 @Module({
-  imports: [StorageModule, NotificationsModule],
+  imports: [StorageModule, NotificationsModule, EntitlementsModule],
   controllers: [
     ConversationsController,
     MessagesController,

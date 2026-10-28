@@ -15,9 +15,11 @@ import { PhotoRepository } from './repositories/photo.repository';
 import { PromptsRepository } from './repositories/prompts.repository';
 import { RecommendationDismissalRepository } from './repositories/recommendation-dismissal.repository';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { EntitlementsModule } from '../entitlements/entitlements.module';
 
 @Module({
-  imports: [StorageModule, NotificationsModule],
+  // EntitlementsModule: the plan-based photo cap (PhotoService).
+  imports: [StorageModule, NotificationsModule, EntitlementsModule],
   controllers: [
     ProfileDraftController,
     ProfileController,

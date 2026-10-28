@@ -10,8 +10,18 @@ import { PhotoRepository } from '../repositories/photo.repository';
 import { PhotoEntity } from '../entities/photo.entity';
 import { ProfileService } from './profile.service';
 import { extensionForMime, UploadedImageFile } from '../pipes/photo-file.pipe';
+import { MembershipService } from '../../entitlements/services/membership.service';
+import { LEGACY_CAP_LIMITS } from '../../entitlements/catalog/feature-catalog';
 
-const MAX_PHOTOS_PER_USER = 6;
+// The cap from before membership plans. It still applies whenever plan limits
+// aren't enforced (MEMBERSHIP_ENFORCEMENT_MODE off/shadow); under `enforce`
+// the member's plan decides instead (profile.photos: Free 5 / Gold 15 /
+// Platinum 20). Photos a member already has are never removed either way.
+const MAX_PHOTOS_PER_USER = LEGACY_CAP_LIMITS['profile.photos']!;
+const LEGACY_PHOTO_LIMIT = {
+  limit: MAX_PHOTOS_PER_USER,
+  message: `Cannot upload more than ${MAX_PHOTOS_PER_USER} photos.`,
+};
 
 @Injectable()
 export class PhotoService {
@@ -21,6 +31,7 @@ export class PhotoService {
     private readonly photoRepository: PhotoRepository,
     private readonly s3: S3Service,
     private readonly profileService: ProfileService,
+    private readonly membership: MembershipService,
   ) {}
 
   /**
@@ -43,11 +54,18 @@ export class PhotoService {
     isPrimary?: boolean,
   ): Promise<PhotoEntity> {
     const existingCount = await this.photoRepository.countForUser(userId);
-    if (existingCount >= MAX_PHOTOS_PER_USER) {
-      throw new BadRequestException(
-        `Cannot upload more than ${MAX_PHOTOS_PER_USER} photos.`,
-      );
-    }
+    // A cheap pre-check before paying for an S3 upload. Under `enforce` the
+    // authoritative, race-free check runs again at insert time (below).
+    const enforcing = this.membership.mode === 'enforce';
+    const membership = enforcing
+      ? await this.membership.resolve(userId)
+      : undefined;
+    await this.membership.enforceCap('profile.photos', {
+      userId,
+      count: () => Promise.resolve(existingCount),
+      membership,
+      legacyLimit: LEGACY_PHOTO_LIMIT,
+    });
 
     const key = this.buildKey(userId, file.mimetype);
     await this.s3.uploadObject({
@@ -57,12 +75,24 @@ export class PhotoService {
     });
 
     try {
-      const created = await this.photoRepository.create(userId, {
+      const data = {
         s3Key: key,
         cdnUrl: this.s3.getObjectUrl(key),
         isPrimary: isPrimary ?? existingCount === 0,
         order: existingCount,
-      });
+      };
+      // Two uploads racing at the cap: the insert re-counts under a lock, and
+      // the loser's object is removed by the catch below like any failed write.
+      const created = enforcing
+        ? await this.photoRepository.createWithinCap(userId, data, (tx) =>
+            this.membership.enforceCap('profile.photos', {
+              userId,
+              tx,
+              count: (db) => db.profilePhoto.count({ where: { userId } }),
+              membership,
+            }),
+          )
+        : await this.photoRepository.create(userId, data);
       this.logger.log(`User ${userId} uploaded photo ${created.id}.`);
       // The "photos" completion slice (12%) flips on count > 0 — only
       // matters on the first photo, but recalculating unconditionally
