@@ -11,12 +11,10 @@ export interface AgentClock {
 /**
  * Signs and verifies agent access tokens.
  *
- * `verify` only answers "is this token genuine and untampered?" and returns
- * its claims, or null. Expiry, audience, issuer and scope are checked by the
- * existing `validateAgentAccessClaims`, not here.
- *
- * PENDING DECISION (Ishu): how tokens are signed (Node `crypto` HMAC, or an
- * approved JWT library). Nothing real implements this port yet.
+ * `verify` returns the claims only for a token that is genuine AND currently
+ * valid for this deployment (signature, issuer, audience, scope, expiry), and
+ * `null` for anything else, without saying why. The real implementation is
+ * `AgentJwtTokenSigner` (HS256 through @nestjs/jwt); tests use a fake.
  */
 export interface AgentTokenSigner {
   sign(claims: AgentAccessClaims): Promise<string>;
