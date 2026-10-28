@@ -144,7 +144,7 @@ suites, 64 skipped, 11 todo.
 
 `commission.auto_approve`, `commission.require_verified_profile`, `referral.credit_window_days`, `referral.member_discount_bps`, `referral.discount_stacks_with_coupons`, `referral.discount_only_in_credit_window`, `payout.minimum_amount_paise`, `agent.client_draft_limit`, `agent.payout_details_wait_hours`, `commission.base`, `commission.base_provisional`, `payout.tax_withholding`, `agent.access_token_ttl_seconds`, `agent.refresh_token_ttl_seconds`, `agent.otp_resend_after_seconds`, `referral.code_validation_ip_limit`, `referral.code_validation_code_limit`, `referral.code_validation_window_seconds`.
 
-The three newest are positive integers, as are the three before them. `commission.base` and `payout.tax_withholding` may legitimately be `null` ("not decided"). **Decided values (Final Build Spec §4):** `commission.auto_approve` = `true`; `agent.payout_details_wait_hours` = `72`; `commission.require_verified_profile` = `false`; `referral.discount_only_in_credit_window` = `true` as the default, still pending Raja's confirmation. The rest need values from Ishu/Raja. Hold days come from the commission policy, **not** from these settings.
+The three newest are positive integers, as are the three before them. `payout.tax_withholding` legitimately stays `null` ("not decided", the CA). **Decided values (Final Build Spec §4, and Raja 28 Oct):** `commission.auto_approve` = `true`; `agent.payout_details_wait_hours` = `72`; `commission.require_verified_profile` = `false`; `commission.base` = `AMOUNT_PAID_EXCLUDING_GST`; `commission.base_provisional` = `false`; `payout.tax_withholding` = `null`; `referral.discount_only_in_credit_window` = `true` as the default, still pending Raja's confirmation. The rest need values from Ishu/Raja. The commission handler computes `base = amountPaid` (after the referral discount) `minus the GST part` (`taxPaise` from Shaaz's `PaymentSucceeded` event); the commission is 10% of that base. Hold days come from the commission policy, **not** from these settings.
 
 ### Every table the ports imply
 
@@ -183,16 +183,25 @@ Expired `agent_applicants` and `referral_code_attempts` rows are purged **opport
 
 | Decision | Place |
 |---|---|
-| Rejected agent may re-apply | `REJECTED_MAY_REAPPLY` in `agent/agent-status.ts` (currently `true`); consumed by `decideApplicationSubmit` and injectable into `AgentApplicationService` |
-| Terminated agents' pending commission | `frozenForAgent()` in `commission/decide-commission-transition.ts` (currently frozen) |
+| ~~Rejected agent may re-apply~~ **DECIDED (Raja, 28 Oct): yes**; resubmission goes back to `PENDING_APPROVAL` for admin review | `REJECTED_MAY_REAPPLY` in `agent/agent-status.ts` (stays `true`); consumed by `decideApplicationSubmit` and injectable into `AgentApplicationService` |
+| ~~Terminated agents' pending commission~~ **DECIDED (Raja, 28 Oct)**: waiting commission stays FROZEN until Raja decides otherwise; already-approved commission is still paid | `frozenForAgent()` in `commission/decide-commission-transition.ts` |
 | Partial refund before approval | `planRefundEffect()` in `commission/plan-refund-effect.ts` (cancels the whole commission) |
 | Tax withholding (CA) | `planPayout()` in `payout/plan-payout.ts` refuses any set value with `TAX_RULE_UNSUPPORTED` — **must change when the CA answers** |
-| Commission base (CA) | `commission.base` setting; `buildCommissionDraft()` returns `amountPaise: null` while it is `null` |
+| ~~Commission base~~ **DECIDED (Raja, 28 Oct)**: 10% of the amount without GST | `commission.base` = `AMOUNT_PAID_EXCLUDING_GST`, `commission.base_provisional` = `false` (seed values); `buildCommissionDraft()` still returns `amountPaise: null` while the setting is `null` |
 | Tamil labels | `AGENT_TAMIL_LABEL_PENDING` in `content/agent-content.ts` |
+
+### Decided by Raja on 28 Oct (evening)
+
+- **Commission base:** 10% of the amount **without GST**. Seed `commission.base` = `AMOUNT_PAID_EXCLUDING_GST` and `commission.base_provisional` = `false`; `payout.tax_withholding` stays `null`. The commission handler computes `base = amountPaid` (after the referral discount) minus the GST part (`taxPaise` from Shaaz's `PaymentSucceeded` event).
+- **A rejected agent may re-apply**; the resubmission goes back to `PENDING_APPROVAL` for admin review. `REJECTED_MAY_REAPPLY` stays `true`.
+- **Roles:** Raja plus one more person as Super Admin; a **Partner Manager** role for approving and rejecting agents; **payouts only for Raja and the person who pays**. Pause, terminate and PAN/phone reveal are **not specified yet**: Super Admin only for now. (The roles are Shaaz's to seed; only `SUPER_ADMIN` exists on his branch.)
+- **The four agent terms** shown on the Help screen are approved (in the portal's `helpContent.ts`); a lawyer checks them before launch.
+- **A terminated agent's waiting commission stays FROZEN** until Raja decides otherwise; commission already approved is still paid (he accepted all the suggestions).
+- **Still open:** the support contact for the Help screen, agent KYC, plan prices, TDS (the CA), the referral web address.
 
 ### Open decisions
 
-Plan prices; GST and the commission base (CA); TDS (CA); may a rejected agent re-apply (Raja); how an agent pays for a client's plan; Tamil wording for the other labels; the referral link web address (`link` and `qrPayload` are `null` until decided); agent KYC later; terminated agents' pending commission; partial refund before approval; **who approves agents** (only `SUPER_ADMIN` is seeded on Shaaz's branch); where scheduled jobs run (no worker or scheduler on Render); **how migrations get applied on Render** (nothing does today); the Help screen support contact.
+Plan prices; TDS (CA); how an agent pays for a client's plan; Tamil wording for the other labels; the referral link web address (`link` and `qrPayload` are `null` until decided); agent KYC later; partial refund before approval; the **support contact** for the Help screen; **roles beyond what Raja said** (see above); where scheduled jobs run (no worker or scheduler on Render); **how migrations get applied on Render** (nothing does today); the Help screen support contact.
 
 ---
 
