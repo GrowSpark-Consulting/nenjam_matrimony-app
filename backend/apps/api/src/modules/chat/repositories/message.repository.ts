@@ -52,6 +52,16 @@ export class MessageRepository {
     });
   }
 
+  /** Whether [senderId] has ever sent a message in [roomId] — deleted ones
+   *  included: what matters is who spoke first, not what is still visible. */
+  async hasMessageFrom(roomId: string, senderId: string): Promise<boolean> {
+    const row = await this.prisma.chatMessage.findFirst({
+      where: { roomId, senderId },
+      select: { id: true },
+    });
+    return row !== null;
+  }
+
   findById(id: string): Promise<ChatMessageWithReply | null> {
     return this.prisma.chatMessage.findUnique({
       where: { id },

@@ -61,6 +61,9 @@ model User {
   reportsAgainst    UserReport[]         @relation("ReportsAgainst")
   reportsMade       UserReport[]         @relation("ReportsMade")
   subscriptions     UserSubscription[]
+  subscriptionEvents SubscriptionEvent[]
+  membershipUsage   MembershipUsageCounter[]
+  membershipUsageItems MembershipUsageItem[]
   profilePrompts    UserProfilePrompt[]
   emailLogs         EmailLog[]
   settings          UserSettings?
@@ -601,46 +604,154 @@ model UserProfilePrompt {
   @@map("user_profile_prompts")
 }
 
-/// Subscription plan catalogue (Silver, Gold). Prices in paise (₹1 = 100 paise).
+/// The membership plan catalogue — Free, Gold, Platinum (SILVER is retired,
+/// kept inactive for history). One row per plan; what a plan grants lives in
+/// its immutable SubscriptionPlanVersion rows and what it costs in its
+/// SubscriptionPlanDuration rows. See docs/membership/README.md.
 model SubscriptionPlan {
   id            String               @id @default(uuid())
   name          SubscriptionPlanName @unique
   displayName   String               @map("display_name")
-  /// Price in paise: ₹499 → 49900, ₹999 → 99900
+  /// LEGACY — superseded by SubscriptionPlanDuration.priceInPaise. Kept only
+  /// because it is NOT NULL on existing rows; nothing reads it.
   priceInr      Int                  @map("price_inr")
+  /// LEGACY — superseded by SubscriptionPlanDuration.durationDays.
   durationDays  Int                  @map("duration_days")
-  /// Human-readable feature list
+  /// LEGACY — superseded by SubscriptionPlanVersion.entitlements.
   features      Json                 @default("[]")
-  /// Machine-readable limits: { contactsPerMonth: 10, expressInterestsPerDay: 5, photoUploads: 4 }
+  /// LEGACY — superseded by SubscriptionPlanVersion.entitlements.
   limits        Json                 @default("{}")
+  /// Whether the plan is offered for purchase. Deactivating never touches
+  /// existing subscriptions; FREE can never be deactivated.
   isActive      Boolean              @default(true) @map("is_active")
+  description   String?
+  /// Rank for upgrade/downgrade and "highest plan wins": FREE 0, GOLD 1,
+  /// PLATINUM 2.
+  tier          Int                  @default(0)
+  displayOrder  Int                  @default(0) @map("display_order")
   createdAt     DateTime             @default(now()) @map("created_at")
   updatedAt     DateTime             @updatedAt @map("updated_at")
   subscriptions UserSubscription[]
+  durations     SubscriptionPlanDuration[]
+  versions      SubscriptionPlanVersion[]
 
   @@map("subscription_plans")
 }
 
-/// A user's active or historical subscription to a plan.
+/// A purchasable length of a plan and its CURRENT price. Historical prices
+/// are never read from here — each subscription and payment snapshots what
+/// was actually charged.
+model SubscriptionPlanDuration {
+  id            String             @id @default(uuid())
+  planId        String             @map("plan_id")
+  /// Marketing length (3 / 6 / 12). Unique per plan.
+  months        Int
+  durationDays  Int                @map("duration_days")
+  bonusDays     Int                @default(0) @map("bonus_days")
+  /// Price in paise. Null means not priced yet, which also means not
+  /// purchasable: an unpriced duration can never be activated.
+  priceInPaise  Int?               @map("price_in_paise")
+  currency      String             @default("INR")
+  isActive      Boolean            @default(false) @map("is_active")
+  displayOrder  Int                @default(0) @map("display_order")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  plan          SubscriptionPlan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+  subscriptions UserSubscription[]
+
+  @@unique([planId, months])
+  @@map("subscription_plan_durations")
+}
+
+/// An immutable snapshot of what a plan grants, keyed by stable feature ids
+/// (see apps/api/src/modules/entitlements/catalog/feature-catalog.ts). A
+/// configuration change is a NEW version, never an edit: subscriptions pin
+/// the version they were bought under, so a change can't silently alter
+/// benefits someone already paid for. Free members follow the FREE plan's
+/// version with the latest effectiveFrom <= now.
+model SubscriptionPlanVersion {
+  id            String             @id @default(uuid())
+  planId        String             @map("plan_id")
+  version       Int
+  entitlements  Json
+  effectiveFrom DateTime           @map("effective_from")
+  changeNote    String?            @map("change_note")
+  /// The admin user who published it; null for system/migration versions.
+  createdById   String?            @map("created_by_id")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  plan          SubscriptionPlan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+  subscriptions UserSubscription[]
+
+  @@unique([planId, version])
+  @@index([planId, effectiveFrom])
+  @@map("subscription_plan_versions")
+}
+
+/// A user's active or historical subscription to a plan. Members with no
+/// current row are Free. A row grants its plan only while ACTIVE and
+/// startDate <= now < endDate, so a row nobody flipped to EXPIRED still stops
+/// counting on its end date.
 model UserSubscription {
-  id            String               @id @default(uuid())
-  userId        String               @map("user_id")
-  planId        String               @map("plan_id")
-  status        SubscriptionStatus   @default(PENDING)
-  startDate     DateTime             @map("start_date")
-  endDate       DateTime             @map("end_date")
-  razorpaySubId String?              @map("razorpay_sub_id")
-  autoRenew     Boolean              @default(false) @map("auto_renew")
-  createdAt     DateTime             @default(now()) @map("created_at")
-  updatedAt     DateTime             @updatedAt @map("updated_at")
-  payments      PaymentTransaction[]
-  plan          SubscriptionPlan     @relation(fields: [planId], references: [id])
-  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String               @id @default(uuid())
+  userId             String               @map("user_id")
+  planId             String               @map("plan_id")
+  status             SubscriptionStatus   @default(PENDING)
+  startDate          DateTime             @map("start_date")
+  endDate            DateTime             @map("end_date")
+  razorpaySubId      String?              @map("razorpay_sub_id")
+  autoRenew          Boolean              @default(false) @map("auto_renew")
+  /// The entitlement snapshot this subscription was sold under. Null only on
+  /// rows that predate plan versions; those resolve to the version effective
+  /// at their startDate.
+  planVersionId      String?              @map("plan_version_id")
+  durationId         String?              @map("duration_id")
+  /// What was charged, in paise (0 for an admin grant) — a snapshot, so later
+  /// price changes never rewrite history.
+  priceInPaise       Int?                 @map("price_in_paise")
+  currency           String?
+  source             SubscriptionSource   @default(PURCHASE)
+  activatedAt        DateTime?            @map("activated_at")
+  /// Set when the member cancels (access continues to endDate) or when
+  /// access is revoked (refund / admin), together with the reason.
+  cancelledAt        DateTime?            @map("cancelled_at")
+  cancellationReason String?              @map("cancellation_reason")
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
+  payments           PaymentTransaction[]
+  events             SubscriptionEvent[]
+  plan               SubscriptionPlan     @relation(fields: [planId], references: [id])
+  planVersion        SubscriptionPlanVersion? @relation(fields: [planVersionId], references: [id], onDelete: Restrict)
+  duration           SubscriptionPlanDuration? @relation(fields: [durationId], references: [id], onDelete: Restrict)
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
   @@index([endDate])
+  // The membership resolver's query: a member's ACTIVE rows still in force.
+  @@index([userId, status, endDate])
   @@map("user_subscriptions")
+}
+
+/// Append-only lifecycle history of a subscription: every status change and
+/// every lifecycle exception, with who caused it.
+model SubscriptionEvent {
+  id             String                @id @default(uuid())
+  subscriptionId String                @map("subscription_id")
+  userId         String                @map("user_id")
+  type           SubscriptionEventType
+  fromStatus     SubscriptionStatus?   @map("from_status")
+  toStatus       SubscriptionStatus?   @map("to_status")
+  /// Who caused it: the member, an admin, or null for the system (webhook,
+  /// expiry sweep).
+  actorId        String?               @map("actor_id")
+  metadata       Json?
+  createdAt      DateTime              @default(now()) @map("created_at")
+  subscription   UserSubscription      @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, createdAt])
+  @@index([userId, createdAt])
+  @@map("subscription_events")
 }
 
 /// Individual Razorpay payment transaction records.
@@ -652,9 +763,14 @@ model PaymentTransaction {
   razorpayPaymentId String?          @unique @map("razorpay_payment_id")
   /// Amount in paise
   amountInr         Int              @map("amount_inr")
+  currency          String           @default("INR")
   status            PaymentStatus    @default(PENDING)
   paidAt            DateTime?        @map("paid_at")
   failureReason     String?          @map("failure_reason")
+  /// Total refunded so far, in paise. A full refund also flips status to
+  /// REFUNDED; a partial one only accumulates here.
+  refundedAmount    Int              @default(0) @map("refunded_amount")
+  refundedAt        DateTime?        @map("refunded_at")
   metadata          Json?
   createdAt         DateTime         @default(now()) @map("created_at")
   updatedAt         DateTime         @updatedAt @map("updated_at")
@@ -665,6 +781,67 @@ model PaymentTransaction {
   @@index([status])
   @@index([paidAt])
   @@map("payment_transactions")
+}
+
+/// Every payment-provider webhook delivery accepted, keyed by the provider's
+/// own event id. Inserted in the same transaction that applies the event, so
+/// a redelivered event is a no-op and a failed one rolls back and can be
+/// retried. Stores ids and a payload hash only — never the payload, which
+/// carries the payer's contact details.
+model PaymentWebhookEvent {
+  id            String               @id @default(uuid())
+  provider      String
+  eventId       String               @map("event_id")
+  eventType     String               @map("event_type")
+  status        PaymentWebhookStatus
+  orderId       String?              @map("order_id")
+  paymentId     String?              @map("payment_id")
+  payloadSha256 String               @map("payload_sha256")
+  detail        String?
+  receivedAt    DateTime             @default(now()) @map("received_at")
+
+  @@unique([provider, eventId])
+  // The event-id header is not covered by the signature, so a replayed
+  // signed body with a fresh header must still be caught: byte-identical
+  // bodies are the same event (Razorpay's own retries resend the same bytes).
+  @@unique([provider, payloadSha256])
+  @@index([orderId])
+  @@map("payment_webhook_events")
+}
+
+/// How much of a metered feature a member has used in one period. Written
+/// only by an atomic conditional upsert (UsageRepository), so concurrent
+/// requests can never take it past its limit. `periodKey` is the IST calendar
+/// day ("D:2026-10-27"), IST month ("M:2026-10"), or a subscription's own
+/// pool ("S:<subscription id>").
+model MembershipUsageCounter {
+  userId       String    @map("user_id")
+  feature      String
+  periodKey    String    @map("period_key")
+  used         Int       @default(0)
+  periodEndsAt DateTime? @map("period_ends_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, feature, periodKey])
+  @@index([periodEndsAt])
+  @@map("membership_usage_counters")
+}
+
+/// The individual items already charged against a counter, for features
+/// metered per distinct item (a profile browsed today, a contact unlocked):
+/// charging the same item twice in one period costs once.
+model MembershipUsageItem {
+  userId    String   @map("user_id")
+  feature   String
+  periodKey String   @map("period_key")
+  itemKey   String   @map("item_key")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, feature, periodKey, itemKey])
+  @@map("membership_usage_items")
 }
 
 /// A private chat room between exactly two users (mutual match).
@@ -1118,8 +1295,39 @@ enum SubscriptionPlanName {
   FREE
   SILVER
   GOLD
+  PLATINUM
 
   @@map("subscription_plan_name")
+}
+
+enum SubscriptionSource {
+  PURCHASE
+  ADMIN_GRANT
+
+  @@map("subscription_source")
+}
+
+enum SubscriptionEventType {
+  CHECKOUT_CREATED
+  ACTIVATED
+  PAYMENT_FAILED
+  CANCELLED_AT_PERIOD_END
+  EXPIRED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  GRANTED
+  EXTENDED
+  REVOKED
+  ENTITLEMENTS_UPGRADED
+
+  @@map("subscription_event_type")
+}
+
+enum PaymentWebhookStatus {
+  PROCESSED
+  IGNORED
+
+  @@map("payment_webhook_status")
 }
 
 enum SubscriptionStatus {

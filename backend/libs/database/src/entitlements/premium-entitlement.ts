@@ -15,9 +15,9 @@ import type { Prisma } from '../../generated/client';
  * Takes `now` rather than reading the clock so a caller building several
  * filters for one request evaluates them all against the same instant.
  *
- * NOTE: nothing creates UserSubscription rows yet — checkout, the Razorpay
- * webhook and the subscription module are unimplemented stubs — so today this
- * matches nobody and every member is treated as non-premium.
+ * Rows are created by checkout + payment confirmation (SubscriptionModule),
+ * which answer 503 until Razorpay is configured; until then this matches only
+ * administratively granted subscriptions. Gold and Platinum both count.
  */
 export function activePremiumSubscriptionWhere(
   now: Date,
@@ -31,10 +31,11 @@ export function activePremiumSubscriptionWhere(
 }
 
 /**
- * TODO(premium): both privacy controls — "Hide My Profile" and "Hide Photos
- * from Non-Connections" — are temporarily available to all users; restore
- * premium gating when subscriptions/checkout are live — set this back to
- * `false`. It is the ONLY switch: the discovery rule below, the photo gate
+ * Both privacy controls — "Hide My Profile" and "Hide Photos from
+ * Non-Connections" — are available to every member, on every plan. This is
+ * now a product rule, not a stopgap: the membership spec says privacy and
+ * safety are never paywalled (docs/membership/README.md), so leave this
+ * `true` when checkout goes live. It is the ONLY switch: the discovery rule below, the photo gate
  * (`arePhotosHidden`) and the `PATCH /settings/privacy` check all read it, so
  * enforcement and the API can never disagree. Nothing else premium reads it.
  *

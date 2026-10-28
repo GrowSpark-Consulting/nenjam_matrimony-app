@@ -24,6 +24,7 @@ import {
 } from '../repositories/message.repository';
 import { ChatAuditService, ChatAuditAction } from './chat-audit.service';
 import { EmailDispatchService } from '../../notifications/services/email-dispatch.service';
+import { MembershipService } from '../../entitlements/services/membership.service';
 import { SendMessageDto } from '../dto/send-message.dto';
 import {
   MediaUrlRefreshDto,
@@ -87,6 +88,7 @@ export class MessagesService {
     private readonly notifications: NotificationsService,
     private readonly emailDispatch: EmailDispatchService,
     private readonly activeConversation: ActiveConversationService,
+    private readonly membership: MembershipService,
   ) {}
 
   async list(
@@ -219,6 +221,18 @@ export class MessagesService {
     // `.catch(() => false)` is load-bearing here exactly as at the push call
     // site: a lookup we cannot answer must fall back to NOTIFYING, never to
     // silence.
+    //
+    // The membership check (who may START a conversation) rides in the same
+    // batch when enforced, so it adds no sequential round trip; a denial
+    // rejects the batch before anything is written. In shadow mode it runs
+    // off the request path entirely.
+    if (this.membership.mode === 'shadow') {
+      void this.assertMayMessage(
+        senderUserId,
+        receiverUserId,
+        dto.roomId,
+      ).catch(() => undefined);
+    }
     const [deliveredNow, senderDisplayName, recipientIsViewing] =
       await Promise.all([
         this.presence.isOnline(receiverUserId),
@@ -226,6 +240,9 @@ export class MessagesService {
         this.activeConversation
           .isViewing(receiverUserId, dto.roomId)
           .catch(() => false),
+        this.membership.mode === 'enforce'
+          ? this.assertMayMessage(senderUserId, receiverUserId, dto.roomId)
+          : undefined,
       ]);
     const now = new Date();
 
@@ -656,6 +673,32 @@ export class MessagesService {
       this.audit.recordDenied(userId, 'ChatRoom', null, 'blocked', { peerId });
       throw new ForbiddenException('You cannot message this member.');
     }
+  }
+
+  /**
+   * Membership on top of eligibility (which it never replaces — an accepted
+   * interest and no block are still required of everyone): STARTING a
+   * conversation is a paid feature (`chat.initiate`). Free on every plan:
+   * replying once the other member has written (`chat.reply`), and writing
+   * to a member whose plan lets free members contact them
+   * (`chat.accept_from_free_members`). Cheapest checks first — a paid sender
+   * costs one lookup. Applies MEMBERSHIP_ENFORCEMENT_MODE via requireFeature.
+   */
+  private async assertMayMessage(
+    senderId: string,
+    receiverId: string,
+    roomId: string,
+  ): Promise<void> {
+    const sender = await this.membership.resolve(senderId);
+    if (this.membership.isEnabled(sender, 'chat.initiate')) return;
+    if (await this.messageRepository.hasMessageFrom(roomId, receiverId)) {
+      return; // a reply
+    }
+    const receiver = await this.membership.resolve(receiverId);
+    if (this.membership.isEnabled(receiver, 'chat.accept_from_free_members')) {
+      return;
+    }
+    await this.membership.requireFeature(sender, 'chat.initiate');
   }
 
   private peerOf(room: ChatRoom, userId: string): string {

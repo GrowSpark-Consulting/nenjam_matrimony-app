@@ -17,6 +17,7 @@ import { EmailDispatchService } from '../../notifications/services/email-dispatc
 import type { CreateNotificationData } from '../../notifications/repositories/notification.repository';
 import { RealtimeGateway } from '../../realtime/realtime.gateway';
 import { RealtimeEvents } from '../../realtime/realtime.events';
+import { MembershipService } from '../../entitlements/services/membership.service';
 import { InterestsRepository } from '../repositories/interests.repository';
 import { MatchInterestDto } from '../dto/match-interest.dto';
 import {
@@ -57,6 +58,7 @@ export class InterestsService {
     private readonly profileMapper: ProfileFeedMapper,
     private readonly realtime: RealtimeGateway,
     private readonly emailDispatch: EmailDispatchService,
+    private readonly membership: MembershipService,
   ) {}
 
   /** Dispatches the polymorphic `POST /matches/interest` body to send or
@@ -89,13 +91,24 @@ export class InterestsService {
     // batch instead of four sequential Neon round trips, then evaluate in the
     // same precedence order (this is the dominant cost of the send latency,
     // and thus of how fast the receiver's real-time event arrives).
-    const [receiver, blocked, senderProfileComplete, reverseActive] =
-      await Promise.all([
-        this.interestsRepository.findReceiverState(receiverId),
-        this.interestsRepository.isBlockedBetween(senderId, receiverId),
-        this.interestsRepository.isProfileComplete(senderId),
-        this.interestsRepository.findReverseActive(senderId, receiverId),
-      ]);
+    //
+    // The sender's plan rides in the same batch when limits are enforced, so
+    // the interest quota adds no round trip before the transaction.
+    const [
+      receiver,
+      blocked,
+      senderProfileComplete,
+      reverseActive,
+      senderMembership,
+    ] = await Promise.all([
+      this.interestsRepository.findReceiverState(receiverId),
+      this.interestsRepository.isBlockedBetween(senderId, receiverId),
+      this.interestsRepository.isProfileComplete(senderId),
+      this.interestsRepository.findReverseActive(senderId, receiverId),
+      this.membership.mode === 'enforce'
+        ? this.membership.resolve(senderId)
+        : undefined,
+    ]);
 
     if (!receiver || receiver.deletedAt) {
       throw new NotFoundException('This member is no longer available.');
@@ -129,24 +142,25 @@ export class InterestsService {
           receiverId,
         );
 
-        let record: ExpressInterest;
-        if (!existing) {
-          record = await this.interestsRepository.create(
-            tx,
-            senderId,
-            receiverId,
-          );
-        } else if (existing.status === 'DECLINED') {
-          // Re-sending after a decline is allowed — reset to PENDING.
-          record = await this.interestsRepository.resetToPending(
-            tx,
-            existing.id,
-          );
-        } else {
+        if (existing && existing.status !== 'DECLINED') {
           throw new ConflictException(
             'You have already sent an interest to this member.',
           );
         }
+
+        // Every real send — a new interest or a re-send after a decline —
+        // spends one from the sender's monthly allowance. Charged inside this
+        // transaction, so a send that fails for any reason costs nothing.
+        await this.membership.consume('interests.send', {
+          userId: senderId,
+          tx,
+          membership: senderMembership,
+        });
+
+        // Re-sending after a decline is allowed — reset to PENDING.
+        const record: ExpressInterest = existing
+          ? await this.interestsRepository.resetToPending(tx, existing.id)
+          : await this.interestsRepository.create(tx, senderId, receiverId);
 
         notificationData = {
           userId: receiverId,
