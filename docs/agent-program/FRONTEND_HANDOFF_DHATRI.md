@@ -69,9 +69,19 @@ store the new tokens and carry on — **no second OTP**.
   `POST /agent/auth/refresh` with `{ "refreshToken": "..." }` **once**, store
   the new pair (the old refresh token stops working), and retry.
 - `REFRESH_TOKEN_INVALID`, `REFRESH_TOKEN_EXPIRED` or `REFRESH_TOKEN_REUSED`:
-  clear the tokens and go to sign-in. `REUSED` means the token was used twice;
-  the backend has revoked the whole session.
-- Never refresh twice in parallel: queue requests while one refresh runs.
+  clear the tokens and go to sign-in. `REUSED` means a used token came back;
+  the backend has revoked **every** refresh token of that agent, on every
+  device.
+- **Never refresh twice in parallel, in any tab.** Two refresh calls with the
+  same token at the same time count as reuse: one wins, the other gets
+  `REFRESH_TOKEN_REUSED`, and the winner is revoked too, so the agent is
+  signed out everywhere. Keep **one refresh in flight per stored session**:
+  - inside a tab, queue requests while one refresh runs;
+  - across tabs and windows that share the stored token, take a shared lock
+    around "refresh and store the new pair" (for example the Web Locks API,
+    `navigator.locks.request`, or a `BroadcastChannel` message to one leader
+    tab). A tab that waits for the lock must re-read the stored token
+    afterwards and use it, **not** send the refresh token it read earlier.
 - Token lifetimes are settings; always use `expiresInSeconds` from the
   response, never a fixed number.
 
@@ -89,10 +99,12 @@ errors). Codes in the contract: `VALIDATION_FAILED`, `UNAUTHORIZED`,
 `OTP_EXPIRED`, `REFRESH_TOKEN_INVALID`, `REFRESH_TOKEN_EXPIRED`,
 `REFRESH_TOKEN_REUSED`, `AGENT_NOT_ACTIVE`, `AGENT_NOT_FOUND`,
 `APPLICATION_EXISTS`, `REFERRAL_NOT_FOUND`, `CODE_NOT_FOUND`,
-`ALREADY_ATTRIBUTED`, `SELF_REFERRAL`.
+`ALREADY_ATTRIBUTED`, `SELF_REFERRAL`, `ALREADY_PAID`, `PHONE_NOT_VERIFIED`.
 
 - `403 AGENT_NOT_ACTIVE` includes `agentStatus`: reload `GET /agent/me` and
   show the matching status screen.
+- `409 APPLICATION_EXISTS` on `POST /agent/application` also includes
+  `agentStatus` (see section 4.2).
 - `429 RATE_LIMITED` comes with a `Retry-After` header (seconds).
 
 ---
@@ -149,9 +161,16 @@ See section 3.
   are required before the first payout.**
 - Success `201` → an `AgentSession`. Store `accessToken` and `refreshToken`,
   then show the Pending screen using `agent`.
-- `409` means an application already exists. The exact refusal codes for
-  "already pending", "already an agent" and "re-apply not allowed" are
-  **To be confirmed** (the contract currently lists `APPLICATION_EXISTS`).
+- Refusals (branch on `code`, then on `agentStatus`):
+
+  | Response | When | What to show |
+  |---|---|---|
+  | `401 UNAUTHORIZED` | the applicant's verified phone has expired, or the token is invalid | Go back to the OTP screen: they verify again. |
+  | `403 AGENT_NOT_ACTIVE`, `agentStatus: REJECTED` | a rejected agent may not apply again (only if that is switched off) | The Rejected screen **without** the "Apply again" button. |
+  | `409 APPLICATION_EXISTS`, `agentStatus: PENDING_APPROVAL` | already under review | The Pending screen. |
+  | `409 APPLICATION_EXISTS`, `agentStatus: ACTIVE`, `SUSPENDED` or `TERMINATED` | already an agent | Reload `GET /agent/me` and show that status screen. |
+  | `409 APPLICATION_EXISTS`, **no** `agentStatus` | this phone already applied from another device | Send them to sign in again. |
+  | `400 VALIDATION_FAILED` | a field is not acceptable | Highlight the fields; the response never repeats what was typed. |
 
 ### 4.3 Status screens → `GET /agent/me` (+ `GET /agent/config` for labels)
 
@@ -250,12 +269,20 @@ or `IOS` only — it is for a future phone app, **not for the website**.
    - `valid: false` → one generic message ("This code isn't valid"). The
      backend never says why, on purpose.
    - `429` → "Too many tries, please wait" (attempts are limited per IP and
-     per code).
+     per code). Honour the `Retry-After` header (seconds).
 3. `POST /registration/referral-code` with `{ "code" }` and the member's
    **Firebase token**, once the member is signed in. Success:
    `{ attached: true, agentDisplayName, windowEndsAt }`. Errors:
-   `404 CODE_NOT_FOUND`, `409 ALREADY_ATTRIBUTED` (the first agent always
-   stays), `422 SELF_REFERRAL`, `429`.
+
+   | Response | Meaning | What to show |
+   |---|---|---|
+   | `400 VALIDATION_FAILED` | not a well-formed code | "Check the code and try again." |
+   | `404 CODE_NOT_FOUND` | unknown, inactive, or its agent is not active (all look the same) | "This code isn't valid." |
+   | `409 ALREADY_ATTRIBUTED` | this member (or their phone) is already credited; the first agent always stays | Say nothing alarming; carry on with sign-up. |
+   | `422 SELF_REFERRAL` | the code belongs to the member's own phone; permanent | "You can't use your own code." |
+   | `422 ALREADY_PAID` | the member has already paid for a plan | "A code can only be added before your first plan." |
+   | `422 PHONE_NOT_VERIFIED` | no verified phone, which a code at sign-up needs | Ask them to verify their phone first. |
+   | `429 RATE_LIMITED` | too many tries by this member or for this code | Wait for `Retry-After`. |
 
 Whether the member is already signed in on that page (so you can attach
 straight away) is **To be confirmed** against the registration flow.
