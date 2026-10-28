@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nenjam_matrimony/core/network/api_client.dart';
+import 'package:nenjam_matrimony/core/network/api_providers.dart';
 import 'package:nenjam_matrimony/features/referral/data/repositories/api_referral_repository.dart';
 import 'package:nenjam_matrimony/features/referral/data/repositories/mock_referral_repository.dart';
 import 'package:nenjam_matrimony/features/referral/data/repositories/unavailable_referral_repository.dart';
@@ -66,7 +68,15 @@ void main() {
   });
 
   test('live: box shown, API repository', () {
-    final c = containerFor(ReferralBackendMode.live);
+    // The real repository takes the shared API client, whose provider wires
+    // Firebase auth in; tests have no Firebase app, so give it a bare client.
+    final c = ProviderContainer(
+      overrides: [
+        referralBackendModeProvider.overrideWithValue(ReferralBackendMode.live),
+        apiClientProvider.overrideWithValue(ApiClient()),
+      ],
+    );
+    addTearDown(c.dispose);
     expect(c.read(referralCodeEntryEnabledProvider), isTrue);
     expect(c.read(referralRepositoryProvider), isA<ApiReferralRepository>());
   });
