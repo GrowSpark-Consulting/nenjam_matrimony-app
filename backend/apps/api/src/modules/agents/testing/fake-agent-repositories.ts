@@ -1,4 +1,9 @@
-/** In-memory repositories and member port. Tests only. */
+/**
+ * In-memory repositories and member port. Tests only.
+ *
+ * Every method accepts the optional `tx`. A write given a `tx` is undone if
+ * the transaction fails (see `FakeAgentUnitOfWork`); reads see live state.
+ */
 import type { ReferralViewSource } from '../referral/agent-referral-view';
 import {
   AgentConflictError,
@@ -14,6 +19,8 @@ import {
   ReferralCodeRecord,
   ReferralCodeRepository,
 } from '../ports/agent-data-ports';
+import type { AgentTx } from '../ports/agent-unit-of-work.port';
+import { trackWrite } from './fake-agent-unit-of-work';
 
 /** Returned objects are copies: callers cannot edit stored rows in place. */
 const copy = <T extends object>(row: T): T => ({ ...row });
@@ -33,7 +40,8 @@ export class FakeAgentRepository implements AgentRepository {
     return Promise.resolve(null);
   }
 
-  create(agent: NewAgentRecord): Promise<AgentRecord> {
+  create(agent: NewAgentRecord, tx?: AgentTx): Promise<AgentRecord> {
+    const track = trackWrite(tx);
     if (this.rows.has(agent.id)) {
       return Promise.reject(new AgentConflictError('DUPLICATE_ID'));
     }
@@ -50,16 +58,25 @@ export class FakeAgentRepository implements AgentRepository {
       payoutDetailsSet: false,
     };
     this.rows.set(row.id, row);
+    track(() => {
+      this.rows.delete(row.id);
+    });
     return Promise.resolve(copy(row));
   }
 
   update(
     id: string,
     changes: Parameters<AgentRepository['update']>[1],
+    tx?: AgentTx,
   ): Promise<AgentRecord> {
+    const track = trackWrite(tx);
     const row = this.rows.get(id);
     if (!row) return Promise.reject(new Error(`Unknown agent ${id}`));
+    const before = copy(row);
     Object.assign(row, changes);
+    track(() => {
+      this.rows.set(id, before);
+    });
     return Promise.resolve(copy(row));
   }
 }
@@ -88,7 +105,8 @@ export class FakeReferralCodeRepository implements ReferralCodeRepository {
     );
   }
 
-  create(code: ReferralCodeRecord): Promise<ReferralCodeRecord> {
+  create(code: ReferralCodeRecord, tx?: AgentTx): Promise<ReferralCodeRecord> {
+    const track = trackWrite(tx);
     const rows = [...this.rows.values()];
     if (this.rows.has(code.id)) {
       return Promise.reject(new AgentConflictError('DUPLICATE_ID'));
@@ -103,6 +121,9 @@ export class FakeReferralCodeRepository implements ReferralCodeRepository {
       return Promise.reject(new AgentConflictError('DUPLICATE_PRIMARY_CODE'));
     }
     this.rows.set(code.id, copy(code));
+    track(() => {
+      this.rows.delete(code.id);
+    });
     return Promise.resolve(copy(code));
   }
 }
@@ -110,11 +131,18 @@ export class FakeReferralCodeRepository implements ReferralCodeRepository {
 export class FakeAgentRefreshTokenRepository implements AgentRefreshTokenRepository {
   private readonly rows = new Map<string, AgentRefreshTokenRecord>();
 
-  create(token: AgentRefreshTokenRecord): Promise<AgentRefreshTokenRecord> {
+  create(
+    token: AgentRefreshTokenRecord,
+    tx?: AgentTx,
+  ): Promise<AgentRefreshTokenRecord> {
+    const track = trackWrite(tx);
     if (this.rows.has(token.id)) {
       return Promise.reject(new AgentConflictError('DUPLICATE_ID'));
     }
     this.rows.set(token.id, copy(token));
+    track(() => {
+      this.rows.delete(token.id);
+    });
     return Promise.resolve(copy(token));
   }
 
@@ -129,10 +157,13 @@ export class FakeAgentRefreshTokenRepository implements AgentRefreshTokenReposit
     currentId: string,
     next: AgentRefreshTokenRecord,
     at: Date,
+    tx?: AgentTx,
   ): Promise<AgentRefreshTokenRecord> {
+    const track = trackWrite(tx);
     const current = this.rows.get(currentId);
-    if (!current)
+    if (!current) {
       return Promise.reject(new Error(`Unknown token ${currentId}`));
+    }
     if (current.revokedAt !== null) {
       return Promise.reject(new AgentConflictError('ALREADY_REVOKED'));
     }
@@ -141,18 +172,26 @@ export class FakeAgentRefreshTokenRepository implements AgentRefreshTokenReposit
     }
     current.revokedAt = new Date(at.getTime());
     this.rows.set(next.id, copy(next));
+    track(() => {
+      current.revokedAt = null;
+      this.rows.delete(next.id);
+    });
     return Promise.resolve(copy(next));
   }
 
-  revokeAllForAgent(agentId: string, at: Date): Promise<number> {
-    let count = 0;
+  revokeAllForAgent(agentId: string, at: Date, tx?: AgentTx): Promise<number> {
+    const track = trackWrite(tx);
+    const revoked: AgentRefreshTokenRecord[] = [];
     for (const row of this.rows.values()) {
       if (row.agentId === agentId && row.revokedAt === null) {
         row.revokedAt = new Date(at.getTime());
-        count += 1;
+        revoked.push(row);
       }
     }
-    return Promise.resolve(count);
+    track(() => {
+      for (const row of revoked) row.revokedAt = null;
+    });
+    return Promise.resolve(revoked.length);
   }
 }
 
@@ -180,7 +219,9 @@ export class FakeReferralAttributionRepository implements ReferralAttributionRep
 
   create(
     attribution: ReferralAttributionRecord,
+    tx?: AgentTx,
   ): Promise<ReferralAttributionRecord> {
+    const track = trackWrite(tx);
     const rows = [...this.rows.values()];
     if (
       this.rows.has(attribution.id) ||
@@ -189,6 +230,9 @@ export class FakeReferralAttributionRepository implements ReferralAttributionRep
       return Promise.reject(new AgentConflictError('DUPLICATE_ATTRIBUTION'));
     }
     this.rows.set(attribution.id, copy(attribution));
+    track(() => {
+      this.rows.delete(attribution.id);
+    });
     return Promise.resolve(copy(attribution));
   }
 }

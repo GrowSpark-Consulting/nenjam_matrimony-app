@@ -8,6 +8,7 @@ import {
   AgentOtpChallenge,
   AgentOtpPort,
   AgentOtpPurpose,
+  AgentOtpRateLimitError,
   AgentOtpVerifyResult,
   AgentPermission,
   AgentPermissionDeniedError,
@@ -15,14 +16,20 @@ import {
   AgentSettingsPort,
 } from '../ports/agent-platform-ports';
 import type { AgentClock } from '../ports/agent-infra-ports';
+import type { AgentTx } from '../ports/agent-unit-of-work.port';
+import { trackWrite } from './fake-agent-unit-of-work';
 
 export interface FakeAgentOtpOptions {
   clock: AgentClock;
   ttlMs: number;
   maxAttempts: number;
+  /** At most this many `send`s per phone and purpose in any window. */
+  sendLimit: number;
+  sendWindowMs: number;
 }
 
 interface FakeChallenge {
+  purpose: AgentOtpPurpose;
   phoneE164: string;
   code: string;
   expiresAt: Date;
@@ -32,22 +39,38 @@ interface FakeChallenge {
 
 export class FakeAgentOtp implements AgentOtpPort {
   private readonly challenges = new Map<string, FakeChallenge>();
+  /** Send times (ms) per `purpose|phone`, oldest first. */
+  private readonly sends = new Map<string, number[]>();
   private counter = 0;
 
   constructor(private readonly options: FakeAgentOtpOptions) {}
 
   send(
-    _purpose: AgentOtpPurpose,
+    purpose: AgentOtpPurpose,
     phoneE164: string,
   ): Promise<AgentOtpChallenge> {
+    const now = this.options.clock.now().getTime();
+    const key = `${purpose}|${phoneE164}`;
+    const recent = (this.sends.get(key) ?? []).filter(
+      (at) => at > now - this.options.sendWindowMs,
+    );
+    if (recent.length >= this.options.sendLimit) {
+      // The oldest send leaves the window at oldest + window.
+      const retryMs = recent[0] + this.options.sendWindowMs - now;
+      return Promise.reject(
+        new AgentOtpRateLimitError(Math.max(1, Math.ceil(retryMs / 1000))),
+      );
+    }
+    recent.push(now);
+    this.sends.set(key, recent);
+
     this.counter += 1;
     const challengeId = `challenge-${this.counter}`;
     // Deterministic six-digit code so tests can read it back.
     const code = String(100000 + this.counter * 7).slice(0, 6);
-    const expiresAt = new Date(
-      this.options.clock.now().getTime() + this.options.ttlMs,
-    );
+    const expiresAt = new Date(now + this.options.ttlMs);
     this.challenges.set(challengeId, {
+      purpose,
       phoneE164,
       code,
       expiresAt,
@@ -57,9 +80,17 @@ export class FakeAgentOtp implements AgentOtpPort {
     return Promise.resolve({ challengeId, expiresAt });
   }
 
-  verify(challengeId: string, code: string): Promise<AgentOtpVerifyResult> {
+  verify(
+    purpose: AgentOtpPurpose,
+    challengeId: string,
+    code: string,
+  ): Promise<AgentOtpVerifyResult> {
     const challenge = this.challenges.get(challengeId);
-    if (!challenge) return Promise.resolve({ ok: false, reason: 'NOT_FOUND' });
+    // Another purpose looks exactly like an unknown challenge, and does not
+    // count as an attempt.
+    if (!challenge || challenge.purpose !== purpose) {
+      return Promise.resolve({ ok: false, reason: 'NOT_FOUND' });
+    }
     if (challenge.used) {
       return Promise.resolve({ ok: false, reason: 'ALREADY_USED' });
     }
@@ -111,18 +142,30 @@ export class FakeAgentSettings implements AgentSettingsPort {
   }
 }
 
+/**
+ * Mimics the agreed real hasher: normalises per kind (trim; lower-case email;
+ * upper-case PAN) and returns "v1:" plus a keyed hash. The phone is only
+ * trimmed: E.164 is NOT validated here.
+ */
 export class FakeAgentIdentifierHasher implements AgentIdentifierHasher {
   constructor(private readonly secret: string) {
     if (!secret) throw new RangeError('secret must be a non-empty string.');
   }
 
   hash(kind: AgentIdentifierKind, value: string): string {
-    if (typeof value !== 'string' || value.length === 0) {
-      throw new RangeError('value must be a non-empty string.');
+    if (typeof value !== 'string') {
+      throw new RangeError('value must be a string.');
     }
-    return createHmac('sha256', this.secret)
-      .update(`${kind}:${value}`)
+    let normalised = value.trim();
+    if (kind === 'EMAIL') normalised = normalised.toLowerCase();
+    if (kind === 'PAN') normalised = normalised.toUpperCase();
+    if (normalised.length === 0) {
+      throw new RangeError('value must not be empty.');
+    }
+    const digest = createHmac('sha256', this.secret)
+      .update(`${kind}:${normalised}`)
       .digest('hex');
+    return `v1:${digest}`;
   }
 }
 
@@ -137,6 +180,7 @@ export class FakeAgentPermission implements AgentPermissionPort {
     this.grants.set(actorId, modules);
   }
 
+  /** Default-deny. The `tx` is accepted (reads see the live state). */
   assert(actorId: string, permission: AgentPermission): Promise<void> {
     const allowed =
       typeof actorId === 'string' &&
@@ -154,15 +198,20 @@ export class FakeAgentPermission implements AgentPermissionPort {
 export class FakeAgentAudit implements AgentAuditPort {
   private readonly stored: AgentAuditEntry[] = [];
 
-  record(entry: AgentAuditEntry): Promise<void> {
+  record(entry: AgentAuditEntry, tx?: AgentTx): Promise<void> {
     if (!entry.action) {
       return Promise.reject(new RangeError('action must be non-empty.'));
     }
     if (!entry.entity) {
       return Promise.reject(new RangeError('entity must be non-empty.'));
     }
+    const track = trackWrite(tx);
     // A copy, so changing the object afterwards cannot rewrite history.
-    this.stored.push(structuredClone(entry));
+    const row = structuredClone(entry);
+    this.stored.push(row);
+    track(() => {
+      this.stored.splice(this.stored.indexOf(row), 1);
+    });
     return Promise.resolve();
   }
 
