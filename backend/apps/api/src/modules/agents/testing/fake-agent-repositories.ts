@@ -226,6 +226,41 @@ export class FakeReferralAttributionRepository implements ReferralAttributionRep
     );
   }
 
+  listPageByAgent(
+    agentId: string,
+    page: { limit: number; after?: { at: Date; id: string } },
+  ): Promise<ReferralAttributionRecord[]> {
+    const newestFirst = (
+      a: ReferralAttributionRecord,
+      b: ReferralAttributionRecord,
+    ) =>
+      b.attributedAt.getTime() - a.attributedAt.getTime() ||
+      (a.id < b.id ? 1 : a.id > b.id ? -1 : 0);
+    const { after } = page;
+    return Promise.resolve(
+      [...this.rows.values()]
+        .filter((row) => row.agentId === agentId)
+        .sort(newestFirst)
+        .filter(
+          (row) =>
+            after === undefined ||
+            row.attributedAt.getTime() < after.at.getTime() ||
+            (row.attributedAt.getTime() === after.at.getTime() &&
+              row.id < after.id),
+        )
+        .slice(0, page.limit)
+        .map(copy),
+    );
+  }
+
+  findByIdForAgent(
+    attributionId: string,
+    agentId: string,
+  ): Promise<ReferralAttributionRecord | null> {
+    const row = this.rows.get(attributionId);
+    return Promise.resolve(row && row.agentId === agentId ? copy(row) : null);
+  }
+
   isPhoneHashCredited(phoneHash: string): Promise<boolean> {
     return Promise.resolve(
       [...this.rows.values()].some((r) => r.memberPhoneHash === phoneHash),

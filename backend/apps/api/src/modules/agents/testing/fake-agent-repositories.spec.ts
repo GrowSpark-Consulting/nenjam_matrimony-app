@@ -177,6 +177,9 @@ describe('FakeReferralAttributionRepository', () => {
     source: 'CODE_AT_SIGNUP',
     memberPhoneHash: 'member-hash',
     attributedAt: NOW,
+    status: 'ACTIVE',
+    windowEndsAt: LATER,
+    needsReview: false,
     ...o,
   });
 
@@ -204,6 +207,81 @@ describe('FakeReferralAttributionRepository', () => {
     expect(await repo.listByAgent('agent-9')).toHaveLength(0);
     expect(await repo.isPhoneHashCredited('member-hash')).toBe(true);
     expect(await repo.isPhoneHashCredited('unknown')).toBe(false);
+  });
+});
+
+describe('FakeReferralAttributionRepository paging and scoping', () => {
+  const row = (
+    id: string,
+    agentId: string,
+    at: Date,
+  ): ReferralAttributionRecord => ({
+    id,
+    memberId: `m-${id}`,
+    agentId,
+    codeId: 'code-1',
+    source: 'CODE_AT_SIGNUP',
+    memberPhoneHash: `h-${id}`,
+    attributedAt: at,
+    status: 'ACTIVE',
+    windowEndsAt: LATER,
+    needsReview: false,
+  });
+  const at = (day: number) => new Date(NOW.getTime() + day * 86_400_000);
+
+  const seeded = async () => {
+    const repo = new FakeReferralAttributionRepository();
+    await repo.create(row('a', 'agent-1', at(1)));
+    await repo.create(row('b', 'agent-1', at(3)));
+    await repo.create(row('c', 'agent-1', at(2)));
+    await repo.create(row('x', 'agent-2', at(9)));
+    return repo;
+  };
+
+  it('listPageByAgent is newest first and only for that agent', async () => {
+    const repo = await seeded();
+    const page = await repo.listPageByAgent('agent-1', { limit: 10 });
+    expect(page.map((r) => r.id)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('listPageByAgent honours limit and returns rows strictly after the cursor', async () => {
+    const repo = await seeded();
+    const first = await repo.listPageByAgent('agent-1', { limit: 2 });
+    expect(first.map((r) => r.id)).toEqual(['b', 'c']);
+    const second = await repo.listPageByAgent('agent-1', {
+      limit: 2,
+      after: { at: first[1].attributedAt, id: first[1].id },
+    });
+    expect(second.map((r) => r.id)).toEqual(['a']);
+  });
+
+  it('listPageByAgent breaks equal times by id, descending, with no repeats', async () => {
+    const repo = new FakeReferralAttributionRepository();
+    for (const id of ['p', 'q', 'r'])
+      await repo.create(row(id, 'agent-1', at(1)));
+    const first = await repo.listPageByAgent('agent-1', { limit: 2 });
+    expect(first.map((r) => r.id)).toEqual(['r', 'q']);
+    const rest = await repo.listPageByAgent('agent-1', {
+      limit: 2,
+      after: { at: first[1].attributedAt, id: first[1].id },
+    });
+    expect(rest.map((r) => r.id)).toEqual(['p']);
+  });
+
+  it('findByIdForAgent answers null for another agent\x27s row and for an unknown id alike', async () => {
+    const repo = await seeded();
+    expect((await repo.findByIdForAgent('a', 'agent-1'))?.id).toBe('a');
+    expect(await repo.findByIdForAgent('x', 'agent-1')).toBeNull();
+    expect(await repo.findByIdForAgent('nope', 'agent-1')).toBeNull();
+  });
+
+  it('returns copies, so a caller cannot edit stored rows', async () => {
+    const repo = await seeded();
+    const [first] = await repo.listPageByAgent('agent-1', { limit: 1 });
+    first.status = 'REJECTED';
+    expect((await repo.findByIdForAgent('b', 'agent-1'))?.status).toBe(
+      'ACTIVE',
+    );
   });
 });
 

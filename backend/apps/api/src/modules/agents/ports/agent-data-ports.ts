@@ -191,6 +191,9 @@ export interface AgentPayoutDetailsRepository {
 
 // --- Attribution -----------------------------------------------------------
 
+export type AgentAttributionStatus =
+  'ACTIVE' | 'CONVERTED' | 'EXPIRED' | 'REJECTED';
+
 export interface ReferralAttributionRecord {
   id: string;
   memberId: string;
@@ -200,6 +203,18 @@ export interface ReferralAttributionRecord {
   /** Hash of the member's verified phone, null when there is none. */
   memberPhoneHash: string | null;
   attributedAt: Date;
+  /** REJECTED rows (e.g. a self-referral) are kept for review, never shown to agents. */
+  status: AgentAttributionStatus;
+  /** End of the credit window, snapshotted when the attribution was made. */
+  windowEndsAt: Date;
+  /** Accepted without a verified phone; an admin should look at it. */
+  needsReview: boolean;
+}
+
+/** Position in the newest-first order: (attributedAt, id), both descending. */
+export interface AttributionPageCursor {
+  at: Date;
+  id: string;
 }
 
 export interface ReferralAttributionRepository {
@@ -211,6 +226,21 @@ export interface ReferralAttributionRepository {
     agentId: string,
     tx?: AgentTx,
   ): Promise<ReferralAttributionRecord[]>;
+  /**
+   * Newest first, ordered by (attributedAt, id) descending. Returns at most
+   * `limit` rows strictly after `after`, or from the start without it.
+   */
+  listPageByAgent(
+    agentId: string,
+    page: { limit: number; after?: AttributionPageCursor },
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord[]>;
+  /** Null when the id is unknown OR belongs to another agent (the two look the same). */
+  findByIdForAgent(
+    attributionId: string,
+    agentId: string,
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord | null>;
   /** True when an attribution already exists for this member phone hash. */
   isPhoneHashCredited(phoneHash: string, tx?: AgentTx): Promise<boolean>;
   /** One attribution per member: throws DUPLICATE_ATTRIBUTION otherwise. */

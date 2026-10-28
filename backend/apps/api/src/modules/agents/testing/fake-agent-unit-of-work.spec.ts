@@ -85,6 +85,9 @@ describe('FakeAgentUnitOfWork (AgentUnitOfWork contract)', () => {
             source: 'CODE_AT_SIGNUP',
             memberPhoneHash: null,
             attributedAt: NOW,
+            status: 'ACTIVE',
+            windowEndsAt: LATER,
+            needsReview: false,
           },
           tx,
         );
@@ -126,6 +129,9 @@ describe('FakeAgentUnitOfWork (AgentUnitOfWork contract)', () => {
               source: 'CODE_AT_SIGNUP',
               memberPhoneHash: null,
               attributedAt: NOW,
+              status: 'ACTIVE',
+              windowEndsAt: LATER,
+              needsReview: false,
             },
             tx,
           );
