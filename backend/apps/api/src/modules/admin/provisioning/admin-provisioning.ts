@@ -108,6 +108,7 @@ export async function grantAdminRole(
     await tx.auditLog.create({
       data: {
         actorId: null,
+        actorType: 'SYSTEM',
         action: 'admin.provision.grant',
         entity: 'AdminAccount',
         entityId: account.id,
@@ -144,6 +145,7 @@ export async function revokeAdminRole(
     await tx.auditLog.create({
       data: {
         actorId: null,
+        actorType: 'SYSTEM',
         action: 'admin.provision.revoke',
         entity: 'AdminAccount',
         entityId: account.id,
@@ -186,6 +188,7 @@ export async function resetAdminMfa(
     await tx.auditLog.create({
       data: {
         actorId: null,
+        actorType: 'SYSTEM',
         action: 'admin.provision.reset_mfa',
         entity: 'AdminAccount',
         entityId: account.id,
@@ -220,6 +223,7 @@ export async function deactivateAdmin(
     await tx.auditLog.create({
       data: {
         actorId: null,
+        actorType: 'SYSTEM',
         action: 'admin.provision.deactivate',
         entity: 'AdminAccount',
         entityId: account.id,

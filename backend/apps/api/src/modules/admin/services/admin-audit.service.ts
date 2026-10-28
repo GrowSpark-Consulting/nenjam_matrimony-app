@@ -7,6 +7,8 @@ export interface AdminAuditEntry {
   /** The acting user's id, derived from the verified token — never from a
    *  request body. Null for the system or the provisioning script. */
   actorId: string | null;
+  /** Who [actorId] is: agents have their own ids, not user ids. */
+  actorType?: AuditActorType;
   /** `<area>.<event>`, e.g. `admin.session.created`, `agent.approve`. */
   action: string;
   entity: string;
@@ -20,6 +22,8 @@ export interface AdminAuditEntry {
   metadata?: Prisma.InputJsonObject;
   context?: AdminRequestContext;
 }
+
+export type AuditActorType = 'STAFF' | 'MEMBER' | 'AGENT' | 'SYSTEM';
 
 type AuditWriter = Pick<Prisma.TransactionClient, 'auditLog'>;
 
@@ -39,7 +43,7 @@ export class AdminAuditService {
    * Use this for every state change.
    */
   async record(tx: AuditWriter, entry: AdminAuditEntry): Promise<void> {
-    await tx.auditLog.create({ data: toRow(entry) });
+    await tx.auditLog.create({ data: buildAuditRow(entry) });
   }
 
   /**
@@ -49,7 +53,7 @@ export class AdminAuditService {
    */
   async recordBestEffort(entry: AdminAuditEntry): Promise<void> {
     try {
-      await this.prisma.auditLog.create({ data: toRow(entry) });
+      await this.prisma.auditLog.create({ data: buildAuditRow(entry) });
     } catch (error) {
       this.logger.error(
         `Could not write audit row "${entry.action}": ${(error as Error).message}`,
@@ -58,12 +62,18 @@ export class AdminAuditService {
   }
 }
 
-function toRow(entry: AdminAuditEntry): Prisma.AuditLogUncheckedCreateInput {
+/** The audit_logs row for [entry]. Exported for services that write audit
+ *  rows inside their own transaction without the Nest service (e.g. the plan
+ *  draft workflow, which lives in the subscription module). */
+export function buildAuditRow(
+  entry: AdminAuditEntry,
+): Prisma.AuditLogUncheckedCreateInput {
   if (!entry.action?.trim() || !entry.entity?.trim()) {
     throw new RangeError('An audit entry needs an action and an entity.');
   }
   return {
     actorId: entry.actorId,
+    actorType: entry.actorType ?? null,
     action: entry.action,
     entity: entry.entity,
     entityId: entry.entityId ?? null,

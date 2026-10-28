@@ -237,6 +237,7 @@ describeIntegration('admin access over HTTP', () => {
         await prisma.auditLog.count({
           where: {
             actorId: member.id,
+            actorType: 'MEMBER',
             action: 'admin.access.denied',
             reason: 'NOT_STAFF',
           },
@@ -350,7 +351,7 @@ describeIntegration('admin access over HTTP', () => {
       expect(body(res).roles).toEqual([
         { key: 'SUPER_ADMIN', name: 'Super Admin' },
       ]);
-      expect(body(res).permissions).toHaveLength(47);
+      expect(body(res).permissions).toHaveLength(48);
       expect(body(res).permissions).toContain('agent.approve');
       expect(body(res).email).toBe(people.sa.email);
     });
@@ -546,7 +547,10 @@ describeIntegration('admin access over HTTP', () => {
       ]);
       expect(
         rows.every(
-          (r) => r.actorId === null && r.reason === 'integration test',
+          (r) =>
+            r.actorId === null &&
+            r.actorType === 'SYSTEM' &&
+            r.reason === 'integration test',
         ),
       ).toBe(true);
       await prisma.auditLog.deleteMany({ where: { entityId: account.id } });

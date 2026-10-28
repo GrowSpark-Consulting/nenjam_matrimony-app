@@ -177,7 +177,9 @@ export class PlansService {
   }
 }
 
-function describeFeature(
+/** The feature registry entry clients render plan comparisons from. Also
+ *  used by the admin plan screens. */
+export function describeFeature(
   key: (typeof FEATURE_KEYS)[number],
 ): FeatureDescriptorDto {
   const def: FeatureDefinition = FEATURES[key];

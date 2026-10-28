@@ -58,13 +58,14 @@ stored only as a SHA-256 hash; TOTP secrets are AES-256-GCM encrypted.
 
 Tables: `roles`, `permissions`, `role_permissions`, `admin_user_roles`. Permission keys are
 `<resource>.<action>`, defined in `admin/rbac/permissions.ts` and seeded by migration
-`20261028070845_admin_rbac_foundation` (a unit test keeps the two identical). 47 keys, from
-the architecture document: dashboard/members, verification and support, subscriptions,
+`20261028070845_admin_rbac_foundation` (a unit test keeps the two identical). 48 keys — the
+architecture document's, plus `agent.pii.reveal` (requested for the first agent payout): dashboard/members, verification and support, subscriptions,
 plans, payments and refunds, the agent program (`agent.*`, `attribution.*`,
 `commission.*`, `payout.*`) and platform (`config.edit`, `rbac.manage`, `audit.view`, …).
-Sensitive (step-up): `member.pii.reveal`, `refund.approve`, `payout.execute`, `rbac.manage`.
+Sensitive (step-up): `member.pii.reveal`, `agent.pii.reveal`, `refund.approve`,
+`payout.execute`, `rbac.manage`.
 
-Seeded role: **`SUPER_ADMIN`** (all 47). The other roles in the architecture document
+Seeded role: **`SUPER_ADMIN`** (all 48). The other roles in the architecture document
 (Operations, Finance, Partner Manager, Support, Verification, Marketing, Read-only) are
 **not seeded** — their permission matrix needs product sign-off; add them in a migration
 or via the future roles screen.
@@ -130,7 +131,7 @@ comes from `@CurrentAdmin()`, never from a request body.
 1. Back up (Neon branch or `pg_dump`, restore-tested) — there is no down-migration.
 2. `pnpm prisma migrate deploy` → applies `20261028070845_admin_rbac_foundation`
    (additive: new tables, nullable/defaulted columns, CHECKs, seed). Verify:
-   `SELECT count(*) FROM permissions` = 47; `SUPER_ADMIN` has 47 grants; the placeholder
+   `SELECT count(*) FROM permissions` = 48; `SUPER_ADMIN` has 48 grants; the placeholder
    admin's `is_active` is false.
 3. Set `ADMIN_MFA_ENCRYPTION_KEY` on the API service; deploy the code.
 4. `GET /admin/me` without a token → 401; with a member token → 403.

@@ -159,6 +159,7 @@ export class AdminGuard implements CanActivate {
   ): Promise<void> {
     return this.audit.recordBestEffort({
       actorId,
+      actorType: reason === 'NOT_STAFF' ? 'MEMBER' : 'STAFF',
       action: 'admin.access.denied',
       entity: 'AdminRoute',
       entityId: route,

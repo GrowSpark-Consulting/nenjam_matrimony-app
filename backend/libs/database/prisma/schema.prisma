@@ -740,8 +740,44 @@ model SubscriptionPlan {
   subscriptions UserSubscription[]
   durations     SubscriptionPlanDuration[]
   versions      SubscriptionPlanVersion[]
+  drafts        SubscriptionPlanDraft[]
 
   @@map("subscription_plans")
+}
+
+/// A proposed change to a plan — its entitlements and/or price list — made in
+/// the admin panel and published only after a SECOND admin approves it
+/// (maker-checker). Publishing creates a new immutable SubscriptionPlanVersion
+/// (if the entitlements changed) and updates the durations, in one
+/// transaction. At most one open (DRAFT or SUBMITTED) draft per plan.
+model SubscriptionPlanDraft {
+  id                 String          @id @default(uuid())
+  planId             String          @map("plan_id")
+  /// The version that was current when the draft was started.
+  baseVersionId      String?         @map("base_version_id")
+  /// The complete proposed entitlement map.
+  entitlements       Json
+  /// The complete proposed price list:
+  /// [{ months, durationDays, bonusDays, priceInPaise, isActive }].
+  durations          Json            @default("[]")
+  changeNote         String          @map("change_note")
+  status             PlanDraftStatus @default(DRAFT)
+  createdById        String          @map("created_by_id")
+  updatedById        String          @map("updated_by_id")
+  submittedById      String?         @map("submitted_by_id")
+  submittedAt        DateTime?       @map("submitted_at")
+  /// Who published or rejected it — never the submitter.
+  decidedById        String?         @map("decided_by_id")
+  decidedAt          DateTime?       @map("decided_at")
+  decisionNote       String?         @map("decision_note")
+  publishedVersionId String?         @map("published_version_id")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+  plan               SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([planId, status])
+  @@index([status, updatedAt])
+  @@map("subscription_plan_drafts")
 }
 
 /// A purchasable length of a plan and its CURRENT price. Historical prices
@@ -1312,6 +1348,9 @@ model AuditLog {
   entityId  String?  @map("entity_id")
   metadata  Json?
   ipAddress String?  @map("ip_address")
+  /// STAFF | MEMBER | AGENT | SYSTEM — actorId alone can't say, because
+  /// agents are not users. Null on rows written before this column existed.
+  actorType String?  @map("actor_type")
   /// Why the actor did it — required for sensitive admin changes.
   reason    String?
   before    Json?
@@ -1418,6 +1457,16 @@ enum SubscriptionSource {
   ADMIN_GRANT
 
   @@map("subscription_source")
+}
+
+enum PlanDraftStatus {
+  DRAFT
+  SUBMITTED
+  PUBLISHED
+  REJECTED
+  DISCARDED
+
+  @@map("plan_draft_status")
 }
 
 enum SubscriptionEventType {

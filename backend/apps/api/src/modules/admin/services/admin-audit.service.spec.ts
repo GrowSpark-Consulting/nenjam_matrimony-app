@@ -15,6 +15,7 @@ describe('AdminAuditService', () => {
 
     await service.record({ auditLog: { create } } as never, {
       actorId: 'user-admin',
+      actorType: 'STAFF',
       action: 'agent.approve',
       entity: 'Agent',
       entityId: 'agent-1',
@@ -28,6 +29,7 @@ describe('AdminAuditService', () => {
     expect(create).toHaveBeenCalledWith({
       data: {
         actorId: 'user-admin',
+        actorType: 'STAFF',
         action: 'agent.approve',
         entity: 'Agent',
         entityId: 'agent-1',

@@ -10,7 +10,8 @@ ADD COLUMN     "mfa_locked_until" TIMESTAMP(3),
 ADD COLUMN     "mfa_secret_encrypted" TEXT;
 
 -- AlterTable
-ALTER TABLE "audit_logs" ADD COLUMN     "after" JSONB,
+ALTER TABLE "audit_logs" ADD COLUMN     "actor_type" TEXT,
+ADD COLUMN     "after" JSONB,
 ADD COLUMN     "before" JSONB,
 ADD COLUMN     "reason" TEXT,
 ADD COLUMN     "request_id" TEXT,
@@ -131,6 +132,8 @@ ALTER TABLE "admin_sessions" ADD CONSTRAINT "admin_sessions_expiry_after_creatio
   CHECK ("expires_at" > "created_at");
 ALTER TABLE "admin_accounts" ADD CONSTRAINT "admin_accounts_mfa_failed_attempts_non_negative"
   CHECK ("mfa_failed_attempts" >= 0);
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_actor_type_known"
+  CHECK ("actor_type" IS NULL OR "actor_type" IN ('STAFF', 'MEMBER', 'AGENT', 'SYSTEM'));
 
 -- Permission keys (Nenjam Admin Architecture v3, section 13). Must match
 -- PERMISSIONS in apps/api/src/modules/admin/rbac/permissions.ts.
@@ -164,6 +167,7 @@ INSERT INTO "permissions" ("id", "key", "description", "is_sensitive") VALUES
   (gen_random_uuid()::text, 'agent.approve', 'Approve or reject agent applications', false),
   (gen_random_uuid()::text, 'agent.manage', 'Pause, resume, terminate agents and replace codes', false),
   (gen_random_uuid()::text, 'agent.payout_details.verify', 'Verify an agent''s payout details', false),
+  (gen_random_uuid()::text, 'agent.pii.reveal', 'Reveal an agent''s full PAN or payout details (e.g. for a first payout)', true),
   (gen_random_uuid()::text, 'attribution.view', 'View referral attributions', false),
   (gen_random_uuid()::text, 'attribution.override', 'Set or correct a referral attribution', false),
   (gen_random_uuid()::text, 'commission.view', 'View commissions', false),

@@ -111,6 +111,7 @@ export class AdminMfaService {
     });
     await this.audit.recordBestEffort({
       actorId: staff.userId,
+      actorType: 'STAFF',
       action: 'admin.mfa.enrollment.started',
       entity: 'AdminAccount',
       entityId: account.id,
@@ -177,6 +178,7 @@ export class AdminMfaService {
       const session = await this.sessions.create(tx, account.id, context, now);
       await this.audit.record(tx, {
         actorId: staff.userId,
+        actorType: 'STAFF',
         action: 'admin.mfa.enrolled',
         entity: 'AdminAccount',
         entityId: account.id,
@@ -184,6 +186,7 @@ export class AdminMfaService {
       });
       await this.audit.record(tx, {
         actorId: staff.userId,
+        actorType: 'STAFF',
         action: 'admin.session.created',
         entity: 'AdminSession',
         entityId: session.sessionId,
@@ -219,6 +222,7 @@ export class AdminMfaService {
       });
       await this.audit.record(tx, {
         actorId: staff.userId,
+        actorType: 'STAFF',
         action: 'admin.session.created',
         entity: 'AdminSession',
         entityId: session.sessionId,
@@ -250,6 +254,7 @@ export class AdminMfaService {
       await this.sessions.markVerified(tx, sessionId, now);
       await this.audit.record(tx, {
         actorId: staff.userId,
+        actorType: 'STAFF',
         action: 'admin.session.step_up',
         entity: 'AdminSession',
         entityId: sessionId,
@@ -270,6 +275,7 @@ export class AdminMfaService {
       await this.sessions.revoke(tx, sessionId, 'LOGOUT', now);
       await this.audit.record(tx, {
         actorId: admin.userId,
+        actorType: 'STAFF',
         action: 'admin.session.ended',
         entity: 'AdminSession',
         entityId: sessionId,
@@ -411,6 +417,7 @@ export class AdminMfaService {
     }
     await this.audit.recordBestEffort({
       actorId: staff.userId,
+      actorType: 'STAFF',
       action: locked ? 'admin.mfa.locked' : 'admin.mfa.failed',
       entity: 'AdminAccount',
       entityId: account.id,

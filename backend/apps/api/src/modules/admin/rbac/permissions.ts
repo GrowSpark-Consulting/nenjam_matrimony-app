@@ -42,6 +42,7 @@ export const PERMISSIONS = [
   'agent.approve',
   'agent.manage',
   'agent.payout_details.verify',
+  'agent.pii.reveal',
   'attribution.view',
   'attribution.override',
   'commission.view',
@@ -72,6 +73,7 @@ export type PermissionKey = (typeof PERMISSIONS)[number];
 export const SENSITIVE_PERMISSIONS: ReadonlySet<PermissionKey> =
   new Set<PermissionKey>([
     'member.pii.reveal',
+    'agent.pii.reveal',
     'refund.approve',
     'payout.execute',
     'rbac.manage',
