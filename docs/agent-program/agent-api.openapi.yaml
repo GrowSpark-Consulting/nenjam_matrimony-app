@@ -229,8 +229,19 @@ paths:
       summary: Exchange a refresh token for a new token pair
       description: |
         Refresh tokens rotate: each use returns a new pair and invalidates the
-        old refresh token. Presenting an already-used refresh token revokes the
-        whole chain (`REFRESH_TOKEN_REUSED`) and the agent must sign in again.
+        old refresh token. Presenting an already-used (revoked) refresh token
+        is treated as theft or a replay: it revokes **every** refresh token of
+        that agent, on every device, and answers `REFRESH_TOKEN_REUSED`; the
+        agent must sign in again.
+
+        **Clients must serialise refresh calls.** Two calls with the same
+        refresh token at the same time count as reuse: one succeeds, the other
+        gets `REFRESH_TOKEN_REUSED`, and the success is revoked as well, so
+        the agent is signed out everywhere. Keep one refresh in flight per
+        session, including across browser tabs and windows sharing the same
+        stored token (for example a lock shared by all tabs), and have the
+        others wait and use the new token.
+
         Agent sessions only: applicants have no refresh token and verify by OTP
         again when their access token expires. The refresh token lifetime is a
         setting.
@@ -266,9 +277,12 @@ paths:
       tags: [Agent auth]
       summary: Revoke this session's refresh token
       description: |
-        Revokes the given refresh token's whole chain. Optionally deactivates
-        this device's push token. Idempotent: an unknown or already-revoked
-        token still returns 204. Agent sessions only: an applicant has no
+        Revokes the given refresh token only; the agent's other sessions stay
+        signed in. It must belong to the signed-in agent; anyone else's token
+        is ignored. Presenting the revoked token to `POST /agent/auth/refresh`
+        later counts as reuse (see there). Optionally deactivates this device's
+        push token. Idempotent: an unknown or already-revoked token still
+        returns 204. Agent sessions only: an applicant has no
         refresh token and nothing to revoke, so the app simply discards the
         applicant access token.
       operationId: agentLogout
@@ -373,9 +387,30 @@ paths:
                       payoutDetailsSet: false
                       primaryCode: null
         '400': { $ref: '#/components/responses/ValidationFailed' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        '401':
+          description: |
+            Missing, invalid or expired token (`UNAUTHORIZED`, `TOKEN_EXPIRED`), or
+            the applicant's verified phone has expired or is gone
+            (`UNAUTHORIZED`): the applicant verifies by OTP again.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: |
+            A rejected agent may not apply again (`AGENT_NOT_ACTIVE`, with
+            `agentStatus: REJECTED`). Only while re-applying is switched off.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         '409':
-          description: An application already exists and is not rejected (`APPLICATION_EXISTS`).
+          description: |
+            An application or agent already exists and the caller may not
+            apply again (`APPLICATION_EXISTS`). `agentStatus` says which:
+            `PENDING_APPROVAL` (already under review) or `ACTIVE`,
+            `SUSPENDED`, `TERMINATED` (already an agent). It is **absent**
+            when the phone already has an agent that this session does not
+            belong to (for example it applied from another device): sign in
+            again to see it.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -759,7 +794,15 @@ paths:
         Member endpoint (Firebase ID token). Credits the signed-in member to
         the code's agent when no attribution exists for their phone yet. The
         first attribution wins; it is never silently replaced. An agent cannot
-        attribute their own phone. Also attempt-limited per user.
+        attribute their own phone: that is refused for good (an admin can
+        correct it, with a recorded reason). Also attempt-limited, per member
+        and per code.
+
+        Every code that cannot be used (unknown, inactive, or its agent not
+        `ACTIVE`) gives the same `404 CODE_NOT_FOUND`, so the response cannot
+        be used to find out which. A phone that is already credited to any
+        agent is `409 ALREADY_ATTRIBUTED`, the same as an already-attributed
+        member.
       operationId: registrationReferralCodeAttach
       security:
         - memberBearer: []
@@ -791,20 +834,31 @@ paths:
                     type: string
                     format: date
                     description: Last day the credit window covers (IST).
-        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '400':
+          description: The text is not a well-formed referral code (`VALIDATION_FAILED`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404':
-          description: Code does not exist or its agent is not active (`CODE_NOT_FOUND`).
+          description: Code does not exist, is inactive, or its agent is not active (`CODE_NOT_FOUND`). All three look identical.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         '409':
-          description: Member already attributed (`ALREADY_ATTRIBUTED`).
+          description: The member, or their phone, is already attributed (`ALREADY_ATTRIBUTED`). The first agent always stays.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         '422':
-          description: Not allowed for this member (`SELF_REFERRAL`).
+          description: |
+            Not allowed for this member. Branch on `code`:
+
+            | `code` | Meaning |
+            |---|---|
+            | `SELF_REFERRAL` | The code belongs to the member's own phone. Permanent. |
+            | `ALREADY_PAID` | The member has already paid for a plan, so a code can no longer be attached. |
+            | `PHONE_NOT_VERIFIED` | The member has no verified phone, which a code at sign-up needs. |
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -908,10 +962,15 @@ components:
             - CODE_NOT_FOUND
             - ALREADY_ATTRIBUTED
             - SELF_REFERRAL
+            - ALREADY_PAID
+            - PHONE_NOT_VERIFIED
         agentStatus:
           allOf:
             - $ref: '#/components/schemas/AgentStatus'
-          description: Present on `AGENT_NOT_ACTIVE`.
+          description: |
+            The agent's current status. Present on `AGENT_NOT_ACTIVE`, and on
+            the `APPLICATION_EXISTS` refusal of `POST /agent/application` when
+            the caller has an agent record of their own.
 
     PhoneE164:
       type: string
