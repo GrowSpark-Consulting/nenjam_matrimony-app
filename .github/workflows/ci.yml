@@ -187,3 +187,44 @@ jobs:
       # No Android `flutter build` here on purpose — it pulls the whole
       # Gradle/AGP toolchain and adds several minutes for little extra signal
       # over analyze. Revisit if an Android-only build breakage ever ships.
+
+  agent-portal:
+    name: Agent Portal (React)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agent-portal
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: agent-portal/package-lock.json
+
+      - name: Install (lockfile only)
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit, component and route tests
+        run: npm test
+
+      - name: Production build
+        # The real production API URL (public; no secret). The build refuses
+        # mocks and fails clearly on a missing or invalid URL.
+        env:
+          VITE_API_BASE_URL: https://nenjam-matrimony.onrender.com
+        run: npm run build
+
+      - name: Production bundle contains no mock API
+        run: |
+          if grep -rqE "MockAgentApi|mock-challenge" dist; then
+            echo "The production bundle includes the mock API." >&2
+            exit 1
+          fi

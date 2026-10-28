@@ -1,0 +1,55 @@
+# Render Blueprint for the Agent Portal as a Static Site.
+#
+# Nothing is deployed by committing this file: someone with access to the
+# Render account applies it (Blueprint) or creates a Static Site with the same
+# settings. DNS for the custom domain is configured separately (see README).
+#
+# Everything here is public configuration. The portal has no secrets: every
+# VITE_* value is compiled into the JavaScript that browsers download.
+services:
+  - type: web
+    runtime: static
+    name: nenjam-agent-portal
+    rootDir: agent-portal
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    domains:
+      - agent.nenjammatrimony.com
+    envVars:
+      # The production API (the Flutter app's default backend on main).
+      # Mock data can never be used in a production build.
+      - key: VITE_API_BASE_URL
+        value: https://nenjam-matrimony.onrender.com
+    # Client-side routing: every path serves index.html, so deep links and
+    # refreshes (e.g. /referrals) work.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://nenjam-matrimony.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=(), payment=()
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000
+      # Always revalidate the HTML shell so a new deploy is picked up; the
+      # hashed files under /assets can be cached for good.
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
