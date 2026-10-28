@@ -81,6 +81,12 @@ paths:
         already belongs to an agent, so the endpoint cannot be used to find out
         who is an agent. Delegates to `OtpService` with purpose
         `AGENT_SIGN_IN`. Rate limited per IP and per phone.
+
+        The response carries a `challengeId`: an opaque id for this one OTP.
+        Keep it and send it, with the code, to `POST /agent/auth/otp/verify`.
+        The phone is not sent again; it comes from the verified challenge. A
+        new request for the same phone returns a new `challengeId` and the
+        earlier one should be dropped.
       operationId: agentOtpRequest
       security: []
       parameters:
@@ -103,10 +109,18 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [expiresInSeconds, resendAfterSeconds]
+                required: [challengeId, expiresInSeconds, resendAfterSeconds]
                 properties:
+                  challengeId:
+                    type: string
+                    description: Opaque id of this OTP. Send it to `POST /agent/auth/otp/verify`.
+                    example: 6f1d2c3a-8b4e-4f7a-9d10-5e2b7c9a1f34
                   expiresInSeconds: { type: integer, example: 300 }
                   resendAfterSeconds: { type: integer, example: 30 }
+              example:
+                challengeId: 6f1d2c3a-8b4e-4f7a-9d10-5e2b7c9a1f34
+                expiresInSeconds: 300
+                resendAfterSeconds: 30
         '400': { $ref: '#/components/responses/ValidationFailed' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
@@ -115,6 +129,11 @@ paths:
       tags: [Agent auth]
       summary: Verify the OTP and get our own agent tokens
       description: |
+        Send the `challengeId` from `POST /agent/auth/otp/request` and the
+        code. The phone is not sent: it is taken from the verified challenge.
+        A challenge that does not exist, or was created for another purpose,
+        is reported as `OTP_INVALID`, so nothing about it is revealed.
+
         Tokens are returned **in the body**. What comes back depends on whether
         the phone already has an agent record:
 
@@ -142,10 +161,13 @@ paths:
           application/json:
             schema:
               type: object
-              required: [phone, code]
+              required: [challengeId, code]
               additionalProperties: false
               properties:
-                phone: { $ref: '#/components/schemas/PhoneE164' }
+                challengeId:
+                  type: string
+                  description: The `challengeId` returned by `POST /agent/auth/otp/request`.
+                  example: 6f1d2c3a-8b4e-4f7a-9d10-5e2b7c9a1f34
                 code:
                   type: string
                   pattern: '^[0-9]{4,8}$'
@@ -193,7 +215,9 @@ paths:
                     scope: APPLICANT
         '400': { $ref: '#/components/responses/ValidationFailed' }
         '401':
-          description: OTP wrong or expired (`OTP_INVALID`, `OTP_EXPIRED`).
+          description: |
+            OTP wrong, already used, unknown challenge or wrong purpose
+            (`OTP_INVALID`), or expired (`OTP_EXPIRED`).
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
