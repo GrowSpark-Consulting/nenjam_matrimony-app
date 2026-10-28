@@ -66,7 +66,26 @@ in one.** The portal needs no secrets.
 | `VITE_API_BASE_URL` | `https://nenjam-matrimony.onrender.com` | Required. Must be `https`; `http` is accepted only for localhost in a dev build. No query, fragment or credentials. |
 | `VITE_USE_MOCKS` | unset | `true` only for local development. A production build refuses it. |
 
-## Deploy to Render (Static Site)
+## Deploy to Vercel (current)
+
+The portal is deployed on Vercel at
+`https://agent-nenjam-matrimony-app.vercel.app/`. The Vercel project's Root
+Directory is `agent-portal`, and `vercel.json` provides the SPA rewrite, the
+security headers (the same CSP as below) and caching.
+
+- Set `VITE_API_BASE_URL=https://nenjam-matrimony.onrender.com` for the
+  **Production** environment in the Vercel project settings.
+- Vite compiles `VITE_*` values into the bundle **at build time**, so after
+  adding or changing the variable you must **redeploy**. An existing build
+  never picks it up.
+- Without the variable, a build still succeeds but the portal shows a
+  configuration error instead of signing anyone in. It never falls back to
+  sample data.
+- The API's `CORS_ORIGINS` must include the portal's exact origin
+  (`https://agent-nenjam-matrimony-app.vercel.app`, and later
+  `https://agent.nenjammatrimony.com`).
+
+## Deploy to Render (Static Site, alternative)
 
 `render.yaml` describes the site. It sets the build (`npm ci && npm run build`
 in `agent-portal/`), publishes `dist`, and:
@@ -100,8 +119,9 @@ change):
 
 ## Rules this code follows
 
-- `Accept-Version: 1` on every request. Every call here is an agent-contract
-  call; the member API stays unversioned.
+- `Accept-Version: 1` on every portal request. That's allowed because every
+  call here targets the versioned agent/referral API. The header is never
+  added to the Flutter API client; the member API stays unversioned.
 - **Token refresh is serialised across tabs** (Web Locks; inside the lock the
   stored session is re-read, so a tab never re-presents a refresh token another
   tab already used, which the server treats as theft). It is retried once. Any
@@ -111,9 +131,20 @@ change):
   `no-referrer`), never in URLs, and never logged. A sign-out in one tab signs
   out the others.
 - `POST /agent/application` returns a full agent session: there is no second
-  OTP. Refusals (`409 APPLICATION_EXISTS`, `403 AGENT_NOT_ACTIVE`) show the
-  server's message plus "Sign in again". There is no "Apply again" button for
-  rejected agents while that decision is pending.
+  OTP. Refusals follow the frontend guide's §4.2 table
+  (`src/lib/applicationRefusal.ts`):
+  - `401`: back to OTP, with "your verification has expired";
+  - `403 AGENT_NOT_ACTIVE` + `REJECTED`: the Rejected screen, with **no**
+    "Apply again";
+  - `409 APPLICATION_EXISTS` + `PENDING_APPROVAL`: the Pending screen;
+  - `409` + `ACTIVE`, `SUSPENDED` or `TERMINATED`: "you are already a
+    partner", sign in again to open the account (an applicant token cannot
+    read `GET /agent/me`; the new sign-in returns the agent session);
+  - `409` with no `agentStatus`: sign in again;
+  - `400 VALIDATION_FAILED`: the fields the message names are marked invalid
+    (`aria-invalid`); the server never repeats what was typed.
+- A `429` honours `Retry-After`: on sign-in, Send, Verify and Resend stay
+  disabled with a countdown for the server's number of seconds.
 - 4xx errors show the server's `message`. Server errors and network failures
   show a fixed sentence (never raw server output), with "Try again". Buttons
   are disabled while a request runs, so nothing is submitted twice.
