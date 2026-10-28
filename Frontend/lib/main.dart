@@ -29,6 +29,7 @@ import 'core/theme/app_theme.dart';
 import 'core/widgets/navigation/app_bottom_nav.dart';
 import 'features/authentication/domain/services/local_auth_session.dart';
 import 'features/authentication/presentation/providers/auth_providers.dart';
+import 'features/membership/presentation/providers/membership_providers.dart';
 import 'features/profile/presentation/providers/profile_dashboard_providers.dart';
 import 'features/profile/presentation/providers/profile_providers.dart';
 import 'features/profile_photos/presentation/providers/photo_providers.dart';
@@ -170,6 +171,9 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
         // Reconnect if needed and re-announce online instantly.
         ref.read(realtimeServiceProvider).handleAppForegrounded();
         _resyncUnreadOnResume();
+        // A plan can start, end or activate (payment webhook) while the app
+        // is backgrounded; the server is the only authority, so re-read it.
+        ref.invalidate(myMembershipProvider);
         // Detects a permission grant made from Android Settings while the
         // app was backgrounded (the user denied the prompt initially, then
         // came back and enabled it manually) — completes FCM registration
@@ -302,6 +306,7 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
         ref.invalidate(myProfileProvider);
         ref.invalidate(profileDraftResponseProvider);
         ref.invalidate(faceVerificationStatusProvider);
+        ref.invalidate(myMembershipProvider);
       }
 
       // The other half: rebuild that same server-backed state whenever a
@@ -324,6 +329,7 @@ class _NenjamMatrimonyAppState extends ConsumerState<NenjamMatrimonyApp>
         ref.invalidate(myProfileProvider);
         ref.invalidate(profileDraftResponseProvider);
         ref.invalidate(faceVerificationStatusProvider);
+        ref.invalidate(myMembershipProvider);
       }
     });
 

@@ -1853,7 +1853,7 @@ abstract class AppLocalizations {
   /// No description provided for @premiumTitle.
   ///
   /// In en, this message translates to:
-  /// **'Upgrade to Luxury Premium'**
+  /// **'Nenjam Premium'**
   String get premiumTitle;
 
   /// No description provided for @premiumHeroTitle.
@@ -1868,16 +1868,16 @@ abstract class AppLocalizations {
   /// **'Get access to verified contacts, AI matchmaking & horoscope details.'**
   String get premiumHeroSubtitle;
 
-  /// No description provided for @premiumProceedToPayment.
+  /// No description provided for @premiumComingSoon.
   ///
   /// In en, this message translates to:
-  /// **'Proceed to Payment'**
-  String get premiumProceedToPayment;
+  /// **'Coming soon'**
+  String get premiumComingSoon;
 
   /// No description provided for @premiumUnavailableNotice.
   ///
   /// In en, this message translates to:
-  /// **'Online purchase isn\'t available yet. The plans shown here are for information only: no payment can be made and no premium access is granted.'**
+  /// **'Premium membership is coming soon. Online purchase isn\'t available yet, so no payment can be made and no premium access is granted.'**
   String get premiumUnavailableNotice;
 
   /// No description provided for @settingsTitle.
@@ -9355,6 +9355,504 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t load more profiles.'**
   String get discoverLoadMoreFailed;
+
+  /// No description provided for @membershipLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load membership details.'**
+  String get membershipLoadError;
+
+  /// No description provided for @membershipCardFreeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re on the Free plan'**
+  String get membershipCardFreeTitle;
+
+  /// No description provided for @membershipCardFreeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'See what each membership plan includes.'**
+  String get membershipCardFreeSubtitle;
+
+  /// No description provided for @membershipCardFreeSubtitleSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid plans are coming soon.'**
+  String get membershipCardFreeSubtitleSoon;
+
+  /// No description provided for @membershipCardPlanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{plan} member'**
+  String membershipCardPlanTitle(String plan);
+
+  /// No description provided for @membershipCardActiveUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Active until {date}'**
+  String membershipCardActiveUntil(String date);
+
+  /// No description provided for @membershipCardQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'{plan} starts on {date}'**
+  String membershipCardQueued(String plan, String date);
+
+  /// No description provided for @membershipCardViewMembership.
+  ///
+  /// In en, this message translates to:
+  /// **'View membership'**
+  String get membershipCardViewMembership;
+
+  /// No description provided for @membershipHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Membership history'**
+  String get membershipHistoryTitle;
+
+  /// No description provided for @membershipHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No purchases or plan changes yet.'**
+  String get membershipHistoryEmpty;
+
+  /// No description provided for @membershipStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting payment'**
+  String get membershipStatusPending;
+
+  /// No description provided for @membershipStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get membershipStatusActive;
+
+  /// No description provided for @membershipStatusExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get membershipStatusExpired;
+
+  /// No description provided for @membershipStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get membershipStatusCancelled;
+
+  /// No description provided for @membershipStatusRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunded'**
+  String get membershipStatusRefunded;
+
+  /// No description provided for @membershipStatusRevoked.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoked'**
+  String get membershipStatusRevoked;
+
+  /// No description provided for @membershipSourceGrant.
+  ///
+  /// In en, this message translates to:
+  /// **'Granted by Nenjam'**
+  String get membershipSourceGrant;
+
+  /// No description provided for @membershipMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 month} other{{count} months}}'**
+  String membershipMonths(int count);
+
+  /// No description provided for @membershipCurrentPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Current plan'**
+  String get membershipCurrentPlan;
+
+  /// No description provided for @membershipFeatureIncluded.
+  ///
+  /// In en, this message translates to:
+  /// **'Included'**
+  String get membershipFeatureIncluded;
+
+  /// No description provided for @membershipFeatureNotIncluded.
+  ///
+  /// In en, this message translates to:
+  /// **'Not included'**
+  String get membershipFeatureNotIncluded;
+
+  /// No description provided for @membershipFeatureUnlimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited'**
+  String get membershipFeatureUnlimited;
+
+  /// No description provided for @membershipFeaturePerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} per month'**
+  String membershipFeaturePerMonth(int count);
+
+  /// No description provided for @membershipFeaturePerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} per day'**
+  String membershipFeaturePerDay(int count);
+
+  /// No description provided for @membershipFeatureEveryMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} every {months} months'**
+  String membershipFeatureEveryMonths(int count, int months);
+
+  /// No description provided for @membershipStartsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts on {date}'**
+  String membershipStartsOn(String date);
+
+  /// No description provided for @membershipBuy.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy'**
+  String get membershipBuy;
+
+  /// No description provided for @membershipPurchaseUnavailableHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Buying isn\'t available in this version of the app yet.'**
+  String get membershipPurchaseUnavailableHere;
+
+  /// No description provided for @membershipPurchaseWebNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy membership in the Nenjam app.'**
+  String get membershipPurchaseWebNote;
+
+  /// No description provided for @membershipPurchaseActivated.
+  ///
+  /// In en, this message translates to:
+  /// **'Your membership is active.'**
+  String get membershipPurchaseActivated;
+
+  /// No description provided for @membershipPurchaseActivationPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment received. Your membership will be activated shortly.'**
+  String get membershipPurchaseActivationPending;
+
+  /// No description provided for @membershipPurchaseCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment cancelled.'**
+  String get membershipPurchaseCancelled;
+
+  /// No description provided for @membershipPurchaseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The payment didn\'t go through.'**
+  String get membershipPurchaseFailed;
+
+  /// No description provided for @membershipPurchaseContactSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t confirm this payment. Please contact support.'**
+  String get membershipPurchaseContactSupport;
+
+  /// No description provided for @membershipPurchaseStartFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t start the payment, try again.'**
+  String get membershipPurchaseStartFailed;
+
+  /// No description provided for @membershipDenialTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your membership plan'**
+  String get membershipDenialTitle;
+
+  /// No description provided for @membershipDenialSeePlans.
+  ///
+  /// In en, this message translates to:
+  /// **'See membership plans'**
+  String get membershipDenialSeePlans;
+
+  /// No description provided for @membershipDenialResetsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Your allowance resets on {date}.'**
+  String membershipDenialResetsOn(String date);
+
+  /// No description provided for @referralCodePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Have a referral code?'**
+  String get referralCodePrompt;
+
+  /// No description provided for @referralCodeHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. Enter the code someone shared with you.'**
+  String get referralCodeHelp;
+
+  /// No description provided for @referralCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Referral code'**
+  String get referralCodeLabel;
+
+  /// No description provided for @referralCodeApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get referralCodeApply;
+
+  /// No description provided for @referralCodeRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get referralCodeRemove;
+
+  /// No description provided for @referralCodeReferredBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Referred by {name}'**
+  String referralCodeReferredBy(String name);
+
+  /// No description provided for @referralCodeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'This code isn\'t valid'**
+  String get referralCodeInvalid;
+
+  /// No description provided for @referralCodeTooManyTries.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many tries, please wait'**
+  String get referralCodeTooManyTries;
+
+  /// No description provided for @referralCodeTooManyTriesSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many tries, please wait {seconds} seconds'**
+  String referralCodeTooManyTriesSeconds(int seconds);
+
+  /// No description provided for @referralCodeCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t check this code right now. You can carry on and try again later.'**
+  String get referralCodeCheckFailed;
+
+  /// No description provided for @referralCodeAttached.
+  ///
+  /// In en, this message translates to:
+  /// **'Referral code applied.'**
+  String get referralCodeAttached;
+
+  /// No description provided for @referralCodeAlreadyLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is already linked to a referral code.'**
+  String get referralCodeAlreadyLinked;
+
+  /// No description provided for @referralCodeNotApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t apply your referral code. Your signup is not affected.'**
+  String get referralCodeNotApplied;
+
+  /// No description provided for @referralCodeNotAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'This referral code can\'t be used with your account.'**
+  String get referralCodeNotAllowed;
+
+  /// No description provided for @referralCodeRetryLater.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t apply your referral code yet. We\'ll try again later.'**
+  String get referralCodeRetryLater;
+
+  /// No description provided for @partnerHelpEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Nenjam Partner Program help'**
+  String get partnerHelpEntry;
+
+  /// No description provided for @partnerHelpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & Support'**
+  String get partnerHelpTitle;
+
+  /// No description provided for @partnerHelpWelcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to the Nenjam Partner Program.'**
+  String get partnerHelpWelcome;
+
+  /// No description provided for @partnerHelpGettingStartedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Getting started'**
+  String get partnerHelpGettingStartedTitle;
+
+  /// No description provided for @partnerHelpGettingStartedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with your mobile number and the one-time code (OTP) we send you. Then fill in your application. Our team reviews it and either approves it or tells you why it was not approved. Once you are approved, you get your personal referral code.'**
+  String get partnerHelpGettingStartedBody;
+
+  /// No description provided for @partnerHelpReferringTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Referring members'**
+  String get partnerHelpReferringTitle;
+
+  /// No description provided for @partnerHelpReferringBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your referral code, or the ready-made English or Tamil message in the portal. People can enter your code when they sign up, or at payment when they buy their first paid plan. A person stays linked to the first agent whose code they used.'**
+  String get partnerHelpReferringBody;
+
+  /// No description provided for @partnerHelpTrackingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking referrals and earnings'**
+  String get partnerHelpTrackingTitle;
+
+  /// No description provided for @partnerHelpTrackingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'For privacy, you only see limited details about the people you referred: first name and last initial, age, city, their stage and a partly hidden phone number. You earn a commission only when someone you referred buys their first paid plan, and only once. Renewals and later plans do not earn commission. The commission is held for a short period, then approved, and paid by our team in the monthly payout.'**
+  String get partnerHelpTrackingBody;
+
+  /// No description provided for @partnerHelpBankTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank details'**
+  String get partnerHelpBankTitle;
+
+  /// No description provided for @partnerHelpBankBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your UPI ID or bank account details carefully and check them before saving. Your PAN is needed before your first payout. If you change your payment details, they are checked again and your next payout may wait a short while.'**
+  String get partnerHelpBankBody;
+
+  /// No description provided for @partnerHelpTermsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent terms (main points)'**
+  String get partnerHelpTermsTitle;
+
+  /// No description provided for @partnerHelpTermNoFees.
+  ///
+  /// In en, this message translates to:
+  /// **'Never charge families any fee for joining.'**
+  String get partnerHelpTermNoFees;
+
+  /// No description provided for @partnerHelpTermNoFalsePromises.
+  ///
+  /// In en, this message translates to:
+  /// **'Never make false promises about matches.'**
+  String get partnerHelpTermNoFalsePromises;
+
+  /// No description provided for @partnerHelpTermNoSharing.
+  ///
+  /// In en, this message translates to:
+  /// **'Never share information about the people you refer or your clients.'**
+  String get partnerHelpTermNoSharing;
+
+  /// No description provided for @partnerHelpTermConsent.
+  ///
+  /// In en, this message translates to:
+  /// **'Never create a profile for someone without their agreement.'**
+  String get partnerHelpTermConsent;
+
+  /// No description provided for @partnerHelpTermsConsequence.
+  ///
+  /// In en, this message translates to:
+  /// **'Breaking these rules can lead to your account being paused.'**
+  String get partnerHelpTermsConsequence;
+
+  /// No description provided for @partnerHelpNeedHelpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Need help?'**
+  String get partnerHelpNeedHelpTitle;
+
+  /// No description provided for @partnerHelpContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact the Nenjam team at {contact}.'**
+  String partnerHelpContact(String contact);
+
+  /// No description provided for @partnerHelpOtpWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Never share your OTP or any login details with anyone.'**
+  String get partnerHelpOtpWarning;
+
+  /// No description provided for @agentShareCopyCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy code'**
+  String get agentShareCopyCode;
+
+  /// No description provided for @agentShareCodeCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Code copied'**
+  String get agentShareCodeCopied;
+
+  /// No description provided for @agentShareWhatsApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Share on WhatsApp'**
+  String get agentShareWhatsApp;
+
+  /// No description provided for @agentShareLanguageEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get agentShareLanguageEnglish;
+
+  /// No description provided for @agentShareLanguageTamil.
+  ///
+  /// In en, this message translates to:
+  /// **'தமிழ்'**
+  String get agentShareLanguageTamil;
+
+  /// No description provided for @agentShareNotShareable.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing is turned off for this code right now.'**
+  String get agentShareNotShareable;
+
+  /// No description provided for @agentShareNoMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No ready-made message is available for this language.'**
+  String get agentShareNoMessage;
+
+  /// No description provided for @agentShareFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open WhatsApp. You can copy the code instead.'**
+  String get agentShareFailed;
+
+  /// No description provided for @agentShareLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load your referral codes.'**
+  String get agentShareLoadFailed;
+
+  /// No description provided for @agentShareNoCodes.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have a referral code yet.'**
+  String get agentShareNoCodes;
 }
 
 class _AppLocalizationsDelegate

@@ -9,12 +9,12 @@ import '../../../../core/services/media/crop_service.dart';
 import '../../../../core/services/media/photo_crop_screen.dart' show CropShape;
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../membership/presentation/providers/membership_providers.dart';
+import '../../../membership/presentation/widgets/membership_denial_sheet.dart';
 import '../../data/repositories/photo_repository.dart';
 import '../../domain/models/user_photo.dart';
 import '../providers/photo_providers.dart';
 import '../../../../l10n/app_localizations.dart';
-
-const int kMaxPhotos = 6;
 
 /// Self-contained profile-photo manager: fetches the user's photos, lets them
 /// add (camera/gallery), set primary, replace, delete, and drag-to-reorder —
@@ -38,6 +38,8 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
     final photosAsync = ref.watch(myPhotosProvider);
     final photos = photosAsync.valueOrNull ?? const <UserPhoto>[];
     final busy = photosAsync.isLoading;
+    // The member's photo cap from `effectiveCaps` (null = no cap).
+    final cap = ref.watch(profilePhotoCapProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,7 +53,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
               ),
             ),
             Text(
-              '${photos.length}/$kMaxPhotos',
+              cap == null ? '${photos.length}' : '${photos.length}/$cap',
               style: AppTypography.labelSmall.copyWith(
                 color: AppColors.textSecondaryLight,
               ),
@@ -64,7 +66,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
           // during mutations the previous list stays visible with an overlay.
           loading: () => photos.isEmpty
               ? const _LoadingState()
-              : _buildGallery(context, photos, busy: true),
+              : _buildGallery(context, photos, busy: true, cap: cap),
           error: (error, _) => _ErrorState(
             message: error is PhotoApiException
                 ? error.message
@@ -73,7 +75,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
           ),
           data: (list) => list.isEmpty
               ? _EmptyState(onAdd: _onAddTap)
-              : _buildGallery(context, list, busy: busy),
+              : _buildGallery(context, list, busy: busy, cap: cap),
         ),
       ],
     );
@@ -83,8 +85,9 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
     BuildContext context,
     List<UserPhoto> photos, {
     required bool busy,
+    required int? cap,
   }) {
-    final canAddMore = photos.length < kMaxPhotos;
+    final canAddMore = cap == null || photos.length < cap;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -331,11 +334,16 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
     if (!mounted) return;
     final state = ref.read(myPhotosProvider);
     state.whenOrNull(
-      error: (error, _) => _snack(
-        error is PhotoApiException
-            ? error.message
-            : AppLocalizations.of(context).authGenericError,
-      ),
+      error: (error, _) {
+        // Uploading over the photo cap under enforcement is a membership
+        // refusal: show the plan sheet rather than a bare snackbar.
+        if (showMembershipDenialIfAny(context, ref, error)) return;
+        _snack(
+          error is PhotoApiException
+              ? error.message
+              : AppLocalizations.of(context).authGenericError,
+        );
+      },
     );
   }
 
@@ -348,10 +356,7 @@ class _PhotoManagerSectionState extends ConsumerState<PhotoManagerSection> {
 }
 
 class _PhotoTile extends StatelessWidget {
-  const _PhotoTile({
-    required this.photo,
-    required this.onTap,
-  });
+  const _PhotoTile({required this.photo, required this.onTap});
 
   final UserPhoto photo;
   final VoidCallback onTap;

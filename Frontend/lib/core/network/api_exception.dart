@@ -11,6 +11,10 @@ class ApiException implements Exception {
     this.message, {
     this.code,
     this.retryAfterSeconds,
+    this.feature,
+    this.limit,
+    this.resetsAt,
+    this.upgradeTo,
   });
   final int? statusCode;
   final String message;
@@ -29,6 +33,29 @@ class ApiException implements Exception {
   /// a 429 alone never implies a cooldown.
   final int? retryAfterSeconds;
 
+  // ── Membership refusal details ──────────────────────────────────────────
+  // Parsed only when [code] starts with `MEMBERSHIP_` (a membership 403, see
+  // docs/membership/api-contract.md). Each is null when the body omits it or
+  // sends something unusable — never a guessed default. The backend only
+  // returns these once enforcement is switched on; in shadow mode it doesn't.
+
+  /// Feature id the refusal is about, e.g. `interests.send`.
+  final String? feature;
+
+  /// The plan's allowance for [feature] (a whole number, 0 or more).
+  final int? limit;
+
+  /// When the allowance resets. Null for a cap (it doesn't reset) and for a
+  /// feature the plan doesn't include.
+  final DateTime? resetsAt;
+
+  /// The cheapest plan on sale that would allow this, e.g. `GOLD`. Null means
+  /// no upgrade can help — never offer one then.
+  final String? upgradeTo;
+
+  /// Whether this is a membership refusal rather than any other 403.
+  bool get isMembershipDenial => code?.startsWith('MEMBERSHIP_') ?? false;
+
   @override
   String toString() => 'ApiException($statusCode): $message';
 }
@@ -46,6 +73,16 @@ T? unwrapOrThrow<T>(int? statusCode, T? data) {
     final dynamic message = data is Map ? data['message'] : null;
     final dynamic code = data is Map ? data['code'] : null;
     final dynamic retryAfter = data is Map ? data['retryAfterSeconds'] : null;
+    // Membership details only ride on a membership refusal; on any other error
+    // a `limit` or `feature` key means something else and is left alone.
+    final Map<dynamic, dynamic>? membership =
+        data is Map && code is String && code.startsWith('MEMBERSHIP_')
+        ? data
+        : null;
+    final dynamic feature = membership?['feature'];
+    final dynamic limit = membership?['limit'];
+    final dynamic resetsAt = membership?['resetsAt'];
+    final dynamic upgradeTo = membership?['upgradeTo'];
     throw ApiException(
       statusCode,
       message is String
@@ -58,6 +95,13 @@ T? unwrapOrThrow<T>(int? statusCode, T? data) {
           retryAfter is num && retryAfter.isFinite && retryAfter > 0
           ? retryAfter.ceil()
           : null,
+      feature: feature is String && feature.isNotEmpty ? feature : null,
+      limit:
+          limit is num && limit.isFinite && limit >= 0 && limit == limit.floor()
+          ? limit.toInt()
+          : null,
+      resetsAt: resetsAt is String ? DateTime.tryParse(resetsAt) : null,
+      upgradeTo: upgradeTo is String && upgradeTo.isNotEmpty ? upgradeTo : null,
     );
   }
   return data;

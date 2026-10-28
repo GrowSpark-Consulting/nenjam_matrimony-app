@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nenjam_matrimony/core/services/storage_service.dart';
+import 'package:nenjam_matrimony/core/widgets/buttons/gradient_button.dart';
 import 'package:nenjam_matrimony/core/widgets/cards/subscription_card.dart';
 import 'package:nenjam_matrimony/features/discover/domain/entities/discover_feed_entity.dart';
 import 'package:nenjam_matrimony/features/discover/domain/entities/discover_profile_page.dart';
@@ -10,6 +11,8 @@ import 'package:nenjam_matrimony/features/discover/domain/repositories/discover_
 import 'package:nenjam_matrimony/features/discover/presentation/providers/discover_providers.dart';
 import 'package:nenjam_matrimony/features/inbox/presentation/widgets/message_bubble.dart';
 import 'package:nenjam_matrimony/features/matches/presentation/pages/matches_page.dart';
+import 'package:nenjam_matrimony/features/membership/data/repositories/mock_membership_repository.dart';
+import 'package:nenjam_matrimony/features/membership/presentation/providers/membership_providers.dart';
 import 'package:nenjam_matrimony/features/premium/presentation/pages/premium_page.dart';
 import 'package:nenjam_matrimony/features/profile/presentation/providers/profile_dashboard_providers.dart';
 import 'package:nenjam_matrimony/features/profile_photos/presentation/providers/photo_providers.dart';
@@ -48,6 +51,9 @@ void main() {
   final editMode = profileFlowModeProvider.overrideWith(
     (ref) => ProfileFlowMode.edit,
   );
+  final mockMembership = membershipRepositoryProvider.overrideWithValue(
+    MockMembershipRepository(),
+  );
   final editProfileOverrides = [
     editMode,
     profileDraftResponseProvider.overrideWith((ref) async => {}),
@@ -57,7 +63,7 @@ void main() {
   group('no overflow at tablet, desktop and ultrawide sizes', () {
     final pages = <String, (Widget Function(), List<Override>)>{
       'MatchesPage': (() => const MatchesPage(), const []),
-      'PremiumPage': (() => const PremiumPage(), const []),
+      'PremiumPage': (() => const PremiumPage(), [mockMembership]),
       'SettingsPage': (() => const SettingsPage(), const []),
       'EditProfilePage': (() => const EditProfilePage(), editProfileOverrides),
       'BasicInfoEditPage': (() => const BasicInfoEditPage(), [editMode]),
@@ -110,40 +116,29 @@ void main() {
     });
   });
 
+  // The Premium tab shows no plans until the app reads the backend catalogue;
+  // its unavailable state sits in a centered 560px column at every width.
   group('Premium', () {
-    List<Rect> cardRects(WidgetTester tester) => [
-      for (final e in find.byType(NmSubscriptionCard).evaluate())
-        tester.getRect(find.byWidget(e.widget)),
-    ];
+    for (final size in const [Size(390, 844), Size(1440, 900)]) {
+      testWidgets('no plan cards, notice centered @ ${size.width.toInt()}', (
+        tester,
+      ) async {
+        expectNoOverflowIn(
+          await pumpAtSize(
+            tester,
+            size,
+            const PremiumPage(),
+            overrides: [mockMembership],
+          ),
+        );
+        expect(find.byType(NmSubscriptionCard), findsNothing);
 
-    testWidgets('phone: plans stacked, full width', (tester) async {
-      expectNoOverflowIn(
-        await pumpAtSize(tester, const Size(390, 844), const PremiumPage()),
-      );
-      final rects = cardRects(tester);
-      expect(rects, hasLength(2));
-      expect(rects[1].top, greaterThan(rects[0].bottom));
-      // 390 - 2 * 20 page padding, as before.
-      expect(rects[0].width, 350);
-    });
-
-    testWidgets('desktop: plans side by side in a centered 900px column', (
-      tester,
-    ) async {
-      expectNoOverflowIn(
-        await pumpAtSize(tester, const Size(1440, 900), const PremiumPage()),
-      );
-      final rects = cardRects(tester);
-      expect(rects, hasLength(2));
-      expect(rects[0].top, rects[1].top);
-      // Equal heights, whatever their feature lists.
-      expect(rects[0].height, rects[1].height);
-      // Column: 900 wide, centered in 1440 - 2 * 20 → starts at 270.
-      // Each plan: (900 - 20 gap) / 2.
-      expect(rects[0].left, 270);
-      expect(rects[0].width, 440);
-      expect(rects[1].right, 1170);
-    });
+        final cta = tester.getRect(find.byType(NmGradientButton));
+        expect(cta.center.dx, size.width / 2);
+        // 390 - 2 * 20 page padding on a phone; capped at 560 on desktop.
+        expect(cta.width, size.width == 390 ? 350 : 560);
+      });
+    }
   });
 
   group('Matches reel', () {

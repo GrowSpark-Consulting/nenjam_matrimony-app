@@ -19,9 +19,10 @@ final photoRepositoryProvider = Provider<PhotoRepository>(
 /// with a fresh presigned URL. Read-only consumers (profile dashboard, review
 /// screen) watch this; mutations go through [PhotosController], which keeps
 /// this provider's cache in sync.
-final myPhotosProvider = AsyncNotifierProvider<PhotosController, List<UserPhoto>>(
-  PhotosController.new,
-);
+final myPhotosProvider =
+    AsyncNotifierProvider<PhotosController, List<UserPhoto>>(
+      PhotosController.new,
+    );
 
 /// The signed-in user's current avatar URL — the primary photo's `cdnUrl`,
 /// falling back to the first photo if none is flagged primary, or `null`
@@ -160,14 +161,15 @@ class PhotosController extends AsyncNotifier<List<UserPhoto>> {
   /// Whether a Firebase ID token is actually obtainable right now. Waits out
   /// the post-launch restore window rather than reading `currentUser`
   /// synchronously — see AuthTokenService.getFirebaseToken.
-  Future<bool> _hasSession() async =>
-      (await photoUploadSession(ref.read)).ok;
+  Future<bool> _hasSession() async => (await photoUploadSession(ref.read)).ok;
 
   /// Re-fetches from the backend (e.g. pull-to-refresh or retry after error).
   Future<void> refresh() {
     PhotoTrace.begin('refresh');
-    return _run(_repo.fetchPhotos, syncProfile: false)
-        .whenComplete(() => PhotoTrace.end('refresh'));
+    return _run(
+      _repo.fetchPhotos,
+      syncProfile: false,
+    ).whenComplete(() => PhotoTrace.end('refresh'));
   }
 
   Future<void> upload(XFile file, {bool? isPrimary}) {
@@ -203,8 +205,9 @@ class PhotosController extends AsyncNotifier<List<UserPhoto>> {
   Future<void> reorder(List<String> orderedIds) =>
       _run(() => _repo.reorder(orderedIds));
 
-  Future<void> setPrimary(String id) => _run(() => _repo.setPrimary(id))
-      .whenComplete(_invalidateFaceVerificationStatus);
+  Future<void> setPrimary(String id) => _run(
+    () => _repo.setPrimary(id),
+  ).whenComplete(_invalidateFaceVerificationStatus);
 
   /// The three mutations above can each change which photo is primary
   /// (replace keeps the same photo id but a new S3 key; delete can remove

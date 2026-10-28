@@ -18,6 +18,7 @@ import 'profile_navigation.dart';
 import 'route_entity_pages.dart';
 import '../../features/discover/presentation/pages/discover_page.dart';
 import '../../features/help/presentation/pages/help_page.dart';
+import '../../features/help/presentation/pages/partner_program_help_page.dart';
 import '../../features/support/domain/models/support_ticket.dart';
 import '../../features/support/presentation/pages/support_ticket_form_page.dart';
 import '../../features/support/presentation/pages/ticket_history_page.dart';
@@ -31,6 +32,7 @@ import '../../features/nearby/presentation/pages/nearby_page.dart';
 import '../../features/notifications/presentation/pages/notifications_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/partner_preferences/presentation/pages/partner_preferences_page.dart';
+import '../../features/membership/presentation/pages/membership_history_page.dart';
 import '../../features/premium/presentation/pages/premium_page.dart';
 import '../../features/privacy/presentation/pages/privacy_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
@@ -526,6 +528,11 @@ GoRouter createRouter(WidgetRef ref) {
         builder: (context, state) => const FaceVerificationPage(),
       ),
       GoRoute(
+        path: RouteNames.membershipHistory,
+        name: RouteNames.membershipHistoryName,
+        builder: (context, state) => const MembershipHistoryPage(),
+      ),
+      GoRoute(
         path: RouteNames.subscription,
         name: RouteNames.subscriptionName,
         pageBuilder: (context, state) => CustomTransitionPage(
@@ -552,6 +559,11 @@ GoRouter createRouter(WidgetRef ref) {
         path: RouteNames.ticketHistory,
         name: RouteNames.ticketHistoryName,
         builder: (context, state) => const TicketHistoryPage(),
+      ),
+      GoRoute(
+        path: RouteNames.partnerProgramHelp,
+        name: RouteNames.partnerProgramHelpName,
+        builder: (context, state) => const PartnerProgramHelpPage(),
       ),
       GoRoute(
         path: RouteNames.privacy,

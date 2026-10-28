@@ -7,8 +7,7 @@ import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
-import '../../../profile_photos/presentation/widgets/photo_manager_section.dart'
-    show kMaxPhotos;
+import '../../../membership/presentation/providers/membership_providers.dart';
 import '../../../registration/presentation/utils/open_edit_profile.dart';
 import '../../domain/completion_recommendation.dart';
 import '../providers/completion_recommendation_provider.dart';
@@ -107,7 +106,9 @@ class CompleteProfileCard extends ConsumerWidget {
   /// the backend's own `photo` recommendation card completes at the first
   /// upload (`photosComplete = photoCount > 0`, the registration-minimum
   /// bar), but this card is asking for a *strong* profile, not a minimum one
-  /// — so it keeps nudging up to [kMaxPhotos], read live off
+  /// — so it keeps nudging up to the member's photo cap
+  /// ([profilePhotoCapProvider]; with no cap, [kPreMembershipPhotoCap]), read
+  /// live off
   /// [myPhotosProvider] rather than the backend's binary flag. Both signals
   /// are real backend data; they just answer different questions.
   List<_HomeCompletionItem> _items(
@@ -117,6 +118,8 @@ class CompleteProfileCard extends ConsumerWidget {
   ) {
     final l10n = AppLocalizations.of(context);
     final photos = ref.watch(myPhotosProvider).valueOrNull;
+    final photoTarget =
+        ref.watch(profilePhotoCapProvider) ?? kPreMembershipPhotoCap;
 
     _HomeCompletionItem tile(String key, int wizardStep) => _HomeCompletionItem(
       key: key,
@@ -126,7 +129,7 @@ class CompleteProfileCard extends ConsumerWidget {
     );
 
     return [
-      if (photos != null && photos.length < kMaxPhotos)
+      if (photos != null && photos.length < photoTarget)
         tile(CompletionCardKeys.photo, _wizardStepPhotos),
       if (!_isComplete(recommendations, CompletionCardKeys.aboutFamily))
         tile(CompletionCardKeys.aboutFamily, _wizardStepFamily),

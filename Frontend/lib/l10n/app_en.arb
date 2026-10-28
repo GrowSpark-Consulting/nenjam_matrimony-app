@@ -403,11 +403,11 @@
   "profileBasicDetailsTitle": "Basic Details",
   "profileCardShortlist": "Shortlist",
   "profileCardLike": "Like",
-  "premiumTitle": "Upgrade to Luxury Premium",
+  "premiumTitle": "Nenjam Premium",
   "premiumHeroTitle": "Unlock Unlimited Matches",
   "premiumHeroSubtitle": "Get access to verified contacts, AI matchmaking & horoscope details.",
-  "premiumProceedToPayment": "Proceed to Payment",
-  "premiumUnavailableNotice": "Online purchase isn't available yet. The plans shown here are for information only: no payment can be made and no premium access is granted.",
+  "premiumComingSoon": "Coming soon",
+  "premiumUnavailableNotice": "Premium membership is coming soon. Online purchase isn't available yet, so no payment can be made and no premium access is granted.",
   "settingsTitle": "Settings",
   "settingsAccountSecuritySection": "Account & Security",
   "settingsIdVerificationTitle": "ID Verification",
@@ -2046,5 +2046,178 @@
   "photoViewerNext": "Next photo",
   "nearbyPermissionBlockedMessageWeb": "Location is blocked for this site. Allow it in your browser's site settings (next to the address bar), then try again.",
   "profileLinkCopied": "Profile link copied",
-  "discoverLoadMoreFailed": "Couldn't load more profiles."
+  "discoverLoadMoreFailed": "Couldn't load more profiles.",
+  "membershipLoadError": "Couldn't load membership details.",
+  "membershipCardFreeTitle": "You're on the Free plan",
+  "membershipCardFreeSubtitle": "See what each membership plan includes.",
+  "membershipCardFreeSubtitleSoon": "Paid plans are coming soon.",
+  "membershipCardPlanTitle": "{plan} member",
+  "@membershipCardPlanTitle": {
+    "placeholders": {
+      "plan": {
+        "type": "String"
+      }
+    }
+  },
+  "membershipCardActiveUntil": "Active until {date}",
+  "@membershipCardActiveUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "membershipCardQueued": "{plan} starts on {date}",
+  "@membershipCardQueued": {
+    "placeholders": {
+      "plan": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "membershipCardViewMembership": "View membership",
+  "membershipHistoryTitle": "Membership history",
+  "membershipHistoryEmpty": "No purchases or plan changes yet.",
+  "membershipStatusPending": "Awaiting payment",
+  "membershipStatusActive": "Active",
+  "membershipStatusExpired": "Expired",
+  "membershipStatusCancelled": "Cancelled",
+  "membershipStatusRefunded": "Refunded",
+  "membershipStatusRevoked": "Revoked",
+  "membershipSourceGrant": "Granted by Nenjam",
+  "membershipMonths": "{count, plural, =1{1 month} other{{count} months}}",
+  "@membershipMonths": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "membershipCurrentPlan": "Current plan",
+  "membershipFeatureIncluded": "Included",
+  "membershipFeatureNotIncluded": "Not included",
+  "membershipFeatureUnlimited": "Unlimited",
+  "membershipFeaturePerMonth": "{count} per month",
+  "@membershipFeaturePerMonth": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "membershipFeaturePerDay": "{count} per day",
+  "@membershipFeaturePerDay": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "membershipFeatureEveryMonths": "{count} every {months} months",
+  "@membershipFeatureEveryMonths": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "months": {
+        "type": "int"
+      }
+    }
+  },
+  "membershipStartsOn": "Starts on {date}",
+  "@membershipStartsOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "membershipBuy": "Buy",
+  "membershipPurchaseUnavailableHere": "Buying isn't available in this version of the app yet.",
+  "membershipPurchaseWebNote": "Buy membership in the Nenjam app.",
+  "membershipPurchaseActivated": "Your membership is active.",
+  "membershipPurchaseActivationPending": "Payment received. Your membership will be activated shortly.",
+  "membershipPurchaseCancelled": "Payment cancelled.",
+  "membershipPurchaseFailed": "The payment didn't go through.",
+  "membershipPurchaseContactSupport": "We couldn't confirm this payment. Please contact support.",
+  "membershipPurchaseStartFailed": "Couldn't start the payment, try again.",
+  "membershipDenialTitle": "Your membership plan",
+  "membershipDenialSeePlans": "See membership plans",
+  "membershipDenialResetsOn": "Your allowance resets on {date}.",
+  "@membershipDenialResetsOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "referralCodePrompt": "Have a referral code?",
+  "referralCodeHelp": "Optional. Enter the code someone shared with you.",
+  "referralCodeLabel": "Referral code",
+  "referralCodeApply": "Apply",
+  "referralCodeRemove": "Remove",
+  "referralCodeReferredBy": "Referred by {name}",
+  "@referralCodeReferredBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "referralCodeInvalid": "This code isn't valid",
+  "referralCodeTooManyTries": "Too many tries, please wait",
+  "referralCodeTooManyTriesSeconds": "Too many tries, please wait {seconds} seconds",
+  "@referralCodeTooManyTriesSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "referralCodeCheckFailed": "We couldn't check this code right now. You can carry on and try again later.",
+  "referralCodeAttached": "Referral code applied.",
+  "referralCodeAlreadyLinked": "Your account is already linked to a referral code.",
+  "referralCodeNotApplied": "We couldn't apply your referral code. Your signup is not affected.",
+  "referralCodeNotAllowed": "This referral code can't be used with your account.",
+  "referralCodeRetryLater": "We couldn't apply your referral code yet. We'll try again later.",
+  "partnerHelpEntry": "Nenjam Partner Program help",
+  "partnerHelpTitle": "Help & Support",
+  "partnerHelpWelcome": "Welcome to the Nenjam Partner Program.",
+  "partnerHelpGettingStartedTitle": "Getting started",
+  "partnerHelpGettingStartedBody": "Sign in with your mobile number and the one-time code (OTP) we send you. Then fill in your application. Our team reviews it and either approves it or tells you why it was not approved. Once you are approved, you get your personal referral code.",
+  "partnerHelpReferringTitle": "Referring members",
+  "partnerHelpReferringBody": "Share your referral code, or the ready-made English or Tamil message in the portal. People can enter your code when they sign up, or at payment when they buy their first paid plan. A person stays linked to the first agent whose code they used.",
+  "partnerHelpTrackingTitle": "Tracking referrals and earnings",
+  "partnerHelpTrackingBody": "For privacy, you only see limited details about the people you referred: first name and last initial, age, city, their stage and a partly hidden phone number. You earn a commission only when someone you referred buys their first paid plan, and only once. Renewals and later plans do not earn commission. The commission is held for a short period, then approved, and paid by our team in the monthly payout.",
+  "partnerHelpBankTitle": "Bank details",
+  "partnerHelpBankBody": "Add your UPI ID or bank account details carefully and check them before saving. Your PAN is needed before your first payout. If you change your payment details, they are checked again and your next payout may wait a short while.",
+  "partnerHelpTermsTitle": "Agent terms (main points)",
+  "partnerHelpTermNoFees": "Never charge families any fee for joining.",
+  "partnerHelpTermNoFalsePromises": "Never make false promises about matches.",
+  "partnerHelpTermNoSharing": "Never share information about the people you refer or your clients.",
+  "partnerHelpTermConsent": "Never create a profile for someone without their agreement.",
+  "partnerHelpTermsConsequence": "Breaking these rules can lead to your account being paused.",
+  "partnerHelpNeedHelpTitle": "Need help?",
+  "partnerHelpContact": "Contact the Nenjam team at {contact}.",
+  "@partnerHelpContact": {
+    "placeholders": {
+      "contact": {
+        "type": "String"
+      }
+    }
+  },
+  "partnerHelpOtpWarning": "Never share your OTP or any login details with anyone.",
+  "agentShareCopyCode": "Copy code",
+  "agentShareCodeCopied": "Code copied",
+  "agentShareWhatsApp": "Share on WhatsApp",
+  "agentShareLanguageEnglish": "English",
+  "agentShareLanguageTamil": "தமிழ்",
+  "agentShareNotShareable": "Sharing is turned off for this code right now.",
+  "agentShareNoMessage": "No ready-made message is available for this language.",
+  "agentShareFailed": "Couldn't open WhatsApp. You can copy the code instead.",
+  "agentShareLoadFailed": "Couldn't load your referral codes.",
+  "agentShareNoCodes": "You don't have a referral code yet."
 }
