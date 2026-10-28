@@ -33,6 +33,7 @@ const newAgent = (id = 'agent-1', phoneHash = 'phone-hash-1') => ({
   city: 'Chennai',
   state: 'Tamil Nadu',
   panLast4: null,
+  panSealed: null,
   createdAt: NOW,
 });
 
@@ -84,6 +85,9 @@ describe('FakeAgentUnitOfWork (AgentUnitOfWork contract)', () => {
             source: 'CODE_AT_SIGNUP',
             memberPhoneHash: null,
             attributedAt: NOW,
+            status: 'ACTIVE',
+            windowEndsAt: LATER,
+            needsReview: false,
           },
           tx,
         );
@@ -125,6 +129,9 @@ describe('FakeAgentUnitOfWork (AgentUnitOfWork contract)', () => {
               source: 'CODE_AT_SIGNUP',
               memberPhoneHash: null,
               attributedAt: NOW,
+              status: 'ACTIVE',
+              windowEndsAt: LATER,
+              needsReview: false,
             },
             tx,
           );

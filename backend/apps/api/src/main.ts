@@ -129,15 +129,18 @@ async function bootstrap() {
       allowedOrigins,
       isDevelopment: configForCors.isDevelopment,
     }),
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',
       'Authorization',
       'X-App-Version',
       'Accept',
+      'Accept-Version',
       // The admin panel's second-factor session (admin/auth/admin-auth.policy.ts).
       'X-Admin-Session',
     ],
+    // Lets a browser app read Retry-After on a 429.
+    exposedHeaders: ['Retry-After'],
   });
 
   app.useGlobalPipes(

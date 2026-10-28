@@ -5,17 +5,25 @@
  * the transaction fails (see `FakeAgentUnitOfWork`); reads see live state.
  */
 import type { ReferralViewSource } from '../referral/agent-referral-view';
+import { looksLikeRawIp } from '../referral/requester-key';
 import {
+  AgentApplicantRecord,
+  AgentApplicantRepository,
   AgentConflictError,
   AgentMemberReadPort,
   AgentMemberSnapshot,
+  AgentPayoutDetailsRecord,
+  AgentPayoutDetailsRepository,
   AgentRecord,
   AgentRefreshTokenRecord,
   AgentRefreshTokenRepository,
   AgentRepository,
   NewAgentRecord,
+  ReferralAttemptDimension,
   ReferralAttributionRecord,
   ReferralAttributionRepository,
+  ReferralCodeAttemptStore,
+  ReferralCodeAttemptWindow,
   ReferralCodeRecord,
   ReferralCodeRepository,
 } from '../ports/agent-data-ports';
@@ -179,6 +187,17 @@ export class FakeAgentRefreshTokenRepository implements AgentRefreshTokenReposit
     return Promise.resolve(copy(next));
   }
 
+  revoke(tokenId: string, at: Date, tx?: AgentTx): Promise<boolean> {
+    const track = trackWrite(tx);
+    const row = this.rows.get(tokenId);
+    if (!row || row.revokedAt !== null) return Promise.resolve(false);
+    row.revokedAt = new Date(at.getTime());
+    track(() => {
+      row.revokedAt = null;
+    });
+    return Promise.resolve(true);
+  }
+
   revokeAllForAgent(agentId: string, at: Date, tx?: AgentTx): Promise<number> {
     const track = trackWrite(tx);
     const revoked: AgentRefreshTokenRecord[] = [];
@@ -211,6 +230,41 @@ export class FakeReferralAttributionRepository implements ReferralAttributionRep
     );
   }
 
+  listPageByAgent(
+    agentId: string,
+    page: { limit: number; after?: { at: Date; id: string } },
+  ): Promise<ReferralAttributionRecord[]> {
+    const newestFirst = (
+      a: ReferralAttributionRecord,
+      b: ReferralAttributionRecord,
+    ) =>
+      b.attributedAt.getTime() - a.attributedAt.getTime() ||
+      (a.id < b.id ? 1 : a.id > b.id ? -1 : 0);
+    const { after } = page;
+    return Promise.resolve(
+      [...this.rows.values()]
+        .filter((row) => row.agentId === agentId)
+        .sort(newestFirst)
+        .filter(
+          (row) =>
+            after === undefined ||
+            row.attributedAt.getTime() < after.at.getTime() ||
+            (row.attributedAt.getTime() === after.at.getTime() &&
+              row.id < after.id),
+        )
+        .slice(0, page.limit)
+        .map(copy),
+    );
+  }
+
+  findByIdForAgent(
+    attributionId: string,
+    agentId: string,
+  ): Promise<ReferralAttributionRecord | null> {
+    const row = this.rows.get(attributionId);
+    return Promise.resolve(row && row.agentId === agentId ? copy(row) : null);
+  }
+
   isPhoneHashCredited(phoneHash: string): Promise<boolean> {
     return Promise.resolve(
       [...this.rows.values()].some((r) => r.memberPhoneHash === phoneHash),
@@ -225,7 +279,9 @@ export class FakeReferralAttributionRepository implements ReferralAttributionRep
     const rows = [...this.rows.values()];
     if (
       this.rows.has(attribution.id) ||
-      rows.some((row) => row.memberId === attribution.memberId)
+      rows.some((row) => row.memberId === attribution.memberId) ||
+      (attribution.memberPhoneHash !== null &&
+        rows.some((row) => row.memberPhoneHash === attribution.memberPhoneHash))
     ) {
       return Promise.reject(new AgentConflictError('DUPLICATE_ATTRIBUTION'));
     }
@@ -234,6 +290,108 @@ export class FakeReferralAttributionRepository implements ReferralAttributionRep
       this.rows.delete(attribution.id);
     });
     return Promise.resolve(copy(attribution));
+  }
+}
+
+export class FakeAgentApplicantRepository implements AgentApplicantRepository {
+  private readonly rows = new Map<string, AgentApplicantRecord>();
+
+  save(record: AgentApplicantRecord, tx?: AgentTx): Promise<void> {
+    const track = trackWrite(tx);
+    const before = this.rows.get(record.phoneHash);
+    this.rows.set(record.phoneHash, copy(record));
+    track(() => {
+      if (before) this.rows.set(record.phoneHash, before);
+      else this.rows.delete(record.phoneHash);
+    });
+    return Promise.resolve();
+  }
+
+  find(phoneHash: string): Promise<AgentApplicantRecord | null> {
+    const row = this.rows.get(phoneHash);
+    return Promise.resolve(row ? copy(row) : null);
+  }
+
+  delete(phoneHash: string, tx?: AgentTx): Promise<void> {
+    const track = trackWrite(tx);
+    const before = this.rows.get(phoneHash);
+    this.rows.delete(phoneHash);
+    track(() => {
+      if (before) this.rows.set(phoneHash, before);
+    });
+    return Promise.resolve();
+  }
+}
+
+export class FakeAgentPayoutDetailsRepository implements AgentPayoutDetailsRepository {
+  private readonly rows = new Map<string, AgentPayoutDetailsRecord>();
+
+  find(agentId: string): Promise<AgentPayoutDetailsRecord | null> {
+    const row = this.rows.get(agentId);
+    return Promise.resolve(row ? copy(row) : null);
+  }
+
+  save(record: AgentPayoutDetailsRecord, tx?: AgentTx): Promise<void> {
+    const track = trackWrite(tx);
+    const before = this.rows.get(record.agentId);
+    this.rows.set(record.agentId, copy(record));
+    track(() => {
+      if (before) this.rows.set(record.agentId, before);
+      else this.rows.delete(record.agentId);
+    });
+    return Promise.resolve();
+  }
+}
+
+export class FakeReferralCodeAttemptStore implements ReferralCodeAttemptStore {
+  private rows: Array<{
+    requesterKey: string;
+    codeKey: string | null;
+    at: Date;
+  }> = [];
+
+  window(
+    dimension: ReferralAttemptDimension,
+    key: string,
+    since: Date,
+  ): Promise<ReferralCodeAttemptWindow> {
+    const times = this.rows
+      .filter(
+        (row) =>
+          (dimension === 'REQUESTER' ? row.requesterKey : row.codeKey) ===
+            key && row.at.getTime() > since.getTime(),
+      )
+      .map((row) => row.at.getTime())
+      .sort((a, b) => a - b);
+    return Promise.resolve({
+      count: times.length,
+      oldestAt: times.length > 0 ? new Date(times[0]) : null,
+    });
+  }
+
+  record(
+    attempt: { requesterKey: string; codeKey: string | null; at: Date },
+    tx?: AgentTx,
+  ): Promise<void> {
+    if (looksLikeRawIp(attempt.requesterKey)) {
+      return Promise.reject(
+        new RangeError(
+          'requesterKey must be a hashed key, not a raw IP address.',
+        ),
+      );
+    }
+    const track = trackWrite(tx);
+    const row = { ...attempt, at: new Date(attempt.at.getTime()) };
+    this.rows.push(row);
+    track(() => {
+      this.rows = this.rows.filter((r) => r !== row);
+    });
+    return Promise.resolve();
+  }
+
+  /** Test helper: how many attempts are stored. */
+  get size(): number {
+    return this.rows.length;
   }
 }
 

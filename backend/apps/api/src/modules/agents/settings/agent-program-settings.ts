@@ -25,6 +25,18 @@ export const AGENT_PAYOUT_DETAILS_WAIT_HOURS_KEY =
 export const COMMISSION_BASE_KEY = 'commission.base';
 export const COMMISSION_BASE_PROVISIONAL_KEY = 'commission.base_provisional';
 export const PAYOUT_TAX_WITHHOLDING_KEY = 'payout.tax_withholding';
+export const AGENT_ACCESS_TOKEN_TTL_SECONDS_KEY =
+  'agent.access_token_ttl_seconds';
+export const AGENT_REFRESH_TOKEN_TTL_SECONDS_KEY =
+  'agent.refresh_token_ttl_seconds';
+export const AGENT_OTP_RESEND_AFTER_SECONDS_KEY =
+  'agent.otp_resend_after_seconds';
+export const REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY =
+  'referral.code_validation_ip_limit';
+export const REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY =
+  'referral.code_validation_code_limit';
+export const REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY =
+  'referral.code_validation_window_seconds';
 
 export type CommissionBase = 'AMOUNT_PAID' | 'AMOUNT_PAID_EXCLUDING_GST';
 
@@ -44,6 +56,12 @@ export interface AgentProgramSettings {
   commissionBaseProvisional?: boolean;
   /** Passed through untouched: the CA has not decided its shape. */
   payoutTaxWithholding?: unknown;
+  accessTokenTtlSeconds?: number;
+  refreshTokenTtlSeconds?: number;
+  otpResendAfterSeconds?: number;
+  codeValidationIpLimit?: number;
+  codeValidationCodeLimit?: number;
+  codeValidationWindowSeconds?: number;
 }
 
 export interface ParsedAgentProgramSettings {
@@ -64,6 +82,8 @@ type Rule = {
 const isBoolean = (v: unknown): boolean => typeof v === 'boolean';
 const isIntegerAtLeast0 = (v: unknown): boolean =>
   typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
+const isPositiveInteger = (v: unknown): boolean =>
+  typeof v === 'number' && Number.isSafeInteger(v) && v >= 1;
 const isBps = (v: unknown): boolean =>
   isIntegerAtLeast0(v) && (v as number) <= 10_000;
 const isCommissionBase = (v: unknown): boolean =>
@@ -144,6 +164,42 @@ const RULES: readonly Rule[] = [
     check: isAnything,
     expected: 'any value',
     nullIsValue: true,
+  },
+  {
+    key: AGENT_ACCESS_TOKEN_TTL_SECONDS_KEY,
+    field: 'accessTokenTtlSeconds',
+    check: isPositiveInteger,
+    expected: 'an integer >= 1',
+  },
+  {
+    key: AGENT_REFRESH_TOKEN_TTL_SECONDS_KEY,
+    field: 'refreshTokenTtlSeconds',
+    check: isPositiveInteger,
+    expected: 'an integer >= 1',
+  },
+  {
+    key: AGENT_OTP_RESEND_AFTER_SECONDS_KEY,
+    field: 'otpResendAfterSeconds',
+    check: isPositiveInteger,
+    expected: 'an integer >= 1',
+  },
+  {
+    key: REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY,
+    field: 'codeValidationIpLimit',
+    check: isPositiveInteger,
+    expected: 'an integer >= 1',
+  },
+  {
+    key: REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY,
+    field: 'codeValidationCodeLimit',
+    check: isPositiveInteger,
+    expected: 'an integer >= 1',
+  },
+  {
+    key: REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY,
+    field: 'codeValidationWindowSeconds',
+    check: isPositiveInteger,
+    expected: 'an integer >= 1',
   },
 ];
 
