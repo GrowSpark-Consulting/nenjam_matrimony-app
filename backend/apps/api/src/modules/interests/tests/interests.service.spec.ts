@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InterestsService } from '../services/interests.service';
 import type { ExpressInterest } from '../../../../../../libs/database/generated/client';
+import { membershipServiceInMode } from '../../entitlements/tests/membership-test-doubles';
 
 function interest(over: Partial<ExpressInterest> = {}): ExpressInterest {
   return {
@@ -63,6 +64,7 @@ function build() {
     mapper as never,
     realtime as never,
     emailDispatch as never,
+    membershipServiceInMode('off'),
   );
   return {
     service,

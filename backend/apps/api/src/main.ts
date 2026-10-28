@@ -48,7 +48,13 @@ function setupSwagger(app: INestApplication): void {
 async function bootstrap() {
   // Typed as the Express application so `set('trust proxy', ...)` below is
   // reachable — the platform is already Express, this only names it.
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  //
+  // `rawBody: true` additionally keeps each request's exact bytes on
+  // `req.rawBody` (parsing is unchanged): the Razorpay webhook signature is
+  // an HMAC of those bytes, which re-serialised JSON would not reproduce.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+  });
 
   app.enableShutdownHooks();
 
@@ -123,13 +129,16 @@ async function bootstrap() {
       allowedOrigins,
       isDevelopment: configForCors.isDevelopment,
     }),
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',
       'Authorization',
       'X-App-Version',
       'Accept',
+      'Accept-Version',
     ],
+    // Lets a browser app read Retry-After on a 429.
+    exposedHeaders: ['Retry-After'],
   });
 
   app.useGlobalPipes(

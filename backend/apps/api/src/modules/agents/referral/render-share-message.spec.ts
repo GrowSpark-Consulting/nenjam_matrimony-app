@@ -145,6 +145,58 @@ describe('renderShareMessage', () => {
     });
   });
 
+  describe('a full stop at the end of the agent name', () => {
+    it('is not doubled when the template follows {agent_name} with a full stop', () => {
+      expect(
+        renderShareMessage(
+          "I'm {agent_name}. Join us.",
+          values({ agentName: 'Ravi K.' }),
+        ),
+      ).toBe("I'm Ravi K. Join us.");
+    });
+
+    it('strips only ONE trailing full stop', () => {
+      expect(
+        renderShareMessage('{agent_name}. Hi', values({ agentName: 'Ravi..' })),
+      ).toBe('Ravi.. Hi');
+    });
+
+    it('leaves a name with no trailing full stop alone', () => {
+      expect(
+        renderShareMessage(
+          "I'm {agent_name}. Join",
+          values({ agentName: 'Ravi Kumar' }),
+        ),
+      ).toBe("I'm Ravi Kumar. Join");
+    });
+
+    it('keeps the full stop when the template does not add one', () => {
+      expect(
+        renderShareMessage('- {agent_name}', values({ agentName: 'Ravi K.' })),
+      ).toBe('- Ravi K.');
+    });
+
+    it('works for Tamil names too', () => {
+      expect(
+        renderShareMessage(
+          'நான் {agent_name}. இணையுங்கள்',
+          values({
+            agentName: 'ரவி கு.',
+          }),
+        ),
+      ).toBe('நான் ரவி கு. இணையுங்கள்');
+    });
+
+    it('strips each occurrence followed by a full stop, not one followed by something else', () => {
+      expect(
+        renderShareMessage(
+          '{agent_name}. / {agent_name}!',
+          values({ agentName: 'Ravi K.' }),
+        ),
+      ).toBe('Ravi K. / Ravi K.!');
+    });
+  });
+
   describe('never evaluates the template', () => {
     it.each(['${1+1}', '{{constructor}}', '<%= code %>', '{__proto__}'])(
       'leaves %p as plain text',

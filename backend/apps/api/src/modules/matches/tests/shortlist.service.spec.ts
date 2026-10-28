@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ShortlistService } from '../services/shortlist.service';
+import { membershipServiceInMode } from '../../entitlements/tests/membership-test-doubles';
 
 function build() {
   const repo = {
@@ -27,6 +28,7 @@ function build() {
     notifications as never,
     mapper as never,
     realtime as never,
+    membershipServiceInMode('off'),
   );
   return { service, repo, notifications, mapper, realtime };
 }

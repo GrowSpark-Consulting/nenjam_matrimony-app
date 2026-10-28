@@ -1,0 +1,317 @@
+/**
+ * Domain-shaped repository ports and the read-only member port.
+ *
+ * These are NOT Prisma shapes: a Prisma adapter maps to and from them once
+ * the Phase 1 tables exist (PR #116). The record fields are the minimum the
+ * planned services need and may grow; none of this is final.
+ *
+ * Every method takes an optional `tx` (see `AgentUnitOfWork`). Writes that
+ * are given it commit or roll back with the transaction; reads that must see
+ * those writes pass it too.
+ *
+ * Uniqueness rules mirror the planned database constraints, and every
+ * violation is reported as `AgentConflictError` so services handle one error
+ * whether a fake or a real database enforced it.
+ */
+import type { AgentStatus } from '../agent/agent-status';
+import type { AttributionSource } from '../referral/decide-attribution';
+import type { ReferralViewSource } from '../referral/agent-referral-view';
+import type { AgentTx } from './agent-unit-of-work.port';
+
+export type AgentConflictReason =
+  | 'DUPLICATE_PHONE_HASH'
+  | 'DUPLICATE_CODE'
+  | 'DUPLICATE_PRIMARY_CODE'
+  | 'DUPLICATE_ATTRIBUTION'
+  | 'ALREADY_REVOKED'
+  | 'DUPLICATE_ID';
+
+export class AgentConflictError extends Error {
+  constructor(public readonly reason: AgentConflictReason) {
+    super(`Conflict: ${reason}`);
+    this.name = 'AgentConflictError';
+  }
+}
+
+// --- Agents ----------------------------------------------------------------
+
+export interface AgentRecord {
+  id: string;
+  phoneHash: string;
+  phoneE164: string;
+  name: string;
+  city: string;
+  state: string;
+  status: AgentStatus;
+  rejectionReason: string | null;
+  approvedAt: Date | null;
+  panLast4: string | null;
+  /** The full PAN, sealed by `AgentSecretSealer`. Never returned to clients. */
+  panSealed: string | null;
+  payoutDetailsSet: boolean;
+  createdAt: Date;
+}
+
+export type NewAgentRecord = Omit<
+  AgentRecord,
+  'status' | 'rejectionReason' | 'approvedAt' | 'payoutDetailsSet'
+>;
+
+/** `status` is stored as given; transition rules live in `agent-status.ts`. */
+export interface AgentRepository {
+  findById(id: string, tx?: AgentTx): Promise<AgentRecord | null>;
+  findByPhoneHash(phoneHash: string, tx?: AgentTx): Promise<AgentRecord | null>;
+  /** Starts as PENDING_APPROVAL. Throws AgentConflictError on a reused id or phone hash. */
+  create(agent: NewAgentRecord, tx?: AgentTx): Promise<AgentRecord>;
+  update(
+    id: string,
+    changes: Partial<
+      Pick<
+        AgentRecord,
+        | 'name'
+        | 'city'
+        | 'state'
+        | 'status'
+        | 'rejectionReason'
+        | 'approvedAt'
+        | 'panLast4'
+        | 'panSealed'
+        | 'payoutDetailsSet'
+      >
+    >,
+    tx?: AgentTx,
+  ): Promise<AgentRecord>;
+}
+
+// --- Referral codes --------------------------------------------------------
+
+export interface ReferralCodeRecord {
+  id: string;
+  agentId: string;
+  /** Normalised, e.g. NM7K2P9X. */
+  code: string;
+  isPrimary: boolean;
+  isActive: boolean;
+  createdAt: Date;
+}
+
+export interface ReferralCodeRepository {
+  findByCode(code: string, tx?: AgentTx): Promise<ReferralCodeRecord | null>;
+  listByAgent(agentId: string, tx?: AgentTx): Promise<ReferralCodeRecord[]>;
+  codeExists(code: string, tx?: AgentTx): Promise<boolean>;
+  /**
+   * Throws AgentConflictError DUPLICATE_CODE for a reused code, or
+   * DUPLICATE_PRIMARY_CODE when the agent already has a primary code.
+   */
+  create(code: ReferralCodeRecord, tx?: AgentTx): Promise<ReferralCodeRecord>;
+}
+
+// --- Refresh tokens --------------------------------------------------------
+
+export interface AgentRefreshTokenRecord {
+  id: string;
+  agentId: string;
+  /** `hashRefreshToken(...)` only; the raw token is never stored. */
+  tokenHash: string;
+  expiresAt: Date;
+  revokedAt: Date | null;
+  createdAt: Date;
+}
+
+export interface AgentRefreshTokenRepository {
+  create(
+    token: AgentRefreshTokenRecord,
+    tx?: AgentTx,
+  ): Promise<AgentRefreshTokenRecord>;
+  findByHash(
+    tokenHash: string,
+    tx?: AgentTx,
+  ): Promise<AgentRefreshTokenRecord | null>;
+  /**
+   * Atomically revokes `currentId` and stores `next`. Throws AgentConflictError
+   * ALREADY_REVOKED if `currentId` was already revoked (a concurrent refresh),
+   * leaving nothing stored.
+   */
+  rotate(
+    currentId: string,
+    next: AgentRefreshTokenRecord,
+    at: Date,
+    tx?: AgentTx,
+  ): Promise<AgentRefreshTokenRecord>;
+  /** Revokes one token; true if it was active, false if unknown or already revoked. */
+  revoke(tokenId: string, at: Date, tx?: AgentTx): Promise<boolean>;
+  /** Revokes every still-active token of the agent; returns how many. */
+  revokeAllForAgent(agentId: string, at: Date, tx?: AgentTx): Promise<number>;
+}
+
+// --- Applicants (verified phone, before an agent record exists) -----------
+
+export interface AgentApplicantRecord {
+  phoneHash: string;
+  /** The verified E.164 phone, sealed by `AgentSecretSealer`. */
+  phoneSealed: string;
+  expiresAt: Date;
+}
+
+/**
+ * Remembers the phone an applicant verified, so the application can create
+ * the agent record without the phone being in the token or the request body.
+ * Written at verify time; deleted after a successful application.
+ */
+export interface AgentApplicantRepository {
+  /** Insert or replace the record for this phone hash. */
+  save(record: AgentApplicantRecord, tx?: AgentTx): Promise<void>;
+  /** Returns the record even if it has expired; the caller checks `expiresAt`. */
+  find(phoneHash: string, tx?: AgentTx): Promise<AgentApplicantRecord | null>;
+  delete(phoneHash: string, tx?: AgentTx): Promise<void>;
+}
+
+// --- Payout details --------------------------------------------------------
+
+export type AgentPayoutMethod = 'UPI' | 'BANK';
+
+export interface AgentPayoutDetailsRecord {
+  agentId: string;
+  method: AgentPayoutMethod;
+  /** The UPI id or bank account, sealed by `AgentSecretSealer`. */
+  detailsSealed: string;
+  /** Masked text that is safe to show, e.g. "r***@okbank". */
+  display: string;
+  /** Null until an admin verifies the details; cleared on every change. */
+  verifiedAt: Date | null;
+  /** When the details last changed; the payout wait counts from here. */
+  changedAt: Date;
+}
+
+/** At most one record per agent: `save` inserts or replaces it. */
+export interface AgentPayoutDetailsRepository {
+  find(agentId: string, tx?: AgentTx): Promise<AgentPayoutDetailsRecord | null>;
+  save(record: AgentPayoutDetailsRecord, tx?: AgentTx): Promise<void>;
+}
+
+// --- Attribution -----------------------------------------------------------
+
+export type AgentAttributionStatus =
+  'ACTIVE' | 'CONVERTED' | 'EXPIRED' | 'REJECTED';
+
+export interface ReferralAttributionRecord {
+  id: string;
+  memberId: string;
+  agentId: string;
+  codeId: string;
+  source: AttributionSource;
+  /** Hash of the member's verified phone, null when there is none. */
+  memberPhoneHash: string | null;
+  attributedAt: Date;
+  /** REJECTED rows (e.g. a self-referral) are kept for review, never shown to agents. */
+  status: AgentAttributionStatus;
+  /** End of the credit window, snapshotted when the attribution was made. */
+  windowEndsAt: Date;
+  /** Accepted without a verified phone; an admin should look at it. */
+  needsReview: boolean;
+}
+
+/** Position in the newest-first order: (attributedAt, id), both descending. */
+export interface AttributionPageCursor {
+  at: Date;
+  id: string;
+}
+
+export interface ReferralAttributionRepository {
+  findByMemberId(
+    memberId: string,
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord | null>;
+  listByAgent(
+    agentId: string,
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord[]>;
+  /**
+   * Newest first, ordered by (attributedAt, id) descending. Returns at most
+   * `limit` rows strictly after `after`, or from the start without it.
+   */
+  listPageByAgent(
+    agentId: string,
+    page: { limit: number; after?: AttributionPageCursor },
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord[]>;
+  /** Null when the id is unknown OR belongs to another agent (the two look the same). */
+  findByIdForAgent(
+    attributionId: string,
+    agentId: string,
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord | null>;
+  /** True when an attribution already exists for this member phone hash. */
+  isPhoneHashCredited(phoneHash: string, tx?: AgentTx): Promise<boolean>;
+  /** One attribution per member: throws DUPLICATE_ATTRIBUTION otherwise. */
+  create(
+    attribution: ReferralAttributionRecord,
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord>;
+}
+
+// --- Code-validation attempts ----------------------------------------------
+
+export type ReferralAttemptDimension = 'REQUESTER' | 'CODE';
+
+export interface ReferralCodeAttemptWindow {
+  /** Attempts recorded after `since`. */
+  count: number;
+  /** The earliest of them, so the caller can say when the window frees up. */
+  oldestAt: Date | null;
+}
+
+/**
+ * Counts how often a requester and a code have been tried recently. Rows
+ * older than the window are meaningless and should be purged.
+ *
+ * The requester key is OPAQUE: a keyed hash of the caller's IP for the public
+ * check, a namespaced member id for attaching. It is never a raw IP address
+ * (an IP is personal data); an implementation must refuse one. The real
+ * hashing comes from the shared identifier hasher.
+ *
+ * Limits of a simple implementation: reading the count and then recording the
+ * attempt is not atomic, so parallel requests can pass a limit by a few.
+ */
+export interface ReferralCodeAttemptStore {
+  window(
+    dimension: ReferralAttemptDimension,
+    key: string,
+    since: Date,
+    tx?: AgentTx,
+  ): Promise<ReferralCodeAttemptWindow>;
+  /**
+   * `codeKey` is null for text that is not a well-formed code. Rejects (does
+   * not store) a `requesterKey` that is a raw IP address.
+   */
+  record(
+    attempt: { requesterKey: string; codeKey: string | null; at: Date },
+    tx?: AgentTx,
+  ): Promise<void>;
+}
+
+// --- Members (read only) ---------------------------------------------------
+
+export interface AgentMemberSnapshot {
+  memberId: string;
+  phoneHash: string | null;
+  signedUpAt: Date;
+  /** Any earlier successful payment. */
+  hasPaid: boolean;
+}
+
+/** Read-only view of members; agent code never writes member data. */
+export interface AgentMemberReadPort {
+  getMember(
+    memberId: string,
+    tx?: AgentTx,
+  ): Promise<AgentMemberSnapshot | null>;
+  /** Display fields for the referrals list; null when the member is gone. */
+  getReferralViewFields(
+    memberId: string,
+    tx?: AgentTx,
+  ): Promise<Omit<
+    ReferralViewSource,
+    'attributionId' | 'commissionStatus'
+  > | null>;
+}

@@ -85,6 +85,14 @@ export class AppConfigService implements OnModuleInit {
     return this.configService.get('psychology', { infer: true });
   }
 
+  get membership(): AppConfig['membership'] {
+    return this.configService.get('membership', { infer: true });
+  }
+
+  get razorpay(): AppConfig['razorpay'] {
+    return this.configService.get('razorpay', { infer: true });
+  }
+
   checkHealth(): ConfigHealth {
     const details: Record<string, boolean> = {
       envFileLoaded: Boolean(this.nodeEnv),

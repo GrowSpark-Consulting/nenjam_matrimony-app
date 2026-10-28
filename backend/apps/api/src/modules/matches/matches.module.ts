@@ -4,6 +4,7 @@ import { StorageModule } from '@app/storage';
 import { InterestsModule } from '../interests/interests.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PsychologyModule } from '../psychology/psychology.module';
+import { EntitlementsModule } from '../entitlements/entitlements.module';
 import { DiscoverController } from './controllers/discover.controller';
 import { NearbyController } from './controllers/nearby.controller';
 import { MatchesController } from './controllers/matches.controller';
@@ -51,6 +52,8 @@ import { PsychologyMatchContextService } from './scoring/psychology/psychology-m
     // live scoring, see PsychologyMatchContextService) — one-directional,
     // psychology never imports matches.
     PsychologyModule,
+    // The plan-based shortlist cap (ShortlistService).
+    EntitlementsModule,
   ],
   controllers: [DiscoverController, MatchesController, NearbyController],
   providers: [

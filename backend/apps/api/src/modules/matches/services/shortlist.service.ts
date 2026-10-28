@@ -12,6 +12,7 @@ import { NotificationsService } from '../../notifications/services/notifications
 import type { CreateNotificationData } from '../../notifications/repositories/notification.repository';
 import { RealtimeGateway } from '../../realtime/realtime.gateway';
 import { RealtimeEvents } from '../../realtime/realtime.events';
+import { MembershipService } from '../../entitlements/services/membership.service';
 import { ShortlistRepository } from '../repositories/shortlist.repository';
 
 function isUniqueViolation(error: unknown): boolean {
@@ -33,11 +34,14 @@ export class ShortlistService {
     private readonly notifications: NotificationsService,
     private readonly profileMapper: ProfileFeedMapper,
     private readonly realtime: RealtimeGateway,
+    private readonly membership: MembershipService,
   ) {}
 
   /** Adds [targetUserId] to [userId]'s shortlist. Idempotent — re-adding an
    *  existing entry is a no-op. Blocked relationships are softly skipped (no
-   *  row, no notification) rather than erroring. */
+   *  row, no notification) rather than erroring. A NEW entry counts against
+   *  the plan's shortlist cap (`shortlist.profiles`); removing one frees a
+   *  place, and entries over a cap are never removed. */
   async add(userId: string, targetUserId: string): Promise<void> {
     if (userId === targetUserId) {
       throw new BadRequestException('You cannot shortlist yourself.');
@@ -45,11 +49,15 @@ export class ShortlistService {
     // Three independent probes, issued together rather than as three sequential
     // round trips. They are still evaluated in the same order below, so the
     // outcome (and which error wins) is unchanged.
-    const [isAvailable, isBlocked, alreadyShortlisted] = await Promise.all([
-      this.shortlistRepository.isTargetAvailable(targetUserId),
-      this.shortlistRepository.isBlockedBetween(userId, targetUserId),
-      this.shortlistRepository.exists(userId, targetUserId),
-    ]);
+    const [isAvailable, isBlocked, alreadyShortlisted, membership] =
+      await Promise.all([
+        this.shortlistRepository.isTargetAvailable(targetUserId),
+        this.shortlistRepository.isBlockedBetween(userId, targetUserId),
+        this.shortlistRepository.exists(userId, targetUserId),
+        this.membership.mode === 'enforce'
+          ? this.membership.resolve(userId)
+          : undefined,
+      ]);
 
     if (!isAvailable) {
       throw new NotFoundException('This member is no longer available.');
@@ -67,6 +75,12 @@ export class ShortlistService {
 
     try {
       await this.prisma.$transaction(async (tx) => {
+        await this.membership.enforceCap('shortlist.profiles', {
+          userId,
+          tx,
+          count: (db) => this.shortlistRepository.countForUser(db, userId),
+          membership,
+        });
         const created = await this.shortlistRepository.create(
           tx,
           userId,

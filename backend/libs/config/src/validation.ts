@@ -167,4 +167,16 @@ export const validationSchema = Joi.object({
     .min(0)
     .max(365)
     .default(7),
+
+  // Membership plan enforcement — off | shadow | enforce. Defaults to shadow
+  // (resolve + record + log, never deny); see docs/membership/README.md.
+  MEMBERSHIP_ENFORCEMENT_MODE: Joi.string()
+    .valid('off', 'shadow', 'enforce')
+    .default('shadow'),
+
+  // Razorpay. All optional: without them checkout and the webhook answer 503
+  // and the app still boots (CI and local dev run with none).
+  RAZORPAY_KEY_ID: Joi.string().allow('').optional(),
+  RAZORPAY_KEY_SECRET: Joi.string().allow('').optional(),
+  RAZORPAY_WEBHOOK_SECRET: Joi.string().allow('').optional(),
 }).unknown(true);

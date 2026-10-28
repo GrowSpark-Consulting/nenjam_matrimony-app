@@ -1,7 +1,10 @@
 import {
+  AGENT_ACCESS_TOKEN_TTL_SECONDS_KEY,
   AGENT_CLIENT_DRAFT_LIMIT_KEY,
+  AGENT_OTP_RESEND_AFTER_SECONDS_KEY,
   AGENT_PAYOUT_DETAILS_WAIT_HOURS_KEY,
   AGENT_PROGRAM_SETTING_KEYS,
+  AGENT_REFRESH_TOKEN_TTL_SECONDS_KEY,
   COMMISSION_AUTO_APPROVE_KEY,
   COMMISSION_BASE_KEY,
   COMMISSION_BASE_PROVISIONAL_KEY,
@@ -9,6 +12,9 @@ import {
   PAYOUT_MINIMUM_AMOUNT_PAISE_KEY,
   PAYOUT_TAX_WITHHOLDING_KEY,
   parseAgentProgramSettings,
+  REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY,
+  REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY,
+  REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY,
   REFERRAL_CREDIT_WINDOW_DAYS_KEY,
   REFERRAL_DISCOUNT_ONLY_IN_CREDIT_WINDOW_KEY,
   REFERRAL_DISCOUNT_STACKS_WITH_COUPONS_KEY,
@@ -29,6 +35,12 @@ const ALL: Record<string, unknown> = {
   [COMMISSION_BASE_KEY]: 'AMOUNT_PAID',
   [COMMISSION_BASE_PROVISIONAL_KEY]: true,
   [PAYOUT_TAX_WITHHOLDING_KEY]: { anything: 'goes' },
+  [AGENT_ACCESS_TOKEN_TTL_SECONDS_KEY]: 900,
+  [AGENT_REFRESH_TOKEN_TTL_SECONDS_KEY]: 2_592_000,
+  [AGENT_OTP_RESEND_AFTER_SECONDS_KEY]: 30,
+  [REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY]: 10,
+  [REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY]: 20,
+  [REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY]: 60,
 };
 
 describe('setting keys', () => {
@@ -55,7 +67,25 @@ describe('setting keys', () => {
     expect(COMMISSION_BASE_KEY).toBe('commission.base');
     expect(COMMISSION_BASE_PROVISIONAL_KEY).toBe('commission.base_provisional');
     expect(PAYOUT_TAX_WITHHOLDING_KEY).toBe('payout.tax_withholding');
-    expect(AGENT_PROGRAM_SETTING_KEYS).toHaveLength(12);
+    expect(AGENT_ACCESS_TOKEN_TTL_SECONDS_KEY).toBe(
+      'agent.access_token_ttl_seconds',
+    );
+    expect(AGENT_REFRESH_TOKEN_TTL_SECONDS_KEY).toBe(
+      'agent.refresh_token_ttl_seconds',
+    );
+    expect(AGENT_OTP_RESEND_AFTER_SECONDS_KEY).toBe(
+      'agent.otp_resend_after_seconds',
+    );
+    expect(REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY).toBe(
+      'referral.code_validation_ip_limit',
+    );
+    expect(REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY).toBe(
+      'referral.code_validation_code_limit',
+    );
+    expect(REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY).toBe(
+      'referral.code_validation_window_seconds',
+    );
+    expect(AGENT_PROGRAM_SETTING_KEYS).toHaveLength(18);
   });
 });
 
@@ -75,6 +105,12 @@ describe('parseAgentProgramSettings', () => {
         commissionBase: 'AMOUNT_PAID',
         commissionBaseProvisional: true,
         payoutTaxWithholding: { anything: 'goes' },
+        accessTokenTtlSeconds: 900,
+        refreshTokenTtlSeconds: 2_592_000,
+        otpResendAfterSeconds: 30,
+        codeValidationIpLimit: 10,
+        codeValidationCodeLimit: 20,
+        codeValidationWindowSeconds: 60,
       },
       missing: [],
     });
@@ -93,7 +129,7 @@ describe('parseAgentProgramSettings', () => {
       delete raw[key];
       const result = parseAgentProgramSettings(raw);
       expect(result.missing).toEqual([key]);
-      expect(Object.keys(result.settings)).toHaveLength(11);
+      expect(Object.keys(result.settings)).toHaveLength(17);
     },
   );
 
@@ -112,8 +148,8 @@ describe('parseAgentProgramSettings', () => {
       (key) => !NULL_IS_VALUE.includes(key),
     );
 
-    it('counts as missing for exactly ten keys', () => {
-      expect(NULL_IS_MISSING).toHaveLength(10);
+    it('counts as missing for exactly sixteen keys', () => {
+      expect(NULL_IS_MISSING).toHaveLength(16);
     });
 
     it.each(NULL_IS_MISSING.map((k) => [k]))(
@@ -121,7 +157,7 @@ describe('parseAgentProgramSettings', () => {
       (key) => {
         const result = parseAgentProgramSettings({ ...ALL, [key]: null });
         expect(result.missing).toEqual([key]);
-        expect(Object.keys(result.settings)).toHaveLength(11);
+        expect(Object.keys(result.settings)).toHaveLength(17);
         expect(Object.values(result.settings)).not.toContain(null);
       },
     );
@@ -131,7 +167,7 @@ describe('parseAgentProgramSettings', () => {
       (key) => {
         const result = parseAgentProgramSettings({ ...ALL, [key]: null });
         expect(result.missing).toEqual([]);
-        expect(Object.keys(result.settings)).toHaveLength(12);
+        expect(Object.keys(result.settings)).toHaveLength(18);
       },
     );
 
@@ -323,6 +359,49 @@ describe('validateCommissionPolicyVersion', () => {
   it.each([-1, 1.5, NaN, Infinity])('rejects holdDays %p', (holdDays) => {
     expect(() => validateCommissionPolicyVersion(policy({ holdDays }))).toThrow(
       RangeError,
+    );
+  });
+});
+
+describe('positive-integer settings (timing and rate limits)', () => {
+  const KEYS = [
+    AGENT_ACCESS_TOKEN_TTL_SECONDS_KEY,
+    AGENT_REFRESH_TOKEN_TTL_SECONDS_KEY,
+    AGENT_OTP_RESEND_AFTER_SECONDS_KEY,
+    REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY,
+    REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY,
+    REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY,
+  ];
+
+  it.each(KEYS.map((k) => [k]))(
+    '%s has no default: absent is missing',
+    (key) => {
+      const raw = { ...ALL };
+      delete raw[key];
+      const result = parseAgentProgramSettings(raw);
+      expect(result.missing).toEqual([key]);
+      expect(Object.keys(result.settings)).toHaveLength(17);
+    },
+  );
+
+  it.each(KEYS.map((k) => [k]))('%s: null is missing, not a value', (key) => {
+    const result = parseAgentProgramSettings({ ...ALL, [key]: null });
+    expect(result.missing).toEqual([key]);
+  });
+
+  it.each(KEYS.map((k) => [k]))('%s accepts 1 as the smallest value', (key) => {
+    const result = parseAgentProgramSettings({ ...ALL, [key]: 1 });
+    expect(result.missing).toEqual([]);
+  });
+
+  describe.each(KEYS)('%s must be a positive integer', (key) => {
+    it.each([0, -1, 1.5, NaN, Infinity, '30', true, Number.MAX_VALUE])(
+      'rejects %p and names the key',
+      (value) => {
+        expect(() =>
+          parseAgentProgramSettings({ ...ALL, [key]: value }),
+        ).toThrow(new RangeError(`Setting ${key} must be an integer >= 1.`));
+      },
     );
   });
 });

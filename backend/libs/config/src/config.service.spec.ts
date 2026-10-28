@@ -46,6 +46,8 @@ describe('AppConfigService', () => {
       maxTier: 10,
     },
     psychology: { enabled: true, timeoutMs: 800, retakeCooldownDays: 7 },
+    membership: { enforcementMode: 'shadow' },
+    razorpay: {},
   };
 
   async function buildService(

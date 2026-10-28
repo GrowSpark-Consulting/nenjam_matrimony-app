@@ -51,6 +51,11 @@ export class ShortlistRepository {
     return client.shortlist.create({ data: { userId, targetUserId } });
   }
 
+  /** How many profiles [userId] has shortlisted — the plan cap's count. */
+  countForUser(client: PrismaClientLike, userId: string): Promise<number> {
+    return client.shortlist.count({ where: { userId } });
+  }
+
   /** Idempotent remove — returns rows deleted (0 = wasn't shortlisted). */
   async remove(userId: string, targetUserId: string): Promise<number> {
     const result = await this.prisma.shortlist.deleteMany({
