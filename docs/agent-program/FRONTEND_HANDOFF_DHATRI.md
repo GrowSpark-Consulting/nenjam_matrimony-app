@@ -44,7 +44,7 @@ disagree, **the contract wins** — and please tell Ishu.
 | Base URL | `<BACKEND_URL>` (the Render service URL — ask Ishu). Local: `http://127.0.0.1:3000`. Never hard-code it. |
 | Agent auth | `Authorization: Bearer <accessToken>` from the agent sign-in. This is **our own token, not Firebase**. |
 | Member auth (Flutter only) | The existing Firebase ID token, as the app already sends. |
-| Version | Send `Accept-Version: 1` on every request. Missing means `1`; an unsupported value gives `406 UNSUPPORTED_VERSION`. |
+| Version | Send `Accept-Version: 1` on the agent and referral API requests that require it under the API contract. Do not add this header globally to the Flutter API client or to unrelated endpoints. The Agent Portal may send it on every portal request, provided those requests all target the versioned agent/referral API. Missing means `1`; an unsupported value gives `406 UNSUPPORTED_VERSION`. |
 | Money | Always **paise** (integer). Show `amountPaise / 100` as rupees, e.g. `50000` → "₹500.00". |
 | Dates | Calendar dates are `YYYY-MM-DD` in **Indian time**; timestamps are ISO-8601 UTC. |
 | Lists | Cursor pagination: `?cursor=<opaque>&limit=<1-50, default 20>` → `{ items, nextCursor }`. `nextCursor` is `null` on the last page. Pass the cursor back unchanged. |
