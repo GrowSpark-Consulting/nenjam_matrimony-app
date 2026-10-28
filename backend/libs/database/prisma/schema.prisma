@@ -1755,31 +1755,32 @@ enum AttributionStatus {
 /// A partner who refers members. A separate identity from User by design: no
 /// userId, signs in with their own phone + OTP and agent token.
 model Agent {
-  id                     String      @id @default(uuid())
+  id               String      @id @default(uuid())
   /// E.164, e.g. +919876543210.
-  phone                  String      @unique
-  /// hashIdentifier(kind, phone) from libs/common. Used for lookup.
-  phoneHash              String      @unique @map("phone_hash")
-  name                   String
-  city                   String
-  state                  String
+  phone            String      @unique
+  /// "v1:"-prefixed keyed hash of the phone (the shared identifier hasher). Used for lookup.
+  phoneHash        String      @unique @map("phone_hash")
+  name             String
+  city             String
+  state            String
   /// Last 4 characters of the PAN, the only part kept in clear.
-  panLast4               String?     @map("pan_last4") @db.VarChar(4)
-  /// Encrypted PAN (ciphertext). Null until supplied.
-  panEncrypted           String?     @map("pan_encrypted")
-  /// Encrypted payout details (bank / UPI) as one ciphertext string.
-  payoutDetailsEncrypted String?     @map("payout_details_encrypted")
-  status                 AgentStatus @default(PENDING_APPROVAL)
+  panLast4         String?     @map("pan_last4") @db.VarChar(4)
+  /// The full PAN sealed by AgentSecretSealer (AES-256-GCM, "v1:" prefix). Never returned to clients. Null until supplied.
+  panEncrypted     String?     @map("pan_encrypted")
+  /// True once the agent has payout details (agent_payout_details); kept in step by the service in the same transaction.
+  payoutDetailsSet Boolean     @default(false) @map("payout_details_set")
+  status           AgentStatus @default(PENDING_APPROVAL)
   /// Set when status = REJECTED; shown to the applicant.
-  rejectionReason        String?     @map("rejection_reason")
-  approvedAt             DateTime?   @map("approved_at")
-  createdAt              DateTime    @default(now()) @map("created_at")
-  updatedAt              DateTime    @updatedAt @map("updated_at")
+  rejectionReason  String?     @map("rejection_reason")
+  approvedAt       DateTime?   @map("approved_at")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
 
   referralCodes ReferralCode[]
   attributions  ReferralAttribution[]
   refreshTokens AgentRefreshToken[]
   deviceTokens  AgentDeviceToken[]
+  payoutDetails AgentPayoutDetails?
 
   @@index([status])
   @@map("agents")
@@ -1810,8 +1811,10 @@ model ReferralAttribution {
   id           String            @id @default(uuid())
   /// Null until the person signs up and is matched by phoneHash.
   userId       String?           @unique @map("user_id")
-  /// hashIdentifier(kind, phone). One attribution per person, ever.
-  phoneHash    String            @unique @map("phone_hash")
+  /// "v1:"-prefixed keyed hash of the phone. One attribution per phone, ever.
+  /// Null only for a code entered at payment by a member with no verified phone
+  /// (needsReview is then true); Postgres lets several rows hold NULL here.
+  phoneHash    String?           @unique @map("phone_hash")
   agentId      String            @map("agent_id")
   /// The code used, when there was one.
   codeId       String?           @map("code_id")
@@ -1819,6 +1822,8 @@ model ReferralAttribution {
   status       AttributionStatus @default(ACTIVE)
   /// End of the credit window, snapshotted from the setting when created.
   windowEndsAt DateTime          @map("window_ends_at")
+  /// Accepted without a verified phone; an admin should look at it.
+  needsReview  Boolean           @default(false) @map("needs_review")
   createdAt    DateTime          @default(now()) @map("created_at")
   updatedAt    DateTime          @updatedAt @map("updated_at")
 
@@ -1835,13 +1840,12 @@ model ReferralAttribution {
 }
 
 /// Rotating refresh tokens for the agent's own session (not Firebase). Only a
-/// hash is stored; tokens in one login chain share a familyId so reuse of a
-/// rotated token can revoke the whole chain.
+/// keyed hash is stored. Presenting a revoked token again revokes EVERY token
+/// of the agent, so no per-login family is needed.
 model AgentRefreshToken {
   id        String    @id @default(uuid())
   agentId   String    @map("agent_id")
-  familyId  String    @map("family_id")
-  /// SHA-256 of the opaque token; the token itself is never stored.
+  /// HMAC-SHA256 of the opaque token with a server pepper; the token itself is never stored.
   tokenHash String    @unique @map("token_hash")
   expiresAt DateTime  @map("expires_at")
   /// Set on rotation, logout, or reuse detection.
@@ -1852,7 +1856,6 @@ model AgentRefreshToken {
   agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
   @@index([agentId])
-  @@index([familyId])
   @@index([expiresAt])
   @@map("agent_refresh_tokens")
 }
@@ -1871,4 +1874,64 @@ model AgentDeviceToken {
 
   @@index([agentId])
   @@map("agent_device_tokens")
+}
+
+enum AgentPayoutMethod {
+  UPI
+  BANK
+
+  @@map("agent_payout_method")
+}
+
+/// Where an admin-created payout goes. At most one row per agent. The details
+/// are sealed; only the masked `display` is ever shown.
+model AgentPayoutDetails {
+  agentId       String            @id @map("agent_id")
+  method        AgentPayoutMethod
+  /// The UPI id or bank account, sealed by AgentSecretSealer. Never returned.
+  detailsSealed String            @map("details_sealed")
+  /// Masked text safe to show, e.g. "r***@okbank" or "HDFC ****9012".
+  display       String
+  /// Null until an admin verifies the details; cleared on every change.
+  verifiedAt    DateTime?         @map("verified_at")
+  /// When the details last changed; the payout wait counts from here.
+  changedAt     DateTime          @map("changed_at")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@map("agent_payout_details")
+}
+
+/// The phone an applicant verified at sign-in, kept (sealed) until they apply,
+/// so the application never takes the phone from the request body. Written at
+/// verify time, deleted after a successful application; expired rows are purged.
+model AgentApplicant {
+  /// "v1:"-prefixed keyed hash of the verified phone.
+  phoneHash   String   @id @map("phone_hash")
+  /// The verified E.164 phone, sealed by AgentSecretSealer.
+  phoneSealed String   @map("phone_sealed")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([expiresAt])
+  @@map("agent_applicants")
+}
+
+/// Attempt counters for the referral-code check and attach (guessing codes).
+/// Rows older than the configured window mean nothing and should be purged.
+/// requesterKey is OPAQUE (a keyed hash of the IP, or a namespaced member id),
+/// never a raw IP address.
+model ReferralCodeAttempt {
+  id           String   @id @default(uuid())
+  requesterKey String   @map("requester_key")
+  /// Null for text that is not a well-formed code.
+  codeKey      String?  @map("code_key")
+  attemptedAt  DateTime @default(now()) @map("attempted_at")
+
+  @@index([requesterKey, attemptedAt])
+  @@index([codeKey, attemptedAt])
+  @@index([attemptedAt])
+  @@map("referral_code_attempts")
 }

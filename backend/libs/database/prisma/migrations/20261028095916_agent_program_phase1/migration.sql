@@ -7,6 +7,9 @@ CREATE TYPE "referral_source" AS ENUM ('CODE_AT_SIGNUP', 'LINK_OR_QR', 'ADDED_BY
 -- CreateEnum
 CREATE TYPE "attribution_status" AS ENUM ('ACTIVE', 'CONVERTED', 'EXPIRED', 'REJECTED');
 
+-- CreateEnum
+CREATE TYPE "agent_payout_method" AS ENUM ('UPI', 'BANK');
+
 -- CreateTable
 CREATE TABLE "agents" (
     "id" TEXT NOT NULL,
@@ -17,7 +20,7 @@ CREATE TABLE "agents" (
     "state" TEXT NOT NULL,
     "pan_last4" VARCHAR(4),
     "pan_encrypted" TEXT,
-    "payout_details_encrypted" TEXT,
+    "payout_details_set" BOOLEAN NOT NULL DEFAULT false,
     "status" "agent_status" NOT NULL DEFAULT 'PENDING_APPROVAL',
     "rejection_reason" TEXT,
     "approved_at" TIMESTAMP(3),
@@ -44,12 +47,13 @@ CREATE TABLE "referral_codes" (
 CREATE TABLE "referral_attributions" (
     "id" TEXT NOT NULL,
     "user_id" TEXT,
-    "phone_hash" TEXT NOT NULL,
+    "phone_hash" TEXT,
     "agent_id" TEXT NOT NULL,
     "code_id" TEXT,
     "source" "referral_source" NOT NULL,
     "status" "attribution_status" NOT NULL DEFAULT 'ACTIVE',
     "window_ends_at" TIMESTAMP(3) NOT NULL,
+    "needs_review" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -60,7 +64,6 @@ CREATE TABLE "referral_attributions" (
 CREATE TABLE "agent_refresh_tokens" (
     "id" TEXT NOT NULL,
     "agent_id" TEXT NOT NULL,
-    "family_id" TEXT NOT NULL,
     "token_hash" TEXT NOT NULL,
     "expires_at" TIMESTAMP(3) NOT NULL,
     "revoked_at" TIMESTAMP(3),
@@ -81,6 +84,40 @@ CREATE TABLE "agent_device_tokens" (
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "agent_device_tokens_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "agent_payout_details" (
+    "agent_id" TEXT NOT NULL,
+    "method" "agent_payout_method" NOT NULL,
+    "details_sealed" TEXT NOT NULL,
+    "display" TEXT NOT NULL,
+    "verified_at" TIMESTAMP(3),
+    "changed_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "agent_payout_details_pkey" PRIMARY KEY ("agent_id")
+);
+
+-- CreateTable
+CREATE TABLE "agent_applicants" (
+    "phone_hash" TEXT NOT NULL,
+    "phone_sealed" TEXT NOT NULL,
+    "expires_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "agent_applicants_pkey" PRIMARY KEY ("phone_hash")
+);
+
+-- CreateTable
+CREATE TABLE "referral_code_attempts" (
+    "id" TEXT NOT NULL,
+    "requester_key" TEXT NOT NULL,
+    "code_key" TEXT,
+    "attempted_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "referral_code_attempts_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -120,9 +157,6 @@ CREATE UNIQUE INDEX "agent_refresh_tokens_token_hash_key" ON "agent_refresh_toke
 CREATE INDEX "agent_refresh_tokens_agent_id_idx" ON "agent_refresh_tokens"("agent_id");
 
 -- CreateIndex
-CREATE INDEX "agent_refresh_tokens_family_id_idx" ON "agent_refresh_tokens"("family_id");
-
--- CreateIndex
 CREATE INDEX "agent_refresh_tokens_expires_at_idx" ON "agent_refresh_tokens"("expires_at");
 
 -- CreateIndex
@@ -130,6 +164,18 @@ CREATE UNIQUE INDEX "agent_device_tokens_fcm_token_key" ON "agent_device_tokens"
 
 -- CreateIndex
 CREATE INDEX "agent_device_tokens_agent_id_idx" ON "agent_device_tokens"("agent_id");
+
+-- CreateIndex
+CREATE INDEX "agent_applicants_expires_at_idx" ON "agent_applicants"("expires_at");
+
+-- CreateIndex
+CREATE INDEX "referral_code_attempts_requester_key_attempted_at_idx" ON "referral_code_attempts"("requester_key", "attempted_at");
+
+-- CreateIndex
+CREATE INDEX "referral_code_attempts_code_key_attempted_at_idx" ON "referral_code_attempts"("code_key", "attempted_at");
+
+-- CreateIndex
+CREATE INDEX "referral_code_attempts_attempted_at_idx" ON "referral_code_attempts"("attempted_at");
 
 -- AddForeignKey
 ALTER TABLE "referral_codes" ADD CONSTRAINT "referral_codes_agent_id_fkey" FOREIGN KEY ("agent_id") REFERENCES "agents"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -148,6 +194,9 @@ ALTER TABLE "agent_refresh_tokens" ADD CONSTRAINT "agent_refresh_tokens_agent_id
 
 -- AddForeignKey
 ALTER TABLE "agent_device_tokens" ADD CONSTRAINT "agent_device_tokens_agent_id_fkey" FOREIGN KEY ("agent_id") REFERENCES "agents"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "agent_payout_details" ADD CONSTRAINT "agent_payout_details_agent_id_fkey" FOREIGN KEY ("agent_id") REFERENCES "agents"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- ---------------------------------------------------------------------------
 -- Hand-written: constraints Prisma cannot express. Not in schema.prisma, so
