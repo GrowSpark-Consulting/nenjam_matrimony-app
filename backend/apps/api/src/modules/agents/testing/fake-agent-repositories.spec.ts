@@ -24,6 +24,7 @@ const newAgent = (overrides: Partial<NewAgentRecord> = {}): NewAgentRecord => ({
   city: 'Chennai',
   state: 'Tamil Nadu',
   panLast4: null,
+  panSealed: null,
   createdAt: NOW,
   ...overrides,
 });

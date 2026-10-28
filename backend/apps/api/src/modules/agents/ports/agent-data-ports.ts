@@ -46,6 +46,8 @@ export interface AgentRecord {
   rejectionReason: string | null;
   approvedAt: Date | null;
   panLast4: string | null;
+  /** The full PAN, sealed by `AgentSecretSealer`. Never returned to clients. */
+  panSealed: string | null;
   payoutDetailsSet: boolean;
   createdAt: Date;
 }
@@ -73,6 +75,7 @@ export interface AgentRepository {
         | 'rejectionReason'
         | 'approvedAt'
         | 'panLast4'
+        | 'panSealed'
         | 'payoutDetailsSet'
       >
     >,
@@ -135,8 +138,32 @@ export interface AgentRefreshTokenRepository {
     at: Date,
     tx?: AgentTx,
   ): Promise<AgentRefreshTokenRecord>;
+  /** Revokes one token; true if it was active, false if unknown or already revoked. */
+  revoke(tokenId: string, at: Date, tx?: AgentTx): Promise<boolean>;
   /** Revokes every still-active token of the agent; returns how many. */
   revokeAllForAgent(agentId: string, at: Date, tx?: AgentTx): Promise<number>;
+}
+
+// --- Applicants (verified phone, before an agent record exists) -----------
+
+export interface AgentApplicantRecord {
+  phoneHash: string;
+  /** The verified E.164 phone, sealed by `AgentSecretSealer`. */
+  phoneSealed: string;
+  expiresAt: Date;
+}
+
+/**
+ * Remembers the phone an applicant verified, so the application can create
+ * the agent record without the phone being in the token or the request body.
+ * Written at verify time; deleted after a successful application.
+ */
+export interface AgentApplicantRepository {
+  /** Insert or replace the record for this phone hash. */
+  save(record: AgentApplicantRecord, tx?: AgentTx): Promise<void>;
+  /** Returns the record even if it has expired; the caller checks `expiresAt`. */
+  find(phoneHash: string, tx?: AgentTx): Promise<AgentApplicantRecord | null>;
+  delete(phoneHash: string, tx?: AgentTx): Promise<void>;
 }
 
 // --- Attribution -----------------------------------------------------------

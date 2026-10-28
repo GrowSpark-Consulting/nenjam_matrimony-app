@@ -33,6 +33,7 @@ const newAgent = (id = 'agent-1', phoneHash = 'phone-hash-1') => ({
   city: 'Chennai',
   state: 'Tamil Nadu',
   panLast4: null,
+  panSealed: null,
   createdAt: NOW,
 });
 
