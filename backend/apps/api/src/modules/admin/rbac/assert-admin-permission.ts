@@ -1,6 +1,6 @@
-import { ForbiddenException } from '@nestjs/common';
 import { isStaffRole } from '@app/common';
 import type { Prisma } from '../../../../../../libs/database/generated/client';
+import { adminForbidden } from '../auth/admin-auth.policy';
 import type { PermissionKey } from './permissions';
 
 /** The fields that decide whether a user may act as staff at all. */
@@ -43,8 +43,14 @@ export async function assertAdminPermission(
   actorId: string,
   permission: PermissionKey,
 ): Promise<void> {
+  // The same body AdminGuard sends, so a client handles a refusal from a
+  // service exactly like one from the guard.
   const denied = () =>
-    new ForbiddenException(`Not permitted: requires ${permission}.`);
+    adminForbidden(
+      'ADMIN_PERMISSION_DENIED',
+      `Not permitted: requires ${permission}.`,
+      { missing: [permission] },
+    );
   if (typeof actorId !== 'string' || actorId.length === 0) throw denied();
 
   const actor = await db.user.findUnique({
