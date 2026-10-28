@@ -120,13 +120,14 @@ The referral discount is the only discount we handle.
 | GST and the commission base | CA | `commission.base` setting; `buildCommissionDraft()` leaves the amount empty (`null`) while no base is set |
 | TDS | CA | `planPayout()` refuses any set tax value with `TAX_RULE_UNSUPPORTED` |
 | May a rejected agent re-apply? | Raja | `REJECTED_MAY_REAPPLY` in `agent/agent-status.ts` (currently `true`) |
-| Members with no verified phone | Raja | `decideMissingPhoneHash()` in `referral/decide-attribution.ts` |
 | A terminated agent's pending commission | Raja | `frozenForAgent()` in `commission/decide-commission-transition.ts` (currently frozen) |
 | Partial refund before approval | Raja | `planRefundEffect()` in `commission/plan-refund-effect.ts` (currently cancels the whole commission) |
 | How an agent can pay for a client's plan | Raja | Not started |
 | Tamil wording for the other labels (statuses, stages) | Raja | Comes from `GET /agent/config` (not built yet). The share messages are approved and final (28 Oct); see `FRONTEND_HANDOFF_DHATRI.md` section 6 |
 | Referral link web address | Raja | `link` and `qrPayload` are `null` until decided |
 | Will agents need KYC later? | Raja | — |
+
+**Decided (no longer pending): members with no verified phone.** A member with no verified phone can never be credited to an agent (`referral_attributions.phone_hash` is NOT NULL), from any source. `quoteReferral` returns no discount with `PHONE_NOT_VERIFIED` and payment goes on; a code entered at payment follows the same rule.
 
 ---
 
