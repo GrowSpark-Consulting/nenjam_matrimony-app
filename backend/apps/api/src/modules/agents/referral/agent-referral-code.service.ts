@@ -33,7 +33,7 @@
  * | ALREADY_ATTRIBUTED  | member (or their phone) is already credited           | 409  | ALREADY_ATTRIBUTED             |
  * | SELF_REFERRAL       | the code belongs to the member's own phone            | 422  | SELF_REFERRAL                  |
  * | ALREADY_PAID        | the member has already paid for a plan                | 422  | ALREADY_PAID (new code)        |
- * | PHONE_NOT_VERIFIED  | no verified phone, and the source is not payment      | 422  | PHONE_NOT_VERIFIED (new code)  |
+ * | PHONE_NOT_VERIFIED  | the member has no verified phone (any source)         | 422  | PHONE_NOT_VERIFIED (new code)  |
  *
  * The validate call never refuses with anything but RATE_LIMITED: every
  * invalid code, whatever the reason, is the same `{ valid: false }`.
@@ -236,6 +236,7 @@ export class AgentReferralCodeService {
       // row (one per member) or their phone is already credited.
       if (
         decision.markRejected === true &&
+        member.phoneHash !== null &&
         record !== null &&
         agent !== null &&
         existing === null &&
@@ -248,6 +249,7 @@ export class AgentReferralCodeService {
             agentId: agent.id,
             codeId: record.id,
             source: input.source,
+            // A self-referral needs a phone hash to be detected at all.
             memberPhoneHash: member.phoneHash,
             attributedAt: now,
             status: 'REJECTED',
@@ -270,9 +272,12 @@ export class AgentReferralCodeService {
       return { ok: false, reason: decision.reason };
     }
 
-    // The checks above guarantee both exist.
+    // The checks above guarantee all three exist.
     if (record === null || agent === null) {
       return { ok: false, reason: 'INVALID_CODE' };
+    }
+    if (member.phoneHash === null) {
+      return { ok: false, reason: 'PHONE_NOT_VERIFIED' };
     }
     const created = await attributions.create(
       {
@@ -285,7 +290,7 @@ export class AgentReferralCodeService {
         attributedAt: now,
         status: 'ACTIVE',
         windowEndsAt: decision.windowEndsAt,
-        needsReview: decision.needsReview === true,
+        needsReview: false,
       },
       tx,
     );
@@ -297,7 +302,7 @@ export class AgentReferralCodeService {
         entityId: created.id,
         metadata: {
           source: input.source,
-          needsReview: decision.needsReview === true,
+          needsReview: false,
         },
       },
       tx,

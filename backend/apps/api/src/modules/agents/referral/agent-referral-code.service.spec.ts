@@ -378,7 +378,7 @@ describe('AgentReferralCodeService', () => {
     const attach = (
       memberId = 'm1',
       code: unknown = CODE,
-      source?: 'CODE_AT_SIGNUP' | 'ENTERED_AT_PAYMENT',
+      source?: 'CODE_AT_SIGNUP' | 'LINK_OR_QR' | 'ENTERED_AT_PAYMENT',
     ) => h.referralCodes.attachCode(memberId, code, source);
 
     beforeEach(async () => {
@@ -605,17 +605,6 @@ describe('AgentReferralCodeService', () => {
         expect(await h.attributions.listByAgent('a2')).toHaveLength(0);
       });
 
-      it('a member with no phone hash who is already credited is refused before any write', async () => {
-        h.seedMember('nophone', { phoneHash: null });
-        await attach('nophone', CODE, 'ENTERED_AT_PAYMENT');
-        const create = jest.spyOn(h.attributions, 'create');
-        await expectServiceError(
-          attach('nophone', CODE, 'ENTERED_AT_PAYMENT'),
-          'ALREADY_ATTRIBUTED',
-        );
-        expect(create).not.toHaveBeenCalled();
-      });
-
       it('a phone already credited under another member id is ALREADY_ATTRIBUTED', async () => {
         h.seedMember('m2', { phoneHash: 'hash-of-m1' });
         await attach('m1');
@@ -650,26 +639,22 @@ describe('AgentReferralCodeService', () => {
       expect(await h.attributions.findByMemberId('paid')).toBeNull();
     });
 
-    describe('no verified phone (the pending rule in decideMissingPhoneHash)', () => {
+    describe('no verified phone: no credit, from any source', () => {
       beforeEach(() => h.seedMember('nophone', { phoneHash: null }));
 
-      it('at sign-up it is refused: PHONE_NOT_VERIFIED', async () => {
-        await expectServiceError(attach('nophone'), 'PHONE_NOT_VERIFIED');
-      });
-
-      it('entering the code at payment is accepted and flagged for review', async () => {
-        const result = await attach('nophone', CODE, 'ENTERED_AT_PAYMENT');
-        expect(result.windowEndsAt).toBe('2026-10-28'); // the credit starts and ends today
-        expect(await h.attributions.findByMemberId('nophone')).toMatchObject({
-          needsReview: true,
-          memberPhoneHash: null,
-          source: 'ENTERED_AT_PAYMENT',
-        });
-        expect(h.audit.entries[0].metadata).toEqual({
-          source: 'ENTERED_AT_PAYMENT',
-          needsReview: true,
-        });
-      });
+      it.each(['CODE_AT_SIGNUP', 'LINK_OR_QR', 'ENTERED_AT_PAYMENT'] as const)(
+        '%s is refused with PHONE_NOT_VERIFIED and nothing is written',
+        async (source) => {
+          const create = jest.spyOn(h.attributions, 'create');
+          await expectServiceError(
+            attach('nophone', CODE, source),
+            'PHONE_NOT_VERIFIED',
+          );
+          expect(create).not.toHaveBeenCalled();
+          expect(await h.attributions.findByMemberId('nophone')).toBeNull();
+          expect(h.audit.entries).toHaveLength(0);
+        },
+      );
     });
 
     describe('rate limiting (per member and per code)', () => {

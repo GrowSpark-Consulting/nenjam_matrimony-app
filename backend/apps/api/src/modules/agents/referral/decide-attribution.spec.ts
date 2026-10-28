@@ -120,19 +120,11 @@ describe('decideAttribution', () => {
       expect(decideAttribution(valid({ agentPhoneHash: null })).ok).toBe(true);
     });
 
-    it('does not treat two missing hashes as equal', () => {
+    it('does not treat two missing hashes as a self-referral: the member is refused for the missing phone', () => {
       const result = decideAttribution(
-        valid({
-          source: 'ENTERED_AT_PAYMENT',
-          memberPhoneHash: null,
-          agentPhoneHash: null,
-        }),
+        valid({ memberPhoneHash: null, agentPhoneHash: null }),
       );
-      expect(result).toEqual({
-        ok: true,
-        windowEndsAt: NOW,
-        needsReview: true,
-      });
+      expect(result).toEqual({ ok: false, reason: 'PHONE_NOT_VERIFIED' });
     });
 
     it('ALREADY_ATTRIBUTED when the member already has an agent', () => {
@@ -158,8 +150,8 @@ describe('decideAttribution', () => {
     );
   });
 
-  describe('missing member phone hash (pending decision)', () => {
-    it.each(['CODE_AT_SIGNUP', 'LINK_OR_QR'] as const)(
+  describe('missing member phone hash', () => {
+    it.each(['CODE_AT_SIGNUP', 'LINK_OR_QR', 'ENTERED_AT_PAYMENT'] as const)(
       '%s is refused with PHONE_NOT_VERIFIED',
       (source) => {
         expect(
@@ -168,12 +160,11 @@ describe('decideAttribution', () => {
       },
     );
 
-    it('ENTERED_AT_PAYMENT is accepted but flagged needsReview', () => {
+    it('a successful decision never asks for a review: needsReview no longer comes from here', () => {
+      expect(decideAttribution(valid())).not.toHaveProperty('needsReview');
       expect(
-        decideAttribution(
-          valid({ source: 'ENTERED_AT_PAYMENT', memberPhoneHash: null }),
-        ),
-      ).toEqual({ ok: true, windowEndsAt: NOW, needsReview: true });
+        decideAttribution(valid({ source: 'ENTERED_AT_PAYMENT' })),
+      ).toEqual({ ok: true, windowEndsAt: NOW });
     });
   });
 

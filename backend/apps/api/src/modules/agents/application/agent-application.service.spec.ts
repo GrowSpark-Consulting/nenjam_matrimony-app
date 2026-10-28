@@ -280,6 +280,51 @@ describe('AgentApplicationService.submit', () => {
       expect(h.sealer.open(second!.panSealed!)).toBe('ABCDE1234F');
     });
 
+    describe('PAN verification when re-applying', () => {
+      const VERIFIED_AT = new Date('2026-10-20T10:00:00.000Z');
+      const seedVerified = (pan = 'AAAAA1111A') =>
+        h.seedAgent('REJECTED', {
+          rejectionReason: 'Incomplete details',
+          panLast4: pan.slice(-4),
+          panSealed: h.sealer.seal(pan),
+          panVerifiedAt: VERIFIED_AT,
+        });
+      const submit = async (body: AgentApplicationBody) =>
+        h.application.submit(await h.claimsOf(await h.signInAs()), body);
+
+      it('a different PAN clears the verification', async () => {
+        await seedVerified('AAAAA1111A');
+        await submit(BODY); // ABCDE1234F
+        const agent = await h.agents.findById('agent-1');
+        expect(h.sealer.open(agent!.panSealed!)).toBe('ABCDE1234F');
+        expect(agent!.panVerifiedAt).toBeNull();
+      });
+
+      it('the same PAN keeps the verification', async () => {
+        await seedVerified('ABCDE1234F');
+        await submit(BODY);
+        expect((await h.agents.findById('agent-1'))!.panVerifiedAt).toEqual(
+          VERIFIED_AT,
+        );
+      });
+
+      it('no PAN sent keeps the PAN and its verification', async () => {
+        await seedVerified();
+        await submit({ name: BODY.name, city: BODY.city, state: BODY.state });
+        expect((await h.agents.findById('agent-1'))!.panVerifiedAt).toEqual(
+          VERIFIED_AT,
+        );
+      });
+
+      it('a first PAN on an agent that had none stays unverified', async () => {
+        await h.seedAgent('REJECTED', {
+          rejectionReason: 'Incomplete details',
+        });
+        await submit(BODY);
+        expect((await h.agents.findById('agent-1'))!.panVerifiedAt).toBeNull();
+      });
+    });
+
     it('does not create a second agent or touch the applicant store', async () => {
       const { claims } = await rejectedAgent();
       await h.application.submit(claims, BODY);

@@ -48,13 +48,19 @@ export interface AgentRecord {
   panLast4: string | null;
   /** The full PAN, sealed by `AgentSecretSealer`. Never returned to clients. */
   panSealed: string | null;
+  /** When staff verified the PAN. Null until verified; cleared when the PAN is replaced. Never set without a PAN. */
+  panVerifiedAt: Date | null;
   payoutDetailsSet: boolean;
   createdAt: Date;
 }
 
 export type NewAgentRecord = Omit<
   AgentRecord,
-  'status' | 'rejectionReason' | 'approvedAt' | 'payoutDetailsSet'
+  | 'status'
+  | 'rejectionReason'
+  | 'approvedAt'
+  | 'panVerifiedAt'
+  | 'payoutDetailsSet'
 >;
 
 /** `status` is stored as given; transition rules live in `agent-status.ts`. */
@@ -76,6 +82,7 @@ export interface AgentRepository {
         | 'approvedAt'
         | 'panLast4'
         | 'panSealed'
+        | 'panVerifiedAt'
         | 'payoutDetailsSet'
       >
     >,
@@ -200,8 +207,8 @@ export interface ReferralAttributionRecord {
   agentId: string;
   codeId: string;
   source: AttributionSource;
-  /** Hash of the member's verified phone, null when there is none. */
-  memberPhoneHash: string | null;
+  /** Hash of the member's verified phone. Required: a member with no verified phone cannot be credited. */
+  memberPhoneHash: string;
   attributedAt: Date;
   /** REJECTED rows (e.g. a self-referral) are kept for review, never shown to agents. */
   status: AgentAttributionStatus;

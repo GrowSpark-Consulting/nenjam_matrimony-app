@@ -305,6 +305,40 @@ describe('AgentReferralQuoteService', () => {
     });
   });
 
+  describe('a member with no verified phone', () => {
+    beforeEach(() => h.seedMember('member-1', { phoneHash: null }));
+
+    it('gets no discount: PHONE_NOT_VERIFIED, and payment goes on', async () => {
+      await seedAgentWithCode();
+      const create = jest.spyOn(h.attributions, 'create');
+      await expect(quoteFor(h, { promoCode: CODE })).resolves.toEqual({
+        discountBps: 0,
+        discountPaise: 0,
+        discountSource: 'NONE',
+        amountPaidPaise: LIST,
+        rejectedReason: 'PHONE_NOT_VERIFIED',
+      });
+      expect(create).not.toHaveBeenCalled();
+    });
+
+    it('with no code there is nothing to report', async () => {
+      await seedAgentWithCode();
+      await expect(quoteFor(h)).resolves.toEqual({
+        discountBps: 0,
+        discountPaise: 0,
+        discountSource: 'NONE',
+        amountPaidPaise: LIST,
+      });
+    });
+
+    it('a bad code is still reported as INVALID first', async () => {
+      await seedAgentWithCode();
+      await expect(
+        quoteFor(h, { promoCode: 'NM2222XX' }),
+      ).resolves.toMatchObject({ rejectedReason: 'INVALID' });
+    });
+  });
+
   describe('an invalid code never blocks payment', () => {
     it.each([
       ['an unknown code', 'NM2222XX'],
