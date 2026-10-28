@@ -55,9 +55,10 @@ info:
     **What an admin may and may not see.** Admin responses show the *masked*
     phone, PAN last 4, *masked* payout details (`display`), status history,
     codes and counts. They **never** contain a sealed value, a full phone
-    number, a full PAN, or full bank/UPI details. The only door to the full PAN
-    is `POST /admin/agents/{id}/reveal` (`agent.pii.reveal`, step-up, once,
-    never cached). The agent's own view (`GET /agent/me`, referrals,
+    number, a full PAN, or full bank/UPI details. The only door to those full
+    values is `POST /admin/agents/{id}/reveal` (`agent.pii.reveal`, step-up,
+    `fields` of `PAN`, `PAYOUT_DETAILS`, `PHONE`, each audited, once, never
+    cached). The agent's own view (`GET /agent/me`, referrals,
     commissions) is a separate contract and stays separate: the agent never
     sees internal statuses, other agents, review flags or admin reasons
     (except the rejection reason, see `reject`).
@@ -87,6 +88,20 @@ info:
     | `APPROVED` | `APPROVED` |
     | `PAID` | `PAID` |
     | `CANCELLED`, `REVERSED` | `CANCELLED` |
+
+    **What Shaaz still owns (not part of the agent work).**
+    - A stable `code` on **validation (400) and not-found (404) errors**. The
+      global `ValidationPipe` and Nest's `NotFoundException` return no `code`
+      today, so `VALIDATION_FAILED` and the `*_NOT_FOUND` codes in this
+      contract need an exception factory or a filter on his side. The
+      service-level `assertAdminPermission` also throws a plain
+      `ForbiddenException` without a `code` (the guard's 403 has one).
+    - **Roles beyond `SUPER_ADMIN`.** Only that role is seeded, so only a
+      super admin can approve agents, verify PAN or payout details, reveal PII
+      or run payouts until the other roles (for example Partner Manager,
+      Finance) are defined and seeded.
+    - The settings table and service, the OTP/identifier-hash pieces, and the
+      payment fields that `quoteReferral` and commissions depend on.
 
     **"Not yet implementable".** Operations marked so in their description
     depend on tables or pieces that do not exist: the commission and payout
@@ -146,8 +161,9 @@ paths:
       description: |
         Newest first. `q` is an exact match on an agent id, a referral code or
         a full phone number in E.164 (the phone is hashed server-side; the
-        phone is never echoed back unmasked). No partial or name search yet
-        (see the questions at the end of the review).
+        phone is never echoed back unmasked). `name` is a separate, case-
+        insensitive **prefix** match on the agent's name. When both are given
+        both must match. There is no partial-phone search.
       parameters:
         - name: status
           in: query
@@ -156,6 +172,10 @@ paths:
           in: query
           description: Exact agent id, referral code (`NM...`) or E.164 phone.
           schema: { type: string, maxLength: 64 }
+        - name: name
+          in: query
+          description: Case-insensitive prefix of the agent's name (at least 2 characters).
+          schema: { type: string, minLength: 2, maxLength: 100 }
         - name: payoutDetails
           in: query
           description: '`UNVERIFIED` lists agents whose payout details are set but not verified.'
@@ -188,8 +208,11 @@ paths:
       x-readiness: after-phase1-migration
       description: |
         Masked phone, PAN last 4, masked payout details, codes, counts and the
-        status history (read from the audit log rows of this agent's status
-        changes). Never a sealed value. `commissions` is `null` until the
+        status history. The history is read from the audit log, but **only
+        this agent's status-change entries** (`entity` `Agent`, this id,
+        actions `agent.approve`, `agent.reject`, `agent.pause`, `agent.resume`,
+        `agent.terminate`) are exposed, so `agent.view` does not grant
+        `audit.view`. Never a sealed value. `commissions` is `null` until the
         commission tables exist (**Not yet implementable** for that field).
       parameters:
         - $ref: '#/components/parameters/AgentId'
@@ -245,10 +268,10 @@ paths:
       description: |
         **Allowed only from `PENDING_APPROVAL`** -> `REJECTED`.
 
-        **`reason` is shown to the applicant** as `rejectionReason` in
-        `GET /agent/me`, so it must be written for them. The panel should say
-        so next to the field. (Question for Shaaz: add a separate internal
-        note?)
+        **There is one reason, and it is shown to the applicant** as
+        `rejectionReason` in `GET /agent/me` (and kept on the audit row), so it
+        must be written for them. The panel must say so next to the field.
+        There is no separate internal note.
       parameters:
         - $ref: '#/components/parameters/AgentId'
       requestBody: { $ref: '#/components/requestBodies/Reason' }
@@ -408,7 +431,9 @@ paths:
         Any later change by the agent clears `verifiedAt` and restarts the
         wait (`agent.payout_details_wait_hours`), so verify the *current*
         details; the response includes `changedAt`. Verifying does not end the
-        wait. Payout creation checks both.
+        wait. Payout creation checks both. To see the full details before
+        verifying, use `reveal` with `PAYOUT_DETAILS`. This does not verify
+        the PAN (see `pan/verify`).
       parameters:
         - $ref: '#/components/parameters/AgentId'
       requestBody: { $ref: '#/components/requestBodies/Reason' }
@@ -433,53 +458,115 @@ paths:
   /admin/agents/{id}/reveal:
     post:
       tags: [Admin agents]
-      summary: Reveal the agent's full PAN, once
+      summary: Reveal the agent's PAN, payout details and/or phone, once
       operationId: adminAgentReveal
       x-permission: agent.pii.reveal
       x-step-up: true
       x-readiness: after-phase1-migration
       x-audit-action: agent.pii.reveal
       description: |
-        Returns the full PAN **in this response only**. A POST, not a GET, so
-        it is never cached, prefetched or replayed by a proxy. The response
-        carries `Cache-Control: no-store`. The server does not keep or log the
-        value; the panel must not store it.
+        Returns the **requested** full values **in this response only**:
+        `fields` lists what to reveal, at least one of `PAN`,
+        `PAYOUT_DETAILS`, `PHONE`, no repeats. Only the requested fields
+        appear in the answer. A POST, not a GET, so it is never cached,
+        prefetched or replayed by a proxy. The response carries
+        `Cache-Control: no-store`. The server does not keep or log the values;
+        the panel must not store them. This is the only door to any full value;
+        every other admin response is masked.
+
+        **Reason required** (`AdminReasonDto`, 3 to 500 characters), the same
+        for all fields in the request.
 
         **Step-up required:** `401 ADMIN_STEP_UP_REQUIRED` unless an
         authenticator check was made in the last 10 minutes. The permission is
         checked first (403 if the caller lacks `agent.pii.reveal`).
 
-        **Audit fails closed.** The reveal is audited (`agent.pii.reveal`,
-        `reason`, the field name `PAN`, never the value) in the same
-        transaction as the read; if the audit write fails, nothing is
-        returned.
+        **Each field is audited.** One audit row per revealed field
+        (`agent.pii.reveal`, `reason`, `metadata.field` = `PAN`,
+        `PAYOUT_DETAILS` or `PHONE`, never the value) in the same transaction
+        as the read. **It fails closed:** if any audit write fails, nothing is
+        returned. If one requested field cannot be revealed (not on file) the
+        whole request fails and **nothing is revealed or audited**.
 
         **Allowed in any agent status**, including `TERMINATED` (an agent may
-        be owed a payout and need PAN). `404 AGENT_NOT_FOUND`;
-        `409 PAN_NOT_SET` when no PAN is on file.
+        be owed a payout). `404 AGENT_NOT_FOUND`; `409 PAN_NOT_SET` or
+        `409 PAYOUT_DETAILS_NOT_SET` when a requested value is not on file.
+        `PHONE` is always on file.
       parameters:
         - $ref: '#/components/parameters/AgentId'
-      requestBody: { $ref: '#/components/requestBodies/Reason' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fields, reason]
+              additionalProperties: false
+              properties:
+                fields:
+                  type: array
+                  minItems: 1
+                  maxItems: 3
+                  uniqueItems: true
+                  items: { $ref: '#/components/schemas/RevealField' }
+                reason: { $ref: '#/components/schemas/Reason' }
       responses:
         '200':
-          description: The PAN, once.
+          description: The requested values, once.
           headers:
             Cache-Control:
               schema: { type: string, example: no-store }
           content:
             application/json:
-              schema:
-                type: object
-                required: [pan, revealedAt]
-                properties:
-                  pan: { type: string, example: ABCDE1234F }
-                  revealedAt: { type: string, format: date-time }
+              schema: { $ref: '#/components/schemas/RevealedValues' }
         '400': { $ref: '#/components/responses/ValidationFailed' }
         '401': { $ref: '#/components/responses/UnauthorizedOrStepUp' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/AgentNotFound' }
         '409':
-          description: '`PAN_NOT_SET`: the agent has not supplied a PAN.'
+          description: '`PAN_NOT_SET` or `PAYOUT_DETAILS_NOT_SET`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /admin/agents/{id}/pan/verify:
+    post:
+      tags: [Admin agents]
+      summary: Mark the agent's PAN as verified
+      operationId: adminAgentPanVerify
+      x-permission: agent.payout_details.verify
+      x-readiness: after-phase1-migration
+      x-audit-action: agent.pan.verify
+      description: |
+        Sets `pan_verified_at` (needs the `pan_verified_at` column added to the
+        Phase 1 migration). Payout eligibility requires it before the first
+        payout (`PAN_NOT_VERIFIED`). The admin checks the PAN against the
+        agent's documents after a `reveal` of `PAN`.
+
+        **Allowed when the agent is `ACTIVE`, `SUSPENDED` or `TERMINATED`**
+        (the same states as `payout-details/verify`). Not allowed for
+        `PENDING_APPROVAL` or `REJECTED`. `409 PAN_NOT_SET` when no PAN is on
+        file; `409 PAN_ALREADY_VERIFIED` when it already is. Replacing the
+        PAN (a rejected agent re-applying with a different one) clears
+        `pan_verified_at`.
+
+        Same permission as the payout-details check, so one staff role does
+        both.
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      requestBody: { $ref: '#/components/requestBodies/Reason' }
+      responses:
+        '200':
+          description: The agent after verification.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminAgentDetail' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/AgentNotFound' }
+        '409':
+          description: '`AGENT_STATUS_NOT_ALLOWED` (with `agentStatus`), `PAN_NOT_SET` or `PAN_ALREADY_VERIFIED`.'
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -535,10 +622,9 @@ paths:
       x-readiness: after-phase1-migration
       x-audit-action: attribution.correct
       description: |
-        PROPOSED SHAPE (Shaaz's list gave only `{ reason }`): the correction
-        is named by `action`. This is the "admin can correct it with a
-        recorded reason" path for a blocked self-referral and for
-        `needsReview` rows.
+        The correction is named by `action` (decided shape). This is the
+        "admin can correct it with a recorded reason" path for a blocked
+        self-referral and for `needsReview` rows.
 
         - `REASSIGN_AGENT` (requires `agentId`): credit a different agent.
           The target must be `ACTIVE`. Sets `source` to `ADMIN_SET`. The
@@ -826,6 +912,52 @@ paths:
         '503': { $ref: '#/components/responses/SettingsNotConfigured' }
 
   /admin/payouts:
+    get:
+      tags: [Admin payouts]
+      summary: Payout history
+      operationId: adminPayoutsList
+      x-permission: payout.view
+      x-readiness: not-yet-implementable
+      description: |
+        **Not yet implementable:** needs the payout tables.
+
+        Newest first. Every status, including `CANCELLED`. `from` and `to`
+        filter on `createdAt` (calendar dates, Indian time, inclusive).
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/PayoutStatus' }
+        - name: agentId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: period
+          in: query
+          description: Calendar month, `YYYY-MM`.
+          schema: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$' }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of payouts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminPayout' }
+                  nextCursor: { type: string, nullable: true }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Admin payouts]
       summary: Create a payout for an agent and period
@@ -847,24 +979,26 @@ paths:
         **Step-up required** (`payout.execute`): `401 ADMIN_STEP_UP_REQUIRED`
         if the last authenticator check is older than 10 minutes.
 
-        **Idempotent.** `Idempotency-Key` is required. Same key and same body
-        -> the original payout again, `200` with `Idempotent-Replayed: true`
-        (no second payout). Same key and a different body ->
-        `409 IDEMPOTENCY_KEY_REUSED`. A missing key is `400`.
+        **Idempotent by the one-payout rule, with no `Idempotency-Key`.** There
+        is at most one non-cancelled payout per agent per period (a unique
+        constraint on agent and period for payouts that are not `CANCELLED`).
+        If one already exists for the `agentId` and `period` sent, the request
+        returns **that existing payout with `200`** and changes nothing (no
+        second payout, no new audit row). A retry after a timeout is therefore
+        safe. A cancelled payout frees the period.
 
-        **Refused with `422 PAYOUT_NOT_ELIGIBLE`** (`reasons` lists them all)
-        unless: the balance is at least the minimum (`BELOW_MINIMUM`), the
-        payout details are verified (`DETAILS_NOT_VERIFIED`) and the wait after
-        their last change is over (`WAIT_NOT_OVER`), the PAN is verified before
-        the first payout (`PAN_NOT_VERIFIED`), the agent is payable
-        (`AGENT_NOT_PAYABLE`) and **no payout exists for that agent and
-        period** (`PAYOUT_EXISTS`; one per agent per period). Also
-        `NOTHING_TO_PAY`, and **`TAX_RULE_UNSUPPORTED`**: any non-null
+        **Otherwise refused with `422 PAYOUT_NOT_ELIGIBLE`** (`reasons` lists
+        them all) unless: the balance is at least the minimum
+        (`BELOW_MINIMUM`), the payout details are verified
+        (`DETAILS_NOT_VERIFIED`) and the wait after their last change is over
+        (`WAIT_NOT_OVER`), the PAN is verified before the first payout
+        (`PAN_NOT_VERIFIED`) and the agent is payable (`AGENT_NOT_PAYABLE`).
+        (`PAYOUT_EXISTS` is what `payable` reports for a period that already
+        has a payout; `create` answers it with the existing payout instead.)
+        Also `NOTHING_TO_PAY`, and **`TAX_RULE_UNSUPPORTED`**: any non-null
         `payout.tax_withholding` is refused until the CA's rule is
         implemented. **Tax is pending the CA**; a created payout today has
         `taxWithheldPaise: 0` and the warning `TAX_RULE_NOT_SET`.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -883,10 +1017,7 @@ paths:
                 reason: { $ref: '#/components/schemas/Reason' }
       responses:
         '200':
-          description: Replay of an earlier request with the same `Idempotency-Key` and body.
-          headers:
-            Idempotent-Replayed:
-              schema: { type: string, example: 'true' }
+          description: A payout for this agent and period already exists; it is returned unchanged.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminPayout' }
@@ -899,11 +1030,6 @@ paths:
         '401': { $ref: '#/components/responses/UnauthorizedOrStepUp' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/AgentNotFound' }
-        '409':
-          description: '`IDEMPOTENCY_KEY_REUSED` (same key, different body).'
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
         '422':
           description: |
             `PAYOUT_NOT_ELIGIBLE`. The body has `reasons`: one or more of the
@@ -913,6 +1039,30 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         '503': { $ref: '#/components/responses/SettingsNotConfigured' }
+
+  /admin/payouts/{id}:
+    get:
+      tags: [Admin payouts]
+      summary: One payout, with its commissions
+      operationId: adminPayoutGet
+      x-permission: payout.view
+      x-readiness: not-yet-implementable
+      description: |
+        **Not yet implementable:** needs the payout and commission tables.
+
+        The payout and the commissions it covers (internal and public
+        statuses). Masked data only.
+      parameters:
+        - $ref: '#/components/parameters/PayoutId'
+      responses:
+        '200':
+          description: The payout.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminPayoutDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/PayoutNotFound' }
 
   /admin/payouts/{id}/mark-paid:
     post:
@@ -1032,12 +1182,6 @@ components:
       in: query
       required: false
       schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      description: A client-generated unique key (for example a UUID) for this create. Reuse it only to retry the identical request.
-      schema: { type: string, minLength: 8, maxLength: 128 }
 
   requestBodies:
     Reason:
@@ -1168,6 +1312,7 @@ components:
             - AGENT_TRANSITION_NOT_ALLOWED
             - AGENT_STATUS_NOT_ALLOWED
             - PAN_NOT_SET
+            - PAN_ALREADY_VERIFIED
             - PAYOUT_DETAILS_NOT_SET
             - PAYOUT_DETAILS_ALREADY_VERIFIED
             - REFERRAL_NOT_FOUND
@@ -1181,7 +1326,6 @@ components:
             - PAYOUT_NOT_FOUND
             - PAYOUT_NOT_ELIGIBLE
             - PAYOUT_STATUS_NOT_ALLOWED
-            - IDEMPOTENCY_KEY_REUSED
             - SETTINGS_NOT_CONFIGURED
         message:
           oneOf:
@@ -1287,7 +1431,7 @@ components:
 
     AdminAgentListItem:
       type: object
-      required: [id, name, phoneMasked, city, state, status, createdAt, approvedAt, panOnFile, payoutDetailsSet, payoutDetailsVerified, primaryCode]
+      required: [id, name, phoneMasked, city, state, status, createdAt, approvedAt, panOnFile, panVerified, payoutDetailsSet, payoutDetailsVerified, primaryCode]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
@@ -1298,6 +1442,7 @@ components:
         createdAt: { type: string, format: date-time }
         approvedAt: { type: string, format: date-time, nullable: true }
         panOnFile: { type: boolean }
+        panVerified: { type: boolean }
         payoutDetailsSet: { type: boolean }
         payoutDetailsVerified: { type: boolean }
         primaryCode: { type: string, nullable: true, example: NM7K2P9X }
@@ -1342,7 +1487,7 @@ components:
       description: |
         Everything an admin sees about an agent. No sealed value, no full
         phone, no full PAN, no full payout details appear anywhere in it.
-      required: [id, name, phoneMasked, city, state, status, rejectionReason, approvedAt, createdAt, updatedAt, panLast4, panOnFile, payoutDetailsSet, payoutDetails, codes, counts, commissions, statusHistory]
+      required: [id, name, phoneMasked, city, state, status, rejectionReason, approvedAt, createdAt, updatedAt, panLast4, panOnFile, panVerifiedAt, payoutDetailsSet, payoutDetails, codes, counts, commissions, statusHistory]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
@@ -1356,6 +1501,7 @@ components:
         updatedAt: { type: string, format: date-time }
         panLast4: { type: string, nullable: true, example: '234F' }
         panOnFile: { type: boolean }
+        panVerifiedAt: { type: string, format: date-time, nullable: true }
         payoutDetailsSet: { type: boolean }
         payoutDetails:
           allOf:
@@ -1483,6 +1629,56 @@ components:
           type: array
           description: '`TAX_RULE_NOT_SET` while `payout.tax_withholding` is null (pending the CA).'
           items: { type: string, enum: [TAX_RULE_NOT_SET] }
+
+    RevealField:
+      type: string
+      enum: [PAN, PAYOUT_DETAILS, PHONE]
+
+    RevealedValues:
+      type: object
+      description: Only the requested fields are present. Returned once, never cached, never stored.
+      required: [revealedAt]
+      additionalProperties: false
+      properties:
+        revealedAt: { type: string, format: date-time }
+        pan: { type: string, example: ABCDE1234F }
+        phone: { $ref: '#/components/schemas/PhoneE164' }
+        payoutDetails:
+          type: object
+          description: |
+            The agent's payout details in the same shape the agent sent:
+            exactly one of `upi` or `bank`.
+          additionalProperties: false
+          minProperties: 1
+          maxProperties: 1
+          properties:
+            upi:
+              type: object
+              required: [vpa]
+              properties:
+                vpa: { type: string, example: ravi@okbank }
+            bank:
+              type: object
+              required: [accountHolderName, accountNumber, ifsc]
+              properties:
+                accountHolderName: { type: string }
+                accountNumber: { type: string }
+                ifsc: { type: string, example: HDFC0001234 }
+
+    PhoneE164:
+      type: string
+      pattern: '^\+[1-9][0-9]{7,14}$'
+      example: '+919876543210'
+
+    AdminPayoutDetail:
+      allOf:
+        - $ref: '#/components/schemas/AdminPayout'
+        - type: object
+          required: [commissions]
+          properties:
+            commissions:
+              type: array
+              items: { $ref: '#/components/schemas/AdminCommission' }
 
     AdminPayout:
       type: object
