@@ -100,10 +100,11 @@ errors). Codes in the contract: `VALIDATION_FAILED`, `UNAUTHORIZED`,
 ## 3. Sign-in flow (dummy OTP for now)
 
 1. Phone screen → `POST /agent/auth/otp/request` with `{ "phone": "+919876543210" }`
-   (E.164, `+91` and 10 digits). Response: `{ expiresInSeconds, resendAfterSeconds }`.
-   It answers the same whether or not the phone is an agent.
-2. OTP screen → `POST /agent/auth/otp/verify` with `{ "phone", "code" }`
-   (`code` is 4–8 digits). Response is an `ApplicantSession` or an
+   (E.164, `+91` and 10 digits). Response: `{ challengeId, expiresInSeconds,
+   resendAfterSeconds }`. Keep the `challengeId`. It answers the same whether
+   or not the phone is an agent.
+2. OTP screen → `POST /agent/auth/otp/verify` with `{ "challengeId", "code" }`
+   (`code` is 4–8 digits; the phone is not sent again). Response is an `ApplicantSession` or an
    `AgentSession`; **branch on `scope`**.
    - `APPLICANT` → application form.
    - `AGENT` → read `agent.status` and go to the matching screen.
