@@ -32,6 +32,27 @@ info:
     - **Errors** keep Nest's shape `{ statusCode, error, code, message }` plus
       route-specific extras (for example `missing`, `agentStatus`, `reasons`).
       Branch on `code`, never on `message`.
+    - **How to read a 401.** A 401 **with no `code`** means the caller is not
+      signed in (the Firebase token is missing, invalid or expired; this comes
+      from `FirebaseAuthGuard`, which adds no code). A 401 **with an
+      `ADMIN_SESSION_*` or `ADMIN_STEP_UP_REQUIRED` code** is an admin session
+      or step-up problem: start or renew the session with
+      `POST /admin/auth/session`, or confirm with `POST /admin/auth/step-up`.
+      There is no `UNAUTHORIZED` code.
+    - **Where the error codes come from.** Only `VALIDATION_FAILED` is global
+      (Shaaz's shared `validationFailed` exception factory in `@app/common`,
+      wired into the global `ValidationPipe`). The not-found and state codes
+      (`AGENT_NOT_FOUND`, `COMMISSION_NOT_FOUND`, `PAYOUT_NOT_FOUND`,
+      `REFERRAL_NOT_FOUND`, `AGENT_TRANSITION_NOT_ALLOWED`, ...) are thrown by
+      the agent code itself, with the same body shape as the admin errors, for
+      example `new NotFoundException({ statusCode: 404, error: 'Not Found',
+      code: 'AGENT_NOT_FOUND', message })`. The 403 for a missing permission
+      (guard and service-level check) is handled on Shaaz's side.
+    - **Path ids.** Every `{id}` path parameter is a UUID and must be read with
+      `ParseUUIDPipe` using `exceptionFactory: validationFailed` from
+      `@app/common` (available once Shaaz's PR with it is merged), so a
+      malformed id answers `400 VALIDATION_FAILED` and not Nest's default
+      `400` without a code.
     - **Lists** are cursor-paginated: `?cursor=&limit=` ->
       `{ items, nextCursor }` (`nextCursor` is `null` on the last page). `limit`
       is 1 to 100, default 25, as in the membership admin API. The cursor is
@@ -90,12 +111,12 @@ info:
     | `CANCELLED`, `REVERSED` | `CANCELLED` |
 
     **What Shaaz still owns (not part of the agent work).**
-    - A stable `code` on **validation (400) and not-found (404) errors**. The
-      global `ValidationPipe` and Nest's `NotFoundException` return no `code`
-      today, so `VALIDATION_FAILED` and the `*_NOT_FOUND` codes in this
-      contract need an exception factory or a filter on his side. The
-      service-level `assertAdminPermission` also throws a plain
-      `ForbiddenException` without a `code` (the guard's 403 has one).
+    - The shared **`validationFailed` exception factory** in `@app/common`
+      (his Thursday PR), which gives `VALIDATION_FAILED` to validation errors
+      and, through `ParseUUIDPipe`, to a malformed `{id}`. It is the only
+      error code that is global; the not-found codes are ours (the agent code
+      throws its own) and the service-level 403 code is handled, so neither is
+      open any more.
     - **Roles beyond `SUPER_ADMIN`.** Only that role is seeded, so only a
       super admin can approve agents, verify PAN or payout details, reveal PII
       or run payouts until the other roles (for example Partner Manager,
@@ -1203,8 +1224,9 @@ components:
           schema: { $ref: '#/components/schemas/Error' }
     Unauthorized:
       description: |
-        Not signed in (`UNAUTHORIZED`), or no valid admin session
-        (`ADMIN_SESSION_REQUIRED`, `ADMIN_SESSION_INVALID`).
+        With no `code`: not signed in (Firebase token missing, invalid or
+        expired). With `ADMIN_SESSION_REQUIRED` or `ADMIN_SESSION_INVALID`: no
+        valid admin session.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -1292,7 +1314,10 @@ components:
   schemas:
     Error:
       type: object
-      required: [statusCode, error, code, message]
+      required: [statusCode, error, message]
+      description: |
+        `code` is present on every error this contract defines. It is absent
+        only on a 401 for a caller who is not signed in.
       properties:
         statusCode: { type: integer, example: 409 }
         error: { type: string, example: Conflict }
@@ -1301,7 +1326,6 @@ components:
           description: Stable machine-readable code.
           enum:
             - VALIDATION_FAILED
-            - UNAUTHORIZED
             - ADMIN_ACCESS_REQUIRED
             - ADMIN_PERMISSION_DENIED
             - ADMIN_ROUTE_UNPROTECTED
