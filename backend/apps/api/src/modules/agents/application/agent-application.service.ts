@@ -130,6 +130,11 @@ export class AgentApplicationService {
         if (decision.action === 'RESUBMIT_PENDING') {
           // A rejected agent starts over: the old session family is revoked
           // and a new one is issued.
+          // A different PAN has not been checked: its verification is cleared.
+          const panChanged =
+            clean.pan !== null &&
+            (existing!.panSealed === null ||
+              sealer.open(existing!.panSealed) !== clean.pan);
           const agent = await agents.update(
             existing!.id,
             {
@@ -143,6 +148,7 @@ export class AgentApplicationService {
                 : {
                     panLast4: clean.pan.slice(-4),
                     panSealed: sealer.seal(clean.pan),
+                    ...(panChanged ? { panVerifiedAt: null } : {}),
                   }),
             },
             tx,

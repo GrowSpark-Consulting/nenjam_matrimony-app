@@ -30,7 +30,8 @@
  *
  * Rejection reasons: INVALID (unknown, malformed, inactive, a terminated or
  * not-yet-approved agent, a rate-limited attempt, a rejected attribution),
- * ALREADY_ATTRIBUTED, NOT_FIRST_PLAN, AGENT_PAUSED, SELF_REFERRAL.
+ * ALREADY_ATTRIBUTED, NOT_FIRST_PLAN, AGENT_PAUSED, SELF_REFERRAL,
+ * PHONE_NOT_VERIFIED (the member has no verified phone: no credit is possible).
  */
 import { AgentConfigError } from '../config/agent-config.service';
 import { AgentServiceError } from '../errors/agent-service-error';
@@ -65,7 +66,8 @@ export type ReferralQuoteRejectedReason =
   | 'ALREADY_ATTRIBUTED'
   | 'NOT_FIRST_PLAN'
   | 'AGENT_PAUSED'
-  | 'SELF_REFERRAL';
+  | 'SELF_REFERRAL'
+  | 'PHONE_NOT_VERIFIED';
 
 export interface ReferralQuoteInput {
   memberId: string;
@@ -281,6 +283,8 @@ export class AgentReferralQuoteService {
           return refused('ALREADY_ATTRIBUTED');
         case 'ALREADY_PAID':
           return refused('NOT_FIRST_PLAN');
+        case 'PHONE_NOT_VERIFIED':
+          return refused('PHONE_NOT_VERIFIED');
         default:
           return refused('INVALID');
       }

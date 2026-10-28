@@ -202,7 +202,7 @@ describe('FakeReferralAttributionRepository', () => {
       attribution({
         id: 'attr-2',
         memberId: 'member-2',
-        memberPhoneHash: null,
+        memberPhoneHash: 'member-hash-2',
       }),
     );
     expect(await repo.listByAgent('agent-1')).toHaveLength(2);
@@ -395,22 +395,29 @@ describe('FakeReferralAttributionRepository phone uniqueness', () => {
     ).rejects.toMatchObject({ reason: 'DUPLICATE_ATTRIBUTION' });
   });
 
-  it('allows several attributions that have no phone hash', async () => {
+  it('refuses an attribution with no phone hash, like the NOT NULL column', async () => {
     const repo = new FakeReferralAttributionRepository();
-    const base = {
+    const noHash = {
       agentId: 'agent-1',
       codeId: 'code-1',
       source: 'ENTERED_AT_PAYMENT' as const,
       attributedAt: NOW,
       status: 'ACTIVE' as const,
       windowEndsAt: LATER,
-      needsReview: true,
-      memberPhoneHash: null,
+      needsReview: false,
     };
-    await repo.create({ ...base, id: 'a', memberId: 'm1' });
     await expect(
-      repo.create({ ...base, id: 'b', memberId: 'm2' }),
-    ).resolves.toBeDefined();
+      repo.create({
+        ...noHash,
+        id: 'a',
+        memberId: 'm1',
+        memberPhoneHash: null as unknown as string,
+      }),
+    ).rejects.toBeInstanceOf(RangeError);
+    await expect(
+      repo.create({ ...noHash, id: 'b', memberId: 'm2', memberPhoneHash: '' }),
+    ).rejects.toBeInstanceOf(RangeError);
+    expect(await repo.listByAgent('agent-1')).toHaveLength(0);
   });
 });
 

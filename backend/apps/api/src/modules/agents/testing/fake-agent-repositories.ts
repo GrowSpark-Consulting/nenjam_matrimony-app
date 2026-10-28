@@ -63,6 +63,7 @@ export class FakeAgentRepository implements AgentRepository {
       status: 'PENDING_APPROVAL',
       rejectionReason: null,
       approvedAt: null,
+      panVerifiedAt: null,
       payoutDetailsSet: false,
     };
     this.rows.set(row.id, row);
@@ -275,13 +276,21 @@ export class FakeReferralAttributionRepository implements ReferralAttributionRep
     attribution: ReferralAttributionRecord,
     tx?: AgentTx,
   ): Promise<ReferralAttributionRecord> {
+    // The database column is NOT NULL; the fake refuses what it would refuse.
+    if (
+      typeof attribution.memberPhoneHash !== 'string' ||
+      attribution.memberPhoneHash === ''
+    ) {
+      return Promise.reject(
+        new RangeError('An attribution needs a member phone hash.'),
+      );
+    }
     const track = trackWrite(tx);
     const rows = [...this.rows.values()];
     if (
       this.rows.has(attribution.id) ||
       rows.some((row) => row.memberId === attribution.memberId) ||
-      (attribution.memberPhoneHash !== null &&
-        rows.some((row) => row.memberPhoneHash === attribution.memberPhoneHash))
+      rows.some((row) => row.memberPhoneHash === attribution.memberPhoneHash)
     ) {
       return Promise.reject(new AgentConflictError('DUPLICATE_ATTRIBUTION'));
     }
