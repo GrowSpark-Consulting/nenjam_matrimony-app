@@ -107,7 +107,9 @@ Interface with Shaaz: `quoteReferral()` (Ishu, read-only, at checkout); his `Pay
 | Tax withholding (CA) | `planPayout()` in `payout/plan-payout.ts` refuses any set value with `TAX_RULE_UNSUPPORTED` — **must change when the CA answers** |
 | Commission base (CA) | `commission.base` setting; `buildCommissionDraft()` returns `amountPaise: null` while it is `null` |
 
-Other decisions still open: plan prices, how an agent pays for a client's plan, Tamil share text, referral link web address, agent KYC, whether the app shows a Partner Program button.
+Other decisions still open: plan prices, how an agent pays for a client's plan, Tamil wording for the other labels (statuses, stages), referral link web address, agent KYC.
+
+Decided by Raja on 28 Oct: the share messages (English and Tamil) are approved and final, served by `GET /agent/config` with `{discount_percent}` filled in from the settings (wording in `FRONTEND_HANDOFF_DHATRI.md` section 6); the Partner Program button is on the landing page only, not in the app.
 
 Setting values decided (Final Build Spec §4): `commission.auto_approve` = `true` (an admin can switch to manual later without a deploy); `agent.payout_details_wait_hours` = `72`; `referral.discount_only_in_credit_window` = `true` as the default, still pending Raja's confirmation; `commission.require_verified_profile` = `false` (decided by the team). None are stored yet — `PlatformSetting` is Shaaz's and does not exist yet.
 
