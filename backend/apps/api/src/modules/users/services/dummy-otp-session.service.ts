@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@app/database';
 import { FirebaseService } from '@app/firebase';
-import { dummyAuthAllows } from '@app/common';
+import { dummyAuthAllows, isStaffRole } from '@app/common';
 import { DummyOtpSessionResponseDto } from '../dto/dummy-otp-session.dto';
 
 /**
@@ -86,6 +86,12 @@ export class DummyOtpSessionService {
     //    prevent, so the failure surfaces rather than being swallowed — the
     //    client must not proceed believing signup succeeded. The Firebase user
     //    is left in place on purpose: it is what makes the retry idempotent.
+    // Never for staff: a token minted here would sign the caller in as
+    // whichever row the supplied phone or email resolves to. Refused before
+    // any row is touched and before a token exists, with the same answer as
+    // a number outside the policy, so the refusal reveals nothing.
+    await this.refuseStaff({ uid, phone, email });
+
     const dbAt = Date.now();
     let userId: string;
     try {
@@ -129,6 +135,37 @@ export class DummyOtpSessionService {
    * request — it is the first thing a new member's identity touches, and the
    * guard must find the row already correct when the very next call arrives.
    */
+  /**
+   * Refuses when [uid] — or, failing that, the supplied email or phone —
+   * belongs to a staff row. Dummy OTP verifies nothing, so it must never be a
+   * way into an admin account, whether through the Firebase account it
+   * resolved or through the `users` row `reconcileUser` would re-link.
+   */
+  private async refuseStaff(params: {
+    uid: string;
+    phone: string;
+    email?: string;
+  }): Promise<void> {
+    const { uid, phone, email } = params;
+    const lookups: Array<
+      { firebaseUid: string } | { email: string } | { phone: string }
+    > = [{ firebaseUid: uid }, ...(email ? [{ email }] : []), { phone }];
+    for (const where of lookups) {
+      const row = await this.prisma.user.findUnique({
+        where,
+        select: { id: true, role: true },
+      });
+      if (row && isStaffRole(row.role)) {
+        this.logger.warn(
+          `Refused a dummy-OTP session that resolves to staff user ${row.id}.`,
+        );
+        throw new ForbiddenException(
+          'Dummy-OTP sign-in is not enabled for this number on this server.',
+        );
+      }
+    }
+  }
+
   private async reconcileUser(params: {
     uid: string;
     phone: string;

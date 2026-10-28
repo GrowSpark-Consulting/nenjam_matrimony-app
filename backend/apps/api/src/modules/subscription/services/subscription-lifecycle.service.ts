@@ -11,7 +11,7 @@ import type {
 } from '../../../../../../libs/database/generated/client';
 import { PlanCatalogService } from '../../entitlements/catalog/plan-catalog.service';
 import { SubscriptionRepository } from '../repositories/subscription.repository';
-import { assertAdminPermission } from '../domain/admin-permission';
+import { assertAdminPermission } from '../../admin/rbac/assert-admin-permission';
 import { windowFor, type PlanWindow } from '../domain/schedule';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -406,10 +406,7 @@ export class SubscriptionLifecycleService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      await assertAdminPermission(tx, input.actorId, {
-        module: 'subscriptions',
-        action: 'write',
-      });
+      await assertAdminPermission(tx, input.actorId, 'subscription.grant');
       const member = await tx.user.findUnique({
         where: { id: input.userId },
         select: { deletedAt: true },
@@ -485,10 +482,7 @@ export class SubscriptionLifecycleService {
       );
     }
     return this.prisma.$transaction(async (tx) => {
-      await assertAdminPermission(tx, input.actorId, {
-        module: 'subscriptions',
-        action: 'write',
-      });
+      await assertAdminPermission(tx, input.actorId, 'subscription.extend');
       const subscription = await tx.userSubscription.findUnique({
         where: { id: input.subscriptionId },
         include: { plan: { select: { tier: true } } },
@@ -567,10 +561,7 @@ export class SubscriptionLifecycleService {
   ): Promise<void> {
     this.assertReason(input.reason);
     await this.prisma.$transaction(async (tx) => {
-      await assertAdminPermission(tx, input.actorId, {
-        module: 'subscriptions',
-        action: 'cancel',
-      });
+      await assertAdminPermission(tx, input.actorId, 'subscription.cancel');
       const subscription = await tx.userSubscription.findUnique({
         where: { id: input.subscriptionId },
         select: { id: true, userId: true },

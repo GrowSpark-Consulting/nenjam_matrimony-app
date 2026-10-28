@@ -135,6 +135,8 @@ async function bootstrap() {
       'Authorization',
       'X-App-Version',
       'Accept',
+      // The admin panel's second-factor session (admin/auth/admin-auth.policy.ts).
+      'X-Admin-Session',
     ],
   });
 

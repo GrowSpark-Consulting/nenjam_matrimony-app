@@ -18,7 +18,7 @@ import {
 } from '../../entitlements/catalog/feature-catalog';
 import { PlanCatalogService } from '../../entitlements/catalog/plan-catalog.service';
 import { SubscriptionRepository } from '../repositories/subscription.repository';
-import { assertAdminPermission } from '../domain/admin-permission';
+import { assertAdminPermission } from '../../admin/rbac/assert-admin-permission';
 
 /** Allowance for clock skew when refusing a backdated version. */
 const BACKDATE_TOLERANCE_MS = 60_000;
@@ -71,8 +71,9 @@ export interface SetDurationInput {
  * methods (see docs/membership/README.md § Future admin API).
  *
  * Every method requires a reason, checks — inside its transaction — that the
- * actor is an ACTIVE admin holding the permission (membership.plans.write /
- * membership.prices.write; see domain/admin-permission.ts), validates, and
+ * actor is an ACTIVE admin whose roles grant the permission (plan.publish for
+ * anything members see change — versions, prices, availability; plan.edit for
+ * display text; see admin/rbac/assert-admin-permission.ts), validates, and
  * writes its change and an AuditLog row (with the before/after state) in that
  * ONE transaction, then refreshes the catalogue cache.
  *
@@ -127,10 +128,7 @@ export class PlanCatalogAdminService {
 
     try {
       const result = await this.prisma.$transaction(async (tx) => {
-        await assertAdminPermission(tx, input.actorId, {
-          module: 'membership',
-          action: 'plans.write',
-        });
+        await assertAdminPermission(tx, input.actorId, 'plan.publish');
         const latest = await tx.subscriptionPlanVersion.aggregate({
           where: { planId: plan.id },
           _max: { version: true },
@@ -223,10 +221,7 @@ export class PlanCatalogAdminService {
     const plan = await this.requirePlan(input.planCode);
     try {
       await this.prisma.$transaction(async (tx) => {
-        await assertAdminPermission(tx, input.actorId, {
-          module: 'membership',
-          action: 'prices.write',
-        });
+        await assertAdminPermission(tx, input.actorId, 'plan.publish');
         const before = await tx.subscriptionPlanDuration.findUnique({
           where: { planId_months: { planId: plan.id, months: input.months } },
         });
@@ -292,10 +287,7 @@ export class PlanCatalogAdminService {
     const plan = await this.requirePlan(input.planCode);
     try {
       await this.prisma.$transaction(async (tx) => {
-        await assertAdminPermission(tx, input.actorId, {
-          module: 'membership',
-          action: 'plans.write',
-        });
+        await assertAdminPermission(tx, input.actorId, 'plan.publish');
         await tx.subscriptionPlan.update({
           where: { id: plan.id },
           data: { isActive: input.isActive },
@@ -345,10 +337,7 @@ export class PlanCatalogAdminService {
     };
     try {
       await this.prisma.$transaction(async (tx) => {
-        await assertAdminPermission(tx, input.actorId, {
-          module: 'membership',
-          action: 'plans.write',
-        });
+        await assertAdminPermission(tx, input.actorId, 'plan.edit');
         await tx.subscriptionPlan.update({ where: { id: plan.id }, data });
         await this.audit(
           tx,

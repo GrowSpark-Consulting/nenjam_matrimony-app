@@ -282,6 +282,44 @@ export class FirebaseService implements OnModuleInit {
   }
 
   /**
+   * The Firebase account registered to [email], or null. Read-only; used by
+   * the admin provisioning script to link a staff row to the account an
+   * operator created in the Firebase console.
+   */
+  async findUserByEmail(email: string): Promise<{
+    uid: string;
+    email: string | undefined;
+    emailVerified: boolean;
+    disabled: boolean;
+    hasPhone: boolean;
+  } | null> {
+    if (!this.app) {
+      throw new InternalServerErrorException(
+        'Firebase Admin SDK is not configured on this server.',
+      );
+    }
+    try {
+      const user = await this.withTimeout(
+        getAuth(this.app).getUserByEmail(email.trim().toLowerCase()),
+        10_000,
+        'Firebase user lookup timed out.',
+      );
+      return {
+        uid: user.uid,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        disabled: user.disabled,
+        hasPhone: !!user.phoneNumber,
+      };
+    } catch (error) {
+      if ((error as { code?: string })?.code === 'auth/user-not-found') {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Permanently deletes the Firebase Auth user, revoking every session plus all
    * ID/refresh tokens so a deleted account can never authenticate again. Used by
    * the hard account-deletion flow.

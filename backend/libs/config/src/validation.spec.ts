@@ -114,6 +114,30 @@ describe('validationSchema', () => {
     expect(value.NODE_ENV).toBe('development');
     expect(value.LOG_LEVEL).toBe('info');
   });
+
+  describe('ADMIN_MFA_ENCRYPTION_KEY', () => {
+    const withKey = (key?: string) =>
+      validationSchema.validate(
+        key === undefined
+          ? validEnv
+          : { ...validEnv, ADMIN_MFA_ENCRYPTION_KEY: key },
+        { abortEarly: false },
+      ).error;
+
+    it('is optional: absent or blank boots (admin sign-in then answers 503)', () => {
+      expect(withKey()).toBeUndefined();
+      expect(withKey('')).toBeUndefined();
+    });
+
+    it('accepts 32 bytes, base64-encoded', () => {
+      expect(withKey(Buffer.alloc(32, 7).toString('base64'))).toBeUndefined();
+    });
+
+    it('refuses to boot with a malformed key rather than run without MFA', () => {
+      expect(withKey('not-a-key')).toBeDefined();
+      expect(withKey(Buffer.alloc(16, 7).toString('base64'))).toBeDefined();
+    });
+  });
 });
 
 describe('validationSchema: face verification', () => {

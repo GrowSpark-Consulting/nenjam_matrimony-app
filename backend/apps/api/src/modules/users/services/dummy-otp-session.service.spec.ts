@@ -188,6 +188,48 @@ describe('DummyOtpSessionService', () => {
     });
   });
 
+  // Dummy OTP checks nothing, so it must never become a way into a staff
+  // account — whether the Firebase account it resolves (looked up by the
+  // caller-supplied email) or the users row it would re-link is an admin's.
+  describe('staff accounts', () => {
+    const staffRow: { id: string; role: string } = {
+      id: 'admin-row',
+      role: 'ADMIN',
+    };
+    const staffWhen = (match: (where: UserWhere) => boolean) =>
+      prisma.user.findUnique.mockImplementation(({ where }) =>
+        Promise.resolve(match(where) ? staffRow : null),
+      );
+
+    it.each([
+      ['the Firebase account it resolved', (w: UserWhere) => !!w.firebaseUid],
+      ['the supplied email', (w: UserWhere) => w.email === EMAIL],
+      ['the supplied phone', (w: UserWhere) => w.phone === PHONE],
+    ])(
+      'refuses when %s belongs to staff, touching no row and minting no token',
+      async (_label, match) => {
+        enableDevMode();
+        staffWhen(match);
+
+        await expect(
+          build().start({ phone: PHONE, email: EMAIL }),
+        ).rejects.toBeInstanceOf(ForbiddenException);
+
+        expect(prisma.user.update).not.toHaveBeenCalled();
+        expect(prisma.user.create).not.toHaveBeenCalled();
+        expect(firebase.createCustomToken).not.toHaveBeenCalled();
+      },
+    );
+
+    it('gives the same answer as a number outside the policy', async () => {
+      enableDevMode();
+      staffWhen((w) => w.phone === PHONE);
+      await expect(build().start({ phone: PHONE })).rejects.toThrow(
+        'Dummy-OTP sign-in is not enabled for this number on this server.',
+      );
+    });
+  });
+
   describe('when provisioning goes wrong', () => {
     it('fails loudly if the users row cannot be written, and mints no token', async () => {
       enableDevMode();

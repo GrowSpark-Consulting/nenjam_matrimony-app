@@ -1,8 +1,6 @@
 export * from './decorators/current-user.decorator';
 export * from './decorators/public.decorator';
-export * from './decorators/roles.decorator';
 export * from './guards/firebase-auth.guard';
-export * from './guards/roles.guard';
 export * from './interceptors/transform-response.interceptor';
 export * from './interceptors/request-timing.interceptor';
 export * from './filters/all-exceptions.filter';
@@ -11,4 +9,5 @@ export * from './dto/pagination-query.dto';
 export * from './events/domain-event-names.const';
 export * from './auth/auth-user-cache';
 export * from './auth/dev-auth';
+export * from './auth/staff-identity';
 export * from './file-types/sniff-media';
