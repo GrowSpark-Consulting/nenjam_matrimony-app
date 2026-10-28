@@ -43,10 +43,9 @@ Why it is built the way it is:
 | Landing page | Will carry a "Partner Program" button/link that opens the Agent Portal. Possibly another repo, planned later. | To be confirmed | — |
 | Flutter app | Member app. Gets a "Have a referral code?" box on the name and age page (and a promo code box at payment later). | Dhatri | `Frontend/` in this repo |
 
-**Entry point (changed 27 Oct):** "Partner Program" is **not** on the app's
-first screen. It is a button/link on the landing page that opens the Agent
-Portal at its own address. Whether the app also shows this button is
-**To be confirmed with Raja**.
+**Entry point (decided by Raja, 28 Oct):** "Partner Program" is a button/link
+on the **landing page only**, not in the app. It opens the Agent Portal at its
+own address.
 
 How a referral flows end to end:
 
@@ -125,10 +124,9 @@ The referral discount is the only discount we handle.
 | A terminated agent's pending commission | Raja | `frozenForAgent()` in `commission/decide-commission-transition.ts` (currently frozen) |
 | Partial refund before approval | Raja | `planRefundEffect()` in `commission/plan-refund-effect.ts` (currently cancels the whole commission) |
 | How an agent can pay for a client's plan | Raja | Not started |
-| Tamil share-message wording | Raja | Comes from `GET /agent/config` (not built yet) |
+| Tamil wording for the other labels (statuses, stages) | Raja | Comes from `GET /agent/config` (not built yet). The share messages are approved and final (28 Oct); see `FRONTEND_HANDOFF_DHATRI.md` section 6 |
 | Referral link web address | Raja | `link` and `qrPayload` are `null` until decided |
 | Will agents need KYC later? | Raja | — |
-| Is the Partner Program button also in the app? | Raja | — |
 
 ---
 

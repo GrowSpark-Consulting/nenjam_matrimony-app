@@ -32,9 +32,8 @@ disagree, **the contract wins** — and please tell Ishu.
 - Admin screens (approving agents, payouts). Those are in Shaaz's admin
   dashboard.
 - Agent-added clients ("Way 2"). That comes later.
-- A "Partner Program" button on the app's first screen. The entry point is a
-  link on the landing page that opens the portal. Whether the app also gets a
-  button is **To be confirmed with Raja**.
+- A "Partner Program" button in the app. It is on the **landing page only**
+  (decided by Raja, 28 Oct), as a link that opens the portal.
 
 ---
 
@@ -276,7 +275,24 @@ No WhatsApp API is needed.
 - The message text comes ready-made in `shareMessages` on each referral link
   (with the code already filled in). While there is no web address, the link
   line is left out automatically.
-- The Tamil text is pending Raja's review (`'<to be supplied>'` until then).
+- The wording is **approved and final** (Raja, 28 Oct). It is served by
+  `GET /agent/config` — never type it into the portal or the app — with
+  `{discount_percent}` filled in from the settings. Each message ends with
+  the link on its own line, which is left out when there is no link.
+
+  English:
+
+  ```
+  Hi! I'm {agent_name}. Join Nenjam, a trusted matrimony app, and use my referral code {code} when you sign up to get {discount_percent}% off your first plan.
+  {link}
+  ```
+
+  Tamil:
+
+  ```
+  வணக்கம்! நான் {agent_name}. நம்பகமான திருமண வரன் தேடல் செயலியான "நெஞ்சம்" (Nenjam)-இல் இணையுங்கள். பதிவு செய்யும்போது என் பரிந்துரைக் குறியீடு {code} பயன்படுத்தினால், உங்கள் முதல் திட்டத்தில் {discount_percent}% தள்ளுபடி கிடைக்கும்.
+  {link}
+  ```
 
 ---
 
@@ -305,7 +321,8 @@ states arrive as `ON_HOLD`.
 |---|---|
 | All agent endpoints | Contract agreed, **not built yet**. Use mock data shaped like the contract examples. |
 | Referral `link` and `qrPayload` | `null` until the web address is decided |
-| Tamil labels and share text | `'<to be supplied>'` until Raja reviews |
+| Share messages | Wording final (English and Tamil, see section 6); `GET /agent/config` is not built yet |
+| Other Tamil labels (statuses, stages) | `'<to be supplied>'` until Raja supplies them |
 | Payments, commissions, payouts | Waiting on Shaaz's payments work; lists will be empty |
 | Real OTP | Dummy OTP until the Firebase paid plan |
 | Agent-added clients | Later |
@@ -316,9 +333,8 @@ states arrive as `ON_HOLD`.
 ## 9. Open decisions that may change your screens
 
 - Can a rejected agent re-apply? (Rejected screen's "Apply again" button.)
-- Is the Partner Program button also in the app?
 - The referral link web address (shows the link and QR).
-- Tamil share-message wording.
+- Tamil wording for the other labels (statuses, stages).
 - How an agent can pay for a client's plan (a future screen).
 - Whether agents will need KYC later (a future screen).
 - Plan prices (shown in commission and discount amounts).
