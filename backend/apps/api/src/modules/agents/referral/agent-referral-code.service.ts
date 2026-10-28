@@ -254,7 +254,8 @@ export class AgentReferralCodeService {
             attributedAt: now,
             status: 'REJECTED',
             windowEndsAt: now,
-            needsReview: false,
+            // Kept so an admin can look at it (and correct it, if it is wrong).
+            needsReview: true,
           },
           tx,
         );

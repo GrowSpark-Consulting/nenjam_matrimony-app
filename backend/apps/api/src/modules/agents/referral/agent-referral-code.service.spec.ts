@@ -533,6 +533,7 @@ describe('AgentReferralCodeService', () => {
         expect(stored).toMatchObject({
           status: 'REJECTED',
           agentId: 'agent-1',
+          needsReview: true,
         });
         expect(h.audit.entries).toEqual([
           expect.objectContaining({
@@ -540,6 +541,14 @@ describe('AgentReferralCodeService', () => {
             metadata: { reason: 'SELF_REFERRAL' },
           }),
         ]);
+      });
+
+      it('only the self-referral is flagged: a normal attach is not', async () => {
+        await attach('m1');
+        expect(await h.attributions.findByMemberId('m1')).toMatchObject({
+          status: 'ACTIVE',
+          needsReview: false,
+        });
       });
 
       it('the rejected row is never shown to the agent', async () => {

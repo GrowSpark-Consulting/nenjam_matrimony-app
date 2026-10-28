@@ -214,7 +214,7 @@ export interface ReferralAttributionRecord {
   status: AgentAttributionStatus;
   /** End of the credit window, snapshotted when the attribution was made. */
   windowEndsAt: Date;
-  /** Accepted without a verified phone; an admin should look at it. */
+  /** An admin should look at it: today, a self-referral kept as REJECTED. */
   needsReview: boolean;
 }
 
