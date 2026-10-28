@@ -48,7 +48,7 @@ CREATE TABLE "referral_codes" (
 CREATE TABLE "referral_attributions" (
     "id" TEXT NOT NULL,
     "user_id" TEXT,
-    "phone_hash" TEXT,
+    "phone_hash" TEXT NOT NULL,
     "agent_id" TEXT NOT NULL,
     "code_id" TEXT,
     "source" "referral_source" NOT NULL,
@@ -214,3 +214,15 @@ ALTER TABLE "referral_codes"
 CREATE UNIQUE INDEX "referral_codes_one_primary_per_agent_uq"
   ON "referral_codes" ("agent_id")
   WHERE "is_primary" = true;
+
+-- A REJECTED agent must carry a reason: it is shown to the applicant. A blank
+-- or whitespace-only reason is not a reason. Moving back to PENDING_APPROVAL
+-- (re-applying) may clear it.
+ALTER TABLE "agents"
+  ADD CONSTRAINT "agents_rejected_has_reason_chk"
+  CHECK ("status" <> 'REJECTED' OR ("rejection_reason" IS NOT NULL AND btrim("rejection_reason") <> ''));
+
+-- A PAN cannot be marked verified unless a PAN is on file.
+ALTER TABLE "agents"
+  ADD CONSTRAINT "agents_pan_verified_needs_pan_chk"
+  CHECK ("pan_verified_at" IS NULL OR "pan_encrypted" IS NOT NULL);

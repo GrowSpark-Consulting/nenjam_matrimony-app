@@ -1715,9 +1715,10 @@ model Community {
 // Agent / Partner Program — phase 1.
 // These tables may point at existing ones (User, DevicePlatform); no existing
 // model points at them except the single User.referralAttribution
-// back-relation, which adds no column. Two constraints Prisma cannot express
-// live only in the migration SQL: the referral code format CHECK and the
-// one-primary-code-per-agent partial unique index.
+// back-relation, which adds no column. Constraints Prisma cannot express live
+// only in the migration SQL: the referral code format CHECK, the
+// one-primary-code-per-agent partial unique index, a REJECTED agent must have a
+// non-blank rejection_reason, and pan_verified_at needs pan_encrypted.
 // ============================================================================
 
 /// Lifecycle of an agent's account. SUSPENDED is shown to the agent as "Paused".
@@ -1813,10 +1814,9 @@ model ReferralAttribution {
   id           String            @id @default(uuid())
   /// Null until the person signs up and is matched by phoneHash.
   userId       String?           @unique @map("user_id")
-  /// "v1:"-prefixed keyed hash of the phone. One attribution per phone, ever.
-  /// Null only for a code entered at payment by a member with no verified phone
-  /// (needsReview is then true); Postgres lets several rows hold NULL here.
-  phoneHash    String?           @unique @map("phone_hash")
+  /// "v1:"-prefixed keyed hash of the phone. REQUIRED: a member with no verified
+  /// phone cannot be credited. One attribution per phone, ever.
+  phoneHash    String            @unique @map("phone_hash")
   agentId      String            @map("agent_id")
   /// The code used, when there was one.
   codeId       String?           @map("code_id")
