@@ -68,3 +68,8 @@ label { display: block; margin-top: 0.25rem; }
 fieldset label { display: inline-flex; align-items: center; gap: 0.4rem; margin: 0; font-weight: 400; }
 input[type='radio'], input[type='checkbox'] { min-height: auto; padding: 0; width: 1.1rem; height: 1.1rem; accent-color: var(--primary); }
 select { width: 100%; max-width: 20rem; margin-bottom: 0.5rem; }
+
+/* Refusal states */
+.notice { background: #efe7f6; color: var(--primary); border-radius: 10px; padding: 0.6rem 0.8rem; }
+input[aria-invalid='true'] { border-color: var(--error); border-width: 2px; }
+.field-error { margin: 0; font-size: 0.9rem; }

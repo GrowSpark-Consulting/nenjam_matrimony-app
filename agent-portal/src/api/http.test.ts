@@ -175,6 +175,33 @@ describe('HttpClient across tabs', () => {
     expect([ra.ok, rb.ok]).toEqual(['Bearer access-2', 'Bearer access-2']);
   });
 
+  it('when the lock holder fails to refresh, the waiting tab signs out without a second refresh', async () => {
+    const storage = memoryStorage();
+    const tabA = new SessionStore(storage, Date.now, null);
+    const tabB = new SessionStore(storage, Date.now, null);
+    tabA.set(agentSession(1));
+    let refreshes = 0;
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url.endsWith('/agent/auth/refresh')) {
+        refreshes++;
+        return json(401, { message: 'expired', code: 'REFRESH_TOKEN_EXPIRED' });
+      }
+      return json(401, { message: 'expired', code: 'TOKEN_EXPIRED' });
+    });
+    const lock = sharedLock();
+    const a = new HttpClient('https://api.test', tabA, fetchFn as unknown as typeof fetch, lock);
+    const b = new HttpClient('https://api.test', tabB, fetchFn as unknown as typeof fetch, lock);
+    const results = await Promise.allSettled([
+      a.request('GET', '/agent/me'),
+      b.request('GET', '/agent/balance'),
+    ]);
+    expect(results.map((r) => r.status)).toEqual(['rejected', 'rejected']);
+    // Only the lock holder ever presented the refresh token: no reuse.
+    expect(refreshes).toBe(1);
+    expect(tabA.get()).toBeNull();
+    expect(tabB.get()).toBeNull();
+  });
+
   it('a network failure is a calm ApiError, and the session is kept', async () => {
     const sessions = new SessionStore(memoryStorage(), Date.now, null);
     sessions.set(agentSession(1));
