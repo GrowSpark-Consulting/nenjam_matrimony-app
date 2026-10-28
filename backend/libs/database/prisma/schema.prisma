@@ -1767,6 +1767,8 @@ model Agent {
   panLast4         String?     @map("pan_last4") @db.VarChar(4)
   /// The full PAN sealed by AgentSecretSealer (AES-256-GCM, "v1:" prefix). Never returned to clients. Null until supplied.
   panEncrypted     String?     @map("pan_encrypted")
+  /// When staff verified the PAN (payout eligibility needs it before the first payout). Null until verified; cleared when the PAN is replaced.
+  panVerifiedAt    DateTime?   @map("pan_verified_at")
   /// True once the agent has payout details (agent_payout_details); kept in step by the service in the same transaction.
   payoutDetailsSet Boolean     @default(false) @map("payout_details_set")
   status           AgentStatus @default(PENDING_APPROVAL)

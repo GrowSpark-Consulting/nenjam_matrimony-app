@@ -20,6 +20,7 @@ CREATE TABLE "agents" (
     "state" TEXT NOT NULL,
     "pan_last4" VARCHAR(4),
     "pan_encrypted" TEXT,
+    "pan_verified_at" TIMESTAMP(3),
     "payout_details_set" BOOLEAN NOT NULL DEFAULT false,
     "status" "agent_status" NOT NULL DEFAULT 'PENDING_APPROVAL',
     "rejection_reason" TEXT,
