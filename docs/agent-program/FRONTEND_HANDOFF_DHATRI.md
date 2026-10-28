@@ -281,7 +281,7 @@ or `IOS` only — it is for a future phone app, **not for the website**.
    | `409 ALREADY_ATTRIBUTED` | this member (or their phone) is already credited; the first agent always stays | Say nothing alarming; carry on with sign-up. |
    | `422 SELF_REFERRAL` | the code belongs to the member's own phone; permanent | "You can't use your own code." |
    | `422 ALREADY_PAID` | the member has already paid for a plan | "A code can only be added before your first plan." |
-   | `422 PHONE_NOT_VERIFIED` | no verified phone, which a code at sign-up needs | Ask them to verify their phone first. |
+   | `422 PHONE_NOT_VERIFIED` | no verified phone; any code (at sign-up, by link or QR, or at payment) needs one | Ask them to verify their phone first. |
    | `429 RATE_LIMITED` | too many tries by this member or for this code | Wait for `Retry-After`. |
 
 Whether the member is already signed in on that page (so you can attach
