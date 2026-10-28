@@ -5,6 +5,10 @@
  * the Phase 1 tables exist (PR #116). The record fields are the minimum the
  * planned services need and may grow; none of this is final.
  *
+ * Every method takes an optional `tx` (see `AgentUnitOfWork`). Writes that
+ * are given it commit or roll back with the transaction; reads that must see
+ * those writes pass it too.
+ *
  * Uniqueness rules mirror the planned database constraints, and every
  * violation is reported as `AgentConflictError` so services handle one error
  * whether a fake or a real database enforced it.
@@ -12,6 +16,7 @@
 import type { AgentStatus } from '../agent/agent-status';
 import type { AttributionSource } from '../referral/decide-attribution';
 import type { ReferralViewSource } from '../referral/agent-referral-view';
+import type { AgentTx } from './agent-unit-of-work.port';
 
 export type AgentConflictReason =
   | 'DUPLICATE_PHONE_HASH'
@@ -52,10 +57,10 @@ export type NewAgentRecord = Omit<
 
 /** `status` is stored as given; transition rules live in `agent-status.ts`. */
 export interface AgentRepository {
-  findById(id: string): Promise<AgentRecord | null>;
-  findByPhoneHash(phoneHash: string): Promise<AgentRecord | null>;
+  findById(id: string, tx?: AgentTx): Promise<AgentRecord | null>;
+  findByPhoneHash(phoneHash: string, tx?: AgentTx): Promise<AgentRecord | null>;
   /** Starts as PENDING_APPROVAL. Throws AgentConflictError on a reused id or phone hash. */
-  create(agent: NewAgentRecord): Promise<AgentRecord>;
+  create(agent: NewAgentRecord, tx?: AgentTx): Promise<AgentRecord>;
   update(
     id: string,
     changes: Partial<
@@ -71,6 +76,7 @@ export interface AgentRepository {
         | 'payoutDetailsSet'
       >
     >,
+    tx?: AgentTx,
   ): Promise<AgentRecord>;
 }
 
@@ -87,14 +93,14 @@ export interface ReferralCodeRecord {
 }
 
 export interface ReferralCodeRepository {
-  findByCode(code: string): Promise<ReferralCodeRecord | null>;
-  listByAgent(agentId: string): Promise<ReferralCodeRecord[]>;
-  codeExists(code: string): Promise<boolean>;
+  findByCode(code: string, tx?: AgentTx): Promise<ReferralCodeRecord | null>;
+  listByAgent(agentId: string, tx?: AgentTx): Promise<ReferralCodeRecord[]>;
+  codeExists(code: string, tx?: AgentTx): Promise<boolean>;
   /**
    * Throws AgentConflictError DUPLICATE_CODE for a reused code, or
    * DUPLICATE_PRIMARY_CODE when the agent already has a primary code.
    */
-  create(code: ReferralCodeRecord): Promise<ReferralCodeRecord>;
+  create(code: ReferralCodeRecord, tx?: AgentTx): Promise<ReferralCodeRecord>;
 }
 
 // --- Refresh tokens --------------------------------------------------------
@@ -110,8 +116,14 @@ export interface AgentRefreshTokenRecord {
 }
 
 export interface AgentRefreshTokenRepository {
-  create(token: AgentRefreshTokenRecord): Promise<AgentRefreshTokenRecord>;
-  findByHash(tokenHash: string): Promise<AgentRefreshTokenRecord | null>;
+  create(
+    token: AgentRefreshTokenRecord,
+    tx?: AgentTx,
+  ): Promise<AgentRefreshTokenRecord>;
+  findByHash(
+    tokenHash: string,
+    tx?: AgentTx,
+  ): Promise<AgentRefreshTokenRecord | null>;
   /**
    * Atomically revokes `currentId` and stores `next`. Throws AgentConflictError
    * ALREADY_REVOKED if `currentId` was already revoked (a concurrent refresh),
@@ -121,9 +133,10 @@ export interface AgentRefreshTokenRepository {
     currentId: string,
     next: AgentRefreshTokenRecord,
     at: Date,
+    tx?: AgentTx,
   ): Promise<AgentRefreshTokenRecord>;
   /** Revokes every still-active token of the agent; returns how many. */
-  revokeAllForAgent(agentId: string, at: Date): Promise<number>;
+  revokeAllForAgent(agentId: string, at: Date, tx?: AgentTx): Promise<number>;
 }
 
 // --- Attribution -----------------------------------------------------------
@@ -140,13 +153,20 @@ export interface ReferralAttributionRecord {
 }
 
 export interface ReferralAttributionRepository {
-  findByMemberId(memberId: string): Promise<ReferralAttributionRecord | null>;
-  listByAgent(agentId: string): Promise<ReferralAttributionRecord[]>;
+  findByMemberId(
+    memberId: string,
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord | null>;
+  listByAgent(
+    agentId: string,
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord[]>;
   /** True when an attribution already exists for this member phone hash. */
-  isPhoneHashCredited(phoneHash: string): Promise<boolean>;
+  isPhoneHashCredited(phoneHash: string, tx?: AgentTx): Promise<boolean>;
   /** One attribution per member: throws DUPLICATE_ATTRIBUTION otherwise. */
   create(
     attribution: ReferralAttributionRecord,
+    tx?: AgentTx,
   ): Promise<ReferralAttributionRecord>;
 }
 
@@ -162,10 +182,14 @@ export interface AgentMemberSnapshot {
 
 /** Read-only view of members; agent code never writes member data. */
 export interface AgentMemberReadPort {
-  getMember(memberId: string): Promise<AgentMemberSnapshot | null>;
+  getMember(
+    memberId: string,
+    tx?: AgentTx,
+  ): Promise<AgentMemberSnapshot | null>;
   /** Display fields for the referrals list; null when the member is gone. */
   getReferralViewFields(
     memberId: string,
+    tx?: AgentTx,
   ): Promise<Omit<
     ReferralViewSource,
     'attributionId' | 'commissionStatus'
