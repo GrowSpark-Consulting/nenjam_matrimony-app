@@ -7,6 +7,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
 import '../../../inbox/presentation/providers/inbox_providers.dart';
 import '../../../inbox/presentation/utils/open_chat_detail.dart';
+import '../../../membership/presentation/widgets/membership_denial_sheet.dart';
 import '../../domain/repositories/interests_repository.dart';
 import '../providers/interests_provider.dart';
 
@@ -70,8 +71,9 @@ Future<void> handleInterestButtonTap(
         await ref
             .read(interestsNotifierProvider.notifier)
             .sendInterest(profile);
-      } catch (_) {
+      } catch (error) {
         if (!context.mounted) return;
+        if (showMembershipDenialIfAny(context, ref, error)) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(l10n.interestsActionFailed)));

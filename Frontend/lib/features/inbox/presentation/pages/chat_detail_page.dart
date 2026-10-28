@@ -23,6 +23,8 @@ import '../controllers/typing_controller.dart';
 import '../providers/inbox_providers.dart';
 import '../providers/presence_providers.dart';
 import '../utils/handle_unblock_conversation.dart';
+import '../../../membership/presentation/providers/membership_providers.dart';
+import '../../../membership/presentation/widgets/membership_denial_sheet.dart';
 import '../widgets/chat_composer.dart';
 import '../widgets/chat_presence.dart';
 import '../widgets/date_separator.dart';
@@ -470,6 +472,12 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
         unawaited(_settleInitialScrollToBottom());
       });
     }
+
+    ref.listen(chatMembershipDenialProvider, (_, denial) {
+      if (denial == null) return;
+      ref.read(chatMembershipDenialProvider.notifier).state = null;
+      showMembershipDenialIfAny(context, ref, denial);
+    });
 
     ref.listen(messagesProvider(conversation.id), (previous, next) {
       final prevMessages = previous?.valueOrNull;

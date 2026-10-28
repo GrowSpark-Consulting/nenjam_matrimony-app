@@ -12,6 +12,8 @@ import 'package:nenjam_matrimony/features/discover/domain/entities/discovery_pro
 import 'package:nenjam_matrimony/features/discover/presentation/pages/discover_page.dart';
 import 'package:nenjam_matrimony/features/inbox/presentation/pages/inbox_page.dart';
 import 'package:nenjam_matrimony/features/matches/presentation/pages/matches_page.dart';
+import 'package:nenjam_matrimony/features/membership/data/repositories/mock_membership_repository.dart';
+import 'package:nenjam_matrimony/features/membership/presentation/providers/membership_providers.dart';
 import 'package:nenjam_matrimony/features/premium/presentation/pages/premium_page.dart';
 import 'package:nenjam_matrimony/features/profile_detail/presentation/pages/profile_detail_page.dart';
 import 'package:nenjam_matrimony/features/profile_menu/presentation/pages/profile_menu_page.dart';
@@ -61,58 +63,58 @@ const _portrait = <Size>[
 ];
 
 List<Size> _allSizes() => [
-      ..._portrait,
-      // Landscape: same devices rotated.
-      ..._portrait.map((s) => Size(s.height, s.width)),
-    ];
+  ..._portrait,
+  // Landscape: same devices rotated.
+  ..._portrait.map((s) => Size(s.height, s.width)),
+];
 
 DiscoveryProfileEntity _profile() => const DiscoveryProfileEntity(
-      id: 'audit-1',
-      matrimonyId: 'NM123456',
-      name: 'Diagnostic Tester With A Fairly Long Name',
-      age: 29,
-      location: 'Chennai, Tamil Nadu, India',
-      profession: 'Senior Software Engineer',
-      education: 'M.Tech, Computer Science',
-      photoUrls: [],
-      isVerified: true,
-      isPremium: true,
-      isPsychologyCompleted: true,
-      isOnline: true,
-      horoscopeAvailable: true,
-      photoProtected: false,
-      phoneVerified: true,
-      compatibility: CompatibilityEntity(
-        aiMatchPercent: 88,
-        astroMatchPercent: 76,
-        psychologyMatchPercent: 81,
-        overallCompatibility: 85,
-        lifestyleMatchPercent: 90,
-        familyMatchPercent: 82,
-        educationMatchPercent: 95,
-        valuesMatchPercent: 88,
-        goalsMatchPercent: 80,
-      ),
-      tags: [],
-      religion: 'Hindu',
-      caste: 'Iyer',
-      community: 'Tamil',
-      height: "5'9\"",
-      diet: 'Vegetarian',
-      distanceKm: 12.4,
-      gender: 'Female',
-      profileComplete: true,
-      maritalStatus: 'Never Married',
-      motherTongue: 'Tamil',
-      smoking: 'No',
-      drinking: 'No',
-      physicalStatus: 'Normal',
-      company: 'Big Tech Corp',
-      annualIncome: '25-30 Lakhs',
-      bio: 'Loves travel and books.',
-      languages: ['Tamil', 'English', 'Hindi'],
-      hobbies: ['Reading', 'Travel'],
-    );
+  id: 'audit-1',
+  matrimonyId: 'NM123456',
+  name: 'Diagnostic Tester With A Fairly Long Name',
+  age: 29,
+  location: 'Chennai, Tamil Nadu, India',
+  profession: 'Senior Software Engineer',
+  education: 'M.Tech, Computer Science',
+  photoUrls: [],
+  isVerified: true,
+  isPremium: true,
+  isPsychologyCompleted: true,
+  isOnline: true,
+  horoscopeAvailable: true,
+  photoProtected: false,
+  phoneVerified: true,
+  compatibility: CompatibilityEntity(
+    aiMatchPercent: 88,
+    astroMatchPercent: 76,
+    psychologyMatchPercent: 81,
+    overallCompatibility: 85,
+    lifestyleMatchPercent: 90,
+    familyMatchPercent: 82,
+    educationMatchPercent: 95,
+    valuesMatchPercent: 88,
+    goalsMatchPercent: 80,
+  ),
+  tags: [],
+  religion: 'Hindu',
+  caste: 'Iyer',
+  community: 'Tamil',
+  height: "5'9\"",
+  diet: 'Vegetarian',
+  distanceKm: 12.4,
+  gender: 'Female',
+  profileComplete: true,
+  maritalStatus: 'Never Married',
+  motherTongue: 'Tamil',
+  smoking: 'No',
+  drinking: 'No',
+  physicalStatus: 'Normal',
+  company: 'Big Tech Corp',
+  annualIncome: '25-30 Lakhs',
+  bio: 'Loves travel and books.',
+  languages: ['Tamil', 'English', 'Hindi'],
+  hobbies: ['Reading', 'Travel'],
+);
 
 /// A signed-out auth service. The onboarding contact page reads the current
 /// user in `initState`; without this the audit would fail on "No Firebase App
@@ -223,7 +225,8 @@ Future<void> _audit(
   final failures = <String>[];
   for (final locale in locales) {
     for (final size in _allSizes()) {
-      final tag = '${size.width.toInt()}x${size.height.toInt()} '
+      final tag =
+          '${size.width.toInt()}x${size.height.toInt()} '
           '${size.width > size.height ? 'landscape' : 'portrait'} '
           '[${locale.languageCode}]';
 
@@ -264,7 +267,8 @@ Future<void> _audit(
   expect(
     failures,
     isEmpty,
-    reason: '\n--- ${failures.length} layout failure(s) ---\n'
+    reason:
+        '\n--- ${failures.length} layout failure(s) ---\n'
         '${failures.join('\n')}\n',
   );
 }
@@ -294,7 +298,9 @@ void main() {
     );
   });
 
-  testWidgets('Profile Detail is responsive across phone sizes', (tester) async {
+  testWidgets('Profile Detail is responsive across phone sizes', (
+    tester,
+  ) async {
     await _audit(
       tester,
       'ProfileDetailPage',
@@ -427,7 +433,9 @@ void main() {
     );
   });
 
-  testWidgets('Profile basics is responsive across phone sizes', (tester) async {
+  testWidgets('Profile basics is responsive across phone sizes', (
+    tester,
+  ) async {
     // A gender chip row, two dropdowns, a sub-community text field and a
     // pinned CTA — the run most likely to overflow is the shortest landscape
     // phone in Tamil, whose labels are the longest of the two locales.
@@ -489,7 +497,16 @@ void main() {
   });
 
   testWidgets('Premium is responsive across phone sizes', (tester) async {
-    await _audit(tester, 'PremiumPage', () => const PremiumPage());
+    await _audit(
+      tester,
+      'PremiumPage',
+      () => const PremiumPage(),
+      overrides: [
+        membershipRepositoryProvider.overrideWithValue(
+          MockMembershipRepository(),
+        ),
+      ],
+    );
   });
 
   testWidgets('Settings is responsive across phone sizes', (tester) async {

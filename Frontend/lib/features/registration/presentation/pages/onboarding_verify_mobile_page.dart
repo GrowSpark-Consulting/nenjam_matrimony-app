@@ -20,6 +20,8 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/domain/services/otp_verifier.dart';
 import '../../../authentication/presentation/utils/post_auth_destination.dart';
 import '../../../profile_photos/presentation/providers/photo_providers.dart';
+import '../../../referral/presentation/providers/referral_providers.dart';
+import '../../../referral/presentation/utils/referral_attach_feedback.dart';
 import '../../data/services/pending_photo_store.dart';
 import '../../domain/services/pending_photo_uploader.dart';
 import '../providers/registration_provider.dart';
@@ -313,6 +315,15 @@ class _OnboardingVerifyMobilePageState
     await storageService.clearPendingPhone();
     await notifier.discardPersistedDraft();
     if (!mounted) return;
+    // 5. A referral code entered on the name step, kept until now: the member
+    //    has a session and the save and finalize above are their first
+    //    successful authenticated calls. In the background, never awaited —
+    //    a referral failure must not hold up or undo the signup.
+    attachReferralInBackground(
+      attach: ref.read(referralAttachmentControllerProvider).attachPending,
+      messenger: ScaffoldMessenger.of(context),
+      l10n: l10n,
+    );
     // Not a bare `context.go(RouteNames.discover)`: onboardingCompleted is
     // now true, which means the router's own redirect guard skips
     // PostAuthDestination entirely for this navigation (it only calls the

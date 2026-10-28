@@ -107,6 +107,25 @@ class StorageService {
     await _prefs.remove(AppConstants.keyPendingEmail);
   }
 
+  // ─── Pending referral code (transient, local-only) ───────────────
+  //
+  // A JSON record (code, agent display name, attempts) written when the
+  // member's referral code validates, kept across the remaining signup steps
+  // and a restart, and removed once attaching it has a final answer. Read and
+  // written only through `PendingReferralStore`.
+  String? get pendingReferralCodeJson {
+    final value = _prefs.getString(AppConstants.keyPendingReferralCode);
+    return (value != null && value.isNotEmpty) ? value : null;
+  }
+
+  Future<void> setPendingReferralCodeJson(String json) async {
+    await _prefs.setString(AppConstants.keyPendingReferralCode, json);
+  }
+
+  Future<void> clearPendingReferralCode() async {
+    await _prefs.remove(AppConstants.keyPendingReferralCode);
+  }
+
   // ─── Onboarding completion (development bridge) ──────────────────
   //
   // Signup collects a whole profile before asking for any credential, so a
@@ -310,6 +329,9 @@ class StorageService {
       // next launch would still send its identifier as the dev-auth header
       // and silently resume the account the member just left.
       clearLocalSession(),
+      // A code that never attached belongs to the member who signed out; it
+      // must not attach to whoever signs in next on this device.
+      clearPendingReferralCode(),
     ]);
   }
 }

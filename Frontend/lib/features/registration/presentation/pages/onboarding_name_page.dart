@@ -8,6 +8,10 @@ import '../../../../core/utils/birth_date.dart';
 import '../../../../core/widgets/inputs/app_text_field.dart';
 import '../../../../core/widgets/inputs/birth_date_field.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../authentication/presentation/providers/auth_providers.dart';
+import '../../../referral/presentation/providers/referral_providers.dart';
+import '../../../referral/presentation/utils/referral_attach_feedback.dart';
+import '../../../referral/presentation/widgets/referral_code_box.dart';
 import '../../domain/models/onboarding_forms.dart';
 import '../providers/registration_provider.dart';
 import '../widgets/onboarding_scaffold.dart';
@@ -76,6 +80,28 @@ class _OnboardingNamePageState extends ConsumerState<OnboardingNamePage> {
         OnboardingNameField.dob => l10n.registrationDobLabel,
       };
 
+  /// Saves the three answers; then, only for a member who is already signed
+  /// in (a Google sign-up arrives here with a session), attaches a waiting
+  /// referral code in the background. Email and mobile signups have no
+  /// session yet — their code waits for the Verify Mobile step. A referral
+  /// failure never fails this step.
+  Future<void> _save() async {
+    await ref.read(registrationProvider.notifier).applyOnboardingName(_form);
+    if (!mounted || !ref.read(referralCodeEntryEnabledProvider)) return;
+    final bool signedIn;
+    try {
+      signedIn = ref.read(firebaseAuthServiceProvider).currentUser != null;
+    } catch (_) {
+      return;
+    }
+    if (!signedIn) return;
+    attachReferralInBackground(
+      attach: ref.read(referralAttachmentControllerProvider).attachPending,
+      messenger: ScaffoldMessenger.of(context),
+      l10n: AppLocalizations.of(context),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -86,17 +112,17 @@ class _OnboardingNamePageState extends ConsumerState<OnboardingNamePage> {
       backRoute: RouteNames.createProfileFor,
       nextRoute: RouteNames.onboardingReligion,
       isComplete: _form.isComplete,
-      validationNames:
-          _form.missingFields.map((f) => _fieldLabel(l10n, f)).toList(),
-      onSave: () => ref
-          .read(registrationProvider.notifier)
-          .applyOnboardingName(_form),
+      validationNames: _form.missingFields
+          .map((f) => _fieldLabel(l10n, f))
+          .toList(),
+      onSave: _save,
       fields: [
         NmTextField(
           label: l10n.registrationFirstNameLabel,
           controller: _firstNameCtrl,
           textCapitalization: TextCapitalization.words,
-          onChanged: (v) => setState(() => _form = _form.copyWith(firstName: v)),
+          onChanged: (v) =>
+              setState(() => _form = _form.copyWith(firstName: v)),
         ),
         NmTextField(
           label: l10n.registrationLastNameLabel,
@@ -110,6 +136,10 @@ class _OnboardingNamePageState extends ConsumerState<OnboardingNamePage> {
               setState(() => _form = _form.copyWith(birthDate: v)),
         ),
       ],
+      // Optional — never part of isComplete.
+      trailing: ref.watch(referralCodeEntryEnabledProvider)
+          ? const ReferralCodeBox()
+          : null,
     );
   }
 }

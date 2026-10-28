@@ -64,7 +64,132 @@ void main() {
       final e = ApiException(500, 'boom');
       expect(e.code, isNull);
       expect(e.retryAfterSeconds, isNull);
+      expect(e.feature, isNull);
+      expect(e.limit, isNull);
+      expect(e.resetsAt, isNull);
+      expect(e.upgradeTo, isNull);
+      expect(e.isMembershipDenial, isFalse);
       expect(e.toString(), 'ApiException(500): boom');
+    });
+  });
+
+  group('unwrapOrThrow membership refusal details', () {
+    ApiException thrownBy(Map<String, dynamic> body) {
+      try {
+        unwrapOrThrow<Map<String, dynamic>>(403, body);
+      } on ApiException catch (e) {
+        return e;
+      }
+      fail('expected an ApiException');
+    }
+
+    test('keeps every field of a full refusal (contract example)', () {
+      final e = thrownBy({
+        'statusCode': 403,
+        'error': 'Forbidden',
+        'code': 'MEMBERSHIP_LIMIT_REACHED',
+        'feature': 'interests.send',
+        'message':
+            "You've used all 5 interests included in your Free plan "
+            'this month. Upgrade to Gold to get more.',
+        'plan': 'FREE',
+        'limit': 5,
+        'used': 5,
+        'resetsAt': '2026-10-31T18:30:00.000Z',
+        'upgradeTo': 'GOLD',
+      });
+      expect(e.statusCode, 403);
+      expect(e.code, 'MEMBERSHIP_LIMIT_REACHED');
+      expect(e.message, startsWith("You've used all 5 interests"));
+      expect(e.isMembershipDenial, isTrue);
+      expect(e.feature, 'interests.send');
+      expect(e.limit, 5);
+      expect(e.resetsAt, DateTime.utc(2026, 10, 31, 18, 30));
+      expect(e.upgradeTo, 'GOLD');
+    });
+
+    test('a partial refusal leaves the missing fields null', () {
+      // FEATURE_UNAVAILABLE carries no limit or reset; FAIR_USE has a null
+      // upgradeTo, which must not be replaced by any plan.
+      final unavailable = thrownBy({
+        'code': 'MEMBERSHIP_FEATURE_UNAVAILABLE',
+        'message': 'Starting a chat is not included in your Free plan.',
+        'feature': 'chat.initiate',
+        'upgradeTo': 'GOLD',
+      });
+      expect(unavailable.feature, 'chat.initiate');
+      expect(unavailable.upgradeTo, 'GOLD');
+      expect(unavailable.limit, isNull);
+      expect(unavailable.resetsAt, isNull);
+
+      final fairUse = thrownBy({
+        'code': 'MEMBERSHIP_FAIR_USE_LIMIT',
+        'message': 'x',
+        'feature': 'interests.send',
+        'limit': 0,
+        'resetsAt': '2026-10-31T18:30:00.000Z',
+        'upgradeTo': null,
+      });
+      expect(fairUse.limit, 0);
+      expect(fairUse.resetsAt, isNotNull);
+      expect(fairUse.upgradeTo, isNull);
+    });
+
+    test('a refusal with no detail fields keeps code and message only', () {
+      final e = thrownBy({'code': 'MEMBERSHIP_LIMIT_REACHED', 'message': 'x'});
+      expect(e.code, 'MEMBERSHIP_LIMIT_REACHED');
+      expect(e.message, 'x');
+      expect(e.feature, isNull);
+      expect(e.limit, isNull);
+      expect(e.resetsAt, isNull);
+      expect(e.upgradeTo, isNull);
+    });
+
+    test('malformed values become null, never a guessed value', () {
+      final e = thrownBy({
+        'code': 'MEMBERSHIP_LIMIT_REACHED',
+        'message': 'x',
+        'feature': 42,
+        'limit': '5',
+        'resetsAt': 'next month',
+        'upgradeTo': '',
+      });
+      expect(e.feature, isNull);
+      expect(e.limit, isNull);
+      expect(e.resetsAt, isNull);
+      expect(e.upgradeTo, isNull);
+
+      for (final limit in [-1, 2.5, double.nan, double.infinity]) {
+        expect(
+          thrownBy({
+            'code': 'MEMBERSHIP_LIMIT_REACHED',
+            'message': 'x',
+            'limit': limit,
+          }).limit,
+          isNull,
+          reason: 'limit: $limit',
+        );
+      }
+    });
+
+    test('ignores the same keys on a non-membership error', () {
+      // The account-blocked 403 has no code at all; other features use their
+      // own codes. Neither is a membership refusal.
+      for (final code in [null, 'ATTEMPT_LIMIT']) {
+        final e = thrownBy({
+          'code': code,
+          'message': 'x',
+          'feature': 'interests.send',
+          'limit': 5,
+          'resetsAt': '2026-10-31T18:30:00.000Z',
+          'upgradeTo': 'GOLD',
+        });
+        expect(e.isMembershipDenial, isFalse, reason: 'code: $code');
+        expect(e.feature, isNull);
+        expect(e.limit, isNull);
+        expect(e.resetsAt, isNull);
+        expect(e.upgradeTo, isNull);
+      }
     });
   });
 

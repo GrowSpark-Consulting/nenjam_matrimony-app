@@ -156,6 +156,33 @@ abstract final class ApiEndpoints {
   /// something invented and faked client-side.
   static const String chatAttachmentUpload = '/chat/attachments';
 
+  // ─── Membership (docs/membership/api-contract.md) ─────────────────
+  static const String membershipPlans = '/membership/plans';
+  static const String membershipMe = '/membership/me';
+  static const String membershipHistory = '/membership/history';
+  static const String membershipCheckout = '/membership/checkout';
+  static const String membershipCheckoutVerify = '/membership/checkout/verify';
+
+  // ─── Agent / Partner Program (docs/agent-program/agent-api.openapi.yaml) ─
+  // Contract agreed, endpoints NOT built yet — the repositories behind these
+  // default to mocks. Every call here sends `Accept-Version: 1`
+  // ([agentApiVersionHeaders]); nothing else in the member API does.
+
+  /// No token needed: called before the member has an account.
+  static const String referralCodeValidate = '/referrals/codes/validate';
+
+  /// Member endpoint (Firebase ID token).
+  static const String registrationReferralCode = '/registration/referral-code';
+
+  /// Agent endpoint (the agent's own access token, not Firebase).
+  static const String agentReferralLinks = '/agent/referral-links';
+
+  /// The `Accept-Version` header the agent-program contract asks for, sent
+  /// per request on its calls only — never added to the client globally.
+  static const Map<String, String> agentApiVersionHeaders = {
+    'Accept-Version': '1',
+  };
+
   // ─── Notifications ───────────────────────────────────────────────
   static const String notifications = '/notifications';
   static const String registerDevice = '/notifications/device';

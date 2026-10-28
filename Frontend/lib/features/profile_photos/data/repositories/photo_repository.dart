@@ -2,6 +2,7 @@ import 'package:cross_file/cross_file.dart';
 import 'package:dio/dio.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/utils/photo_trace.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../domain/models/user_photo.dart';
@@ -9,10 +10,31 @@ import '../../domain/models/user_photo.dart';
 /// Thrown when the backend rejects a photo request (too many photos, bad file
 /// type, not found, etc.) — carries the backend's own message so the UI can
 /// show something actionable. Mirrors RegistrationApiException.
-class PhotoApiException implements Exception {
-  PhotoApiException(this.statusCode, this.message);
-  final int? statusCode;
-  final String message;
+///
+/// An [ApiException], so a membership refusal on upload (the photo cap under
+/// enforcement) keeps its `code`, `limit` and `upgradeTo`.
+class PhotoApiException extends ApiException {
+  PhotoApiException(
+    super.statusCode,
+    super.message, {
+    super.code,
+    super.feature,
+    super.limit,
+    super.resetsAt,
+    super.upgradeTo,
+  });
+
+  PhotoApiException._from(ApiException e)
+    : super(
+        e.statusCode,
+        e.message,
+        code: e.code,
+        retryAfterSeconds: e.retryAfterSeconds,
+        feature: e.feature,
+        limit: e.limit,
+        resetsAt: e.resetsAt,
+        upgradeTo: e.upgradeTo,
+      );
 
   @override
   String toString() => 'PhotoApiException($statusCode): $message';
@@ -41,7 +63,9 @@ class PhotoRepository {
       // it actually was. Observed as: type '_Map<String, dynamic>' is not a
       // subtype of type 'List<dynamic>?'. Taking the body untyped lets
       // [_unwrapList] classify it properly.
-      final response = await _apiClient.get<dynamic>(ApiEndpoints.profilePhotos);
+      final response = await _apiClient.get<dynamic>(
+        ApiEndpoints.profilePhotos,
+      );
       PhotoTrace.step('GET ${ApiEndpoints.profilePhotos} ←', {
         'status': response.statusCode,
         'bodyType': response.data.runtimeType.toString(),
@@ -233,19 +257,14 @@ class PhotoRepository {
 
   void _throwIfError(int? statusCode, Object? data) {
     if (statusCode != null && statusCode >= 400) {
-      final message = data is Map ? data['message'] : null;
-      PhotoTrace.step('backend rejected', {
-        'status': statusCode,
-        'body': data,
-      });
-      throw PhotoApiException(
-        statusCode,
-        message is String
-            ? message
-            : message is List && message.isNotEmpty
-                ? message.join(', ')
-                : 'Request failed ($statusCode).',
-      );
+      PhotoTrace.step('backend rejected', {'status': statusCode, 'body': data});
+      // Same message rules as every other repository, plus the membership
+      // refusal details.
+      try {
+        unwrapOrThrow<Object>(statusCode, data);
+      } on ApiException catch (e) {
+        throw PhotoApiException._from(e);
+      }
     }
   }
 }

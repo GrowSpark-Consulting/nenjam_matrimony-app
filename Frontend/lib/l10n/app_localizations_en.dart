@@ -940,7 +940,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileCardLike => 'Like';
 
   @override
-  String get premiumTitle => 'Upgrade to Luxury Premium';
+  String get premiumTitle => 'Nenjam Premium';
 
   @override
   String get premiumHeroTitle => 'Unlock Unlimited Matches';
@@ -950,11 +950,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Get access to verified contacts, AI matchmaking & horoscope details.';
 
   @override
-  String get premiumProceedToPayment => 'Proceed to Payment';
+  String get premiumComingSoon => 'Coming soon';
 
   @override
   String get premiumUnavailableNotice =>
-      'Online purchase isn\'t available yet. The plans shown here are for information only: no payment can be made and no premium access is granted.';
+      'Premium membership is coming soon. Online purchase isn\'t available yet, so no payment can be made and no premium access is granted.';
 
   @override
   String get settingsTitle => 'Settings';
@@ -5101,4 +5101,307 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discoverLoadMoreFailed => 'Couldn\'t load more profiles.';
+
+  @override
+  String get membershipLoadError => 'Couldn\'t load membership details.';
+
+  @override
+  String get membershipCardFreeTitle => 'You\'re on the Free plan';
+
+  @override
+  String get membershipCardFreeSubtitle =>
+      'See what each membership plan includes.';
+
+  @override
+  String get membershipCardFreeSubtitleSoon => 'Paid plans are coming soon.';
+
+  @override
+  String membershipCardPlanTitle(String plan) {
+    return '$plan member';
+  }
+
+  @override
+  String membershipCardActiveUntil(String date) {
+    return 'Active until $date';
+  }
+
+  @override
+  String membershipCardQueued(String plan, String date) {
+    return '$plan starts on $date';
+  }
+
+  @override
+  String get membershipCardViewMembership => 'View membership';
+
+  @override
+  String get membershipHistoryTitle => 'Membership history';
+
+  @override
+  String get membershipHistoryEmpty => 'No purchases or plan changes yet.';
+
+  @override
+  String get membershipStatusPending => 'Awaiting payment';
+
+  @override
+  String get membershipStatusActive => 'Active';
+
+  @override
+  String get membershipStatusExpired => 'Expired';
+
+  @override
+  String get membershipStatusCancelled => 'Cancelled';
+
+  @override
+  String get membershipStatusRefunded => 'Refunded';
+
+  @override
+  String get membershipStatusRevoked => 'Revoked';
+
+  @override
+  String get membershipSourceGrant => 'Granted by Nenjam';
+
+  @override
+  String membershipMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count months',
+      one: '1 month',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get membershipCurrentPlan => 'Current plan';
+
+  @override
+  String get membershipFeatureIncluded => 'Included';
+
+  @override
+  String get membershipFeatureNotIncluded => 'Not included';
+
+  @override
+  String get membershipFeatureUnlimited => 'Unlimited';
+
+  @override
+  String membershipFeaturePerMonth(int count) {
+    return '$count per month';
+  }
+
+  @override
+  String membershipFeaturePerDay(int count) {
+    return '$count per day';
+  }
+
+  @override
+  String membershipFeatureEveryMonths(int count, int months) {
+    return '$count every $months months';
+  }
+
+  @override
+  String membershipStartsOn(String date) {
+    return 'Starts on $date';
+  }
+
+  @override
+  String get membershipBuy => 'Buy';
+
+  @override
+  String get membershipPurchaseUnavailableHere =>
+      'Buying isn\'t available in this version of the app yet.';
+
+  @override
+  String get membershipPurchaseWebNote => 'Buy membership in the Nenjam app.';
+
+  @override
+  String get membershipPurchaseActivated => 'Your membership is active.';
+
+  @override
+  String get membershipPurchaseActivationPending =>
+      'Payment received. Your membership will be activated shortly.';
+
+  @override
+  String get membershipPurchaseCancelled => 'Payment cancelled.';
+
+  @override
+  String get membershipPurchaseFailed => 'The payment didn\'t go through.';
+
+  @override
+  String get membershipPurchaseContactSupport =>
+      'We couldn\'t confirm this payment. Please contact support.';
+
+  @override
+  String get membershipPurchaseStartFailed =>
+      'Couldn\'t start the payment, try again.';
+
+  @override
+  String get membershipDenialTitle => 'Your membership plan';
+
+  @override
+  String get membershipDenialSeePlans => 'See membership plans';
+
+  @override
+  String membershipDenialResetsOn(String date) {
+    return 'Your allowance resets on $date.';
+  }
+
+  @override
+  String get referralCodePrompt => 'Have a referral code?';
+
+  @override
+  String get referralCodeHelp =>
+      'Optional. Enter the code someone shared with you.';
+
+  @override
+  String get referralCodeLabel => 'Referral code';
+
+  @override
+  String get referralCodeApply => 'Apply';
+
+  @override
+  String get referralCodeRemove => 'Remove';
+
+  @override
+  String referralCodeReferredBy(String name) {
+    return 'Referred by $name';
+  }
+
+  @override
+  String get referralCodeInvalid => 'This code isn\'t valid';
+
+  @override
+  String get referralCodeTooManyTries => 'Too many tries, please wait';
+
+  @override
+  String referralCodeTooManyTriesSeconds(int seconds) {
+    return 'Too many tries, please wait $seconds seconds';
+  }
+
+  @override
+  String get referralCodeCheckFailed =>
+      'We couldn\'t check this code right now. You can carry on and try again later.';
+
+  @override
+  String get referralCodeAttached => 'Referral code applied.';
+
+  @override
+  String get referralCodeAlreadyLinked =>
+      'Your account is already linked to a referral code.';
+
+  @override
+  String get referralCodeNotApplied =>
+      'We couldn\'t apply your referral code. Your signup is not affected.';
+
+  @override
+  String get referralCodeNotAllowed =>
+      'This referral code can\'t be used with your account.';
+
+  @override
+  String get referralCodeRetryLater =>
+      'We couldn\'t apply your referral code yet. We\'ll try again later.';
+
+  @override
+  String get partnerHelpEntry => 'Nenjam Partner Program help';
+
+  @override
+  String get partnerHelpTitle => 'Help & Support';
+
+  @override
+  String get partnerHelpWelcome => 'Welcome to the Nenjam Partner Program.';
+
+  @override
+  String get partnerHelpGettingStartedTitle => 'Getting started';
+
+  @override
+  String get partnerHelpGettingStartedBody =>
+      'Sign in with your mobile number and the one-time code (OTP) we send you. Then fill in your application. Our team reviews it and either approves it or tells you why it was not approved. Once you are approved, you get your personal referral code.';
+
+  @override
+  String get partnerHelpReferringTitle => 'Referring members';
+
+  @override
+  String get partnerHelpReferringBody =>
+      'Share your referral code, or the ready-made English or Tamil message in the portal. People can enter your code when they sign up, or at payment when they buy their first paid plan. A person stays linked to the first agent whose code they used.';
+
+  @override
+  String get partnerHelpTrackingTitle => 'Tracking referrals and earnings';
+
+  @override
+  String get partnerHelpTrackingBody =>
+      'For privacy, you only see limited details about the people you referred: first name and last initial, age, city, their stage and a partly hidden phone number. You earn a commission only when someone you referred buys their first paid plan, and only once. Renewals and later plans do not earn commission. The commission is held for a short period, then approved, and paid by our team in the monthly payout.';
+
+  @override
+  String get partnerHelpBankTitle => 'Bank details';
+
+  @override
+  String get partnerHelpBankBody =>
+      'Add your UPI ID or bank account details carefully and check them before saving. Your PAN is needed before your first payout. If you change your payment details, they are checked again and your next payout may wait a short while.';
+
+  @override
+  String get partnerHelpTermsTitle => 'Agent terms (main points)';
+
+  @override
+  String get partnerHelpTermNoFees =>
+      'Never charge families any fee for joining.';
+
+  @override
+  String get partnerHelpTermNoFalsePromises =>
+      'Never make false promises about matches.';
+
+  @override
+  String get partnerHelpTermNoSharing =>
+      'Never share information about the people you refer or your clients.';
+
+  @override
+  String get partnerHelpTermConsent =>
+      'Never create a profile for someone without their agreement.';
+
+  @override
+  String get partnerHelpTermsConsequence =>
+      'Breaking these rules can lead to your account being paused.';
+
+  @override
+  String get partnerHelpNeedHelpTitle => 'Need help?';
+
+  @override
+  String partnerHelpContact(String contact) {
+    return 'Contact the Nenjam team at $contact.';
+  }
+
+  @override
+  String get partnerHelpOtpWarning =>
+      'Never share your OTP or any login details with anyone.';
+
+  @override
+  String get agentShareCopyCode => 'Copy code';
+
+  @override
+  String get agentShareCodeCopied => 'Code copied';
+
+  @override
+  String get agentShareWhatsApp => 'Share on WhatsApp';
+
+  @override
+  String get agentShareLanguageEnglish => 'English';
+
+  @override
+  String get agentShareLanguageTamil => 'தமிழ்';
+
+  @override
+  String get agentShareNotShareable =>
+      'Sharing is turned off for this code right now.';
+
+  @override
+  String get agentShareNoMessage =>
+      'No ready-made message is available for this language.';
+
+  @override
+  String get agentShareFailed =>
+      'Couldn\'t open WhatsApp. You can copy the code instead.';
+
+  @override
+  String get agentShareLoadFailed => 'Couldn\'t load your referral codes.';
+
+  @override
+  String get agentShareNoCodes => 'You don\'t have a referral code yet.';
 }
