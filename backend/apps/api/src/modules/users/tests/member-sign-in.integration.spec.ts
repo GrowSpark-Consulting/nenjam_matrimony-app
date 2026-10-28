@@ -1,4 +1,9 @@
-import { ExecutionContext, ForbiddenException, Logger } from '@nestjs/common';
+import {
+  ConflictException,
+  ExecutionContext,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { FirebaseAuthGuard } from '@app/common';
 import type { PrismaClient, PrismaService } from '@app/database';
 import type { FirebaseService } from '@app/firebase';
@@ -59,6 +64,7 @@ describeIntegration(
     async function authenticate(decoded: {
       uid: string;
       email?: string;
+      email_verified?: boolean;
       phone_number?: string;
     }) {
       firebase.verifyIdToken.mockResolvedValue(decoded);
@@ -147,6 +153,7 @@ describeIntegration(
       const user = await authenticate({
         uid: `${PREFIX}-new-uid-email`,
         email: email('relinked'),
+        email_verified: true,
       });
       expect(user.id).toBe(member.id);
       expect(
@@ -166,6 +173,39 @@ describeIntegration(
       });
       const session = await otp().start({ phone: phone(3) });
       expect(session.userId).toBe(member.id);
+    });
+
+    it('refuses to hand a member to someone who only claims their email', async () => {
+      const victim = await prisma.user.create({
+        data: {
+          firebaseUid: `${PREFIX}-victim-uid`,
+          email: email('victim'),
+          phone: phone(6),
+          status: 'ACTIVE',
+        },
+      });
+      // Dummy-OTP signup with a new number and the victim's email.
+      await expect(
+        otp().start({ phone: phone(7), email: email('victim') }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      // A fresh Firebase email/password account for the victim's address.
+      await expect(
+        authenticate({
+          uid: `${PREFIX}-attacker-uid-2`,
+          email: email('victim'),
+          email_verified: false,
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
+
+      const after = await prisma.user.findUniqueOrThrow({
+        where: { id: victim.id },
+      });
+      expect(after).toMatchObject({
+        firebaseUid: `${PREFIX}-victim-uid`,
+        phone: phone(6),
+        email: email('victim'),
+      });
+      expect(await prisma.user.count({ where: { phone: phone(7) } })).toBe(0);
     });
 
     it('refuses both paths for a staff row, leaving it untouched', async () => {

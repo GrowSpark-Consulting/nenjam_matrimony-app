@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   InternalServerErrorException,
 } from '@nestjs/common';
@@ -113,14 +114,10 @@ describe('DummyOtpSessionService', () => {
 
       const result = await build().start({ phone: PHONE, email: EMAIL });
 
-      expect(firebase.findOrCreateUser).toHaveBeenCalledWith({
-        phone: PHONE,
-        email: EMAIL,
-      });
-      // The address reaches Firebase only as something to look an existing
-      // account up by — never written onto one. An unverified address on the
-      // account is what routes a member to a verify-email screen they cannot
-      // pass; see FirebaseService.findOrCreateUser.
+      // The Firebase account is found or created by PHONE only: a typed email
+      // must never select an account (that was an account takeover), and is
+      // never written onto one — it lands on the users row below.
+      expect(firebase.findOrCreateUser).toHaveBeenCalledWith({ phone: PHONE });
       expect(firebase.createCustomToken).toHaveBeenCalledWith('firebase-uid-1');
       expect(prisma.user.create.mock.calls[0][0].data).toMatchObject({
         firebaseUid: 'firebase-uid-1',
@@ -169,22 +166,56 @@ describe('DummyOtpSessionService', () => {
       expect(result.userId).toBe('user-1');
     });
 
-    it('re-links an account that already exists under another uid', async () => {
+    it('re-links an account that already holds this phone under another uid', async () => {
       enableDevMode();
       // The Firebase account was re-created (routine in QA), so the uid moved
-      // while the address stayed. Everything this member owns hangs off the
+      // while the number stayed. Everything this member owns hangs off the
       // internal id, so it must be re-linked rather than duplicated.
       prisma.user.findUnique.mockImplementation(({ where }) =>
-        Promise.resolve(where.email === EMAIL ? { id: 'existing-user' } : null),
+        Promise.resolve(where.phone === PHONE ? { id: 'existing-user' } : null),
       );
 
-      const result = await build().start({ phone: PHONE, email: EMAIL });
+      const result = await build().start({ phone: PHONE });
 
       expect(prisma.user.create).not.toHaveBeenCalled();
       const [updateArg] = prisma.user.update.mock.calls[0];
       expect(updateArg.where).toEqual({ id: 'existing-user' });
       expect(updateArg.data).toMatchObject({ firebaseUid: 'firebase-uid-1' });
       expect(result.userId).toBe('existing-user');
+    });
+
+    it('refuses an email that belongs to another account, touching nothing', async () => {
+      enableDevMode();
+      // The takeover this closes: a new number plus someone else's email used
+      // to sign the caller in as that someone.
+      const victim = {
+        id: 'victim',
+        firebaseUid: 'victim-uid',
+        phone: '+919000000001',
+      };
+      prisma.user.findUnique.mockImplementation(({ where }) =>
+        Promise.resolve(where.email === EMAIL ? victim : null),
+      );
+
+      await expect(
+        build().start({ phone: PHONE, email: EMAIL }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(prisma.user.create).not.toHaveBeenCalled();
+      expect(firebase.createCustomToken).not.toHaveBeenCalled();
+    });
+
+    it('accepts the email when it is already on this phone number account', async () => {
+      enableDevMode();
+      const own = { id: 'own', firebaseUid: 'old-uid', phone: PHONE };
+      prisma.user.findUnique.mockImplementation(({ where }) =>
+        Promise.resolve(
+          where.email === EMAIL || where.phone === PHONE ? own : null,
+        ),
+      );
+
+      const result = await build().start({ phone: PHONE, email: EMAIL });
+      expect(result.userId).toBe('own');
     });
   });
 

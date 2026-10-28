@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
@@ -75,10 +76,7 @@ export class DummyOtpSessionService {
     // 1. The Firebase account. Idempotent by phone, so a retry after any
     //    failure below resolves to the same uid instead of a second account.
     const firebaseAt = Date.now();
-    const { uid, created } = await this.firebase.findOrCreateUser({
-      phone,
-      email,
-    });
+    const { uid, created } = await this.firebase.findOrCreateUser({ phone });
     const firebaseMs = since(firebaseAt);
 
     // 2. The internal row for it. A Firebase account whose `users` row failed
@@ -91,6 +89,7 @@ export class DummyOtpSessionService {
     // any row is touched and before a token exists, with the same answer as
     // a number outside the policy, so the refusal reveals nothing.
     await this.refuseStaff({ uid, phone, email });
+    await this.refuseClaimedEmail({ uid, phone, email });
 
     const dbAt = Date.now();
     let userId: string;
@@ -124,18 +123,6 @@ export class DummyOtpSessionService {
   }
 
   /**
-   * The internal `users` row for [uid], reusing whatever already represents
-   * this person.
-   *
-   * The same reconciliation `FirebaseAuthGuard.resolveUser` performs, and for
-   * the same reason: a Firebase account can be deleted and re-created while
-   * `email`/`phone` remain this system's durable identity, so matching on uid
-   * alone would try to insert a duplicate and crash on the unique constraint.
-   * Done here as well as there because this endpoint runs *before* any guarded
-   * request — it is the first thing a new member's identity touches, and the
-   * guard must find the row already correct when the very next call arrives.
-   */
-  /**
    * Refuses when [uid] — or, failing that, the supplied email or phone —
    * belongs to a staff row. Dummy OTP verifies nothing, so it must never be a
    * way into an admin account, whether through the Firebase account it
@@ -166,6 +153,52 @@ export class DummyOtpSessionService {
     }
   }
 
+  /**
+   * Refuses a signup whose email already belongs to a DIFFERENT account.
+   *
+   * The email is only ever something the caller typed — nothing in this flow
+   * verifies it — so it may be stored on this person's own row but must never
+   * select, or re-link, someone else's. Same row (same uid, or the row this
+   * phone already owns) is fine. Checked before any row is touched and before
+   * a token exists.
+   */
+  private async refuseClaimedEmail(params: {
+    uid: string;
+    phone: string;
+    email?: string;
+  }): Promise<void> {
+    if (!params.email) return;
+    const owner = await this.prisma.user.findUnique({
+      where: { email: params.email },
+      select: { id: true, firebaseUid: true, phone: true },
+    });
+    if (!owner) return;
+    if (owner.firebaseUid === params.uid || owner.phone === params.phone)
+      return;
+    this.logger.warn(
+      `Refused a dummy-OTP signup claiming the email of user ${owner.id}.`,
+    );
+    throw new ConflictException({
+      statusCode: 409,
+      error: 'Conflict',
+      code: 'EMAIL_ALREADY_REGISTERED',
+      message:
+        'This email is already registered to another account. Sign in to that account, or use a different email.',
+    });
+  }
+
+  /**
+   * The internal `users` row for [uid], reusing whatever already represents
+   * this person.
+   *
+   * The same reconciliation `FirebaseAuthGuard.resolveUser` performs, and for
+   * the same reason: a Firebase account can be deleted and re-created while
+   * `email`/`phone` remain this system's durable identity, so matching on uid
+   * alone would try to insert a duplicate and crash on the unique constraint.
+   * Done here as well as there because this endpoint runs *before* any guarded
+   * request — it is the first thing a new member's identity touches, and the
+   * guard must find the row already correct when the very next call arrives.
+   */
   private async reconcileUser(params: {
     uid: string;
     phone: string;
@@ -188,17 +221,13 @@ export class DummyOtpSessionService {
     // Re-link rather than duplicate: this person already has an account under
     // a previous uid (a re-created Firebase account, or one made by an earlier
     // sign-in path), and everything they own hangs off that internal id.
-    const existing =
-      (email
-        ? await this.prisma.user.findUnique({
-            where: { email },
-            select: { id: true },
-          })
-        : null) ??
-      (await this.prisma.user.findUnique({
-        where: { phone },
-        select: { id: true },
-      }));
+    // Found by PHONE only — the identifier this flow is about. Never by the
+    // claimed email (refuseClaimedEmail has already refused one that belongs
+    // to another account).
+    const existing = await this.prisma.user.findUnique({
+      where: { phone },
+      select: { id: true },
+    });
 
     if (existing) {
       this.logger.log(

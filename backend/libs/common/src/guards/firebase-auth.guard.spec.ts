@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ExecutionContext,
   ForbiddenException,
   UnauthorizedException,
@@ -178,7 +179,11 @@ describe('FirebaseAuthGuard', () => {
         .mockResolvedValueOnce({ id: 'internal-1', firebaseUid: 'old-uid' }); // by email
       const update = jest.fn(() => Promise.resolve({ id: 'internal-1' }));
       const verifyIdToken = jest.fn(() =>
-        Promise.resolve({ uid: UID, email: 'member@example.com' }),
+        Promise.resolve({
+          uid: UID,
+          email: 'member@example.com',
+          email_verified: true,
+        }),
       );
       const { guard, upsert } = buildGuard({
         verifyIdToken,
@@ -194,6 +199,35 @@ describe('FirebaseAuthGuard', () => {
       // A re-link found a real account, so no revocation round trip either.
       expect(verifyIdToken).toHaveBeenCalledTimes(1);
       expect(request.user?.id).toBe('internal-1');
+    });
+
+    // Anyone can create an email/password Firebase account for an address
+    // they don't own; only a Firebase-verified email may claim a member row.
+    it('never re-links a member row by an unverified email', async () => {
+      const findUnique = jest
+        .fn()
+        .mockResolvedValueOnce(null) // by firebaseUid
+        .mockResolvedValueOnce({ id: 'member-row', role: 'USER' }); // by email
+      const update = jest.fn();
+      const { guard, upsert } = buildGuard({
+        verifyIdToken: jest.fn(() =>
+          Promise.resolve({
+            uid: UID,
+            email: 'member@example.com',
+            email_verified: false,
+          }),
+        ),
+        findUnique,
+        update,
+      });
+      const { ctx, request } = contextFor(`Bearer ${TOKEN}`);
+
+      await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(update).not.toHaveBeenCalled();
+      expect(upsert).not.toHaveBeenCalled();
+      expect(request.user).toBeUndefined();
     });
 
     // A new Firebase account that merely claims an admin's email or phone must

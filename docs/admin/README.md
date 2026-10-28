@@ -171,10 +171,16 @@ comes from `@CurrentAdmin()`, never from a request body.
   existing `users` row to any new Firebase account that claimed the same email or phone,
   and dummy OTP resolved the Firebase account by a caller-supplied email. Both now refuse
   any staff row; the TOTP factor covers a hijacked Firebase login on top.
-- **Still open for members (separate decision):** with `DUMMY_OTP_ENABLED` and no
-  `DUMMY_OTP_PHONES` allow-list, dummy OTP can still sign a caller in as a member whose
-  email they supply. Fix before real users depend on it: stop resolving accounts by the
-  supplied email in dummy OTP, or switch to real OTP (`USE_REAL_OTP=true`).
+- **Fixed for members — claimed email:** dummy OTP no longer looks a Firebase account up by
+  the email the caller typed, and never re-links a row by it; an email already on another
+  account is refused (409 `EMAIL_ALREADY_REGISTERED`). `FirebaseAuthGuard` re-links a row
+  by email only when Firebase has **verified** that email.
+- **Still open for members — claimed phone (needs a launch decision):** while
+  `DUMMY_OTP_ENABLED=true` with an empty `DUMMY_OTP_PHONES`, the dummy-OTP endpoint signs
+  in whoever supplies a member's **phone number**: that is what "dummy" means, nothing is
+  verified. Before real users depend on the app, either turn on real SMS OTP (Firebase
+  Phone Auth on the Blaze plan + the app's real verifier + `USE_REAL_OTP=true`), or
+  restrict `DUMMY_OTP_PHONES` to testers' numbers.
 - Not yet: DB-level insert-only grants on `audit_logs` (needs a separate migration role),
   Redis caching of permission sets (not needed at admin traffic levels), a general
   approvals queue (grants, long extensions, refunds) — plan publishing already has one.
