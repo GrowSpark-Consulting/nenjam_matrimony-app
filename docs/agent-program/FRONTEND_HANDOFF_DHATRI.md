@@ -139,7 +139,7 @@ What each status may do (from the contract):
 |---|---|---|
 | (applicant) | — | `POST /agent/application`, `GET /agent/me` (404) |
 | `PENDING_APPROVAL` | label from config | `GET /agent/me`, `GET /agent/config`, refresh, logout |
-| `REJECTED` | label from config, with `rejectionReason` | same as pending, plus re-apply (`POST /agent/application`) — re-apply is a **Pending decision** |
+| `REJECTED` | label from config, with `rejectionReason` | same as pending, plus re-apply (`POST /agent/application`) — **allowed** (decided, Raja 28 Oct); the resubmission goes back to `PENDING_APPROVAL` for admin review |
 | `ACTIVE` | label from config | everything |
 | `SUSPENDED` | **"Paused"** | all reads; links come back `shareable: false`; cannot edit payout details |
 | `TERMINATED` | label from config | read-only: `GET /agent/me`, `GET /agent/config`, `GET /agent/commissions`, `GET /agent/balance`, `GET /agent/payouts`, refresh, logout. Approved balance is still paid. |
@@ -166,7 +166,7 @@ See section 3.
   | Response | When | What to show |
   |---|---|---|
   | `401 UNAUTHORIZED` | the applicant's verified phone has expired, or the token is invalid | Go back to the OTP screen: they verify again. |
-  | `403 AGENT_NOT_ACTIVE`, `agentStatus: REJECTED` | a rejected agent may not apply again (only if that is switched off) | The Rejected screen **without** the "Apply again" button. |
+  | `403 AGENT_NOT_ACTIVE`, `agentStatus: REJECTED` | a rejected agent may not apply again (only if that is ever switched off; re-applying is allowed today) | The Rejected screen **without** the "Apply again" button. |
   | `409 APPLICATION_EXISTS`, `agentStatus: PENDING_APPROVAL` | already under review | The Pending screen. |
   | `409 APPLICATION_EXISTS`, `agentStatus: ACTIVE`, `SUSPENDED` or `TERMINATED` | already an agent | Reload `GET /agent/me` and show that status screen. |
   | `409 APPLICATION_EXISTS`, **no** `agentStatus` | this phone already applied from another device | Send them to sign in again. |
@@ -181,8 +181,9 @@ with `statusLabel` (`{ en, ta }`), `approvedAt`, `panLast4`,
 - **Pending**: "We're reviewing your application." No code yet
   (`primaryCode` is `null`).
 - **Approved (`ACTIVE`)**: go to Home.
-- **Rejected**: show `rejectionReason`, and a "Apply again" button only if
-  re-apply is allowed (Pending decision).
+- **Rejected**: show `rejectionReason` and the **"Apply again" button**
+  (re-apply is allowed, Raja 28 Oct). Applying again sends the form to
+  `POST /agent/application`; the agent goes back to Pending for review.
 - **Paused (`SUSPENDED`)**: everything readable, sharing disabled, payout
   details read-only.
 - **Terminated**: read-only earnings, balance and payouts; no code or sharing.
@@ -244,8 +245,10 @@ Response is masked only: `{ method: 'UPI' | 'BANK', display }`, e.g.
 `HDFC ****6789`. The full number or UPI id is never sent back.
 
 ### 4.9 Help
-No help endpoint exists in the contract. Static content for now —
-**To be confirmed** what it says.
+No help endpoint exists in the contract. Static content for now. The text
+is the **approved** Help & Support wording, including the four agent terms
+(Raja, 28 Oct; a lawyer checks them before launch). The **support contact is
+still pending**: show the placeholder until it is confirmed, never invent one.
 
 ### 4.10 Sign out → `POST /agent/auth/logout`
 Body `{ "refreshToken" }` (agent sessions). An applicant has nothing to revoke;
@@ -360,7 +363,7 @@ states arrive as `ON_HOLD`.
 
 ## 9. Open decisions that may change your screens
 
-- Can a rejected agent re-apply? (Rejected screen's "Apply again" button.)
+- The support contact for the Help screen (still pending).
 - The referral link web address (shows the link and QR).
 - Tamil wording for the other labels (statuses, stages).
 - How an agent can pay for a client's plan (a future screen).
