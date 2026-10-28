@@ -47,6 +47,18 @@ export function renderShareMessage(
 
   return text.replace(
     PLACEHOLDER,
-    (_match, name: string) => replacements[name],
+    (match: string, name: string, offset: number, whole: string) => {
+      const value = replacements[name];
+      // "I'm {agent_name}. Join" must not become "I'm Ravi K.. Join": drop
+      // ONE trailing full stop from the name when the template supplies one.
+      if (
+        name === 'agent_name' &&
+        value.endsWith('.') &&
+        whole[offset + match.length] === '.'
+      ) {
+        return value.slice(0, -1);
+      }
+      return value;
+    },
   );
 }
