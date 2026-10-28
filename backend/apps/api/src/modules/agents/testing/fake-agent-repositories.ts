@@ -5,6 +5,7 @@
  * the transaction fails (see `FakeAgentUnitOfWork`); reads see live state.
  */
 import type { ReferralViewSource } from '../referral/agent-referral-view';
+import { looksLikeRawIp } from '../referral/requester-key';
 import {
   AgentApplicantRecord,
   AgentApplicantRepository,
@@ -18,8 +19,11 @@ import {
   AgentRefreshTokenRepository,
   AgentRepository,
   NewAgentRecord,
+  ReferralAttemptDimension,
   ReferralAttributionRecord,
   ReferralAttributionRepository,
+  ReferralCodeAttemptStore,
+  ReferralCodeAttemptWindow,
   ReferralCodeRecord,
   ReferralCodeRepository,
 } from '../ports/agent-data-ports';
@@ -226,6 +230,41 @@ export class FakeReferralAttributionRepository implements ReferralAttributionRep
     );
   }
 
+  listPageByAgent(
+    agentId: string,
+    page: { limit: number; after?: { at: Date; id: string } },
+  ): Promise<ReferralAttributionRecord[]> {
+    const newestFirst = (
+      a: ReferralAttributionRecord,
+      b: ReferralAttributionRecord,
+    ) =>
+      b.attributedAt.getTime() - a.attributedAt.getTime() ||
+      (a.id < b.id ? 1 : a.id > b.id ? -1 : 0);
+    const { after } = page;
+    return Promise.resolve(
+      [...this.rows.values()]
+        .filter((row) => row.agentId === agentId)
+        .sort(newestFirst)
+        .filter(
+          (row) =>
+            after === undefined ||
+            row.attributedAt.getTime() < after.at.getTime() ||
+            (row.attributedAt.getTime() === after.at.getTime() &&
+              row.id < after.id),
+        )
+        .slice(0, page.limit)
+        .map(copy),
+    );
+  }
+
+  findByIdForAgent(
+    attributionId: string,
+    agentId: string,
+  ): Promise<ReferralAttributionRecord | null> {
+    const row = this.rows.get(attributionId);
+    return Promise.resolve(row && row.agentId === agentId ? copy(row) : null);
+  }
+
   isPhoneHashCredited(phoneHash: string): Promise<boolean> {
     return Promise.resolve(
       [...this.rows.values()].some((r) => r.memberPhoneHash === phoneHash),
@@ -240,7 +279,9 @@ export class FakeReferralAttributionRepository implements ReferralAttributionRep
     const rows = [...this.rows.values()];
     if (
       this.rows.has(attribution.id) ||
-      rows.some((row) => row.memberId === attribution.memberId)
+      rows.some((row) => row.memberId === attribution.memberId) ||
+      (attribution.memberPhoneHash !== null &&
+        rows.some((row) => row.memberPhoneHash === attribution.memberPhoneHash))
     ) {
       return Promise.reject(new AgentConflictError('DUPLICATE_ATTRIBUTION'));
     }
@@ -299,6 +340,58 @@ export class FakeAgentPayoutDetailsRepository implements AgentPayoutDetailsRepos
       else this.rows.delete(record.agentId);
     });
     return Promise.resolve();
+  }
+}
+
+export class FakeReferralCodeAttemptStore implements ReferralCodeAttemptStore {
+  private rows: Array<{
+    requesterKey: string;
+    codeKey: string | null;
+    at: Date;
+  }> = [];
+
+  window(
+    dimension: ReferralAttemptDimension,
+    key: string,
+    since: Date,
+  ): Promise<ReferralCodeAttemptWindow> {
+    const times = this.rows
+      .filter(
+        (row) =>
+          (dimension === 'REQUESTER' ? row.requesterKey : row.codeKey) ===
+            key && row.at.getTime() > since.getTime(),
+      )
+      .map((row) => row.at.getTime())
+      .sort((a, b) => a - b);
+    return Promise.resolve({
+      count: times.length,
+      oldestAt: times.length > 0 ? new Date(times[0]) : null,
+    });
+  }
+
+  record(
+    attempt: { requesterKey: string; codeKey: string | null; at: Date },
+    tx?: AgentTx,
+  ): Promise<void> {
+    if (looksLikeRawIp(attempt.requesterKey)) {
+      return Promise.reject(
+        new RangeError(
+          'requesterKey must be a hashed key, not a raw IP address.',
+        ),
+      );
+    }
+    const track = trackWrite(tx);
+    const row = { ...attempt, at: new Date(attempt.at.getTime()) };
+    this.rows.push(row);
+    track(() => {
+      this.rows = this.rows.filter((r) => r !== row);
+    });
+    return Promise.resolve();
+  }
+
+  /** Test helper: how many attempts are stored. */
+  get size(): number {
+    return this.rows.length;
   }
 }
 

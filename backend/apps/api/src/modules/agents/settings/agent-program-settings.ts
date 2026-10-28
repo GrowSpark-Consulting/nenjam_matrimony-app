@@ -31,6 +31,12 @@ export const AGENT_REFRESH_TOKEN_TTL_SECONDS_KEY =
   'agent.refresh_token_ttl_seconds';
 export const AGENT_OTP_RESEND_AFTER_SECONDS_KEY =
   'agent.otp_resend_after_seconds';
+export const REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY =
+  'referral.code_validation_ip_limit';
+export const REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY =
+  'referral.code_validation_code_limit';
+export const REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY =
+  'referral.code_validation_window_seconds';
 
 export type CommissionBase = 'AMOUNT_PAID' | 'AMOUNT_PAID_EXCLUDING_GST';
 
@@ -53,6 +59,9 @@ export interface AgentProgramSettings {
   accessTokenTtlSeconds?: number;
   refreshTokenTtlSeconds?: number;
   otpResendAfterSeconds?: number;
+  codeValidationIpLimit?: number;
+  codeValidationCodeLimit?: number;
+  codeValidationWindowSeconds?: number;
 }
 
 export interface ParsedAgentProgramSettings {
@@ -171,6 +180,24 @@ const RULES: readonly Rule[] = [
   {
     key: AGENT_OTP_RESEND_AFTER_SECONDS_KEY,
     field: 'otpResendAfterSeconds',
+    check: isPositiveInteger,
+    expected: 'an integer >= 1',
+  },
+  {
+    key: REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY,
+    field: 'codeValidationIpLimit',
+    check: isPositiveInteger,
+    expected: 'an integer >= 1',
+  },
+  {
+    key: REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY,
+    field: 'codeValidationCodeLimit',
+    check: isPositiveInteger,
+    expected: 'an integer >= 1',
+  },
+  {
+    key: REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY,
+    field: 'codeValidationWindowSeconds',
     check: isPositiveInteger,
     expected: 'an integer >= 1',
   },

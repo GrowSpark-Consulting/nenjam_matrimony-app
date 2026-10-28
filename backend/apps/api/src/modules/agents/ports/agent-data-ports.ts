@@ -191,6 +191,9 @@ export interface AgentPayoutDetailsRepository {
 
 // --- Attribution -----------------------------------------------------------
 
+export type AgentAttributionStatus =
+  'ACTIVE' | 'CONVERTED' | 'EXPIRED' | 'REJECTED';
+
 export interface ReferralAttributionRecord {
   id: string;
   memberId: string;
@@ -200,6 +203,18 @@ export interface ReferralAttributionRecord {
   /** Hash of the member's verified phone, null when there is none. */
   memberPhoneHash: string | null;
   attributedAt: Date;
+  /** REJECTED rows (e.g. a self-referral) are kept for review, never shown to agents. */
+  status: AgentAttributionStatus;
+  /** End of the credit window, snapshotted when the attribution was made. */
+  windowEndsAt: Date;
+  /** Accepted without a verified phone; an admin should look at it. */
+  needsReview: boolean;
+}
+
+/** Position in the newest-first order: (attributedAt, id), both descending. */
+export interface AttributionPageCursor {
+  at: Date;
+  id: string;
 }
 
 export interface ReferralAttributionRepository {
@@ -211,6 +226,21 @@ export interface ReferralAttributionRepository {
     agentId: string,
     tx?: AgentTx,
   ): Promise<ReferralAttributionRecord[]>;
+  /**
+   * Newest first, ordered by (attributedAt, id) descending. Returns at most
+   * `limit` rows strictly after `after`, or from the start without it.
+   */
+  listPageByAgent(
+    agentId: string,
+    page: { limit: number; after?: AttributionPageCursor },
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord[]>;
+  /** Null when the id is unknown OR belongs to another agent (the two look the same). */
+  findByIdForAgent(
+    attributionId: string,
+    agentId: string,
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord | null>;
   /** True when an attribution already exists for this member phone hash. */
   isPhoneHashCredited(phoneHash: string, tx?: AgentTx): Promise<boolean>;
   /** One attribution per member: throws DUPLICATE_ATTRIBUTION otherwise. */
@@ -218,6 +248,46 @@ export interface ReferralAttributionRepository {
     attribution: ReferralAttributionRecord,
     tx?: AgentTx,
   ): Promise<ReferralAttributionRecord>;
+}
+
+// --- Code-validation attempts ----------------------------------------------
+
+export type ReferralAttemptDimension = 'REQUESTER' | 'CODE';
+
+export interface ReferralCodeAttemptWindow {
+  /** Attempts recorded after `since`. */
+  count: number;
+  /** The earliest of them, so the caller can say when the window frees up. */
+  oldestAt: Date | null;
+}
+
+/**
+ * Counts how often a requester and a code have been tried recently. Rows
+ * older than the window are meaningless and should be purged.
+ *
+ * The requester key is OPAQUE: a keyed hash of the caller's IP for the public
+ * check, a namespaced member id for attaching. It is never a raw IP address
+ * (an IP is personal data); an implementation must refuse one. The real
+ * hashing comes from the shared identifier hasher.
+ *
+ * Limits of a simple implementation: reading the count and then recording the
+ * attempt is not atomic, so parallel requests can pass a limit by a few.
+ */
+export interface ReferralCodeAttemptStore {
+  window(
+    dimension: ReferralAttemptDimension,
+    key: string,
+    since: Date,
+    tx?: AgentTx,
+  ): Promise<ReferralCodeAttemptWindow>;
+  /**
+   * `codeKey` is null for text that is not a well-formed code. Rejects (does
+   * not store) a `requesterKey` that is a raw IP address.
+   */
+  record(
+    attempt: { requesterKey: string; codeKey: string | null; at: Date },
+    tx?: AgentTx,
+  ): Promise<void>;
 }
 
 // --- Members (read only) ---------------------------------------------------

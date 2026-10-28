@@ -2,6 +2,8 @@
  * One place that wires the agent services to the in-memory fakes, so the
  * service specs read as behaviour and not as set-up. Tests only.
  */
+import { AgentReferralCodeService } from '../referral/agent-referral-code.service';
+import { AgentReferralService } from '../referral/agent-referral.service';
 import { AgentApplicationService } from '../application/agent-application.service';
 import { AgentMeService } from '../agent/agent-me.service';
 import { AgentProfileBuilder } from '../agent/agent-profile-builder';
@@ -13,12 +15,21 @@ import {
 } from '../auth/agent-session-issuer';
 import { AgentSignInService } from '../auth/agent-sign-in.service';
 import { StaticAgentContent } from '../content/agent-content';
-import type { AgentRecord } from '../ports/agent-data-ports';
+import type {
+  AgentAttributionStatus,
+  AgentRecord,
+} from '../ports/agent-data-ports';
+import type { ReferralStage } from '../referral/agent-referral-view';
 import type { AgentTokenSigner } from '../ports/agent-infra-ports';
 import {
   AGENT_ACCESS_TOKEN_TTL_SECONDS_KEY,
   AGENT_OTP_RESEND_AFTER_SECONDS_KEY,
   AGENT_REFRESH_TOKEN_TTL_SECONDS_KEY,
+  REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY,
+  REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY,
+  REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY,
+  REFERRAL_CREDIT_WINDOW_DAYS_KEY,
+  REFERRAL_MEMBER_DISCOUNT_BPS_KEY,
 } from '../settings/agent-program-settings';
 import { FakeAgentClock, FakeAgentTokenSigner } from './fake-agent-infra';
 import {
@@ -30,9 +41,12 @@ import {
 } from './fake-agent-platform';
 import {
   FakeAgentApplicantRepository,
+  FakeAgentMemberRead,
   FakeAgentPayoutDetailsRepository,
   FakeAgentRefreshTokenRepository,
   FakeAgentRepository,
+  FakeReferralAttributionRepository,
+  FakeReferralCodeAttemptStore,
   FakeReferralCodeRepository,
 } from './fake-agent-repositories';
 import { FakeAgentSecretSealer } from './fake-agent-secret-sealer';
@@ -45,6 +59,10 @@ export const ACCESS_TTL = 900;
 export const REFRESH_TTL = 2_592_000;
 export const RESEND_AFTER = 30;
 export const OTP_TTL_MS = 300_000;
+export const IP_LIMIT = 3;
+export const CODE_LIMIT = 2;
+export const VALIDATION_WINDOW = 60;
+export const CREDIT_WINDOW_DAYS = 60;
 
 export const AUTH_OPTIONS: AgentAuthOptions = {
   issuer: 'nenjam-agent',
@@ -77,6 +95,11 @@ export function makeAgentHarness(
     [AGENT_ACCESS_TOKEN_TTL_SECONDS_KEY]: ACCESS_TTL,
     [AGENT_REFRESH_TOKEN_TTL_SECONDS_KEY]: REFRESH_TTL,
     [AGENT_OTP_RESEND_AFTER_SECONDS_KEY]: RESEND_AFTER,
+    [REFERRAL_MEMBER_DISCOUNT_BPS_KEY]: 500,
+    [REFERRAL_CREDIT_WINDOW_DAYS_KEY]: CREDIT_WINDOW_DAYS,
+    [REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY]: IP_LIMIT,
+    [REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY]: CODE_LIMIT,
+    [REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY]: VALIDATION_WINDOW,
     ...settingsOverrides,
   });
   const otp = new FakeAgentOtp({
@@ -91,6 +114,10 @@ export function makeAgentHarness(
   const codes = new FakeReferralCodeRepository();
   const tokens = new FakeAgentRefreshTokenRepository();
   const applicants = new FakeAgentApplicantRepository();
+  let attributionCounter = 0;
+  const attributions = new FakeReferralAttributionRepository();
+  const members = new FakeAgentMemberRead();
+  const attempts = new FakeReferralCodeAttemptStore();
   const payoutDetails = new FakeAgentPayoutDetailsRepository();
   const sealer = new FakeAgentSecretSealer();
   const audit = new FakeAgentAudit();
@@ -132,6 +159,26 @@ export function makeAgentHarness(
     uow,
     audit,
     clock,
+  });
+  const referrals = new AgentReferralService({
+    access: me,
+    codes,
+    attributions,
+    members,
+    content,
+    settings,
+  });
+  const referralCodes = new AgentReferralCodeService({
+    settings,
+    attempts,
+    codes,
+    agents,
+    attributions,
+    members,
+    uow,
+    audit,
+    clock,
+    newId: () => `attribution-${++attributionCounter}`,
   });
   let agentCounter = 0;
   const application = new AgentApplicationService({
@@ -177,6 +224,74 @@ export function makeAgentHarness(
     });
   };
 
+  /** A member who has signed up but is not (yet) credited to any agent. */
+  const seedMember = (
+    id: string,
+    o: { phoneHash?: string | null; hasPaid?: boolean } = {},
+  ) =>
+    members.add(
+      {
+        memberId: id,
+        phoneHash: o.phoneHash === undefined ? `hash-of-${id}` : o.phoneHash,
+        signedUpAt: START,
+        hasPaid: o.hasPaid ?? false,
+      },
+      {
+        firstName: 'Priya',
+        lastName: 'Sharma',
+        phoneE164: '+919000000002',
+        age: 27,
+        city: 'Madurai',
+        signedUpAt: START,
+        stage: 'REGISTERED',
+        profileCompletenessPct: 40,
+      },
+    );
+
+  /** Creates a referred member and the attribution that credits them to an agent. */
+  const seedReferral = async (o: {
+    id: string;
+    agentId?: string;
+    at?: Date;
+    status?: AgentAttributionStatus;
+    stage?: ReferralStage;
+    firstName?: string;
+    city?: string;
+  }) => {
+    const memberId = `member-${o.id}`;
+    const at = o.at ?? START;
+    members.add(
+      {
+        memberId,
+        phoneHash: `member-hash-${o.id}`,
+        signedUpAt: at,
+        hasPaid: o.stage === 'PURCHASED',
+      },
+      {
+        firstName: o.firstName ?? 'Priya',
+        lastName: 'Sharma',
+        phoneE164: '+919000000002',
+        age: 27,
+        city: o.city ?? 'Madurai',
+        signedUpAt: at,
+        stage: o.stage ?? 'REGISTERED',
+        profileCompletenessPct: 40,
+      },
+    );
+    return attributions.create({
+      id: o.id,
+      memberId,
+      agentId: o.agentId ?? 'agent-1',
+      codeId: 'code-1',
+      source: 'CODE_AT_SIGNUP',
+      memberPhoneHash: `member-hash-${o.id}`,
+      attributedAt: at,
+      status: o.status ?? 'ACTIVE',
+      windowEndsAt: new Date(at.getTime() + 60 * 86_400_000),
+      needsReview: false,
+    });
+  };
+
   /** start + verify with the right code: what a user does. */
   const signInAs = async (phone = PHONE) => {
     const { challengeId } = await signIn.start(phone);
@@ -192,6 +307,9 @@ export function makeAgentHarness(
     codes,
     tokens,
     applicants,
+    attributions,
+    members,
+    attempts,
     payoutDetails,
     sealer,
     audit,
@@ -204,8 +322,12 @@ export function makeAgentHarness(
     signIn,
     application,
     me,
+    referrals,
+    referralCodes,
     claimsOf,
     seedAgent,
+    seedReferral,
+    seedMember,
     signInAs,
   };
 }

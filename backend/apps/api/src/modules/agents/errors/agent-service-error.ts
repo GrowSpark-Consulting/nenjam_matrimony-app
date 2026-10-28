@@ -21,6 +21,12 @@ export type AgentServiceErrorCode =
   | 'REFRESH_TOKEN_REUSED'
   | 'AGENT_NOT_ACTIVE'
   | 'AGENT_NOT_FOUND'
+  | 'REFERRAL_NOT_FOUND'
+  | 'CODE_NOT_FOUND'
+  | 'ALREADY_ATTRIBUTED'
+  | 'SELF_REFERRAL'
+  | 'ALREADY_PAID'
+  | 'PHONE_NOT_VERIFIED'
   | ApplicationSubmitRejectReason;
 
 export interface AgentServiceErrorOptions {
