@@ -48,13 +48,15 @@ nenjam_matrimony_app/
 │   ├── libs/{common,config,logger,database,cache,search,queue,firebase,storage,mail}/
 │   ├── scripts/             # ops/verification scripts — see §14
 │   └── railway.toml, prisma.config.ts
+├── admin/                   # staff admin panel: Next.js + TS static export over /admin/*
+│                            #   (own pnpm package; admin/README.md, docs/admin/README.md)
 ├── docs/                    # architecture notes, API reference, dev handoffs, daily reports
 │   ├── api/, architecture/, development/, discover/, registration/, daily-reports/
 ├── scripts/
 │   ├── dev/                 # start_dev.ps1, stop_dev.ps1, USB/adb helpers (Windows)
 │   └── git-hooks/           # opt-in pre-commit secret scanner — see §12/§13
 ├── seed-data/                # ISO country/subdivision/city + religion source data, consumed by backend seeders
-├── .github/workflows/ci.yml # single CI workflow, backend + frontend jobs — see §10/§13
+├── .github/workflows/ci.yml # single CI workflow: admin web, backend and frontend jobs — see §10/§13
 ├── PROJECT_DOCUMENTATION.md  # 2026-07-11 snapshot — historical context only, see warning above
 ├── auth-architecture.md      # root design doc: Firebase-auth-only decision (still broadly accurate)
 └── registration-wizard-integration.md

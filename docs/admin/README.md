@@ -1,15 +1,18 @@
-# Admin access (RBAC, staff sign-in, audit) — Phase 1
+# Admin panel — access, API and operations
 
-The backend foundation for the admin panel: who is staff, what each staff member may
-do, how they prove a second factor, and the audit trail. Code:
-`backend/apps/api/src/modules/admin/`. Design source: *Nenjam Admin Architecture v3*
-(sections 4 and 13), adapted to what the repository already had.
+Who is staff, what each staff member may do, how they prove a second factor, the admin
+API over membership, and the audit trail. Backend: `backend/apps/api/src/modules/admin/`.
+Web app: `admin/` (see [admin/README.md](../../admin/README.md)). Design source: *Nenjam
+Admin Architecture v3* (sections 4, 11 and 13), adapted to what the repository already had.
 
-**Built:** RBAC tables and permission keys, `AdminGuard` + `@RequirePermissions`,
-our own TOTP second factor with admin sessions, `GET /admin/me`, the audit writer,
-operator provisioning, and protection of staff accounts from the member sign-in paths.
-**Not built yet:** the Next.js admin panel (Phase 2), agent screens (Phase 3, on Ishu's
-`/admin/agents/*`), plan and subscription admin routes (Phase 4).
+**Built:** RBAC tables and permission keys, `AdminGuard` + `@RequirePermissions`, our own
+TOTP second factor with admin sessions, the audit writer, operator provisioning,
+protection of staff accounts from the member sign-in paths, plan drafts with two-admin
+publishing, subscription lookup/extend/revoke, audit search, overview and roles, and the
+Next.js web app for all of it.
+**Not built yet:** agent screens (they need Ishu's `/admin/agents/*`), complimentary grants
+and extensions over 30 days (need a second-approver workflow), payments/refunds screens
+(no live payments yet), platform settings, role editing in the UI.
 
 ## How a request to `/admin/*` is authorised
 
@@ -47,6 +50,27 @@ decide what to show.
 | `POST /admin/auth/step-up` `{ code }` | any admin | Fresh check before a sensitive action |
 | `POST /admin/auth/logout` | any admin | Ends the session (204) |
 | `GET /admin/me` | any admin | `{ adminAccountId, userId, email, department, lastLoginAt, roles, permissions }` |
+| `GET /admin/overview` | `dashboard.view` | Member counts, active memberships by plan, drafts awaiting approval; revenue only with `finance.view` |
+| `GET /admin/plans` | `plan.view` | Every plan: current entitlements, version history, prices, open draft, subscriber count; the feature registry |
+| `PATCH /admin/plans/:code/display` `{ displayName?, description?, displayOrder?, reason }` | `plan.edit` | Name and description |
+| `POST /admin/plans/:code/status` `{ isActive, reason }` | `plan.publish` | Start / stop selling (existing subscriptions untouched; Free can't be switched off) |
+| `GET /admin/plan-drafts` `?planCode&status` · `GET /admin/plan-drafts/:id` | `plan.view` | Drafts, each with the server's review: problems, changed features, reductions, price changes, `publishable`, `stale` |
+| `POST /admin/plan-drafts` `{ planCode, changeNote }` | `plan.edit` | Start a draft from the plan as it is (one open draft per plan) |
+| `PUT /admin/plan-drafts/:id` `{ entitlements?, durations?, changeNote? }` | `plan.edit` | Edit a DRAFT (the complete entitlement map / price list; paise) |
+| `POST /admin/plan-drafts/:id/submit` | `plan.edit` | Send for approval — must be valid and change something |
+| `POST /admin/plan-drafts/:id/publish` `{ note? }` | `plan.publish`, **not the submitter** | New version (if entitlements changed) + prices, one transaction |
+| `POST /admin/plan-drafts/:id/reject` `{ reason }` | `plan.publish`, not the submitter | |
+| `POST /admin/plan-drafts/:id/discard` `{ reason }` | `plan.edit` | |
+| `GET /admin/subscriptions` `?q&status&planCode&cursor&limit` | `subscription.view` | `q` = exact email, phone, user id or subscription id; contacts masked; `{ items, nextCursor }` |
+| `GET /admin/subscriptions/:id` | `subscription.view` | With events and payments |
+| `POST /admin/subscriptions/:id/extend` `{ days ≤ 30, reason }` | `subscription.extend` | Pushes queued renewals back too |
+| `POST /admin/subscriptions/:id/revoke` `{ reason }` | `subscription.cancel` | Ends it now; no refund |
+| `GET /admin/audit-logs` `?action&entity&entityId&actorId&from&to&cursor&limit` | `audit.view` | Newest first; read-only (no edit/delete route exists) |
+| `GET /admin/roles` | `rbac.manage` (step-up) | Roles, grants and admins, read-only |
+
+**Maker-checker:** a plan draft is published or rejected only by an admin other than the
+one who submitted it — enforced in the service and by a database CHECK. Keep at least two
+admins with `plan.publish`. Prices are changed only through drafts.
 
 Session policy: 12 h absolute, 30 min idle, step-up valid 10 min. A code is accepted once
 per 30-second step (no replay). Five wrong codes (or enrolment codes) lock the second
@@ -124,19 +148,22 @@ comes from `@CurrentAdmin()`, never from a request body.
 | Var | Where | Notes |
 |---|---|---|
 | `ADMIN_MFA_ENCRYPTION_KEY` | API | 32 random bytes, base64 (`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`). Unset → admin sign-in answers 503, the app still boots. Malformed → the API refuses to boot. One per environment; changing it invalidates every enrolled authenticator (`reset-mfa` each admin). |
-| `CORS_ORIGINS` | API | Add the admin panel's origin when it is deployed (Phase 2). `X-Admin-Session` is already an allowed header. |
+| `CORS_ORIGINS` | API | Add the admin panel's origin (e.g. `https://admin.<domain>`). `X-Admin-Session` is already an allowed header. |
+| `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_FIREBASE_*` | admin web build | Public values, set at build time — see `admin/.env.example`. |
 
-## Deploying Phase 1
+## Deploying
 
 1. Back up (Neon branch or `pg_dump`, restore-tested) — there is no down-migration.
-2. `pnpm prisma migrate deploy` → applies `20261028070845_admin_rbac_foundation`
-   (additive: new tables, nullable/defaulted columns, CHECKs, seed). Verify:
-   `SELECT count(*) FROM permissions` = 48; `SUPER_ADMIN` has 48 grants; the placeholder
-   admin's `is_active` is false.
+2. `pnpm prisma migrate deploy` → applies `20261028070845_admin_rbac_foundation` and
+   `20261028075906_plan_drafts` (additive: new tables and enum, nullable/defaulted columns,
+   CHECKs, seed). Verify: `SELECT count(*) FROM permissions` = 48; `SUPER_ADMIN` has 48
+   grants; the placeholder admin's `is_active` is false.
 3. Set `ADMIN_MFA_ENCRYPTION_KEY` on the API service; deploy the code.
 4. `GET /admin/me` without a token → 401; with a member token → 403.
-5. Provision the first Super Admin (above) once the admin panel can run the enrolment
-   (Phase 2), or enrol through the API directly.
+5. Build and host the web app (`admin/README.md` § Deploy); add its origin to
+   `CORS_ORIGINS` and to Firebase's authorised domains.
+6. Provision the first two Super Admins (two, because a plan change needs a second
+   approver) and have each enrol in the web app.
 
 ## Security notes
 
@@ -149,5 +176,5 @@ comes from `@CurrentAdmin()`, never from a request body.
   email they supply. Fix before real users depend on it: stop resolving accounts by the
   supplied email in dummy OTP, or switch to real OTP (`USE_REAL_OTP=true`).
 - Not yet: DB-level insert-only grants on `audit_logs` (needs a separate migration role),
-  Redis caching of permission sets (not needed at admin traffic levels), maker-checker
-  approvals for publishing plans (Phase 4).
+  Redis caching of permission sets (not needed at admin traffic levels), a general
+  approvals queue (grants, long extensions, refunds) — plan publishing already has one.
