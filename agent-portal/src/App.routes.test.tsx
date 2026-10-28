@@ -5,7 +5,7 @@ import type { ApiSetup } from './api';
 import { ApiError } from './api/errors';
 import { MockAgentApi } from './api/mockAgentApi';
 import { SESSION_STORAGE_KEY, SessionStore } from './api/session';
-import type { ReferralLink } from './api/types';
+import type { AgentStatus, ReferralLink } from './api/types';
 import { AppRoutes } from './App';
 import { PortalProvider } from './state/PortalContext';
 
@@ -179,16 +179,14 @@ describe('loading, empty, error and retry states', () => {
 });
 
 describe('application refusals (contract)', () => {
-  it('409 APPLICATION_EXISTS shows the server message and offers "Sign in again"', async () => {
-    class Exists extends MockAgentApi {
+  /** Applicant fills the form and submits; `apply` answers with [error]. */
+  async function submitRefused(error: ApiError) {
+    class Refusing extends MockAgentApi {
       async apply(): Promise<never> {
-        throw new ApiError(409, 'An application already exists for this phone.', {
-          code: 'APPLICATION_EXISTS',
-          agentStatus: 'PENDING_APPROVAL',
-        });
+        throw error;
       }
     }
-    const s = setup((sessions) => new Exists(sessions));
+    const s = setup((sessions) => new Refusing(sessions));
     await signedInAs(s, '+919876543210');
     renderAt('/apply', s);
     const user = userEvent.setup();
@@ -196,12 +194,79 @@ describe('application refusals (contract)', () => {
     await user.type(screen.getByLabelText('City'), 'Coimbatore');
     await user.type(screen.getByLabelText('State'), 'Tamil Nadu');
     await user.click(screen.getByRole('button', { name: 'Submit application' }));
-    expect(
-      await screen.findByText('An application already exists for this phone.'),
-    ).toBeInTheDocument();
+    return user;
+  }
+
+  const exists = (agentStatus?: AgentStatus) =>
+    new ApiError(409, 'An application already exists.', {
+      code: 'APPLICATION_EXISTS',
+      agentStatus: agentStatus ?? null,
+    });
+
+  it('409 + PENDING_APPROVAL: the Pending screen; signing in again clears the session', async () => {
+    const user = await submitRefused(exists('PENDING_APPROVAL'));
+    expect(await screen.findByRole('heading', { name: 'Under review' })).toBeInTheDocument();
+    expect(screen.queryByText(/success/i)).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Sign in again' }));
     await waitFor(() => expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull());
     expect(await screen.findByLabelText('Mobile number')).toBeInTheDocument();
+  });
+
+  it.each(['ACTIVE', 'SUSPENDED', 'TERMINATED'] as const)(
+    '409 + %s: "already a partner", sign in again to open it',
+    async (status) => {
+      await submitRefused(exists(status));
+      expect(
+        await screen.findByRole('heading', { name: 'You are already a partner' }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Sign in again' })).toBeInTheDocument();
+    },
+  );
+
+  it('409 with NO agentStatus: sign in again (applied from another device)', async () => {
+    await submitRefused(exists());
+    expect(
+      await screen.findByRole('heading', { name: 'Please sign in again' }),
+    ).toBeInTheDocument();
+  });
+
+  it('403 AGENT_NOT_ACTIVE + REJECTED: Rejected screen with NO "Apply again"', async () => {
+    await submitRefused(
+      new ApiError(403, 'Not allowed.', { code: 'AGENT_NOT_ACTIVE', agentStatus: 'REJECTED' }),
+    );
+    expect(
+      await screen.findByRole('heading', { name: 'Application not approved' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /apply again/i })).toBeNull();
+    expect(screen.queryByLabelText('Full name')).toBeNull();
+  });
+
+  it('400 VALIDATION_FAILED: the named fields are marked invalid; the form stays', async () => {
+    await submitRefused(
+      new ApiError(400, 'name must be 2-100 characters, pan is not valid', {
+        code: 'VALIDATION_FAILED',
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText('Full name')).toHaveAttribute('aria-invalid', 'true'),
+    );
+    expect(screen.getByLabelText('PAN (optional)')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('City')).not.toHaveAttribute('aria-invalid');
+    expect(screen.getAllByText('Please check this field.')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Submit application' })).toBeEnabled();
+  });
+
+  it('401: back to OTP with an explanation; the session is gone', async () => {
+    await submitRefused(new ApiError(401, 'Unauthorized', { code: 'UNAUTHORIZED' }));
+    expect(await screen.findByLabelText('Mobile number')).toBeInTheDocument();
+    expect(screen.getByText(/verification has expired/)).toBeInTheDocument();
+  });
+
+  it('nothing is shown as success unless the server returns 201', async () => {
+    await submitRefused(new ApiError(500, 'boom'));
+    expect(await screen.findByText(/having trouble/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Full name')).toBeInTheDocument();
+    expect(screen.queryByText("We're reviewing your application.")).toBeNull();
   });
 
   it('PAN is validated before sending and upper-cased', async () => {
@@ -220,5 +285,40 @@ describe('application refusals (contract)', () => {
     await user.click(screen.getByRole('button', { name: 'Submit application' }));
     await waitFor(() => expect(apply).toHaveBeenCalled());
     expect(apply.mock.calls[0][0]).toMatchObject({ pan: 'ABCDE1234F' });
+  });
+});
+
+describe('Retry-After on sign-in (429)', () => {
+  it('disables sending for the server-given seconds and does not call again', async () => {
+    const s = setup();
+    const request = vi
+      .spyOn(s.api, 'requestOtp')
+      .mockRejectedValue(
+        new ApiError(429, 'Too many', { code: 'RATE_LIMITED', retryAfterSeconds: 30 }),
+      );
+    renderAt('/sign-in', s);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('Mobile number'), '9000000005');
+    await user.click(screen.getByRole('button', { name: 'Send code' }));
+    const wait = await screen.findByRole('button', { name: /Try again in (30|29)s/ });
+    expect(wait).toBeDisabled();
+    expect(screen.getByText(/please wait 30 seconds/)).toBeInTheDocument();
+    await user.click(wait);
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it('the button comes back once the wait is over', async () => {
+    const s = setup();
+    vi.spyOn(s.api, 'requestOtp').mockRejectedValueOnce(
+      new ApiError(429, 'Too many', { code: 'RATE_LIMITED', retryAfterSeconds: 1 }),
+    );
+    renderAt('/sign-in', s);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('Mobile number'), '9000000005');
+    await user.click(screen.getByRole('button', { name: 'Send code' }));
+    expect(await screen.findByRole('button', { name: /Try again in/ })).toBeDisabled();
+    expect(
+      await screen.findByRole('button', { name: 'Send code' }, { timeout: 3000 }),
+    ).toBeEnabled();
   });
 });

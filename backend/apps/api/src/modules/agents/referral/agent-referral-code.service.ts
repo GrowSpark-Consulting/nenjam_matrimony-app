@@ -58,9 +58,6 @@ import type {
 import type { AgentUnitOfWork } from '../ports/agent-unit-of-work.port';
 import {
   parseAgentProgramSettings,
-  REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY,
-  REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY,
-  REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY,
   REFERRAL_CREDIT_WINDOW_DAYS_KEY,
 } from '../settings/agent-program-settings';
 import { toDisplayName } from './agent-referral-view';
@@ -69,13 +66,10 @@ import {
   AttributionSource,
   decideAttribution,
 } from './decide-attribution';
-import {
-  decideCodeValidationAttempt,
-  toValidateResponse,
-  ValidateResponse,
-} from './code-validation';
+import { toValidateResponse, ValidateResponse } from './code-validation';
 import { normalizeReferralCode } from './normalize-referral-code';
 import { looksLikeRawIp } from './requester-key';
+import { ReferralAttemptLimiter } from './referral-attempt-limiter';
 
 /** An opaque key is a short hash, not free text. */
 const MAX_REQUESTER_KEY_LENGTH = 200;
@@ -102,21 +96,17 @@ export interface AgentReferralCodeServiceDeps {
   newId?: () => string;
 }
 
-interface Limits {
-  ipLimit: number;
-  codeLimit: number;
-  windowSeconds: number;
-}
-
 type AttachOutcome =
   | { ok: true; agentName: string; windowEndsAt: Date }
   | { ok: false; reason: AttributionRejectReason };
 
 export class AgentReferralCodeService {
   private readonly newId: () => string;
+  private readonly limiter: ReferralAttemptLimiter;
 
   constructor(private readonly deps: AgentReferralCodeServiceDeps) {
     this.newId = deps.newId ?? randomUUID;
+    this.limiter = new ReferralAttemptLimiter(deps);
   }
 
   /**
@@ -143,7 +133,7 @@ export class AgentReferralCodeService {
       );
     }
     const code = normalizeReferralCode(rawCode);
-    await this.throttle(`requester:${requesterKey}`, code);
+    await this.limiter.check(`requester:${requesterKey}`, code);
 
     const record =
       code === null ? null : await this.deps.codes.findByCode(code);
@@ -172,7 +162,7 @@ export class AgentReferralCodeService {
     if (code === null) {
       throw new AgentServiceError('VALIDATION_FAILED', { fields: ['code'] });
     }
-    await this.throttle(`user:${memberId}`, code);
+    await this.limiter.check(`user:${memberId}`, code);
     const creditWindowDays = await this.creditWindowDays();
 
     let outcome: AttachOutcome;
@@ -319,75 +309,6 @@ export class AgentReferralCodeService {
     };
   }
 
-  /** Refuses with RATE_LIMITED, or records this attempt. Settings are read each time. */
-  private async throttle(
-    requesterKey: string,
-    codeKey: string | null,
-  ): Promise<void> {
-    const limits = await this.limits();
-    const now = this.deps.clock.now();
-    const windowMs = limits.windowSeconds * 1000;
-    const since = new Date(now.getTime() - windowMs);
-
-    const requester = await this.deps.attempts.window(
-      'REQUESTER',
-      requesterKey,
-      since,
-    );
-    // Text that is not a code counts against the requester only.
-    const code =
-      codeKey === null
-        ? { count: 0, oldestAt: null }
-        : await this.deps.attempts.window('CODE', codeKey, since);
-
-    const decision = decideCodeValidationAttempt({
-      ipAttempts: requester.count,
-      codeAttempts: code.count,
-      ipLimit: limits.ipLimit,
-      codeLimit: limits.codeLimit,
-    });
-    if (!decision.allowed) {
-      const oldest =
-        decision.reason === 'IP_LIMIT' ? requester.oldestAt : code.oldestAt;
-      const msLeft =
-        (oldest?.getTime() ?? now.getTime()) + windowMs - now.getTime();
-      throw new AgentServiceError('RATE_LIMITED', {
-        retryAfterSeconds: Math.max(1, Math.ceil(msLeft / 1000)),
-      });
-    }
-    await this.deps.attempts.record({ requesterKey, codeKey, at: now });
-  }
-
-  private async limits(): Promise<Limits> {
-    const keys = [
-      REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY,
-      REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY,
-      REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY,
-    ];
-    const parsed = parseAgentProgramSettings(
-      await this.deps.settings.getMany(keys),
-    );
-    const missing = keys.filter((key) => parsed.missing.includes(key));
-    const {
-      codeValidationIpLimit,
-      codeValidationCodeLimit,
-      codeValidationWindowSeconds,
-    } = parsed.settings;
-    if (
-      missing.length > 0 ||
-      codeValidationIpLimit === undefined ||
-      codeValidationCodeLimit === undefined ||
-      codeValidationWindowSeconds === undefined
-    ) {
-      throw new AgentConfigError(missing);
-    }
-    return {
-      ipLimit: codeValidationIpLimit,
-      codeLimit: codeValidationCodeLimit,
-      windowSeconds: codeValidationWindowSeconds,
-    };
-  }
-
   private async creditWindowDays(): Promise<number> {
     const parsed = parseAgentProgramSettings(
       await this.deps.settings.getMany([REFERRAL_CREDIT_WINDOW_DAYS_KEY]),
@@ -420,7 +341,7 @@ function refusal(reason: AttributionRejectReason): AgentServiceError {
 }
 
 /** "Ravi Kumar Singh" -> first "Ravi", last "Singh"; a single name has no last. */
-function splitName(name: string | undefined | null): {
+export function splitName(name: string | undefined | null): {
   first: string | null;
   last: string | null;
 } {

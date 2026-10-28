@@ -3,6 +3,7 @@
  * service specs read as behaviour and not as set-up. Tests only.
  */
 import { AgentReferralCodeService } from '../referral/agent-referral-code.service';
+import { AgentReferralQuoteService } from '../referral/agent-referral-quote.service';
 import { AgentReferralService } from '../referral/agent-referral.service';
 import { AgentApplicationService } from '../application/agent-application.service';
 import { AgentMeService } from '../agent/agent-me.service';
@@ -180,6 +181,15 @@ export function makeAgentHarness(
     clock,
     newId: () => `attribution-${++attributionCounter}`,
   });
+  const referralQuote = new AgentReferralQuoteService({
+    settings,
+    attempts,
+    codes,
+    agents,
+    attributions,
+    members,
+    clock,
+  });
   let agentCounter = 0;
   const application = new AgentApplicationService({
     agents,
@@ -324,6 +334,7 @@ export function makeAgentHarness(
     me,
     referrals,
     referralCodes,
+    referralQuote,
     claimsOf,
     seedAgent,
     seedReferral,
