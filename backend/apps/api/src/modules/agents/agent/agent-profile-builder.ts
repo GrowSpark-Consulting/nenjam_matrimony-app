@@ -14,7 +14,8 @@ import type {
   ReferralCodeRepository,
 } from '../ports/agent-data-ports';
 import type { AgentTx } from '../ports/agent-unit-of-work.port';
-import { IST_OFFSET_MS, maskPhone } from '../referral/agent-referral-view';
+import { maskPhone } from '../referral/agent-referral-view';
+import { toIstDate } from './ist-date';
 
 export interface AgentProfile {
   id: string;
@@ -62,11 +63,7 @@ export class AgentProfileBuilder {
       rejectionReason:
         agent.status === 'REJECTED' ? agent.rejectionReason : null,
       approvedAt:
-        agent.approvedAt === null
-          ? null
-          : new Date(agent.approvedAt.getTime() + IST_OFFSET_MS)
-              .toISOString()
-              .slice(0, 10),
+        agent.approvedAt === null ? null : toIstDate(agent.approvedAt),
       panLast4: agent.panLast4,
       payoutDetailsSet: agent.payoutDetailsSet,
       primaryCode:

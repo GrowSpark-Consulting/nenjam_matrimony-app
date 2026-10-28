@@ -250,6 +250,36 @@ export interface ReferralAttributionRepository {
   ): Promise<ReferralAttributionRecord>;
 }
 
+// --- Code-validation attempts ----------------------------------------------
+
+export type ReferralAttemptDimension = 'REQUESTER' | 'CODE';
+
+export interface ReferralCodeAttemptWindow {
+  /** Attempts recorded after `since`. */
+  count: number;
+  /** The earliest of them, so the caller can say when the window frees up. */
+  oldestAt: Date | null;
+}
+
+/**
+ * Counts how often a requester (an IP for the public check, a member id for
+ * attaching) and a code have been tried recently. Rows older than the window
+ * are meaningless and should be purged.
+ */
+export interface ReferralCodeAttemptStore {
+  window(
+    dimension: ReferralAttemptDimension,
+    key: string,
+    since: Date,
+    tx?: AgentTx,
+  ): Promise<ReferralCodeAttemptWindow>;
+  /** `codeKey` is null for text that is not a well-formed code. */
+  record(
+    attempt: { requesterKey: string; codeKey: string | null; at: Date },
+    tx?: AgentTx,
+  ): Promise<void>;
+}
+
 // --- Members (read only) ---------------------------------------------------
 
 export interface AgentMemberSnapshot {

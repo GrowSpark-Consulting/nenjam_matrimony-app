@@ -12,6 +12,9 @@ import {
   PAYOUT_MINIMUM_AMOUNT_PAISE_KEY,
   PAYOUT_TAX_WITHHOLDING_KEY,
   parseAgentProgramSettings,
+  REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY,
+  REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY,
+  REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY,
   REFERRAL_CREDIT_WINDOW_DAYS_KEY,
   REFERRAL_DISCOUNT_ONLY_IN_CREDIT_WINDOW_KEY,
   REFERRAL_DISCOUNT_STACKS_WITH_COUPONS_KEY,
@@ -35,6 +38,9 @@ const ALL: Record<string, unknown> = {
   [AGENT_ACCESS_TOKEN_TTL_SECONDS_KEY]: 900,
   [AGENT_REFRESH_TOKEN_TTL_SECONDS_KEY]: 2_592_000,
   [AGENT_OTP_RESEND_AFTER_SECONDS_KEY]: 30,
+  [REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY]: 10,
+  [REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY]: 20,
+  [REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY]: 60,
 };
 
 describe('setting keys', () => {
@@ -70,7 +76,16 @@ describe('setting keys', () => {
     expect(AGENT_OTP_RESEND_AFTER_SECONDS_KEY).toBe(
       'agent.otp_resend_after_seconds',
     );
-    expect(AGENT_PROGRAM_SETTING_KEYS).toHaveLength(15);
+    expect(REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY).toBe(
+      'referral.code_validation_ip_limit',
+    );
+    expect(REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY).toBe(
+      'referral.code_validation_code_limit',
+    );
+    expect(REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY).toBe(
+      'referral.code_validation_window_seconds',
+    );
+    expect(AGENT_PROGRAM_SETTING_KEYS).toHaveLength(18);
   });
 });
 
@@ -93,6 +108,9 @@ describe('parseAgentProgramSettings', () => {
         accessTokenTtlSeconds: 900,
         refreshTokenTtlSeconds: 2_592_000,
         otpResendAfterSeconds: 30,
+        codeValidationIpLimit: 10,
+        codeValidationCodeLimit: 20,
+        codeValidationWindowSeconds: 60,
       },
       missing: [],
     });
@@ -111,7 +129,7 @@ describe('parseAgentProgramSettings', () => {
       delete raw[key];
       const result = parseAgentProgramSettings(raw);
       expect(result.missing).toEqual([key]);
-      expect(Object.keys(result.settings)).toHaveLength(14);
+      expect(Object.keys(result.settings)).toHaveLength(17);
     },
   );
 
@@ -130,8 +148,8 @@ describe('parseAgentProgramSettings', () => {
       (key) => !NULL_IS_VALUE.includes(key),
     );
 
-    it('counts as missing for exactly thirteen keys', () => {
-      expect(NULL_IS_MISSING).toHaveLength(13);
+    it('counts as missing for exactly sixteen keys', () => {
+      expect(NULL_IS_MISSING).toHaveLength(16);
     });
 
     it.each(NULL_IS_MISSING.map((k) => [k]))(
@@ -139,7 +157,7 @@ describe('parseAgentProgramSettings', () => {
       (key) => {
         const result = parseAgentProgramSettings({ ...ALL, [key]: null });
         expect(result.missing).toEqual([key]);
-        expect(Object.keys(result.settings)).toHaveLength(14);
+        expect(Object.keys(result.settings)).toHaveLength(17);
         expect(Object.values(result.settings)).not.toContain(null);
       },
     );
@@ -149,7 +167,7 @@ describe('parseAgentProgramSettings', () => {
       (key) => {
         const result = parseAgentProgramSettings({ ...ALL, [key]: null });
         expect(result.missing).toEqual([]);
-        expect(Object.keys(result.settings)).toHaveLength(15);
+        expect(Object.keys(result.settings)).toHaveLength(18);
       },
     );
 
@@ -345,11 +363,14 @@ describe('validateCommissionPolicyVersion', () => {
   });
 });
 
-describe('session and OTP timing settings', () => {
+describe('positive-integer settings (timing and rate limits)', () => {
   const KEYS = [
     AGENT_ACCESS_TOKEN_TTL_SECONDS_KEY,
     AGENT_REFRESH_TOKEN_TTL_SECONDS_KEY,
     AGENT_OTP_RESEND_AFTER_SECONDS_KEY,
+    REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY,
+    REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY,
+    REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY,
   ];
 
   it.each(KEYS.map((k) => [k]))(
@@ -359,7 +380,7 @@ describe('session and OTP timing settings', () => {
       delete raw[key];
       const result = parseAgentProgramSettings(raw);
       expect(result.missing).toEqual([key]);
-      expect(Object.keys(result.settings)).toHaveLength(14);
+      expect(Object.keys(result.settings)).toHaveLength(17);
     },
   );
 

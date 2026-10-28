@@ -10,8 +10,10 @@ import {
   FakeAgentRefreshTokenRepository,
   FakeAgentRepository,
   FakeReferralAttributionRepository,
+  FakeReferralCodeAttemptStore,
   FakeReferralCodeRepository,
 } from './fake-agent-repositories';
+import { FakeAgentUnitOfWork } from './fake-agent-unit-of-work';
 
 const NOW = new Date('2026-10-28T10:00:00.000Z');
 const LATER = new Date('2026-11-27T10:00:00.000Z');
@@ -282,6 +284,110 @@ describe('FakeReferralAttributionRepository paging and scoping', () => {
     expect((await repo.findByIdForAgent('b', 'agent-1'))?.status).toBe(
       'ACTIVE',
     );
+  });
+});
+
+describe('FakeReferralCodeAttemptStore', () => {
+  const at = (seconds: number) => new Date(NOW.getTime() + seconds * 1000);
+
+  it('counts attempts after the cut-off, and reports the oldest', async () => {
+    const store = new FakeReferralCodeAttemptStore();
+    await store.record({
+      requesterKey: 'ip:1',
+      codeKey: 'NMAAAAAA',
+      at: at(0),
+    });
+    await store.record({
+      requesterKey: 'ip:1',
+      codeKey: 'NMBBBBBB',
+      at: at(10),
+    });
+    await store.record({
+      requesterKey: 'ip:2',
+      codeKey: 'NMAAAAAA',
+      at: at(20),
+    });
+    expect(await store.window('REQUESTER', 'ip:1', at(-1))).toEqual({
+      count: 2,
+      oldestAt: at(0),
+    });
+    expect(await store.window('CODE', 'NMAAAAAA', at(-1))).toEqual({
+      count: 2,
+      oldestAt: at(0),
+    });
+  });
+
+  it('an attempt exactly at the cut-off is outside the window', async () => {
+    const store = new FakeReferralCodeAttemptStore();
+    await store.record({ requesterKey: 'ip:1', codeKey: null, at: at(0) });
+    expect(await store.window('REQUESTER', 'ip:1', at(0))).toEqual({
+      count: 0,
+      oldestAt: null,
+    });
+  });
+
+  it('keeps the two dimensions apart, and never counts a null code', async () => {
+    const store = new FakeReferralCodeAttemptStore();
+    await store.record({ requesterKey: 'same', codeKey: null, at: at(0) });
+    expect((await store.window('REQUESTER', 'same', at(-1))).count).toBe(1);
+    expect((await store.window('CODE', 'same', at(-1))).count).toBe(0);
+  });
+
+  it('an attempt recorded in a failed transaction is undone', async () => {
+    const store = new FakeReferralCodeAttemptStore();
+    const uow = new FakeAgentUnitOfWork();
+    await expect(
+      uow.run(async (tx) => {
+        await store.record(
+          { requesterKey: 'ip:1', codeKey: null, at: at(0) },
+          tx,
+        );
+        throw new Error('boom');
+      }),
+    ).rejects.toThrow('boom');
+    expect(store.size).toBe(0);
+  });
+});
+
+describe('FakeReferralAttributionRepository phone uniqueness', () => {
+  it('refuses a second attribution for the same non-null phone hash', async () => {
+    const repo = new FakeReferralAttributionRepository();
+    const base = {
+      agentId: 'agent-1',
+      codeId: 'code-1',
+      source: 'CODE_AT_SIGNUP' as const,
+      attributedAt: NOW,
+      status: 'ACTIVE' as const,
+      windowEndsAt: LATER,
+      needsReview: false,
+    };
+    await repo.create({
+      ...base,
+      id: 'a',
+      memberId: 'm1',
+      memberPhoneHash: 'h',
+    });
+    await expect(
+      repo.create({ ...base, id: 'b', memberId: 'm2', memberPhoneHash: 'h' }),
+    ).rejects.toMatchObject({ reason: 'DUPLICATE_ATTRIBUTION' });
+  });
+
+  it('allows several attributions that have no phone hash', async () => {
+    const repo = new FakeReferralAttributionRepository();
+    const base = {
+      agentId: 'agent-1',
+      codeId: 'code-1',
+      source: 'ENTERED_AT_PAYMENT' as const,
+      attributedAt: NOW,
+      status: 'ACTIVE' as const,
+      windowEndsAt: LATER,
+      needsReview: true,
+      memberPhoneHash: null,
+    };
+    await repo.create({ ...base, id: 'a', memberId: 'm1' });
+    await expect(
+      repo.create({ ...base, id: 'b', memberId: 'm2' }),
+    ).resolves.toBeDefined();
   });
 });
 

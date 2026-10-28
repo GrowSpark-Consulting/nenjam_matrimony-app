@@ -18,8 +18,11 @@ import {
   AgentRefreshTokenRepository,
   AgentRepository,
   NewAgentRecord,
+  ReferralAttemptDimension,
   ReferralAttributionRecord,
   ReferralAttributionRepository,
+  ReferralCodeAttemptStore,
+  ReferralCodeAttemptWindow,
   ReferralCodeRecord,
   ReferralCodeRepository,
 } from '../ports/agent-data-ports';
@@ -275,7 +278,9 @@ export class FakeReferralAttributionRepository implements ReferralAttributionRep
     const rows = [...this.rows.values()];
     if (
       this.rows.has(attribution.id) ||
-      rows.some((row) => row.memberId === attribution.memberId)
+      rows.some((row) => row.memberId === attribution.memberId) ||
+      (attribution.memberPhoneHash !== null &&
+        rows.some((row) => row.memberPhoneHash === attribution.memberPhoneHash))
     ) {
       return Promise.reject(new AgentConflictError('DUPLICATE_ATTRIBUTION'));
     }
@@ -334,6 +339,51 @@ export class FakeAgentPayoutDetailsRepository implements AgentPayoutDetailsRepos
       else this.rows.delete(record.agentId);
     });
     return Promise.resolve();
+  }
+}
+
+export class FakeReferralCodeAttemptStore implements ReferralCodeAttemptStore {
+  private rows: Array<{
+    requesterKey: string;
+    codeKey: string | null;
+    at: Date;
+  }> = [];
+
+  window(
+    dimension: ReferralAttemptDimension,
+    key: string,
+    since: Date,
+  ): Promise<ReferralCodeAttemptWindow> {
+    const times = this.rows
+      .filter(
+        (row) =>
+          (dimension === 'REQUESTER' ? row.requesterKey : row.codeKey) ===
+            key && row.at.getTime() > since.getTime(),
+      )
+      .map((row) => row.at.getTime())
+      .sort((a, b) => a - b);
+    return Promise.resolve({
+      count: times.length,
+      oldestAt: times.length > 0 ? new Date(times[0]) : null,
+    });
+  }
+
+  record(
+    attempt: { requesterKey: string; codeKey: string | null; at: Date },
+    tx?: AgentTx,
+  ): Promise<void> {
+    const track = trackWrite(tx);
+    const row = { ...attempt, at: new Date(attempt.at.getTime()) };
+    this.rows.push(row);
+    track(() => {
+      this.rows = this.rows.filter((r) => r !== row);
+    });
+    return Promise.resolve();
+  }
+
+  /** Test helper: how many attempts are stored. */
+  get size(): number {
+    return this.rows.length;
   }
 }
 
