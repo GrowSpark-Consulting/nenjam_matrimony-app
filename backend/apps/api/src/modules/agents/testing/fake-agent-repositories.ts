@@ -5,6 +5,7 @@
  * the transaction fails (see `FakeAgentUnitOfWork`); reads see live state.
  */
 import type { ReferralViewSource } from '../referral/agent-referral-view';
+import { looksLikeRawIp } from '../referral/requester-key';
 import {
   AgentApplicantRecord,
   AgentApplicantRepository,
@@ -372,6 +373,13 @@ export class FakeReferralCodeAttemptStore implements ReferralCodeAttemptStore {
     attempt: { requesterKey: string; codeKey: string | null; at: Date },
     tx?: AgentTx,
   ): Promise<void> {
+    if (looksLikeRawIp(attempt.requesterKey)) {
+      return Promise.reject(
+        new RangeError(
+          'requesterKey must be a hashed key, not a raw IP address.',
+        ),
+      );
+    }
     const track = trackWrite(tx);
     const row = { ...attempt, at: new Date(attempt.at.getTime()) };
     this.rows.push(row);

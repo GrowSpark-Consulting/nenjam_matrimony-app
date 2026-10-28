@@ -52,7 +52,7 @@ describe('AgentReferralCodeService', () => {
     it('an active code of an ACTIVE agent is valid, with first name and last initial', async () => {
       await seedAgentWithCode();
       await expect(
-        h.referralCodes.validateCode(CODE, '1.1.1.1'),
+        h.referralCodes.validateCode(CODE, 'hashed-1'),
       ).resolves.toEqual({
         valid: true,
         agentDisplayName: 'Ravi K.',
@@ -61,7 +61,7 @@ describe('AgentReferralCodeService', () => {
 
     it('returns exactly the two documented fields', async () => {
       await seedAgentWithCode();
-      const result = await h.referralCodes.validateCode(CODE, '1.1.1.1');
+      const result = await h.referralCodes.validateCode(CODE, 'hashed-1');
       expect(Object.keys(result).sort()).toEqual(['agentDisplayName', 'valid']);
     });
 
@@ -70,7 +70,7 @@ describe('AgentReferralCodeService', () => {
       async (typed) => {
         await seedAgentWithCode();
         await expect(
-          h.referralCodes.validateCode(typed, '1.1.1.1'),
+          h.referralCodes.validateCode(typed, 'hashed-1'),
         ).resolves.toMatchObject({
           valid: true,
         });
@@ -115,7 +115,9 @@ describe('AgentReferralCodeService', () => {
         undefined,
         {},
       ]) {
-        answers.push(await h.referralCodes.validateCode(code, `10.0.0.${++n}`));
+        answers.push(
+          await h.referralCodes.validateCode(code, `hashed-n${++n}`),
+        );
       }
       for (const answer of answers) expect(answer).toEqual(INVALID);
       expect(new Set(answers.map((a) => JSON.stringify(a))).size).toBe(1);
@@ -126,19 +128,19 @@ describe('AgentReferralCodeService', () => {
       await seedAgentWithCode('ACTIVE', { id: 'a1' });
       await h.agents.update('a1', { name: 'Ravi' });
       await expect(
-        h.referralCodes.validateCode(CODE, '1.1.1.1'),
+        h.referralCodes.validateCode(CODE, 'hashed-1'),
       ).resolves.toMatchObject({
         agentDisplayName: 'Ravi',
       });
       await h.agents.update('a1', { name: 'Ravi Kumar Singh' });
       await expect(
-        h.referralCodes.validateCode(CODE, '1.1.1.2'),
+        h.referralCodes.validateCode(CODE, 'hashed-2'),
       ).resolves.toMatchObject({
         agentDisplayName: 'Ravi S.',
       });
       await h.agents.update('a1', { name: 'ரவி குமார்' });
       await expect(
-        h.referralCodes.validateCode(CODE, '1.1.1.3'),
+        h.referralCodes.validateCode(CODE, 'hashed-3'),
       ).resolves.toMatchObject({
         agentDisplayName: 'ரவி கு.',
       });
@@ -147,7 +149,7 @@ describe('AgentReferralCodeService', () => {
     it('never reveals anything but the display name (no id, phone, status or code)', async () => {
       await seedAgentWithCode();
       const json = JSON.stringify(
-        await h.referralCodes.validateCode(CODE, '1.1.1.1'),
+        await h.referralCodes.validateCode(CODE, 'hashed-1'),
       );
       for (const leak of [
         'agent-1',
@@ -163,9 +165,62 @@ describe('AgentReferralCodeService', () => {
 
     it('writes no attribution and no audit entry', async () => {
       await seedAgentWithCode();
-      await h.referralCodes.validateCode(CODE, '1.1.1.1');
+      await h.referralCodes.validateCode(CODE, 'hashed-1');
       expect(h.audit.entries).toHaveLength(0);
       expect(await h.attributions.listByAgent('agent-1')).toHaveLength(0);
+    });
+
+    describe('the requester key is opaque (never a raw IP address)', () => {
+      it.each([
+        '1.2.3.4',
+        '203.0.113.7',
+        '::1',
+        '2401:4900:1c0a:2f3d::1',
+        'requester:1.2.3.4',
+      ])('refuses the raw address %p and records nothing', async (ip) => {
+        await seedAgentWithCode();
+        await expect(h.referralCodes.validateCode(CODE, ip)).rejects.toThrow(
+          'hashed key, not a raw IP address',
+        );
+        expect(h.attempts.size).toBe(0);
+      });
+
+      it('accepts a hashed key', async () => {
+        await seedAgentWithCode();
+        await expect(
+          h.referralCodes.validateCode(
+            CODE,
+            'v1:3f5a9c0d2b7e4a118c6d5f0e9a3b7c24',
+          ),
+        ).resolves.toMatchObject({ valid: true });
+      });
+
+      it('refuses an over-long key', async () => {
+        await expect(
+          h.referralCodes.validateCode(CODE, 'x'.repeat(201)),
+        ).rejects.toThrow(RangeError);
+      });
+
+      it('stores the key under a namespace, so it can never equal a member key', async () => {
+        await h.referralCodes.validateCode(CODE, 'user:m1');
+        h.seedMember('m1');
+        await seedAgentWithCode();
+        await h.referralCodes.attachCode('m1', CODE);
+        // two different keys, so neither run counted against the other
+        expect(h.attempts.size).toBe(2);
+        expect(
+          (
+            await h.attempts.window(
+              'REQUESTER',
+              'requester:user:m1',
+              new Date(0),
+            )
+          ).count,
+        ).toBe(1);
+        expect(
+          (await h.attempts.window('REQUESTER', 'user:m1', new Date(0))).count,
+        ).toBe(1);
+      });
     });
 
     it('refuses an empty requester', async () => {
@@ -178,22 +233,22 @@ describe('AgentReferralCodeService', () => {
       it(`the ${IP_LIMIT + 1}th try from one IP in the window is RATE_LIMITED`, async () => {
         await seedAgentWithCode();
         for (let i = 0; i < IP_LIMIT; i++) {
-          await h.referralCodes.validateCode(`NM${i}ZZZZZ`, '9.9.9.9');
+          await h.referralCodes.validateCode(`NM${i}ZZZZZ`, 'hashed-a');
         }
         await expectServiceError(
-          h.referralCodes.validateCode(CODE, '9.9.9.9'),
+          h.referralCodes.validateCode(CODE, 'hashed-a'),
           'RATE_LIMITED',
         );
       });
 
       it('carries retryAfterSeconds: when the oldest attempt leaves the window, rounded up', async () => {
         for (let i = 0; i < IP_LIMIT; i++) {
-          await h.referralCodes.validateCode('garbage', '9.9.9.9');
+          await h.referralCodes.validateCode('garbage', 'hashed-a');
           h.clock.advance(1_000);
         }
         // oldest attempt was 3 s ago; window is 60 s
         await expectServiceError(
-          h.referralCodes.validateCode('garbage', '9.9.9.9'),
+          h.referralCodes.validateCode('garbage', 'hashed-a'),
           'RATE_LIMITED',
           { retryAfterSeconds: VALIDATION_WINDOW - IP_LIMIT },
         );
@@ -201,37 +256,37 @@ describe('AgentReferralCodeService', () => {
 
       it('is independent per IP', async () => {
         for (let i = 0; i < IP_LIMIT; i++) {
-          await h.referralCodes.validateCode('garbage', '9.9.9.9');
+          await h.referralCodes.validateCode('garbage', 'hashed-a');
         }
         await expect(
-          h.referralCodes.validateCode('garbage', '8.8.8.8'),
+          h.referralCodes.validateCode('garbage', 'hashed-b'),
         ).resolves.toEqual(INVALID);
       });
 
       it(`the per-code limit (${CODE_LIMIT}) trips across different IPs`, async () => {
         await seedAgentWithCode();
         for (let i = 0; i < CODE_LIMIT; i++) {
-          await h.referralCodes.validateCode(CODE, `10.0.0.${i}`);
+          await h.referralCodes.validateCode(CODE, `hashed-${i}`);
         }
         await expectServiceError(
-          h.referralCodes.validateCode(CODE, '10.0.0.99'),
+          h.referralCodes.validateCode(CODE, 'hashed-99'),
           'RATE_LIMITED',
         );
         // a different code is unaffected
         await expect(
-          h.referralCodes.validateCode('NM9999ZZ', '10.0.0.99'),
+          h.referralCodes.validateCode('NM9999ZZ', 'hashed-99'),
         ).resolves.toEqual(INVALID);
       });
 
       it('blocked attempts do not extend the lockout', async () => {
         await seedAgentWithCode();
         for (let i = 0; i < IP_LIMIT; i++) {
-          await h.referralCodes.validateCode('garbage', '9.9.9.9');
+          await h.referralCodes.validateCode('garbage', 'hashed-a');
         }
         const before = h.attempts.size;
         for (let i = 0; i < 5; i++) {
           await expectServiceError(
-            h.referralCodes.validateCode('garbage', '9.9.9.9'),
+            h.referralCodes.validateCode('garbage', 'hashed-a'),
             'RATE_LIMITED',
           );
         }
@@ -240,37 +295,37 @@ describe('AgentReferralCodeService', () => {
 
       it('frees up once the window has passed', async () => {
         for (let i = 0; i < IP_LIMIT; i++) {
-          await h.referralCodes.validateCode('garbage', '9.9.9.9');
+          await h.referralCodes.validateCode('garbage', 'hashed-a');
         }
         await expectServiceError(
-          h.referralCodes.validateCode('garbage', '9.9.9.9'),
+          h.referralCodes.validateCode('garbage', 'hashed-a'),
           'RATE_LIMITED',
         );
         h.clock.advance(VALIDATION_WINDOW * 1000);
         await expect(
-          h.referralCodes.validateCode('garbage', '9.9.9.9'),
+          h.referralCodes.validateCode('garbage', 'hashed-a'),
         ).resolves.toEqual(INVALID);
       });
 
       it('text that is not a code counts against the IP but never against a code', async () => {
         for (let i = 0; i < CODE_LIMIT + 1; i++) {
-          await h.referralCodes.validateCode('garbage', `10.0.0.${i}`);
+          await h.referralCodes.validateCode('garbage', `hashed-${i}`);
         }
         await expect(
-          h.referralCodes.validateCode('also garbage', '10.0.0.200'),
+          h.referralCodes.validateCode('also garbage', 'hashed-200'),
         ).resolves.toEqual(INVALID);
       });
 
       it('the limited answer is the same whether or not the code exists', async () => {
         await seedAgentWithCode();
         for (let i = 0; i < IP_LIMIT; i++) {
-          await h.referralCodes.validateCode('garbage', '9.9.9.9');
+          await h.referralCodes.validateCode('garbage', 'hashed-a');
         }
         const real = await h.referralCodes
-          .validateCode(CODE, '9.9.9.9')
+          .validateCode(CODE, 'hashed-a')
           .catch((e: unknown) => e);
         const fake = await h.referralCodes
-          .validateCode('NM9999ZZ', '9.9.9.9')
+          .validateCode('NM9999ZZ', 'hashed-a')
           .catch((e: unknown) => e);
         expect(JSON.stringify(real)).toBe(JSON.stringify(fake));
         expect(real).toMatchObject({ code: 'RATE_LIMITED' });
@@ -278,14 +333,14 @@ describe('AgentReferralCodeService', () => {
 
       it('reads the limits from the settings on every call', async () => {
         h.settings.set(REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY, 1);
-        await h.referralCodes.validateCode('garbage', '9.9.9.9');
+        await h.referralCodes.validateCode('garbage', 'hashed-a');
         await expectServiceError(
-          h.referralCodes.validateCode('garbage', '9.9.9.9'),
+          h.referralCodes.validateCode('garbage', 'hashed-a'),
           'RATE_LIMITED',
         );
         h.settings.set(REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY, 5);
         await expect(
-          h.referralCodes.validateCode('garbage', '9.9.9.9'),
+          h.referralCodes.validateCode('garbage', 'hashed-a'),
         ).resolves.toEqual(INVALID);
       });
 
@@ -298,10 +353,10 @@ describe('AgentReferralCodeService', () => {
         async (key) => {
           h.settings.remove(key);
           await expect(
-            h.referralCodes.validateCode(CODE, '1.1.1.1'),
+            h.referralCodes.validateCode(CODE, 'hashed-1'),
           ).rejects.toBeInstanceOf(AgentConfigError);
           await expect(
-            h.referralCodes.validateCode(CODE, '1.1.1.1'),
+            h.referralCodes.validateCode(CODE, 'hashed-1'),
           ).rejects.toThrow(key);
           expect(h.attempts.size).toBe(0);
         },
@@ -312,7 +367,7 @@ describe('AgentReferralCodeService', () => {
         async (value) => {
           h.settings.set(REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY, value);
           await expect(
-            h.referralCodes.validateCode(CODE, '1.1.1.1'),
+            h.referralCodes.validateCode(CODE, 'hashed-1'),
           ).rejects.toThrow(RangeError);
         },
       );

@@ -9,8 +9,17 @@
  * Both calls are attempt-limited. The limits and the window are settings
  * (never defaulted): the public check counts attempts per IP and per code;
  * the attach counts them per member and per code, using the same limits.
- * Counting is check-then-record, so a burst of parallel requests can pass a
- * limit by a few; an atomic counter in the real adapter closes that.
+ *
+ * LIMITS TO CLOSE IN THE REAL ADAPTER (accepted for now):
+ *  - Counting is check-then-record, so a burst of parallel requests can pass a
+ *    limit by a few; an atomic counter closes that.
+ *  - `validateCode` is not constant-time: an existing code does a second
+ *    lookup, so response timing could still hint at it. The rate limit is the
+ *    protection until that is tightened.
+ *
+ * The requester key is OPAQUE. The caller hashes the IP (with Shaaz's hasher,
+ * once it has an IP kind) and passes the hash; a raw IP is refused here, and
+ * the attempt store refuses it too.
  *
  * PROPOSED HTTP MAPPING (to be confirmed). `AgentServiceError.code` is the
  * left-hand column.
@@ -66,6 +75,10 @@ import {
   ValidateResponse,
 } from './code-validation';
 import { normalizeReferralCode } from './normalize-referral-code';
+import { looksLikeRawIp } from './requester-key';
+
+/** An opaque key is a short hash, not free text. */
+const MAX_REQUESTER_KEY_LENGTH = 200;
 
 export interface AgentAttachResult {
   attached: true;
@@ -107,18 +120,30 @@ export class AgentReferralCodeService {
   }
 
   /**
-   * The public check. `requester` is the caller's IP address. Any code that is
-   * not an ACTIVE agent's active code gets the same answer.
+   * The public check. `requesterKey` identifies the caller for rate limiting
+   * and MUST be opaque: a keyed hash of the caller's IP address made by the
+   * caller of this service, never the address itself (an IP is personal data).
+   * A raw IP address is refused with a RangeError. Any code that is not an
+   * ACTIVE agent's active code gets the same answer.
    */
   async validateCode(
     rawCode: unknown,
-    requester: string,
+    requesterKey: string,
   ): Promise<ValidateResponse> {
-    if (typeof requester !== 'string' || requester.length === 0) {
-      throw new RangeError('requester must be a non-empty string.');
+    if (
+      typeof requesterKey !== 'string' ||
+      requesterKey.length === 0 ||
+      requesterKey.length > MAX_REQUESTER_KEY_LENGTH
+    ) {
+      throw new RangeError('requesterKey must be a short non-empty string.');
+    }
+    if (looksLikeRawIp(requesterKey)) {
+      throw new RangeError(
+        'requesterKey must be a hashed key, not a raw IP address.',
+      );
     }
     const code = normalizeReferralCode(rawCode);
-    await this.throttle(`ip:${requester}`, code);
+    await this.throttle(`requester:${requesterKey}`, code);
 
     const record =
       code === null ? null : await this.deps.codes.findByCode(code);

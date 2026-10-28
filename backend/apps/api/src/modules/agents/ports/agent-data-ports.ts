@@ -262,9 +262,16 @@ export interface ReferralCodeAttemptWindow {
 }
 
 /**
- * Counts how often a requester (an IP for the public check, a member id for
- * attaching) and a code have been tried recently. Rows older than the window
- * are meaningless and should be purged.
+ * Counts how often a requester and a code have been tried recently. Rows
+ * older than the window are meaningless and should be purged.
+ *
+ * The requester key is OPAQUE: a keyed hash of the caller's IP for the public
+ * check, a namespaced member id for attaching. It is never a raw IP address
+ * (an IP is personal data); an implementation must refuse one. The real
+ * hashing comes from the shared identifier hasher.
+ *
+ * Limits of a simple implementation: reading the count and then recording the
+ * attempt is not atomic, so parallel requests can pass a limit by a few.
  */
 export interface ReferralCodeAttemptStore {
   window(
@@ -273,7 +280,10 @@ export interface ReferralCodeAttemptStore {
     since: Date,
     tx?: AgentTx,
   ): Promise<ReferralCodeAttemptWindow>;
-  /** `codeKey` is null for text that is not a well-formed code. */
+  /**
+   * `codeKey` is null for text that is not a well-formed code. Rejects (does
+   * not store) a `requesterKey` that is a raw IP address.
+   */
   record(
     attempt: { requesterKey: string; codeKey: string | null; at: Date },
     tx?: AgentTx,

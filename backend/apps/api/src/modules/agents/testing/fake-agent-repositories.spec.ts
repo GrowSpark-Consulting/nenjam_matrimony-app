@@ -333,6 +333,29 @@ describe('FakeReferralCodeAttemptStore', () => {
     expect((await store.window('CODE', 'same', at(-1))).count).toBe(0);
   });
 
+  it.each(['1.2.3.4', '::1', 'requester:203.0.113.7'])(
+    'refuses a raw IP address as the requester key (%p) and stores nothing',
+    async (requesterKey) => {
+      const store = new FakeReferralCodeAttemptStore();
+      await expect(
+        store.record({ requesterKey, codeKey: null, at: at(0) }),
+      ).rejects.toThrow(RangeError);
+      expect(store.size).toBe(0);
+    },
+  );
+
+  it('accepts an opaque hashed key', async () => {
+    const store = new FakeReferralCodeAttemptStore();
+    await expect(
+      store.record({
+        requesterKey: 'requester:v1:ab12',
+        codeKey: null,
+        at: at(0),
+      }),
+    ).resolves.toBeUndefined();
+    expect(store.size).toBe(1);
+  });
+
   it('an attempt recorded in a failed transaction is undone', async () => {
     const store = new FakeReferralCodeAttemptStore();
     const uow = new FakeAgentUnitOfWork();
