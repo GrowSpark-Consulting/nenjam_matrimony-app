@@ -10,4 +10,5 @@ export * from './events/domain-event-names.const';
 export * from './auth/auth-user-cache';
 export * from './auth/dev-auth';
 export * from './auth/staff-identity';
+export * from './crypto/secret-sealer';
 export * from './file-types/sniff-media';

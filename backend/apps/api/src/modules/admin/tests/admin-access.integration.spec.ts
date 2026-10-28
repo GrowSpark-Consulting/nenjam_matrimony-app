@@ -323,7 +323,7 @@ describeIntegration('admin access over HTTP', () => {
       secret = body(started).secret as string;
       expect(body(started).otpauthUri).toContain('otpauth://totp/');
       const stored = await accountOf('sa');
-      expect(stored.mfaSecretEncrypted).toMatch(/^v1\./);
+      expect(stored.mfaSecretEncrypted).toMatch(/^v1:/);
       expect(stored.mfaSecretEncrypted).not.toContain(secret);
 
       const confirmed = await http()

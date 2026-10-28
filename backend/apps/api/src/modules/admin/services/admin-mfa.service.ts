@@ -5,6 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { AppConfigService } from '@app/config';
+import { parseSealingKey, SecretSealer } from '@app/common';
 import { PrismaService } from '@app/database';
 import {
   ADMIN_MFA_LOCK_MS,
@@ -18,12 +19,7 @@ import type {
   AdminRequestContext,
   AuthenticatedAdmin,
 } from '../auth/admin-request';
-import {
-  hashEnrollmentCode,
-  open,
-  parseSecretKey,
-  seal,
-} from '../auth/secret-box';
+import { hashEnrollmentCode } from '../auth/secret-box';
 import { generateTotpSecret, matchTotp, otpauthUri } from '../auth/totp';
 import { AdminAccessService, type StaffAccount } from './admin-access.service';
 import { AdminAuditService } from './admin-audit.service';
@@ -68,7 +64,7 @@ const MFA_SELECT = {
 @Injectable()
 export class AdminMfaService {
   private readonly logger = new Logger(AdminMfaService.name);
-  private readonly key: Buffer | null;
+  private readonly sealer: SecretSealer | null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -77,8 +73,12 @@ export class AdminMfaService {
     private readonly audit: AdminAuditService,
     config: AppConfigService,
   ) {
-    this.key = parseSecretKey(config.admin.mfaEncryptionKey);
-    if (!this.key) {
+    const key = parseSealingKey(
+      config.admin.mfaEncryptionKey,
+      'ADMIN_MFA_ENCRYPTION_KEY',
+    );
+    this.sealer = key ? new SecretSealer(key, 'admin.mfa.totp_secret') : null;
+    if (!this.sealer) {
       this.logger.warn(
         'ADMIN_MFA_ENCRYPTION_KEY is not set: admin sign-in answers 503.',
       );
@@ -92,7 +92,7 @@ export class AdminMfaService {
     context: AdminRequestContext,
     now: Date = new Date(),
   ): Promise<{ secret: string; otpauthUri: string }> {
-    const key = this.requireKey();
+    const sealer = this.requireSealer();
     const staff = await this.requireStaff(userId);
     const account = await this.loadAccount(staff.adminAccountId);
     this.refuseIfEnrolled(account);
@@ -107,7 +107,10 @@ export class AdminMfaService {
     const secret = generateTotpSecret();
     await this.prisma.adminAccount.update({
       where: { id: account.id },
-      data: { mfaSecretEncrypted: seal(key, secret), mfaLastUsedStep: null },
+      data: {
+        mfaSecretEncrypted: sealer.seal(secret),
+        mfaLastUsedStep: null,
+      },
     });
     await this.audit.recordBestEffort({
       actorId: staff.userId,
@@ -136,7 +139,7 @@ export class AdminMfaService {
     context: AdminRequestContext,
     now: Date = new Date(),
   ): Promise<IssuedAdminSession> {
-    const key = this.requireKey();
+    const sealer = this.requireSealer();
     const staff = await this.requireStaff(userId);
     const account = await this.loadAccount(staff.adminAccountId);
     this.refuseIfEnrolled(account);
@@ -152,7 +155,7 @@ export class AdminMfaService {
         'Start enrolment first: there is no authenticator secret to confirm.',
       );
     }
-    await this.acceptCode(account, staff, key, code, context, now);
+    await this.acceptCode(account, staff, sealer, code, context, now);
 
     return this.prisma.$transaction(async (tx) => {
       const spent = await tx.adminAccount.updateMany({
@@ -203,7 +206,7 @@ export class AdminMfaService {
     context: AdminRequestContext,
     now: Date = new Date(),
   ): Promise<IssuedAdminSession> {
-    const key = this.requireKey();
+    const sealer = this.requireSealer();
     const staff = await this.requireStaff(userId);
     const account = await this.loadAccount(staff.adminAccountId);
     if (!account.mfaEnrolledAt || !account.mfaSecretEncrypted) {
@@ -212,7 +215,7 @@ export class AdminMfaService {
         'Set up your authenticator first, using the enrolment code you were given.',
       );
     }
-    await this.acceptCode(account, staff, key, code, context, now);
+    await this.acceptCode(account, staff, sealer, code, context, now);
 
     return this.prisma.$transaction(async (tx) => {
       const session = await this.sessions.create(tx, account.id, context, now);
@@ -239,7 +242,7 @@ export class AdminMfaService {
     context: AdminRequestContext,
     now: Date = new Date(),
   ): Promise<{ stepUpValidUntil: Date }> {
-    const key = this.requireKey();
+    const sealer = this.requireSealer();
     const staff = await this.requireStaff(admin.userId);
     const account = await this.loadAccount(staff.adminAccountId);
     if (!admin.sessionId || !account.mfaSecretEncrypted) {
@@ -248,7 +251,7 @@ export class AdminMfaService {
         'Sign in with your authenticator first.',
       );
     }
-    await this.acceptCode(account, staff, key, code, context, now);
+    await this.acceptCode(account, staff, sealer, code, context, now);
     const sessionId = admin.sessionId;
     await this.prisma.$transaction(async (tx) => {
       await this.sessions.markVerified(tx, sessionId, now);
@@ -287,13 +290,13 @@ export class AdminMfaService {
 
   // --------------------------------------------------------------------------
 
-  private requireKey(): Buffer {
-    if (!this.key) {
+  private requireSealer(): SecretSealer {
+    if (!this.sealer) {
       throw new ServiceUnavailableException(
         'Admin sign-in is not configured on this server.',
       );
     }
-    return this.key;
+    return this.sealer;
   }
 
   private async requireStaff(userId: string): Promise<StaffAccount> {
@@ -353,13 +356,13 @@ export class AdminMfaService {
   private async acceptCode(
     account: MfaAccount,
     staff: StaffAccount,
-    key: Buffer,
+    sealer: SecretSealer,
     code: string,
     context: AdminRequestContext,
     now: Date,
   ): Promise<number> {
     this.refuseIfLocked(account, now);
-    const secret = open(key, account.mfaSecretEncrypted!);
+    const secret = sealer.open(account.mfaSecretEncrypted!);
     const step = matchTotp(secret, code, now.getTime());
     const claimed =
       step !== null &&
