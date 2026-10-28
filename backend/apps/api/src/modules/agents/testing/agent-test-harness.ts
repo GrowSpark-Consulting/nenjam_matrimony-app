@@ -2,6 +2,7 @@
  * One place that wires the agent services to the in-memory fakes, so the
  * service specs read as behaviour and not as set-up. Tests only.
  */
+import { AgentApplicationService } from '../application/agent-application.service';
 import { AgentProfileBuilder } from '../agent/agent-profile-builder';
 import type { AgentStatus } from '../agent/agent-status';
 import type { AgentAccessClaims } from '../auth/agent-access-claims';
@@ -120,6 +121,26 @@ export function makeAgentHarness(
     options: AUTH_OPTIONS,
   });
 
+  let agentCounter = 0;
+  const application = new AgentApplicationService({
+    agents,
+    refreshTokens: tokens,
+    applicants,
+    sealer,
+    uow,
+    audit,
+    clock,
+    issuer,
+    newId: () => `new-agent-${++agentCounter}`,
+  });
+
+  /** The verified claims inside a session's access token. */
+  const claimsOf = async (session: { accessToken: string }) => {
+    const claims = await signer.verify(session.accessToken);
+    if (claims === null) throw new Error('not a token this harness signed');
+    return claims;
+  };
+
   /** Creates an agent record for `phone` in the given status. */
   const seedAgent = async (
     status: string = 'ACTIVE',
@@ -168,6 +189,8 @@ export function makeAgentHarness(
     profiles,
     issuer,
     signIn,
+    application,
+    claimsOf,
     seedAgent,
     signInAs,
   };
