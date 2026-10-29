@@ -53,6 +53,7 @@ import { AgentAdminAgentsService } from './agent-admin-agents.service';
 
 interface Body {
   code?: string;
+  message?: unknown;
   codes?: unknown[];
   items?: unknown[];
   nextCursor?: string | null;
@@ -280,6 +281,22 @@ describe('/admin/agents over HTTP', () => {
         expect(h.audit.entries).toHaveLength(0);
       },
     );
+
+    it('a short or long reason is refused by the body check, before the service runs', async () => {
+      const { id } = await h.seedAgent(1);
+      for (const reason of ['ab', 'x'.repeat(501)]) {
+        const res = await request(app.getHttpServer())
+          .post(`/admin/agents/${id}/approve`)
+          .set(as(APPROVER))
+          .send({ reason });
+        expect(res.status).toBe(400);
+        // The pipe answers with its messages; the service answers with `fields`.
+        expect(res.body).not.toHaveProperty('fields');
+        expect(bodyOf(res).message).toEqual([
+          expect.stringContaining('reason must be'),
+        ]);
+      }
+    });
 
     it('a blank reason (spaces only) is VALIDATION_FAILED from the service', async () => {
       const { id } = await h.seedAgent(1);
