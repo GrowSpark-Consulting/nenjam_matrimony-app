@@ -188,7 +188,7 @@ export function makeCommissionHarness(
       needsReview: false,
     });
 
-  /** GST-inclusive 9500 paid at 18%: the payment stored 8051 + 1449. */
+  /** Prices are exclusive of GST: 10000 less the 5% discount is 9500 taxable; 18% GST (1710) is added; the member pays 11210. */
   const paymentSucceeded = (
     n: number,
     o: Partial<PaymentSucceeded> = {},
@@ -205,10 +205,10 @@ export function makeCommissionHarness(
     discountPaise: 500,
     discountSource: 'REFERRAL_FIRST_PLAN',
     heldReferralCodeId: null,
-    amountPaidPaise: 9_500,
+    amountPaidPaise: 11_210,
     taxRateBps: 1_800,
-    taxPaise: 1_449,
-    taxableAmountPaise: 8_051,
+    taxPaise: 1_710,
+    taxableAmountPaise: 9_500,
     currency: 'INR',
     paymentSourceHash: null,
     paidAt: new Date(T0.getTime() + HOUR).toISOString(),
@@ -225,9 +225,9 @@ export function makeCommissionHarness(
     refundId: `rf-${refundN}`,
     paymentId: `pay-${n}`,
     memberId: `member-${n}`,
-    refundedPaise: 9_500,
-    refundedTaxPaise: 1_449,
-    totalRefundedPaise: 9_500,
+    refundedPaise: 11_210,
+    refundedTaxPaise: 1_710,
+    totalRefundedPaise: 11_210,
     fullyRefunded: true,
     refundedAt: new Date(T0.getTime() + 2 * HOUR).toISOString(),
     ...o,

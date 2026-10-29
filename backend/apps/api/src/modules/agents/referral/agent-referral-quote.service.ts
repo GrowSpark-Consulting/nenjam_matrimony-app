@@ -84,7 +84,12 @@ export interface ReferralQuote {
   discountBps: number;
   discountPaise: number;
   discountSource: ReferralDiscount['source'];
-  amountPaidPaise: number;
+  /**
+   * The list price minus the discount: the TAXABLE amount. Plan prices are
+   * exclusive of GST, so GST is added on top of this (the payments code
+   * computes and stores it); this is not what the member pays.
+   */
+  taxableAfterDiscountPaise: number;
   /** The typed code to hold on the payment so it can be attached when paid. */
   heldReferralCodeId?: string;
   /** "Ravi K." - the agent the discount comes from. */
@@ -169,7 +174,7 @@ export class AgentReferralQuoteService {
       discountBps: discount.discountPaise > 0 ? bps : 0,
       discountPaise: discount.discountPaise,
       discountSource: discount.source,
-      amountPaidPaise: discount.amountPaidPaise,
+      taxableAfterDiscountPaise: discount.taxableAfterDiscountPaise,
     };
     if (discount.discountPaise > 0) {
       quote.agentDisplayName = toDisplayName(name.first ?? '', name.last);
@@ -342,7 +347,7 @@ function none(
     discountBps: 0,
     discountPaise: 0,
     discountSource: 'NONE',
-    amountPaidPaise: list.amountPaidPaise,
+    taxableAfterDiscountPaise: list.taxableAfterDiscountPaise,
   };
   if (rejectedReason !== undefined) quote.rejectedReason = rejectedReason;
   return quote;
