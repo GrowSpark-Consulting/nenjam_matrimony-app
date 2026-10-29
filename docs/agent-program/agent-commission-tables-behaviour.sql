@@ -1,4 +1,4 @@
--- Behaviour tests for 20261029100000_agent_commission_tables (+ the seed).
+-- Behaviour tests for 20261029110000_agent_commission_tables (+ the seed).
 -- Everything runs in one transaction that is rolled back. Fake data only.
 \set ON_ERROR_STOP on
 BEGIN;

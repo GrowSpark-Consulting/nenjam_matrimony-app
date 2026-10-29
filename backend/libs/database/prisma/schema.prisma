@@ -1948,7 +1948,7 @@ model ReferralCodeAttempt {
 }
 
 // ---------------------------------------------------------------------------
-// Agent commissions, ledger and payouts (migration 20261029100000).
+// Agent commissions, ledger and payouts (migration 20261029110000).
 // Money is integer PAISE. Nothing here cascades on delete: a money record can
 // only be removed by deleting it deliberately, never as a side effect.
 // ---------------------------------------------------------------------------

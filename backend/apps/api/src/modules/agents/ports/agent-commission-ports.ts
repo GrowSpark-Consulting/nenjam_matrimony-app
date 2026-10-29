@@ -1,6 +1,6 @@
 /**
  * Domain-shaped repository ports for commissions, the agent ledger and
- * payouts (tables from migration 20261029100000_agent_commission_tables).
+ * payouts (tables from migration 20261029110000_agent_commission_tables).
  *
  * Like `agent-data-ports.ts`, these are not Prisma shapes. Every method takes
  * an optional `tx` (see `AgentUnitOfWork`); money is integer PAISE.
