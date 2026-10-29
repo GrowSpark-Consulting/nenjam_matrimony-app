@@ -36,10 +36,13 @@ function Guard({ allow, children }: { allow?: AgentStatus[]; children: ReactElem
   return children;
 }
 
-function ApplicantOnly({ children }: { children: ReactElement }) {
-  const { stored } = usePortal();
+/** The application form: a new applicant, or a rejected agent applying again. */
+function ApplyGuard({ children }: { children: ReactElement }) {
+  const { stored, agent, loading } = usePortal();
   if (!stored) return <Navigate to="/sign-in" replace />;
-  if (stored.session.scope !== 'APPLICANT') return <Navigate to="/" replace />;
+  if (stored.session.scope === 'APPLICANT') return children;
+  if (loading && !agent) return <p className="main">Loading…</p>;
+  if (agent?.status !== 'REJECTED') return <Navigate to="/" replace />;
   return children;
 }
 
@@ -51,7 +54,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/sign-in" element={<SignInPage />} />
-      <Route path="/apply" element={<ApplicantOnly><ApplyPage /></ApplicantOnly>} />
+      <Route path="/apply" element={<ApplyGuard><ApplyPage /></ApplyGuard>} />
       <Route element={stored ? <Guard><Layout /></Guard> : undefined}>
         <Route path="/" element={<Guard allow={REFERRAL_STATUSES}><HomePage /></Guard>} />
         <Route path="/referrals" element={<Guard allow={REFERRAL_STATUSES}><ReferralsPage /></Guard>} />
