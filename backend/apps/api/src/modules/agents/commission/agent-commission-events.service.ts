@@ -28,16 +28,22 @@ import type {
 } from '../ports/agent-commission-ports';
 import {
   AgentConflictError,
+  type AgentMemberReadPort,
   type AgentRepository,
+  type ReferralAttributionRecord,
   type ReferralAttributionRepository,
 } from '../ports/agent-data-ports';
 import type { AgentClock } from '../ports/agent-infra-ports';
 import type { AgentPaymentSourcePort } from '../ports/agent-money-ports';
 import type {
   AgentAuditPort,
+  AgentIdentifierHasher,
   AgentSettingsPort,
 } from '../ports/agent-platform-ports';
-import type { AgentUnitOfWork } from '../ports/agent-unit-of-work.port';
+import type {
+  AgentTx,
+  AgentUnitOfWork,
+} from '../ports/agent-unit-of-work.port';
 import {
   COMMISSION_BASE_KEY,
   parseAgentProgramSettings,
@@ -56,6 +62,9 @@ export interface AgentCommissionEventsDeps {
   ledger: AgentLedgerRepository;
   settings: AgentSettingsPort;
   paymentSources: AgentPaymentSourcePort;
+  /** Read only. Gives the member's phone, to look for a duplicate under every pepper version. */
+  members: AgentMemberReadPort;
+  hasher: AgentIdentifierHasher;
   audit: AgentAuditPort;
   clock: AgentClock;
 }
@@ -66,7 +75,9 @@ export type PaymentSucceededOutcome =
   | 'NOT_FIRST_PLAN'
   | 'NO_ATTRIBUTION'
   | 'ATTRIBUTION_NOT_ACTIVE'
-  | 'OUTSIDE_CREDIT_WINDOW';
+  | 'OUTSIDE_CREDIT_WINDOW'
+  /** Another version of this phone's hash already has a commission: marked for review, nothing credited. */
+  | 'DUPLICATE_PHONE_REVIEW';
 
 export interface PaymentSucceededResult {
   outcome: PaymentSucceededOutcome;
@@ -135,6 +146,33 @@ export class AgentCommissionEventsService {
           return { outcome: 'OUTSIDE_CREDIT_WINDOW' };
         }
 
+        // The unique indexes only see two hashes made with the SAME pepper
+        // version. During a rotation the same phone can exist under another
+        // version, so look at every active version before inserting. If any
+        // already has a commission (or an attribution that earned one), never
+        // credit twice: mark this referral for review and stop.
+        if (await this.phoneAlreadyEarned(event, attribution, tx)) {
+          if (!attribution.needsReview) {
+            await this.deps.attributions.correct(
+              attribution.id,
+              attribution.status,
+              { needsReview: true },
+              tx,
+            );
+            await this.deps.audit.record(
+              {
+                actorId: null,
+                action: 'COMMISSION_BLOCKED_DUPLICATE_PHONE',
+                entity: 'ReferralAttribution',
+                entityId: attribution.id,
+                metadata: { paymentId: event.paymentId },
+              },
+              tx,
+            );
+          }
+          return { outcome: 'DUPLICATE_PHONE_REVIEW' };
+        }
+
         const agent = await this.deps.agents.findById(attribution.agentId, tx);
         if (agent === null) throw new AgentMoneyError('AGENT_NOT_FOUND');
         const policy = await this.deps.policy.findForAgent(
@@ -173,6 +211,8 @@ export class AgentCommissionEventsService {
             agentId: agent.id,
             attributionId: attribution.id,
             paymentId: event.paymentId,
+            // The attribution's STORED hash, copied as it is: never
+            // re-hashed here, so a rotation cannot give one member two hashes.
             phoneHash: attribution.memberPhoneHash,
             policyVersionId: policy.id,
             status: draft.status,
@@ -316,6 +356,50 @@ export class AgentCommissionEventsService {
         reversalPaise: plan.reversalPaise,
       };
     });
+  }
+
+  /**
+   * True when this member's phone, under ANY active pepper version, already
+   * has a commission for another payment, or has another attribution that
+   * earned one. Without the member's phone only the stored hash can be
+   * compared (the unique indexes already cover that one).
+   */
+  private async phoneAlreadyEarned(
+    event: PaymentSucceeded,
+    attribution: ReferralAttributionRecord,
+    tx: AgentTx,
+  ): Promise<boolean> {
+    const view = await this.deps.members.getReferralViewFields(
+      event.memberId,
+      tx,
+    );
+    const hashes = new Set<string>([attribution.memberPhoneHash]);
+    if (view !== null) {
+      for (const hash of this.deps.hasher.hashAll('PHONE', view.phoneE164)) {
+        hashes.add(hash);
+      }
+    }
+    for (const hash of hashes) {
+      const commission = await this.deps.commissions.findByPhoneHash(hash, tx);
+      // Another payment of THIS referral is not a duplicate phone: it gets the
+      // "already processed" answer from the database's one-per-attribution rule.
+      if (
+        commission !== null &&
+        commission.paymentId !== event.paymentId &&
+        commission.attributionId !== attribution.id
+      ) {
+        return true;
+      }
+      const other = await this.deps.attributions.findByPhoneHash(hash, tx);
+      if (other !== null && other.id !== attribution.id) {
+        const earned = await this.deps.commissions.findByAttributionId(
+          other.id,
+          tx,
+        );
+        if (earned !== null) return true;
+      }
+    }
+    return false;
   }
 
   private audit(

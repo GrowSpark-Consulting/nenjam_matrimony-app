@@ -24,8 +24,13 @@ import {
   FakeCommissionRepository,
 } from './fake-agent-commission-repositories';
 import { FakeAgentClock } from './fake-agent-infra';
-import { FakeAgentAudit, FakeAgentSettings } from './fake-agent-platform';
 import {
+  FakeAgentAudit,
+  FakeAgentIdentifierHasher,
+  FakeAgentSettings,
+} from './fake-agent-platform';
+import {
+  FakeAgentMemberRead,
   FakeAgentPayoutDetailsRepository,
   FakeAgentRepository,
   FakeReferralAttributionRepository,
@@ -84,6 +89,12 @@ export function makeCommissionHarness(
   const audit = new FakeAgentAudit();
   const paymentSources = new FakePaymentSources();
   const profiles = new FakeMemberProfiles();
+  const members = new FakeAgentMemberRead();
+  // Two older pepper versions are still active, as during a rotation.
+  const hasher = new FakeAgentIdentifierHasher('test-secret', [
+    'older-secret',
+    'oldest-secret',
+  ]);
 
   let ids = 0;
   const newId = () => `id-${++ids}`;
@@ -98,6 +109,8 @@ export function makeCommissionHarness(
       ledger,
       settings: settingsPort,
       paymentSources,
+      members,
+      hasher,
       audit,
       clock,
     },
@@ -164,6 +177,9 @@ export function makeCommissionHarness(
     return agents.update(created.id, { status, ...o });
   };
 
+  /** The member's phone (what the member read port gives), by attribution number. */
+  const memberPhone = (n: number) => `+9190000${String(n).padStart(5, '0')}`;
+
   /** A referral of `memberId` to an agent, inside a 60 day window from `T0`. */
   const seedAttribution = (
     n: number,
@@ -174,8 +190,29 @@ export function makeCommissionHarness(
       windowEndsAt?: Date;
       memberPhoneHash?: string;
     } = {},
-  ) =>
-    attributions.create({
+  ) => {
+    const memberId = o.memberId === undefined ? `member-${n}` : o.memberId;
+    if (memberId !== null) {
+      members.add(
+        {
+          memberId,
+          phoneHash: o.memberPhoneHash ?? `v1:member-hash-${n}`,
+          signedUpAt: T0,
+          hasPaid: false,
+        },
+        {
+          firstName: 'Priya',
+          lastName: 'Sharma',
+          phoneE164: memberPhone(n),
+          age: 27,
+          city: 'Madurai',
+          signedUpAt: T0,
+          stage: 'REGISTERED',
+          profileCompletenessPct: 40,
+        },
+      );
+    }
+    return attributions.create({
       id: `attr-${n}`,
       memberId: o.memberId === undefined ? `member-${n}` : o.memberId,
       agentId: o.agentId ?? 'agent-1',
@@ -187,6 +224,7 @@ export function makeCommissionHarness(
       windowEndsAt: o.windowEndsAt ?? new Date(T0.getTime() + 60 * DAY),
       needsReview: false,
     });
+  };
 
   /** GST-inclusive 9500 paid at 18%: the payment stored 8051 + 1449. */
   const paymentSucceeded = (
@@ -265,6 +303,9 @@ export function makeCommissionHarness(
     audit,
     paymentSources,
     profiles,
+    members,
+    hasher,
+    memberPhone,
     events,
     approval,
     payoutService,
