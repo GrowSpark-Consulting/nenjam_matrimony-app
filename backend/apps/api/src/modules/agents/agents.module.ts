@@ -38,9 +38,16 @@ import { AgentAdminAgentsService } from './admin/agent-admin-agents.service';
 import { AgentAdminController } from './admin/agent-admin.controller';
 import { AgentCommissionEventsService } from './commission/agent-commission-events.service';
 import { AgentPaymentEventsSubscriber } from './commission/agent-payment-events.subscriber';
+import { AgentReferralQuoteModule } from './quote/agent-referral-quote.module';
 
 @Module({
-  imports: [AdminModule, PlatformModule, SubscriptionModule],
+  imports: [
+    AdminModule,
+    PlatformModule,
+    SubscriptionModule,
+    // The referral quote for the checkout (global; not an agent route).
+    AgentReferralQuoteModule,
+  ],
   controllers: [AgentAdminController],
   providers: [
     {
