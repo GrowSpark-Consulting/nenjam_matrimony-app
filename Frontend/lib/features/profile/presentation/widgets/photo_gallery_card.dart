@@ -11,7 +11,10 @@ import '../../../../core/layout/mouse_drag_scroll.dart';
 /// add-photo dashed placeholder at the end.
 class NmPhotoGalleryCard extends StatelessWidget {
   final List<String> photoUrls;
-  final int maxPhotos;
+
+  /// The member's photo cap (`effectiveCaps['profile.photos']`); null means
+  /// no cap.
+  final int? maxPhotos;
   final VoidCallback? onAddTap;
   final void Function(int index)? onPhotoTap;
 
@@ -25,7 +28,8 @@ class NmPhotoGalleryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canAddMore = photoUrls.length < maxPhotos;
+    final cap = maxPhotos;
+    final canAddMore = cap == null || photoUrls.length < cap;
 
     return Container(
       width: double.infinity,
@@ -93,7 +97,9 @@ class NmPhotoGalleryCard extends StatelessWidget {
                     (entry) => Padding(
                       padding: const EdgeInsets.only(right: AppSpacing.sm),
                       child: GestureDetector(
-                        onTap: onPhotoTap == null ? null : () => onPhotoTap!(entry.key),
+                        onTap: onPhotoTap == null
+                            ? null
+                            : () => onPhotoTap!(entry.key),
                         child: _PhotoThumbnail(url: entry.value),
                       ),
                     ),

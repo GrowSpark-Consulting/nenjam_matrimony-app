@@ -20,10 +20,10 @@ class UserPhoto {
   });
 
   factory UserPhoto.fromJson(Map<String, dynamic> json) => UserPhoto(
-        id: json['id'] as String,
-        cdnUrl: json['cdnUrl'] as String? ?? '',
-        isPrimary: json['isPrimary'] as bool? ?? false,
-        order: (json['order'] as num?)?.toInt() ?? 0,
-        isApproved: json['isApproved'] as bool? ?? false,
-      );
+    id: json['id'] as String,
+    cdnUrl: json['cdnUrl'] as String? ?? '',
+    isPrimary: json['isPrimary'] as bool? ?? false,
+    order: (json['order'] as num?)?.toInt() ?? 0,
+    isApproved: json['isApproved'] as bool? ?? false,
+  );
 }

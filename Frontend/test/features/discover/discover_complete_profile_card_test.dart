@@ -12,11 +12,11 @@ import 'package:nenjam_matrimony/features/nearby/domain/repositories/nearby_repo
 import 'package:nenjam_matrimony/features/nearby/presentation/providers/nearby_providers.dart';
 import 'package:nenjam_matrimony/features/profile/presentation/providers/profile_dashboard_providers.dart';
 import 'package:nenjam_matrimony/features/profile_completion/domain/completion_recommendation.dart';
+import 'package:nenjam_matrimony/features/membership/data/repositories/mock_membership_repository.dart';
+import 'package:nenjam_matrimony/features/membership/presentation/providers/membership_providers.dart';
 import 'package:nenjam_matrimony/features/profile_completion/presentation/widgets/complete_profile_card.dart';
 import 'package:nenjam_matrimony/features/profile_photos/domain/models/user_photo.dart';
 import 'package:nenjam_matrimony/features/profile_photos/presentation/providers/photo_providers.dart';
-import 'package:nenjam_matrimony/features/profile_photos/presentation/widgets/photo_manager_section.dart'
-    show kMaxPhotos;
 import 'package:nenjam_matrimony/features/registration/data/repositories/registration_repository.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/providers/registration_provider.dart';
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
@@ -146,7 +146,7 @@ class _FakePhotosController extends PhotosController {
   // and the five backend-scored sections, not the photo tile (that's
   // exercised in complete_profile_card_test.dart).
   Future<List<UserPhoto>> build() async => List.generate(
-    kMaxPhotos,
+    kPreMembershipPhotoCap,
     (i) => UserPhoto(
       id: 'photo-$i',
       cdnUrl: '',
@@ -172,6 +172,10 @@ Future<void> _pumpDiscover(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        // The photo cap comes from /membership/me — 6 today.
+        membershipRepositoryProvider.overrideWithValue(
+          MockMembershipRepository(),
+        ),
         discoverFeedProvider.overrideWith((ref) async => feed),
         profileDraftResponseProvider.overrideWith((ref) async => draft),
         registrationRepositoryProvider.overrideWithValue(

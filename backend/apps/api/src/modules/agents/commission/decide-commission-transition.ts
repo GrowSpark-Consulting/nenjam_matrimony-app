@@ -43,10 +43,10 @@ export interface CommissionTransition {
 }
 
 // ---------------------------------------------------------------------------
-// PENDING DECISION (Raja): a TERMINATED agent's open commissions are FROZEN,
-// the same as a suspended agent's. Whether they should instead be paid out
-// (the agent keeps the approved balance) is not settled. This is the ONLY
-// place that rule lives; change it here.
+// DECIDED (Raja, 28 Oct): a TERMINATED agent's waiting commissions stay FROZEN,
+// the same as a suspended agent's, until Raja decides otherwise; commission
+// already APPROVED is still paid (payout eligibility treats TERMINATED as
+// payable). This is the ONLY place that rule lives; change it here.
 // ---------------------------------------------------------------------------
 function frozenForAgent(
   agentStatus: string,

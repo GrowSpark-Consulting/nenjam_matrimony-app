@@ -48,13 +48,19 @@ export interface AgentRecord {
   panLast4: string | null;
   /** The full PAN, sealed by `AgentSecretSealer`. Never returned to clients. */
   panSealed: string | null;
+  /** When staff verified the PAN. Null until verified; cleared when the PAN is replaced. Never set without a PAN. */
+  panVerifiedAt: Date | null;
   payoutDetailsSet: boolean;
   createdAt: Date;
 }
 
 export type NewAgentRecord = Omit<
   AgentRecord,
-  'status' | 'rejectionReason' | 'approvedAt' | 'payoutDetailsSet'
+  | 'status'
+  | 'rejectionReason'
+  | 'approvedAt'
+  | 'panVerifiedAt'
+  | 'payoutDetailsSet'
 >;
 
 /** `status` is stored as given; transition rules live in `agent-status.ts`. */
@@ -76,6 +82,7 @@ export interface AgentRepository {
         | 'approvedAt'
         | 'panLast4'
         | 'panSealed'
+        | 'panVerifiedAt'
         | 'payoutDetailsSet'
       >
     >,
@@ -157,6 +164,10 @@ export interface AgentApplicantRecord {
  * Remembers the phone an applicant verified, so the application can create
  * the agent record without the phone being in the token or the request body.
  * Written at verify time; deleted after a successful application.
+ *
+ * PURGE (decided 28 Oct): rows that have expired are removed opportunistically
+ * by the real adapter, in a small limited batch (for example a few dozen rows
+ * past `expiresAt`) on each `save`. No scheduler or cron job is used.
  */
 export interface AgentApplicantRepository {
   /** Insert or replace the record for this phone hash. */
@@ -200,14 +211,14 @@ export interface ReferralAttributionRecord {
   agentId: string;
   codeId: string;
   source: AttributionSource;
-  /** Hash of the member's verified phone, null when there is none. */
-  memberPhoneHash: string | null;
+  /** Hash of the member's verified phone. Required: a member with no verified phone cannot be credited. */
+  memberPhoneHash: string;
   attributedAt: Date;
   /** REJECTED rows (e.g. a self-referral) are kept for review, never shown to agents. */
   status: AgentAttributionStatus;
   /** End of the credit window, snapshotted when the attribution was made. */
   windowEndsAt: Date;
-  /** Accepted without a verified phone; an admin should look at it. */
+  /** An admin should look at it: today, a self-referral kept as REJECTED. */
   needsReview: boolean;
 }
 
@@ -272,6 +283,10 @@ export interface ReferralCodeAttemptWindow {
  *
  * Limits of a simple implementation: reading the count and then recording the
  * attempt is not atomic, so parallel requests can pass a limit by a few.
+ *
+ * PURGE (decided 28 Oct): rows older than the window are removed
+ * opportunistically by the real adapter, in a small limited batch on each
+ * `record`. No scheduler or cron job is used.
  */
 export interface ReferralCodeAttemptStore {
   window(

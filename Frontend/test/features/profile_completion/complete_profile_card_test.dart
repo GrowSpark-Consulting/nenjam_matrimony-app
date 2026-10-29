@@ -10,8 +10,8 @@ import 'package:nenjam_matrimony/features/profile_completion/domain/completion_r
 import 'package:nenjam_matrimony/features/profile_completion/presentation/widgets/complete_profile_card.dart';
 import 'package:nenjam_matrimony/features/profile_photos/domain/models/user_photo.dart';
 import 'package:nenjam_matrimony/features/profile_photos/presentation/providers/photo_providers.dart';
-import 'package:nenjam_matrimony/features/profile_photos/presentation/widgets/photo_manager_section.dart'
-    show kMaxPhotos;
+import 'package:nenjam_matrimony/features/membership/data/repositories/mock_membership_repository.dart';
+import 'package:nenjam_matrimony/features/membership/presentation/providers/membership_providers.dart';
 import 'package:nenjam_matrimony/features/registration/data/repositories/registration_repository.dart';
 import 'package:nenjam_matrimony/features/registration/presentation/providers/registration_provider.dart';
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
@@ -25,7 +25,7 @@ import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 /// full section reads (via [profileDraftResponseProvider] /
 /// [profileCompletenessSnapshotProvider]). Photos is the one exception —
 /// it reads the live photo count off [myPhotosProvider], the same provider
-/// every other photo UI in the app uses, and completes at [kMaxPhotos]
+/// every other photo UI in the app uses, and completes at [kPreMembershipPhotoCap]
 /// rather than the backend's registration-minimum "at least one" bar. These
 /// tests fix both sources and assert what the card does with them — never a
 /// second, invented completion signal.
@@ -131,11 +131,15 @@ class _Harness {
   /// four, unless a test explicitly exercises photo counts.
   final int photoCount;
 
-  _Harness(this.draft, {this.photoCount = kMaxPhotos});
+  _Harness(this.draft, {this.photoCount = kPreMembershipPhotoCap});
 
   Future<void> pump(WidgetTester tester) async {
     container = ProviderContainer(
       overrides: [
+        // The photo target is the member's cap from /membership/me — 6 today.
+        membershipRepositoryProvider.overrideWithValue(
+          MockMembershipRepository(),
+        ),
         profileDraftResponseProvider.overrideWith((ref) async {
           draftFetches++;
           return draft;
@@ -331,8 +335,10 @@ void main() {
       expect(find.text('Add Photos'), findsOneWidget);
     });
 
-    testWidgets('6 photos (kMaxPhotos) hides Add Photos', (tester) async {
-      await _Harness(_draft(), photoCount: kMaxPhotos).pump(tester);
+    testWidgets('6 photos (kPreMembershipPhotoCap) hides Add Photos', (
+      tester,
+    ) async {
+      await _Harness(_draft(), photoCount: kPreMembershipPhotoCap).pump(tester);
       expect(find.text('Add Photos'), findsNothing);
     });
 
@@ -369,7 +375,7 @@ void main() {
       // extra refresh call from this card, since it already watches
       // myPhotosProvider live.
       harness.container.read(myPhotosProvider.notifier).state = AsyncValue.data(
-        _photos(kMaxPhotos),
+        _photos(kPreMembershipPhotoCap),
       );
       await tester.pumpAndSettle();
 
@@ -414,7 +420,7 @@ void main() {
           partnerPreferenceComplete: true,
           verificationComplete: true,
         ),
-        // Already defaults to kMaxPhotos (complete).
+        // Already defaults to kPreMembershipPhotoCap (complete).
       ).pump(tester);
 
       expect(find.byType(CompleteProfileCard), findsOneWidget);
@@ -461,7 +467,7 @@ void main() {
       WidgetTester tester,
       String cardKey,
       String expectedPage, {
-      int photoCount = kMaxPhotos,
+      int photoCount = kPreMembershipPhotoCap,
     }) async {
       final harness = _Harness(_draft(), photoCount: photoCount);
       await harness.pump(tester);
@@ -484,9 +490,7 @@ void main() {
 
     // Family and horoscope have dedicated pages; they are no longer sections
     // of Edit Profile.
-    testWidgets('Family Details opens the Family Details page', (
-      tester,
-    ) async {
+    testWidgets('Family Details opens the Family Details page', (tester) async {
       await expectTapOpens(
         tester,
         CompletionCardKeys.aboutFamily,

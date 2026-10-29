@@ -10,10 +10,10 @@ export type AgentStatus =
   'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED' | 'TERMINATED';
 
 // ---------------------------------------------------------------------------
-// PENDING DECISION (Raja): may a REJECTED agent re-apply, which moves them
-// REJECTED -> PENDING_APPROVAL? The API contract assumes yes. This is the ONLY
-// place that rule lives; it drives both the transition table and the `apply`
-// capability below. Set it to false to make REJECTED final.
+// DECIDED (Raja, 28 Oct): a REJECTED agent MAY re-apply; the resubmission goes
+// back to PENDING_APPROVAL for admin review (REJECTED -> PENDING_APPROVAL).
+// This is the ONLY place that rule lives; it drives both the transition table
+// and the `apply` capability below. Set it to false to make REJECTED final.
 // ---------------------------------------------------------------------------
 export const REJECTED_MAY_REAPPLY = true;
 

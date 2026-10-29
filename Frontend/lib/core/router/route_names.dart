@@ -61,9 +61,11 @@ abstract final class RouteNames {
   static const String verification = '/verification';
   static const String faceVerification = '/verification/face';
   static const String subscription = '/subscription';
+  static const String membershipHistory = '/membership/history';
   static const String help = '/help';
   static const String supportTicketForm = '/help/ticket';
   static const String ticketHistory = '/help/tickets';
+  static const String partnerProgramHelp = '/help/partner-program';
   static const String privacy = '/privacy';
   static const String partnerPreferences = '/partner-preferences';
   static const String interestsSent = '/interests-sent';
@@ -152,9 +154,11 @@ abstract final class RouteNames {
   static const String verificationName = 'verification';
   static const String faceVerificationName = 'faceVerification';
   static const String subscriptionName = 'subscription';
+  static const String membershipHistoryName = 'membershipHistory';
   static const String helpName = 'help';
   static const String supportTicketFormName = 'supportTicketForm';
   static const String ticketHistoryName = 'ticketHistory';
+  static const String partnerProgramHelpName = 'partnerProgramHelp';
   static const String privacyName = 'privacy';
   static const String partnerPreferencesName = 'partnerPreferences';
   static const String interestsSentName = 'interestsSent';

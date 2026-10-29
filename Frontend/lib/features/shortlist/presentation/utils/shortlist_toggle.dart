@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
+import '../../../membership/presentation/widgets/membership_denial_sheet.dart';
 import '../providers/shortlist_provider.dart';
 
 /// Single place every shortlist/bookmark button in the app calls to toggle
@@ -17,10 +18,15 @@ Future<void> handleShortlistToggle(
 ) async {
   try {
     await ref.read(shortlistNotifierProvider.notifier).toggleShortlist(profile);
-  } catch (_) {
+  } catch (error) {
     if (!context.mounted) return;
+    // Adding is enforced (the shortlist cap); a membership refusal gets the
+    // plan sheet instead of the generic failure.
+    if (showMembershipDenialIfAny(context, ref, error)) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context).shortlistActionFailed)),
+      SnackBar(
+        content: Text(AppLocalizations.of(context).shortlistActionFailed),
+      ),
     );
   }
 }

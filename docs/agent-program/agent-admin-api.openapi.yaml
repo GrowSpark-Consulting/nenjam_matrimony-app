@@ -1,0 +1,1729 @@
+openapi: 3.0.3
+info:
+  title: Nenjam Agent / Partner Program - Admin API
+  version: 0.1.0-draft
+  description: |
+    DRAFT contract for the staff-facing (admin) endpoints of the agent
+    program, written **for Shaaz to review**. Nothing here is implemented.
+    It complements `agent-api.openapi.yaml` (the agent's own API); the two are
+    kept apart on purpose.
+
+    **Who calls it.** Staff only, through the admin panel. Every route is on an
+    `@AdminController` (Firebase identity, then `AdminGuard`: active staff,
+    admin session, permissions) and carries exactly one `@RequirePermissions`
+    key, named on every operation below as `x-permission`.
+
+    **Conventions (taken from `feat/admin-rbac-foundation`, PR #129)**
+    - Two credentials on every request: `Authorization: Bearer <Firebase ID
+      token>` and `X-Admin-Session: <admin session token>` (from
+      `POST /admin/auth/session`). Both are documented as security schemes.
+    - **Permissions** are `<resource>.<action>` keys. A missing key is
+      `403 ADMIN_PERMISSION_DENIED` (body includes `missing: [keys]`). The
+      service layer re-checks with `assertAdminPermission` inside its
+      transaction.
+    - **Step-up.** `payout.execute` and `agent.pii.reveal` are *sensitive*
+      permissions. A route that needs one also needs an authenticator check
+      made **within the last 10 minutes** (`ADMIN_STEP_UP_MS`). If it is
+      missing or stale the answer is **`401 ADMIN_STEP_UP_REQUIRED`** (not
+      403: it means "authenticate again", not "not allowed"). The client calls
+      `POST /admin/auth/step-up { code }` and retries. The permission check
+      runs first, so a caller without the key gets 403, never the step-up
+      prompt.
+    - **Errors** keep Nest's shape `{ statusCode, error, code, message }` plus
+      route-specific extras (for example `missing`, `agentStatus`, `reasons`).
+      Branch on `code`, never on `message`.
+    - **How to read a 401.** A 401 **with no `code`** means the caller is not
+      signed in (the Firebase token is missing, invalid or expired; this comes
+      from `FirebaseAuthGuard`, which adds no code). A 401 **with an
+      `ADMIN_SESSION_*` or `ADMIN_STEP_UP_REQUIRED` code** is an admin session
+      or step-up problem: start or renew the session with
+      `POST /admin/auth/session`, or confirm with `POST /admin/auth/step-up`.
+      There is no `UNAUTHORIZED` code.
+    - **Where the error codes come from.** Only `VALIDATION_FAILED` is global
+      (Shaaz's shared `validationFailed` exception factory in `@app/common`,
+      wired into the global `ValidationPipe`). The not-found and state codes
+      (`AGENT_NOT_FOUND`, `COMMISSION_NOT_FOUND`, `PAYOUT_NOT_FOUND`,
+      `REFERRAL_NOT_FOUND`, `AGENT_TRANSITION_NOT_ALLOWED`, ...) are thrown by
+      the agent code itself, with the same body shape as the admin errors, for
+      example `new NotFoundException({ statusCode: 404, error: 'Not Found',
+      code: 'AGENT_NOT_FOUND', message })`. The 403 for a missing permission
+      (guard and service-level check) is handled on Shaaz's side.
+    - **Path ids.** Every `{id}` path parameter is a UUID and must be read with
+      `ParseUUIDPipe` using `exceptionFactory: validationFailed` from
+      `@app/common` (available once Shaaz's PR with it is merged), so a
+      malformed id answers `400 VALIDATION_FAILED` and not Nest's default
+      `400` without a code.
+    - **Lists** are cursor-paginated: `?cursor=&limit=` ->
+      `{ items, nextCursor }` (`nextCursor` is `null` on the last page). `limit`
+      is 1 to 100, default 25, as in the membership admin API. The cursor is
+      opaque.
+    - **Money** is integer **paise**. **Dates** are ISO-8601: timestamps in UTC
+      (`2026-10-28T09:30:00Z`); plain calendar dates (`YYYY-MM-DD`, Indian
+      time) only where noted.
+    - **Every mutation** takes `{ reason }` (a string of 3 to 500 characters,
+      `AdminReasonDto`) and writes its audit row **in the same transaction** as
+      the change (`AdminAuditService.record(tx, ...)`, `actorType: STAFF`,
+      `action` as named on each operation, `before` and `after` snapshots, the
+      `reason`, the request context). If the audit write fails the change rolls
+      back. Reads write no audit row, except `reveal`, which does and fails
+      closed.
+    - Routes are unversioned, as the other admin routes are (no
+      `Accept-Version`).
+    - **Settings are not constants.** The minimum payout, the wait after a
+      payout-details change and the hold are settings; nothing below hard-codes
+      a value.
+
+    **What an admin may and may not see.** Admin responses show the *masked*
+    phone, PAN last 4, *masked* payout details (`display`), status history,
+    codes and counts. They **never** contain a sealed value, a full phone
+    number, a full PAN, or full bank/UPI details. The only door to those full
+    values is `POST /admin/agents/{id}/reveal` (`agent.pii.reveal`, step-up,
+    `fields` of `PAN`, `PAYOUT_DETAILS`, `PHONE`, each audited, once, never
+    cached). The agent's own view (`GET /agent/me`, referrals,
+    commissions) is a separate contract and stays separate: the agent never
+    sees internal statuses, other agents, review flags or admin reasons
+    (except the rejection reason, see `reject`).
+
+    **Agent state machine** (`canTransitionAgentStatus`, `agent-status.ts`):
+
+    | From | Allowed next |
+    |---|---|
+    | `PENDING_APPROVAL` | `ACTIVE` (approve), `REJECTED` (reject) |
+    | `ACTIVE` | `SUSPENDED` (pause), `TERMINATED` (terminate) |
+    | `SUSPENDED` | `ACTIVE` (resume), `TERMINATED` (terminate) |
+    | `REJECTED` | `PENDING_APPROVAL` - done by the *applicant* re-applying, never by an admin endpoint (while `REJECTED_MAY_REAPPLY` is true) |
+    | `TERMINATED` | none (final) |
+
+    A refused transition is `409 AGENT_TRANSITION_NOT_ALLOWED` with
+    `agentStatus` (the current status) and `refusal` (`SAME_STATUS`,
+    `TERMINATED_IS_FINAL` or `TRANSITION_NOT_ALLOWED`).
+
+    **Commission statuses.** Admins see the *internal* status
+    (`CommissionStatus`); the agent sees only the *public* one
+    (`PublicCommissionStatus`). Every admin commission carries both, so the
+    panel can show what the agent is seeing.
+
+    | Internal (admin) | Public (agent) |
+    |---|---|
+    | `ON_HOLD`, `AWAITING_VERIFICATION`, `IN_REVIEW`, `FROZEN`, `READY` | `ON_HOLD` |
+    | `APPROVED` | `APPROVED` |
+    | `PAID` | `PAID` |
+    | `CANCELLED`, `REVERSED` | `CANCELLED` |
+
+    **What Shaaz still owns (not part of the agent work).**
+    - The shared **`validationFailed` exception factory** in `@app/common`
+      (his Thursday PR), which gives `VALIDATION_FAILED` to validation errors
+      and, through `ParseUUIDPipe`, to a malformed `{id}`. It is the only
+      error code that is global; the not-found codes are ours (the agent code
+      throws its own) and the service-level 403 code is handled, so neither is
+      open any more.
+    - **Roles beyond `SUPER_ADMIN`.** Only that role is seeded, so only a
+      super admin can approve agents, verify PAN or payout details, reveal PII
+      or run payouts until the other roles (for example Partner Manager,
+      Finance) are defined and seeded.
+    - The settings table and service, the OTP/identifier-hash pieces, and the
+      payment fields that `quoteReferral` and commissions depend on.
+
+    **"Not yet implementable".** Operations marked so in their description
+    depend on tables or pieces that do not exist: the commission and payout
+    tables (the commission batch has not been built; `AgentCommissionPolicyPort`
+    has no table), `PlatformSetting` and the 18-key settings seed (a separate
+    migration that must sort after Shaaz's settings table), and the agent
+    tables themselves, which exist only in the unapplied Phase 1 migration
+    (PR #116). The `x-readiness` extension on each operation says which:
+    `after-phase1-migration` (agent tables only), `after-settings-seed`, or
+    `not-yet-implementable` (needs commission and/or payout tables).
+  contact:
+    name: Backend (agent program)
+
+servers:
+  - url: https://api.example.invalid
+    description: Placeholder; use the Render service URL. Local - http://127.0.0.1:3000
+
+tags:
+  - name: Admin agents
+  - name: Admin referrals
+  - name: Admin commissions
+  - name: Admin payouts
+
+security:
+  - firebaseIdToken: []
+    adminSession: []
+
+paths:
+  /admin/agents/summary:
+    get:
+      tags: [Admin agents]
+      summary: Counts for the agent-program overview
+      operationId: adminAgentsSummary
+      x-permission: agent.view
+      x-readiness: after-phase1-migration
+      description: |
+        Counts only. Must be routed before `/admin/agents/{id}` so `summary` is
+        not read as an id. `commissionsReady` and `payoutsCreated` are `null`
+        until the commission and payout tables exist (**Not yet
+        implementable** for those two fields).
+      responses:
+        '200':
+          description: The summary.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentsSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/agents:
+    get:
+      tags: [Admin agents]
+      summary: List agents
+      operationId: adminAgentsList
+      x-permission: agent.view
+      x-readiness: after-phase1-migration
+      description: |
+        Newest first. `q` is an exact match on an agent id, a referral code or
+        a full phone number in E.164 (the phone is hashed server-side; the
+        phone is never echoed back unmasked). `name` is a separate, case-
+        insensitive **prefix** match on the agent's name. When both are given
+        both must match. There is no partial-phone search.
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/AgentStatus' }
+        - name: q
+          in: query
+          description: Exact agent id, referral code (`NM...`) or E.164 phone.
+          schema: { type: string, maxLength: 64 }
+        - name: name
+          in: query
+          description: Case-insensitive prefix of the agent's name (at least 2 characters).
+          schema: { type: string, minLength: 2, maxLength: 100 }
+        - name: payoutDetails
+          in: query
+          description: '`UNVERIFIED` lists agents whose payout details are set but not verified.'
+          schema: { type: string, enum: [UNVERIFIED] }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of agents.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminAgentListItem' }
+                  nextCursor: { type: string, nullable: true }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/agents/{id}:
+    get:
+      tags: [Admin agents]
+      summary: One agent
+      operationId: adminAgentGet
+      x-permission: agent.view
+      x-readiness: after-phase1-migration
+      description: |
+        Masked phone, PAN last 4, masked payout details, codes, counts and the
+        status history. The history is read from the audit log, but **only
+        this agent's status-change entries** (`entity` `Agent`, this id,
+        actions `agent.approve`, `agent.reject`, `agent.pause`, `agent.resume`,
+        `agent.terminate`) are exposed, so `agent.view` does not grant
+        `audit.view`. Never a sealed value. `commissions` is `null` until the
+        commission tables exist (**Not yet implementable** for that field).
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      responses:
+        '200':
+          description: The agent.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminAgentDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/AgentNotFound' }
+
+  /admin/agents/{id}/approve:
+    post:
+      tags: [Admin agents]
+      summary: Approve an application
+      operationId: adminAgentApprove
+      x-permission: agent.approve
+      x-readiness: after-phase1-migration
+      x-audit-action: agent.approve
+      description: |
+        **Allowed only from `PENDING_APPROVAL`** -> `ACTIVE`. In one
+        transaction: set `status` and `approvedAt`, clear `rejectionReason`,
+        create the agent's first (primary, active) referral code, write the
+        audit row. Everything else (including a second approve) is
+        `409 AGENT_TRANSITION_NOT_ALLOWED`.
+
+        `reason` is internal (audit only); the agent is not shown it.
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      requestBody: { $ref: '#/components/requestBodies/Reason' }
+      responses:
+        '200':
+          description: The agent after approval.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminAgentDetail' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/AgentNotFound' }
+        '409': { $ref: '#/components/responses/AgentTransitionNotAllowed' }
+
+  /admin/agents/{id}/reject:
+    post:
+      tags: [Admin agents]
+      summary: Reject an application
+      operationId: adminAgentReject
+      x-permission: agent.approve
+      x-readiness: after-phase1-migration
+      x-audit-action: agent.reject
+      description: |
+        **Allowed only from `PENDING_APPROVAL`** -> `REJECTED`.
+
+        **There is one reason, and it is shown to the applicant** as
+        `rejectionReason` in `GET /agent/me` (and kept on the audit row), so it
+        must be written for them. The panel must say so next to the field.
+        There is no separate internal note.
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      requestBody: { $ref: '#/components/requestBodies/Reason' }
+      responses:
+        '200':
+          description: The agent after rejection.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminAgentDetail' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/AgentNotFound' }
+        '409': { $ref: '#/components/responses/AgentTransitionNotAllowed' }
+
+  /admin/agents/{id}/pause:
+    post:
+      tags: [Admin agents]
+      summary: Pause an agent
+      operationId: adminAgentPause
+      x-permission: agent.manage
+      x-readiness: after-phase1-migration
+      x-audit-action: agent.pause
+      description: |
+        **Allowed only from `ACTIVE`** -> `SUSPENDED` (shown to the agent as
+        "Paused"). Effect: new referrals are no longer credited, links stop
+        being shareable, payout-details edits are blocked. Codes stay
+        recorded. Open commissions move to `FROZEN` by the daily job (not
+        inside this request). Reversible with `resume`.
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      requestBody: { $ref: '#/components/requestBodies/Reason' }
+      responses:
+        '200':
+          description: The agent after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminAgentDetail' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/AgentNotFound' }
+        '409': { $ref: '#/components/responses/AgentTransitionNotAllowed' }
+
+  /admin/agents/{id}/resume:
+    post:
+      tags: [Admin agents]
+      summary: Resume a paused agent
+      operationId: adminAgentResume
+      x-permission: agent.manage
+      x-readiness: after-phase1-migration
+      x-audit-action: agent.resume
+      description: |
+        **Allowed only from `SUSPENDED`** -> `ACTIVE`. Not a way to undo
+        `TERMINATED` (final) or `REJECTED`. Frozen commissions are evaluated
+        again by the daily job.
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      requestBody: { $ref: '#/components/requestBodies/Reason' }
+      responses:
+        '200':
+          description: The agent after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminAgentDetail' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/AgentNotFound' }
+        '409': { $ref: '#/components/responses/AgentTransitionNotAllowed' }
+
+  /admin/agents/{id}/terminate:
+    post:
+      tags: [Admin agents]
+      summary: Terminate an agent (final)
+      operationId: adminAgentTerminate
+      x-permission: agent.manage
+      x-readiness: after-phase1-migration
+      x-audit-action: agent.terminate
+      description: |
+        **Allowed from `ACTIVE` or `SUSPENDED`** -> `TERMINATED`, which is
+        **final**. The agent keeps read-only access (status, commissions,
+        balance, payouts). No new credit, no sharing, no payout-details edits.
+        Already-approved commissions remain payable (`decidePayoutEligibility`
+        treats `TERMINATED` as payable); open commissions are frozen, which is
+        a **pending decision (Raja)** in `frozenForAgent()`.
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      requestBody: { $ref: '#/components/requestBodies/Reason' }
+      responses:
+        '200':
+          description: The agent after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminAgentDetail' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/AgentNotFound' }
+        '409': { $ref: '#/components/responses/AgentTransitionNotAllowed' }
+
+  /admin/agents/{id}/codes/replace:
+    post:
+      tags: [Admin agents]
+      summary: Issue a new primary referral code
+      operationId: adminAgentCodesReplace
+      x-permission: agent.manage
+      x-readiness: after-phase1-migration
+      x-audit-action: agent.code.replace
+      description: |
+        **Allowed when the agent is `ACTIVE` or `SUSPENDED`** (an agent has a
+        code only after approval; a terminated agent's codes are not
+        replaced). In one transaction a new code is generated and becomes
+        `isPrimary`; the old primary becomes `isPrimary: false` but stays
+        `isActive: true`, so **old codes keep working** and keep attributing
+        members (while the agent can earn). Nothing is deleted. The
+        one-primary-per-agent index is respected by demoting before
+        promoting.
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      requestBody: { $ref: '#/components/requestBodies/Reason' }
+      responses:
+        '200':
+          description: The agent's codes after the change.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [primary, codes]
+                properties:
+                  primary: { $ref: '#/components/schemas/AdminReferralCode' }
+                  codes:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminReferralCode' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/AgentNotFound' }
+        '409': { $ref: '#/components/responses/AgentStatusNotAllowed' }
+
+  /admin/agents/{id}/payout-details/verify:
+    post:
+      tags: [Admin agents]
+      summary: Mark the agent's payout details as verified
+      operationId: adminAgentPayoutDetailsVerify
+      x-permission: agent.payout_details.verify
+      x-readiness: after-phase1-migration
+      x-audit-action: agent.payout_details.verify
+      description: |
+        Sets `verifiedAt` on the agent's current payout details. Requires that
+        details exist (`payoutDetailsSet`) and are not already verified.
+        **Allowed when the agent is `ACTIVE`, `SUSPENDED` or `TERMINATED`**
+        (details can only have been set while `ACTIVE`; a terminated agent may
+        still be owed money). Not allowed for `PENDING_APPROVAL` or
+        `REJECTED`.
+
+        Any later change by the agent clears `verifiedAt` and restarts the
+        wait (`agent.payout_details_wait_hours`), so verify the *current*
+        details; the response includes `changedAt`. Verifying does not end the
+        wait. Payout creation checks both. To see the full details before
+        verifying, use `reveal` with `PAYOUT_DETAILS`. This does not verify
+        the PAN (see `pan/verify`).
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      requestBody: { $ref: '#/components/requestBodies/Reason' }
+      responses:
+        '200':
+          description: The agent after verification.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminAgentDetail' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/AgentNotFound' }
+        '409':
+          description: |
+            `AGENT_STATUS_NOT_ALLOWED` (with `agentStatus`),
+            `PAYOUT_DETAILS_NOT_SET` or `PAYOUT_DETAILS_ALREADY_VERIFIED`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /admin/agents/{id}/reveal:
+    post:
+      tags: [Admin agents]
+      summary: Reveal the agent's PAN, payout details and/or phone, once
+      operationId: adminAgentReveal
+      x-permission: agent.pii.reveal
+      x-step-up: true
+      x-readiness: after-phase1-migration
+      x-audit-action: agent.pii.reveal
+      description: |
+        Returns the **requested** full values **in this response only**:
+        `fields` lists what to reveal, at least one of `PAN`,
+        `PAYOUT_DETAILS`, `PHONE`, no repeats. Only the requested fields
+        appear in the answer. A POST, not a GET, so it is never cached,
+        prefetched or replayed by a proxy. The response carries
+        `Cache-Control: no-store`. The server does not keep or log the values;
+        the panel must not store them. This is the only door to any full value;
+        every other admin response is masked.
+
+        **Reason required** (`AdminReasonDto`, 3 to 500 characters), the same
+        for all fields in the request.
+
+        **Step-up required:** `401 ADMIN_STEP_UP_REQUIRED` unless an
+        authenticator check was made in the last 10 minutes. The permission is
+        checked first (403 if the caller lacks `agent.pii.reveal`).
+
+        **Each field is audited.** One audit row per revealed field
+        (`agent.pii.reveal`, `reason`, `metadata.field` = `PAN`,
+        `PAYOUT_DETAILS` or `PHONE`, never the value) in the same transaction
+        as the read. **It fails closed:** if any audit write fails, nothing is
+        returned. If one requested field cannot be revealed (not on file) the
+        whole request fails and **nothing is revealed or audited**.
+
+        **Allowed in any agent status**, including `TERMINATED` (an agent may
+        be owed a payout). `404 AGENT_NOT_FOUND`; `409 PAN_NOT_SET` or
+        `409 PAYOUT_DETAILS_NOT_SET` when a requested value is not on file.
+        `PHONE` is always on file.
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fields, reason]
+              additionalProperties: false
+              properties:
+                fields:
+                  type: array
+                  minItems: 1
+                  maxItems: 3
+                  uniqueItems: true
+                  items: { $ref: '#/components/schemas/RevealField' }
+                reason: { $ref: '#/components/schemas/Reason' }
+      responses:
+        '200':
+          description: The requested values, once.
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RevealedValues' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/UnauthorizedOrStepUp' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/AgentNotFound' }
+        '409':
+          description: '`PAN_NOT_SET` or `PAYOUT_DETAILS_NOT_SET`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /admin/agents/{id}/pan/verify:
+    post:
+      tags: [Admin agents]
+      summary: Mark the agent's PAN as verified
+      operationId: adminAgentPanVerify
+      x-permission: agent.payout_details.verify
+      x-readiness: after-phase1-migration
+      x-audit-action: agent.pan.verify
+      description: |
+        Sets `pan_verified_at` (needs the `pan_verified_at` column added to the
+        Phase 1 migration). Payout eligibility requires it before the first
+        payout (`PAN_NOT_VERIFIED`). The admin checks the PAN against the
+        agent's documents after a `reveal` of `PAN`.
+
+        **Allowed when the agent is `ACTIVE`, `SUSPENDED` or `TERMINATED`**
+        (the same states as `payout-details/verify`). Not allowed for
+        `PENDING_APPROVAL` or `REJECTED`. `409 PAN_NOT_SET` when no PAN is on
+        file; `409 PAN_ALREADY_VERIFIED` when it already is. Replacing the
+        PAN (a rejected agent re-applying with a different one) clears
+        `pan_verified_at`.
+
+        Same permission as the payout-details check, so one staff role does
+        both.
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      requestBody: { $ref: '#/components/requestBodies/Reason' }
+      responses:
+        '200':
+          description: The agent after verification.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminAgentDetail' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/AgentNotFound' }
+        '409':
+          description: '`AGENT_STATUS_NOT_ALLOWED` (with `agentStatus`), `PAN_NOT_SET` or `PAN_ALREADY_VERIFIED`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /admin/agents/{id}/referrals:
+    get:
+      tags: [Admin referrals]
+      summary: One agent's referrals (attributions)
+      operationId: adminAgentReferrals
+      x-permission: attribution.view
+      x-readiness: after-phase1-migration
+      description: |
+        Newest first. Unlike the agent's own list, this shows `source`,
+        `status`, the review flag and the code used, but still no full phone
+        (masked) and no member profile data. `stage`, `planName`,
+        `purchasedAt`, `commissionId` and `commissionStatus` are `null` until
+        the commission tables exist (**Not yet implementable** for those
+        fields).
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/AttributionStatus' }
+        - name: needsReview
+          in: query
+          schema: { type: boolean }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of referrals.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminReferral' }
+                  nextCursor: { type: string, nullable: true }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/AgentNotFound' }
+
+  /admin/referrals/{id}/correct:
+    post:
+      tags: [Admin referrals]
+      summary: Correct a referral attribution
+      operationId: adminReferralCorrect
+      x-permission: attribution.override
+      x-readiness: after-phase1-migration
+      x-audit-action: attribution.correct
+      description: |
+        The correction is named by `action` (decided shape). This is the
+        "admin can correct it with a recorded reason" path for a blocked
+        self-referral and for `needsReview` rows.
+
+        - `REASSIGN_AGENT` (requires `agentId`): credit a different agent.
+          The target must be `ACTIVE`. Sets `source` to `ADMIN_SET`. The
+          credit window end is **not** reset. Refused with `SELF_REFERRAL`
+          when the target agent's phone is the member's phone.
+        - `REJECT`: set `status` to `REJECTED` (not credited).
+        - `CLEAR_REVIEW`: set `needsReview` to false, nothing else.
+
+        **Allowed only while the attribution is `ACTIVE`, `EXPIRED` or
+        `REJECTED`**; once `CONVERTED` a commission exists and must be handled
+        with the commission endpoints (`409 ATTRIBUTION_CONVERTED`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The attribution id.
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason, action]
+              additionalProperties: false
+              properties:
+                reason: { $ref: '#/components/schemas/Reason' }
+                action:
+                  type: string
+                  enum: [REASSIGN_AGENT, REJECT, CLEAR_REVIEW]
+                agentId:
+                  type: string
+                  format: uuid
+                  description: Required for `REASSIGN_AGENT`, rejected otherwise.
+      responses:
+        '200':
+          description: The attribution after the correction.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminReferral' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`REFERRAL_NOT_FOUND`, or `AGENT_NOT_FOUND` for the target agent.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: '`ATTRIBUTION_CONVERTED`, or `AGENT_STATUS_NOT_ALLOWED` when the target agent is not `ACTIVE`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: '`SELF_REFERRAL`: the target agent is the member.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /admin/commissions:
+    get:
+      tags: [Admin commissions]
+      summary: List commissions
+      operationId: adminCommissionsList
+      x-permission: commission.view
+      x-readiness: not-yet-implementable
+      description: |
+        **Not yet implementable:** needs the commission tables (deferred to the
+        commission batch) and the payment events from Shaaz's side.
+
+        Newest first. Shows the *internal* `status` and the `publicStatus` the
+        agent sees.
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/CommissionStatus' }
+        - name: agentId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          description: Earned on or after this date (`YYYY-MM-DD`, Indian time).
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          description: Earned on or before this date.
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of commissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminCommission' }
+                  nextCursor: { type: string, nullable: true }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/commissions/{id}/approve:
+    post:
+      tags: [Admin commissions]
+      summary: Approve a commission
+      operationId: adminCommissionApprove
+      x-permission: commission.approve
+      x-readiness: not-yet-implementable
+      x-audit-action: commission.approve
+      description: |
+        **Not yet implementable:** needs the commission tables.
+
+        **Allowed from `READY` or `IN_REVIEW`** -> `APPROVED`, only while the
+        earning agent is `ACTIVE` (a paused or terminated agent's commissions
+        are `FROZEN`; resume first). Refused when `amountPaise` is still
+        `null` (`COMMISSION_AMOUNT_NOT_SET`, i.e. `commission.base` is not
+        decided: set the amount with `override` first). When
+        `commission.auto_approve` is on (decided: true) the daily job approves
+        `READY` commissions itself, so this endpoint mostly handles `IN_REVIEW`
+        ones. `ON_HOLD`, `AWAITING_VERIFICATION` and `FROZEN` cannot be
+        approved early.
+      parameters:
+        - $ref: '#/components/parameters/CommissionId'
+      requestBody: { $ref: '#/components/requestBodies/Reason' }
+      responses:
+        '200':
+          description: The commission after approval.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminCommission' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/CommissionNotFound' }
+        '409': { $ref: '#/components/responses/CommissionStatusNotAllowed' }
+        '422':
+          description: '`COMMISSION_AMOUNT_NOT_SET`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /admin/commissions/{id}/cancel:
+    post:
+      tags: [Admin commissions]
+      summary: Cancel a commission
+      operationId: adminCommissionCancel
+      x-permission: commission.cancel
+      x-readiness: not-yet-implementable
+      x-audit-action: commission.cancel
+      description: |
+        **Not yet implementable:** needs the commission tables.
+
+        **Allowed from any open status** (`ON_HOLD`, `AWAITING_VERIFICATION`,
+        `IN_REVIEW`, `FROZEN`, `READY`) **and from `APPROVED` if it is not in
+        a payout** -> `CANCELLED`. Not from `PAID`, `CANCELLED` or `REVERSED`
+        (a paid commission is undone by a refund reversal or an adjustment,
+        never by cancel). `409 COMMISSION_IN_PAYOUT` when a `CREATED` payout
+        holds it (cancel the payout first). Any credited ledger amount is
+        reversed in the same transaction.
+      parameters:
+        - $ref: '#/components/parameters/CommissionId'
+      requestBody: { $ref: '#/components/requestBodies/Reason' }
+      responses:
+        '200':
+          description: The commission after cancellation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminCommission' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/CommissionNotFound' }
+        '409': { $ref: '#/components/responses/CommissionStatusNotAllowed' }
+
+  /admin/commissions/{id}/override:
+    post:
+      tags: [Admin commissions]
+      summary: Override a commission amount
+      operationId: adminCommissionOverride
+      x-permission: commission.override
+      x-readiness: not-yet-implementable
+      x-audit-action: commission.override
+      description: |
+        **Not yet implementable:** needs the commission tables.
+
+        Sets `amountPaise`. **Allowed in any open status and in `APPROVED`
+        while not in a payout.** Not from `PAID`, `CANCELLED` or `REVERSED`,
+        nor when a payout holds it. The amount must be a non-negative integer
+        and **not above what the member paid** (`422 AMOUNT_EXCEEDS_PAID`,
+        the same cap `calculateCommission` applies). The status does not
+        change. The audit row records the old and new amount and the reason.
+      parameters:
+        - $ref: '#/components/parameters/CommissionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amountPaise, reason]
+              additionalProperties: false
+              properties:
+                amountPaise: { type: integer, minimum: 0, example: 9990 }
+                reason: { $ref: '#/components/schemas/Reason' }
+      responses:
+        '200':
+          description: The commission after the override.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminCommission' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/CommissionNotFound' }
+        '409': { $ref: '#/components/responses/CommissionStatusNotAllowed' }
+        '422':
+          description: '`AMOUNT_EXCEEDS_PAID`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /admin/payouts/payable:
+    get:
+      tags: [Admin payouts]
+      summary: Agents with a payable balance for a period
+      operationId: adminPayoutsPayable
+      x-permission: payout.view
+      x-readiness: not-yet-implementable
+      description: |
+        **Not yet implementable:** needs the commission and payout tables and
+        the settings seed (`payout.minimum_amount_paise`,
+        `agent.payout_details_wait_hours`, `payout.tax_withholding`).
+
+        For each agent with approved, unpaid commissions: the balance, and
+        whether a payout can be created now with **every** reason it cannot
+        (`decidePayoutEligibility`):
+
+        - `AGENT_NOT_PAYABLE`: only `ACTIVE` and `TERMINATED` agents are paid
+          (a `SUSPENDED` agent is not).
+        - `PAN_NOT_VERIFIED`: a verified PAN is needed before the first payout.
+        - `DETAILS_NOT_VERIFIED`: payout details not verified.
+        - `WAIT_NOT_OVER`: the wait after a payout-details change
+          (`agent.payout_details_wait_hours`, decided 72) has not passed.
+        - `NOTHING_TO_PAY`: balance is zero.
+        - `BELOW_MINIMUM`: balance is under `payout.minimum_amount_paise`
+          (Rs. 500 by Raja's number, a setting).
+        - `PAYOUT_EXISTS`: **one payout per agent per period** already exists.
+
+        `warnings` carries `TAX_RULE_NOT_SET`: **tax withholding is pending the
+        CA**. While `payout.tax_withholding` is `null` the withheld amount is
+        0. Once it is set to anything, `planPayout` refuses with
+        `TAX_RULE_UNSUPPORTED` until the rule is implemented.
+      parameters:
+        - name: period
+          in: query
+          required: true
+          description: Calendar month, `YYYY-MM`.
+          schema: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$', example: '2026-11' }
+        - name: eligible
+          in: query
+          schema: { type: boolean }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of payable agents.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/PayableAgent' }
+                  nextCursor: { type: string, nullable: true }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/SettingsNotConfigured' }
+
+  /admin/payouts:
+    get:
+      tags: [Admin payouts]
+      summary: Payout history
+      operationId: adminPayoutsList
+      x-permission: payout.view
+      x-readiness: not-yet-implementable
+      description: |
+        **Not yet implementable:** needs the payout tables.
+
+        Newest first. Every status, including `CANCELLED`. `from` and `to`
+        filter on `createdAt` (calendar dates, Indian time, inclusive).
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/PayoutStatus' }
+        - name: agentId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: period
+          in: query
+          description: Calendar month, `YYYY-MM`.
+          schema: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$' }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of payouts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminPayout' }
+                  nextCursor: { type: string, nullable: true }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Admin payouts]
+      summary: Create a payout for an agent and period
+      operationId: adminPayoutCreate
+      x-permission: payout.execute
+      x-step-up: true
+      x-readiness: not-yet-implementable
+      x-audit-action: payout.create
+      description: |
+        **Not yet implementable:** needs the commission and payout tables, the
+        ledger and the settings seed.
+
+        Plans one manual payout (`planPayout`) from the agent's approved,
+        unpaid commissions and records it as `CREATED` (shown to the agent as
+        "Processing"). Money moves outside the app; `mark-paid` records it.
+        Everything happens in one transaction: payout row, the commissions
+        attached, ledger entries, audit row.
+
+        **Step-up required** (`payout.execute`): `401 ADMIN_STEP_UP_REQUIRED`
+        if the last authenticator check is older than 10 minutes.
+
+        **Idempotent by the one-payout rule, with no `Idempotency-Key`.** There
+        is at most one non-cancelled payout per agent per period (a unique
+        constraint on agent and period for payouts that are not `CANCELLED`).
+        If one already exists for the `agentId` and `period` sent, the request
+        returns **that existing payout with `200`** and changes nothing (no
+        second payout, no new audit row). A retry after a timeout is therefore
+        safe. A cancelled payout frees the period.
+
+        **Otherwise refused with `422 PAYOUT_NOT_ELIGIBLE`** (`reasons` lists
+        them all) unless: the balance is at least the minimum
+        (`BELOW_MINIMUM`), the payout details are verified
+        (`DETAILS_NOT_VERIFIED`) and the wait after their last change is over
+        (`WAIT_NOT_OVER`), the PAN is verified before the first payout
+        (`PAN_NOT_VERIFIED`) and the agent is payable (`AGENT_NOT_PAYABLE`).
+        (`PAYOUT_EXISTS` is what `payable` reports for a period that already
+        has a payout; `create` answers it with the existing payout instead.)
+        Also `NOTHING_TO_PAY`, and **`TAX_RULE_UNSUPPORTED`**: any non-null
+        `payout.tax_withholding` is refused until the CA's rule is
+        implemented. **Tax is pending the CA**; a created payout today has
+        `taxWithheldPaise: 0` and the warning `TAX_RULE_NOT_SET`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [agentId, period, reason]
+              additionalProperties: false
+              properties:
+                agentId: { type: string, format: uuid }
+                period:
+                  type: string
+                  pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+                  description: Calendar month, `YYYY-MM`.
+                  example: '2026-11'
+                reason: { $ref: '#/components/schemas/Reason' }
+      responses:
+        '200':
+          description: A payout for this agent and period already exists; it is returned unchanged.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminPayout' }
+        '201':
+          description: The payout was created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminPayout' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/UnauthorizedOrStepUp' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/AgentNotFound' }
+        '422':
+          description: |
+            `PAYOUT_NOT_ELIGIBLE`. The body has `reasons`: one or more of the
+            `PayoutIneligibleReason` values, plus `NOTHING_TO_PAY` and
+            `TAX_RULE_UNSUPPORTED` from `planPayout`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/SettingsNotConfigured' }
+
+  /admin/payouts/{id}:
+    get:
+      tags: [Admin payouts]
+      summary: One payout, with its commissions
+      operationId: adminPayoutGet
+      x-permission: payout.view
+      x-readiness: not-yet-implementable
+      description: |
+        **Not yet implementable:** needs the payout and commission tables.
+
+        The payout and the commissions it covers (internal and public
+        statuses). Masked data only.
+      parameters:
+        - $ref: '#/components/parameters/PayoutId'
+      responses:
+        '200':
+          description: The payout.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminPayoutDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/PayoutNotFound' }
+
+  /admin/payouts/{id}/mark-paid:
+    post:
+      tags: [Admin payouts]
+      summary: Record that a payout was paid
+      operationId: adminPayoutMarkPaid
+      x-permission: payout.execute
+      x-step-up: true
+      x-readiness: not-yet-implementable
+      x-audit-action: payout.mark_paid
+      description: |
+        **Not yet implementable:** needs the payout tables and the ledger.
+
+        **Allowed only from `CREATED`** -> `PAID`. Stores the bank/UPI
+        `reference` and `paidAt`, marks its commissions `PAID`, writes the
+        ledger debit, audits, all in one transaction. `paidAt` must not be in
+        the future. Step-up required.
+      parameters:
+        - $ref: '#/components/parameters/PayoutId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reference, paidAt, reason]
+              additionalProperties: false
+              properties:
+                reference:
+                  type: string
+                  minLength: 3
+                  maxLength: 100
+                  description: Bank or UPI transaction reference.
+                paidAt: { type: string, format: date-time }
+                reason: { $ref: '#/components/schemas/Reason' }
+      responses:
+        '200':
+          description: The payout after marking.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminPayout' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/UnauthorizedOrStepUp' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/PayoutNotFound' }
+        '409': { $ref: '#/components/responses/PayoutStatusNotAllowed' }
+
+  /admin/payouts/{id}/cancel:
+    post:
+      tags: [Admin payouts]
+      summary: Cancel a payout that was not paid
+      operationId: adminPayoutCancel
+      x-permission: payout.execute
+      x-step-up: true
+      x-readiness: not-yet-implementable
+      x-audit-action: payout.cancel
+      description: |
+        **Not yet implementable:** needs the payout tables and the ledger.
+
+        **Allowed only from `CREATED`** -> `CANCELLED`. The commissions return
+        to `APPROVED` (payable again) and the ledger hold is released
+        (`buildPayoutReleaseEntry`), in one transaction. The period is free
+        again, so a new payout can be created for the same agent and period.
+        Step-up required (it is money handling).
+      parameters:
+        - $ref: '#/components/parameters/PayoutId'
+      requestBody: { $ref: '#/components/requestBodies/Reason' }
+      responses:
+        '200':
+          description: The payout after cancellation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminPayout' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/UnauthorizedOrStepUp' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/PayoutNotFound' }
+        '409': { $ref: '#/components/responses/PayoutStatusNotAllowed' }
+
+components:
+  securitySchemes:
+    firebaseIdToken:
+      type: http
+      scheme: bearer
+      bearerFormat: Firebase ID token
+      description: The staff member's Firebase identity (`FirebaseAuthGuard`).
+    adminSession:
+      type: apiKey
+      in: header
+      name: X-Admin-Session
+      description: Admin session token from `POST /admin/auth/session`.
+
+  parameters:
+    AgentId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CommissionId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PayoutId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque cursor from the previous page's `nextCursor`.
+      schema: { type: string, maxLength: 200 }
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+
+  requestBodies:
+    Reason:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [reason]
+            additionalProperties: false
+            properties:
+              reason: { $ref: '#/components/schemas/Reason' }
+
+  responses:
+    ValidationFailed:
+      description: Body or query failed validation (`VALIDATION_FAILED`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: |
+        With no `code`: not signed in (Firebase token missing, invalid or
+        expired). With `ADMIN_SESSION_REQUIRED` or `ADMIN_SESSION_INVALID`: no
+        valid admin session.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    UnauthorizedOrStepUp:
+      description: |
+        As `Unauthorized`, **or `ADMIN_STEP_UP_REQUIRED`**: this route needs a
+        sensitive permission and the last authenticator check is missing or
+        older than 10 minutes. Call `POST /admin/auth/step-up { code }` and
+        retry.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            statusCode: 401
+            error: Unauthorized
+            code: ADMIN_STEP_UP_REQUIRED
+            message: This action needs a fresh code from your authenticator app.
+    Forbidden:
+      description: |
+        `ADMIN_ACCESS_REQUIRED` (not active staff), `ADMIN_PERMISSION_DENIED`
+        (a missing key; the body lists `missing`) or `ADMIN_ROUTE_UNPROTECTED`.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            statusCode: 403
+            error: Forbidden
+            code: ADMIN_PERMISSION_DENIED
+            message: 'Not permitted: requires agent.approve.'
+            missing: [agent.approve]
+    AgentNotFound:
+      description: '`AGENT_NOT_FOUND`.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    CommissionNotFound:
+      description: '`COMMISSION_NOT_FOUND`.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    PayoutNotFound:
+      description: '`PAYOUT_NOT_FOUND`.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    AgentTransitionNotAllowed:
+      description: |
+        `AGENT_TRANSITION_NOT_ALLOWED`: the move is not in the state machine
+        for the agent's current status. Includes `agentStatus` and `refusal`.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            statusCode: 409
+            error: Conflict
+            code: AGENT_TRANSITION_NOT_ALLOWED
+            message: An agent in this status cannot be approved.
+            agentStatus: ACTIVE
+            refusal: TRANSITION_NOT_ALLOWED
+    AgentStatusNotAllowed:
+      description: '`AGENT_STATUS_NOT_ALLOWED`: this action is not allowed in the agent''s current status. Includes `agentStatus`.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    CommissionStatusNotAllowed:
+      description: |
+        `COMMISSION_STATUS_NOT_ALLOWED` (includes `commissionStatus`) or
+        `COMMISSION_IN_PAYOUT`.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    PayoutStatusNotAllowed:
+      description: '`PAYOUT_STATUS_NOT_ALLOWED`: the payout is not `CREATED`. Includes `payoutStatus`.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    SettingsNotConfigured:
+      description: |
+        `SETTINGS_NOT_CONFIGURED`: a required setting is missing because the
+        settings seed has not run. Nothing is defaulted in code.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Error:
+      type: object
+      required: [statusCode, error, message]
+      description: |
+        `code` is present on every error this contract defines. It is absent
+        only on a 401 for a caller who is not signed in.
+      properties:
+        statusCode: { type: integer, example: 409 }
+        error: { type: string, example: Conflict }
+        code:
+          type: string
+          description: Stable machine-readable code.
+          enum:
+            - VALIDATION_FAILED
+            - ADMIN_ACCESS_REQUIRED
+            - ADMIN_PERMISSION_DENIED
+            - ADMIN_ROUTE_UNPROTECTED
+            - ADMIN_SESSION_REQUIRED
+            - ADMIN_SESSION_INVALID
+            - ADMIN_STEP_UP_REQUIRED
+            - AGENT_NOT_FOUND
+            - AGENT_TRANSITION_NOT_ALLOWED
+            - AGENT_STATUS_NOT_ALLOWED
+            - PAN_NOT_SET
+            - PAN_ALREADY_VERIFIED
+            - PAYOUT_DETAILS_NOT_SET
+            - PAYOUT_DETAILS_ALREADY_VERIFIED
+            - REFERRAL_NOT_FOUND
+            - ATTRIBUTION_CONVERTED
+            - SELF_REFERRAL
+            - COMMISSION_NOT_FOUND
+            - COMMISSION_STATUS_NOT_ALLOWED
+            - COMMISSION_IN_PAYOUT
+            - COMMISSION_AMOUNT_NOT_SET
+            - AMOUNT_EXCEEDS_PAID
+            - PAYOUT_NOT_FOUND
+            - PAYOUT_NOT_ELIGIBLE
+            - PAYOUT_STATUS_NOT_ALLOWED
+            - SETTINGS_NOT_CONFIGURED
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items: { type: string }
+          description: Human readable. Not for branching.
+        missing:
+          type: array
+          items: { type: string }
+          description: On `ADMIN_PERMISSION_DENIED`, the permission keys the caller lacks.
+        agentStatus:
+          allOf:
+            - $ref: '#/components/schemas/AgentStatus'
+          description: On `AGENT_TRANSITION_NOT_ALLOWED` and `AGENT_STATUS_NOT_ALLOWED`.
+        refusal:
+          type: string
+          enum: [UNKNOWN_STATUS, SAME_STATUS, TERMINATED_IS_FINAL, TRANSITION_NOT_ALLOWED]
+          description: On `AGENT_TRANSITION_NOT_ALLOWED`, from `canTransitionAgentStatus`.
+        commissionStatus:
+          allOf:
+            - $ref: '#/components/schemas/CommissionStatus'
+          description: On `COMMISSION_STATUS_NOT_ALLOWED`.
+        payoutStatus:
+          $ref: '#/components/schemas/PayoutStatus'
+        reasons:
+          type: array
+          description: On `PAYOUT_NOT_ELIGIBLE`.
+          items: { $ref: '#/components/schemas/PayoutRefusalReason' }
+        fields:
+          type: array
+          items: { type: string }
+          description: On `VALIDATION_FAILED`, which fields (never their values).
+
+    Reason:
+      type: string
+      minLength: 3
+      maxLength: 500
+      description: Why. Stored on the audit row. (For `reject` it is also shown to the applicant.)
+      example: Documents checked and match the application.
+
+    AgentStatus:
+      type: string
+      enum: [PENDING_APPROVAL, ACTIVE, REJECTED, SUSPENDED, TERMINATED]
+      description: '`SUSPENDED` is shown to the agent as "Paused".'
+
+    AttributionStatus:
+      type: string
+      enum: [ACTIVE, CONVERTED, EXPIRED, REJECTED]
+
+    ReferralSource:
+      type: string
+      enum: [CODE_AT_SIGNUP, LINK_OR_QR, ADDED_BY_AGENT, ENTERED_AT_PAYMENT, ADMIN_SET]
+
+    CommissionStatus:
+      type: string
+      description: |
+        The INTERNAL status (admins only). `ON_HOLD`: inside the hold period.
+        `AWAITING_VERIFICATION`: hold over, member profile not verified yet.
+        `IN_REVIEW`: an admin is deciding. `FROZEN`: the agent is paused or
+        terminated. `READY`: waiting for an admin (auto-approve off).
+        `APPROVED`: payable. `PAID`. `CANCELLED`. `REVERSED`: undone by a
+        refund after approval or payment.
+      enum: [ON_HOLD, AWAITING_VERIFICATION, IN_REVIEW, FROZEN, READY, APPROVED, PAID, CANCELLED, REVERSED]
+
+    PublicCommissionStatus:
+      type: string
+      description: What the agent sees for the same commission (see the table in the description).
+      enum: [ON_HOLD, APPROVED, PAID, CANCELLED]
+
+    PayoutStatus:
+      type: string
+      enum: [CREATED, PAID, CANCELLED]
+
+    PayoutIneligibleReason:
+      type: string
+      enum: [AGENT_NOT_PAYABLE, PAN_NOT_VERIFIED, DETAILS_NOT_VERIFIED, WAIT_NOT_OVER, NOTHING_TO_PAY, BELOW_MINIMUM, PAYOUT_EXISTS]
+
+    PayoutRefusalReason:
+      description: A reason a payout cannot be created, from `decidePayoutEligibility` and `planPayout`.
+      type: string
+      enum: [AGENT_NOT_PAYABLE, PAN_NOT_VERIFIED, DETAILS_NOT_VERIFIED, WAIT_NOT_OVER, NOTHING_TO_PAY, BELOW_MINIMUM, PAYOUT_EXISTS, TAX_RULE_UNSUPPORTED]
+
+    AgentsSummary:
+      type: object
+      required: [byStatus, payoutDetailsAwaitingVerification, referralsNeedingReview, commissionsReady, payoutsCreated]
+      properties:
+        byStatus:
+          type: object
+          description: Count of agents in each status (every status present, zero if none).
+          additionalProperties: { type: integer }
+          example: { PENDING_APPROVAL: 4, ACTIVE: 31, REJECTED: 2, SUSPENDED: 1, TERMINATED: 0 }
+        payoutDetailsAwaitingVerification: { type: integer }
+        referralsNeedingReview: { type: integer }
+        commissionsReady:
+          type: integer
+          nullable: true
+          description: '`READY` commissions awaiting an admin. Null until the commission tables exist (**Not yet implementable**).'
+        payoutsCreated:
+          type: integer
+          nullable: true
+          description: Payouts in `CREATED`. Null until the payout tables exist (**Not yet implementable**).
+
+    AdminAgentListItem:
+      type: object
+      required: [id, name, phoneMasked, city, state, status, createdAt, approvedAt, panOnFile, panVerified, payoutDetailsSet, payoutDetailsVerified, primaryCode]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        phoneMasked: { type: string, example: '+91 98***210' }
+        city: { type: string }
+        state: { type: string }
+        status: { $ref: '#/components/schemas/AgentStatus' }
+        createdAt: { type: string, format: date-time }
+        approvedAt: { type: string, format: date-time, nullable: true }
+        panOnFile: { type: boolean }
+        panVerified: { type: boolean }
+        payoutDetailsSet: { type: boolean }
+        payoutDetailsVerified: { type: boolean }
+        primaryCode: { type: string, nullable: true, example: NM7K2P9X }
+
+    AdminReferralCode:
+      type: object
+      required: [id, code, isPrimary, isActive, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: NM7K2P9X }
+        isPrimary: { type: boolean }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    AdminPayoutDetails:
+      type: object
+      description: Masked. The sealed value is never returned.
+      required: [method, display, verifiedAt, changedAt]
+      properties:
+        method: { type: string, enum: [UPI, BANK] }
+        display: { type: string, example: 'HDFC ****6789' }
+        verifiedAt: { type: string, format: date-time, nullable: true }
+        changedAt:
+          type: string
+          format: date-time
+          description: When the details were last changed; the wait is counted from here.
+
+    StatusHistoryEntry:
+      type: object
+      description: One status change, read from the audit log (`agent.approve`, `agent.reject`, `agent.pause`, ...).
+      required: [from, to, at, actorId, actorType, reason]
+      properties:
+        from: { $ref: '#/components/schemas/AgentStatus' }
+        to: { $ref: '#/components/schemas/AgentStatus' }
+        at: { type: string, format: date-time }
+        actorId: { type: string, nullable: true }
+        actorType: { type: string, enum: [STAFF, MEMBER, AGENT, SYSTEM] }
+        reason: { type: string, nullable: true }
+
+    AdminAgentDetail:
+      type: object
+      description: |
+        Everything an admin sees about an agent. No sealed value, no full
+        phone, no full PAN, no full payout details appear anywhere in it.
+      required: [id, name, phoneMasked, city, state, status, rejectionReason, approvedAt, createdAt, updatedAt, panLast4, panOnFile, panVerifiedAt, payoutDetailsSet, payoutDetails, codes, counts, commissions, statusHistory]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        phoneMasked: { type: string, example: '+91 98***210' }
+        city: { type: string }
+        state: { type: string }
+        status: { $ref: '#/components/schemas/AgentStatus' }
+        rejectionReason: { type: string, nullable: true }
+        approvedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        panLast4: { type: string, nullable: true, example: '234F' }
+        panOnFile: { type: boolean }
+        panVerifiedAt: { type: string, format: date-time, nullable: true }
+        payoutDetailsSet: { type: boolean }
+        payoutDetails:
+          allOf:
+            - $ref: '#/components/schemas/AdminPayoutDetails'
+          nullable: true
+        codes:
+          type: array
+          items: { $ref: '#/components/schemas/AdminReferralCode' }
+        counts:
+          type: object
+          required: [referrals, byAttributionStatus, needsReview]
+          properties:
+            referrals: { type: integer }
+            byAttributionStatus:
+              type: object
+              additionalProperties: { type: integer }
+              example: { ACTIVE: 6, CONVERTED: 3, EXPIRED: 1, REJECTED: 0 }
+            needsReview: { type: integer }
+        commissions:
+          type: object
+          nullable: true
+          description: Null until the commission tables exist (**Not yet implementable**).
+          required: [byStatus, approvedUnpaidPaise, paidPaise]
+          properties:
+            byStatus:
+              type: object
+              description: Counts keyed by the INTERNAL `CommissionStatus`.
+              additionalProperties: { type: integer }
+            approvedUnpaidPaise: { type: integer }
+            paidPaise: { type: integer }
+        statusHistory:
+          type: array
+          description: Oldest first.
+          items: { $ref: '#/components/schemas/StatusHistoryEntry' }
+
+    AdminReferral:
+      type: object
+      required: [id, agentId, source, status, needsReview, codeId, code, userId, maskedPhone, windowEndsAt, createdAt, stage, planName, purchasedAt, commissionId, commissionStatus]
+      properties:
+        id: { type: string, format: uuid, description: The attribution id. }
+        agentId: { type: string, format: uuid }
+        source: { $ref: '#/components/schemas/ReferralSource' }
+        status: { $ref: '#/components/schemas/AttributionStatus' }
+        needsReview: { type: boolean }
+        codeId: { type: string, format: uuid, nullable: true }
+        code: { type: string, nullable: true, example: NM7K2P9X }
+        userId: { type: string, format: uuid, nullable: true, description: 'Null until the person signs up. Staff-only; the agent never sees it.' }
+        maskedPhone: { type: string, nullable: true, example: '+91 98***210' }
+        windowEndsAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        stage:
+          type: string
+          nullable: true
+          enum: [REGISTERED, PROFILE_COMPLETE, PURCHASED]
+          description: Null until the commission tables exist (**Not yet implementable**).
+        planName: { type: string, nullable: true }
+        purchasedAt: { type: string, format: date-time, nullable: true }
+        commissionId: { type: string, format: uuid, nullable: true }
+        commissionStatus:
+          allOf:
+            - $ref: '#/components/schemas/CommissionStatus'
+          nullable: true
+          description: The INTERNAL status.
+
+    CommissionRate:
+      type: object
+      required: [calcType, value]
+      properties:
+        calcType: { type: string, enum: [PERCENTAGE] }
+        value: { type: integer, description: 'Basis points (1000 = 10%).', example: 1000 }
+
+    AdminCommission:
+      type: object
+      required: [id, agentId, agentName, agentStatus, referralId, planName, paidPaise, basePaise, amountPaise, creditedPaise, reversedPaise, rate, status, publicStatus, earnedOn, holdEndsOn, approvedOn, paidOn, payoutId, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        agentId: { type: string, format: uuid }
+        agentName: { type: string }
+        agentStatus: { $ref: '#/components/schemas/AgentStatus' }
+        referralId: { type: string, format: uuid, description: The attribution id. }
+        planName: { type: string }
+        paidPaise: { type: integer, description: What the member paid (the cap for `override`)., example: 99900 }
+        basePaise:
+          type: integer
+          nullable: true
+          description: What the commission is calculated on. Null while `commission.base` is undecided (the CA).
+        amountPaise:
+          type: integer
+          nullable: true
+          description: The commission. Null while the base is undecided, until set by `override`.
+        creditedPaise: { type: integer }
+        reversedPaise: { type: integer }
+        rate: { $ref: '#/components/schemas/CommissionRate' }
+        status: { $ref: '#/components/schemas/CommissionStatus' }
+        publicStatus: { $ref: '#/components/schemas/PublicCommissionStatus' }
+        earnedOn: { type: string, format: date, description: 'Indian time.' }
+        holdEndsOn: { type: string, format: date, nullable: true }
+        approvedOn: { type: string, format: date, nullable: true }
+        paidOn: { type: string, format: date, nullable: true }
+        payoutId: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    PayableAgent:
+      type: object
+      required: [agentId, agentName, agentStatus, period, balancePaise, commissionCount, panVerified, payoutDetails, eligible, reasons, warnings]
+      properties:
+        agentId: { type: string, format: uuid }
+        agentName: { type: string }
+        agentStatus: { $ref: '#/components/schemas/AgentStatus' }
+        period: { type: string, example: '2026-11' }
+        balancePaise: { type: integer, description: Approved and unpaid., example: 60000 }
+        commissionCount: { type: integer }
+        panVerified: { type: boolean }
+        payoutDetails:
+          allOf:
+            - $ref: '#/components/schemas/AdminPayoutDetails'
+          nullable: true
+        eligible: { type: boolean }
+        reasons:
+          type: array
+          description: Every reason a payout cannot be created now. Empty when eligible.
+          items: { $ref: '#/components/schemas/PayoutIneligibleReason' }
+        warnings:
+          type: array
+          description: '`TAX_RULE_NOT_SET` while `payout.tax_withholding` is null (pending the CA).'
+          items: { type: string, enum: [TAX_RULE_NOT_SET] }
+
+    RevealField:
+      type: string
+      enum: [PAN, PAYOUT_DETAILS, PHONE]
+
+    RevealedValues:
+      type: object
+      description: Only the requested fields are present. Returned once, never cached, never stored.
+      required: [revealedAt]
+      additionalProperties: false
+      properties:
+        revealedAt: { type: string, format: date-time }
+        pan: { type: string, example: ABCDE1234F }
+        phone: { $ref: '#/components/schemas/PhoneE164' }
+        payoutDetails:
+          type: object
+          description: |
+            The agent's payout details in the same shape the agent sent:
+            exactly one of `upi` or `bank`.
+          additionalProperties: false
+          minProperties: 1
+          maxProperties: 1
+          properties:
+            upi:
+              type: object
+              required: [vpa]
+              properties:
+                vpa: { type: string, example: ravi@okbank }
+            bank:
+              type: object
+              required: [accountHolderName, accountNumber, ifsc]
+              properties:
+                accountHolderName: { type: string }
+                accountNumber: { type: string }
+                ifsc: { type: string, example: HDFC0001234 }
+
+    PhoneE164:
+      type: string
+      pattern: '^\+[1-9][0-9]{7,14}$'
+      example: '+919876543210'
+
+    AdminPayoutDetail:
+      allOf:
+        - $ref: '#/components/schemas/AdminPayout'
+        - type: object
+          required: [commissions]
+          properties:
+            commissions:
+              type: array
+              items: { $ref: '#/components/schemas/AdminCommission' }
+
+    AdminPayout:
+      type: object
+      required: [id, agentId, agentName, period, amountPaise, taxWithheldPaise, netPaise, status, reference, paidAt, createdAt, createdBy, commissionIds, warnings, cancelReason]
+      properties:
+        id: { type: string, format: uuid }
+        agentId: { type: string, format: uuid }
+        agentName: { type: string }
+        period: { type: string, example: '2026-11' }
+        amountPaise: { type: integer, example: 60000 }
+        taxWithheldPaise: { type: integer, description: 'Always 0 until the CA''s rule is implemented.', example: 0 }
+        netPaise: { type: integer, example: 60000 }
+        status: { $ref: '#/components/schemas/PayoutStatus' }
+        reference: { type: string, nullable: true }
+        paidAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string, description: The staff user id. }
+        commissionIds:
+          type: array
+          items: { type: string, format: uuid }
+        warnings:
+          type: array
+          items: { type: string, enum: [TAX_RULE_NOT_SET] }
+        cancelReason: { type: string, nullable: true }

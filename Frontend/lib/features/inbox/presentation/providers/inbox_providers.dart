@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_providers.dart';
 import '../../../../core/realtime/realtime_providers.dart';
 import '../../../discover/domain/entities/discovery_profile_entity.dart';
+import '../../../../core/network/api_exception.dart';
+import '../../../membership/presentation/providers/membership_providers.dart';
 import '../../data/repositories/conversation_api_repository_impl.dart';
 import '../../domain/entities/conversation_entity.dart';
 import '../../domain/entities/message_entity.dart';
@@ -856,7 +858,12 @@ class MessagesNotifier extends FamilyAsyncNotifier<List<MessageEntity>, String> 
             sent,
             preview: optimistic.type == MessageType.text ? sent.text : '📷 Photo',
           );
-    } catch (_) {
+    } catch (error) {
+      // A plan limit is surfaced by the chat page as the plan sheet; the
+      // bubble still turns red like any failed send.
+      if (error is ApiException && error.isMembershipDenial) {
+        ref.read(chatMembershipDenialProvider.notifier).state = error;
+      }
       final latest = state.valueOrNull;
       if (latest != null) {
         state = AsyncValue.data([

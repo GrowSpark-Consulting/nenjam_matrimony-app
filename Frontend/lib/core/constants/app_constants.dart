@@ -72,6 +72,10 @@ abstract final class AppConstants {
   static const String keyPendingPhone = 'pending_signup_phone';
   static const String keyPendingEmail = 'pending_onboarding_email';
 
+  /// A validated referral code waiting to be attached once the member is
+  /// signed in — see `PendingReferralStore`. Local-only and transient.
+  static const String keyPendingReferralCode = 'pending_referral_code';
+
   /// Set once the new signup onboarding reaches its end. Paired with the
   /// static development OTP verifier — see StorageService.onboardingCompleted.
   static const String keyOnboardingCompleted = 'onboarding_completed';

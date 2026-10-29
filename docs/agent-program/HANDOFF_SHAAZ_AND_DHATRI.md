@@ -102,7 +102,7 @@ in code. The setting keys below are the ones defined in
 | Auto-approve commissions after the hold | On (an admin can switch to manual later, without a deploy) | `commission.auto_approve` = `true` | Decided |
 | Wait after payout details change | 72 hours | `agent.payout_details_wait_hours` = `72` | Decided |
 | Discount only inside the credit window | Yes (default) | `referral.discount_only_in_credit_window` = `true` | Default set; **Pending decision** (Raja to confirm) |
-| Commission base (with or without GST) | — | `commission.base` (`null`, `AMOUNT_PAID` or `AMOUNT_PAID_EXCLUDING_GST`) and `commission.base_provisional` | **Pending decision** (CA) |
+| Commission base (with or without GST) | 10% of the amount **without GST** | `commission.base` = `AMOUNT_PAID_EXCLUDING_GST` and `commission.base_provisional` = `false`. The commission handler computes `base = amountPaid` (after the referral discount) minus the GST part (`taxPaise` from the `PaymentSucceeded` event) | Decided (Raja, 28 Oct) |
 | Tax withholding (TDS) | — | `payout.tax_withholding` (shape unknown, passed through as-is) | **Pending decision** (CA) |
 
 Note: the settings list also contains `referral.discount_stacks_with_coupons`.
@@ -117,16 +117,22 @@ The referral discount is the only discount we handle.
 | Question | Who decides | Where it shows in code (one marked place) |
 |---|---|---|
 | Plan prices | Raja | — |
-| GST and the commission base | CA | `commission.base` setting; `buildCommissionDraft()` leaves the amount empty (`null`) while no base is set |
 | TDS | CA | `planPayout()` refuses any set tax value with `TAX_RULE_UNSUPPORTED` |
-| May a rejected agent re-apply? | Raja | `REJECTED_MAY_REAPPLY` in `agent/agent-status.ts` (currently `true`) |
-| Members with no verified phone | Raja | `decideMissingPhoneHash()` in `referral/decide-attribution.ts` |
-| A terminated agent's pending commission | Raja | `frozenForAgent()` in `commission/decide-commission-transition.ts` (currently frozen) |
 | Partial refund before approval | Raja | `planRefundEffect()` in `commission/plan-refund-effect.ts` (currently cancels the whole commission) |
 | How an agent can pay for a client's plan | Raja | Not started |
 | Tamil wording for the other labels (statuses, stages) | Raja | Comes from `GET /agent/config` (not built yet). The share messages are approved and final (28 Oct); see `FRONTEND_HANDOFF_DHATRI.md` section 6 |
 | Referral link web address | Raja | `link` and `qrPayload` are `null` until decided |
 | Will agents need KYC later? | Raja | — |
+
+**Decided by Raja (28 Oct, evening), no longer pending:**
+- **Commission base:** 10% of the amount without GST (see the settings table above).
+- **A rejected agent may re-apply**; the resubmission goes back to `PENDING_APPROVAL` for admin review (`REJECTED_MAY_REAPPLY` stays `true`).
+- **A terminated agent's waiting commission stays FROZEN** until Raja decides otherwise; commission already approved is still paid.
+- **Roles (Shaaz):** Raja plus one more as Super Admin; a **Partner Manager** role for approving and rejecting agents; payouts only for Raja and the person who pays. Pause, terminate and PAN/phone reveal are not specified yet: Super Admin only for now.
+- **The four agent terms** on the Help screen are approved (a lawyer checks them before launch).
+- **Still open:** the support contact for the Help screen, agent KYC, plan prices, TDS (the CA), the web address.
+
+**Decided (no longer pending): members with no verified phone.** A member with no verified phone can never be credited to an agent (`referral_attributions.phone_hash` is NOT NULL), from any source. `quoteReferral` returns no discount with `PHONE_NOT_VERIFIED` and payment goes on; a code entered at payment follows the same rule.
 
 ---
 

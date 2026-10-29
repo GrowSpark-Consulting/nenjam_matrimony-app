@@ -14,6 +14,7 @@ export interface AttributionInput {
   codeActive: boolean;
   /** AgentStatus of the code's agent, e.g. ACTIVE, SUSPENDED. */
   agentStatus: string;
+  /** The member's verified phone hash; null when there is none (always refused). */
   memberPhoneHash: string | null;
   agentPhoneHash: string | null;
   /** The member already has an attribution: the first agent always stays. */
@@ -37,24 +38,10 @@ export type AttributionRejectReason =
   | 'PHONE_NOT_VERIFIED';
 
 export type AttributionDecision =
-  | { ok: true; windowEndsAt: Date; needsReview?: boolean }
+  | { ok: true; windowEndsAt: Date }
   | { ok: false; reason: AttributionRejectReason; markRejected?: boolean };
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-// ---------------------------------------------------------------------------
-// PENDING DECISION (Raja): what to do when the member's phone hash is missing.
-// Signup sources cannot be trusted without a verified phone, so they are
-// refused; a code entered at payment is accepted but flagged for admin review.
-// This is the ONLY place that rule lives; change it here.
-// ---------------------------------------------------------------------------
-function decideMissingPhoneHash(
-  source: AttributionSource,
-): { ok: false; reason: 'PHONE_NOT_VERIFIED' } | { needsReview: true } {
-  return source === 'ENTERED_AT_PAYMENT'
-    ? { needsReview: true }
-    : { ok: false, reason: 'PHONE_NOT_VERIFIED' };
-}
 
 export function decideAttribution(
   input: AttributionInput,
@@ -89,11 +76,11 @@ export function decideAttribution(
   }
   if (input.memberHasPaid) return { ok: false, reason: 'ALREADY_PAID' };
 
-  let needsReview = false;
+  // A phone hash is required on every attribution, whatever the source: the
+  // database column is NOT NULL, and one attribution per phone is how a second
+  // account on the same number is caught. No verified phone, no credit.
   if (input.memberPhoneHash === null) {
-    const missing = decideMissingPhoneHash(input.source);
-    if ('ok' in missing) return missing;
-    needsReview = missing.needsReview;
+    return { ok: false, reason: 'PHONE_NOT_VERIFIED' };
   }
 
   const windowEndsAt =
@@ -101,7 +88,5 @@ export function decideAttribution(
       ? new Date(input.now.getTime())
       : new Date(input.now.getTime() + input.creditWindowDays * MS_PER_DAY);
 
-  return needsReview
-    ? { ok: true, windowEndsAt, needsReview: true }
-    : { ok: true, windowEndsAt };
+  return { ok: true, windowEndsAt };
 }

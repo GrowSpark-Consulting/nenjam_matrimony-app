@@ -8,17 +8,29 @@ must be true before limits are ever enforced. Pair with [README.md](README.md)
 
 | # | Decision | Why it matters | Current state |
 |---|---|---|---|
-| P1 | **Prices** for Gold 3 / 6 months and Platinum 3 / 6 / 12 months (paise, incl. or excl. GST) | Nothing is purchasable without them | All durations unpriced + inactive |
+| P1 | **Prices** for Gold 3 / 6 months and Platinum 3 / 6 / 12 months (paise, incl. or excl. GST). The durations are fixed; only the prices are open — **pending with Raja** | Nothing is purchasable without them | All durations unpriced + inactive, so `GET /membership/plans` returns empty `durations` for every plan and `checkoutAvailable: false` |
 | P2 | **Bonus days** on longer plans ("bonus weeks", PDF p.3) | Changes the term members get | 0 everywhere |
 | P3 | **Gold contact pool**: PDF table says 60 per 3-month plan, PDF principles say "about 50" | Billing promise | 60 (table) |
 | P4 | **Legacy subscribers**: how existing pre-catalogue SILVER/GOLD subscriptions (if any exist in production) should map | Previously purchased benefits | No limits while in force (`LEGACY`) — never reduced |
 | P5 | **"Let free members contact you"**: a Platinum toggle the member controls, or always on? | Who can message whom | Always on for Platinum |
 | P6 | **Payment records on account deletion**: deleted with the account today (pre-existing cascade). Tax/GST retention may require keeping them | Legal retention | Deleted with the account |
-| P7 | **Web purchases**: support via Razorpay `checkout.js` or hide buying on web | Flutter scope | — |
+| P7 | **Web purchases**: support via Razorpay `checkout.js` or hide buying on web. The backend checkout and verify endpoints are the same either way | Flutter scope | Open, but not blocking: checkout is unavailable on every platform today |
 
 Prices are set with `PlanCatalogAdminService.setDuration` by an admin whose role grants
 `plan.publish` (audited). There is no HTTP surface for it yet; until the admin panel's
 plan screens exist, use a reviewed one-off script run by an engineer.
+
+### Current state (28 Oct 2026)
+
+- **No plan is purchasable.** Prices are not set (P1), so every plan has empty
+  `durations` and `checkoutAvailable` is `false`.
+- **Deployed:** the membership endpoints exist on `https://nenjam-matrimony.onrender.com`
+  (they answer 401 without a token), the migrations are applied, and the plan
+  catalogue loads. After Render has been idle, the first request can take about
+  60 seconds.
+- **Enforcement** is in `shadow` mode (nothing is denied) and **checkout is off**.
+  Neither payments nor entitlement enforcement is production-ready; §2 and §6
+  list what has to happen first.
 
 ## 2. Razorpay readiness
 

@@ -7,6 +7,8 @@ import 'package:nenjam_matrimony/features/discover/domain/entities/compatibility
 import 'package:nenjam_matrimony/features/discover/domain/entities/discovery_profile_entity.dart';
 import 'package:nenjam_matrimony/features/matches/presentation/pages/matches_page.dart';
 import 'package:nenjam_matrimony/features/matches/presentation/providers/reel_feed_provider.dart';
+import 'package:nenjam_matrimony/features/membership/data/repositories/mock_membership_repository.dart';
+import 'package:nenjam_matrimony/features/membership/presentation/providers/membership_providers.dart';
 import 'package:nenjam_matrimony/features/premium/presentation/pages/premium_page.dart';
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 
@@ -120,7 +122,8 @@ void main() {
           expect(
             tester.getRect(info).bottom,
             lessThanOrEqualTo(navTop),
-            reason: 'the metadata chips (location/height/education) must sit '
+            reason:
+                'the metadata chips (location/height/education) must sit '
                 'above the floating pill, not underneath it',
           );
         },
@@ -137,7 +140,16 @@ void main() {
         addTearDown(tester.view.resetDevicePixelRatio);
         addTearDown(() => tester.binding.setSurfaceSize(null));
 
-        await _pump(tester, const PremiumPage(), size);
+        await _pump(
+          tester,
+          const PremiumPage(),
+          size,
+          overrides: [
+            membershipRepositoryProvider.overrideWithValue(
+              MockMembershipRepository(),
+            ),
+          ],
+        );
 
         // The page must paint all the way down: if the scroll viewport stops
         // at the top of the pill (a SafeArea eating the inset), the Scaffold's
@@ -147,7 +159,8 @@ void main() {
         expect(
           viewport.bottom,
           size.height,
-          reason: 'the scroll viewport must run to the bottom of the screen so '
+          reason:
+              'the scroll viewport must run to the bottom of the screen so '
               'the page shows through around the pill',
         );
 
@@ -164,7 +177,8 @@ void main() {
         expect(
           tester.getRect(cta.last).bottom,
           lessThanOrEqualTo(navTop),
-          reason: 'scrolled fully to the bottom, the Proceed CTA must rest '
+          reason:
+              'scrolled fully to the bottom, the Proceed CTA must rest '
               'above the floating pill',
         );
       });

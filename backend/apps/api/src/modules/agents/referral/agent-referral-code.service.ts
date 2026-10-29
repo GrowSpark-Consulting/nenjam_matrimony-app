@@ -33,7 +33,7 @@
  * | ALREADY_ATTRIBUTED  | member (or their phone) is already credited           | 409  | ALREADY_ATTRIBUTED             |
  * | SELF_REFERRAL       | the code belongs to the member's own phone            | 422  | SELF_REFERRAL                  |
  * | ALREADY_PAID        | the member has already paid for a plan                | 422  | ALREADY_PAID (new code)        |
- * | PHONE_NOT_VERIFIED  | no verified phone, and the source is not payment      | 422  | PHONE_NOT_VERIFIED (new code)  |
+ * | PHONE_NOT_VERIFIED  | the member has no verified phone (any source)         | 422  | PHONE_NOT_VERIFIED (new code)  |
  *
  * The validate call never refuses with anything but RATE_LIMITED: every
  * invalid code, whatever the reason, is the same `{ valid: false }`.
@@ -58,9 +58,6 @@ import type {
 import type { AgentUnitOfWork } from '../ports/agent-unit-of-work.port';
 import {
   parseAgentProgramSettings,
-  REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY,
-  REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY,
-  REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY,
   REFERRAL_CREDIT_WINDOW_DAYS_KEY,
 } from '../settings/agent-program-settings';
 import { toDisplayName } from './agent-referral-view';
@@ -69,13 +66,10 @@ import {
   AttributionSource,
   decideAttribution,
 } from './decide-attribution';
-import {
-  decideCodeValidationAttempt,
-  toValidateResponse,
-  ValidateResponse,
-} from './code-validation';
+import { toValidateResponse, ValidateResponse } from './code-validation';
 import { normalizeReferralCode } from './normalize-referral-code';
 import { looksLikeRawIp } from './requester-key';
+import { ReferralAttemptLimiter } from './referral-attempt-limiter';
 
 /** An opaque key is a short hash, not free text. */
 const MAX_REQUESTER_KEY_LENGTH = 200;
@@ -102,21 +96,17 @@ export interface AgentReferralCodeServiceDeps {
   newId?: () => string;
 }
 
-interface Limits {
-  ipLimit: number;
-  codeLimit: number;
-  windowSeconds: number;
-}
-
 type AttachOutcome =
   | { ok: true; agentName: string; windowEndsAt: Date }
   | { ok: false; reason: AttributionRejectReason };
 
 export class AgentReferralCodeService {
   private readonly newId: () => string;
+  private readonly limiter: ReferralAttemptLimiter;
 
   constructor(private readonly deps: AgentReferralCodeServiceDeps) {
     this.newId = deps.newId ?? randomUUID;
+    this.limiter = new ReferralAttemptLimiter(deps);
   }
 
   /**
@@ -143,7 +133,7 @@ export class AgentReferralCodeService {
       );
     }
     const code = normalizeReferralCode(rawCode);
-    await this.throttle(`requester:${requesterKey}`, code);
+    await this.limiter.check(`requester:${requesterKey}`, code);
 
     const record =
       code === null ? null : await this.deps.codes.findByCode(code);
@@ -172,7 +162,7 @@ export class AgentReferralCodeService {
     if (code === null) {
       throw new AgentServiceError('VALIDATION_FAILED', { fields: ['code'] });
     }
-    await this.throttle(`user:${memberId}`, code);
+    await this.limiter.check(`user:${memberId}`, code);
     const creditWindowDays = await this.creditWindowDays();
 
     let outcome: AttachOutcome;
@@ -246,6 +236,7 @@ export class AgentReferralCodeService {
       // row (one per member) or their phone is already credited.
       if (
         decision.markRejected === true &&
+        member.phoneHash !== null &&
         record !== null &&
         agent !== null &&
         existing === null &&
@@ -258,11 +249,13 @@ export class AgentReferralCodeService {
             agentId: agent.id,
             codeId: record.id,
             source: input.source,
+            // A self-referral needs a phone hash to be detected at all.
             memberPhoneHash: member.phoneHash,
             attributedAt: now,
             status: 'REJECTED',
             windowEndsAt: now,
-            needsReview: false,
+            // Kept so an admin can look at it (and correct it, if it is wrong).
+            needsReview: true,
           },
           tx,
         );
@@ -280,9 +273,12 @@ export class AgentReferralCodeService {
       return { ok: false, reason: decision.reason };
     }
 
-    // The checks above guarantee both exist.
+    // The checks above guarantee all three exist.
     if (record === null || agent === null) {
       return { ok: false, reason: 'INVALID_CODE' };
+    }
+    if (member.phoneHash === null) {
+      return { ok: false, reason: 'PHONE_NOT_VERIFIED' };
     }
     const created = await attributions.create(
       {
@@ -295,7 +291,7 @@ export class AgentReferralCodeService {
         attributedAt: now,
         status: 'ACTIVE',
         windowEndsAt: decision.windowEndsAt,
-        needsReview: decision.needsReview === true,
+        needsReview: false,
       },
       tx,
     );
@@ -307,7 +303,7 @@ export class AgentReferralCodeService {
         entityId: created.id,
         metadata: {
           source: input.source,
-          needsReview: decision.needsReview === true,
+          needsReview: false,
         },
       },
       tx,
@@ -316,75 +312,6 @@ export class AgentReferralCodeService {
       ok: true,
       agentName: agent.name,
       windowEndsAt: decision.windowEndsAt,
-    };
-  }
-
-  /** Refuses with RATE_LIMITED, or records this attempt. Settings are read each time. */
-  private async throttle(
-    requesterKey: string,
-    codeKey: string | null,
-  ): Promise<void> {
-    const limits = await this.limits();
-    const now = this.deps.clock.now();
-    const windowMs = limits.windowSeconds * 1000;
-    const since = new Date(now.getTime() - windowMs);
-
-    const requester = await this.deps.attempts.window(
-      'REQUESTER',
-      requesterKey,
-      since,
-    );
-    // Text that is not a code counts against the requester only.
-    const code =
-      codeKey === null
-        ? { count: 0, oldestAt: null }
-        : await this.deps.attempts.window('CODE', codeKey, since);
-
-    const decision = decideCodeValidationAttempt({
-      ipAttempts: requester.count,
-      codeAttempts: code.count,
-      ipLimit: limits.ipLimit,
-      codeLimit: limits.codeLimit,
-    });
-    if (!decision.allowed) {
-      const oldest =
-        decision.reason === 'IP_LIMIT' ? requester.oldestAt : code.oldestAt;
-      const msLeft =
-        (oldest?.getTime() ?? now.getTime()) + windowMs - now.getTime();
-      throw new AgentServiceError('RATE_LIMITED', {
-        retryAfterSeconds: Math.max(1, Math.ceil(msLeft / 1000)),
-      });
-    }
-    await this.deps.attempts.record({ requesterKey, codeKey, at: now });
-  }
-
-  private async limits(): Promise<Limits> {
-    const keys = [
-      REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY,
-      REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY,
-      REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY,
-    ];
-    const parsed = parseAgentProgramSettings(
-      await this.deps.settings.getMany(keys),
-    );
-    const missing = keys.filter((key) => parsed.missing.includes(key));
-    const {
-      codeValidationIpLimit,
-      codeValidationCodeLimit,
-      codeValidationWindowSeconds,
-    } = parsed.settings;
-    if (
-      missing.length > 0 ||
-      codeValidationIpLimit === undefined ||
-      codeValidationCodeLimit === undefined ||
-      codeValidationWindowSeconds === undefined
-    ) {
-      throw new AgentConfigError(missing);
-    }
-    return {
-      ipLimit: codeValidationIpLimit,
-      codeLimit: codeValidationCodeLimit,
-      windowSeconds: codeValidationWindowSeconds,
     };
   }
 
@@ -420,7 +347,7 @@ function refusal(reason: AttributionRejectReason): AgentServiceError {
 }
 
 /** "Ravi Kumar Singh" -> first "Ravi", last "Singh"; a single name has no last. */
-function splitName(name: string | undefined | null): {
+export function splitName(name: string | undefined | null): {
   first: string | null;
   last: string | null;
 } {

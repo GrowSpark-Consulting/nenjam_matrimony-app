@@ -37,7 +37,8 @@ import '../widgets/identity_hero_card.dart';
 import '../widgets/match_journey_card.dart';
 import '../widgets/partner_preference_card.dart';
 import '../widgets/photo_gallery_card.dart';
-import '../widgets/premium_membership_card.dart';
+import '../../../membership/presentation/providers/membership_providers.dart';
+import '../../../membership/presentation/widgets/membership_status_card.dart';
 import '../widgets/profile_performance_card.dart';
 import '../widgets/quick_actions_card.dart';
 import '../widgets/today_priority_card.dart';
@@ -390,9 +391,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     // A failed check isn't "not taken" — a neutral retry,
                     // never the take-the-quiz prompt.
                     error: (_, __) => PsychologyStatusCheckFailed(
-                      onRetry: () => ref.invalidate(
-                        myPersonalityResultProvider,
-                      ),
+                      onRetry: () =>
+                          ref.invalidate(myPersonalityResultProvider),
                     ),
                     // Not taken (404): a soft, optional prompt. Completed:
                     // status only (retake lives on the quiz page).
@@ -486,6 +486,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   // step (edit mode), which manages the same provider.
                   child: NmPhotoGalleryCard(
                     photoUrls: photos.map((p) => p.cdnUrl).toList(),
+                    maxPhotos: ref.watch(profilePhotoCapProvider),
                     onAddTap: () =>
                         openEditProfile(context, ref, wizardStep: 11),
                   ),
@@ -493,18 +494,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 gap,
 
                 // ── 11. Premium Membership ────────────────────────
-                _FadeInSection(
+                const _FadeInSection(
                   delay: 540,
-                  child: NmPremiumMembershipCard(
-                    // TODO(backend): no subscription/premium-status
-                    // endpoint is wired yet (ApiEndpoints.
-                    // subscriptionStatus is unused) — placeholder until
-                    // that's implemented.
-                    isPremiumMember: false,
-                    // Premium is a bottom-nav tab — switch via the shell's
-                    // go navigation, not a stacked push.
-                    onCtaTap: () => context.go(RouteNames.premium),
-                  ),
+                  // Driven by GET /membership/me.
+                  child: MembershipStatusCard(),
                 ),
                 gap,
 
@@ -570,19 +563,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       surfaceTintColor: Colors.transparent,
       title: Text(
         l10n.profileTitle,
-        style: AppTypography.titleLarge.copyWith(
-          color: AppColors.primary,
-        ),
+        style: AppTypography.titleLarge.copyWith(color: AppColors.primary),
       ),
       actions: [
         // Existing settings navigation — UNCHANGED
         IconButton(
           tooltip: l10n.settingsTitle,
           onPressed: () => context.push(RouteNames.settings),
-          icon: const Icon(
-            Icons.settings_outlined,
-            color: AppColors.primary,
-          ),
+          icon: const Icon(Icons.settings_outlined, color: AppColors.primary),
         ),
         const SizedBox(width: AppSpacing.sm),
       ],

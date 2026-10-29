@@ -30,9 +30,15 @@ class HelpPage extends StatelessWidget {
       appBar: AppBar(title: Text(AppLocalizations.of(context).drawerHelp)),
       body: SafeArea(
         child: ListView(
-          padding: NmContentWidth.pagePadding(context, const EdgeInsets.all(20)),
+          padding: NmContentWidth.pagePadding(
+            context,
+            const EdgeInsets.all(20),
+          ),
           children: [
-            Text(AppLocalizations.of(context).helpFaqTitle, style: AppTypography.titleLarge),
+            Text(
+              AppLocalizations.of(context).helpFaqTitle,
+              style: AppTypography.titleLarge,
+            ),
             const SizedBox(height: 16),
             const _FaqItem(
               question: 'How does AI matching work?',
@@ -50,7 +56,10 @@ class HelpPage extends StatelessWidget {
                   'Go to the Premium tab from the bottom menu or navigation drawer to explore luxury membership plans.',
             ),
             const SizedBox(height: 32),
-            Text(AppLocalizations.of(context).helpStillNeedHelp, style: AppTypography.titleLarge),
+            Text(
+              AppLocalizations.of(context).helpStillNeedHelp,
+              style: AppTypography.titleLarge,
+            ),
             const SizedBox(height: 16),
             ListTile(
               leading: const Icon(Icons.support_agent_rounded),
@@ -100,6 +109,14 @@ class HelpPage extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => context.push(RouteNames.ticketHistory),
             ),
+            // Help text for agents only — not an entry point into the Partner
+            // Program, which opens from the website landing page alone.
+            ListTile(
+              leading: const Icon(Icons.handshake_outlined),
+              title: Text(l10n.partnerHelpEntry),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => context.push(RouteNames.partnerProgramHelp),
+            ),
           ],
         ),
       ),
@@ -117,9 +134,7 @@ class _FaqItem extends StatelessWidget {
     return ExpansionTile(
       title: Text(question, style: AppTypography.titleSmall),
       childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-      children: [
-        Text(answer, style: AppTypography.bodyMedium),
-      ],
+      children: [Text(answer, style: AppTypography.bodyMedium)],
     );
   }
 }

@@ -10,6 +10,7 @@ import '../../../../core/services/storage_service.dart';
 import '../../../authentication/data/services/backend_sync_service.dart';
 import '../../../authentication/domain/services/local_auth_session.dart';
 import '../../../authentication/presentation/providers/auth_providers.dart';
+import '../../../referral/presentation/providers/referral_providers.dart';
 import '../../../authentication/presentation/utils/post_auth_destination.dart';
 import '../../../registration/domain/models/profile_draft.dart';
 import '../../../registration/domain/models/profile_flow_mode.dart';
@@ -114,6 +115,12 @@ class SplashController extends Notifier<void> {
     // Best-effort: refreshes this session's mirror in the NestJS + Postgres
     // backend on app resume. Never awaited — must not block the splash.
     unawaited(syncUserWithBackend(ref.read(apiClientProvider)));
+
+    // A referral code entered during signup that has not attached yet — the
+    // app was killed in between, or the last attempt failed and is due a
+    // retry. Silent and never awaited: the splash must not wait on it, and
+    // the controller itself decides whether there is anything to send.
+    unawaited(ref.read(referralAttachmentControllerProvider).attachPending());
 
     // Phone OTP verification is disabled for now, so email is the only thing
     // gated on — and only for an account that actually carries an address.

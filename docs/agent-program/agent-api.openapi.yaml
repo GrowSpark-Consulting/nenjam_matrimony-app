@@ -858,7 +858,7 @@ paths:
             |---|---|
             | `SELF_REFERRAL` | The code belongs to the member's own phone. Permanent. |
             | `ALREADY_PAID` | The member has already paid for a plan, so a code can no longer be attached. |
-            | `PHONE_NOT_VERIFIED` | The member has no verified phone, which a code at sign-up needs. |
+            | `PHONE_NOT_VERIFIED` | The member has no verified phone. Any code needs one: at sign-up, by link or QR, or at payment. |
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
