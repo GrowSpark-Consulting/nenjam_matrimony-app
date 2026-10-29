@@ -176,6 +176,28 @@ caller (the payout destination) checks `hasFreshStepUp(admin)`. Every admin resp
 - **`validationFailed`** (`@app/common`): the 400 `VALIDATION_FAILED` body every validation
   failure uses; on id parameters, `new ParseUUIDPipe({ exceptionFactory: validationFailed })`.
 
+### Payments for the agent program (`SubscriptionModule`)
+
+- **Referral quote:** provide your quote service under `AGENT_REFERRAL_QUOTE` (`@app/common`)
+  from a **`@Global()`** module. Checkout injects it optionally:
+  - Without it, there's no discount and a typed code gets 422 `PROMO_CODES_UNAVAILABLE`.
+  - With it, checkout calls `quote({ memberId, promoCode, planPriceId, listAmountPaise })` for
+    every purchase (with or without a typed code).
+  - Checkout refuses to charge when `taxableAfterDiscountPaise ≠ list − discount`, or when the
+    discount and its source disagree.
+- **Payment events:**
+  - Subscribe with `ReferralEventBus.subscribe(handler)` (import `SubscriptionModule`) in
+    `onModuleInit`.
+  - `PaymentSucceeded` is written when a purchase activates a plan. `PaymentRefunded` is written
+    for each refund of a captured payment, with `refundedTaxPaise` computed on the running total.
+  - Both are written in the payment's transaction (outbox `payment_event_outbox`) and delivered
+    after commit, oldest first, **at least once**.
+  - A handler that throws leaves its event to be retried. With no subscriber, events wait.
+  - `livemode: false` marks Razorpay test-mode payments: never a real commission.
+- **GST:** the `payment.gst_rate_bps` setting, seeded at 0. Checkout answers 503
+  `CHECKOUT_UNAVAILABLE` if it's missing, and `PUT /admin/settings` refuses anything but an
+  integer 0–10000.
+
 ## Environment
 
 | Var | Where | Notes |

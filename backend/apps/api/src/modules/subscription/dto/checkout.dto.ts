@@ -1,13 +1,15 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsIn,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Matches,
   MaxLength,
 } from 'class-validator';
+import type { PaymentDiscountSource } from '@app/common';
 import type {
   SubscriptionPlanName,
   SubscriptionStatus,
@@ -28,6 +30,16 @@ export class CheckoutDto {
   @IsInt()
   @IsIn([1, 3, 6, 12, 24])
   months!: number;
+
+  @ApiPropertyOptional({
+    example: 'NM7K2P9X',
+    description:
+      'A referral code the member typed. Refused (422) if it gives no discount; leave it out otherwise.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  promoCode?: string;
 }
 
 /** Body for POST /membership/checkout/verify — exactly the three values the
@@ -61,6 +73,24 @@ export interface CheckoutResponseDto {
   keyId: string;
   plan: { code: SubscriptionPlanName; name: string };
   months: number;
+  /** How amountInPaise was reached; show it before payment. */
+  pricing: CheckoutPricingDto;
+  /** Present when a referral discount applies. */
+  referral: { agentDisplayName: string | null } | null;
+}
+
+/** All in paise. GST is added on top: total = list − discount + tax. */
+export interface CheckoutPricingDto {
+  /** The plan price, excluding GST. */
+  listAmountPaise: number;
+  discountPaise: number;
+  discountSource: PaymentDiscountSource;
+  taxableAmountPaise: number;
+  /** 1800 = 18%; 0 while the business is not GST-registered. */
+  taxRateBps: number;
+  taxPaise: number;
+  /** = amountInPaise: what the member pays. */
+  totalPaise: number;
 }
 
 /**

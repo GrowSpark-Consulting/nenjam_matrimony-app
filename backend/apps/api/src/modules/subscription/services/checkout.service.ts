@@ -1,11 +1,33 @@
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
+  Inject,
   Injectable,
+  Logger,
   NotFoundException,
+  type OnModuleInit,
+  Optional,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import {
+  AGENT_REFERRAL_QUOTE,
+  type ReferralQuoteProvider,
+  type ReferralQuoteResult,
+} from '@app/common';
 import { PrismaService } from '@app/database';
 import { PlanCatalogService } from '../../entitlements/catalog/plan-catalog.service';
+import { IdentifierHashService } from '../../platform/identifier-hash.service';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import {
+  GST_RATE_SETTING,
+  parseGstRateBps,
+  priceCheckout,
+  PricingError,
+  type CheckoutPricing,
+} from '../domain/pricing';
+import { PaymentEventDispatcher } from '../events/payment-event-outbox';
+import { paymentSourceHashOf } from '../events/payment-events';
 import { CheckoutDto, VerifyCheckoutDto } from '../dto/checkout.dto';
 import type {
   CheckoutResponseDto,
@@ -21,28 +43,52 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /**
  * Buying a plan, in two steps the client drives:
  *
- *  1. `start` — validates the plan and duration are on sale, creates a
- *     Razorpay order for the CURRENT price, and records a PENDING
- *     subscription + PENDING payment. The subscription pins the entitlement
- *     version and the price on sale at this moment, so what the member saw is
- *     what they get. PENDING grants nothing.
+ *  1. `start` — validates the plan and duration are on sale, prices the
+ *     purchase (list price − referral discount, GST added on top; see
+ *     domain/pricing.ts), creates a Razorpay order for that total, and
+ *     records a PENDING subscription + PENDING payment carrying the whole
+ *     breakdown. The subscription pins the entitlement version and the price
+ *     on sale at this moment, so what the member saw is what they get.
+ *     PENDING grants nothing.
  *  2. `verify` — checks the Razorpay signature, then asks Razorpay for the
  *     payment itself and activates only if it is CAPTURED for this order at
  *     the checkout amount. The client never supplies a status or an amount.
  *     The webhook (RazorpayWebhookService) activates the same order
  *     independently; whichever arrives first wins, the other is a no-op.
  *
- * Both answer 503 until Razorpay is configured.
+ * Both answer 503 until Razorpay is configured; `start` also while the GST
+ * setting is missing (there is no default rate in code).
+ *
+ * The referral discount comes from the agent program's quote service
+ * (AGENT_REFERRAL_QUOTE), injected optionally: without it there is no
+ * discount and a typed promo code is refused.
  */
 @Injectable()
-export class CheckoutService {
+export class CheckoutService implements OnModuleInit {
+  private readonly logger = new Logger(CheckoutService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly catalog: PlanCatalogService,
     private readonly razorpay: RazorpayService,
     private readonly lifecycle: SubscriptionLifecycleService,
     private readonly repository: SubscriptionRepository,
+    private readonly settings: PlatformSettingsService,
+    private readonly hasher: IdentifierHashService,
+    private readonly dispatcher: PaymentEventDispatcher,
+    @Optional()
+    @Inject(AGENT_REFERRAL_QUOTE)
+    private readonly referralQuote?: ReferralQuoteProvider,
   ) {}
+
+  /** The admin settings API refuses a GST rate checkout couldn't use. */
+  onModuleInit(): void {
+    this.settings.registerValidator(GST_RATE_SETTING, (value) =>
+      parseGstRateBps(value) === null
+        ? `${GST_RATE_SETTING} must be an integer from 0 to 10000 (basis points: 1800 = 18%).`
+        : null,
+    );
+  }
 
   async start(
     userId: string,
@@ -69,9 +115,23 @@ export class CheckoutService {
       throw new BadRequestException('That plan is not available.');
     }
 
+    const promoCode = dto.promoCode?.trim() || null;
+    const quote = await this.quoteReferral(
+      userId,
+      promoCode,
+      duration.id,
+      duration.priceInPaise,
+    );
+    const pricing = this.price(
+      duration.priceInPaise,
+      quote,
+      await this.gstRateBps(),
+    );
+    const livemode = this.razorpay.isLiveMode();
+
     const subscriptionId = randomUUID();
     const order = await this.razorpay.createOrder({
-      amountInPaise: duration.priceInPaise,
+      amountInPaise: pricing.totalPaise,
       currency: duration.currency,
       receipt: subscriptionId,
       notes: {
@@ -79,6 +139,9 @@ export class CheckoutService {
         subscriptionId,
         plan: plan.code,
         months: String(duration.months),
+        listPaise: String(pricing.listAmountPaise),
+        discountPaise: String(pricing.discountPaise),
+        taxPaise: String(pricing.taxPaise),
       },
     });
 
@@ -107,9 +170,18 @@ export class CheckoutService {
           userId,
           subscriptionId,
           razorpayOrderId: order.id,
-          amountInr: duration.priceInPaise!,
+          amountInr: pricing.totalPaise,
           currency: duration.currency,
           status: 'PENDING',
+          paidBy: 'MEMBER',
+          livemode,
+          listAmountPaise: pricing.listAmountPaise,
+          discountPaise: pricing.discountPaise,
+          discountSource: pricing.discountSource,
+          heldReferralCodeId: pricing.heldReferralCodeId,
+          taxableAmountPaise: pricing.taxableAmountPaise,
+          taxRateBps: pricing.taxRateBps,
+          taxPaise: pricing.taxPaise,
         },
       });
       await this.repository.recordEvent(tx, {
@@ -124,6 +196,11 @@ export class CheckoutService {
           months: duration.months,
           priceInPaise: duration.priceInPaise,
           planVersion: version.version,
+          discountPaise: pricing.discountPaise,
+          taxRateBps: pricing.taxRateBps,
+          taxPaise: pricing.taxPaise,
+          totalPaise: pricing.totalPaise,
+          livemode,
         },
       });
     });
@@ -131,12 +208,104 @@ export class CheckoutService {
     return {
       subscriptionId,
       orderId: order.id,
-      amountInPaise: duration.priceInPaise,
+      amountInPaise: pricing.totalPaise,
       currency: duration.currency,
       keyId,
       plan: { code: plan.code, name: plan.name },
       months: duration.months,
+      pricing: {
+        listAmountPaise: pricing.listAmountPaise,
+        discountPaise: pricing.discountPaise,
+        discountSource: pricing.discountSource,
+        taxableAmountPaise: pricing.taxableAmountPaise,
+        taxRateBps: pricing.taxRateBps,
+        taxPaise: pricing.taxPaise,
+        totalPaise: pricing.totalPaise,
+      },
+      referral:
+        pricing.discountSource === 'NONE'
+          ? null
+          : { agentDisplayName: quote?.agentDisplayName ?? null },
     };
+  }
+
+  /**
+   * The agent program's quote, or null without one. A typed code that gives
+   * no discount is refused (422) rather than silently charged in full; a
+   * failing quote service refuses the checkout (503) rather than guessing.
+   */
+  private async quoteReferral(
+    memberId: string,
+    promoCode: string | null,
+    planPriceId: string,
+    listAmountPaise: number,
+  ): Promise<ReferralQuoteResult | null> {
+    if (!this.referralQuote) {
+      if (promoCode) {
+        throw checkoutError(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          'PROMO_CODES_UNAVAILABLE',
+          'Referral codes can’t be used yet. Remove the code to continue.',
+        );
+      }
+      return null;
+    }
+    let quote: ReferralQuoteResult;
+    try {
+      quote = await this.referralQuote.quote({
+        memberId,
+        promoCode,
+        planPriceId,
+        listAmountPaise,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Referral quote failed for a checkout: ${(error as Error).message}`,
+      );
+      throw checkoutUnavailable();
+    }
+    if (promoCode && quote.discountSource === 'NONE') {
+      throw checkoutError(
+        HttpStatus.UNPROCESSABLE_ENTITY,
+        'PROMO_CODE_REJECTED',
+        'That code can’t be used for this purchase.',
+        { reason: quote.rejectedReason ?? 'NOT_APPLICABLE' },
+      );
+    }
+    return quote;
+  }
+
+  /** The GST rate setting; 503 while it is missing or unusable. */
+  private async gstRateBps(): Promise<number> {
+    const values = await this.settings.getMany([GST_RATE_SETTING]);
+    const rate = parseGstRateBps(values[GST_RATE_SETTING]);
+    if (rate === null) {
+      this.logger.error(
+        `${GST_RATE_SETTING} is missing or not an integer 0–10000: checkout refused.`,
+      );
+      throw checkoutUnavailable();
+    }
+    return rate;
+  }
+
+  private price(
+    listAmountPaise: number,
+    quote: ReferralQuoteResult | null,
+    taxRateBps: number,
+  ): CheckoutPricing {
+    try {
+      return priceCheckout(listAmountPaise, quote, taxRateBps);
+    } catch (error) {
+      if (
+        error instanceof PricingError &&
+        error.code === 'BELOW_MINIMUM_CHARGE'
+      ) {
+        throw new BadRequestException('That plan is not available.');
+      }
+      // A quote that doesn't add up: never charge on it.
+      this.logger.error(`Checkout refused: ${(error as Error).message}`);
+      throw checkoutUnavailable();
+    }
   }
 
   async verify(
@@ -183,8 +352,10 @@ export class CheckoutService {
           currency: provider.currency,
           actorId: userId,
           via: 'CHECKOUT_VERIFY',
+          paymentSourceHash: paymentSourceHashOf(this.hasher, provider.vpa),
         }),
       );
+      this.dispatcher.dispatchSoon();
     } else if (
       provider.status === 'authorized' ||
       provider.status === 'created'
@@ -209,4 +380,34 @@ export class CheckoutService {
       endDate: active ? subscription.endDate.toISOString() : null,
     };
   }
+}
+
+/** The `{ statusCode, error, code, message }` body the app branches on. */
+function checkoutError(
+  status: HttpStatus.UNPROCESSABLE_ENTITY | HttpStatus.SERVICE_UNAVAILABLE,
+  code: string,
+  message: string,
+  extra?: Record<string, unknown>,
+): HttpException {
+  return new HttpException(
+    {
+      statusCode: status,
+      error:
+        status === HttpStatus.UNPROCESSABLE_ENTITY
+          ? 'Unprocessable Entity'
+          : 'Service Unavailable',
+      code,
+      message,
+      ...extra,
+    },
+    status,
+  );
+}
+
+function checkoutUnavailable(): HttpException {
+  return checkoutError(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'CHECKOUT_UNAVAILABLE',
+    'Payments are temporarily unavailable. Please try again shortly.',
+  );
 }
