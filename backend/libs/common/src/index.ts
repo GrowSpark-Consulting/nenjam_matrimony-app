@@ -12,3 +12,4 @@ export * from './events/domain-event-names.const';
 export * from './auth/auth-user-cache';
 export * from './auth/dev-auth';
 export * from './file-types/sniff-media';
+export * from './contracts/referral-events';
