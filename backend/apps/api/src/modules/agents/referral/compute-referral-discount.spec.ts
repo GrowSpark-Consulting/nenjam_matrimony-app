@@ -19,7 +19,7 @@ describe('computeReferralDiscount', () => {
     expect(computeReferralDiscount(input())).toEqual({
       discountPaise: 4_995,
       source: 'REFERRAL_FIRST_PLAN',
-      amountPaidPaise: 94_905,
+      taxableAfterDiscountPaise: 94_905,
     });
   });
 
@@ -29,12 +29,16 @@ describe('computeReferralDiscount', () => {
     ).toEqual({
       discountPaise: 9_990,
       source: 'REFERRAL_FIRST_PLAN',
-      amountPaidPaise: 89_910,
+      taxableAfterDiscountPaise: 89_910,
     });
   });
 
   describe('eligibility and the credit window', () => {
-    const NONE = { discountPaise: 0, source: 'NONE', amountPaidPaise: 99_900 };
+    const NONE = {
+      discountPaise: 0,
+      source: 'NONE',
+      taxableAfterDiscountPaise: 99_900,
+    };
 
     it.each([
       // referralEligible, withinCreditWindow, onlyInCreditWindow, applies
@@ -56,7 +60,7 @@ describe('computeReferralDiscount', () => {
           expect(result).toEqual({
             discountPaise: 4_995,
             source: 'REFERRAL_FIRST_PLAN',
-            amountPaidPaise: 94_905,
+            taxableAfterDiscountPaise: 94_905,
           });
         } else {
           expect(result).toEqual(NONE);
@@ -71,7 +75,7 @@ describe('computeReferralDiscount', () => {
       expect(computeReferralDiscount(input({ listAmountPaise: 999 }))).toEqual({
         discountPaise: 49,
         source: 'REFERRAL_FIRST_PLAN',
-        amountPaidPaise: 950,
+        taxableAfterDiscountPaise: 950,
       });
     });
 
@@ -80,7 +84,7 @@ describe('computeReferralDiscount', () => {
       expect(computeReferralDiscount(input({ listAmountPaise: 19 }))).toEqual({
         discountPaise: 0,
         source: 'NONE',
-        amountPaidPaise: 19,
+        taxableAfterDiscountPaise: 19,
       });
     });
   });
@@ -92,21 +96,25 @@ describe('computeReferralDiscount', () => {
       ).toEqual({
         discountPaise: 99_900,
         source: 'REFERRAL_FIRST_PLAN',
-        amountPaidPaise: 0,
+        taxableAfterDiscountPaise: 0,
       });
     });
 
     it('a 0% rate gives NONE', () => {
       expect(
         computeReferralDiscount(input({ referralDiscountBps: 0 })),
-      ).toEqual({ discountPaise: 0, source: 'NONE', amountPaidPaise: 99_900 });
+      ).toEqual({
+        discountPaise: 0,
+        source: 'NONE',
+        taxableAfterDiscountPaise: 99_900,
+      });
     });
 
     it('a zero list amount gives NONE', () => {
       expect(computeReferralDiscount(input({ listAmountPaise: 0 }))).toEqual({
         discountPaise: 0,
         source: 'NONE',
-        amountPaidPaise: 0,
+        taxableAfterDiscountPaise: 0,
       });
     });
 
@@ -118,7 +126,7 @@ describe('computeReferralDiscount', () => {
         }),
       );
       expect(result.discountPaise).toBe(9_006_298_534_815_516);
-      expect(result.amountPaidPaise + result.discountPaise).toBe(
+      expect(result.taxableAfterDiscountPaise + result.discountPaise).toBe(
         9_007_199_254_740_991,
       );
     });
@@ -129,9 +137,11 @@ describe('computeReferralDiscount', () => {
           const r = computeReferralDiscount(
             input({ listAmountPaise, referralDiscountBps }),
           );
-          expect(r.discountPaise + r.amountPaidPaise).toBe(listAmountPaise);
+          expect(r.discountPaise + r.taxableAfterDiscountPaise).toBe(
+            listAmountPaise,
+          );
           expect(r.discountPaise).toBeLessThanOrEqual(listAmountPaise);
-          expect(r.amountPaidPaise).toBeGreaterThanOrEqual(0);
+          expect(r.taxableAfterDiscountPaise).toBeGreaterThanOrEqual(0);
         }
       }
     });
