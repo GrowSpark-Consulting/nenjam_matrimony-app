@@ -186,7 +186,7 @@ Expired `agent_applicants` and `referral_code_attempts` rows are purged **opport
 |---|---|
 | ~~Rejected agent may re-apply~~ **DECIDED (Raja, 28 Oct): yes**; resubmission goes back to `PENDING_APPROVAL` for admin review | `REJECTED_MAY_REAPPLY` in `agent/agent-status.ts` (stays `true`); consumed by `decideApplicationSubmit` and injectable into `AgentApplicationService` |
 | ~~Terminated agents' pending commission~~ **DECIDED (Raja, 28 Oct)**: waiting commission stays FROZEN until Raja decides otherwise; already-approved commission is still paid | `frozenForAgent()` in `commission/decide-commission-transition.ts` |
-| Partial refund before approval | `planRefundEffect()` in `commission/plan-refund-effect.ts` (cancels the whole commission) |
+| ~~Partial refund before approval~~ **DECIDED (Ishu, 29 Oct)**: a full refund cancels; a PARTIAL refund before approval reduces the commission in proportion, `floor(original x (amountPaid - refundedTotal) / amountPaid)` on the running total, idempotent per refund, ledger untouched, status/rule/review reasons unchanged; a late-filled amount gets the same fraction | `planRefundEffect()` and `reduceForRefund()` in `commission/plan-refund-effect.ts`; columns `commissions.refunded_paise` and `pre_refund_amount_paise` |
 | Tax withholding (CA) | `planPayout()` in `payout/plan-payout.ts` refuses any set value with `TAX_RULE_UNSUPPORTED` — **must change when the CA answers** |
 | ~~Commission base~~ **DECIDED (Raja, 28 Oct)**: 10% of the amount without GST | `commission.base` = `AMOUNT_PAID_EXCLUDING_GST`, `commission.base_provisional` = `false` (seed values); `buildCommissionDraft()` still returns `amountPaise: null` while the setting is `null` |
 | Tamil labels | `AGENT_TAMIL_LABEL_PENDING` in `content/agent-content.ts` |
@@ -204,7 +204,7 @@ Expired `agent_applicants` and `referral_code_attempts` rows are purged **opport
 
 ### Open decisions
 
-Plan prices; TDS (CA); how an agent pays for a client's plan; Tamil wording for the other labels; the referral link web address (`link` and `qrPayload` are `null` until decided); partial refund before approval; **roles beyond what Raja said** (see above); where scheduled jobs run (no worker or scheduler on Render); **how migrations get applied on Render** (nothing does today).
+Plan prices; TDS (CA); how an agent pays for a client's plan; Tamil wording for the other labels; the referral link web address (`link` and `qrPayload` are `null` until decided); **roles beyond what Raja said** (see above); where scheduled jobs run (no worker or scheduler on Render); **how migrations get applied on Render** (nothing does today).
 
 ---
 

@@ -96,6 +96,10 @@ describe('planRefundEffect', () => {
       const big = 9_000_000_000_000_000;
       expect(reduceForRefund(big, big, 1)).toBe(big - 1);
       expect(reduceForRefund(big, big, big)).toBe(0);
+      // Floating point would give ...951 here; integer maths gives ...950.
+      expect(
+        reduceForRefund(5_396_221_036_765_083, 9_007_199_253_998_632, 221),
+      ).toBe(5_396_221_036_764_950);
     });
 
     it('a replayed refund (same or older running total) changes nothing', () => {

@@ -64,6 +64,12 @@ SELECT pg_temp.t('commission: credited with null amount', pg_temp.c('cx9','at4',
 SELECT pg_temp.t('commission: credited = amount ok (boundary)', pg_temp.c('c4','at4','pay4','mh4','100',9999,',credited_paise|,100'), 'ok');
 SELECT pg_temp.t('commission: reversed over credited', $$UPDATE commissions SET reversed_paise=101 WHERE id='c4'$$, '23514');
 SELECT pg_temp.t('commission: reversed = credited ok', $$UPDATE commissions SET reversed_paise=100 WHERE id='c4'$$, 'ok');
+SELECT pg_temp.t('refund: a reduced amount with its original and running total (control)', $$UPDATE commissions SET refunded_paise=2500, pre_refund_amount_paise=8475, amount_paise=6356 WHERE id='c1'$$, 'ok');
+SELECT pg_temp.t('refund: running total over what was paid', $$UPDATE commissions SET refunded_paise=10000 WHERE id='c1'$$, '23514');
+SELECT pg_temp.t('refund: negative running total', $$UPDATE commissions SET refunded_paise=-1 WHERE id='c1'$$, '23514');
+SELECT pg_temp.t('refund: original over what was paid', $$UPDATE commissions SET pre_refund_amount_paise=10000 WHERE id='c1'$$, '23514');
+SELECT pg_temp.t('refund: amount above its original', $$UPDATE commissions SET amount_paise=8476 WHERE id='c1'$$, '23514');
+SELECT pg_temp.t('refund: amount back to its original is allowed (boundary)', $$UPDATE commissions SET amount_paise=8475 WHERE id='c1'$$, 'ok');
 SELECT pg_temp.t('commission: APPROVED without amount', $$UPDATE commissions SET status='APPROVED' WHERE id='c2'$$, '23514');
 SELECT pg_temp.t('commission: APPROVED with amount (control)', $$UPDATE commissions SET status='APPROVED' WHERE id='c1'$$, 'ok');
 SELECT pg_temp.t('commission: PAID without paid_at', $$UPDATE commissions SET status='PAID' WHERE id='c1'$$, '23514');

@@ -118,7 +118,7 @@ The referral discount is the only discount we handle.
 |---|---|---|
 | Plan prices | Raja | — |
 | TDS | CA | `planPayout()` refuses any set tax value with `TAX_RULE_UNSUPPORTED` |
-| Partial refund before approval | Raja | `planRefundEffect()` in `commission/plan-refund-effect.ts` (currently cancels the whole commission) |
+| Partial refund before approval | **Decided (Ishu, 29 Oct)** | A full refund cancels; a partial refund before approval reduces the commission in proportion to what is still paid (running total, idempotent per refund; the ledger is not touched before approval). `planRefundEffect()` in `commission/plan-refund-effect.ts` |
 | How an agent can pay for a client's plan | Raja | Not started |
 | Tamil wording for the other labels (statuses, stages) | Raja | Comes from `GET /agent/config` (not built yet). The share messages are approved and final (28 Oct); see `FRONTEND_HANDOFF_DHATRI.md` section 6 |
 | Referral link web address | Raja | `link` and `qrPayload` are `null` until decided |
