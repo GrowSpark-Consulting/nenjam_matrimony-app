@@ -19,6 +19,17 @@
  * Every payment emits PaymentSucceeded, paid in the app or recorded by an
  * admin (cash, UPI) — `paidBy` says which. Only a first paid plan
  * (`isFirstPaidPlan`) can earn a commission; the rest are for completeness.
+ *
+ * GST is ADDED to the price (prices exclude GST; Raja, 29 Oct):
+ *
+ *   taxableAmountPaise = listAmountPaise − discountPaise
+ *   taxPaise           = round(taxableAmountPaise × taxRateBps / 10000)
+ *   amountPaidPaise    = taxableAmountPaise + taxPaise   (what the member pays)
+ *
+ * e.g. ₹1,000 with 5% off at 18%: taxable 95000, GST 17100, paid 112100.
+ * The rate is a platform setting with no default in code; it is 0 until the
+ * business is GST-registered, so today taxPaise = 0 and the member pays the
+ * taxable amount.
  */
 
 export const REFERRAL_EVENT_VERSION = 1;
@@ -39,23 +50,22 @@ export interface PaymentSucceeded {
   paidBy: PaymentPaidBy;
   /** The member's first paid plan: the only payment that earns a commission. */
   isFirstPaidPlan: boolean;
-  /** The plan's price before any discount. */
+  /** The plan's price before any discount, excluding GST. */
   listAmountPaise: number;
   discountPaise: number;
   discountSource: PaymentDiscountSource;
   /** The referral code quoted at checkout (a plain id, no foreign key), or
    *  null when none was. */
   heldReferralCodeId: string | null;
-  /** What was actually paid: listAmountPaise − discountPaise. */
-  amountPaidPaise: number;
-  /** The GST rate when the payment was made, in basis points (1800 = 18%);
-   *  0 when no GST is charged. */
-  taxRateBps: number;
-  /** The GST inside amountPaidPaise (prices include GST). */
-  taxPaise: number;
-  /** amountPaidPaise − taxPaise: the commission base under
-   *  `commission.base` = AMOUNT_PAID_EXCLUDING_GST. */
+  /** listAmountPaise − discountPaise, excluding GST: the commission base. */
   taxableAmountPaise: number;
+  /** The GST rate when the payment was made, in basis points (1800 = 18%);
+   *  0 while the business is not GST-registered. */
+  taxRateBps: number;
+  /** The GST added on top of taxableAmountPaise (see `addExclusiveTax`). */
+  taxPaise: number;
+  /** What the member actually paid: taxableAmountPaise + taxPaise. */
+  amountPaidPaise: number;
   currency: 'INR';
   /** Keyed hash of the payment source (card, UPI id) when the provider
    *  reports one; for abuse checks only. Null otherwise. */
@@ -71,7 +81,7 @@ export interface PaymentRefunded {
   refundId: string;
   paymentId: string;
   memberId: string;
-  /** This refund alone, not the running total. */
+  /** This refund alone, not the running total; part of amountPaidPaise. */
   refundedPaise: number;
   /** The GST part of this refund (see `refundTaxPaise`). */
   refundedTaxPaise: number;
@@ -97,31 +107,29 @@ export interface ReferralEventPublisher {
 export const REFERRAL_EVENT_PUBLISHER = Symbol('REFERRAL_EVENT_PUBLISHER');
 
 /**
- * Splits a GST-inclusive amount into its taxable part and its GST, as stored
- * on the payment: taxable = round(amount × 10000 / (10000 + rate)), and the
- * GST is the rest, so the two always add up to the amount.
+ * Adds GST to a taxable amount: taxPaise = round(taxable × rate / 10000),
+ * totalPaise = taxable + taxPaise (what the member pays). At rate 0 the
+ * total is the taxable amount.
  *
  * Rounding to the nearest paisa (half up) is provisional until the CA
  * confirms it; whatever is stored on the payment is what counts.
  */
-export function splitInclusiveTax(
-  amountPaidPaise: number,
+export function addExclusiveTax(
+  taxableAmountPaise: number,
   taxRateBps: number,
-): { taxableAmountPaise: number; taxPaise: number } {
-  assertPaise('amountPaidPaise', amountPaidPaise);
+): { taxPaise: number; totalPaise: number } {
+  assertPaise('taxableAmountPaise', taxableAmountPaise);
   if (!Number.isSafeInteger(taxRateBps) || taxRateBps < 0) {
     throw new RangeError('taxRateBps must be a non-negative integer.');
   }
-  const taxableAmountPaise = Math.round(
-    (amountPaidPaise * 10_000) / (10_000 + taxRateBps),
-  );
-  return { taxableAmountPaise, taxPaise: amountPaidPaise - taxableAmountPaise };
+  const taxPaise = Math.round((taxableAmountPaise * taxRateBps) / 10_000);
+  return { taxPaise, totalPaise: taxableAmountPaise + taxPaise };
 }
 
 /**
- * The GST part of one refund, in proportion to the payment's GST. Computed on
- * the running total, so however a payment is refunded in pieces the parts add
- * up to exactly `taxPaise` once it is fully refunded.
+ * The GST part of one refund, in proportion to the payment's GST within what
+ * was paid. Computed on the running total, so however a payment is refunded
+ * in pieces the parts add up to exactly `taxPaise` once it is fully refunded.
  */
 export function refundTaxPaise(input: {
   amountPaidPaise: number;
