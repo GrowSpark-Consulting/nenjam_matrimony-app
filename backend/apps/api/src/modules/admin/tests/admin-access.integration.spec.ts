@@ -227,6 +227,15 @@ describeIntegration('admin access over HTTP', () => {
       await http().get('/admin/me').expect(401);
     });
 
+    it('sign-in is POST only: GET /admin/auth/session is 404, POST without a token 401', async () => {
+      // Opening the sign-in URL in a browser is a GET: there is no such route.
+      await http().get('/admin/auth/session').expect(404);
+      await http()
+        .post('/admin/auth/session')
+        .send({ code: '123456' })
+        .expect(401);
+    });
+
     it('403 for a member, and the attempt is audited', async () => {
       const res = await http().get('/admin/me').set(as('member')).expect(403);
       expect(body(res).code).toBe('ADMIN_ACCESS_REQUIRED');
@@ -354,6 +363,24 @@ describeIntegration('admin access over HTTP', () => {
       expect(body(res).permissions).toHaveLength(48);
       expect(body(res).permissions).toContain('agent.approve');
       expect(body(res).email).toBe(people.sa.email);
+    });
+
+    it('answers only the documented methods, even for a signed-in admin', async () => {
+      // Sign-in is POST /admin/auth/session; the session is read with
+      // GET /admin/me. Anything else is 404 and says nothing about the admin.
+      const wrongMethods = [
+        () => http().get('/admin/auth/session'),
+        () => http().put('/admin/auth/session'),
+        () => http().delete('/admin/auth/session'),
+        () => http().post('/admin/me'),
+      ];
+      for (const attempt of wrongMethods) {
+        const res = await attempt().set(as('sa', session));
+        expect(res.status).toBe(404);
+        const text = JSON.stringify(res.body);
+        expect(text).not.toContain(people.sa.email);
+        expect(text).not.toContain(session);
+      }
     });
 
     it('never accepts the same authenticator code twice', async () => {
