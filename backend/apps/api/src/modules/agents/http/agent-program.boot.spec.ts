@@ -44,7 +44,6 @@ function program(): AgentProgram {
     }),
     referrals: h.referrals,
     referralCodes: h.referralCodes,
-    quote: h.referralQuote,
     tokens: jwt,
     piiSealing: true,
     requesterKey: () => 'v1:hashed-test-ip',
@@ -99,7 +98,7 @@ describe('AGENT_PROGRAM_ENABLED', () => {
   });
 
   it.each([undefined, '', 'false', '1', 'yes'])(
-    'with %p every agent route is 404 and no quote is provided',
+    'with %p every agent route is 404',
     async (flag) => {
       const { app, moduleRef } = await bootWith(flag);
       try {
@@ -117,7 +116,7 @@ describe('AGENT_PROGRAM_ENABLED', () => {
   );
 
   it.each(['true', 'TRUE', ' true '])(
-    'with %p every route exists and the quote is provided',
+    'with %p every route exists, and the routes module provides no quote (the quote module does)',
     async (flag) => {
       const { app, moduleRef } = await bootWith(flag);
       try {
@@ -125,10 +124,9 @@ describe('AGENT_PROGRAM_ENABLED', () => {
           const res = await request(app.getHttpServer())[method](path).send({});
           expect([path, res.status === 404]).toEqual([path, false]);
         }
-        const quote = moduleRef.get<{ quote: unknown }>(AGENT_REFERRAL_QUOTE, {
-          strict: false,
-        });
-        expect(typeof quote.quote).toBe('function');
+        expect(() =>
+          moduleRef.get<unknown>(AGENT_REFERRAL_QUOTE, { strict: false }),
+        ).toThrow();
       } finally {
         await app.close();
       }

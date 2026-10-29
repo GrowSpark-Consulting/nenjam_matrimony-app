@@ -1,15 +1,11 @@
 /**
- * The agent-facing and member referral routes, and the referral quote for
- * the checkout. Registered ONLY when AGENT_PROGRAM_ENABLED is exactly `true`
- * (see `agentProgramEnabled` and `AgentsModule`): with the flag off nothing
- * here exists, the routes answer 404, and nothing is provided under
- * AGENT_REFERRAL_QUOTE, so the checkout charges the list price.
- *
- * Global so the checkout (SubscriptionModule, which cannot import this
- * module: AgentsModule → AdminModule → SubscriptionModule) can inject
- * AGENT_REFERRAL_QUOTE.
+ * The agent-facing and member referral routes. Registered ONLY when
+ * AGENT_PROGRAM_ENABLED is exactly `true` (see `agentProgramEnabled` and
+ * `AgentsModule`): with the flag off nothing here exists and the routes
+ * answer 404. The checkout's referral quote is NOT here: it is provided by
+ * AgentReferralQuoteModule whatever the flag.
  */
-import { Global, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { PrismaService } from '@app/database';
 import { AdminModule } from '../../admin/admin.module';
 import { AdminAuditService } from '../../admin/services/admin-audit.service';
@@ -17,10 +13,6 @@ import { IdentifierHashService } from '../../platform/identifier-hash.service';
 import { OtpService } from '../../platform/otp/otp.service';
 import { PlatformModule } from '../../platform/platform.module';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
-import {
-  AGENT_REFERRAL_QUOTE,
-  type AgentReferralQuote,
-} from '../agent-referral-quote.token';
 import { AgentAuthController } from './agent-auth.controller';
 import { AgentController } from './agent.controller';
 import { AgentAccessGuard } from './agent-http';
@@ -38,7 +30,6 @@ export function agentProgramEnabled(
   return env.AGENT_PROGRAM_ENABLED?.trim().toLowerCase() === 'true';
 }
 
-@Global()
 @Module({
   imports: [AdminModule, PlatformModule],
   controllers: [AgentAuthController, AgentController, MemberReferralController],
@@ -68,13 +59,7 @@ export function agentProgramEnabled(
           env: process.env,
         }),
     },
-    {
-      provide: AGENT_REFERRAL_QUOTE,
-      inject: [AGENT_PROGRAM],
-      useFactory: (program: AgentProgram): AgentReferralQuote => program.quote,
-    },
     AgentAccessGuard,
   ],
-  exports: [AGENT_REFERRAL_QUOTE],
 })
 export class AgentProgramModule {}

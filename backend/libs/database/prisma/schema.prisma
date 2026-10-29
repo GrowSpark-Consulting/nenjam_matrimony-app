@@ -2050,6 +2050,13 @@ model Agent {
   deviceTokens  AgentDeviceToken[]
   payoutDetails AgentPayoutDetails?
 
+  /// Overrides the active commission policy for this agent. Null = use the active one.
+  commissionPolicyId String?                  @map("commission_policy_id")
+  commissionPolicy   CommissionPolicyVersion? @relation(fields: [commissionPolicyId], references: [id], onDelete: Restrict)
+  commissions        Commission[]
+  ledgerEntries      AgentLedgerEntry[]
+  payouts            AgentPayout[]
+
   @@index([status])
   @@map("agents")
 }
@@ -2099,6 +2106,8 @@ model ReferralAttribution {
   /// SetNull: deleting a member must not delete the attribution (it carries
   /// commission history).
   user  User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  commission Commission?
 
   @@index([agentId, createdAt])
   @@index([codeId])
@@ -2201,4 +2210,185 @@ model ReferralCodeAttempt {
   @@index([codeKey, attemptedAt])
   @@index([attemptedAt])
   @@map("referral_code_attempts")
+}
+
+// ---------------------------------------------------------------------------
+// Agent commissions, ledger and payouts (migration 20261029110000).
+// Money is integer PAISE. Nothing here cascades on delete: a money record can
+// only be removed by deleting it deliberately, never as a side effect.
+// ---------------------------------------------------------------------------
+
+enum CommissionCalcType {
+  PERCENTAGE
+
+  @@map("commission_calc_type")
+}
+
+/// The internal commission status (what staff see). The agent sees a reduced set.
+enum CommissionStatus {
+  ON_HOLD
+  AWAITING_VERIFICATION
+  IN_REVIEW
+  FROZEN
+  READY
+  APPROVED
+  PAID
+  CANCELLED
+  REVERSED
+
+  @@map("commission_status")
+}
+
+enum AgentLedgerEntryType {
+  CREDIT
+  REVERSAL
+  PAYOUT_DEBIT
+  PAYOUT_RELEASE
+  ADJUSTMENT
+
+  @@map("agent_ledger_entry_type")
+}
+
+enum AgentPayoutStatus {
+  CREATED
+  PAID
+  CANCELLED
+
+  @@map("agent_payout_status")
+}
+
+/// One version of the commission rule. Versions are added, not edited: a
+/// commission snapshots the rule it was calculated with. The active version is
+/// the newest one whose effective_from has passed.
+model CommissionPolicyVersion {
+  id            String             @id @default(uuid())
+  /// 1, 2, 3 ... one row per number.
+  version       Int                @unique
+  calcType      CommissionCalcType @map("calc_type")
+  /// Basis points for PERCENTAGE (1000 = 10%).
+  value         Int
+  /// Days a commission waits before it can be approved.
+  holdDays      Int                @map("hold_days")
+  effectiveFrom DateTime           @map("effective_from")
+  createdAt     DateTime           @default(now()) @map("created_at")
+
+  agents      Agent[]
+  commissions Commission[]
+
+  @@index([effectiveFrom])
+  @@map("commission_policy_versions")
+}
+
+/// What an agent earns on one member's first paid plan. One per attribution,
+/// one per payment and one per member phone hash.
+model Commission {
+  id                 String             @id @default(uuid())
+  agentId            String             @map("agent_id")
+  attributionId      String             @unique @map("attribution_id")
+  /// payment_transactions.id. A plain id (no foreign key), like the payment events.
+  paymentId          String             @unique @map("payment_id")
+  /// Hash of the referred member's phone; one commission per phone, ever.
+  phoneHash          String             @unique @map("phone_hash")
+  policyVersionId    String             @map("policy_version_id")
+  status             CommissionStatus   @default(ON_HOLD)
+  /// The rule this commission was calculated with, snapshotted.
+  calcType           CommissionCalcType @map("calc_type")
+  ruleValue          Int                @map("rule_value")
+  /// What the percentage was taken of (excluding GST); null while commission.base is not set.
+  basePaise          Int?               @map("base_paise")
+  /// Null until the base is known.
+  amountPaise        Int?               @map("amount_paise")
+  /// What the member actually paid for the plan.
+  amountPaidPaise    Int                @map("amount_paid_paise")
+  /// The part of amount_paid_paise without GST, as stored on the payment (never recomputed). Kept so the amount can be filled in later if commission.base was not set when the payment came in.
+  taxableAmountPaise Int                @map("taxable_amount_paise")
+  /// The running total refunded BEFORE approval (a partial refund reduces the commission in proportion; nothing was credited yet). After approval, refunds go through the ledger (reversed_paise).
+  refundedPaise      Int                @default(0) @map("refunded_paise")
+  /// The amount before a refund reduced it; the reference for later refunds. Null until a refund reduced it (or while the amount is unknown).
+  preRefundAmountPaise Int?             @map("pre_refund_amount_paise")
+  /// What has been credited to the agent's ledger for this commission.
+  creditedPaise      Int                @default(0) @map("credited_paise")
+  /// What refunds have clawed back so far.
+  reversedPaise      Int                @default(0) @map("reversed_paise")
+  holdUntil          DateTime           @map("hold_until")
+  /// PAID_BY_AGENT, PAYMENT_SOURCE_REUSED, SELF_MATCH: why it is IN_REVIEW.
+  reviewReasons      String[]           @default([]) @map("review_reasons")
+  approvedAt         DateTime?          @map("approved_at")
+  paidAt             DateTime?          @map("paid_at")
+  cancelledAt        DateTime?          @map("cancelled_at")
+  payoutId           String?            @map("payout_id")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  agent         Agent                   @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  attribution   ReferralAttribution     @relation(fields: [attributionId], references: [id], onDelete: Restrict)
+  policyVersion CommissionPolicyVersion @relation(fields: [policyVersionId], references: [id], onDelete: Restrict)
+  payout        AgentPayout?            @relation(fields: [payoutId], references: [id], onDelete: Restrict)
+  ledgerEntries AgentLedgerEntry[]
+
+  @@index([agentId, status])
+  @@index([status, holdUntil])
+  @@index([payoutId])
+  @@map("commissions")
+}
+
+/// The agent's money, one signed row per movement. APPEND-ONLY: a trigger in
+/// the migration rejects UPDATE and DELETE. The balance is the sum of amounts.
+model AgentLedgerEntry {
+  id             String               @id @default(uuid())
+  agentId        String               @map("agent_id")
+  type           AgentLedgerEntryType
+  /// Signed: + adds to the agent's balance, - takes from it. Never 0.
+  amountPaise    Int                  @map("amount_paise")
+  /// Replaying the same event writes nothing twice.
+  idempotencyKey String               @unique @map("idempotency_key")
+  commissionId   String?              @map("commission_id")
+  /// The provider's refund id, on REVERSAL entries.
+  refundId       String?              @map("refund_id")
+  payoutId       String?              @map("payout_id")
+  /// The commission rule snapshotted on CREDIT entries.
+  calcType       String?              @map("calc_type")
+  ruleValue      Int?                 @map("rule_value")
+  ruleSnapshot   Json?                @map("rule_snapshot")
+  /// Required on ADJUSTMENT entries.
+  reason         String?
+  createdAt      DateTime             @default(now()) @map("created_at")
+
+  agent      Agent       @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  commission Commission? @relation(fields: [commissionId], references: [id], onDelete: Restrict)
+  payout     AgentPayout? @relation(fields: [payoutId], references: [id], onDelete: Restrict)
+
+  @@index([agentId, createdAt])
+  @@index([commissionId])
+  @@index([payoutId])
+  @@map("agent_ledger_entries")
+}
+
+/// A manual payout for one agent and one calendar month.
+model AgentPayout {
+  id               String            @id @default(uuid())
+  agentId          String            @map("agent_id")
+  /// 'YYYY-MM'. At most one non-cancelled payout per agent and period (partial unique index in the migration SQL).
+  period           String
+  amountPaise      Int               @map("amount_paise")
+  taxWithheldPaise Int               @default(0) @map("tax_withheld_paise")
+  netPaise         Int               @map("net_paise")
+  status           AgentPayoutStatus @default(CREATED)
+  /// The bank or UPI reference once paid; unique when set.
+  reference        String?           @unique
+  paidAt           DateTime?         @map("paid_at")
+  cancelReason     String?           @map("cancel_reason")
+  cancelledAt      DateTime?         @map("cancelled_at")
+  /// The staff user id who created it. A plain id (no foreign key), like audit rows.
+  createdBy        String            @map("created_by")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  agent         Agent              @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  commissions   Commission[]
+  ledgerEntries AgentLedgerEntry[]
+
+  @@index([agentId, period])
+  @@index([status])
+  @@map("agent_payouts")
 }

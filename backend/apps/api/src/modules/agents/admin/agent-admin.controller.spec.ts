@@ -134,7 +134,15 @@ class StandInAdminModule {}
   providers: [
     {
       provide: IdentifierHashService,
-      useValue: { hashIdentifier: jest.fn(), hashIdentifierAll: jest.fn() },
+      useValue: {
+        available: false,
+        hashIdentifier: jest.fn(),
+        hashIdentifierAll: jest.fn(),
+      },
+    },
+    {
+      provide: PlatformSettingsService,
+      useValue: { getMany: jest.fn(), registerValidator: jest.fn() },
     },
     {
       provide: PlatformSettingsService,

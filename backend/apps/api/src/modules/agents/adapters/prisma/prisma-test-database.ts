@@ -2,14 +2,21 @@
  * Test support for the database-gated adapter specs (`*.db-spec.ts`). Never
  * imported by production code.
  *
- * These specs write to, and truncate, a real database, so they only ever run
- * against a throwaway LOCAL Postgres. The URL comes from
- * `AGENT_PRISMA_TEST_DATABASE_URL`; anything but `localhost` / `127.0.0.1`
- * is refused before a connection is opened. The repo's `prisma.config.ts`
- * and `.env` files are never read here.
+ * These specs write to a real database, so they only ever run against a
+ * throwaway LOCAL Postgres. The URL comes from `AGENT_PRISMA_TEST_DATABASE_URL`;
+ * anything but `localhost` / `127.0.0.1` is refused before a connection is
+ * opened. The repo's `prisma.config.ts` and `.env` files are never read here.
+ *
+ * **Isolation.** The URL names a TEMPLATE database that already has every
+ * migration applied. It is never connected to by a spec and never written to.
+ * Each test (`reset()`) gets its own fresh database created from it
+ * (`CREATE DATABASE ... TEMPLATE ...`), and the previous one is dropped. The
+ * money tables are append-only and refuse TRUNCATE (see the commission
+ * migration), so nothing here empties a table: a spec starts from a clean
+ * copy, and the copy is dropped when it is done.
  */
 import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
+import { Client, Pool } from 'pg';
 import { PrismaClient } from '@app/database';
 
 export const TEST_DATABASE_ENV = 'AGENT_PRISMA_TEST_DATABASE_URL';
@@ -48,29 +55,112 @@ export function requireLocalTestDatabaseUrl(
   return url;
 }
 
+/** The same server and credentials, another database. */
+export function withDatabase(url: string, database: string): string {
+  const parsed = new URL(url);
+  parsed.pathname = `/${database}`;
+  return parsed.toString();
+}
+
+const SAFE_NAME = /^[a-z0-9_]+$/;
+
 export interface TestDatabase {
+  /** The client for the CURRENT fresh database; it follows `reset()`. */
   prisma: PrismaClient;
+  /** Drops the current database and starts the next test from a clean copy of the template. */
+  reset(): Promise<void>;
+  /** Drops the current database and disconnects. */
   close(): Promise<void>;
 }
 
+const handles = new WeakMap<object, TestDatabase>();
+
 export function openTestDatabase(): TestDatabase {
-  const url = requireLocalTestDatabaseUrl();
+  const templateUrl = requireLocalTestDatabaseUrl();
+  const templateName = decodeURIComponent(
+    new URL(templateUrl).pathname.replace(/^\//, ''),
+  );
+  if (!SAFE_NAME.test(templateName)) {
+    throw new Error(
+      `${TEST_DATABASE_ENV} must name a database with only lower-case letters, digits and underscores.`,
+    );
+  }
   // Printed once per suite so the target is always visible in the output.
-  console.log(`[agent-db-tests] database: ${maskDatabaseUrl(url)}`);
-  const pool = new Pool({ connectionString: url, max: 5 });
-  const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
-  return {
-    prisma,
-    close: async () => {
-      await prisma.$disconnect();
-      await pool.end();
-    },
+  console.log(`[agent-db-tests] template: ${maskDatabaseUrl(templateUrl)}`);
+
+  const adminUrl = withDatabase(templateUrl, 'postgres');
+  const admin = async (sql: string) => {
+    const client = new Client({ connectionString: adminUrl });
+    await client.connect();
+    try {
+      await client.query(sql);
+    } finally {
+      await client.end();
+    }
   };
+
+  let counter = 0;
+  let current: { name: string; pool: Pool; prisma: PrismaClient } | null = null;
+
+  const dropCurrent = async () => {
+    if (current === null) return;
+    const { name, pool, prisma } = current;
+    current = null;
+    await prisma.$disconnect();
+    await pool.end();
+    await admin(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
+  };
+
+  const create = async () => {
+    counter += 1;
+    const name = `${templateName}_t${process.pid}_${counter}`;
+    if (!SAFE_NAME.test(name)) throw new Error('Unsafe test database name.');
+    await admin(`CREATE DATABASE "${name}" TEMPLATE "${templateName}"`);
+    const pool = new Pool({
+      connectionString: withDatabase(templateUrl, name),
+      max: 5,
+    });
+    current = {
+      name,
+      pool,
+      prisma: new PrismaClient({ adapter: new PrismaPg(pool) }),
+    };
+  };
+
+  // The spec files hold `prisma` in a constant, so it is a stand-in that
+  // always forwards to the current database's client.
+  const prisma = new Proxy({} as PrismaClient, {
+    get(_target, property) {
+      if (current === null) {
+        throw new Error(
+          'No test database yet: call reset() in beforeEach before using prisma.',
+        );
+      }
+      const value = Reflect.get(current.prisma, property) as unknown;
+      if (typeof value !== 'function') return value as never;
+      const method = value as (...args: unknown[]) => unknown;
+      return method.bind(current.prisma) as never;
+    },
+  });
+
+  const handle: TestDatabase = {
+    prisma,
+    reset: async () => {
+      await dropCurrent();
+      await create();
+    },
+    close: dropCurrent,
+  };
+  handles.set(prisma, handle);
+  return handle;
 }
 
-/** Empties the agent tables (plus the test users and the audit rows the specs write). */
-export async function truncateAgentTables(prisma: PrismaClient) {
-  await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "agents", "referral_codes", "referral_attributions", "agent_refresh_tokens", "agent_payout_details", "agent_applicants", "referral_code_attempts", "users", "audit_logs" CASCADE',
-  );
+/**
+ * Starts the next test from a clean copy of the template. Call it where a
+ * spec used to empty its tables. Never truncates anything.
+ */
+export async function freshTestDatabase(prisma: PrismaClient): Promise<void> {
+  const handle = handles.get(prisma);
+  if (!handle) throw new Error('prisma was not made by openTestDatabase().');
+  await handle.reset();
 }

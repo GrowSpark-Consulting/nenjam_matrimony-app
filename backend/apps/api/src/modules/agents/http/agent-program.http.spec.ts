@@ -79,7 +79,6 @@ async function boot(
     }),
     referrals: h.referrals,
     referralCodes: h.referralCodes,
-    quote: h.referralQuote,
     tokens: jwt,
     piiSealing: true,
     requesterKey: () => 'v1:hashed-test-ip',

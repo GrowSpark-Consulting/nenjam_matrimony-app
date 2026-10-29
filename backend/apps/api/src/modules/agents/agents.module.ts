@@ -36,11 +36,14 @@ import {
   AgentProgramModule,
   agentProgramEnabled,
 } from './http/agent-program.module';
+import { AgentReferralQuoteModule } from './quote/agent-referral-quote.module';
 
 @Module({
   imports: [
     AdminModule,
     PlatformModule,
+    // The referral quote for the checkout (global; not an agent route).
+    AgentReferralQuoteModule,
     // The agent-facing and member referral routes: registered only when
     // AGENT_PROGRAM_ENABLED=true; otherwise they do not exist (404).
     ConditionalModule.registerWhen(AgentProgramModule, agentProgramEnabled),

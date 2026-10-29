@@ -6,16 +6,13 @@ import { PrismaAgentAdminRead } from './prisma-agent-admin-read';
 import { PrismaAgentRepository } from './prisma-agent.repository';
 import { PrismaReferralCodeRepository } from './prisma-referral-code.repository';
 import { PrismaAgentPayoutDetailsRepository } from './prisma-agent-payout-details.repository';
-import { openTestDatabase, truncateAgentTables } from './prisma-test-database';
+import { openTestDatabase, freshTestDatabase } from './prisma-test-database';
 
 const db = openTestDatabase();
 const prisma = db.prisma;
 
-afterAll(async () => {
-  await truncateAgentTables(prisma);
-  await db.close();
-});
-beforeEach(() => truncateAgentTables(prisma));
+afterAll(() => db.close());
+beforeEach(() => freshTestDatabase(prisma));
 
 const read = new PrismaAgentAdminRead(prisma);
 const agents = new PrismaAgentRepository(prisma);

@@ -59,7 +59,6 @@ import type { AgentCommissionPolicyPort } from '../ports/agent-commission-policy
 import type { AgentTokenSigner } from '../ports/agent-infra-ports';
 import type { AgentSecretSealer } from '../ports/agent-secret-sealer.port';
 import { AgentReferralCodeService } from '../referral/agent-referral-code.service';
-import { AgentReferralQuoteService } from '../referral/agent-referral-quote.service';
 import { AgentReferralService } from '../referral/agent-referral.service';
 
 export const AGENT_PROGRAM = Symbol('AGENT_PROGRAM');
@@ -75,7 +74,6 @@ export interface AgentProgram {
   config: AgentConfigService;
   referrals: AgentReferralService;
   referralCodes: AgentReferralCodeService;
-  quote: AgentReferralQuoteService;
   /** null: AGENT_JWT_SECRET is not usable, every agent route answers 503. */
   tokens: AgentTokenChecker | null;
   /** false: AGENT_PII_ENCRYPTION_KEY is not set, the sealing routes answer 503. */
@@ -255,15 +253,6 @@ export function buildAgentProgram(deps: AgentProgramDeps): AgentProgram {
       members,
       uow,
       audit,
-      clock,
-    }),
-    quote: new AgentReferralQuoteService({
-      settings,
-      attempts,
-      codes,
-      agents,
-      attributions,
-      members,
       clock,
     }),
     tokens: jwt,

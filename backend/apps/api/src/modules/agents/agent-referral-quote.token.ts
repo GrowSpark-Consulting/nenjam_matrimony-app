@@ -5,10 +5,8 @@
  * The checkout injects it OPTIONALLY (`@Optional() @Inject(AGENT_REFERRAL_QUOTE)`):
  * when nothing is provided it charges the list price with no discount.
  *
- * NOT PROVIDED YET: the quote needs the member read adapter (the member's
- * verified phone hash and whether they have paid), which waits for the
- * Payments PR's payment fields. Until then the token exists so his code can
- * import it, and the module provides nothing under it.
+ * Provided by AgentReferralQuoteModule (quote/), only when identifier hashing
+ * and the quote's settings are configured; otherwise its value is null.
  */
 import type { AgentReferralQuoteService } from './referral/agent-referral-quote.service';
 

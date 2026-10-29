@@ -24,7 +24,10 @@ export type AgentConflictReason =
   | 'DUPLICATE_PRIMARY_CODE'
   | 'DUPLICATE_ATTRIBUTION'
   | 'ALREADY_REVOKED'
-  | 'DUPLICATE_ID';
+  | 'DUPLICATE_ID'
+  | 'DUPLICATE_COMMISSION'
+  | 'DUPLICATE_PAYOUT'
+  | 'DUPLICATE_PAYOUT_REFERENCE';
 
 export class AgentConflictError extends Error {
   constructor(public readonly reason: AgentConflictReason) {
@@ -253,6 +256,11 @@ export interface ReferralAttributionRepository {
   findByIdForAgent(
     attributionId: string,
     agentId: string,
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord | null>;
+  /** The attribution stored under this EXACT phone hash (one version of the pepper), or null. */
+  findByPhoneHash(
+    phoneHash: string,
     tx?: AgentTx,
   ): Promise<ReferralAttributionRecord | null>;
   /** True when an attribution already exists for this member phone hash. */
