@@ -84,7 +84,7 @@ export interface ReferralQuote {
   discountBps: number;
   discountPaise: number;
   discountSource: ReferralDiscount['source'];
-  amountPaidPaise: number;
+  taxableAfterDiscountPaise: number;
   /** The typed code to hold on the payment so it can be attached when paid. */
   heldReferralCodeId?: string;
   /** "Ravi K." - the agent the discount comes from. */
@@ -169,7 +169,7 @@ export class AgentReferralQuoteService {
       discountBps: discount.discountPaise > 0 ? bps : 0,
       discountPaise: discount.discountPaise,
       discountSource: discount.source,
-      amountPaidPaise: discount.amountPaidPaise,
+      taxableAfterDiscountPaise: discount.taxableAfterDiscountPaise,
     };
     if (discount.discountPaise > 0) {
       quote.agentDisplayName = toDisplayName(name.first ?? '', name.last);
@@ -342,7 +342,7 @@ function none(
     discountBps: 0,
     discountPaise: 0,
     discountSource: 'NONE',
-    amountPaidPaise: list.amountPaidPaise,
+    taxableAfterDiscountPaise: list.taxableAfterDiscountPaise,
   };
   if (rejectedReason !== undefined) quote.rejectedReason = rejectedReason;
   return quote;
