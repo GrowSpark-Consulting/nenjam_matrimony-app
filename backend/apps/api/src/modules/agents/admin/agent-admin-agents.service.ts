@@ -149,6 +149,17 @@ export interface AgentListQuery {
 
 export const PERMISSION_AGENT_VIEW = { module: 'agent', action: 'view' };
 export const PERMISSION_AGENT_APPROVE = { module: 'agent', action: 'approve' };
+export const PERMISSION_AGENT_MANAGE = { module: 'agent', action: 'manage' };
+
+/** Who may move an agent, and from which statuses (the contract's rules). */
+interface MoveRule {
+  permission: { module: string; action: string };
+  from: readonly AgentStatus[];
+}
+const APPLICATION_RULE: MoveRule = {
+  permission: PERMISSION_AGENT_APPROVE,
+  from: ['PENDING_APPROVAL'],
+};
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
@@ -301,7 +312,58 @@ export class AgentAdminAgentsService {
     );
   }
 
+  /** ACTIVE -> SUSPENDED ("Paused"). Open commissions freeze in the daily job. */
+  async pause(
+    actor: AdminActor,
+    id: string,
+    reason: string,
+  ): Promise<AdminAgentDetailView> {
+    return this.manage(actor, id, reason, 'SUSPENDED', 'agent.pause', [
+      'ACTIVE',
+    ]);
+  }
+
+  /** SUSPENDED -> ACTIVE. Never undoes TERMINATED or REJECTED. */
+  async resume(
+    actor: AdminActor,
+    id: string,
+    reason: string,
+  ): Promise<AdminAgentDetailView> {
+    return this.manage(actor, id, reason, 'ACTIVE', 'agent.resume', [
+      'SUSPENDED',
+    ]);
+  }
+
+  /** ACTIVE or SUSPENDED -> TERMINATED, which is final. */
+  async terminate(
+    actor: AdminActor,
+    id: string,
+    reason: string,
+  ): Promise<AdminAgentDetailView> {
+    return this.manage(actor, id, reason, 'TERMINATED', 'agent.terminate', [
+      'ACTIVE',
+      'SUSPENDED',
+    ]);
+  }
+
   // --- internals --------------------------------------------------------------
+
+  private async manage(
+    actor: AdminActor,
+    id: string,
+    reason: string,
+    to: AgentStatus,
+    action: string,
+    from: readonly AgentStatus[],
+  ): Promise<AdminAgentDetailView> {
+    const text = requireReason(reason);
+    return await this.deps.uow.run((tx) =>
+      this.move(actor, id, text, to, action, tx, () => Promise.resolve({}), {
+        permission: PERMISSION_AGENT_MANAGE,
+        from,
+      }),
+    );
+  }
 
   private async move(
     actor: AdminActor,
@@ -314,24 +376,20 @@ export class AgentAdminAgentsService {
       agent: AgentRecord,
       now: Date,
     ) => Promise<Partial<Pick<AgentRecord, 'approvedAt' | 'rejectionReason'>>>,
+    rule: MoveRule = APPLICATION_RULE,
   ): Promise<AdminAgentDetailView> {
-    await this.deps.permission.assert(
-      actor.userId,
-      PERMISSION_AGENT_APPROVE,
-      tx,
-    );
+    await this.deps.permission.assert(actor.userId, rule.permission, tx);
     const agent = await this.deps.agents.findById(id, tx);
     if (agent === null) throw new AgentMoneyError('AGENT_NOT_FOUND');
-    // Approve and reject are for applications only: the state machine also
-    // allows SUSPENDED -> ACTIVE, but that is "resume", not "approve".
-    const decision =
-      agent.status === 'PENDING_APPROVAL'
-        ? canTransitionAgentStatus(agent.status, to)
-        : agent.status === to
-          ? ({ allowed: false, reason: 'SAME_STATUS' } as const)
-          : agent.status === 'TERMINATED'
-            ? ({ allowed: false, reason: 'TERMINATED_IS_FINAL' } as const)
-            : ({ allowed: false, reason: 'TRANSITION_NOT_ALLOWED' } as const);
+    // Each action moves only from its own statuses: approve and reject are
+    // for applications only (SUSPENDED -> ACTIVE is "resume", not "approve").
+    const decision = rule.from.includes(agent.status)
+      ? canTransitionAgentStatus(agent.status, to)
+      : agent.status === to
+        ? ({ allowed: false, reason: 'SAME_STATUS' } as const)
+        : agent.status === 'TERMINATED'
+          ? ({ allowed: false, reason: 'TERMINATED_IS_FINAL' } as const)
+          : ({ allowed: false, reason: 'TRANSITION_NOT_ALLOWED' } as const);
     if (!decision.allowed) {
       throw new AgentMoneyError('AGENT_TRANSITION_NOT_ALLOWED', {
         agentStatus: agent.status,

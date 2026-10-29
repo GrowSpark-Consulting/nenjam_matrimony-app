@@ -237,6 +237,7 @@ export class AgentAdminCommissionService {
       await this.deps.audit.record(
         {
           actorId: actor.userId,
+          ...(actor.context !== undefined && { context: actor.context }),
           action: 'commission.cancel',
           entity: 'Commission',
           entityId: id,
@@ -323,6 +324,7 @@ export class AgentAdminCommissionService {
       await this.deps.audit.record(
         {
           actorId: actor.userId,
+          ...(actor.context !== undefined && { context: actor.context }),
           action: 'commission.override',
           entity: 'Commission',
           entityId: id,

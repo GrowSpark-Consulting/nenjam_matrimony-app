@@ -192,6 +192,7 @@ export class AgentAdminReferralService {
       await this.deps.audit.record(
         {
           actorId: actor.userId,
+          ...(actor.context !== undefined && { context: actor.context }),
           action: 'attribution.correct',
           entity: 'ReferralAttribution',
           entityId: attributionId,

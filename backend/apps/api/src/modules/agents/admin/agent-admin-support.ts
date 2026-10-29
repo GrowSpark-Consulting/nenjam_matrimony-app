@@ -21,12 +21,15 @@ import type {
   ReferralCodeRecord,
 } from '../ports/agent-data-ports';
 import { maskPhone } from '../referral/agent-referral-view';
+import type { AgentAuditEntry } from '../ports/agent-platform-ports';
 
 export interface AdminActor {
   /** `users.id` of the staff member. */
   userId: string;
   /** An authenticator check within the step-up window (`hasFreshStepUp`). */
   stepUpFresh: boolean;
+  /** The request the change came from, for the audit row. */
+  context?: AgentAuditEntry['context'];
 }
 
 /** The permission keys used by the admin services, as in the contract. */
