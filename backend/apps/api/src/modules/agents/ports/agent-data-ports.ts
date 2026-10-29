@@ -212,7 +212,8 @@ export interface ReferralAttributionRecord {
   agentId: string;
   /** Null once the code is deleted. */
   codeId: string | null;
-  source: AttributionSource;
+  /** The three sources the services create, plus the two the database allows (an agent adds a client, an admin sets one). */
+  source: AttributionSource | 'ADDED_BY_AGENT' | 'ADMIN_SET';
   /** Hash of the member's verified phone. Required: a member with no verified phone cannot be credited. */
   memberPhoneHash: string;
   attributedAt: Date;
