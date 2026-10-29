@@ -166,8 +166,6 @@ export class FirebaseService implements OnModuleInit {
    *
    * Idempotent by identifier, which is what the retry cases need:
    *   - same phone signing up again resolves to the same uid;
-   *   - an address already used by another account is left alone rather than
-   *     stolen from it (the phone is the identity here — see the caller);
    *   - a create that loses a race to a concurrent one re-reads instead of
    *     failing, because `auth/*-already-exists` means the account we wanted
    *     now exists.
@@ -176,18 +174,16 @@ export class FirebaseService implements OnModuleInit {
    * ([createCustomToken]) for exactly as long as the dummy OTP stands in for
    * real verification.
    *
-   * [email] is used to FIND an existing account and is never written onto
-   * one. An address Firebase has not verified, attached to the account, makes
-   * `user.email != null && !user.emailVerified` true — and that is the exact
-   * shape the app's routing reads as "this member owes us an email
-   * verification", which would drop a dummy-OTP signup onto a verify-email
-   * screen with nothing to resend and no way to pass. Nothing in this flow
-   * verifies an address, so nothing in it may claim one: the address is kept
-   * where it belongs, on the internal `users` row.
+   * Looked up by PHONE ONLY. It used to fall back to the email the signup
+   * form carried, and a match there was returned — and then signed in. Since
+   * nothing in this flow verifies an address, that let anyone obtain a
+   * session for whichever account held an email they typed. An email never
+   * selects an account here, and is never written onto one (an unverified
+   * address on the Firebase account would also strand the member on the
+   * app's verify-email screen); it stays on the internal `users` row.
    */
   async findOrCreateUser(params: {
     phone: string;
-    email?: string | null;
   }): Promise<{ uid: string; created: boolean }> {
     if (!this.app) {
       throw new InternalServerErrorException(
@@ -196,7 +192,6 @@ export class FirebaseService implements OnModuleInit {
     }
     const auth = getAuth(this.app);
     const phone = params.phone.trim();
-    const email = params.email?.trim().toLowerCase() || undefined;
 
     const byIdentifier = async (
       find: () => Promise<UserRecord>,
@@ -220,13 +215,9 @@ export class FirebaseService implements OnModuleInit {
       }
     };
 
-    // The phone is the identity this flow verifies (however loosely), so it
-    // is looked up first: an existing phone account is THE account, whatever
-    // address the signup form also carried.
-    const existing =
-      (await byIdentifier(() => auth.getUserByPhoneNumber(phone))) ??
-      (email ? await byIdentifier(() => auth.getUserByEmail(email)) : null);
-
+    // The phone is the identity this flow verifies (however loosely): an
+    // existing phone account is THE account.
+    const existing = await byIdentifier(() => auth.getUserByPhoneNumber(phone));
     if (existing) return { uid: existing.uid, created: false };
 
     try {
@@ -279,6 +270,44 @@ export class FirebaseService implements OnModuleInit {
         'connectivity to Google and the token-creator role on the service ' +
         'account.',
     );
+  }
+
+  /**
+   * The Firebase account registered to [email], or null. Read-only; used by
+   * the admin provisioning script to link a staff row to the account an
+   * operator created in the Firebase console.
+   */
+  async findUserByEmail(email: string): Promise<{
+    uid: string;
+    email: string | undefined;
+    emailVerified: boolean;
+    disabled: boolean;
+    hasPhone: boolean;
+  } | null> {
+    if (!this.app) {
+      throw new InternalServerErrorException(
+        'Firebase Admin SDK is not configured on this server.',
+      );
+    }
+    try {
+      const user = await this.withTimeout(
+        getAuth(this.app).getUserByEmail(email.trim().toLowerCase()),
+        10_000,
+        'Firebase user lookup timed out.',
+      );
+      return {
+        uid: user.uid,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        disabled: user.disabled,
+        hasPhone: !!user.phoneNumber,
+      };
+    } catch (error) {
+      if ((error as { code?: string })?.code === 'auth/user-not-found') {
+        return null;
+      }
+      throw error;
+    }
   }
 
   /**

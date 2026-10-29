@@ -179,4 +179,14 @@ export const validationSchema = Joi.object({
   RAZORPAY_KEY_ID: Joi.string().allow('').optional(),
   RAZORPAY_KEY_SECRET: Joi.string().allow('').optional(),
   RAZORPAY_WEBHOOK_SECRET: Joi.string().allow('').optional(),
+
+  // Admin authenticator secrets are encrypted with this (32 random bytes,
+  // base64). Optional: without it the app boots and admin sign-in answers 503.
+  // A value that is set must be well-formed — a wrong-length key is a
+  // misconfiguration, not "admin off".
+  ADMIN_MFA_ENCRYPTION_KEY: Joi.string()
+    .allow('')
+    .base64()
+    .length(44)
+    .optional(),
 }).unknown(true);

@@ -53,7 +53,8 @@
     "verify:fake-seed": "ts-node libs/database/src/verify-fake-seed.ts",
     "unseed:fake": "ts-node libs/database/src/unseed-fake.ts",
     "verify:email": "ts-node -r tsconfig-paths/register scripts/verify-email.ts",
-    "account:status": "ts-node -r tsconfig-paths/register scripts/set-account-status.ts"
+    "account:status": "ts-node -r tsconfig-paths/register scripts/set-account-status.ts",
+    "admin:provision": "ts-node -r tsconfig-paths/register scripts/admin-provision.ts"
   },
   "dependencies": {
     "@aws-sdk/client-rekognition": "3.1091.0",

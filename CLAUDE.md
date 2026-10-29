@@ -48,13 +48,15 @@ nenjam_matrimony_app/
 │   ├── libs/{common,config,logger,database,cache,search,queue,firebase,storage,mail}/
 │   ├── scripts/             # ops/verification scripts — see §14
 │   └── railway.toml, prisma.config.ts
+├── admin/                   # staff admin panel: Next.js + TS static export over /admin/*
+│                            #   (own pnpm package; admin/README.md, docs/admin/README.md)
 ├── docs/                    # architecture notes, API reference, dev handoffs, daily reports
 │   ├── api/, architecture/, development/, discover/, registration/, daily-reports/
 ├── scripts/
 │   ├── dev/                 # start_dev.ps1, stop_dev.ps1, USB/adb helpers (Windows)
 │   └── git-hooks/           # opt-in pre-commit secret scanner — see §12/§13
 ├── seed-data/                # ISO country/subdivision/city + religion source data, consumed by backend seeders
-├── .github/workflows/ci.yml # single CI workflow, backend + frontend jobs — see §10/§13
+├── .github/workflows/ci.yml # single CI workflow: admin web, backend and frontend jobs — see §10/§13
 ├── PROJECT_DOCUMENTATION.md  # 2026-07-11 snapshot — historical context only, see warning above
 ├── auth-architecture.md      # root design doc: Firebase-auth-only decision (still broadly accurate)
 └── registration-wizard-integration.md
@@ -141,7 +143,9 @@ The **real** design system (verify against `lib/core/theme/app_colors.dart` befo
 
 The client's `AuthInterceptor` (`lib/core/network/api_interceptor.dart`) is wired to `AuthTokenService.getFirebaseToken()` (confirmed via `api_providers.dart`'s `AuthInterceptor(getAccessToken: () => tokenService.getFirebaseToken(), ...)`), **not** `StorageService`. `StorageService`'s legacy `accessToken`/`refreshToken` SharedPreferences-backed fields (`saveTokens`, `isLoggedIn`, etc.) are **dead code for the actual authentication path** — nothing in the live auth flow reads or writes them.
 
-`@Public()` and `@Roles()` decorators exist (`libs/common/src/decorators/`) but are unfinished `SetMetadata` stubs with no guard reading their metadata — using them today has **no effect**. `RolesGuard` and `AdminOnlyGuard` are empty stub classes. Don't rely on any of these for authorization; there is currently no role-based access control mechanism actually wired up.
+`@Public()` (`libs/common/src/decorators/`) is an unfinished `SetMetadata` stub with no guard reading it — using it has **no effect**.
+
+**Staff RBAC is real** (`apps/api/src/modules/admin/`, see `docs/admin/README.md`): `/admin/*` controllers use `@AdminController(path)` (= `FirebaseAuthGuard` + `AdminGuard`) and every route declares `@RequirePermissions(...)`, `@AllowAnyAdmin()` or `@AdminSessionNotRequired()` — an undeclared route is refused and fails boot (`AdminRouteCheck`). Access = active `AdminAccount` + roles (`Role`/`Permission`/`RolePermission`/`AdminUserRole`; keys in `admin/rbac/permissions.ts`, seeded by migration) + an admin session from our own TOTP check (`X-Admin-Session` header). Services that change money/plans also call `assertAdminPermission(tx, actorId, key)` inside their transaction. Staff `users` rows (role ≠ USER) are never re-linked by `FirebaseAuthGuard` or dummy-OTP; admins are created only by `pnpm admin:provision`. The old `RolesGuard`/`AdminOnlyGuard`/`@Roles()` stubs were removed.
 
 ⚠️ **`POST /auth/dummy-otp/session` (`DummyOtpSessionController`/`DummyOtpSessionService`, `apps/api/src/modules/users/`) — a real, currently-live authentication bypass, confined to this one endpoint.** `FirebaseAuthGuard` itself has **no** bypass — do not describe it as accepting an unauthenticated development header. The old `X-Dev-Auth-Phone` header that a comment in `dev-auth.ts` describes `FirebaseAuthGuard` as once consulting has been **removed from the guard**: `readDevAuthPhone`/`DEV_AUTH_HEADER` still exist in `libs/common/src/auth/dev-auth.ts` but have **no call sites anywhere outside that file and its own spec** (confirmed by a repo-wide search). The bypass now lives entirely in `POST /auth/dummy-otp/session`, which is **deliberately unauthenticated** and **rate-limited to 10 requests per 60 seconds**. When `DUMMY_OTP_ENABLED=true` (any environment, including production) or `DEV_AUTH_ENABLED=true` (non-production) — governed by the same `dummyAuthAllows()` policy in `dev-auth.ts` — it accepts the supplied phone number with **no SMS ownership verification** and calls `firebase-admin`'s `createCustomToken()` to mint a **real Firebase custom token** for that number. The client exchanges that custom token for an ordinary Firebase session, which then satisfies `FirebaseAuthGuard` completely normally — the bypass is in *how the session gets minted*, not in how it's later verified. It is narrowed by an optional `DUMMY_OTP_PHONES` allowlist, and fully closed by `USE_REAL_OTP=true` (which restores real Firebase Phone Auth) or a non-empty `DUMMY_OTP_PHONES`. **Never enable `DUMMY_OTP_ENABLED`/`DEV_AUTH_ENABLED` against a database containing real user accounts.** Treat any change to `dev-auth.ts`, `DummyOtpSessionController`/`Service`, or `FirebaseAuthGuard` as security-sensitive.
 
@@ -172,8 +176,8 @@ JWT: `JWT_SECRET` is a required, Joi-validated env var, but **no `@nestjs/jwt`/`
 **Guards/Interceptors/Pipes/Filters** — know which are real before relying on them:
 | Real | Stub / unwired |
 |---|---|
-| `FirebaseAuthGuard` | `RolesGuard`, `AdminOnlyGuard`, `WsJwtGuard` (websocket app) |
-| `@CurrentUser()` decorator | `@Public()`, `@Roles()` decorators (no reader) |
+| `FirebaseAuthGuard`, `AdminGuard` + `@RequirePermissions` (admin module) | `WsJwtGuard` (websocket app) |
+| `@CurrentUser()`, `@CurrentAdmin()` decorators | `@Public()` decorator (no reader) |
 | Global `ValidationPipe` (whitelist/transform/forbidNonWhitelisted) | `ZodValidationPipe` (empty; `zod` unused anywhere) |
 | `ThrottlerGuard` (global `APP_GUARD`, real rate limiting) | `transform-response.interceptor.ts`, `request-timing.interceptor.ts` (neither registered) |
 | module-local `conversation-participant.guard.ts` (chat) | `AllExceptionsFilter` (empty `@Catch()`, **not registered** — Nest's default exception handling is what actually runs) |
@@ -241,7 +245,7 @@ Before finishing a change: run the formatter/analyzer/linter for the side you to
 - **A pre-commit secret scanner exists but is opt-in per clone**: `scripts/git-hooks/pre-commit` blocks staged AWS keys, Postgres/Redis/MongoDB URLs with inline passwords, Neon passwords, Google API keys, GitHub/Stripe/Resend/Slack tokens, JWTs, and private keys — written after a real incident where live secrets were pasted into `backend/.env.example` (the one `.env*` file git actually tracks). **Enable it**: `git config core.hooksPath scripts/git-hooks`. It exempts public Firebase client config (`google-services.json`, `firebase_options.dart`, etc.) and loopback-only connection strings.
 - **The dummy-OTP session-minting bypass** (§5) — `POST /auth/dummy-otp/session`, not `FirebaseAuthGuard` — is a real, intentional authentication hole gated by env flags (`DUMMY_OTP_ENABLED`/`DEV_AUTH_ENABLED`). It mints a genuine Firebase custom token for a phone number with no SMS ownership check; `FirebaseAuthGuard` itself always requires a real, verified token and has no bypass of its own. Never enable those flags against real user data, and treat any change to `dev-auth.ts`, `DummyOtpSessionController`/`Service`, or `firebase-auth.guard.ts` as security-sensitive.
 - `FirebaseAuthGuard` is applied **per-controller**, not globally — a new controller with no `@UseGuards(FirebaseAuthGuard)` is unauthenticated by default. Always add it explicitly for anything touching user data.
-- `AllExceptionsFilter`, `RolesGuard`, `@Public()`/`@Roles()`, `ZodValidationPipe`, and the response-transform/request-timing interceptors are non-functional stubs (§7) — don't rely on them for anything security-relevant; verify the real mechanism (Nest's default exception handling, `FirebaseAuthGuard`, the global `ValidationPipe`) is what's actually protecting a given path.
+- `AllExceptionsFilter`, `@Public()`, `ZodValidationPipe`, and the response-transform/request-timing interceptors are non-functional stubs (§7) — don't rely on them for anything security-relevant; verify the real mechanism (Nest's default exception handling, `FirebaseAuthGuard`, the global `ValidationPipe`) is what's actually protecting a given path.
 - Never log Firebase ID tokens, passwords, or full request/response bodies (`LoggingInterceptor` deliberately avoids this — match that convention).
 - Before committing: check `git status`/`git diff` for anything that looks like a real credential, especially in `.env.example` files (the one place a real secret has leaked here before) and any generated/config file.
 
@@ -322,7 +326,7 @@ Known performance-sensitive areas, already addressed in the current code — und
 - **`PROJECT_DOCUMENTATION.md`** (root) is a detailed but dated (2026-07-11) snapshot — good for historical structure/DB-design narrative, but its CI status, module-registration counts, routing-guard claims, color palette, and "no FCM" claim are all superseded by the current code. Cross-check anything load-bearing against the live source.
 - **`Frontend/BRAIN.md` and `Frontend/PROJECT_RULES.md`** describe an aspirational architecture that materially diverges from the real code (see the warning at the top of this file and §3/§4/§10). Don't cite them as authority when they conflict with what's actually in `lib/`.
 - The **dummy-OTP session bypass** (§5/§12) — confined to `POST /auth/dummy-otp/session`, not `FirebaseAuthGuard` itself — is a live, intentional exception to normal auth — it exists because SMS billing for real Firebase Phone Auth isn't enabled yet, not because the design intends a permanent bypass.
-- A large fraction of "enterprise NestJS scaffolding" (global exception filter, response/timing interceptors, Zod pipe, roles guard/decorators, the whole `@app/logger` lib, and 6 of 18 feature modules) is present as files but inert — see the table in §7. Don't assume a file's existence means it's wired in; check `AppModule`/`main.ts`.
+- A large fraction of "enterprise NestJS scaffolding" (global exception filter, response/timing interceptors, Zod pipe, the `@Public()` decorator, the whole `@app/logger` lib, and 6 of 18 feature modules) is present as files but inert — see the table in §7. Don't assume a file's existence means it's wired in; check `AppModule`/`main.ts`.
 
 ---
 

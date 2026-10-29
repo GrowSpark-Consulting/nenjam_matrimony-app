@@ -1,0 +1,35 @@
+{
+  "name": "nenjam-admin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nenjam staff admin panel — a static web app over the NestJS /admin API.",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "firebase": "^11.6.0",
+    "next": "^15.3.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@types/node": "^22.15.0",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "eslint": "^9.25.0",
+    "eslint-config-next": "^15.3.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
+  }
+}

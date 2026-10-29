@@ -47,13 +47,15 @@ describeIntegration('membership lifecycle', () => {
   let catalog: PlanCatalogService;
   let orderSeq = 0;
 
-  // Admin actors, as real users: the services now verify role, status and
-  // AdminAccount.permissions themselves.
+  // Admin actors, as real users: the services verify status, an active
+  // AdminAccount and a role granting the permission themselves.
   const ADMIN = 'mbr-life-admin'; // subscriptions + membership
   const SUBS_ADMIN = 'mbr-life-subs-admin'; // like the seeded admin
   const SUSPENDED_ADMIN = 'mbr-life-suspended-admin';
   const NOT_ADMIN = 'mbr-life-not-admin';
-  const ACTORS = [ADMIN, SUBS_ADMIN, SUSPENDED_ADMIN, NOT_ADMIN];
+  const LEGACY_ADMIN = 'mbr-life-legacy-admin'; // like the old seeded placeholder
+  const ACTORS = [ADMIN, SUBS_ADMIN, SUSPENDED_ADMIN, NOT_ADMIN, LEGACY_ADMIN];
+  const SUBS_ROLE = 'ITEST_MBR_SUBSCRIPTIONS';
   const USERS = [
     'mbr-life-a',
     'mbr-life-b',
@@ -89,12 +91,34 @@ describeIntegration('membership lifecycle', () => {
     );
   }
 
+  /** A role holding exactly [keys], created for this suite. */
+  async function ensureRole(key: string, keys: string[]) {
+    const role = await prisma.role.upsert({
+      where: { key },
+      create: { key, name: key },
+      update: {},
+    });
+    const permissions = await prisma.permission.findMany({
+      where: { key: { in: keys } },
+    });
+    expect(permissions).toHaveLength(keys.length);
+    await prisma.rolePermission.createMany({
+      data: permissions.map((p) => ({ roleId: role.id, permissionId: p.id })),
+      skipDuplicates: true,
+    });
+    return role;
+  }
+
   async function createActor(
     id: string,
     over: {
       role?: 'ADMIN' | 'USER';
       status?: 'ACTIVE' | 'SUSPENDED';
-      permissions?: Record<string, string[]> | null;
+      /** Role keys held through an active AdminAccount. */
+      roles?: string[];
+      /** An AdminAccount that was never provisioned: inactive, with only the
+       *  legacy JSON grants the old seeder wrote. */
+      legacyJsonOnly?: boolean;
     },
   ) {
     await prisma.user.create({
@@ -104,8 +128,29 @@ describeIntegration('membership lifecycle', () => {
         email: `${id}@example.com`,
         role: over.role ?? 'ADMIN',
         status: over.status ?? 'ACTIVE',
-        ...(over.permissions && {
-          adminAccount: { create: { permissions: over.permissions } },
+        ...(over.legacyJsonOnly && {
+          adminAccount: {
+            create: {
+              permissions: {
+                subscriptions: ['read', 'write', 'cancel'],
+                membership: ['plans.write', 'prices.write'],
+              },
+            },
+          },
+        }),
+        ...(over.roles && {
+          adminAccount: {
+            create: {
+              isActive: true,
+              roles: {
+                create: (
+                  await prisma.role.findMany({
+                    where: { key: { in: over.roles } },
+                  })
+                ).map((r) => ({ roleId: r.id })),
+              },
+            },
+          },
         }),
       },
     });
@@ -150,23 +195,19 @@ describeIntegration('membership lifecycle', () => {
     webhooks = new RazorpayWebhookService(db, lifecycle);
 
     await prisma.user.deleteMany({ where: { id: { in: ACTORS } } });
-    await createActor(ADMIN, {
-      permissions: {
-        subscriptions: ['read', 'write', 'cancel'],
-        membership: ['plans.write', 'prices.write'],
-      },
-    });
-    await createActor(SUBS_ADMIN, {
-      permissions: { subscriptions: ['read', 'write', 'cancel'] },
-    });
+    await ensureRole(SUBS_ROLE, [
+      'subscription.grant',
+      'subscription.extend',
+      'subscription.cancel',
+    ]);
+    await createActor(ADMIN, { roles: ['SUPER_ADMIN'] });
+    await createActor(SUBS_ADMIN, { roles: [SUBS_ROLE] });
     await createActor(SUSPENDED_ADMIN, {
       status: 'SUSPENDED',
-      permissions: {
-        subscriptions: ['read', 'write', 'cancel'],
-        membership: ['plans.write', 'prices.write'],
-      },
+      roles: ['SUPER_ADMIN'],
     });
-    await createActor(NOT_ADMIN, { role: 'USER', permissions: null });
+    await createActor(NOT_ADMIN, { role: 'USER' });
+    await createActor(LEGACY_ADMIN, { legacyJsonOnly: true });
 
     // Put Gold and Platinum on sale (the shipped catalogue is unpriced).
     for (const [planCode, months, price] of [
@@ -204,6 +245,7 @@ describeIntegration('membership lifecycle', () => {
     await prisma?.user.deleteMany({
       where: { id: { in: [...USERS, ...ACTORS] } },
     });
+    await prisma?.role.deleteMany({ where: { key: SUBS_ROLE } });
     await prisma?.$disconnect();
   });
 
@@ -616,6 +658,7 @@ describeIntegration('membership lifecycle', () => {
     it.each([
       ['a member who is not an admin', NOT_ADMIN],
       ['a suspended admin', SUSPENDED_ADMIN],
+      ['an unprovisioned admin holding only legacy JSON grants', LEGACY_ADMIN],
       ['an id that is no user at all', 'mbr-life-nobody'],
     ])('refuses %s, writing nothing', async (_label, actorId) => {
       const auditBefore = await prisma.auditLog.count();
@@ -626,7 +669,55 @@ describeIntegration('membership lifecycle', () => {
       expect(await prisma.auditLog.count()).toBe(auditBefore);
     });
 
-    it('lets the seeded-style admin manage subscriptions but not prices', async () => {
+    it('rolls the change back when its audit row cannot be written', async () => {
+      // The same client, except that inside a transaction the audit insert
+      // fails — as a full disk or a broken constraint would.
+      const failingAudit = new Proxy(prisma, {
+        get(target, prop, receiver) {
+          if (prop !== '$transaction')
+            return Reflect.get(target, prop, receiver) as unknown;
+          return (fn: (tx: unknown) => Promise<unknown>) =>
+            target.$transaction((tx) =>
+              fn(
+                new Proxy(tx, {
+                  get(inner, key, r) {
+                    if (key === 'auditLog') {
+                      return {
+                        create: () => Promise.reject(new Error('audit down')),
+                      };
+                    }
+                    return Reflect.get(inner, key, r) as unknown;
+                  },
+                }),
+              ),
+            );
+        },
+      }) as unknown as PrismaService;
+      const lifecycleWithFailingAudit = new SubscriptionLifecycleService(
+        failingAudit,
+        new SubscriptionRepository(failingAudit),
+        catalog,
+      );
+
+      await expect(
+        lifecycleWithFailingAudit.grant({
+          userId: E,
+          planCode: 'GOLD',
+          days: 7,
+          actorId: ADMIN,
+          reason: 'support compensation',
+        }),
+      ).rejects.toThrow('audit down');
+      expect(
+        await prisma.userSubscription.count({ where: { userId: E } }),
+      ).toBe(0);
+      expect(
+        await prisma.subscriptionEvent.count({ where: { userId: E } }),
+      ).toBe(0);
+      expect(await planOf(E)).toBe('FREE');
+    });
+
+    it('lets an admin whose role grants only subscription.* manage subscriptions but not prices', async () => {
       await expect(grantBy(SUBS_ADMIN)).resolves.toHaveProperty(
         'subscriptionId',
       );

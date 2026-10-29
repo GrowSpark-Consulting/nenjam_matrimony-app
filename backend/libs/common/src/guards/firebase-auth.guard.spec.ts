@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ExecutionContext,
   ForbiddenException,
   UnauthorizedException,
@@ -178,7 +179,11 @@ describe('FirebaseAuthGuard', () => {
         .mockResolvedValueOnce({ id: 'internal-1', firebaseUid: 'old-uid' }); // by email
       const update = jest.fn(() => Promise.resolve({ id: 'internal-1' }));
       const verifyIdToken = jest.fn(() =>
-        Promise.resolve({ uid: UID, email: 'member@example.com' }),
+        Promise.resolve({
+          uid: UID,
+          email: 'member@example.com',
+          email_verified: true,
+        }),
       );
       const { guard, upsert } = buildGuard({
         verifyIdToken,
@@ -195,6 +200,65 @@ describe('FirebaseAuthGuard', () => {
       expect(verifyIdToken).toHaveBeenCalledTimes(1);
       expect(request.user?.id).toBe('internal-1');
     });
+
+    // Anyone can create an email/password Firebase account for an address
+    // they don't own; only a Firebase-verified email may claim a member row.
+    it('never re-links a member row by an unverified email', async () => {
+      const findUnique = jest
+        .fn()
+        .mockResolvedValueOnce(null) // by firebaseUid
+        .mockResolvedValueOnce({ id: 'member-row', role: 'USER' }); // by email
+      const update = jest.fn();
+      const { guard, upsert } = buildGuard({
+        verifyIdToken: jest.fn(() =>
+          Promise.resolve({
+            uid: UID,
+            email: 'member@example.com',
+            email_verified: false,
+          }),
+        ),
+        findUnique,
+        update,
+      });
+      const { ctx, request } = contextFor(`Bearer ${TOKEN}`);
+
+      await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(update).not.toHaveBeenCalled();
+      expect(upsert).not.toHaveBeenCalled();
+      expect(request.user).toBeUndefined();
+    });
+
+    // A new Firebase account that merely claims an admin's email or phone must
+    // not inherit the admin row — that would make anyone who can register the
+    // address (or mint a dummy-OTP session for the number) an admin.
+    it.each([
+      ['email', { uid: UID, email: 'admin@example.com' }],
+      ['phone', { uid: UID, phone_number: '+919999999999' }],
+    ])(
+      'never re-links a staff row matched by %s to another Firebase account',
+      async (_by, decoded) => {
+        const findUnique = jest
+          .fn()
+          .mockResolvedValueOnce(null) // by firebaseUid
+          .mockResolvedValueOnce({ id: 'admin-row', role: 'ADMIN' });
+        const update = jest.fn();
+        const { guard, upsert } = buildGuard({
+          verifyIdToken: jest.fn(() => Promise.resolve(decoded)),
+          findUnique,
+          update,
+        });
+        const { ctx, request } = contextFor(`Bearer ${TOKEN}`);
+
+        await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(
+          ForbiddenException,
+        );
+        expect(update).not.toHaveBeenCalled();
+        expect(upsert).not.toHaveBeenCalled();
+        expect(request.user).toBeUndefined();
+      },
+    );
   });
   // The bypass this guard used to carry, and must never carry again.
   //

@@ -25,6 +25,7 @@ import { ReferenceDataModule } from './modules/reference-data/reference-data.mod
 import { VerificationModule } from './modules/verification/verification.module';
 import { PsychologyModule } from './modules/psychology/psychology.module';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { throttlerConfig } from './throttling';
 
 @Module({
@@ -76,6 +77,10 @@ import { throttlerConfig } from './throttling';
     // Razorpay webhook. Checkout and the webhook answer 503 until Razorpay is
     // configured; the rest works without it.
     SubscriptionModule,
+    // Staff access: /admin/auth/* (authenticator sign-in) and /admin/me, plus
+    // the AdminGuard + RBAC every /admin/* controller uses. Sign-in answers
+    // 503 until ADMIN_MFA_ENCRYPTION_KEY is set.
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

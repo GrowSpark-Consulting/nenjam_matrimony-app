@@ -97,16 +97,122 @@ model RefreshToken {
 }
 
 /// Extended admin metadata — one-to-one extension of User (role=ADMIN).
+///
+/// Access comes from roles (AdminUserRole → Role → Permission), checked by the
+/// admin guard. An account is created inactive and switched on only by the
+/// provisioning script (`pnpm admin:provision`), which also hands out the
+/// one-time code needed to enrol an authenticator.
 model AdminAccount {
-  id          String   @id @default(uuid())
-  userId      String   @unique @map("user_id")
-  department  String   @default("PLATFORM")
-  permissions Json     @default("{}")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                     String          @id @default(uuid())
+  userId                 String          @unique @map("user_id")
+  department             String          @default("PLATFORM")
+  /// Legacy per-account grants written by the old seeder. No longer read:
+  /// access comes from roles. Kept so no data is dropped.
+  permissions            Json            @default("{}")
+  isActive               Boolean         @default(false) @map("is_active")
+  /// TOTP secret, AES-256-GCM encrypted with ADMIN_MFA_ENCRYPTION_KEY.
+  /// Pending (not yet usable) while mfaEnrolledAt is null.
+  mfaSecretEncrypted     String?         @map("mfa_secret_encrypted")
+  mfaEnrolledAt          DateTime?       @map("mfa_enrolled_at")
+  /// The TOTP time step of the last accepted code — a code is never
+  /// accepted twice.
+  mfaLastUsedStep        Int?            @map("mfa_last_used_step")
+  mfaFailedAttempts      Int             @default(0) @map("mfa_failed_attempts")
+  mfaLockedUntil         DateTime?       @map("mfa_locked_until")
+  /// SHA-256 of the one-time enrolment code the provisioning script printed.
+  mfaEnrollmentCodeHash  String?         @map("mfa_enrollment_code_hash")
+  mfaEnrollmentExpiresAt DateTime?       @map("mfa_enrollment_expires_at")
+  lastLoginAt            DateTime?       @map("last_login_at")
+  createdAt              DateTime        @default(now()) @map("created_at")
+  updatedAt              DateTime        @updatedAt @map("updated_at")
+  user                   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roles                  AdminUserRole[]
+  sessions               AdminSession[]
 
   @@map("admin_accounts")
+}
+
+/// A staff role: a named, editable bundle of permissions. Code checks
+/// permissions, never role keys, so a new role needs no deploy.
+model Role {
+  id          String           @id @default(uuid())
+  /// Stable identifier, e.g. SUPER_ADMIN.
+  key         String           @unique
+  name        String
+  description String?
+  /// Seeded by a migration; not deletable from the admin panel.
+  isSystem    Boolean          @default(false) @map("is_system")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  permissions RolePermission[]
+  admins      AdminUserRole[]
+
+  @@map("roles")
+}
+
+/// One action an admin may take, `<resource>.<action>` (e.g. agent.approve).
+/// The keys are defined in code (admin/rbac/permissions.ts) and seeded by
+/// migrations; the two must match (a unit test checks).
+model Permission {
+  id          String           @id @default(uuid())
+  key         String           @unique
+  description String
+  /// Needs a recent second-factor check (step-up) on every use.
+  isSensitive Boolean          @default(false) @map("is_sensitive")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String     @map("role_id")
+  permissionId String     @map("permission_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model AdminUserRole {
+  adminAccountId String       @map("admin_account_id")
+  roleId         String       @map("role_id")
+  /// User id of the admin who assigned it; null when the provisioning
+  /// script did.
+  assignedById   String?      @map("assigned_by_id")
+  assignedAt     DateTime     @default(now()) @map("assigned_at")
+  adminAccount   AdminAccount @relation(fields: [adminAccountId], references: [id], onDelete: Cascade)
+  role           Role         @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@id([adminAccountId, roleId])
+  @@index([roleId])
+  @@map("admin_user_roles")
+}
+
+/// Proof that an admin passed the second factor. Issued after a TOTP check
+/// and sent as `X-Admin-Session` alongside the Firebase ID token; only its
+/// SHA-256 is stored.
+model AdminSession {
+  id             String       @id @default(uuid())
+  adminAccountId String       @map("admin_account_id")
+  tokenHash      String       @unique @map("token_hash")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  lastSeenAt     DateTime     @map("last_seen_at")
+  expiresAt      DateTime     @map("expires_at")
+  /// Last TOTP check on this session; sensitive permissions need it recent.
+  mfaVerifiedAt  DateTime     @map("mfa_verified_at")
+  revokedAt      DateTime?    @map("revoked_at")
+  revokeReason   String?      @map("revoke_reason")
+  ipAddress      String?      @map("ip_address")
+  userAgent      String?      @map("user_agent")
+  adminAccount   AdminAccount @relation(fields: [adminAccountId], references: [id], onDelete: Cascade)
+
+  @@index([adminAccountId])
+  @@index([expiresAt])
+  @@map("admin_sessions")
 }
 
 /// Full matrimonial profile — the searchable core of each member.
@@ -635,8 +741,44 @@ model SubscriptionPlan {
   subscriptions UserSubscription[]
   durations     SubscriptionPlanDuration[]
   versions      SubscriptionPlanVersion[]
+  drafts        SubscriptionPlanDraft[]
 
   @@map("subscription_plans")
+}
+
+/// A proposed change to a plan — its entitlements and/or price list — made in
+/// the admin panel and published only after a SECOND admin approves it
+/// (maker-checker). Publishing creates a new immutable SubscriptionPlanVersion
+/// (if the entitlements changed) and updates the durations, in one
+/// transaction. At most one open (DRAFT or SUBMITTED) draft per plan.
+model SubscriptionPlanDraft {
+  id                 String          @id @default(uuid())
+  planId             String          @map("plan_id")
+  /// The version that was current when the draft was started.
+  baseVersionId      String?         @map("base_version_id")
+  /// The complete proposed entitlement map.
+  entitlements       Json
+  /// The complete proposed price list:
+  /// [{ months, durationDays, bonusDays, priceInPaise, isActive }].
+  durations          Json            @default("[]")
+  changeNote         String          @map("change_note")
+  status             PlanDraftStatus @default(DRAFT)
+  createdById        String          @map("created_by_id")
+  updatedById        String          @map("updated_by_id")
+  submittedById      String?         @map("submitted_by_id")
+  submittedAt        DateTime?       @map("submitted_at")
+  /// Who published or rejected it — never the submitter.
+  decidedById        String?         @map("decided_by_id")
+  decidedAt          DateTime?       @map("decided_at")
+  decisionNote       String?         @map("decision_note")
+  publishedVersionId String?         @map("published_version_id")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+  plan               SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([planId, status])
+  @@index([status, updatedAt])
+  @@map("subscription_plan_drafts")
 }
 
 /// A purchasable length of a plan and its CURRENT price. Historical prices
@@ -1207,11 +1349,21 @@ model AuditLog {
   entityId  String?  @map("entity_id")
   metadata  Json?
   ipAddress String?  @map("ip_address")
+  /// STAFF | MEMBER | AGENT | SYSTEM — actorId alone can't say, because
+  /// agents are not users. Null on rows written before this column existed.
+  actorType String?  @map("actor_type")
+  /// Why the actor did it — required for sensitive admin changes.
+  reason    String?
+  before    Json?
+  after     Json?
+  requestId String?  @map("request_id")
+  userAgent String?  @map("user_agent")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([actorId])
   @@index([entity, entityId])
   @@index([createdAt])
+  @@index([action, createdAt])
   @@map("audit_logs")
 }
 
@@ -1306,6 +1458,16 @@ enum SubscriptionSource {
   ADMIN_GRANT
 
   @@map("subscription_source")
+}
+
+enum PlanDraftStatus {
+  DRAFT
+  SUBMITTED
+  PUBLISHED
+  REJECTED
+  DISCARDED
+
+  @@map("plan_draft_status")
 }
 
 enum SubscriptionEventType {
