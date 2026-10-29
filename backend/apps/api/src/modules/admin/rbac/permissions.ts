@@ -3,7 +3,7 @@
  * `<resource>.<action>` (Nenjam Admin Architecture v3, section 13).
  *
  * The database holds the same keys — seeded by migrations, starting with
- * `20261028070845_admin_rbac_foundation` — so roles can bundle them. This list
+ * `20261029053600_admin_rbac_foundation` — so roles can bundle them. This list
  * is what code checks against, so a mistyped key in `@RequirePermissions`
  * fails to compile instead of silently denying everyone. A new key needs both
  * an entry here and an INSERT in a new migration (`permissions.spec.ts`

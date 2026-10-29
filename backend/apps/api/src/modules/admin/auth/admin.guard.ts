@@ -9,13 +9,17 @@ import { SENSITIVE_PERMISSIONS } from '../rbac/permissions';
 import { AdminAccessService } from '../services/admin-access.service';
 import { AdminAuditService } from '../services/admin-audit.service';
 import { AdminSessionService } from '../services/admin-session.service';
+import type { Response } from 'express';
 import {
   ADMIN_SESSION_HEADER,
-  ADMIN_STEP_UP_MS,
   adminForbidden,
   adminUnauthorized,
 } from './admin-auth.policy';
-import { type AdminRequest, requestContextOf } from './admin-request';
+import {
+  type AdminRequest,
+  isFreshStepUp,
+  requestContextOf,
+} from './admin-request';
 import {
   ADMIN_ROUTE_POLICY,
   type AdminRoutePolicy,
@@ -50,6 +54,12 @@ export class AdminGuard implements CanActivate {
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const request = ctx.switchToHttp().getRequest<AdminRequest>();
+    // Admin answers carry personal data and payout destinations: no browser
+    // or proxy may keep a copy. Set before any check, so refusals too.
+    ctx
+      .switchToHttp()
+      .getResponse<Response>()
+      .setHeader('Cache-Control', 'no-store');
     const user = request.user;
     if (!user) {
       // FirebaseAuthGuard must run first; reaching here without it is a
@@ -126,11 +136,7 @@ export class AdminGuard implements CanActivate {
     const sensitive = policy.permissions.some((key) =>
       SENSITIVE_PERMISSIONS.has(key),
     );
-    if (
-      sensitive &&
-      (!mfaVerifiedAt ||
-        now.getTime() - mfaVerifiedAt.getTime() > ADMIN_STEP_UP_MS)
-    ) {
+    if (sensitive && !isFreshStepUp(mfaVerifiedAt, now)) {
       throw adminUnauthorized(
         'ADMIN_STEP_UP_REQUIRED',
         'This action needs a fresh code from your authenticator app.',
@@ -144,6 +150,7 @@ export class AdminGuard implements CanActivate {
       department: staff.department,
       lastLoginAt: staff.lastLoginAt,
       sessionId,
+      stepUpVerifiedAt: mfaVerifiedAt,
       roles: grants.roles,
       permissions: grants.permissions,
     };

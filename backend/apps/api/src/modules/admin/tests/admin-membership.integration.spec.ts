@@ -573,6 +573,17 @@ describeIntegration('admin membership API over HTTP', () => {
       expect(sa.admins.map((a) => a.email)).toEqual(
         expect.arrayContaining([people.alice.email, people.bob.email]),
       );
+      // Raja's roles (28 Oct): exactly these keys, nothing more.
+      const grants = (key: string) =>
+        roles.roles.find((r) => r.key === key)?.permissions;
+      expect(grants('PARTNER_MANAGER')).toEqual([
+        'agent.approve',
+        'agent.view',
+      ]);
+      expect(grants('PAYOUT_MANAGER')).toEqual([
+        'payout.execute',
+        'payout.view',
+      ]);
       await http().get('/admin/roles').set(as('viewer')).expect(403);
     });
   });

@@ -188,16 +188,30 @@ INSERT INTO "permissions" ("id", "key", "description", "is_sensitive") VALUES
   (gen_random_uuid()::text, 'system.job.retry', 'Retry failed background jobs', false)
 ON CONFLICT ("key") DO NOTHING;
 
--- The only role seeded here. Further roles (Operations, Finance, Partner
--- Manager, ...) are product decisions and are added once their permission
--- matrix is confirmed.
+-- Roles decided by Raja (28 Oct). Anything not granted below — pausing or
+-- terminating agents, code replacement, PAN/phone reveal, commissions,
+-- attribution — stays Super Admin only until decided. Further roles
+-- (Operations, Finance, Support, ...) are added in later migrations once their
+-- permission matrix is confirmed.
 INSERT INTO "roles" ("id", "key", "name", "description", "is_system", "updated_at") VALUES
   (gen_random_uuid()::text, 'SUPER_ADMIN', 'Super Admin',
-   'Every permission. Assign to one or two founders only.', true, CURRENT_TIMESTAMP)
+   'Every permission. Assign to one or two founders only.', true, CURRENT_TIMESTAMP),
+  (gen_random_uuid()::text, 'PARTNER_MANAGER', 'Partner Manager',
+   'Reviews agent applications: view agents, approve or reject them.', true, CURRENT_TIMESTAMP),
+  (gen_random_uuid()::text, 'PAYOUT_MANAGER', 'Payout Manager',
+   'Pays agents: views payouts, creates them and marks them paid. Sees the payout destination when paying; never PAN.', true, CURRENT_TIMESTAMP)
 ON CONFLICT ("key") DO NOTHING;
 
 INSERT INTO "role_permissions" ("role_id", "permission_id")
 SELECT r."id", p."id"
 FROM "roles" r CROSS JOIN "permissions" p
 WHERE r."key" = 'SUPER_ADMIN'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO "role_permissions" ("role_id", "permission_id")
+SELECT r."id", p."id"
+FROM "roles" r
+JOIN "permissions" p
+  ON (r."key" = 'PARTNER_MANAGER' AND p."key" IN ('agent.view', 'agent.approve'))
+  OR (r."key" = 'PAYOUT_MANAGER' AND p."key" IN ('payout.view', 'payout.execute'))
 ON CONFLICT DO NOTHING;

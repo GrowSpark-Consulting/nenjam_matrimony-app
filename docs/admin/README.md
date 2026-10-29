@@ -82,17 +82,25 @@ stored only as a SHA-256 hash; TOTP secrets are AES-256-GCM encrypted.
 
 Tables: `roles`, `permissions`, `role_permissions`, `admin_user_roles`. Permission keys are
 `<resource>.<action>`, defined in `admin/rbac/permissions.ts` and seeded by migration
-`20261028070845_admin_rbac_foundation` (a unit test keeps the two identical). 48 keys — the
+`20261029053600_admin_rbac_foundation` (a unit test keeps the two identical). 48 keys — the
 architecture document's, plus `agent.pii.reveal` (requested for the first agent payout): dashboard/members, verification and support, subscriptions,
 plans, payments and refunds, the agent program (`agent.*`, `attribution.*`,
 `commission.*`, `payout.*`) and platform (`config.edit`, `rbac.manage`, `audit.view`, …).
 Sensitive (step-up): `member.pii.reveal`, `agent.pii.reveal`, `refund.approve`,
 `payout.execute`, `rbac.manage`.
 
-Seeded role: **`SUPER_ADMIN`** (all 48). The other roles in the architecture document
-(Operations, Finance, Partner Manager, Support, Verification, Marketing, Read-only) are
-**not seeded** — their permission matrix needs product sign-off; add them in a migration
-or via the future roles screen.
+Seeded roles (Raja, 28 Oct):
+
+| Role | Permissions | Who |
+|---|---|---|
+| `SUPER_ADMIN` | all 48 | Raja + one more |
+| `PARTNER_MANAGER` | `agent.view`, `agent.approve` | approves / rejects agent applications |
+| `PAYOUT_MANAGER` | `payout.view`, `payout.execute` (sensitive: step-up) | Raja + the person who pays; the payout detail/create response shows the full UPI or bank destination to `payout.execute` holders (never in lists); PAN stays Super Admin only |
+
+Everything else — pausing/terminating agents, code replacement, PAN or phone reveal,
+commissions, attribution — stays Super Admin only until decided. Other roles in the
+architecture document (Operations, Finance, Support, Verification, Marketing, Read-only)
+are added by later migrations once their permission matrix is confirmed.
 
 The legacy `AdminAccount.permissions` JSON is kept but **no longer read**. Membership's
 admin services now use: `subscription.grant` / `.extend` / `.cancel`, `plan.publish`
@@ -154,8 +162,8 @@ comes from `@CurrentAdmin()`, never from a request body.
 ## Deploying
 
 1. Back up (Neon branch or `pg_dump`, restore-tested) — there is no down-migration.
-2. `pnpm prisma migrate deploy` → applies `20261028070845_admin_rbac_foundation` and
-   `20261028075906_plan_drafts` (additive: new tables and enum, nullable/defaulted columns,
+2. `pnpm prisma migrate deploy` → applies the agent tables (`20261028095916_agent_program_phase1`, Ishu), `20261029053600_admin_rbac_foundation` and
+   `20261029053700_plan_drafts` (additive: new tables and enum, nullable/defaulted columns,
    CHECKs, seed). Verify: `SELECT count(*) FROM permissions` = 48; `SUPER_ADMIN` has 48
    grants; the placeholder admin's `is_active` is false.
 3. Set `ADMIN_MFA_ENCRYPTION_KEY` on the API service; deploy the code.

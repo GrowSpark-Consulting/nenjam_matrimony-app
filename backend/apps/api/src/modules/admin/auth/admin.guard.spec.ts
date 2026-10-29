@@ -17,7 +17,7 @@ import type {
 } from '../services/admin-session.service';
 import { AdminGuard } from './admin.guard';
 import { ADMIN_STEP_UP_MS } from './admin-auth.policy';
-import type { AdminRequest } from './admin-request';
+import { type AdminRequest, hasFreshStepUp } from './admin-request';
 import {
   AdminSessionNotRequired,
   AllowAnyAdmin,
@@ -100,12 +100,16 @@ function contextFor(
     ip: '203.0.113.9',
     user: user ?? undefined,
   } as unknown as AdminRequest;
+  const response = { setHeader: jest.fn() };
   const ctx = {
-    switchToHttp: () => ({ getRequest: () => request }),
+    switchToHttp: () => ({
+      getRequest: () => request,
+      getResponse: () => response,
+    }),
     getHandler: () => Routes.prototype[handler],
     getClass: () => Routes,
   } as unknown as ExecutionContext;
-  return { ctx, request };
+  return { ctx, request, response };
 }
 
 async function rejection(promise: Promise<unknown>) {
@@ -120,7 +124,7 @@ async function rejection(promise: Promise<unknown>) {
 describe('AdminGuard', () => {
   it('lets an admin with the permission and a live session through, and attaches them', async () => {
     const { guard, sessions } = build({});
-    const { ctx, request } = contextFor('view');
+    const { ctx, request, response } = contextFor('view');
     await expect(guard.canActivate(ctx)).resolves.toBe(true);
     expect(request.admin).toMatchObject({
       adminAccountId: 'acct-1',
@@ -128,6 +132,11 @@ describe('AdminGuard', () => {
       sessionId: 'sess-1',
       permissions: ['plan.view'],
     });
+    expect(request.admin?.stepUpVerifiedAt).toBeInstanceOf(Date);
+    expect(response.setHeader).toHaveBeenCalledWith(
+      'Cache-Control',
+      'no-store',
+    );
     expect(sessions.validate).toHaveBeenCalledWith(
       'token',
       'acct-1',
@@ -272,5 +281,21 @@ describe('AdminGuard', () => {
         code: 'ADMIN_STEP_UP_REQUIRED',
       });
     });
+  });
+});
+
+describe('hasFreshStepUp', () => {
+  const now = new Date('2026-10-29T10:00:00Z');
+  const at = (msAgo: number) => new Date(now.getTime() - msAgo);
+
+  it('is the guard’s 10-minute rule, for services that only reveal data to a fresh caller', () => {
+    expect(hasFreshStepUp({ stepUpVerifiedAt: at(60_000) }, now)).toBe(true);
+    expect(
+      hasFreshStepUp({ stepUpVerifiedAt: at(ADMIN_STEP_UP_MS) }, now),
+    ).toBe(true);
+    expect(
+      hasFreshStepUp({ stepUpVerifiedAt: at(ADMIN_STEP_UP_MS + 1) }, now),
+    ).toBe(false);
+    expect(hasFreshStepUp({ stepUpVerifiedAt: null }, now)).toBe(false);
   });
 });

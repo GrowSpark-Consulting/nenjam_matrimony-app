@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import type { Request } from 'express';
 import type { AuthenticatedUser } from '@app/common';
 import type { PermissionKey } from '../rbac/permissions';
+import { ADMIN_STEP_UP_MS } from './admin-auth.policy';
 
 /** The staff member behind a request, attached by AdminGuard. */
 export interface AuthenticatedAdmin {
@@ -17,8 +18,32 @@ export interface AuthenticatedAdmin {
   lastLoginAt: Date | null;
   /** Null only on the sign-in routes, before a session exists. */
   sessionId: string | null;
+  /** The session's last authenticator check (sign-in or step-up); null
+   *  without a session. Read it through [hasFreshStepUp]. */
+  stepUpVerifiedAt: Date | null;
   roles: Array<{ key: string; name: string }>;
   permissions: PermissionKey[];
+}
+
+/**
+ * Whether [admin] confirmed a code within the step-up window — the same rule
+ * AdminGuard applies to sensitive permissions. For a route that is NOT itself
+ * sensitive but shows sensitive data only to a freshly confirmed caller (e.g.
+ * a payout's destination on `GET /admin/payouts/{id}`): include it when this
+ * is true, leave it out otherwise.
+ */
+export function hasFreshStepUp(
+  admin: Pick<AuthenticatedAdmin, 'stepUpVerifiedAt'>,
+  now: Date = new Date(),
+): boolean {
+  return isFreshStepUp(admin.stepUpVerifiedAt, now);
+}
+
+export function isFreshStepUp(verifiedAt: Date | null, now: Date): boolean {
+  return (
+    verifiedAt !== null &&
+    now.getTime() - verifiedAt.getTime() <= ADMIN_STEP_UP_MS
+  );
 }
 
 /** Where a request came from, recorded on every audit row it causes. */
