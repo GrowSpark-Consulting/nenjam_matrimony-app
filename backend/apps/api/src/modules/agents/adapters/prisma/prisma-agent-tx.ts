@@ -42,3 +42,14 @@ export function unwrapTx(tx: AgentTx): PrismaTxClient {
   }
   return tx.client;
 }
+
+/**
+ * The client a repository method should use: the transaction's when it was
+ * given a `tx`, otherwise the plain client (a statement on its own).
+ */
+export function dbFor(
+  prisma: PrismaTxClient,
+  tx: AgentTx | undefined,
+): PrismaTxClient {
+  return tx === undefined ? prisma : unwrapTx(tx);
+}
