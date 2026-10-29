@@ -241,6 +241,26 @@ export class PrismaCommissionRepository implements CommissionRepository {
     return rows.map(toRecord);
   }
 
+  async listAgentIdsWithPayable(
+    input: { afterAgentId?: string; limit: number },
+    tx?: AgentTx,
+  ): Promise<string[]> {
+    const rows = await dbFor(this.prisma, tx).commission.findMany({
+      where: {
+        status: 'APPROVED',
+        payoutId: null,
+        ...(input.afterAgentId !== undefined && {
+          agentId: { gt: input.afterAgentId },
+        }),
+      },
+      distinct: ['agentId'],
+      orderBy: { agentId: 'asc' },
+      take: input.limit,
+      select: { agentId: true },
+    });
+    return rows.map((r) => r.agentId);
+  }
+
   async listPayableByAgent(
     agentId: string,
     tx?: AgentTx,

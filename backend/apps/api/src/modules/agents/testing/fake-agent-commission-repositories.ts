@@ -192,6 +192,25 @@ export class FakeCommissionRepository implements CommissionRepository {
     );
   }
 
+  listAgentIdsWithPayable(input: {
+    afterAgentId?: string;
+    limit: number;
+  }): Promise<string[]> {
+    const ids = new Set(
+      [...this.rows.values()]
+        .filter((r) => r.status === 'APPROVED' && r.payoutId === null)
+        .map((r) => r.agentId),
+    );
+    return Promise.resolve(
+      [...ids]
+        .sort()
+        .filter(
+          (id) => input.afterAgentId === undefined || id > input.afterAgentId,
+        )
+        .slice(0, input.limit),
+    );
+  }
+
   listPayableByAgent(agentId: string): Promise<CommissionRecord[]> {
     return Promise.resolve(
       [...this.rows.values()]

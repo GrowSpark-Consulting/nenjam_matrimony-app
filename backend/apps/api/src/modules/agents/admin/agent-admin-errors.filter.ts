@@ -10,6 +10,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { AgentConfigError } from '../config/agent-config.service';
 import {
   AgentMoneyError,
   type AgentMoneyErrorCode,
@@ -45,13 +46,24 @@ const MESSAGE: Partial<Record<AgentMoneyErrorCode, string>> = {
   CONCURRENT_CHANGE: 'The agent changed meanwhile; reload and try again.',
 };
 
-@Catch(AgentMoneyError, AgentPermissionDeniedError)
+@Catch(AgentMoneyError, AgentPermissionDeniedError, AgentConfigError)
 export class AgentAdminErrorsFilter implements ExceptionFilter {
   catch(
-    exception: AgentMoneyError | AgentPermissionDeniedError,
+    exception: AgentMoneyError | AgentPermissionDeniedError | AgentConfigError,
     host: ArgumentsHost,
   ): void {
     const response = host.switchToHttp().getResponse<Response>();
+    if (exception instanceof AgentConfigError) {
+      // A required setting is not seeded: the contract's SettingsNotConfigured.
+      response.status(HttpStatus.SERVICE_UNAVAILABLE).json({
+        statusCode: 503,
+        error: 'Service Unavailable',
+        code: 'SETTINGS_NOT_CONFIGURED',
+        message: 'A required setting is not configured.',
+        missing: exception.missing,
+      });
+      return;
+    }
     if (exception instanceof AgentPermissionDeniedError) {
       // The same body as the admin guard's refusal.
       const missing = /requires ([\w.]+)\./.exec(exception.message)?.[1];

@@ -221,8 +221,6 @@ const GAPS: Record<string, string> = {
   'GET /agent/balance': 'not in the 29 Oct route list',
   'GET /agent/payouts': 'not in the 29 Oct route list',
   'POST /agent/devices': 'no agent push yet (the portal is a website)',
-  'GET /admin/payouts/payable':
-    'needs a cross-agent payable query (new repository method); not built',
 };
 
 const contract = [

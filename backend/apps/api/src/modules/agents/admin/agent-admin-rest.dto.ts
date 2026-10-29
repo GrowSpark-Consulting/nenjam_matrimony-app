@@ -129,6 +129,17 @@ export class AdminPayoutsQueryDto extends PageQuery {
   period?: string;
 }
 
+/** GET /admin/payouts/payable (period required). */
+export class AdminPayableQueryDto extends PageQuery {
+  @Matches(PERIOD)
+  period!: string;
+
+  @IsOptional()
+  @Transform(toBoolean)
+  @IsBoolean()
+  eligible?: boolean;
+}
+
 export class AdminPayoutCreateDto {
   @IsUUID()
   agentId!: string;

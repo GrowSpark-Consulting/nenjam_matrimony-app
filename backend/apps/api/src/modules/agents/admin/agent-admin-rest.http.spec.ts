@@ -220,6 +220,7 @@ const ROUTES: Array<
     { amountPaise: 100, ...REASON },
   ],
   ['get', '/admin/payouts', 'payout.view', null],
+  ['get', '/admin/payouts/payable?period=2026-11', 'payout.view', null],
   [
     'post',
     '/admin/payouts',
@@ -382,6 +383,31 @@ describe('remaining admin agent-program routes over HTTP', () => {
       .set({ 'x-test-admin': PAYER, 'x-test-perms': 'payout.view' });
     expect(p.status).toBe(404);
     expect(p.body).toMatchObject({ code: 'PAYOUT_NOT_FOUND' });
+  });
+
+  it('GET /admin/payouts/payable is its own route (not :id), 400 on a bad period, 503 without settings', async () => {
+    const w = adminWorld();
+    app = await boot(w.rest, w.a.service);
+    const as = { 'x-test-admin': PAYER, 'x-test-perms': 'payout.view' };
+    const ok = await request(app.getHttpServer())
+      .get('/admin/payouts/payable?period=2026-11')
+      .set(as);
+    expect(ok.status).toBe(200);
+    expect(ok.body).toEqual({ items: [], nextCursor: null });
+    const bad = await request(app.getHttpServer())
+      .get('/admin/payouts/payable?period=2026-13')
+      .set(as);
+    expect(bad.status).toBe(400);
+    expect(bad.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+    w.h.settings.remove('payout.minimum_amount_paise');
+    const missing = await request(app.getHttpServer())
+      .get('/admin/payouts/payable?period=2026-11')
+      .set(as);
+    expect(missing.status).toBe(503);
+    expect(missing.body).toMatchObject({
+      code: 'SETTINGS_NOT_CONFIGURED',
+      missing: ['payout.minimum_amount_paise'],
+    });
   });
 
   it('payout create answers 201 when new and 200 when it already existed', async () => {
