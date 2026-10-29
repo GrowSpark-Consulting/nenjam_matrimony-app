@@ -20,7 +20,7 @@ export interface ReferralDiscountInput {
 export interface ReferralDiscount {
   discountPaise: number;
   source: 'REFERRAL_FIRST_PLAN' | 'NONE';
-  amountPaidPaise: number;
+  taxableAfterDiscountPaise: number;
 }
 
 const BASIS_POINTS_PER_UNIT = 10_000;
@@ -62,6 +62,6 @@ export function computeReferralDiscount(
   return {
     discountPaise,
     source: discountPaise > 0 ? 'REFERRAL_FIRST_PLAN' : 'NONE',
-    amountPaidPaise: input.listAmountPaise - discountPaise,
+    taxableAfterDiscountPaise: input.listAmountPaise - discountPaise,
   };
 }

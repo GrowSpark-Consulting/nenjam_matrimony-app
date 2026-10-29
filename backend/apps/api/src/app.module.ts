@@ -26,6 +26,7 @@ import { VerificationModule } from './modules/verification/verification.module';
 import { PsychologyModule } from './modules/psychology/psychology.module';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { AgentsModule } from './modules/agents/agents.module';
 import { throttlerConfig } from './throttling';
 
 @Module({
@@ -81,6 +82,8 @@ import { throttlerConfig } from './throttling';
     // the AdminGuard + RBAC every /admin/* controller uses. Sign-in answers
     // 503 until ADMIN_MFA_ENCRYPTION_KEY is set.
     AdminModule,
+    // The agent program: today only the staff routes under /admin/agents.
+    AgentsModule,
   ],
   controllers: [AppController],
   providers: [
