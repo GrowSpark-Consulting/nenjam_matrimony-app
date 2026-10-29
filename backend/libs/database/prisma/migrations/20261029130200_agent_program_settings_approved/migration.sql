@@ -1,13 +1,12 @@
--- Agent program: PROPOSED values for the six settings that are not decided
--- yet. FOR ISHU'S APPROVAL: do not merge this migration until each value is
--- approved; change a value here only while this migration has never been
--- applied anywhere (afterwards change it with the admin settings API).
+-- Agent program: the six token-lifetime and code-check values, APPROVED by
+-- Ishu on 29 Oct (evening). Change a value only with the admin settings API
+-- (this file must never change once applied anywhere).
 --
--- Data only. Sorts after 20261029110200_agent_program_settings_seed. Every
+-- Data only. Sorts after 20261029130100_agent_program_settings_seed. Every
 -- value can be changed later by a Super Admin (PUT /admin/settings/:key)
 -- without a deploy. ON CONFLICT DO NOTHING keeps a value already set.
 --
--- Reasons:
+-- Reasons (as proposed and approved):
 --   agent.access_token_ttl_seconds = 900 (15 minutes): the contract's own
 --     example; a stolen access token is useful for a short time only, and the
 --     portal refreshes silently.

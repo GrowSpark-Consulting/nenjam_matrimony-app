@@ -15,9 +15,8 @@ const MIGRATIONS = join(
   __dirname,
   '../../../../../../libs/database/prisma/migrations',
 );
-const DECIDED = '20261029110200_agent_program_settings_seed';
-const PROPOSED = '20261029110300_agent_program_settings_proposed';
-const LAST_OF_155 = '20261029110100_agent_commission_policy_seed';
+const DECIDED = '20261029130100_agent_program_settings_seed';
+const PROPOSED = '20261029130200_agent_program_settings_approved';
 
 function sqlOf(folder: string): string {
   return readFileSync(join(MIGRATIONS, folder, 'migration.sql'), 'utf8');
@@ -43,11 +42,11 @@ const proposed = rowsOf(sqlOf(PROPOSED));
 const all = [...decided, ...proposed];
 
 describe('agent-program settings seed migrations', () => {
-  it('both sort after #155 and are the last agent migrations', () => {
-    const folders = readdirSync(MIGRATIONS).filter((f) => /^\d{14}_/.test(f));
-    expect(DECIDED > LAST_OF_155).toBe(true);
-    expect(PROPOSED > DECIDED).toBe(true);
-    expect(folders).toEqual(expect.arrayContaining([DECIDED, PROPOSED]));
+  it('are the last two migrations, decided values first', () => {
+    const folders = readdirSync(MIGRATIONS)
+      .filter((f) => /^\d{14}_/.test(f))
+      .sort();
+    expect(folders.slice(-2)).toEqual([DECIDED, PROPOSED]);
   });
 
   it('seed exactly the decided values', () => {
@@ -67,17 +66,15 @@ describe('agent-program settings seed migrations', () => {
     });
   });
 
-  it('propose values for exactly the six undecided keys, in their own migration', () => {
-    expect(proposed.map((r) => r.key).sort()).toEqual(
-      [
-        'agent.access_token_ttl_seconds',
-        'agent.refresh_token_ttl_seconds',
-        'agent.otp_resend_after_seconds',
-        'referral.code_validation_ip_limit',
-        'referral.code_validation_code_limit',
-        'referral.code_validation_window_seconds',
-      ].sort(),
-    );
+  it('set the six approved values, in their own migration', () => {
+    expect(Object.fromEntries(proposed.map((r) => [r.key, r.value]))).toEqual({
+      'agent.access_token_ttl_seconds': 900,
+      'agent.refresh_token_ttl_seconds': 2_592_000,
+      'agent.otp_resend_after_seconds': 30,
+      'referral.code_validation_ip_limit': 60,
+      'referral.code_validation_code_limit': 20,
+      'referral.code_validation_window_seconds': 3600,
+    });
   });
 
   it('together set every one of the 18 keys once, and the parser accepts them all', () => {

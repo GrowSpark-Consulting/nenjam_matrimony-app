@@ -1,11 +1,11 @@
 -- Agent program: the DECIDED platform settings (Raja and Ishu, 28-29 Oct).
--- Data only, no schema change. Sorts after 20261029110100 (#155) and must
--- never reach a database before #155's migrations.
+-- Data only, no schema change. Sorts after every earlier migration, including
+-- #155's (20261029110000, 20261029110100) and 20261029130000_payment_referral_gst.
 --
 -- ON CONFLICT DO NOTHING: a value an admin has already set is kept. Values are
 -- JSONB, never SQL NULL ('null'::jsonb is "not decided" where our parser
--- accepts it). The six settings that are not decided yet are in the next
--- migration, 20261029110300_agent_program_settings_proposed.
+-- accepts it). The six values approved by Ishu on 29 Oct (evening) are in the
+-- next migration, 20261029130200_agent_program_settings_approved.
 
 INSERT INTO "platform_settings" ("key", "value", "description") VALUES
   ('commission.auto_approve', 'true'::jsonb,
