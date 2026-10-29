@@ -68,6 +68,8 @@ info:
       `reason`, the request context). If the audit write fails the change rolls
       back. Reads write no audit row, except `reveal`, which does and fails
       closed.
+    - **Caching.** The admin guard sets `Cache-Control: no-store` on **every**
+      admin response, so no route below repeats it.
     - Routes are unversioned, as the other admin routes are (no
       `Accept-Version`).
     - **Settings are not constants.** The minimum payout, the wait after a
@@ -86,13 +88,21 @@ info:
     2. **The payout destination, for the person who pays** (Final Build Spec
        §3 and §5). To pay, the payer needs the full UPI id or bank details, so
        `POST /admin/payouts` (create) and `GET /admin/payouts/{id}` (detail)
-       include a `destination` **only for a caller who holds `payout.execute`
-       and has a fresh step-up**. It is audited (an audit row in the same
-       transaction as the read, failing closed), sent with
-       `Cache-Control: no-store`, and **never** appears in a list response
-       (`GET /admin/payouts`, `GET /admin/payouts/payable`), in `mark-paid` or
-       `cancel` responses, or for anyone without `payout.execute`. It never
-       contains a PAN or a phone number; the PAN stays behind `reveal`.
+       include a `destination` **only when the admin holds `payout.execute`
+       AND has a fresh step-up**; otherwise the field is **left out**, the
+       answer is still `200`, and **no audit row is written**. When it is
+       included, one `payout.destination.disclose` audit row (no value in it)
+       is written in the same transaction as the read, failing closed. It
+       **never** appears in a list response (`GET /admin/payouts`,
+       `GET /admin/payouts/payable`), in `mark-paid` or `cancel` responses,
+       or for anyone without `payout.execute`. It never contains a PAN or a
+       phone number; the PAN stays behind `reveal`.
+
+    **The payee on every payout response.** The payer holds no `agent.view`,
+    so every payout response (create, detail, list, payable, mark-paid,
+    cancel) carries the payee's `agentName` and `agentCode` (the agent's
+    primary referral code, `null` if none) so the payer knows who is being
+    paid without opening the agent.
 
     The agent's own view (`GET /agent/me`, referrals,
     commissions) is a separate contract and stays separate: the agent never
@@ -523,8 +533,7 @@ paths:
         `fields` lists what to reveal, at least one of `PAN`,
         `PAYOUT_DETAILS`, `PHONE`, no repeats. Only the requested fields
         appear in the answer. A POST, not a GET, so it is never cached,
-        prefetched or replayed by a proxy. The response carries
-        `Cache-Control: no-store`. The server does not keep or log the values;
+        prefetched or replayed by a proxy. The server does not keep or log the values;
         the panel must not store them. This is the only door to any full value;
         every other admin response is masked.
 
@@ -567,9 +576,6 @@ paths:
       responses:
         '200':
           description: The requested values, once.
-          headers:
-            Cache-Control:
-              schema: { type: string, example: no-store }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RevealedValues' }
@@ -1036,14 +1042,20 @@ paths:
         **The response includes the full payout `destination`** (UPI id or
         bank details), because the payer needs it to pay. It is the agent's
         current verified details, read in the same transaction as the
-        payout. This is allowed because the caller holds `payout.execute` with
-        a fresh step-up; **it is audited** (one `payout.destination.disclose`
-        audit row with `metadata.payoutId` and the method, never the value, in
-        the same transaction; if the audit write fails nothing is returned),
-        and the response carries `Cache-Control: no-store`. The same applies
-        when the `200` returns an existing payout. The destination is never in
-        list responses and never sent to anyone else. A PAN is never included
-        (PAN reveal stays Super Admin only, through `reveal`).
+        payout. The destination is included only when the admin holds
+        `payout.execute` AND has a fresh step-up; otherwise the field is left
+        out, the answer is still `200` and no audit row is written. (Creating
+        a payout itself requires both, so on this route a caller without the
+        step-up is refused with `401 ADMIN_STEP_UP_REQUIRED` before anything
+        is created, and every `200`/`201` carries the destination.) When it
+        is included, **it is audited**: one `payout.destination.disclose`
+        audit row (`metadata.payoutId` and the method, never the value) in the
+        same transaction as the read; if the audit write fails nothing is
+        returned. The same applies when the `200` returns an existing payout.
+        The destination is never in list responses and never sent to anyone
+        else. A PAN is never included (PAN reveal stays Super Admin only,
+        through `reveal`). The response also carries the payee's
+        `agentName` and `agentCode`.
 
         **Idempotent by the one-payout rule, with no `Idempotency-Key`.** There
         is at most one non-cancelled payout per agent per period (a unique
@@ -1084,17 +1096,11 @@ paths:
       responses:
         '200':
           description: A payout for this agent and period already exists; it is returned unchanged, with the destination.
-          headers:
-            Cache-Control:
-              schema: { type: string, example: no-store }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminPayoutWithDestination' }
         '201':
           description: The payout was created; the response includes the destination.
-          headers:
-            Cache-Control:
-              schema: { type: string, example: no-store }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminPayoutWithDestination' }
@@ -1126,26 +1132,22 @@ paths:
         statuses).
 
         **Payout destination.** The answer includes `destination` (the full
-        UPI id or bank details) **only if the caller also holds
-        `payout.execute` and has a fresh step-up** (an authenticator check in
-        the last 10 minutes). Then it is audited (one
-        `payout.destination.disclose` audit row, never the value, in the same
-        transaction as the read; if the audit write fails nothing is
-        returned) and the response carries `Cache-Control: no-store`. For every
-        other caller, including one who holds only `payout.view`, or holds
-        `payout.execute` without a fresh step-up, the `destination` field is
-        **absent** (not null, not masked) and the answer is otherwise the same,
-        masked data only; there is no 401 for a missing step-up on this read.
-        A response without a destination writes no audit row.
+        UPI id or bank details) **only when the admin holds `payout.execute`
+        AND has a fresh step-up** (an authenticator check in the last 10
+        minutes). Then one `payout.destination.disclose` audit row (no value
+        in it) is written in the same transaction as the read; if the audit
+        write fails nothing is returned. In every other case, including an
+        admin who holds only `payout.view`, or holds `payout.execute`
+        without a fresh step-up, the `destination` field is **left out**
+        (not null, not masked), the answer is still `200`, it is otherwise
+        the same masked data, and **no audit row is written**; there is no 401
+        for a missing step-up on this read. The answer carries the payee's
+        `agentName` and `agentCode`.
       parameters:
         - $ref: '#/components/parameters/PayoutId'
       responses:
         '200':
           description: The payout. Includes `destination` only as described above.
-          headers:
-            Cache-Control:
-              description: '`no-store` when the response includes `destination`.'
-              schema: { type: string, example: no-store }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminPayoutDetail' }
@@ -1699,10 +1701,11 @@ components:
 
     PayableAgent:
       type: object
-      required: [agentId, agentName, agentStatus, period, balancePaise, commissionCount, panVerified, payoutDetails, eligible, reasons, warnings]
+      required: [agentId, agentName, agentCode, agentStatus, period, balancePaise, commissionCount, panVerified, payoutDetails, eligible, reasons, warnings]
       properties:
         agentId: { type: string, format: uuid }
         agentName: { type: string }
+        agentCode: { type: string, nullable: true, description: The agent's primary referral code. }
         agentStatus: { $ref: '#/components/schemas/AgentStatus' }
         period: { type: string, example: '2026-11' }
         balancePaise: { type: integer, description: Approved and unpaid., example: 60000 }
@@ -1782,7 +1785,7 @@ components:
               description: Present only for a caller with `payout.execute` and a fresh step-up; otherwise absent.
 
     AdminPayoutWithDestination:
-      description: The payout create answer. `destination` is always present (the caller holds `payout.execute` with step-up).
+      description: The payout create answer. `destination` is always present (create requires `payout.execute` with a fresh step-up).
       allOf:
         - $ref: '#/components/schemas/AdminPayout'
         - type: object
@@ -1792,11 +1795,12 @@ components:
 
     AdminPayout:
       type: object
-      required: [id, agentId, agentName, period, amountPaise, taxWithheldPaise, netPaise, status, reference, paidAt, createdAt, createdBy, commissionIds, warnings, cancelReason]
+      required: [id, agentId, agentName, agentCode, period, amountPaise, taxWithheldPaise, netPaise, status, reference, paidAt, createdAt, createdBy, commissionIds, warnings, cancelReason]
       properties:
         id: { type: string, format: uuid }
         agentId: { type: string, format: uuid }
         agentName: { type: string }
+        agentCode: { type: string, nullable: true, description: The payee's primary referral code. }
         period: { type: string, example: '2026-11' }
         amountPaise: { type: integer, example: 60000 }
         taxWithheldPaise: { type: integer, description: 'Always 0 until the CA''s rule is implemented.', example: 0 }
