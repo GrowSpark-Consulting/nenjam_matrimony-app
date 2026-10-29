@@ -122,7 +122,7 @@ The referral discount is the only discount we handle.
 | How an agent can pay for a client's plan | Raja | Not started |
 | Tamil wording for the other labels (statuses, stages) | Raja | Comes from `GET /agent/config` (not built yet). The share messages are approved and final (28 Oct); see `FRONTEND_HANDOFF_DHATRI.md` section 6 |
 | Referral link web address | Raja | `link` and `qrPayload` are `null` until decided |
-| Will agents need KYC later? | Raja | — |
+| Will agents need KYC later? | Raja | **Answered 29 Oct: no separate KYC, the PAN is enough** |
 
 **Decided by Raja (28 Oct, evening), no longer pending:**
 - **Commission base:** 10% of the amount without GST (see the settings table above).
@@ -130,7 +130,9 @@ The referral discount is the only discount we handle.
 - **A terminated agent's waiting commission stays FROZEN** until Raja decides otherwise; commission already approved is still paid.
 - **Roles (Shaaz):** Raja plus one more as Super Admin; a **Partner Manager** role for approving and rejecting agents; payouts only for Raja and the person who pays. Pause, terminate and PAN/phone reveal are not specified yet: Super Admin only for now.
 - **The four agent terms** on the Help screen are approved (a lawyer checks them before launch).
-- **Still open:** the support contact for the Help screen, agent KYC, plan prices, TDS (the CA), the web address.
+- **Answered 29 Oct:** a support contact was supplied for the Help screen (it lives in the portal's config, not in this repo); agents need no separate KYC, the PAN is enough.
+- **Migration order:** `20261028095916_agent_program_phase1` (ours, merged), then Shaaz's `20261029053600_admin_rbac_foundation` and `20261029053700_plan_drafts`; apply all three in one window, in that order.
+- **Still open:** plan prices, TDS (the CA), the web address.
 
 **Decided (no longer pending): members with no verified phone.** A member with no verified phone can never be credited to an agent (`referral_attributions.phone_hash` is NOT NULL), from any source. `quoteReferral` returns no discount with `PHONE_NOT_VERIFIED` and payment goes on; a code entered at payment follows the same rule.
 
