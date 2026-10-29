@@ -300,6 +300,11 @@ export interface ReferralAttributionRepository {
     agentId: string,
     tx?: AgentTx,
   ): Promise<ReferralAttributionRecord | null>;
+  /** The attribution stored under this EXACT phone hash (one version of the pepper), or null. */
+  findByPhoneHash(
+    phoneHash: string,
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord | null>;
   /** True when an attribution already exists for this member phone hash. */
   isPhoneHashCredited(phoneHash: string, tx?: AgentTx): Promise<boolean>;
   /** One attribution per member: throws DUPLICATE_ATTRIBUTION otherwise. */

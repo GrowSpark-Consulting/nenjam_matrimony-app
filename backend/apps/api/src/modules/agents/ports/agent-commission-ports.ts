@@ -163,6 +163,15 @@ export interface CommissionRepository {
     attributionId: string,
     tx?: AgentTx,
   ): Promise<CommissionRecord | null>;
+  /**
+   * The commission for this EXACT stored phone hash. A hash made under
+   * another pepper version is a different string, so a duplicate check must
+   * call this once per version (see `AgentIdentifierHasher.hashAll`).
+   */
+  findByPhoneHash(
+    phoneHash: string,
+    tx?: AgentTx,
+  ): Promise<CommissionRecord | null>;
   /** Rejects when the commission does not exist. */
   update(
     id: string,

@@ -282,6 +282,9 @@ ALTER TABLE "agent_ledger_entries"
   );
 
 -- Rows are never changed or removed. A correction is a new ADJUSTMENT row.
+-- The same function serves the row-level trigger (UPDATE, DELETE) and the
+-- statement-level one (TRUNCATE). It reads neither NEW nor OLD, so it works
+-- for both, and the refusal is the same.
 CREATE FUNCTION "agent_ledger_entries_append_only"() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -293,6 +296,39 @@ $$;
 CREATE TRIGGER "agent_ledger_entries_append_only_trg"
   BEFORE UPDATE OR DELETE ON "agent_ledger_entries"
   FOR EACH ROW EXECUTE FUNCTION "agent_ledger_entries_append_only"();
+
+-- TRUNCATE does not fire row triggers, and TRUNCATE ... CASCADE on any table
+-- the ledger references (agents, commissions, agent_payouts) empties it too.
+-- A statement-level trigger refuses both: a CASCADE from a referenced table
+-- fires the ledger's BEFORE TRUNCATE trigger as well.
+CREATE TRIGGER "agent_ledger_entries_no_truncate_trg"
+  BEFORE TRUNCATE ON "agent_ledger_entries"
+  FOR EACH STATEMENT EXECUTE FUNCTION "agent_ledger_entries_append_only"();
+
+-- The other money tables refuse TRUNCATE too, so their protection does not
+-- depend on which foreign keys happen to exist (without CASCADE the foreign
+-- keys already refuse it; with CASCADE it would reach the ledger). Deleting
+-- single rows is not refused here: the foreign keys are ON DELETE RESTRICT,
+-- so a row that anything refers to cannot be removed.
+CREATE FUNCTION "agent_money_tables_no_truncate"() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION '% holds money records: % is not allowed', TG_TABLE_NAME, TG_OP
+    USING ERRCODE = 'restrict_violation';
+END;
+$$;
+
+CREATE TRIGGER "commissions_no_truncate_trg"
+  BEFORE TRUNCATE ON "commissions"
+  FOR EACH STATEMENT EXECUTE FUNCTION "agent_money_tables_no_truncate"();
+
+CREATE TRIGGER "agent_payouts_no_truncate_trg"
+  BEFORE TRUNCATE ON "agent_payouts"
+  FOR EACH STATEMENT EXECUTE FUNCTION "agent_money_tables_no_truncate"();
+
+CREATE TRIGGER "commission_policy_versions_no_truncate_trg"
+  BEFORE TRUNCATE ON "commission_policy_versions"
+  FOR EACH STATEMENT EXECUTE FUNCTION "agent_money_tables_no_truncate"();
 
 -- Payouts ----------------------------------------------------------------------
 
