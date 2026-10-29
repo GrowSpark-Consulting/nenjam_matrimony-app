@@ -22,7 +22,8 @@ info:
       service layer re-checks with `assertAdminPermission` inside its
       transaction.
     - **Step-up.** `payout.execute` and `agent.pii.reveal` are *sensitive*
-      permissions. A route that needs one also needs an authenticator check
+      permissions (so are `member.pii.reveal`, `refund.approve` and
+      `rbac.manage`, not used here). A route that needs one also needs an authenticator check
       made **within the last 10 minutes** (`ADMIN_STEP_UP_MS`). If it is
       missing or stale the answer is **`401 ADMIN_STEP_UP_REQUIRED`** (not
       403: it means "authenticate again", not "not allowed"). The client calls
@@ -76,13 +77,46 @@ info:
     **What an admin may and may not see.** Admin responses show the *masked*
     phone, PAN last 4, *masked* payout details (`display`), status history,
     codes and counts. They **never** contain a sealed value, a full phone
-    number, a full PAN, or full bank/UPI details. The only door to those full
-    values is `POST /admin/agents/{id}/reveal` (`agent.pii.reveal`, step-up,
-    `fields` of `PAN`, `PAYOUT_DETAILS`, `PHONE`, each audited, once, never
-    cached). The agent's own view (`GET /agent/me`, referrals,
+    number, a full PAN, or full bank/UPI details. There are exactly two doors
+    to full values:
+
+    1. `POST /admin/agents/{id}/reveal` (`agent.pii.reveal`, step-up, `fields`
+       of `PAN`, `PAYOUT_DETAILS`, `PHONE`, each audited, once, never cached).
+       **Super Admin only.** It is the only way to see a PAN or a phone.
+    2. **The payout destination, for the person who pays** (Final Build Spec
+       §3 and §5). To pay, the payer needs the full UPI id or bank details, so
+       `POST /admin/payouts` (create) and `GET /admin/payouts/{id}` (detail)
+       include a `destination` **only for a caller who holds `payout.execute`
+       and has a fresh step-up**. It is audited (an audit row in the same
+       transaction as the read, failing closed), sent with
+       `Cache-Control: no-store`, and **never** appears in a list response
+       (`GET /admin/payouts`, `GET /admin/payouts/payable`), in `mark-paid` or
+       `cancel` responses, or for anyone without `payout.execute`. It never
+       contains a PAN or a phone number; the PAN stays behind `reveal`.
+
+    The agent's own view (`GET /agent/me`, referrals,
     commissions) is a separate contract and stays separate: the agent never
     sees internal statuses, other agents, review flags or admin reasons
     (except the rejection reason, see `reject`).
+
+    **Roles and permissions** (decided by Raja on 28 Oct; seeded by Shaaz
+    together with the #129 migrations, with the 48 permission keys)
+
+    | Role | Who | Permissions |
+    |---|---|---|
+    | `SUPER_ADMIN` | Raja plus one more person | All 48 permissions |
+    | `PARTNER_MANAGER` | Staff who approve agents | `agent.view`, `agent.approve` |
+    | `PAYOUT_MANAGER` | Raja and the person who pays | `payout.view`, `payout.execute` (step-up) |
+
+    **Super Admin only, for now:** `agent.manage` (pause, resume, terminate,
+    replace code), `agent.payout_details.verify` (payout details and PAN
+    verification), `agent.pii.reveal` (the `reveal` route), every
+    `attribution.*` key (referrals list and correct) and every `commission.*`
+    key (list, approve, cancel, override). No other role is given any of them
+    until Raja decides. Note that `PARTNER_MANAGER` and `PAYOUT_MANAGER` do not
+    include `agent.view` (payout manager) or `payout.*` (partner manager), so
+    each sees only what its table row lists. Because `payout.execute` can show
+    a full payout destination, it must be granted only to the people who pay.
 
     **Agent state machine** (`canTransitionAgentStatus`, `agent-status.ts`):
 
@@ -117,10 +151,9 @@ info:
       error code that is global; the not-found codes are ours (the agent code
       throws its own) and the service-level 403 code is handled, so neither is
       open any more.
-    - **Roles beyond `SUPER_ADMIN`.** Only that role is seeded, so only a
-      super admin can approve agents, verify PAN or payout details, reveal PII
-      or run payouts until the other roles (for example Partner Manager,
-      Finance) are defined and seeded.
+    - **Seeding the roles below** (see "Roles and permissions"). Until Shaaz
+      renames his #129 migrations, seeds them and applies the pending
+      migrations to production, only `SUPER_ADMIN` exists.
     - The settings table and service, the OTP/identifier-hash pieces, and the
       payment fields that `quoteReferral` and commissions depend on.
 
@@ -1000,6 +1033,18 @@ paths:
         **Step-up required** (`payout.execute`): `401 ADMIN_STEP_UP_REQUIRED`
         if the last authenticator check is older than 10 minutes.
 
+        **The response includes the full payout `destination`** (UPI id or
+        bank details), because the payer needs it to pay. It is the agent's
+        current verified details, read in the same transaction as the
+        payout. This is allowed because the caller holds `payout.execute` with
+        a fresh step-up; **it is audited** (one `payout.destination.disclose`
+        audit row with `metadata.payoutId` and the method, never the value, in
+        the same transaction; if the audit write fails nothing is returned),
+        and the response carries `Cache-Control: no-store`. The same applies
+        when the `200` returns an existing payout. The destination is never in
+        list responses and never sent to anyone else. A PAN is never included
+        (PAN reveal stays Super Admin only, through `reveal`).
+
         **Idempotent by the one-payout rule, with no `Idempotency-Key`.** There
         is at most one non-cancelled payout per agent per period (a unique
         constraint on agent and period for payouts that are not `CANCELLED`).
@@ -1038,15 +1083,21 @@ paths:
                 reason: { $ref: '#/components/schemas/Reason' }
       responses:
         '200':
-          description: A payout for this agent and period already exists; it is returned unchanged.
+          description: A payout for this agent and period already exists; it is returned unchanged, with the destination.
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AdminPayout' }
+              schema: { $ref: '#/components/schemas/AdminPayoutWithDestination' }
         '201':
-          description: The payout was created.
+          description: The payout was created; the response includes the destination.
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AdminPayout' }
+              schema: { $ref: '#/components/schemas/AdminPayoutWithDestination' }
         '400': { $ref: '#/components/responses/ValidationFailed' }
         '401': { $ref: '#/components/responses/UnauthorizedOrStepUp' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -1072,12 +1123,29 @@ paths:
         **Not yet implementable:** needs the payout and commission tables.
 
         The payout and the commissions it covers (internal and public
-        statuses). Masked data only.
+        statuses).
+
+        **Payout destination.** The answer includes `destination` (the full
+        UPI id or bank details) **only if the caller also holds
+        `payout.execute` and has a fresh step-up** (an authenticator check in
+        the last 10 minutes). Then it is audited (one
+        `payout.destination.disclose` audit row, never the value, in the same
+        transaction as the read; if the audit write fails nothing is
+        returned) and the response carries `Cache-Control: no-store`. For every
+        other caller, including one who holds only `payout.view`, or holds
+        `payout.execute` without a fresh step-up, the `destination` field is
+        **absent** (not null, not masked) and the answer is otherwise the same,
+        masked data only; there is no 401 for a missing step-up on this read.
+        A response without a destination writes no audit row.
       parameters:
         - $ref: '#/components/parameters/PayoutId'
       responses:
         '200':
-          description: The payout.
+          description: The payout. Includes `destination` only as described above.
+          headers:
+            Cache-Control:
+              description: '`no-store` when the response includes `destination`.'
+              schema: { type: string, example: no-store }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminPayoutDetail' }
@@ -1667,27 +1735,32 @@ components:
         revealedAt: { type: string, format: date-time }
         pan: { type: string, example: ABCDE1234F }
         phone: { $ref: '#/components/schemas/PhoneE164' }
-        payoutDetails:
+        payoutDetails: { $ref: '#/components/schemas/PayoutDestination' }
+
+    PayoutDestination:
+      type: object
+      description: |
+        The agent's full payout details in the same shape the agent sent:
+        exactly one of `upi` or `bank`. Sensitive: appears only in the `reveal`
+        response (`payoutDetails`, Super Admin) and in the payout create and
+        payout detail responses (`destination`, `payout.execute` with step-up).
+        Never in a list.
+      additionalProperties: false
+      minProperties: 1
+      maxProperties: 1
+      properties:
+        upi:
           type: object
-          description: |
-            The agent's payout details in the same shape the agent sent:
-            exactly one of `upi` or `bank`.
-          additionalProperties: false
-          minProperties: 1
-          maxProperties: 1
+          required: [vpa]
           properties:
-            upi:
-              type: object
-              required: [vpa]
-              properties:
-                vpa: { type: string, example: ravi@okbank }
-            bank:
-              type: object
-              required: [accountHolderName, accountNumber, ifsc]
-              properties:
-                accountHolderName: { type: string }
-                accountNumber: { type: string }
-                ifsc: { type: string, example: HDFC0001234 }
+            vpa: { type: string, example: ravi@okbank }
+        bank:
+          type: object
+          required: [accountHolderName, accountNumber, ifsc]
+          properties:
+            accountHolderName: { type: string }
+            accountNumber: { type: string }
+            ifsc: { type: string, example: HDFC0001234 }
 
     PhoneE164:
       type: string
@@ -1703,6 +1776,19 @@ components:
             commissions:
               type: array
               items: { $ref: '#/components/schemas/AdminCommission' }
+            destination:
+              allOf:
+                - $ref: '#/components/schemas/PayoutDestination'
+              description: Present only for a caller with `payout.execute` and a fresh step-up; otherwise absent.
+
+    AdminPayoutWithDestination:
+      description: The payout create answer. `destination` is always present (the caller holds `payout.execute` with step-up).
+      allOf:
+        - $ref: '#/components/schemas/AdminPayout'
+        - type: object
+          required: [destination]
+          properties:
+            destination: { $ref: '#/components/schemas/PayoutDestination' }
 
     AdminPayout:
       type: object
