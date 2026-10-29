@@ -168,6 +168,78 @@ export function defineAgentStoresContract(
         ).toBe('attr-02');
       });
 
+      it('findByPhoneHash finds the attribution stored under that exact hash', async () => {
+        await add(1);
+        expect(
+          (await w.attributions.findByPhoneHash('v1:member-hash-1'))?.id,
+        ).toBe('attr-01');
+        expect(
+          await w.attributions.findByPhoneHash('v0:member-hash-1'),
+        ).toBeNull();
+        expect(await w.attributions.findByPhoneHash('nope')).toBeNull();
+      });
+
+      it("findById finds any agent's attribution; null when unknown", async () => {
+        await add(1);
+        expect((await w.attributions.findById('attr-01'))?.memberId).toBe(
+          'member-1',
+        );
+        expect(await w.attributions.findById('nope')).toBeNull();
+      });
+
+      describe('correct (admin)', () => {
+        it('changes only the given fields and only from the expected status', async () => {
+          await add(1, { needsReview: true });
+          const done = await w.attributions.correct('attr-01', 'ACTIVE', {
+            agentId: 'agent-2',
+            source: 'ADMIN_SET',
+            needsReview: false,
+          });
+          expect(done).toMatchObject({
+            agentId: 'agent-2',
+            source: 'ADMIN_SET',
+            needsReview: false,
+            status: 'ACTIVE',
+            memberId: 'member-1',
+            windowEndsAt: at(60 * 24 * 60),
+          });
+          // Wrong expected status: nothing changes.
+          expect(
+            await w.attributions.correct('attr-01', 'REJECTED', {
+              status: 'EXPIRED',
+            }),
+          ).toBeNull();
+          expect((await w.attributions.findById('attr-01'))?.status).toBe(
+            'ACTIVE',
+          );
+          expect(
+            await w.attributions.correct('nope', 'ACTIVE', {
+              needsReview: false,
+            }),
+          ).toBeNull();
+        });
+
+        it('rejects an attribution', async () => {
+          await add(1);
+          expect(
+            (
+              await w.attributions.correct('attr-01', 'ACTIVE', {
+                status: 'REJECTED',
+              })
+            )?.status,
+          ).toBe('REJECTED');
+        });
+
+        it('two parallel corrections of one attribution: exactly one wins', async () => {
+          await add(1);
+          const results = await Promise.all([
+            w.attributions.correct('attr-01', 'ACTIVE', { status: 'REJECTED' }),
+            w.attributions.correct('attr-01', 'ACTIVE', { status: 'EXPIRED' }),
+          ]);
+          expect(results.filter((r) => r !== null)).toHaveLength(1);
+        });
+      });
+
       it('reports whether a phone hash is already credited', async () => {
         await add(1);
         expect(

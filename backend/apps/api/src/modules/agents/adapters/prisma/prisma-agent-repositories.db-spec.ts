@@ -11,7 +11,7 @@ import { PrismaAgentRepository } from './prisma-agent.repository';
 import { PrismaAgentUnitOfWork } from './prisma-agent-unit-of-work';
 import { PrismaReferralCodeRepository } from './prisma-referral-code.repository';
 import { PrismaTestAudit } from './prisma-test-audit';
-import { openTestDatabase, truncateAgentTables } from './prisma-test-database';
+import { openTestDatabase, freshTestDatabase } from './prisma-test-database';
 
 const db = openTestDatabase();
 const prisma = db.prisma;
@@ -30,11 +30,10 @@ function makeWorld() {
 }
 
 defineAgentRepositoryContract('prisma', async () => {
-  await truncateAgentTables(prisma);
+  await freshTestDatabase(prisma);
   return {
     ...makeWorld(),
     auditCount: () => prisma.auditLog.count(),
-    cleanup: () => truncateAgentTables(prisma),
   };
 });
 
@@ -51,8 +50,7 @@ describe('prisma adapters: what only the real database shows', () => {
     createdAt: new Date('2026-10-29T09:00:00.000Z'),
   };
 
-  beforeEach(() => truncateAgentTables(prisma));
-  afterAll(() => truncateAgentTables(prisma));
+  beforeEach(() => freshTestDatabase(prisma));
 
   it('refuses the same phone under a different hash as DUPLICATE_PHONE_HASH', async () => {
     const { agents } = makeWorld();

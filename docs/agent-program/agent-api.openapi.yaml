@@ -41,6 +41,14 @@ info:
       a new envelope because the live Flutter app already parses the current
       shape; the added `code` is additive and safe for it to ignore. New
       clients branch on `code`, never on `message`.
+    - **Any agent or member referral route may also answer:** `503
+      AGENT_PROGRAM_UNAVAILABLE` while the agent program is not fully set up
+      on the server (token secret, sealing key, a setting or the commission
+      policy missing; show "not available yet", retry later); `503
+      IDENTIFIER_HASHING_UNAVAILABLE` or `503 OTP_DELIVERY_UNAVAILABLE`
+      from the shared platform services; and `409 CONCURRENT_CHANGE` when
+      two requests changed the same thing at once (retry). With
+      `AGENT_PROGRAM_ENABLED` off on the server the routes do not exist (404).
     - **Settings are not constants.** Hold days, credit window, minimum payout,
       referred-member discount and commission rate are settings; clients read
       the ones they display from `GET /agent/config`.
@@ -964,6 +972,8 @@ components:
             - SELF_REFERRAL
             - ALREADY_PAID
             - PHONE_NOT_VERIFIED
+            - AGENT_PROGRAM_UNAVAILABLE
+            - CONCURRENT_CHANGE
         agentStatus:
           allOf:
             - $ref: '#/components/schemas/AgentStatus'

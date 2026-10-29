@@ -24,7 +24,10 @@ export type AgentConflictReason =
   | 'DUPLICATE_PRIMARY_CODE'
   | 'DUPLICATE_ATTRIBUTION'
   | 'ALREADY_REVOKED'
-  | 'DUPLICATE_ID';
+  | 'DUPLICATE_ID'
+  | 'DUPLICATE_COMMISSION'
+  | 'DUPLICATE_PAYOUT'
+  | 'DUPLICATE_PAYOUT_REFERENCE';
 
 export class AgentConflictError extends Error {
   constructor(public readonly reason: AgentConflictReason) {
@@ -64,8 +67,24 @@ export type NewAgentRecord = Omit<
 >;
 
 /** `status` is stored as given; transition rules live in `agent-status.ts`. */
+/** What the admin list can filter on. All given filters must match. */
+export interface AgentListFilter {
+  status?: AgentStatus;
+  /** Case-insensitive prefix of the agent's name. */
+  namePrefix?: string;
+  phoneHash?: string;
+  /** Exactly these agent ids (for a referral-code lookup). */
+  ids?: string[];
+}
+
 export interface AgentRepository {
   findById(id: string, tx?: AgentTx): Promise<AgentRecord | null>;
+  /** Newest first, ordered by (createdAt, id) descending. */
+  listPage(
+    filter: AgentListFilter,
+    page: { limit: number; after?: { at: Date; id: string } },
+    tx?: AgentTx,
+  ): Promise<AgentRecord[]>;
   findByPhoneHash(phoneHash: string, tx?: AgentTx): Promise<AgentRecord | null>;
   /** Starts as PENDING_APPROVAL. Throws AgentConflictError on a reused id or phone hash. */
   create(agent: NewAgentRecord, tx?: AgentTx): Promise<AgentRecord>;
@@ -111,6 +130,12 @@ export interface ReferralCodeRepository {
    * DUPLICATE_PRIMARY_CODE when the agent already has a primary code.
    */
   create(code: ReferralCodeRecord, tx?: AgentTx): Promise<ReferralCodeRecord>;
+  /** Changes whether a code is the agent's primary one. Rejects for an unknown id. */
+  setPrimary(
+    id: string,
+    isPrimary: boolean,
+    tx?: AgentTx,
+  ): Promise<ReferralCodeRecord>;
 }
 
 // --- Refresh tokens --------------------------------------------------------
@@ -232,6 +257,26 @@ export interface AttributionPageCursor {
 }
 
 export interface ReferralAttributionRepository {
+  findById(
+    attributionId: string,
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord | null>;
+  /**
+   * An admin correction. Changes only the given fields and only while the
+   * attribution is still in `expectedStatus`; returns null when it was in
+   * another state (a lost race) or does not exist.
+   */
+  correct(
+    attributionId: string,
+    expectedStatus: AgentAttributionStatus,
+    changes: Partial<
+      Pick<
+        ReferralAttributionRecord,
+        'agentId' | 'codeId' | 'source' | 'status' | 'needsReview'
+      >
+    >,
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord | null>;
   findByMemberId(
     memberId: string,
     tx?: AgentTx,
@@ -253,6 +298,11 @@ export interface ReferralAttributionRepository {
   findByIdForAgent(
     attributionId: string,
     agentId: string,
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord | null>;
+  /** The attribution stored under this EXACT phone hash (one version of the pepper), or null. */
+  findByPhoneHash(
+    phoneHash: string,
     tx?: AgentTx,
   ): Promise<ReferralAttributionRecord | null>;
   /** True when an attribution already exists for this member phone hash. */

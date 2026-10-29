@@ -12,13 +12,12 @@ import { PrismaAgentRepository } from './prisma-agent.repository';
 import { PrismaReferralAttributionRepository } from './prisma-referral-attribution.repository';
 import { PrismaReferralCodeAttemptStore } from './prisma-referral-code-attempt.store';
 import { PrismaReferralCodeRepository } from './prisma-referral-code.repository';
-import { openTestDatabase, truncateAgentTables } from './prisma-test-database';
+import { openTestDatabase, freshTestDatabase } from './prisma-test-database';
 
 const db = openTestDatabase();
 const prisma = db.prisma;
 
 afterAll(async () => {
-  await truncateAgentTables(prisma);
   await db.close();
 });
 
@@ -37,7 +36,7 @@ const seedUser = (id: string) =>
 const contractPurge = { batchSize: 10, graceMs: 365 * DAY, clock };
 
 defineAgentStoresContract('prisma', async () => {
-  await truncateAgentTables(prisma);
+  await freshTestDatabase(prisma);
   return {
     agents: new PrismaAgentRepository(prisma),
     codes: new PrismaReferralCodeRepository(prisma),
@@ -47,12 +46,11 @@ defineAgentStoresContract('prisma', async () => {
     seedMember: async (id) => {
       await seedUser(id);
     },
-    cleanup: () => truncateAgentTables(prisma),
   };
 });
 
 describe('prisma attribution repository: delete rules', () => {
-  beforeEach(() => truncateAgentTables(prisma));
+  beforeEach(() => freshTestDatabase(prisma));
 
   async function seedAttribution() {
     const agents = new PrismaAgentRepository(prisma);
@@ -128,7 +126,7 @@ describe('prisma applicant store: bounded purge on write', () => {
     expiresAt,
   });
 
-  beforeEach(() => truncateAgentTables(prisma));
+  beforeEach(() => freshTestDatabase(prisma));
 
   const store = (batchSize: number, logger?: { warn(m: string): void }) =>
     new PrismaAgentApplicantRepository(prisma, {
@@ -233,7 +231,7 @@ describe('prisma attempt store: bounded purge on write', () => {
   const GRACE = 1 * DAY;
   const cutoff = new Date(NOW.getTime() - GRACE);
 
-  beforeEach(() => truncateAgentTables(prisma));
+  beforeEach(() => freshTestDatabase(prisma));
 
   const store = (batchSize: number) =>
     new PrismaReferralCodeAttemptStore(prisma, {
