@@ -164,6 +164,10 @@ export interface AgentAuditEntry {
   /** Admin actions: the relevant fields before and after, never a secret. */
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;
+  /** Who is acting: staff, a member, an agent, or the system. */
+  actorType?: 'STAFF' | 'MEMBER' | 'AGENT' | 'SYSTEM';
+  /** The request the change came from (request id, IP, user agent). */
+  context?: { requestId: string; ipAddress?: string; userAgent?: string };
 }
 
 /**
