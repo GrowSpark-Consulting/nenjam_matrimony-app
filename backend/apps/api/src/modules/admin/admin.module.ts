@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { DiscoveryModule } from '@nestjs/core';
 import { AppConfigModule } from '@app/config';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
+import { PlatformModule } from '../platform/platform.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { AdminGuard } from './auth/admin.guard';
 import { AdminRouteCheck } from './auth/admin-route-check';
@@ -17,6 +18,7 @@ import {
   AdminPlanDraftsController,
   AdminPlansController,
 } from './controllers/admin-plans.controller';
+import { AdminSettingsController } from './controllers/admin-settings.controller';
 import { AdminAccessService } from './services/admin-access.service';
 import { AdminAuditService } from './services/admin-audit.service';
 import { AdminMfaService } from './services/admin-mfa.service';
@@ -26,7 +28,8 @@ import { AdminSessionService } from './services/admin-session.service';
 /**
  * Staff access — RBAC (roles → permissions), the authenticator second factor,
  * admin sessions, the audit writer — and the admin API over membership
- * (plans, drafts, subscriptions), the audit log, the overview and roles.
+ * (plans, drafts, subscriptions), platform settings, the audit log, the
+ * overview and roles.
  *
  * Wraps SubscriptionModule's services; nothing there depends on this module.
  * Another module's admin controllers use `@AdminController(...)` and
@@ -39,6 +42,7 @@ import { AdminSessionService } from './services/admin-session.service';
     AppConfigModule,
     DiscoveryModule,
     EntitlementsModule,
+    PlatformModule,
     SubscriptionModule,
   ],
   controllers: [
@@ -50,6 +54,7 @@ import { AdminSessionService } from './services/admin-session.service';
     AdminSubscriptionsController,
     AdminAuditLogsController,
     AdminRolesController,
+    AdminSettingsController,
   ],
   providers: [
     AdminAccessService,
