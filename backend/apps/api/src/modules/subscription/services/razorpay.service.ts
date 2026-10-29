@@ -33,6 +33,8 @@ export interface RazorpayPayment {
   amount: number;
   currency: string;
   status: 'created' | 'authorized' | 'captured' | 'refunded' | 'failed';
+  /** The payer's UPI id, for UPI payments; null otherwise. */
+  vpa: string | null;
 }
 
 /** Constant-time comparison of two hex HMAC digests. */
@@ -77,6 +79,12 @@ export class RazorpayService {
   /** The public key id the client's Razorpay Checkout opens with. */
   publicKeyId(): string {
     return this.requireKeys().keyId;
+  }
+
+  /** False with TEST keys (`rzp_test_`): no money moves. Only an
+   *  `rzp_live_` key is live; anything else is treated as test. */
+  isLiveMode(): boolean {
+    return this.requireKeys().keyId.startsWith('rzp_live_');
   }
 
   async createOrder(input: CreateOrderInput): Promise<RazorpayOrder> {
@@ -160,6 +168,7 @@ export class RazorpayService {
         amount?: unknown;
         currency?: unknown;
         status?: unknown;
+        vpa?: unknown;
       };
       if (
         typeof payment.id !== 'string' ||
@@ -176,6 +185,7 @@ export class RazorpayService {
         amount: payment.amount,
         currency: payment.currency,
         status: payment.status as RazorpayPayment['status'],
+        vpa: typeof payment.vpa === 'string' ? payment.vpa : null,
       };
     } catch (error) {
       this.logger.error(

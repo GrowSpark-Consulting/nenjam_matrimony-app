@@ -71,3 +71,16 @@ describe('entitlements', () => {
     expect(sameValue({ limit: 5 }, { limit: 6 })).toBe(false);
   });
 });
+
+describe('agents', () => {
+  it('labels statuses the way the agent program does (SUSPENDED is "paused")', async () => {
+    const { agentStatusLabel } = await import('./agents');
+    expect(agentStatusLabel('SUSPENDED')).toBe('paused');
+    expect(agentStatusLabel('PENDING_APPROVAL')).toBe('awaiting approval');
+  });
+
+  it('offers approve and reject only for an application awaiting approval', async () => {
+    const { canDecide, AGENT_STATUSES } = await import('./agents');
+    expect(AGENT_STATUSES.filter(canDecide)).toEqual(['PENDING_APPROVAL']);
+  });
+});

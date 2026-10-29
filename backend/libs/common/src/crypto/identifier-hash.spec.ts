@@ -30,6 +30,7 @@ describe('IdentifierHasher', () => {
     ['IP', '::FFFF:CB00:7109', '203.0.113.9'],
     ['IP', '2001:0db8:0000:0000:0000:0000:0000:0001', '2001:db8::1'],
     ['IP', 'fe80::1%eth0', 'FE80::1'],
+    ['UPI', ' Priya.K@OkICICI ', 'priya.k@okicici'],
   ] as const)('%s: "%s" and "%s" are one identifier', (kind, a, b) => {
     expect(hasher.hash(kind, a)).toBe(hasher.hash(kind, b));
   });
@@ -70,6 +71,8 @@ describe('IdentifierHasher', () => {
     ['IP', '203.0.113.999'],
     ['IP', 'localhost'],
     ['EMAIL', ''],
+    ['UPI', 'no-at-sign'],
+    ['UPI', 'a@1bank'],
   ] as const)('refuses %s "%s" with a RangeError', (kind, value) => {
     expect(() => hasher.hash(kind, value)).toThrow(RangeError);
   });
