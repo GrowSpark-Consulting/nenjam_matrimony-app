@@ -80,6 +80,12 @@ so members pay exactly the plan price.
 
 ## 4. Test purchases (Android app)
 
+> **Blocked until the app has Razorpay.** As of 29 Oct the Flutter app ships no payment
+> SDK: `UnsupportedPaymentGateway` hides every Buy button. A `RazorpayPaymentGateway` (the
+> `razorpay_flutter` package) must open Razorpay with the checkout response's
+> `key: keyId`, `order_id: orderId`, `amount: amountInPaise`, `currency`. Until then the
+> server side is ready but nothing can start a purchase.
+
 Razorpay's test credentials (the dashboard's *Test Card Details* page has the current
 list):
 
