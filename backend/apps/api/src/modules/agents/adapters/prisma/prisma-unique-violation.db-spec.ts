@@ -4,13 +4,13 @@
  * recorded error shape in the default spec cannot drift from reality.
  */
 import { readUniqueViolation } from './prisma-unique-violation';
-import { openTestDatabase, truncateAgentTables } from './prisma-test-database';
+import { openTestDatabase, freshTestDatabase } from './prisma-test-database';
 
 const db = openTestDatabase();
 const prisma = db.prisma;
 
 afterAll(() => db.close());
-beforeEach(() => truncateAgentTables(prisma));
+beforeEach(() => freshTestDatabase(prisma));
 
 const person = { name: 'Ravi', city: 'Madurai', state: 'Tamil Nadu' };
 

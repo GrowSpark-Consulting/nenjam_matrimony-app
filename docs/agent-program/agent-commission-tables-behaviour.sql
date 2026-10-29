@@ -140,6 +140,50 @@ SELECT pg_temp.t('trigger re-enabled: UPDATE rejected again', $$UPDATE agent_led
 -- Balance is the sum of the signed rows
 SELECT pg_temp.t('ledger: balance = sum of entries', $$SELECT 1/(SELECT (sum(amount_paise)=8476-100-60000+60000+50-50)::int FROM agent_ledger_entries WHERE agent_id='a1')$$, 'ok');
 
+-- TRUNCATE, TRUNCATE ... CASCADE (also from a referenced table) and DELETE of
+-- every row are all refused on the ledger. The rows from the tests above exist.
+SELECT pg_temp.t('ledger: TRUNCATE refused', $$TRUNCATE agent_ledger_entries$$, '23001');
+SELECT pg_temp.t('ledger: TRUNCATE CASCADE refused', $$TRUNCATE agent_ledger_entries CASCADE$$, '23001');
+SELECT pg_temp.t('ledger: TRUNCATE CASCADE from a referenced table (agents) refused', $$TRUNCATE agents CASCADE$$, '23001');
+SELECT pg_temp.t('ledger: TRUNCATE CASCADE from a referenced table (commissions) refused', $$TRUNCATE commissions CASCADE$$, '23001');
+SELECT pg_temp.t('ledger: TRUNCATE CASCADE from a referenced table (agent_payouts) refused', $$TRUNCATE agent_payouts CASCADE$$, '23001');
+SELECT pg_temp.t('ledger: DELETE of every row refused', $$DELETE FROM agent_ledger_entries$$, '23001');
+SELECT pg_temp.t('ledger: DELETE with a WHERE that matches everything refused', $$DELETE FROM agent_ledger_entries WHERE amount_paise <> 0$$, '23001');
+SELECT pg_temp.t('ledger: the rows are all still there', $$SELECT 1/(SELECT (count(*) >= 6)::int FROM agent_ledger_entries)$$, 'ok');
+-- A plain TRUNCATE of a table that others refer to is already refused by the
+-- foreign keys (0A000, checked before any trigger). The triggers cover what
+-- the foreign keys allow: CASCADE, and TRUNCATE with every referencing table
+-- listed in the same statement.
+SELECT pg_temp.t('commissions: plain TRUNCATE refused (by the foreign keys)', $$TRUNCATE commissions$$, '0A000');
+SELECT pg_temp.t('agent_payouts: plain TRUNCATE refused (by the foreign keys)', $$TRUNCATE agent_payouts$$, '0A000');
+SELECT pg_temp.t('commission_policy_versions: plain TRUNCATE refused (by the foreign keys)', $$TRUNCATE commission_policy_versions$$, '0A000');
+SELECT pg_temp.t('commission_policy_versions: TRUNCATE CASCADE refused', $$TRUNCATE commission_policy_versions CASCADE$$, '23001');
+SELECT pg_temp.t('commissions: TRUNCATE with its referencing tables listed too is refused', $$TRUNCATE commissions, agent_ledger_entries$$, '23001');
+SELECT pg_temp.t('agent_payouts: TRUNCATE with its referencing tables listed too is refused', $$TRUNCATE agent_payouts, commissions, agent_ledger_entries$$, '23001');
+SELECT pg_temp.t('commission_policy_versions: TRUNCATE with its referencing tables listed too is refused', $$TRUNCATE commission_policy_versions, commissions, agent_ledger_entries, agents, referral_codes, referral_attributions, agent_payouts, agent_refresh_tokens, agent_payout_details, agent_device_tokens$$, '23001');
+
+-- CONTROLS: with the triggers off the same statements are NOT refused by the
+-- trigger, so the refusals above really are the triggers.
+ALTER TABLE agent_ledger_entries DISABLE TRIGGER agent_ledger_entries_append_only_trg;
+SELECT pg_temp.t('control: DELETE of every row succeeds with the row trigger disabled', $$DELETE FROM agent_ledger_entries$$, 'ok');
+ALTER TABLE agent_ledger_entries ENABLE TRIGGER agent_ledger_entries_append_only_trg;
+ALTER TABLE agent_ledger_entries DISABLE TRIGGER agent_ledger_entries_no_truncate_trg;
+SELECT pg_temp.t('control: TRUNCATE ledger succeeds with its truncate trigger disabled', $$TRUNCATE agent_ledger_entries$$, 'ok');
+ALTER TABLE agent_ledger_entries ENABLE TRIGGER agent_ledger_entries_no_truncate_trg;
+-- Without the other money tables' triggers (and the ledger's) the foreign
+-- keys allow the listed form and CASCADE.
+ALTER TABLE commissions DISABLE TRIGGER commissions_no_truncate_trg;
+ALTER TABLE agent_payouts DISABLE TRIGGER agent_payouts_no_truncate_trg;
+ALTER TABLE commission_policy_versions DISABLE TRIGGER commission_policy_versions_no_truncate_trg;
+ALTER TABLE agent_ledger_entries DISABLE TRIGGER agent_ledger_entries_no_truncate_trg;
+SELECT pg_temp.t('control: TRUNCATE commissions with its referencing tables listed succeeds without the triggers', $$TRUNCATE commissions, agent_ledger_entries$$, 'ok');
+SELECT pg_temp.t('control: TRUNCATE agents CASCADE succeeds with all the truncate triggers disabled', $$TRUNCATE agents CASCADE$$, 'ok');
+ALTER TABLE commissions ENABLE TRIGGER commissions_no_truncate_trg;
+ALTER TABLE agent_payouts ENABLE TRIGGER agent_payouts_no_truncate_trg;
+ALTER TABLE commission_policy_versions ENABLE TRIGGER commission_policy_versions_no_truncate_trg;
+ALTER TABLE agent_ledger_entries ENABLE TRIGGER agent_ledger_entries_no_truncate_trg;
+SELECT pg_temp.t('triggers re-enabled: TRUNCATE agents CASCADE refused again', $$TRUNCATE agents CASCADE$$, '23001');
+
 \echo
 SELECT n, CASE WHEN ok THEN 'PASS' ELSE 'FAIL' END AS result, name, expected, got FROM results ORDER BY n;
 \echo

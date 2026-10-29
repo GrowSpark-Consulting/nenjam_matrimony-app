@@ -15,13 +15,12 @@ import { PrismaAgentUnitOfWork } from './prisma-agent-unit-of-work';
 import { PrismaCommissionPolicyRepository } from './prisma-commission-policy.repository';
 import { PrismaCommissionRepository } from './prisma-commission.repository';
 import { PrismaReferralAttributionRepository } from './prisma-referral-attribution.repository';
-import { openTestDatabase, truncateAgentTables } from './prisma-test-database';
+import { openTestDatabase, freshTestDatabase } from './prisma-test-database';
 
 const db = openTestDatabase();
 const prisma = db.prisma;
 
 afterAll(async () => {
-  await truncateAgentTables(prisma);
   await db.close();
 });
 
@@ -36,7 +35,7 @@ const world = () => ({
 });
 
 defineAgentCommissionContract('prisma', async () => {
-  await truncateAgentTables(prisma);
+  await freshTestDatabase(prisma);
   return {
     ...world(),
     addPolicyVersion: async (v) => {
@@ -51,7 +50,6 @@ defineAgentCommissionContract('prisma', async () => {
         },
       });
     },
-    cleanup: () => truncateAgentTables(prisma),
   };
 });
 
@@ -59,7 +57,7 @@ describe('prisma commission adapters: what only the real database shows', () => 
   const NOW = new Date('2026-10-29T09:00:00.000Z');
 
   beforeEach(async () => {
-    await truncateAgentTables(prisma);
+    await freshTestDatabase(prisma);
     const w = world();
     await w.agents.create({
       id: 'agent-1',

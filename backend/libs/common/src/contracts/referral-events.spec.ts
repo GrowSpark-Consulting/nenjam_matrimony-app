@@ -1,32 +1,35 @@
-import { refundTaxPaise, splitInclusiveTax } from './referral-events';
+import { addExclusiveTax, refundTaxPaise } from './referral-events';
 
-describe('splitInclusiveTax', () => {
-  it('takes the GST out of a GST-inclusive amount', () => {
-    // ₹1,180 at 18% is ₹1,000 plus ₹180 GST.
-    expect(splitInclusiveTax(118_000, 1800)).toEqual({
-      taxableAmountPaise: 100_000,
-      taxPaise: 18_000,
+describe('addExclusiveTax', () => {
+  it('adds GST on top of the taxable amount (Raja’s example)', () => {
+    // ₹1,000 with 5% off is ₹950 taxable; 18% GST is ₹171; ₹1,121 paid.
+    expect(addExclusiveTax(95_000, 1800)).toEqual({
+      taxPaise: 17_100,
+      totalPaise: 112_100,
     });
   });
 
-  it('always adds back up to the amount paid', () => {
-    for (const amount of [1, 99, 100, 47_405, 94_905, 1_234_567]) {
+  it('adds nothing at rate 0 (not GST-registered yet)', () => {
+    expect(addExclusiveTax(95_000, 0)).toEqual({
+      taxPaise: 0,
+      totalPaise: 95_000,
+    });
+  });
+
+  it('rounds the GST to the nearest paisa, half up', () => {
+    expect(addExclusiveTax(99, 1800).taxPaise).toBe(18); // 17.82
+    expect(addExclusiveTax(25, 1800).taxPaise).toBe(5); // 4.5
+    expect(addExclusiveTax(24, 1800).taxPaise).toBe(4); // 4.32
+  });
+
+  it('always totals taxable + tax', () => {
+    for (const taxable of [0, 1, 99, 100, 47_405, 94_905, 1_234_567]) {
       for (const rate of [0, 500, 1200, 1800, 2800]) {
-        const { taxableAmountPaise, taxPaise } = splitInclusiveTax(
-          amount,
-          rate,
-        );
-        expect(taxableAmountPaise + taxPaise).toBe(amount);
+        const { taxPaise, totalPaise } = addExclusiveTax(taxable, rate);
+        expect(totalPaise).toBe(taxable + taxPaise);
         expect(taxPaise).toBeGreaterThanOrEqual(0);
       }
     }
-  });
-
-  it('charges no GST at rate 0', () => {
-    expect(splitInclusiveTax(99_900, 0)).toEqual({
-      taxableAmountPaise: 99_900,
-      taxPaise: 0,
-    });
   });
 
   it.each([
@@ -34,26 +37,37 @@ describe('splitInclusiveTax', () => {
     [1.5, 1800],
     [100, -1],
     [100, 18.5],
-  ])('refuses amount %p at rate %p', (amount, rate) => {
-    expect(() => splitInclusiveTax(amount, rate)).toThrow(RangeError);
+  ])('refuses taxable %p at rate %p', (taxable, rate) => {
+    expect(() => addExclusiveTax(taxable, rate)).toThrow(RangeError);
   });
 });
 
 describe('refundTaxPaise', () => {
-  const payment = { amountPaidPaise: 94_905, taxPaise: 14_477 };
+  // Raja's example: 112100 paid, of which 17100 GST.
+  const payment = { amountPaidPaise: 112_100, taxPaise: 17_100 };
 
   it('is the whole GST on a full refund', () => {
     expect(
       refundTaxPaise({
         ...payment,
         refundedBeforePaise: 0,
-        refundedPaise: 94_905,
+        refundedPaise: 112_100,
       }),
-    ).toBe(14_477);
+    ).toBe(17_100);
+  });
+
+  it('is proportional on a partial refund', () => {
+    expect(
+      refundTaxPaise({
+        ...payment,
+        refundedBeforePaise: 0,
+        refundedPaise: 56_050,
+      }),
+    ).toBe(8_550);
   });
 
   it('adds up to exactly the GST however the refund is split', () => {
-    const pieces = [1, 333, 10_000, 40_000, 44_571];
+    const pieces = [1, 333, 10_000, 40_000, 61_766];
     let before = 0;
     let tax = 0;
     for (const piece of pieces) {
@@ -68,12 +82,23 @@ describe('refundTaxPaise', () => {
     expect(tax).toBe(payment.taxPaise);
   });
 
+  it('is 0 while no GST is charged', () => {
+    expect(
+      refundTaxPaise({
+        amountPaidPaise: 95_000,
+        taxPaise: 0,
+        refundedBeforePaise: 0,
+        refundedPaise: 40_000,
+      }),
+    ).toBe(0);
+  });
+
   it('refuses refunds beyond what was paid', () => {
     expect(() =>
       refundTaxPaise({
         ...payment,
-        refundedBeforePaise: 90_000,
-        refundedPaise: 5_000,
+        refundedBeforePaise: 100_000,
+        refundedPaise: 12_101,
       }),
     ).toThrow(RangeError);
   });

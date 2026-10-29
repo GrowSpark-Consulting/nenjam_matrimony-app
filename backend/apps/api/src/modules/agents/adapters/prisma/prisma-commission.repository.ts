@@ -162,6 +162,16 @@ export class PrismaCommissionRepository implements CommissionRepository {
     return row ? toRecord(row) : null;
   }
 
+  async findByPhoneHash(
+    phoneHash: string,
+    tx?: AgentTx,
+  ): Promise<CommissionRecord | null> {
+    const row = await dbFor(this.prisma, tx).commission.findUnique({
+      where: { phoneHash },
+    });
+    return row ? toRecord(row) : null;
+  }
+
   async findByAttributionId(
     attributionId: string,
     tx?: AgentTx,

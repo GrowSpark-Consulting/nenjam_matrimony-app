@@ -77,6 +77,16 @@ function toRecord(row: AttributionRow): ReferralAttributionRecord {
 export class PrismaReferralAttributionRepository implements ReferralAttributionRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  async findByPhoneHash(
+    phoneHash: string,
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord | null> {
+    const row = await dbFor(this.prisma, tx).referralAttribution.findUnique({
+      where: { phoneHash },
+    });
+    return row ? toRecord(row) : null;
+  }
+
   async findById(
     attributionId: string,
     tx?: AgentTx,
