@@ -138,6 +138,16 @@ export interface AgentPermissionPort {
     permission: AgentPermission,
     tx?: AgentTx,
   ): Promise<void>;
+  /**
+   * The same check as `assert`, answered as a boolean (never rejects for a
+   * missing permission). For a route that shows sensitive data only to
+   * holders of a permission instead of refusing everyone else.
+   */
+  has(
+    actorId: string,
+    permission: AgentPermission,
+    tx?: AgentTx,
+  ): Promise<boolean>;
 }
 
 // --- Audit ----------------------------------------------------------------
@@ -149,6 +159,11 @@ export interface AgentAuditEntry {
   entityId: string | null;
   /** Never put tokens, OTPs, PAN or bank details here. */
   metadata?: Record<string, unknown>;
+  /** Admin actions: why (3 to 500 characters, the admin's own words). */
+  reason?: string;
+  /** Admin actions: the relevant fields before and after, never a secret. */
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
 }
 
 /**

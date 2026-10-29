@@ -179,6 +179,44 @@ export function defineAgentRepositoryContract(
         });
       });
 
+      it('listPage is newest first, ties by id descending, with filters and a cursor', async () => {
+        await w.agents.create({
+          ...newAgent(1),
+          name: 'Ravi Kumar',
+          createdAt: at(1),
+        });
+        await w.agents.create({
+          ...newAgent(2),
+          name: 'ravi Shankar',
+          createdAt: at(5),
+        });
+        await w.agents.create({
+          ...newAgent(3),
+          name: 'Mala',
+          createdAt: at(5),
+        });
+        await w.agents.update('agent-3', { status: 'ACTIVE' });
+        const ids = async (
+          filter: Parameters<AgentRepository['listPage']>[0],
+          page: Parameters<AgentRepository['listPage']>[1] = { limit: 10 },
+        ) => (await w.agents.listPage(filter, page)).map((a) => a.id);
+        expect(await ids({})).toEqual(['agent-3', 'agent-2', 'agent-1']);
+        expect(await ids({ status: 'ACTIVE' })).toEqual(['agent-3']);
+        expect(await ids({ namePrefix: 'RAV' })).toEqual([
+          'agent-2',
+          'agent-1',
+        ]);
+        expect(await ids({ phoneHash: 'v1:hash-1' })).toEqual(['agent-1']);
+        expect(await ids({ ids: ['agent-1', 'agent-3'] })).toEqual([
+          'agent-3',
+          'agent-1',
+        ]);
+        expect(await ids({}, { limit: 2 })).toEqual(['agent-3', 'agent-2']);
+        expect(
+          await ids({}, { limit: 10, after: { at: at(5), id: 'agent-3' } }),
+        ).toEqual(['agent-2', 'agent-1']);
+      });
+
       it('rejects an update of an unknown agent', async () => {
         await expect(w.agents.update('nobody', { name: 'x' })).rejects.toThrow(
           'Unknown agent nobody',
@@ -216,6 +254,25 @@ export function defineAgentRepositoryContract(
         await expect(
           w.codes.create(code(3, 'agent-1', { isPrimary: true })),
         ).rejects.toEqual(conflict('DUPLICATE_PRIMARY_CODE'));
+      });
+
+      it('setPrimary demotes and promotes; two primaries are a conflict', async () => {
+        await seedAgent(1);
+        await w.codes.create(code(1, 'agent-1', { isPrimary: true }));
+        await w.codes.create(code(2, 'agent-1'));
+        await expect(w.codes.setPrimary('code-2', true)).rejects.toEqual(
+          conflict('DUPLICATE_PRIMARY_CODE'),
+        );
+        expect((await w.codes.setPrimary('code-1', false)).isPrimary).toBe(
+          false,
+        );
+        expect((await w.codes.setPrimary('code-2', true)).isPrimary).toBe(true);
+        expect(
+          (await w.codes.listByAgent('agent-1')).map((c) => c.isPrimary),
+        ).toEqual([false, true]);
+        await expect(w.codes.setPrimary('nope', true)).rejects.toThrow(
+          'Unknown referral code nope',
+        );
       });
 
       it('lets two different agents each have a primary code', async () => {
