@@ -164,6 +164,10 @@ export interface AgentApplicantRecord {
  * Remembers the phone an applicant verified, so the application can create
  * the agent record without the phone being in the token or the request body.
  * Written at verify time; deleted after a successful application.
+ *
+ * PURGE (decided 28 Oct): rows that have expired are removed opportunistically
+ * by the real adapter, in a small limited batch (for example a few dozen rows
+ * past `expiresAt`) on each `save`. No scheduler or cron job is used.
  */
 export interface AgentApplicantRepository {
   /** Insert or replace the record for this phone hash. */
@@ -279,6 +283,10 @@ export interface ReferralCodeAttemptWindow {
  *
  * Limits of a simple implementation: reading the count and then recording the
  * attempt is not atomic, so parallel requests can pass a limit by a few.
+ *
+ * PURGE (decided 28 Oct): rows older than the window are removed
+ * opportunistically by the real adapter, in a small limited batch on each
+ * `record`. No scheduler or cron job is used.
  */
 export interface ReferralCodeAttemptStore {
   window(
