@@ -1,11 +1,12 @@
+import { Link } from 'react-router-dom';
 import { pickLabel } from '../lib/labels';
 import { usePortal } from '../state/PortalContext';
 
 /**
  * Status screens from `GET /agent/me`, labelled from `GET /agent/config`.
  *
- * Rejected: shows `rejectionReason`. There is no "Apply again" button yet —
- * whether a rejected agent may re-apply is pending with Raja.
+ * Rejected: shows `rejectionReason` and an "Apply again" button (Raja
+ * approved re-applying; the server still decides and may refuse).
  */
 export function StatusPage() {
   const { agent, config } = usePortal();
@@ -18,6 +19,13 @@ export function StatusPage() {
       {agent.status === 'REJECTED' && agent.rejectionReason && (
         <p>
           <strong>Reason:</strong> {agent.rejectionReason}
+        </p>
+      )}
+      {agent.status === 'REJECTED' && (
+        <p>
+          <Link to="/apply" className="button">
+            Apply again
+          </Link>
         </p>
       )}
       {agent.status === 'SUSPENDED' && (

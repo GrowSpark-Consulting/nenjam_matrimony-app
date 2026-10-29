@@ -62,12 +62,12 @@ describe('protected routes and agent-status restrictions', () => {
     }
   });
 
-  it('rejected agent sees the reason and NO "Apply again" (decision pending)', async () => {
+  it('rejected agent sees the reason and an "Apply again" link to the form', async () => {
     const s = setup();
     await signedInAs(s, '+919000000002');
     renderAt('/', s);
     expect(await screen.findByText(/Reason:/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /apply again/i })).toBeNull();
+    expect(screen.getByRole('link', { name: /apply again/i })).toHaveAttribute('href', '/apply');
   });
 
   it('terminated agent: money pages only, no code or sharing', async () => {
