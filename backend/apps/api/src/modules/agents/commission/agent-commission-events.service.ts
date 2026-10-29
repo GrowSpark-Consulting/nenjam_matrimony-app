@@ -78,6 +78,7 @@ export interface PaymentSucceededResult {
 
 export type PaymentRefundedOutcome =
   | 'REVERSED'
+  | 'REDUCED'
   | 'CANCELLED'
   | 'ALREADY_PROCESSED'
   | 'NO_COMMISSION'
@@ -87,6 +88,8 @@ export interface PaymentRefundedResult {
   outcome: PaymentRefundedOutcome;
   commissionId?: string;
   reversalPaise?: number;
+  /** With REDUCED: the new amount (null while the amount is still unknown). */
+  reducedAmountPaise?: number | null;
 }
 
 export class AgentCommissionPolicyMissingError extends Error {
@@ -185,6 +188,8 @@ export class AgentCommissionEventsService {
             amountPaise: draft.amountPaise,
             amountPaidPaise: event.amountPaidPaise,
             taxableAmountPaise: event.taxableAmountPaise,
+            refundedPaise: 0,
+            preRefundAmountPaise: null,
             creditedPaise: 0,
             reversedPaise: 0,
             holdUntil: draft.holdUntil,
@@ -258,10 +263,52 @@ export class AgentCommissionEventsService {
         refundedTotalPaise: event.totalRefundedPaise,
         isFullRefund: event.fullyRefunded,
         payoutStatus: commission.status === 'PAID' ? 'PAID' : 'NONE',
+        // Before approval: the amount before any refund reduced it, and the
+        // running total already applied. After approval: only set when a
+        // refund reduced the commission before it was approved.
+        originalAmountPaise:
+          commission.preRefundAmountPaise ??
+          (isOpen(commission.status) ? commission.amountPaise : null),
+        alreadyRefundedPaise: commission.refundedPaise,
       });
 
       if (plan.commissionNext === 'UNCHANGED' && plan.reversalPaise === 0) {
         return { outcome: 'NOTHING_TO_REVERSE', commissionId: commission.id };
+      }
+
+      // A PARTIAL refund before approval REDUCES the commission in
+      // proportion (DECIDED, Ishu 29 Oct). Nothing was credited, so the ledger
+      // is not touched; the status, rule snapshot and review reasons stay.
+      // The running total makes a replayed refund a no-op (handled above, by
+      // the plan returning UNCHANGED).
+      if (plan.commissionNext === 'REDUCED') {
+        const reduced = await commissions.transition(
+          commission.id,
+          commission.status,
+          {
+            refundedPaise: plan.refundedPaise,
+            ...(plan.reducedAmountPaise !== null &&
+              plan.reducedAmountPaise !== undefined && {
+                amountPaise: plan.reducedAmountPaise,
+                preRefundAmountPaise:
+                  commission.preRefundAmountPaise ?? commission.amountPaise,
+              }),
+          },
+          tx,
+        );
+        if (reduced === null) throw new AgentMoneyError('CONCURRENT_CHANGE');
+        await this.audit(
+          commission,
+          event,
+          'COMMISSION_REDUCED_BY_REFUND',
+          0,
+          tx,
+        );
+        return {
+          outcome: 'REDUCED',
+          commissionId: commission.id,
+          reducedAmountPaise: plan.reducedAmountPaise ?? null,
+        };
       }
 
       if (plan.commissionNext === 'CANCELLED') {
@@ -345,6 +392,15 @@ export class AgentCommissionEventsService {
     );
   }
 }
+
+const OPEN_STATUSES: ReadonlySet<string> = new Set([
+  'ON_HOLD',
+  'AWAITING_VERIFICATION',
+  'IN_REVIEW',
+  'FROZEN',
+  'READY',
+]);
+const isOpen = (status: string): boolean => OPEN_STATUSES.has(status);
 
 function assertPaise(name: string, value: unknown): asserts value is number {
   if (!Number.isSafeInteger(value) || (value as number) < 0) {

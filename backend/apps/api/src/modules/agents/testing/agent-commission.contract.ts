@@ -129,6 +129,8 @@ export function defineAgentCommissionContract(
       amountPaise: 848,
       amountPaidPaise: 10000,
       taxableAmountPaise: 8475,
+      refundedPaise: 0,
+      preRefundAmountPaise: null,
       creditedPaise: 0,
       reversedPaise: 0,
       holdUntil: at(14 * 24 * 60),
@@ -294,6 +296,29 @@ export function defineAgentCommissionContract(
         await expect(
           w.commissions.update('nope', { status: 'FROZEN' }),
         ).rejects.toThrow('Unknown commission nope');
+      });
+
+      it('stores the refund reduction: running total, reduced amount and the original', async () => {
+        await w.commissions.create(commission(1));
+        const reduced = await w.commissions.transition('com-01', 'ON_HOLD', {
+          refundedPaise: 2802,
+          amountPaise: 712,
+          preRefundAmountPaise: 848,
+        });
+        expect(reduced).toMatchObject({
+          refundedPaise: 2802,
+          amountPaise: 712,
+          preRefundAmountPaise: 848,
+          status: 'ON_HOLD',
+        });
+        expect(await w.commissions.findById('com-01')).toMatchObject({
+          refundedPaise: 2802,
+          preRefundAmountPaise: 848,
+        });
+        const again = await w.commissions.update('com-01', {
+          preRefundAmountPaise: null,
+        });
+        expect(again.preRefundAmountPaise).toBeNull();
       });
 
       it('transition changes the row only if it is still in the expected state', async () => {

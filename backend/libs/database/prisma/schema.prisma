@@ -2199,6 +2199,10 @@ model Commission {
   amountPaidPaise    Int                @map("amount_paid_paise")
   /// The part of amount_paid_paise without GST, as stored on the payment (never recomputed). Kept so the amount can be filled in later if commission.base was not set when the payment came in.
   taxableAmountPaise Int                @map("taxable_amount_paise")
+  /// The running total refunded BEFORE approval (a partial refund reduces the commission in proportion; nothing was credited yet). After approval, refunds go through the ledger (reversed_paise).
+  refundedPaise      Int                @default(0) @map("refunded_paise")
+  /// The amount before a refund reduced it; the reference for later refunds. Null until a refund reduced it (or while the amount is unknown).
+  preRefundAmountPaise Int?             @map("pre_refund_amount_paise")
   /// What has been credited to the agent's ledger for this commission.
   creditedPaise      Int                @default(0) @map("credited_paise")
   /// What refunds have clawed back so far.

@@ -57,6 +57,8 @@ interface CommissionRow {
   amountPaise: number | null;
   amountPaidPaise: number;
   taxableAmountPaise: number;
+  refundedPaise: number;
+  preRefundAmountPaise: number | null;
   creditedPaise: number;
   reversedPaise: number;
   holdUntil: Date;
@@ -83,6 +85,8 @@ function toRecord(row: CommissionRow): CommissionRecord {
     amountPaise: row.amountPaise,
     amountPaidPaise: row.amountPaidPaise,
     taxableAmountPaise: row.taxableAmountPaise,
+    refundedPaise: row.refundedPaise,
+    preRefundAmountPaise: row.preRefundAmountPaise,
     creditedPaise: row.creditedPaise,
     reversedPaise: row.reversedPaise,
     holdUntil: row.holdUntil,
@@ -99,6 +103,8 @@ const changesData = (changes: CommissionChanges) => ({
   status: changes.status,
   basePaise: changes.basePaise,
   amountPaise: changes.amountPaise,
+  refundedPaise: changes.refundedPaise,
+  preRefundAmountPaise: changes.preRefundAmountPaise,
   creditedPaise: changes.creditedPaise,
   reversedPaise: changes.reversedPaise,
   reviewReasons: changes.reviewReasons,
@@ -130,6 +136,8 @@ export class PrismaCommissionRepository implements CommissionRepository {
           amountPaise: commission.amountPaise,
           amountPaidPaise: commission.amountPaidPaise,
           taxableAmountPaise: commission.taxableAmountPaise,
+          refundedPaise: commission.refundedPaise,
+          preRefundAmountPaise: commission.preRefundAmountPaise,
           creditedPaise: commission.creditedPaise,
           reversedPaise: commission.reversedPaise,
           holdUntil: commission.holdUntil,

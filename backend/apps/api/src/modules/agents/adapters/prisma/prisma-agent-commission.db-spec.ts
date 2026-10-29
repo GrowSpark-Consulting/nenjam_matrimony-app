@@ -110,6 +110,8 @@ describe('prisma commission adapters: what only the real database shows', () => 
     amountPaise: 848,
     amountPaidPaise: 10000,
     taxableAmountPaise: 8475,
+    refundedPaise: 0,
+    preRefundAmountPaise: null,
     creditedPaise: 0,
     reversedPaise: 0,
     holdUntil: NOW,

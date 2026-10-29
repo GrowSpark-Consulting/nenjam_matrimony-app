@@ -44,6 +44,8 @@ CREATE TABLE "commissions" (
     "amount_paise" INTEGER,
     "amount_paid_paise" INTEGER NOT NULL,
     "taxable_amount_paise" INTEGER NOT NULL,
+    "refunded_paise" INTEGER NOT NULL DEFAULT 0,
+    "pre_refund_amount_paise" INTEGER,
     "credited_paise" INTEGER NOT NULL DEFAULT 0,
     "reversed_paise" INTEGER NOT NULL DEFAULT 0,
     "hold_until" TIMESTAMP(3) NOT NULL,
@@ -229,6 +231,20 @@ ALTER TABLE "commissions"
 ALTER TABLE "commissions"
   ADD CONSTRAINT "commissions_paid_has_time_chk"
   CHECK ("status" <> 'PAID' OR "paid_at" IS NOT NULL);
+
+-- A refund before approval reduces the amount in proportion: the refunded total
+-- is part of what was paid, and the amount never rises above its original.
+ALTER TABLE "commissions"
+  ADD CONSTRAINT "commissions_refund_chk"
+  CHECK (
+    "refunded_paise" >= 0
+    AND "refunded_paise" <= "amount_paid_paise"
+    AND ("pre_refund_amount_paise" IS NULL OR (
+      "pre_refund_amount_paise" >= 0
+      AND "pre_refund_amount_paise" <= "amount_paid_paise"
+      AND ("amount_paise" IS NULL OR "amount_paise" <= "pre_refund_amount_paise")
+    ))
+  );
 
 -- Why a commission is IN_REVIEW: only the known reasons.
 ALTER TABLE "commissions"

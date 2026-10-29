@@ -312,6 +312,22 @@ describe('override', () => {
     ).rejects.toMatchObject({ code: 'COMMISSION_STATUS_NOT_ALLOWED' });
   });
 
+  it('refuses a typed amount over a commission a partial refund already reduced', async () => {
+    const c = await make(1, 'IN_REVIEW');
+    await h.events.onPaymentRefunded(
+      h.paymentRefunded(1, 1, {
+        refundedPaise: 2_802,
+        totalRefundedPaise: 2_802,
+        fullyRefunded: false,
+      }),
+    );
+    expect((await h.commissions.findById(c.id))?.amountPaise).toBe(712);
+    await expect(
+      h.commissionsAdmin.override(super_, c.id, 800, REASON),
+    ).rejects.toMatchObject({ code: 'COMMISSION_PARTLY_REFUNDED' });
+    expect((await h.commissions.findById(c.id))?.amountPaise).toBe(712);
+  });
+
   it('will not drop an approved amount below what refunds already reversed', async () => {
     const c = await make(1, 'READY');
     await h.commissionsAdmin.approve(super_, c.id, REASON);
