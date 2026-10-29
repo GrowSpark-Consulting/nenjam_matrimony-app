@@ -143,7 +143,10 @@ export class AgentSignInService {
             phoneHash,
             phoneSealed: this.deps.sealer.seal(phone),
             expiresAt: new Date(
-              now.getTime() + this.deps.options.applicantPhoneTtlSeconds * 1000,
+              now.getTime() +
+                (this.deps.options.applicantPhoneTtlSeconds ??
+                  lifetimes.accessTtlSeconds) *
+                  1000,
             ),
           },
           tx,

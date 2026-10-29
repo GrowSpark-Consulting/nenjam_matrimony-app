@@ -73,7 +73,19 @@ export class AgentJwtTokenSigner implements AgentTokenSigner {
   }
 
   async verify(token: string): Promise<AgentAccessClaims | null> {
-    if (typeof token !== 'string' || token.length === 0) return null;
+    const checked = await this.check(token);
+    return checked.ok ? checked.claims : null;
+  }
+
+  /**
+   * Like `verify`, but says whether a GENUINE token has merely expired (so a
+   * client knows to refresh). The reason is only ever EXPIRED after the
+   * signature has been checked: a forged or altered token is always INVALID.
+   */
+  async check(token: string): Promise<AgentTokenCheck> {
+    if (typeof token !== 'string' || token.length === 0) {
+      return { ok: false, reason: 'INVALID' };
+    }
 
     let payload: unknown;
     try {
@@ -85,7 +97,7 @@ export class AgentJwtTokenSigner implements AgentTokenSigner {
       });
     } catch {
       // Bad signature, wrong algorithm, malformed: no detail is passed on.
-      return null;
+      return { ok: false, reason: 'INVALID' };
     }
 
     const checked = validateAgentAccessClaims(payload, {
@@ -93,6 +105,20 @@ export class AgentJwtTokenSigner implements AgentTokenSigner {
       audience: this.audience,
       now: this.clock.now(),
     });
-    return checked.ok ? checked.claims : null;
+    if (checked.ok) return { ok: true, claims: checked.claims };
+    return {
+      ok: false,
+      reason: checked.reason === 'EXPIRED' ? 'EXPIRED' : 'INVALID',
+    };
   }
+}
+
+/** What `AgentJwtTokenSigner.check` answers. */
+export type AgentTokenCheck =
+  | { ok: true; claims: AgentAccessClaims }
+  | { ok: false; reason: 'INVALID' | 'EXPIRED' };
+
+/** The part of the signer the agent guard needs. */
+export interface AgentTokenChecker {
+  check(token: string): Promise<AgentTokenCheck>;
 }

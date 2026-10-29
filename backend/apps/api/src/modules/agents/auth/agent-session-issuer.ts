@@ -37,7 +37,12 @@ export interface AgentAuthOptions {
   /** Secret keying the stored hash of refresh tokens. From configuration. */
   refreshTokenPepper: string;
   /** How long a verified applicant phone is remembered for an application. */
-  applicantPhoneTtlSeconds: number;
+  /**
+   * Optional: when absent, the remembered phone lives exactly as long as the
+   * applicant's access token (the access-token lifetime setting), so no
+   * window is a constant.
+   */
+  applicantPhoneTtlSeconds?: number;
 }
 
 export function assertAgentAuthOptions(options: AgentAuthOptions): void {
@@ -47,8 +52,9 @@ export function assertAgentAuthOptions(options: AgentAuthOptions): void {
     }
   }
   if (
-    !Number.isSafeInteger(options.applicantPhoneTtlSeconds) ||
-    options.applicantPhoneTtlSeconds < 1
+    options.applicantPhoneTtlSeconds !== undefined &&
+    (!Number.isSafeInteger(options.applicantPhoneTtlSeconds) ||
+      options.applicantPhoneTtlSeconds < 1)
   ) {
     throw new RangeError('applicantPhoneTtlSeconds must be an integer >= 1.');
   }

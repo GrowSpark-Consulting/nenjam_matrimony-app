@@ -23,12 +23,15 @@ import { PlatformSettingsService } from '../../../platform/settings/platform-set
 import { AgentServiceError } from '../../errors/agent-service-error';
 import {
   AgentOtpRateLimitError,
+  type AgentAuditEntry,
+  type AgentAuditPort,
   type AgentOtpChallenge,
   type AgentOtpPort,
   type AgentOtpPurpose,
   type AgentOtpVerifyResult,
   type AgentSettingsPort,
 } from '../../ports/agent-platform-ports';
+import type { AgentTx } from '../../ports/agent-unit-of-work.port';
 import {
   AGENT_OTP_RESEND_AFTER_SECONDS_KEY,
   AGENT_PROGRAM_SETTING_KEYS,
@@ -112,5 +115,26 @@ export class AgentSettingValidators implements OnModuleInit {
     for (const key of AGENT_PROGRAM_SETTING_KEYS) {
       this.settings.registerValidator(key, agentSettingValidator(key));
     }
+  }
+}
+
+/**
+ * The audit port for the agent-facing routes: the same writer as the admin
+ * routes, but an entry with an actor is the AGENT acting (the admin adapter
+ * would label it STAFF) and one without is the SYSTEM. An explicit
+ * `actorType` on the entry still wins.
+ */
+export class AgentActorAuditAdapter implements AgentAuditPort {
+  constructor(private readonly inner: AgentAuditPort) {}
+
+  record(entry: AgentAuditEntry, tx?: AgentTx): Promise<void> {
+    return this.inner.record(
+      {
+        ...entry,
+        actorType:
+          entry.actorType ?? (entry.actorId === null ? 'SYSTEM' : 'AGENT'),
+      },
+      tx,
+    );
   }
 }
