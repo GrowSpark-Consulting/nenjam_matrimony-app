@@ -68,9 +68,9 @@ export function openTestDatabase(): TestDatabase {
   };
 }
 
-/** Empties the agent tables (and the audit rows the specs write). */
+/** Empties the agent tables (plus the test users and the audit rows the specs write). */
 export async function truncateAgentTables(prisma: PrismaClient) {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "agents", "referral_codes", "referral_attributions", "agent_refresh_tokens", "agent_payout_details", "audit_logs" CASCADE',
+    'TRUNCATE TABLE "agents", "referral_codes", "referral_attributions", "agent_refresh_tokens", "agent_payout_details", "agent_applicants", "referral_code_attempts", "users", "audit_logs" CASCADE',
   );
 }
