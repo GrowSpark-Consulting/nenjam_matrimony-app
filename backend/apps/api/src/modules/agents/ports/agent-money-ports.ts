@@ -39,6 +39,11 @@ export interface AgentStatusHistoryPort {
     agentId: string,
     tx?: import('./agent-unit-of-work.port').AgentTx,
   ): Promise<
-    Array<{ action: string; at: Date; actorId: string | null; reason: string | null }>
+    Array<{
+      action: string;
+      at: Date;
+      actorId: string | null;
+      reason: string | null;
+    }>
   >;
 }
