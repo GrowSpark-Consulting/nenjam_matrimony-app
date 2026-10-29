@@ -24,7 +24,12 @@ export type AgentMoneyErrorCode =
   | 'PAYOUT_DETAILS_ALREADY_VERIFIED'
   | 'CODE_ALREADY_REPLACED'
   | 'ALREADY_ATTRIBUTED'
-  | 'CONCURRENT_CHANGE';
+  | 'CONCURRENT_CHANGE'
+  | 'ADMIN_STEP_UP_REQUIRED'
+  | 'AGENT_STATUS_NOT_ALLOWED'
+  | 'ATTRIBUTION_CONVERTED'
+  | 'AMOUNT_EXCEEDS_PAID'
+  | 'SELF_REFERRAL';
 
 export interface AgentMoneyErrorOptions {
   /** For PAYOUT_NOT_ELIGIBLE: every reason, in a fixed order. */

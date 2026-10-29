@@ -49,6 +49,8 @@ describe('AppConfigService', () => {
     membership: { enforcementMode: 'shadow' },
     razorpay: {},
     admin: {},
+    identifierHash: {},
+    agentOtp: { dummyEnabled: false, dummyPhones: [] },
   };
 
   async function buildService(

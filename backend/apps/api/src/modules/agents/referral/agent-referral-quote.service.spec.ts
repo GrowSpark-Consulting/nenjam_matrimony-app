@@ -87,7 +87,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 500,
         discountPaise: 4_995,
         discountSource: 'REFERRAL_FIRST_PLAN',
-        amountPaidPaise: 94_905,
+        taxableAfterDiscountPaise: 94_905,
         heldReferralCodeId: 'code-of-agent-1',
         agentDisplayName: 'Ravi K.',
       });
@@ -105,7 +105,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
       });
       await expect(quoteFor(h, { promoCode: '   ' })).resolves.toMatchObject({
         discountSource: 'NONE',
@@ -123,7 +123,7 @@ describe('AgentReferralQuoteService', () => {
       await expect(quoteFor(h, { promoCode: CODE })).resolves.toMatchObject({
         discountBps: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
       });
     });
   });
@@ -136,7 +136,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
         rejectedReason: 'NOT_FIRST_PLAN',
       });
       expect(await attemptsRecorded()).toBe(0);
@@ -161,7 +161,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 500,
         discountPaise: 4_995,
         discountSource: 'REFERRAL_FIRST_PLAN',
-        amountPaidPaise: 94_905,
+        taxableAfterDiscountPaise: 94_905,
         agentDisplayName: 'Ravi K.',
       });
     });
@@ -180,7 +180,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 500,
         discountPaise: 4_995,
         discountSource: 'REFERRAL_FIRST_PLAN',
-        amountPaidPaise: 94_905,
+        taxableAfterDiscountPaise: 94_905,
         agentDisplayName: 'Ravi K.',
         rejectedReason: 'ALREADY_ATTRIBUTED',
       });
@@ -216,7 +216,7 @@ describe('AgentReferralQuoteService', () => {
       await expect(quoteFor(h)).resolves.toMatchObject({
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
       });
     });
 
@@ -241,7 +241,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
         rejectedReason: 'AGENT_PAUSED',
       });
     });
@@ -272,7 +272,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
         rejectedReason: 'SELF_REFERRAL',
       });
     });
@@ -315,7 +315,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
         rejectedReason: 'PHONE_NOT_VERIFIED',
       });
       expect(create).not.toHaveBeenCalled();
@@ -327,7 +327,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
       });
     });
 
@@ -349,7 +349,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
         rejectedReason: 'INVALID',
       });
     });
@@ -367,7 +367,7 @@ describe('AgentReferralQuoteService', () => {
       await expect(
         quoteFor(h, { promoCode: OTHER_CODE }),
       ).resolves.toMatchObject({
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
         rejectedReason: 'INVALID',
       });
     });
@@ -382,7 +382,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
         rejectedReason: 'INVALID',
       });
     });
@@ -463,7 +463,10 @@ describe('AgentReferralQuoteService', () => {
       await seedAgentWithCode();
       await expect(
         quoteFor(h, { promoCode: CODE, listAmountPaise: 0 }),
-      ).resolves.toMatchObject({ discountPaise: 0, amountPaidPaise: 0 });
+      ).resolves.toMatchObject({
+        discountPaise: 0,
+        taxableAfterDiscountPaise: 0,
+      });
     });
 
     it('a missing discount setting is a config error only when a discount is possible', async () => {

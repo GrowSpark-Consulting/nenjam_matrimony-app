@@ -189,4 +189,37 @@ export const validationSchema = Joi.object({
     .base64()
     .length(44)
     .optional(),
+
+  // Keyed hashing of phones, emails, PANs and IPs: "v1:<secret>[,v0:<old>]",
+  // newest first, each secret at least 32 characters. Optional: without it
+  // the app boots and the agent program's routes answer 503.
+  IDENTIFIER_HASH_PEPPERS: Joi.string()
+    .allow('')
+    .pattern(/^v\d{1,6}:[^,]{32,}(,\s*v\d{1,6}:[^,]{32,})*$/)
+    .optional(),
+
+  // Agent sign-in codes in testing (no SMS provider yet). Off unless `true`;
+  // when on, the code is required, and in production so is the allow-list.
+  AGENT_OTP_DUMMY_ENABLED: Joi.boolean().default(false),
+  AGENT_OTP_DUMMY_CODE: Joi.when('AGENT_OTP_DUMMY_ENABLED', {
+    is: true,
+    then: Joi.string()
+      .pattern(/^\d{6}$/)
+      .required(),
+    otherwise: Joi.string()
+      .allow('')
+      .pattern(/^\d{6}$/)
+      .optional(),
+  }),
+  AGENT_OTP_DUMMY_PHONES: Joi.when('AGENT_OTP_DUMMY_ENABLED', {
+    is: true,
+    then: Joi.when('NODE_ENV', {
+      is: 'production',
+      then: Joi.string()
+        .pattern(/\+[1-9]\d{7,14}/)
+        .required(),
+      otherwise: Joi.string().allow('').optional(),
+    }),
+    otherwise: Joi.string().allow('').optional(),
+  }),
 }).unknown(true);

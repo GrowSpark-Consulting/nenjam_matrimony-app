@@ -64,6 +64,46 @@ SELECT pg_temp.t('commission: credited with null amount', pg_temp.c('cx9','at4',
 SELECT pg_temp.t('commission: credited = amount ok (boundary)', pg_temp.c('c4','at4','pay4','mh4','100',9999,',credited_paise|,100'), 'ok');
 SELECT pg_temp.t('commission: reversed over credited', $$UPDATE commissions SET reversed_paise=101 WHERE id='c4'$$, '23514');
 SELECT pg_temp.t('commission: reversed = credited ok', $$UPDATE commissions SET reversed_paise=100 WHERE id='c4'$$, 'ok');
+-- Partial refund before approval (commissions_refund_chk): the amount is
+-- reduced in proportion, never above its original, and the refunded running
+-- total is at most what was paid.
+SELECT pg_temp.t('refund: a new commission has refunded 0 and no original', $$SELECT 1/(SELECT (refunded_paise = 0 AND pre_refund_amount_paise IS NULL)::int FROM commissions WHERE id='c1')$$, 'ok');
+SELECT pg_temp.t('refund: a reduced amount with its original and running total (control)', $$UPDATE commissions SET refunded_paise=2500, pre_refund_amount_paise=8475, amount_paise=6356 WHERE id='c1'$$, 'ok');
+SELECT pg_temp.t('refund: running total over what was paid', $$UPDATE commissions SET refunded_paise=10000 WHERE id='c1'$$, '23514');
+SELECT pg_temp.t('refund: negative running total', $$UPDATE commissions SET refunded_paise=-1 WHERE id='c1'$$, '23514');
+SELECT pg_temp.t('refund: original over what was paid', $$UPDATE commissions SET pre_refund_amount_paise=10000 WHERE id='c1'$$, '23514');
+SELECT pg_temp.t('refund: negative original (amount unknown, so only this clause can refuse it)', $$UPDATE commissions SET pre_refund_amount_paise=-1, amount_paise=NULL WHERE id='c1'$$, '23514');
+SELECT pg_temp.t('refund: amount above its original', $$UPDATE commissions SET amount_paise=8476 WHERE id='c1'$$, '23514');
+SELECT pg_temp.t('refund: amount back to its original is allowed (boundary)', $$UPDATE commissions SET amount_paise=8475 WHERE id='c1'$$, 'ok');
+SELECT pg_temp.t('refund: running total equal to what was paid, amount 0 (boundary)', $$UPDATE commissions SET refunded_paise=9999, amount_paise=0 WHERE id='c1'$$, 'ok');
+SELECT pg_temp.t('refund: an unknown amount with a running total is allowed', $$UPDATE commissions SET refunded_paise=100, pre_refund_amount_paise=NULL, amount_paise=NULL WHERE id='c2'$$, 'ok');
+SELECT pg_temp.t('refund: c1 back to its reduced state', $$UPDATE commissions SET refunded_paise=2500, pre_refund_amount_paise=8475, amount_paise=6356 WHERE id='c1'$$, 'ok');
+-- CONTROLS for commissions_refund_chk: without it each refused statement
+-- succeeds (on a row that exists), so the refusals above really are this
+-- CHECK. Each control undoes itself, so the CHECK can be added back.
+CREATE FUNCTION pg_temp.ctl(p_sql text) RETURNS text LANGUAGE plpgsql AS $f$
+BEGIN
+  RETURN format('DO $do$ BEGIN %s; IF NOT FOUND THEN RAISE EXCEPTION ''control matched no row'' USING ERRCODE = ''P0002''; END IF; UPDATE commissions SET refunded_paise=2500, pre_refund_amount_paise=8475, amount_paise=6356 WHERE id=''c1''; END $do$', p_sql);
+END $f$;
+ALTER TABLE commissions DROP CONSTRAINT commissions_refund_chk;
+SELECT pg_temp.t('control: running total over what was paid succeeds without the CHECK', pg_temp.ctl($$UPDATE commissions SET refunded_paise=10000 WHERE id='c1'$$), 'ok');
+SELECT pg_temp.t('control: negative running total succeeds without the CHECK', pg_temp.ctl($$UPDATE commissions SET refunded_paise=-1 WHERE id='c1'$$), 'ok');
+SELECT pg_temp.t('control: original over what was paid succeeds without the CHECK', pg_temp.ctl($$UPDATE commissions SET pre_refund_amount_paise=10000 WHERE id='c1'$$), 'ok');
+SELECT pg_temp.t('control: negative original succeeds without the CHECK', pg_temp.ctl($$UPDATE commissions SET pre_refund_amount_paise=-1, amount_paise=NULL WHERE id='c1'$$), 'ok');
+SELECT pg_temp.t('control: amount above its original succeeds without the CHECK', pg_temp.ctl($$UPDATE commissions SET amount_paise=8476 WHERE id='c1'$$), 'ok');
+SELECT pg_temp.t('control: a control on a missing row is reported, not passed', pg_temp.ctl($$UPDATE commissions SET amount_paise=1 WHERE id='nope'$$), 'P0002');
+ALTER TABLE commissions ADD CONSTRAINT commissions_refund_chk CHECK (
+  refunded_paise >= 0
+  AND refunded_paise <= amount_paid_paise
+  AND (pre_refund_amount_paise IS NULL OR (
+    pre_refund_amount_paise >= 0
+    AND pre_refund_amount_paise <= amount_paid_paise
+    AND (amount_paise IS NULL OR amount_paise <= pre_refund_amount_paise)
+  ))
+);
+SELECT pg_temp.t('CHECK added back: c1 still in its reduced state', $$SELECT 1/(SELECT (refunded_paise=2500 AND pre_refund_amount_paise=8475 AND amount_paise=6356)::int FROM commissions WHERE id='c1')$$, 'ok');
+SELECT pg_temp.t('CHECK added back: amount above its original refused again', $$UPDATE commissions SET amount_paise=8476 WHERE id='c1'$$, '23514');
+SELECT pg_temp.t('CHECK added back: running total over what was paid refused again', $$UPDATE commissions SET refunded_paise=10000 WHERE id='c1'$$, '23514');
 SELECT pg_temp.t('commission: APPROVED without amount', $$UPDATE commissions SET status='APPROVED' WHERE id='c2'$$, '23514');
 SELECT pg_temp.t('commission: APPROVED with amount (control)', $$UPDATE commissions SET status='APPROVED' WHERE id='c1'$$, 'ok');
 SELECT pg_temp.t('commission: PAID without paid_at', $$UPDATE commissions SET status='PAID' WHERE id='c1'$$, '23514');

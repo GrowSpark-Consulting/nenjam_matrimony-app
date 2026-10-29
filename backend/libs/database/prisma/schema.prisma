@@ -1367,6 +1367,43 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+/// Values operators tune without a release: agent-program rules, rates and
+/// limits. Keys are added by migration only; admins change values through
+/// `PUT /admin/settings/:key` (audited, versioned). `value` is stored JSON and
+/// is validated by the code that reads it, never here — JSON `null` is a real
+/// value ("not decided"), distinct from a missing key.
+model PlatformSetting {
+  key         String   @id
+  value       Json
+  description String?
+  /// Starts at 1, +1 on every change; an update names the version it read.
+  version     Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("platform_settings")
+}
+
+/// One-time codes for phone sign-in outside Firebase (agents). Bound to a
+/// purpose: a challenge never verifies for another one. The code is stored
+/// hashed; a challenge verifies once, dies after the attempt limit, and
+/// expires. Expired rows are purged in small batches when codes are sent.
+model OtpChallenge {
+  id         String     @id @default(uuid())
+  purpose    OtpPurpose
+  phoneE164  String     @map("phone_e164")
+  codeHash   String     @map("code_hash")
+  /// Every verify call counts, the right code included.
+  attempts   Int        @default(0)
+  expiresAt  DateTime   @map("expires_at")
+  consumedAt DateTime?  @map("consumed_at")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  @@index([purpose, phoneE164, createdAt])
+  @@index([expiresAt])
+  @@map("otp_challenges")
+}
+
 enum UserRole {
   USER
   ADMIN
@@ -1468,6 +1505,12 @@ enum PlanDraftStatus {
   DISCARDED
 
   @@map("plan_draft_status")
+}
+
+enum OtpPurpose {
+  AGENT_SIGN_IN
+
+  @@map("otp_purpose")
 }
 
 enum SubscriptionEventType {
@@ -2199,6 +2242,10 @@ model Commission {
   amountPaidPaise    Int                @map("amount_paid_paise")
   /// The part of amount_paid_paise without GST, as stored on the payment (never recomputed). Kept so the amount can be filled in later if commission.base was not set when the payment came in.
   taxableAmountPaise Int                @map("taxable_amount_paise")
+  /// The running total refunded BEFORE approval (a partial refund reduces the commission in proportion; nothing was credited yet). After approval, refunds go through the ledger (reversed_paise).
+  refundedPaise      Int                @default(0) @map("refunded_paise")
+  /// The amount before a refund reduced it; the reference for later refunds. Null until a refund reduced it (or while the amount is unknown).
+  preRefundAmountPaise Int?             @map("pre_refund_amount_paise")
   /// What has been credited to the agent's ledger for this commission.
   creditedPaise      Int                @default(0) @map("credited_paise")
   /// What refunds have clawed back so far.
