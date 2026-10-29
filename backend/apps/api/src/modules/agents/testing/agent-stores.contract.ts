@@ -168,6 +168,17 @@ export function defineAgentStoresContract(
         ).toBe('attr-02');
       });
 
+      it('findByPhoneHash finds the attribution stored under that exact hash', async () => {
+        await add(1);
+        expect(
+          (await w.attributions.findByPhoneHash('v1:member-hash-1'))?.id,
+        ).toBe('attr-01');
+        expect(
+          await w.attributions.findByPhoneHash('v0:member-hash-1'),
+        ).toBeNull();
+        expect(await w.attributions.findByPhoneHash('nope')).toBeNull();
+      });
+
       it("findById finds any agent's attribution; null when unknown", async () => {
         await add(1);
         expect((await w.attributions.findById('attr-01'))?.memberId).toBe(

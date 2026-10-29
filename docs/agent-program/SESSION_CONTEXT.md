@@ -138,7 +138,8 @@ suites, 64 skipped, 11 todo.
 - Additions after Shaaz's review: `agents.pan_verified_at TIMESTAMP(3) NULL`; **`referral_attributions.phone_hash` is NOT NULL** (still unique); and **two hand-written CHECKs** after the existing block: a REJECTED agent must have a non-blank `rejection_reason`, and `pan_verified_at` requires `pan_encrypted`.
 - Checked on a throwaway local database: replay of all migrations, CI's drift check ("No difference detected") and a control that fails, an additivity comparison (additions only), 19 `psql` behaviour tests (the earlier 74-test script was lost with its scratchpad) and a control that fails 7 without the new constraints, 3315 tests, build.
 - **It is NOT applied to any database.** Nothing runs `prisma migrate deploy` on Render. Shaaz ran a read-only check on the **production** Neon database on 28 Oct: no agent migration rows and no agent tables (**per Shaaz; To be confirmed**; other shared databases, if any, were not checked as far as is known).
-- Shaaz's own migrations `20261028070845_admin_rbac_foundation` and `20261028075906_plan_drafts` are on his branch (verified in git), sort **before** ours, and are not applied anywhere. His next migrations (settings table, OTP challenges, payment fields) are to come **after** ours (per Shaaz).
+- **Migration order (corrected 29 Oct).** Ours, merged in #116: `20261028095916_agent_program_phase1`. Shaaz's two, on `feat/admin-rbac-foundation` (verified in git) and renamed to sort **after** ours: `20261029053600_admin_rbac_foundation` and `20261029053700_plan_drafts`. Apply order in production: **all three in one window, in that order** (production has 33 migrations applied today, per Ishu; **To be confirmed**). None of them is applied anywhere yet, and nothing applies migrations automatically on Render. His later migrations (settings table, OTP challenges, payment fields) come after these (per Shaaz). Any new migration of ours must sort **after** `20261029053700` and after anything newer on `origin/main`.
+- **Shaaz's facts (29 Oct, verified on his branch where noted):** `PAYOUT_MANAGER` has **no** `agent.view`; his admin guard sets `Cache-Control: no-store` on **every** admin response; `hasFreshStepUp(admin)` exists; the payout destination is included only when the admin holds `payout.execute` **and** has a fresh step-up, otherwise the field is left out, the response is still 200 and **no audit row** is written.
 
 ### The 18 settings keys that must be seeded (no defaults in code)
 
@@ -171,7 +172,7 @@ Expired `agent_applicants` and `referral_code_attempts` rows are purged **opport
 
 - Raja approved the **Tamil share message** (wording in `FRONTEND_HANDOFF_DHATRI.md` section 6, in `content/agent-content.ts`); other Tamil labels are still `'<to be supplied>'`.
 - The **Partner Program button is on the landing page only**, not in the app.
-- **No agent KYC yet.** **Dummy OTP until the Firebase paid plan** is bought. **No coupons** in the agent program (`referral.discount_stacks_with_coupons` exists in the settings list but must not be used).
+- **No separate agent KYC: the PAN is enough** (Raja, 29 Oct). **Dummy OTP until the Firebase paid plan** is bought. **No coupons** in the agent program (`referral.discount_stacks_with_coupons` exists in the settings list but must not be used).
 - Applicants get an **access token only**; applying returns an **agent session**; **strict refresh reuse** (a revoked token presented again revokes everything; accepted as strict by design).
 - `family_id` is **dropped**; the **commission policy table is deferred**; **`payout_details_set` is a column** and the payout-details update must set it; **purge of expired rows happens inside the real adapters**.
 - A self-referring agent **stays blocked** (an admin can correct it with a recorded reason, once the admin endpoint exists). The REJECTED row kept for a self-referral sets `needsReview = true` so it shows up for review.
@@ -197,11 +198,12 @@ Expired `agent_applicants` and `referral_code_attempts` rows are purged **opport
 - **Roles:** Raja plus one more person as Super Admin; a **Partner Manager** role for approving and rejecting agents; **payouts only for Raja and the person who pays**. Pause, terminate and PAN/phone reveal are **not specified yet**: Super Admin only for now. (The roles are Shaaz's to seed; only `SUPER_ADMIN` exists on his branch.)
 - **The four agent terms** shown on the Help screen are approved (in the portal's `helpContent.ts`); a lawyer checks them before launch.
 - **A terminated agent's waiting commission stays FROZEN** until Raja decides otherwise; commission already approved is still paid (he accepted all the suggestions).
-- **Still open:** the support contact for the Help screen, agent KYC, plan prices, TDS (the CA), the referral web address.
+- **Answered by Raja on 29 Oct:** a **support contact was supplied** for the agent Help screen (the numbers live in the portal's config, not in this repo); agents need **no separate KYC, the PAN is enough**.
+- **Still open:** plan prices, TDS (the CA), the referral web address.
 
 ### Open decisions
 
-Plan prices; TDS (CA); how an agent pays for a client's plan; Tamil wording for the other labels; the referral link web address (`link` and `qrPayload` are `null` until decided); agent KYC later; partial refund before approval; the **support contact** for the Help screen; **roles beyond what Raja said** (see above); where scheduled jobs run (no worker or scheduler on Render); **how migrations get applied on Render** (nothing does today); the Help screen support contact.
+Plan prices; TDS (CA); how an agent pays for a client's plan; Tamil wording for the other labels; the referral link web address (`link` and `qrPayload` are `null` until decided); partial refund before approval; **roles beyond what Raja said** (see above); where scheduled jobs run (no worker or scheduler on Render); **how migrations get applied on Render** (nothing does today).
 
 ---
 
@@ -280,6 +282,39 @@ After **#116 merges** and **Shaaz's platform PR lands** (OTP service, hashing, s
 18. **Nothing runs `prisma migrate deploy` on Render.** A merged migration is not applied until someone runs it, and applying one to the shared Neon database is a separate step Ishu must approve.
 19. Applicants have **no refresh token**. Contract limits and HTTP mappings for the refusals are in the service header comments (`agent-application.service.ts`, `agent-referral-code.service.ts`).
 20. A **PR's GitHub title and Draft state are not in git**; take them from Ishu.
+
+---
+
+## 8b. Runbook
+
+### Before any `IDENTIFIER_HASH_PEPPERS` rotation
+
+A phone hash is only equal to another hash made with the **same** pepper
+version, so a unique index on `phone_hash` cannot see a duplicate that was
+hashed under an older version. Rotating the pepper without a plan could let
+one member earn two commissions, or one phone be credited to two agents.
+
+1. **Run a re-hash step before the old version is retired**, for every table
+   that stores a phone hash: `agents.phone_hash`, `referral_attributions.phone_hash`,
+   `agent_applicants.phone_hash` and `commissions.phone_hash`. Re-hash from the
+   raw phone where one is held (agents: `phone`; applicants: the sealed phone),
+   in small batches, each in its own transaction. For attributions and
+   commissions the raw phone is the member's phone on the user row. A row that
+   cannot be re-hashed (the member is gone) keeps its old-version hash.
+2. **Keep `hashAll` (Shaaz's `hashIdentifierAll`) in use until the re-hash has
+   finished and been checked.** Every duplicate check and every lookup by phone
+   hash must compare against **all** active versions, newest first, not only
+   `hash`. Today the commission handler does this (it checks each version for a
+   commission, and for an earlier attribution that earned one, before it inserts,
+   and marks the attribution for review instead of crediting twice). The agent
+   sign-in, the application and the referral-code attach still look up by the
+   newest version only: **widen them before the first rotation.**
+3. The handler **copies the attribution's stored hash** onto the commission; it
+   never re-hashes the phone. That keeps one hash per member through a rotation.
+4. Only after step 1 is verified (no row left on an old version, except the ones
+   noted above) may the old pepper be removed from `IDENTIFIER_HASH_PEPPERS`.
+5. Do not run the re-hash against a remote database from a laptop without the
+   same approval as any other production data change.
 
 ---
 
