@@ -915,6 +915,31 @@ model PaymentTransaction {
   refundedAmount    Int              @default(0) @map("refunded_amount")
   refundedAt        DateTime?        @map("refunded_at")
   metadata          Json?
+  /// Who paid: the member in the app, an agent for them, or an admin
+  /// recording cash/UPI received.
+  paidBy             PaymentPaidBy         @default(MEMBER) @map("paid_by")
+  /// False for a Razorpay TEST-mode payment (no money moved); set from the key
+  /// in use at checkout. Null on rows from before this column.
+  livemode           Boolean?
+  /// The pricing fixed at checkout, in paise. GST is added on top:
+  ///   taxable = list − discount; tax = round(taxable × rate / 10000);
+  ///   amountInr = taxable + tax.
+  /// Null on rows from before these columns (they were list price only).
+  listAmountPaise    Int?                  @map("list_amount_paise")
+  discountPaise      Int                   @default(0) @map("discount_paise")
+  discountSource     PaymentDiscountSource @default(NONE) @map("discount_source")
+  /// The referral code quoted at checkout. A plain id, no foreign key: the
+  /// payment record must outlive any code.
+  heldReferralCodeId String?               @map("held_referral_code_id")
+  taxableAmountPaise Int?                  @map("taxable_amount_paise")
+  taxRateBps         Int?                  @map("tax_rate_bps")
+  taxPaise           Int?                  @map("tax_paise")
+  /// Set when the payment succeeds: no earlier successful payment by this
+  /// member. Only a first paid plan can earn an agent commission.
+  isFirstPaidPlan    Boolean               @default(false) @map("is_first_paid_plan")
+  /// Keyed hash of the payer's UPI id when Razorpay reports one (abuse
+  /// checks); never the id itself.
+  paymentSourceHash  String?               @map("payment_source_hash")
   createdAt         DateTime         @default(now()) @map("created_at")
   updatedAt         DateTime         @updatedAt @map("updated_at")
   subscription      UserSubscription @relation(fields: [subscriptionId], references: [id])
@@ -924,6 +949,26 @@ model PaymentTransaction {
   @@index([status])
   @@index([paidAt])
   @@map("payment_transactions")
+}
+
+/// Payment events for other features (the agent program), written in the
+/// SAME transaction as the payment change and delivered after commit — at
+/// least once, oldest first, until a subscriber accepts them. `dedupeKey`
+/// makes writing one twice a no-op.
+model PaymentEventOutbox {
+  id          String    @id @default(uuid())
+  /// `payment.succeeded` | `payment.refunded` (libs/common referral-events).
+  type        String
+  /// `<type>:<paymentId>` or `<type>:<refundId>`.
+  dedupeKey   String    @unique @map("dedupe_key")
+  payload     Json
+  attempts    Int       @default(0)
+  lastError   String?   @map("last_error")
+  deliveredAt DateTime? @map("delivered_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([deliveredAt, createdAt])
+  @@map("payment_event_outbox")
 }
 
 /// Every payment-provider webhook delivery accepted, keyed by the provider's
@@ -1505,6 +1550,21 @@ enum PlanDraftStatus {
   DISCARDED
 
   @@map("plan_draft_status")
+}
+
+enum PaymentPaidBy {
+  MEMBER
+  AGENT
+  ADMIN_RECORDED
+
+  @@map("payment_paid_by")
+}
+
+enum PaymentDiscountSource {
+  NONE
+  REFERRAL_FIRST_PLAN
+
+  @@map("payment_discount_source")
 }
 
 enum OtpPurpose {
