@@ -71,6 +71,8 @@ export interface AgentCommissionEventsDeps {
 
 export type PaymentSucceededOutcome =
   | 'CREATED'
+  /** livemode is not true: a Razorpay test payment, nothing credited. */
+  | 'TEST_MODE'
   | 'ALREADY_PROCESSED'
   | 'NOT_FIRST_PLAN'
   | 'NO_ATTRIBUTION'
@@ -86,6 +88,8 @@ export interface PaymentSucceededResult {
 
 export type PaymentRefundedOutcome =
   | 'REVERSED'
+  /** livemode is not true: nothing to change. */
+  | 'TEST_MODE'
   | 'CANCELLED'
   | 'ALREADY_PROCESSED'
   | 'NO_COMMISSION'
@@ -118,6 +122,10 @@ export class AgentCommissionEventsService {
     event: PaymentSucceeded,
   ): Promise<PaymentSucceededResult> {
     const paidAt = checkSucceeded(event);
+    // A Razorpay TEST payment never earns a real commission (contract:
+    // livemode). Anything but an explicit true is treated as test: money
+    // fails closed.
+    if (event.livemode !== true) return { outcome: 'TEST_MODE' };
     // Only a member's first paid plan earns a commission.
     if (!event.isFirstPaidPlan) return { outcome: 'NOT_FIRST_PLAN' };
 
@@ -273,6 +281,8 @@ export class AgentCommissionEventsService {
     event: PaymentRefunded,
   ): Promise<PaymentRefundedResult> {
     const refundedAt = checkRefunded(event);
+    // A test payment never had a commission, so its refund changes nothing.
+    if (event.livemode !== true) return { outcome: 'TEST_MODE' };
     return this.deps.uow.run(async (tx) => {
       const { commissions, ledger } = this.deps;
       const commission = await commissions.findByPaymentId(event.paymentId, tx);

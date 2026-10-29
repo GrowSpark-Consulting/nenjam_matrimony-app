@@ -2,7 +2,8 @@ import { createHmac } from 'node:crypto';
 import { isIP } from 'node:net';
 
 /**
- * Keyed one-way hashes of personal identifiers — phone, email, PAN, IP — for
+ * Keyed one-way hashes of personal identifiers — phone, email, PAN, IP, UPI
+ * id — for
  * lookups and uniqueness without keeping the raw value: "is this phone
  * already attributed?", "has this IP tried too many codes?".
  *
@@ -18,7 +19,7 @@ import { isIP } from 'node:net';
  * This file reads no environment, never logs, and never puts a value or a
  * pepper in an error message.
  */
-export type IdentifierKind = 'PHONE' | 'EMAIL' | 'PAN' | 'IP';
+export type IdentifierKind = 'PHONE' | 'EMAIL' | 'PAN' | 'IP' | 'UPI';
 
 export interface IdentifierPepper {
   /** `v` + digits, e.g. `v1`; the prefix of every hash made with it. */
@@ -93,6 +94,7 @@ function digest(
  *  - PAN:   spaces dropped, upper-cased.
  *  - IP:    IPv4 dotted; IPv6 in its canonical compressed form; an
  *    IPv4-mapped IPv6 address (`::ffff:1.2.3.4`) is the IPv4 address.
+ *  - UPI:   a UPI id (`name@bank`), trimmed and lower-cased.
  */
 export function normalizeIdentifier(
   kind: IdentifierKind,
@@ -114,6 +116,8 @@ export function normalizeIdentifier(
       return trimmed.replace(/\s+/g, '').toUpperCase();
     case 'IP':
       return normalizeIp(trimmed);
+    case 'UPI':
+      return normalizeUpi(trimmed);
     default:
       throw new RangeError('Unknown identifier kind.');
   }
@@ -129,6 +133,14 @@ function normalizePhone(raw: string): string {
     throw new RangeError('The PHONE value is not a phone number.');
   }
   return phone;
+}
+
+function normalizeUpi(raw: string): string {
+  const upi = raw.toLowerCase();
+  if (!/^[a-z0-9._-]{2,256}@[a-z][a-z0-9.-]{1,64}$/.test(upi)) {
+    throw new RangeError('The UPI value is not a UPI id.');
+  }
+  return upi;
 }
 
 function normalizeIp(raw: string): string {
