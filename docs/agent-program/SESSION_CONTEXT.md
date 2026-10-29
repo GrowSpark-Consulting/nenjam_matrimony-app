@@ -285,6 +285,39 @@ After **#116 merges** and **Shaaz's platform PR lands** (OTP service, hashing, s
 
 ---
 
+## 8b. Runbook
+
+### Before any `IDENTIFIER_HASH_PEPPERS` rotation
+
+A phone hash is only equal to another hash made with the **same** pepper
+version, so a unique index on `phone_hash` cannot see a duplicate that was
+hashed under an older version. Rotating the pepper without a plan could let
+one member earn two commissions, or one phone be credited to two agents.
+
+1. **Run a re-hash step before the old version is retired**, for every table
+   that stores a phone hash: `agents.phone_hash`, `referral_attributions.phone_hash`,
+   `agent_applicants.phone_hash` and `commissions.phone_hash`. Re-hash from the
+   raw phone where one is held (agents: `phone`; applicants: the sealed phone),
+   in small batches, each in its own transaction. For attributions and
+   commissions the raw phone is the member's phone on the user row. A row that
+   cannot be re-hashed (the member is gone) keeps its old-version hash.
+2. **Keep `hashAll` (Shaaz's `hashIdentifierAll`) in use until the re-hash has
+   finished and been checked.** Every duplicate check and every lookup by phone
+   hash must compare against **all** active versions, newest first, not only
+   `hash`. Today the commission handler does this (it checks each version for a
+   commission, and for an earlier attribution that earned one, before it inserts,
+   and marks the attribution for review instead of crediting twice). The agent
+   sign-in, the application and the referral-code attach still look up by the
+   newest version only: **widen them before the first rotation.**
+3. The handler **copies the attribution's stored hash** onto the commission; it
+   never re-hashes the phone. That keeps one hash per member through a rotation.
+4. Only after step 1 is verified (no row left on an old version, except the ones
+   noted above) may the old pepper be removed from `IDENTIFIER_HASH_PEPPERS`.
+5. Do not run the re-hash against a remote database from a laptop without the
+   same approval as any other production data change.
+
+---
+
 ## 9. Report format Ishu expects
 
 After each batch:
