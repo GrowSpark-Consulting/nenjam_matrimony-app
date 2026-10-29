@@ -40,7 +40,7 @@ export class PrismaAgentApplicantRepository implements AgentApplicantRepository 
       create: { phoneHash: record.phoneHash, ...fields },
       update: fields,
     });
-    await this.purgeExpired();
+    await this.purgeExpired(record.phoneHash);
   }
 
   async find(
@@ -65,10 +65,11 @@ export class PrismaAgentApplicantRepository implements AgentApplicantRepository 
     });
   }
 
-  private purgeExpired(): Promise<void> {
+  /** Never removes `keep`, the row this write just stored. */
+  private purgeExpired(keep: string): Promise<void> {
     return runPurge(this.purge, 'applicants', async (cutoff, batchSize) => {
       const expired = await this.prisma.agentApplicant.findMany({
-        where: { expiresAt: { lt: cutoff } },
+        where: { expiresAt: { lt: cutoff }, phoneHash: { not: keep } },
         orderBy: { expiresAt: 'asc' },
         take: batchSize,
         select: { phoneHash: true },
