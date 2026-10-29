@@ -12,3 +12,4 @@ export * from './auth/dev-auth';
 export * from './auth/staff-identity';
 export * from './crypto/secret-sealer';
 export * from './file-types/sniff-media';
+export * from './contracts/referral-events';
