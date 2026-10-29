@@ -240,6 +240,41 @@ describe('FakeAgentSettings (AgentSettingsPort contract)', () => {
 describe('FakeAgentIdentifierHasher (AgentIdentifierHasher contract)', () => {
   const hasher = new FakeAgentIdentifierHasher('test-secret');
 
+  describe('hashAll (every active pepper version)', () => {
+    const rotating = new FakeAgentIdentifierHasher('new-secret', [
+      'old-secret',
+      'older-secret',
+    ]);
+
+    it('lists the newest version first, then each older one', () => {
+      const all = rotating.hashAll('PHONE', PHONE);
+      expect(all).toHaveLength(3);
+      expect(all[0]).toBe(rotating.hash('PHONE', PHONE));
+      expect(all.map((h) => h.split(':')[0])).toEqual(['v1', 'v0', 'v-1']);
+      expect(new Set(all).size).toBe(3);
+    });
+
+    it('with one version it is just the hash', () => {
+      expect(hasher.hashAll('PHONE', PHONE)).toEqual([
+        hasher.hash('PHONE', PHONE),
+      ]);
+    });
+
+    it('a hash made under the old pepper is found among the versions', () => {
+      const oldHash = new FakeAgentIdentifierHasher('old-secret')
+        .hash('PHONE', PHONE)
+        .replace(/^v1:/, 'v0:');
+      expect(rotating.hashAll('PHONE', ` ${PHONE} `)).toContain(oldHash);
+    });
+
+    it('normalises like hash and refuses an empty value', () => {
+      expect(rotating.hashAll('EMAIL', ' A@B.in ')).toEqual(
+        rotating.hashAll('EMAIL', 'a@b.in'),
+      );
+      expect(() => rotating.hashAll('PHONE', '  ')).toThrow(RangeError);
+    });
+  });
+
   it('is deterministic and version-prefixed', () => {
     const hash = hasher.hash('PHONE', PHONE);
     expect(hash).toBe(hasher.hash('PHONE', PHONE));

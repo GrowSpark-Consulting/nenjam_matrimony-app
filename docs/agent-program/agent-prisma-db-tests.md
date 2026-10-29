@@ -22,11 +22,20 @@ schema already has every migration applied (including
 * If it is not set, `pnpm test:agent-db` fails with a message (it does not skip).
 * If its host is anything but `localhost` or `127.0.0.1`, the specs refuse to
   open a connection.
-* The specs **truncate** `agents`, `referral_codes`, `referral_attributions`,
-  `agent_refresh_tokens`, `agent_payout_details` and `audit_logs`. Never point
-  it at a database that holds data you want.
+* The specs create and drop databases on that server (named after the template, with a suffix), and write only to those. They never write to the template. Point the URL only at a throwaway local server.
 * The specs never read `backend/prisma.config.ts` or any `.env` file, and the
   URL is printed with its credentials hidden at the start of each suite.
+
+## How a spec gets a clean database
+
+`AGENT_PRISMA_TEST_DATABASE_URL` names a **template** database that has every
+migration applied. A spec never connects to it and never writes to it: each test
+gets its own fresh database made from it (`CREATE DATABASE ... TEMPLATE ...`),
+and the previous one is dropped. **Nothing is truncated.** The money tables
+refuse TRUNCATE on purpose (the append-only ledger and its referenced tables),
+and a spec must not work around that. The user in the URL needs permission to
+create and drop databases on the local server. No test connection is open to the
+template while a copy is made.
 
 ## Running them
 
@@ -60,6 +69,11 @@ schema already has every migration applied (including
   the Prisma adapters, plus what only a real database shows: the same phone
   under another hash, CHECK violations not hidden as conflicts, cascade delete,
   a finished transaction refused, and the transaction timeout option.
+
+* `prisma-agent-stores.db-spec.ts` — the attribution repository, applicant store and attempt store (contract suite), delete rules and the bounded purge.
+* `prisma-agent-commission.db-spec.ts` — the commission policy, commission, ledger and payout adapters (contract suite), the append-only ledger trigger, the CHECK constraints and the seeded policy version.
+
+The SQL behaviour tests for the commission migration (every unique rule, the CHECKs, the append-only trigger, the delete rules, with controls) are in `agent-commission-tables-behaviour.sql`; run it with `psql` against a throwaway local database that has every migration applied (it runs in one transaction and rolls back).
 
 ## Known limit
 
