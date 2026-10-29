@@ -138,6 +138,64 @@ describe('validationSchema', () => {
       expect(withKey(Buffer.alloc(16, 7).toString('base64'))).toBeDefined();
     });
   });
+
+  describe('IDENTIFIER_HASH_PEPPERS', () => {
+    const secret = 'k'.repeat(32);
+    const withPeppers = (peppers: string) =>
+      validationSchema.validate(
+        { ...validEnv, IDENTIFIER_HASH_PEPPERS: peppers },
+        { abortEarly: false },
+      ).error;
+
+    it('is optional, and takes "v1:<secret>" lists newest first', () => {
+      expect(withPeppers('')).toBeUndefined();
+      expect(withPeppers(`v1:${secret}`)).toBeUndefined();
+      expect(withPeppers(`v2:${secret}, v1:${secret}x`)).toBeUndefined();
+    });
+
+    it('refuses a short secret or a missing version', () => {
+      expect(withPeppers('v1:short')).toBeDefined();
+      expect(withPeppers(secret)).toBeDefined();
+    });
+  });
+
+  describe('AGENT_OTP_DUMMY_*', () => {
+    const withDummy = (env: Record<string, string>) =>
+      validationSchema.validate({ ...validEnv, ...env }, { abortEarly: false })
+        .error;
+
+    it('is off by default and needs nothing then', () => {
+      expect(withDummy({})).toBeUndefined();
+    });
+
+    it('needs a 6-digit code when on', () => {
+      expect(withDummy({ AGENT_OTP_DUMMY_ENABLED: 'true' })).toBeDefined();
+      expect(
+        withDummy({
+          AGENT_OTP_DUMMY_ENABLED: 'true',
+          AGENT_OTP_DUMMY_CODE: '12345',
+        }),
+      ).toBeDefined();
+      expect(
+        withDummy({
+          AGENT_OTP_DUMMY_ENABLED: 'true',
+          AGENT_OTP_DUMMY_CODE: '123456',
+        }),
+      ).toBeUndefined();
+    });
+
+    it('needs an allow-list when on in production', () => {
+      const on = {
+        NODE_ENV: 'production',
+        AGENT_OTP_DUMMY_ENABLED: 'true',
+        AGENT_OTP_DUMMY_CODE: '123456',
+      };
+      expect(withDummy(on)).toBeDefined();
+      expect(
+        withDummy({ ...on, AGENT_OTP_DUMMY_PHONES: '+919876543210' }),
+      ).toBeUndefined();
+    });
+  });
 });
 
 describe('validationSchema: face verification', () => {
