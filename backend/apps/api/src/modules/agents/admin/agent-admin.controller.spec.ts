@@ -39,6 +39,7 @@ import { AdminGuard } from '../../admin/auth/admin.guard';
 import { AdminAuditService } from '../../admin/services/admin-audit.service';
 import { IdentifierHashService } from '../../platform/identifier-hash.service';
 import { PlatformModule } from '../../platform/platform.module';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 import { AgentsModule } from '../agents.module';
 import {
   APPROVER,
@@ -135,8 +136,12 @@ class StandInAdminModule {}
       provide: IdentifierHashService,
       useValue: { hashIdentifier: jest.fn(), hashIdentifierAll: jest.fn() },
     },
+    {
+      provide: PlatformSettingsService,
+      useValue: { getMany: jest.fn(), registerValidator: jest.fn() },
+    },
   ],
-  exports: [IdentifierHashService],
+  exports: [IdentifierHashService, PlatformSettingsService],
 })
 class StandInPlatformModule {}
 

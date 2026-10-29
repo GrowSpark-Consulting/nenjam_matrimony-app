@@ -20,6 +20,7 @@ import {
   IdentifierHashAdapter,
   SystemClock,
 } from './adapters/admin/agent-admin-platform.adapters';
+import { AgentSettingValidators } from './adapters/platform/agent-platform.adapters';
 import { PrismaAgentAdminRead } from './adapters/prisma/prisma-agent-admin-read';
 import { PrismaAgentPayoutDetailsRepository } from './adapters/prisma/prisma-agent-payout-details.repository';
 import { PrismaAgentRepository } from './adapters/prisma/prisma-agent.repository';
@@ -33,6 +34,8 @@ import { AgentAdminController } from './admin/agent-admin.controller';
   imports: [AdminModule, PlatformModule],
   controllers: [AgentAdminController],
   providers: [
+    // Refuses a bad agent-program setting when an admin enters it.
+    AgentSettingValidators,
     {
       provide: AgentAdminAgentsService,
       inject: [PrismaService, AdminAuditService, IdentifierHashService],
