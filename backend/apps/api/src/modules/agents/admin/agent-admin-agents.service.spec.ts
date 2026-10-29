@@ -299,7 +299,7 @@ describe('reads', () => {
     expect(first.items[0]).toEqual({
       id: expect.any(String) as unknown,
       name: 'Agent 3',
-      phoneMasked: '+91 90***003',
+      phoneMasked: '+91 99***999',
       city: 'Madurai',
       state: 'Tamil Nadu',
       status: 'PENDING_APPROVAL',
@@ -355,15 +355,16 @@ describe('reads', () => {
     expect(await ids(a.id)).toEqual([a.id]);
     expect(await ids(code)).toEqual([b.id]);
     expect(await ids(code.toLowerCase())).toEqual([b.id]);
-    expect(await ids('NM222222')).toEqual([]);
+    expect(code).not.toBe('NM7K2P9X');
+    expect(await ids('NM7K2P9X')).toEqual([]);
     expect(await ids(a.phone)).toEqual([a.id]);
     expect(await ids('ravi')).toEqual([a.id]);
     expect(await ids('zz')).toEqual([]);
     // A phone stored under an older pepper version is still found.
     await h.agents.create({
       id: '11111111-1111-4111-8111-000000000077',
-      phoneHash: h.hasher.hashAll('PHONE', '+919000000077')[1],
-      phoneE164: '+919000000077',
+      phoneHash: h.hasher.hashAll('PHONE', '+919999999999')[1],
+      phoneE164: '+919999999999',
       name: 'Old',
       city: 'C',
       state: 'S',
@@ -372,7 +373,7 @@ describe('reads', () => {
       createdAt: new Date(),
     });
     h.read.track('11111111-1111-4111-8111-000000000077');
-    expect(await ids('+919000000077')).toEqual([
+    expect(await ids('+919999999999')).toEqual([
       '11111111-1111-4111-8111-000000000077',
     ]);
   });

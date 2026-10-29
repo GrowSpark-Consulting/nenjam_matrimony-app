@@ -22,6 +22,9 @@ const agents = new PrismaAgentRepository(prisma);
 const codes = new PrismaReferralCodeRepository(prisma);
 const details = new PrismaAgentPayoutDetailsRepository(prisma);
 
+/** The approved fake phones only. */
+const TEST_PHONES = ['+919000000001', '+919000000002', '+919999999999'];
+
 const T0 = new Date('2026-10-29T09:00:00.000Z');
 const id = (n: number) =>
   `11111111-1111-4111-8111-${String(n).padStart(12, '0')}`;
@@ -30,7 +33,7 @@ async function seed(n: number, name: string, minutes: number) {
   await agents.create({
     id: id(n),
     phoneHash: `v1:hash-${n}`,
-    phoneE164: `+9190000000${String(n).padStart(2, '0')}`,
+    phoneE164: TEST_PHONES[n - 1],
     name,
     city: 'Madurai',
     state: 'Tamil Nadu',

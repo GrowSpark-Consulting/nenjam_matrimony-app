@@ -25,6 +25,13 @@ export const APPROVER = 'staff-approver';
 export const NOBODY = 'staff-nobody';
 export const SEALED_PAN = 'v1:sealed-pan-ABCDE1234F';
 export const SEALED_DETAILS = 'v1:sealed-details-ravi@okbank';
+/** The approved fake phones only; `seedAgent(n)` takes the n-th. */
+export const TEST_PHONES = [
+  '+919000000001',
+  '+919000000002',
+  '+919999999999',
+  '+919876543210',
+];
 
 export function makeAgentAdminHarness() {
   const uow = new FakeAgentUnitOfWork();
@@ -76,10 +83,16 @@ export function makeAgentAdminHarness() {
     o: Partial<AgentRecord> = {},
   ) => {
     const id = `11111111-1111-4111-8111-${String(n).padStart(12, '0')}`;
-    const phone = `+9190000000${String(n).padStart(2, '0')}`;
+    // Past the four approved phones (paging tests only) a phone repeats under
+    // a distinct test-only hash; only the hash is unique.
+    const phone = TEST_PHONES[(n - 1) % TEST_PHONES.length];
+    const phoneHash =
+      n <= TEST_PHONES.length
+        ? hasher.hash('PHONE', phone)
+        : `test-only:agent-${n}`;
     await agents.create({
       id,
-      phoneHash: hasher.hash('PHONE', phone),
+      phoneHash,
       phoneE164: phone,
       name: o.name ?? `Agent ${n}`,
       city: 'Madurai',
