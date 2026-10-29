@@ -289,7 +289,9 @@ export class FakeReferralAttributionRepository implements ReferralAttributionRep
     const rows = [...this.rows.values()];
     if (
       this.rows.has(attribution.id) ||
-      rows.some((row) => row.memberId === attribution.memberId) ||
+      // Like the unique index: several rows may have no member (null).
+      (attribution.memberId !== null &&
+        rows.some((row) => row.memberId === attribution.memberId)) ||
       rows.some((row) => row.memberPhoneHash === attribution.memberPhoneHash)
     ) {
       return Promise.reject(new AgentConflictError('DUPLICATE_ATTRIBUTION'));

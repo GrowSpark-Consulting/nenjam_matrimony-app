@@ -199,6 +199,8 @@ export class AgentReferralService {
     record: ReferralAttributionRecord,
   ): Promise<AgentReferralView | null> {
     if (record.status === 'REJECTED') return null;
+    // A deleted member has nothing left to show.
+    if (record.memberId === null) return null;
     const fields = await this.deps.members.getReferralViewFields(
       record.memberId,
     );

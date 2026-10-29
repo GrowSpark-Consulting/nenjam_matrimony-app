@@ -374,6 +374,29 @@ describe('AgentReferralService', () => {
       expect(page.items.map((i) => i.id)).toEqual(['r02', 'r01']);
     });
 
+    it('skips a referral whose member account was deleted (null member)', async () => {
+      const claims = await asAgent();
+      await seed(2);
+      await h.attributions.create({
+        id: 'gone',
+        memberId: null,
+        agentId: 'agent-1',
+        codeId: null,
+        source: 'CODE_AT_SIGNUP',
+        memberPhoneHash: 'hash-of-gone',
+        attributedAt: new Date(START.getTime() + 10 * DAY),
+        status: 'ACTIVE',
+        windowEndsAt: new Date(START.getTime() + 70 * DAY),
+        needsReview: false,
+      });
+      const page = await h.referrals.listReferrals(claims, { limit: 5 });
+      expect(page.items.map((i) => i.id)).toEqual(['r02', 'r01']);
+      await expectServiceError(
+        h.referrals.getReferral(claims, 'gone'),
+        'REFERRAL_NOT_FOUND',
+      );
+    });
+
     it('OWN-AGENT SCOPING: an agent sees only their own referrals', async () => {
       const claims = await asAgent();
       await h.seedAgent('ACTIVE', {

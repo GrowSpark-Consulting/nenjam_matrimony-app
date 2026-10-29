@@ -207,9 +207,11 @@ export type AgentAttributionStatus =
 
 export interface ReferralAttributionRecord {
   id: string;
-  memberId: string;
+  /** Null once the member's account is deleted (the row stays: it carries commission history). */
+  memberId: string | null;
   agentId: string;
-  codeId: string;
+  /** Null once the code is deleted. */
+  codeId: string | null;
   source: AttributionSource;
   /** Hash of the member's verified phone. Required: a member with no verified phone cannot be credited. */
   memberPhoneHash: string;
