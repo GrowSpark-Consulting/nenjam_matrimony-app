@@ -24,7 +24,10 @@ export type AgentConflictReason =
   | 'DUPLICATE_PRIMARY_CODE'
   | 'DUPLICATE_ATTRIBUTION'
   | 'ALREADY_REVOKED'
-  | 'DUPLICATE_ID';
+  | 'DUPLICATE_ID'
+  | 'DUPLICATE_COMMISSION'
+  | 'DUPLICATE_PAYOUT'
+  | 'DUPLICATE_PAYOUT_REFERENCE';
 
 export class AgentConflictError extends Error {
   constructor(public readonly reason: AgentConflictReason) {
