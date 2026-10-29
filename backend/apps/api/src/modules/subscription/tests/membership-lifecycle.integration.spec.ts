@@ -25,6 +25,10 @@ import { SubscriptionLifecycleService } from '../services/subscription-lifecycle
 import { PlanCatalogAdminService } from '../services/plan-catalog-admin.service';
 import { CheckoutService } from '../services/checkout.service';
 import { RazorpayWebhookService } from '../services/razorpay-webhook.service';
+import { IdentifierHashService } from '../../platform/identifier-hash.service';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { PaymentEventDispatcher } from '../events/payment-event-outbox';
+import { ReferralEventBus } from '../events/referral-event-bus';
 
 /**
  * The subscription lifecycle against a real Postgres: payments confirmed
@@ -178,6 +182,7 @@ describeIntegration('membership lifecycle', () => {
     admin = new PlanCatalogAdminService(db, catalog, subscriptions);
     const razorpay = {
       publicKeyId: () => 'rzp_test_key',
+      isLiveMode: () => false,
       createOrder: (input: { amountInPaise: number; currency: string }) =>
         Promise.resolve({
           id: `order_itest_${Date.now()}_${++orderSeq}`,
@@ -185,14 +190,22 @@ describeIntegration('membership lifecycle', () => {
           currency: input.currency,
         }),
     };
+    const hasher = new IdentifierHashService({
+      identifierHash: { peppers: `v1:${'k'.repeat(32)}` },
+    } as never);
+    // No subscriber here: events stay in the outbox for the tests to read.
+    const dispatcher = new PaymentEventDispatcher(db, new ReferralEventBus());
     checkout = new CheckoutService(
       db,
       catalog,
       razorpay as never,
       lifecycle,
       subscriptions,
+      new PlatformSettingsService(db),
+      hasher,
+      dispatcher,
     );
-    webhooks = new RazorpayWebhookService(db, lifecycle);
+    webhooks = new RazorpayWebhookService(db, lifecycle, dispatcher, hasher);
 
     await prisma.user.deleteMany({ where: { id: { in: ACTORS } } });
     await ensureRole(SUBS_ROLE, [
@@ -227,6 +240,7 @@ describeIntegration('membership lifecycle', () => {
   });
 
   beforeEach(async () => {
+    await prisma.paymentEventOutbox.deleteMany({});
     await prisma.paymentTransaction.deleteMany({
       where: { userId: { in: USERS } },
     });
@@ -957,5 +971,222 @@ describeIntegration('membership lifecycle', () => {
     );
     expect(JSON.stringify(row)).not.toContain('payer@x.in');
     await prisma.paymentWebhookEvent.delete({ where: { id: row!.id } });
+  });
+
+  describe('payment events for the agent program', () => {
+    const outbox = () =>
+      prisma.paymentEventOutbox.findMany({ orderBy: { createdAt: 'asc' } });
+    const setGst = (rate: number) =>
+      prisma.platformSetting.update({
+        where: { key: 'payment.gst_rate_bps' },
+        data: { value: rate },
+      });
+    const refund = (paymentId: string, refundId: string, amount: number) =>
+      prisma.$transaction((tx) =>
+        lifecycle.recordRefund(tx, {
+          paymentId,
+          refundId,
+          amountInPaise: amount,
+        }),
+      );
+
+    afterEach(() => setGst(0));
+
+    it('writes PaymentSucceeded once, with the pricing stored at checkout', async () => {
+      const order = await buy(A, 'GOLD');
+      await confirm(order.orderId, 'pay_ev1');
+      await confirm(order.orderId, 'pay_ev1'); // a replay changes nothing
+      const payment = await prisma.paymentTransaction.findUniqueOrThrow({
+        where: { razorpayOrderId: order.orderId },
+      });
+      const rows = await outbox();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        type: 'payment.succeeded',
+        dedupeKey: `payment.succeeded:${payment.id}`,
+        deliveredAt: null,
+      });
+      expect(rows[0].payload).toEqual({
+        type: 'payment.succeeded',
+        version: 1,
+        paymentId: payment.id,
+        livemode: false,
+        memberId: A,
+        subscriptionId: order.subscriptionId,
+        planDurationId: expect.any(String) as string,
+        paidBy: 'MEMBER',
+        isFirstPaidPlan: true,
+        listAmountPaise: 399_900,
+        discountPaise: 0,
+        discountSource: 'NONE',
+        heldReferralCodeId: null,
+        taxableAmountPaise: 399_900,
+        taxRateBps: 0,
+        taxPaise: 0,
+        amountPaidPaise: 399_900,
+        currency: 'INR',
+        paymentSourceHash: null,
+        paidAt: expect.any(String) as string,
+      });
+    });
+
+    it('counts only one payment as the first paid plan, even when two confirm at once', async () => {
+      const gold = await buy(B, 'GOLD');
+      const platinum = await buy(B, 'PLATINUM');
+      await Promise.all([
+        confirm(gold.orderId, 'pay_first_1'),
+        confirm(platinum.orderId, 'pay_first_2'),
+      ]);
+      const flags = await prisma.paymentTransaction.findMany({
+        where: { userId: B },
+        select: { isFirstPaidPlan: true },
+      });
+      expect(flags.filter((f) => f.isFirstPaidPlan)).toHaveLength(1);
+      const events = (await outbox()).map(
+        (r) => r.payload as { isFirstPaidPlan: boolean },
+      );
+      expect(events.filter((e) => e.isFirstPaidPlan)).toHaveLength(1);
+    });
+
+    it('stores a hash of the payer’s UPI id from the webhook, never the id', async () => {
+      const order = await buy(A, 'GOLD');
+      const body = {
+        event: 'payment.captured',
+        payload: {
+          payment: {
+            entity: {
+              id: 'pay_upi',
+              order_id: order.orderId,
+              amount: 399_900,
+              currency: 'INR',
+              vpa: 'priya@okicici',
+            },
+          },
+        },
+      };
+      await webhooks.handle(
+        `evt_upi_${order.orderId}`,
+        body,
+        Buffer.from(JSON.stringify(body)),
+      );
+      const payment = await prisma.paymentTransaction.findUniqueOrThrow({
+        where: { razorpayOrderId: order.orderId },
+      });
+      expect(payment.paymentSourceHash).toMatch(/^v1:[0-9a-f]{64}$/);
+      expect(JSON.stringify(payment)).not.toContain('priya');
+      expect(JSON.stringify(await outbox())).not.toContain('priya');
+    });
+
+    it('adds GST on top, and gives each refund its share of it', async () => {
+      await setGst(1800);
+      const order = await buy(A, 'GOLD');
+      // 399900 + 18% (71982) = 471882
+      expect(order.amountInPaise).toBe(471_882);
+      expect(order.pricing).toMatchObject({
+        taxableAmountPaise: 399_900,
+        taxPaise: 71_982,
+        totalPaise: 471_882,
+      });
+      await confirm(order.orderId, 'pay_gst');
+      await refund('pay_gst', 'rfnd_gst_1', 235_941);
+      await refund('pay_gst', 'rfnd_gst_2', 235_941);
+      const [succeeded, first, second] = (await outbox()).map(
+        (r) => r.payload as Record<string, unknown>,
+      );
+      expect(succeeded).toMatchObject({
+        taxableAmountPaise: 399_900,
+        taxRateBps: 1800,
+        taxPaise: 71_982,
+        amountPaidPaise: 471_882,
+      });
+      expect(first).toMatchObject({
+        type: 'payment.refunded',
+        refundId: 'rfnd_gst_1',
+        refundedPaise: 235_941,
+        refundedTaxPaise: 35_991,
+        totalRefundedPaise: 235_941,
+        fullyRefunded: false,
+        livemode: false,
+      });
+      expect(second).toMatchObject({
+        refundId: 'rfnd_gst_2',
+        refundedTaxPaise: 35_991,
+        totalRefundedPaise: 471_882,
+        fullyRefunded: true,
+      });
+      expect(
+        (first.refundedTaxPaise as number) +
+          (second.refundedTaxPaise as number),
+      ).toBe(71_982);
+    });
+
+    it('writes no refund event for a refund that overtook the capture', async () => {
+      const order = await buy(A, 'GOLD');
+      await prisma.$transaction((tx) =>
+        lifecycle.recordRefund(tx, {
+          paymentId: 'pay_early',
+          orderId: order.orderId,
+          refundId: 'rfnd_early',
+          amountInPaise: 399_900,
+        }),
+      );
+      expect(await outbox()).toHaveLength(0);
+    });
+
+    it('delivers after commit, waits while nobody subscribes, and retries a rejected event', async () => {
+      const bus = new ReferralEventBus();
+      const dispatcher = new PaymentEventDispatcher(
+        prisma as unknown as PrismaService,
+        bus,
+      );
+      const order = await buy(A, 'GOLD');
+      await confirm(order.orderId, 'pay_dispatch');
+
+      expect(await dispatcher.dispatchPending()).toEqual({
+        delivered: 0,
+        failed: 0,
+      });
+
+      const seen: string[] = [];
+      let down = true;
+      bus.subscribe((event) => {
+        if (down) {
+          down = false;
+          return Promise.reject(new Error('handler down'));
+        }
+        seen.push(event.type);
+        return Promise.resolve();
+      });
+      expect(await dispatcher.dispatchPending()).toEqual({
+        delivered: 0,
+        failed: 1,
+      });
+      expect((await outbox())[0]).toMatchObject({
+        attempts: 1,
+        lastError: 'handler down',
+        deliveredAt: null,
+      });
+
+      expect(await dispatcher.dispatchPending()).toEqual({
+        delivered: 1,
+        failed: 0,
+      });
+      expect(seen).toEqual(['payment.succeeded']);
+      expect((await outbox())[0].deliveredAt).toBeInstanceOf(Date);
+      expect(await dispatcher.dispatchPending()).toEqual({
+        delivered: 0,
+        failed: 0,
+      });
+    });
+
+    it('refuses to store a pricing breakdown that does not add up (database CHECK)', async () => {
+      const order = await buy(A, 'GOLD');
+      await expect(
+        prisma.paymentTransaction.update({
+          where: { razorpayOrderId: order.orderId },
+          data: { taxPaise: 1 },
+        }),
+      ).rejects.toThrow();
+    });
   });
 });

@@ -42,6 +42,9 @@ export interface PaymentSucceeded {
   version: typeof REFERRAL_EVENT_VERSION;
   /** `payment_transactions.id`. The idempotency key. */
   paymentId: string;
+  /** False for a payment made with Razorpay TEST keys (no money moved).
+   *  Never earns a real commission. Admin-recorded payments are live. */
+  livemode: boolean;
   /** `users.id` of the member the plan is for (who paid is `paidBy`). */
   memberId: string;
   subscriptionId: string;
@@ -80,6 +83,8 @@ export interface PaymentRefunded {
    *  admin records. The idempotency key. */
   refundId: string;
   paymentId: string;
+  /** Same as the refunded payment's `livemode`. */
+  livemode: boolean;
   memberId: string;
   /** This refund alone, not the running total; part of amountPaidPaise. */
   refundedPaise: number;
