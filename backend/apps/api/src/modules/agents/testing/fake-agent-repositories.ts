@@ -218,6 +218,15 @@ export class FakeAgentRefreshTokenRepository implements AgentRefreshTokenReposit
 export class FakeReferralAttributionRepository implements ReferralAttributionRepository {
   private readonly rows = new Map<string, ReferralAttributionRecord>();
 
+  findByPhoneHash(
+    phoneHash: string,
+  ): Promise<ReferralAttributionRecord | null> {
+    for (const row of this.rows.values()) {
+      if (row.memberPhoneHash === phoneHash) return Promise.resolve(copy(row));
+    }
+    return Promise.resolve(null);
+  }
+
   findByMemberId(memberId: string): Promise<ReferralAttributionRecord | null> {
     for (const row of this.rows.values()) {
       if (row.memberId === memberId) return Promise.resolve(copy(row));

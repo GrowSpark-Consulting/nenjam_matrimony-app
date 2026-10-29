@@ -135,6 +135,11 @@ export class FakeCommissionRepository implements CommissionRepository {
     return Promise.resolve(row ? this.clone(row) : null);
   }
 
+  findByPhoneHash(phoneHash: string): Promise<CommissionRecord | null> {
+    const row = [...this.rows.values()].find((r) => r.phoneHash === phoneHash);
+    return Promise.resolve(row ? this.clone(row) : null);
+  }
+
   findByAttributionId(attributionId: string): Promise<CommissionRecord | null> {
     const row = [...this.rows.values()].find(
       (r) => r.attributionId === attributionId,
