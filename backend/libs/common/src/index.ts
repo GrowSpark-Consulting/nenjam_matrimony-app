@@ -15,3 +15,4 @@ export * from './crypto/secret-sealer';
 export * from './crypto/identifier-hash';
 export * from './file-types/sniff-media';
 export * from './contracts/referral-events';
+export * from './contracts/referral-quote';

@@ -248,3 +248,66 @@ export interface RolesResponse {
   }>;
   permissions: Array<{ key: string; description: string; isSensitive: boolean }>;
 }
+
+/** The agent program (`/admin/agents/*`, owned by the agent-program backend). */
+export type AgentStatus = 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED' | 'TERMINATED';
+
+export interface AgentsSummary {
+  byStatus: Record<AgentStatus, number>;
+  payoutDetailsAwaitingVerification: number;
+  referralsNeedingReview: number;
+  /** Null until the commission tables exist. */
+  commissionsReady: number | null;
+  payoutsCreated: number | null;
+}
+
+export interface AgentRow {
+  id: string;
+  name: string;
+  phoneMasked: string;
+  city: string;
+  state: string;
+  status: AgentStatus;
+  createdAt: string;
+  approvedAt: string | null;
+  panOnFile: boolean;
+  panVerified: boolean;
+  payoutDetailsSet: boolean;
+  payoutDetailsVerified: boolean;
+  primaryCode: string | null;
+}
+
+export interface AgentDetail {
+  id: string;
+  name: string;
+  phoneMasked: string;
+  city: string;
+  state: string;
+  status: AgentStatus;
+  rejectionReason: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  panLast4: string | null;
+  panOnFile: boolean;
+  panVerifiedAt: string | null;
+  payoutDetailsSet: boolean;
+  payoutDetails: {
+    method: 'UPI' | 'BANK';
+    display: string;
+    verifiedAt: string | null;
+    changedAt: string;
+  } | null;
+  codes: Array<{ id: string; code: string; isPrimary: boolean; isActive: boolean; createdAt: string }>;
+  counts: { referrals: number; byAttributionStatus: Record<string, number>; needsReview: number };
+  /** Null until the commission tables exist. */
+  commissions: null;
+  statusHistory: Array<{
+    from: AgentStatus;
+    to: AgentStatus;
+    at: string;
+    actorId: string | null;
+    actorType: 'STAFF' | 'MEMBER' | 'AGENT' | 'SYSTEM';
+    reason: string | null;
+  }>;
+}

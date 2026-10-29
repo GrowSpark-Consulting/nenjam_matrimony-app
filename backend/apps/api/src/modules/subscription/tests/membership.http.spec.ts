@@ -14,6 +14,9 @@ import { PlansService } from '../services/plans.service';
 import { CheckoutService } from '../services/checkout.service';
 import { RazorpayService } from '../services/razorpay.service';
 import { RazorpayWebhookService } from '../services/razorpay-webhook.service';
+import { IdentifierHashService } from '../../platform/identifier-hash.service';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { PaymentEventDispatcher } from '../events/payment-event-outbox';
 import { SubscriptionLifecycleService } from '../services/subscription-lifecycle.service';
 import { RazorpaySignatureGuard } from '../guards/razorpay-signature.guard';
 import type {
@@ -66,6 +69,18 @@ describe('Membership API over HTTP', () => {
           useValue: { handle: webhookHandle },
         },
         { provide: SubscriptionLifecycleService, useValue: {} },
+        {
+          provide: PlatformSettingsService,
+          useValue: {
+            getMany: () => Promise.resolve({ 'payment.gst_rate_bps': 0 }),
+            registerValidator: () => undefined,
+          },
+        },
+        { provide: IdentifierHashService, useValue: { available: false } },
+        {
+          provide: PaymentEventDispatcher,
+          useValue: { dispatchSoon: () => undefined },
+        },
         {
           provide: SubscriptionRepository,
           useValue: {
