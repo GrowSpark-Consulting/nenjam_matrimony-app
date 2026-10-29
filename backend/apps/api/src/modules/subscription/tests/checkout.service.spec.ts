@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { createHmac } from 'node:crypto';
 import type { ReferralQuoteProvider, ReferralQuoteResult } from '@app/common';
+import type { AgentReferralQuote } from '../../agents/agent-referral-quote.token';
 import { CheckoutService } from '../services/checkout.service';
 import { RazorpayService } from '../services/razorpay.service';
 import {
@@ -134,7 +135,15 @@ function quoting(result: Partial<ReferralQuoteResult>) {
   return { quote, provider: { quote } as ReferralQuoteProvider };
 }
 
+// The agent program's quote service is what gets injected under
+// AGENT_REFERRAL_QUOTE; this fails to compile if it stops fitting.
+const agentQuoteFits = (q: AgentReferralQuote): ReferralQuoteProvider => q;
+
 describe('CheckoutService.start', () => {
+  it('takes the agent program’s quote service as its quote provider', () => {
+    expect(typeof agentQuoteFits).toBe('function');
+  });
+
   it('answers 503 until payments are configured, before touching anything', async () => {
     const { service, createOrder } = build({ configured: false });
     await expect(

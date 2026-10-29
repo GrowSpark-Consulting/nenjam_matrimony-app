@@ -10,12 +10,9 @@ import {
   Optional,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import {
-  AGENT_REFERRAL_QUOTE,
-  type ReferralQuoteProvider,
-  type ReferralQuoteResult,
-} from '@app/common';
+import type { ReferralQuoteProvider, ReferralQuoteResult } from '@app/common';
 import { PrismaService } from '@app/database';
+import { AGENT_REFERRAL_QUOTE } from '../../agents/agent-referral-quote.token';
 import { PlanCatalogService } from '../../entitlements/catalog/plan-catalog.service';
 import { IdentifierHashService } from '../../platform/identifier-hash.service';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';

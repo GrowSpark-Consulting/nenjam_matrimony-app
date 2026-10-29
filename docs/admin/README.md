@@ -178,8 +178,9 @@ caller (the payout destination) checks `hasFreshStepUp(admin)`. Every admin resp
 
 ### Payments for the agent program (`SubscriptionModule`)
 
-- **Referral quote:** provide your quote service under `AGENT_REFERRAL_QUOTE` (`@app/common`)
-  from a **`@Global()`** module. Checkout injects it optionally:
+- **Referral quote:** provide your quote service under `AGENT_REFERRAL_QUOTE`
+  (`modules/agents/agent-referral-quote.token.ts`) from a **`@Global()`** module.
+  SubscriptionModule can't import AgentsModule (AgentsModule → AdminModule → SubscriptionModule). Checkout injects it optionally:
   - Without it, there's no discount and a typed code gets 422 `PROMO_CODES_UNAVAILABLE`.
   - With it, checkout calls `quote({ memberId, promoCode, planPriceId, listAmountPaise })` for
     every purchase (with or without a typed code).
