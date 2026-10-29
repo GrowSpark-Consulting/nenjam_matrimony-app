@@ -2,12 +2,12 @@
 
 Audience: the next Claude Code session working on the Nenjam Agent / Partner
 Program backend for Ishu. Read this, then `CLAUDE.md`, then continue without
-asking Ishu to repeat anything below. Updated 28 Oct 2026 (evening);
-`origin/main` was `d4e6291` (PR #141). Re-verify anything load-bearing against the code —
+asking Ishu to repeat anything below. Updated 29 Oct 2026 (evening);
+`origin/main` was `930626e` (PR #160). Re-verify anything load-bearing against the code —
 things move. Statements marked **To be confirmed** could not be checked from
-git (GitHub, Render, Neon and what other people told Ishu are not visible
-there); statements marked **(per Ishu)** or **(per Shaaz)** are what they said,
-and are not proven by this repository.
+git (GitHub, Render, Neon, Vercel and what other people told Ishu are not
+visible there); statements marked **(per Ishu)** or **(per Shaaz)** are what
+they said, and are not proven by this repository.
 
 ---
 
@@ -16,34 +16,36 @@ and are not proven by this repository.
 1. Nenjam Matrimony: Flutter app + NestJS pnpm monorepo (`backend/`), Prisma, shared Neon Postgres.
 2. Deployed on **Render**: one Free web service on branch `main`, auto-deploys; no worker, scheduler or confirmed Redis (per Ishu; **To be confirmed** — not visible from git). `backend/railway.toml` still exists but is stale.
 3. Ishu owns the **Agent / Partner Program backend**: agents, sign-in, applications, NM codes, attribution, commission, payouts.
-4. Shaaz owns admin RBAC and audit, `PlatformSetting` + settings service, admin TOTP, the OTP service, `hashIdentifier`, subscriptions, payments, the admin dashboard. His work is **not on `main` yet** except membership (#123); see section 6.
+4. Shaaz owns admin RBAC and audit, `PlatformSetting` + settings service, admin TOTP, the OTP service, `hashIdentifier`, `SecretSealer`, subscriptions, payments, the admin dashboard and the admin web app. Most of his platform work is now **on `main`** (section 6).
 5. Dhatri owns Flutter and the Agent Portal website. Never touch frontend code.
-6. Agents are not members: own phone + OTP sign-in (purpose `AGENT_SIGN_IN`), own access token (HS256), rotating refresh token.
+6. Agents are not members: own phone + OTP sign-in (purpose `AGENT_SIGN_IN`), own access token (HS256, its own secret `AGENT_JWT_SECRET`), rotating refresh token.
 7. Raja's numbers: 10% commission, 14-day hold, 60-day credit window, Rs. 500 minimum payout, 5% first-plan discount, 10 client drafts, PAN before first payout — all settings or policy, never constants.
-8. Everything agent-related on `main` is **services and pure functions against ports, with in-memory fakes and tests**, under `backend/apps/api/src/modules/agents/`, **not wired into any module** (checked: nothing outside that folder references it). Nothing is live: **the agent routes are NOT built into the running backend yet** (no controllers, no `AgentsModule`), so the Agent Portal gets a 404 on every agent call until the controllers and the module wiring exist.
-9. Testing only until the Firebase paid plan: dummy OTP (`DUMMY_OTP_ENABLED=true` on Render, anyone can sign in as any number, accepted for testing) — **To be confirmed** on Render.
-10. The contract is `docs/agent-program/agent-api.openapi.yaml`; the admin contract is `docs/agent-program/agent-admin-api.openapi.yaml` (merged, #136). The Phase 1 schema is PR #116 (a Draft, per Ishu), migration `20261028095916_agent_program_phase1`, **not applied to any database**.
-11. **Agent Portal** (Dhatri's React + Vite site, merged in #135, #138, #139): live at **https://agent-nenjam-matrimony-app.vercel.app** (Dhatri's Vercel project). The custom domain `agent.nenjammatrimony.com` is **planned and not set up**. The backend needs `CORS_ORIGINS` set on Render to allow the portal's address (per Ishu; **To be confirmed** on Render).
-12. **`AGENT_PII_ENCRYPTION_KEY`** (the agents' sealing key) has been generated and is in Ishu's password manager, but it is **NOT set on Render**. Nothing reads it yet. Never print or store it.
+8. **What is live:** `AgentsModule` is imported in `app.module.ts` (#158) and serves only the staff routes `GET /admin/agents/summary`, `GET /admin/agents`, `GET /admin/agents/:id`, `POST /admin/agents/:id/approve`, `POST /admin/agents/:id/reject`. **No agent-facing or member-facing agent route exists on `main`**: the Agent Portal still gets a 404 on every `/agent/*` call.
+9. **Update 29 Oct ~20:00 (per Shaaz, via Ishu):** production has **40 migrations applied**, no drift: #155's `20261029110000_agent_commission_tables` and `20261029110100_agent_commission_policy_seed` (policy v1: 1000 bps, 14-day hold; TRUNCATE and append-only triggers present) and Shaaz's `20261029130000_payment_referral_gst`. **#155 (`ba28426`) and #159 Payments (`c6175d4`) are merged**; `origin/main` has 40 migration folders. **Those two #155 migrations must never change.** The agent settings seed (`feat/agent-settings-seed`: `20261029110200`, `20261029110300`) is NOT merged or applied.
+10. The contract is `docs/agent-program/agent-api.openapi.yaml`; the admin contract is `docs/agent-program/agent-admin-api.openapi.yaml`.
+11. **Agent Portal** (Dhatri's React + Vite site): live at **https://agent-nenjam-matrimony-app.vercel.app** on **mock data**; that origin is in `CORS_ORIGINS` on Render (per Ishu; **To be confirmed**). The custom domain `agent.nenjammatrimony.com` is planned and not set up. Her CI Flutter check is red on `main` (a `referral_backend_mode` test from #142; not ours).
+12. **Admin web Agents page** (Shaaz, #160) is merged and **not deployed yet**: Vercel's free-plan limit, resets around 12:05 UTC on 30 Oct (per Ishu; **To be confirmed**).
 13. **A member with no verified phone can never be credited to an agent** (`referral_attributions.phone_hash` is NOT NULL), from any source, including a code entered at payment. `quoteReferral` returns no discount with `rejectedReason: PHONE_NOT_VERIFIED` and payment goes on.
 
 ---
 
 ## 2. Standing rules
 
-- **Backend only.** Never edit frontend (`Frontend/`) or Shaaz's files. If they need a change, write Ishu a message for that person.
-- **Ishu decides when to push.** You may **commit yourself**, but **push only when Ishu names the branch**, and then only that branch. Never force-push, never push to `main`, never delete branches. Ishu gives permission per task; it does not carry over.
-- **No reviewers on normal PRs.** Only a Draft PR (today: #116) gets a reviewer. **Ishu merges their own PRs** once CI passes. There is no `gh` CLI, so you give a compare link and a pasteable title and description; Ishu opens the PR.
+- **Backend only.** Never edit frontend (`Frontend/`, the portal) or Shaaz's files (for example `libs/config/src/validation.ts`, `modules/platform/`, `modules/admin/`, `modules/subscription/`, `libs/common/src/crypto/`). If they need a change, write Ishu a message for that person.
+- **Push only the branches Ishu names** (in the prompt). You may **commit yourself**. Plain pushes only, always as `git push -u origin <branch>:<branch>`; never force-push, never merge, never push to `main`, never delete branches. Permission is per task; it does not carry over.
+- **No reviewers on normal PRs.** Only a Draft PR gets a reviewer (today: #155, Shaaz). **Ishu merges their own PRs** once CI passes. There is no `gh` CLI: give a compare link and a pasteable title and description; Ishu opens the PR.
 - **Merging to `main` deploys to the live Render site.** After every merge, check that the deploy is **Live** (Render dashboard; not visible from git).
-- `git fetch` first; branch from **`origin/main`** (not local `main`). Before merging or committing, run `git branch --show-current` (see trap 17).
+- `git fetch --all` first; branch from **`origin/main`** (not local `main`). `git switch -c X origin/main` sets the upstream to `origin/main`: run `git branch --unset-upstream` right after, so no bare `git push` can ever target `main`. Run `git branch --show-current` before every commit (trap 17).
+- **Before every batch and every push:** `git fetch --all`, then tell Ishu what changed on `origin/main` and on Shaaz's and Dhatri's branches, and what it means.
 - **Each batch of steps = ONE branch, one commit per step, ONE pull request**, unless Ishu says otherwise.
 - Small, surgical diffs. Match existing style (see `CLAUDE.md`).
 - **No new dependency** without asking Ishu. Node built-ins are fine.
 - Business values (rates, windows, hold days, limits, flags, token lifetimes) are **parameters or settings, never constants**, and never defaulted in code.
 - Pending business rules live in **one clearly marked place** (`PENDING DECISION (Raja)` comment).
-- **Never run any Prisma command against a remote or shared database.** See traps 1 and 2. Use a throwaway local Postgres.
-- **No migrations or schema edits without approval.** Applying a migration to the shared Neon database is a separate step Ishu must approve (nothing runs `prisma migrate deploy` on Render).
+- **Never run any Prisma command against a remote or shared database**, and never with the repo's `prisma.config.ts`. See traps 1 and 2. Use a throwaway local Postgres, print the masked URL before every Prisma command.
+- **No migrations or schema edits without approval.** Applying a migration to Neon is Shaaz's production window, approved by Ishu (nothing runs `prisma migrate deploy` on Render). **A migration that has been applied anywhere must never change** (Prisma checksums).
 - Never print or store secrets, environment values, real phone numbers, emails, PAN or bank details. Use only the approved fake test values (trap 14).
+- Mutation checks use a script that **refuses a mutation whose pattern does not match** (trap 15).
 - Verify claims against code on `origin/main`; write "To be confirmed" rather than guess. `CLAUDE.md`, `BRAIN.md` and `PROJECT_RULES.md` have known stale parts.
 
 **Checks for every step** (from `backend/`), and say honestly what was not run:
@@ -51,14 +53,14 @@ and are not proven by this repository.
 ```
 npx tsc --noEmit
 pnpm test
+AGENT_PRISMA_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:55432/<throwaway db> pnpm test:agent-db
 pnpm build:all
-npx eslint apps/api/src/modules/agents   # or the folder changed
+node scripts/smoke-boot.mjs
+npx eslint apps/api/src/modules/agents apps/api/src/app.module.ts
 ```
 
 Also run the new spec alone (`npx jest <spec path>`) to count new tests, and
-confirm the full-suite total rose by that count. For anything security-relevant
-also run **mutation checks** (trap 15). Total on 28 Oct: **3315 passed**, 162
-suites, 64 skipped, 11 todo.
+confirm the full-suite total rose by that count.
 
 ---
 
@@ -66,223 +68,158 @@ suites, 64 skipped, 11 todo.
 
 | What | Where |
 |---|---|
-| Agent-program code | `backend/apps/api/src/modules/agents/{agent,application,auth,commission,config,content,crypto,errors,payout,ports,referral,settings,testing}/` |
+| Agent-program code | `backend/apps/api/src/modules/agents/{adapters,admin,agent,application,auth,commission,config,content,crypto,errors,payout,ports,referral,settings,testing}/` |
+| The module | `agents/agents.module.ts` (admin routes only on `main`) |
+| Quote token for checkout | `agents/agent-referral-quote.token.ts` (`AGENT_REFERRAL_QUOTE`, type `AgentReferralQuote`) |
 | API contract | `docs/agent-program/agent-api.openapi.yaml` |
-| Phase 1 schema draft | `docs/agent-program/agent-phase1-schema-draft.prisma` — **superseded** (header says so); kept as a record |
+| Admin contract | `docs/agent-program/agent-admin-api.openapi.yaml` |
 | Shared handoff | `docs/agent-program/HANDOFF_SHAAZ_AND_DHATRI.md` |
 | Frontend handoff | `docs/agent-program/FRONTEND_HANDOFF_DHATRI.md` |
-| Real schema | `backend/libs/database/prisma/schema.prisma` (agent models are **not** on `main`; they are on the #116 branch) |
-| Phase 1 migration | PR #116, branch `feat/agent-phase1-migration`, folder `backend/libs/database/prisma/migrations/20261028095916_agent_program_phase1/` (see section 4) |
-| Shaaz's admin work | PR #129 (draft), branch `feat/admin-rbac-foundation` (section 6) |
+| Prisma DB-test notes | `docs/agent-program/agent-prisma-db-tests.md` (`pnpm test:agent-db`, config `apps/api/test/jest-agent-db.json`) |
+| Schema | `backend/libs/database/prisma/schema.prisma` |
+| Shaaz's platform services | `apps/api/src/modules/platform/` (`PlatformSettingsService`, `IdentifierHashService`, `OtpService`) |
+| Shaaz's admin RBAC/audit | `apps/api/src/modules/admin/` (`assertAdminPermission`, `AdminAuditService`, `@AdminController`, `@RequirePermissions`, `hasFreshStepUp`) |
+| Shared contracts | `libs/common/src/contracts/referral-events.ts`, `libs/common/src/crypto/secret-sealer.ts`, `libs/common/src/pipes/validation-failed.ts` |
 | Dummy OTP policy (members) | `backend/libs/common/src/auth/dev-auth.ts`, `POST /auth/dummy-otp/session` |
 | Remote | `https://github.com/GrowSpark-Consulting/nenjam_matrimony-app.git` |
 
 ---
 
-## 4. State on 28 Oct
+## 4. State on 29 Oct (evening)
 
-### Merged PRs #122 to #142 (from `git log --merges origin/main`; titles are the PR commits' subjects, GitHub titles may differ)
+### Merged since the last version (from `git log --merges d4e6291..origin/main`)
 
 | PR | Branch | What |
 |---|---|---|
-| #122 | `docs/agent-program-handoff` | shared handoff, frontend handoff, session context, decided settings |
-| #123 | `feat/membership-foundation` | Shaaz: Free / Gold / Platinum membership foundation, plus its docs |
-| #124 | `docs/agent-program-decisions-28oct` | Raja's 28 Oct decisions recorded; contract says share messages are backend-rendered |
-| #125 | `feat/agent-ports-and-config` | ports and in-memory fakes; config service (`GET /agent/config`) |
-| #126 | `chore/add-nestjs-jwt` | `@nestjs/jwt` dependency for agent access tokens |
-| #127 | `docs/agent-contract-otp-challenge` | OTP request returns a `challengeId`; verify takes it |
-| #128 | `feat/agent-ports-and-config` | ports aligned with what was agreed with Shaaz (purpose-bound OTP verify, `tx`, `AgentUnitOfWork`) |
-| #130 | `feat/agent-signin-application-services` | sign-in, application and "me" services |
-| #131 | `fix/cors-agent-portal-headers` | CORS: allow `Accept-Version`, expose `Retry-After` |
-| #132 | `feat/agent-signer-links-validate` | HS256 signer, referral links and list, code validate and attach, hashed requester key |
-| #133 | `docs/agent-contract-member-refusals` | member-endpoint refusals, `agentStatus` on application refusals, refresh note |
-| #134 | `docs/agent-session-context-28oct` | the previous session context |
-| #135 | `feat/agent-portal-production-ready` | Dhatri: the Agent Portal (React + Vite) |
-| #136 | `docs/agent-admin-contract` | the admin API contract (`agent-admin-api.openapi.yaml`) for Shaaz, with his decisions applied |
-| #137 | `feat/agent-quote-referral` | `quoteReferral` (`AgentReferralQuoteService`), read-only, plus the shared `ReferralAttemptLimiter` |
-| #138 | `feat/agent-portal-vercel-config` | Dhatri: `vercel.json` (SPA rewrite, security headers) |
-| #139 | `feat/agent-portal-api-refusals` | Dhatri: portal handles application refusals and `Retry-After` |
-| #141 | `feat/agent-ports-pan-verified-phone-hash` | the ports follow the Phase 1 migration: `panVerifiedAt`, required phone hash, `PHONE_NOT_VERIFIED` on the quote |
-| #142 | `feat/flutter-membership-referral` | Dhatri: Flutter membership, referral code box and partner help (not agent backend) |
+| #116 | `feat/agent-phase1-migration` | Phase 1 agent tables, migration `20261028095916_agent_program_phase1` |
+| #129 | `feat/admin-rbac-foundation` | Shaaz: RBAC, staff TOTP, audit; `20261029053600_admin_rbac_foundation`, `20261029053700_plan_drafts` |
+| #140 | `docs/agent-admin-contract-fixes` | Shaaz's review fixes to the admin contract |
+| #143 | `feat/agent-review-flag-and-doc-fixes` | self-referral kept as REJECTED sets `needsReview` |
+| #144 | `docs/agent-raja-decisions-28oct-pm` | Raja's 28 Oct evening decisions |
+| #145, #152 | `docs/agent-admin-contract-payer`, `-payee` | payout responses carry the payee; destination only with step-up |
+| #146 | `feat/agent-portal-apply-again` | Dhatri: portal re-apply |
+| #147, #149 | `fix/referral-live-test-api-client` | Dhatri: referral live test client |
+| #148 | `feat/referral-events-contract` | Shaaz: `referral-events.ts` (GST exclusive) |
+| #150 | `feat/platform-foundation` | Shaaz: settings, hashing, OTP, `VALIDATION_FAILED`; `20261029100000_platform_foundation` |
+| #151 | `docs/agent-raja-and-migration-names` | Raja's 29 Oct answers, corrected migration names |
+| #153, #154 | `feat/agent-prisma-core-adapters`, `feat/agent-prisma-attribution-and-stores` | the Prisma adapters for every Phase 1 port |
+| #158 | `feat/agent-admin-routes-approval` | PR A: `AgentsModule` + the five admin agent routes |
+| #160 | `feat/admin-web-agents` | Shaaz: admin web Agents page (not deployed, see section 1) |
 
-**#129 is not merged** (Shaaz's draft). **#116 is open**, Draft per Ishu (**To be confirmed** on GitHub).
+### #155 (merged 29 Oct evening) and the stack on it
 
-**Pushed, not merged yet** (a PR number, if any, is not in git; take it from Ishu): `docs/agent-admin-contract-fixes` (Shaaz's review fixes to the admin contract) and `feat/agent-review-flag-and-doc-fixes` (a self-referral kept as REJECTED sets `needsReview`, plus these doc updates). #140 is not in `git log --merges`.
+- **#155** (MERGED as `ba28426` after Shaaz's production window), branch `feat/agent-commission-tables`, head **`5896821`**: migrations `20261029110000_agent_commission_tables` (TRUNCATE triggers on every money table; partial-refund columns `refunded_paise`, `pre_refund_amount_paise` and `commissions_refund_chk`) and `20261029110100_agent_commission_policy_seed`. **The SQL is FINAL.** It is **not applied anywhere and not merged**: Shaaz runs the production window, tells Ishu, then Ishu merges #155. After the window the SQL must never change.
+- Stacked on it: `feat/agent-commission-services` (`a85c69e`), `feat/agent-admin-services` (`e2e0717`), `fix/agent-gst-exclusive` (`3df4e62`), `fix/agent-partial-refund-proportional` (`328541e`). **Merge order after #155:** services, admin-services, gst-exclusive, partial-refund.
+- The stack adds `AgentPermissionPort.has()` (and its adapter and fake), the commission/payout services, `runDailyApproval()`, the partial-refund rule and the runbook for pepper rotation (its pepper-rotation runbook is section 8b below).
 
-### What is merged under `modules/agents/` (none of it wired)
+### What is on `main` under `modules/agents/`
 
-- **Ports** (`ports/`): `AgentOtpPort`, `AgentSettingsPort`, `AgentIdentifierHasher`, `AgentPermissionPort`, `AgentAuditPort`, `AgentClock`, `AgentTokenSigner`, `AgentContentPort`, `AgentCommissionPolicyPort`, `AgentSecretSealer`, `AgentUnitOfWork` (+ opaque `AgentTx`), `AgentMemberReadPort`, and the repositories `AgentRepository`, `ReferralCodeRepository`, `AgentRefreshTokenRepository`, `ReferralAttributionRepository`, `AgentApplicantRepository`, `AgentPayoutDetailsRepository`, `ReferralCodeAttemptStore`. Their shapes are the ones agreed in principle with Shaaz; real adapters do not exist.
-- **Fakes and tests** (`testing/`): in-memory fakes for every port, a unit of work that undoes writes made with its `tx`, a shared harness (`agent-test-harness.ts`), and the approved fake values.
-- **Real code that is not a fake:** `AesGcmSecretSealer` (`crypto/`, AES-256-GCM via `node:crypto`, `v1:` prefix, key passed in, no key exists anywhere) and `AgentJwtTokenSigner` (`auth/`, HS256 only through `@nestjs/jwt`, secret/issuer/audience are constructor parameters, secret at least 32 characters, no secret exists anywhere).
-- **Services:**
-  - `AgentSignInService` (`auth/`): OTP start (same answer whether or not the phone is an agent), verify (returns an applicant session or an agent session), refresh (rotation; **strict reuse**: a revoked token presented again revokes every token of that agent and is audited), logout (revokes only the given token).
-  - `AgentApplicationService` (`application/`): create or resubmit; a rejected agent who resubmits gets a new refresh-token family and the old tokens are revoked.
-  - `AgentMeService` (`agent/`): profile, capabilities, `assertCan`, payout-details update (ACTIVE only, sealed, clears verification, sets `payout_details_set`).
-  - `AgentConfigService` (`config/`): labels, share messages, four displayed settings.
-  - `AgentReferralService` (`referral/`): links, referrals list (cursor, 1 to 50, default 20), one referral; every read scoped to the caller's own agent id.
-  - `AgentReferralCodeService` (`referral/`): public code check and member attach; attempt-limited; the requester key must be an opaque hash, never a raw IP.
-  - `AgentReferralQuoteService` (`referral/`, #137): `quote({ memberId, promoCode?, planPriceId, listAmountPaise })` for the checkout. Read-only (its only write is the attempt counter, and only when a code was typed); first paid plan only; the first agent always stays; a paused agent gives no discount; an invalid code never blocks payment (full price plus a `rejectedReason`: `INVALID`, `ALREADY_ATTRIBUTED`, `NOT_FIRST_PLAN`, `AGENT_PAUSED`, `SELF_REFERRAL`, and `PHONE_NOT_VERIFIED`, #141). `ReferralAttemptLimiter` is the attempt limit shared by validate, attach and quote.
-- **Pure rules** (all merged earlier): commission (`calculateCommission`, eligibility, transitions, refund effect, draft, ledger), referral (code generator, normaliser, attribution, view mapper, code-validation helpers, discount, share-message renderer), payout (eligibility, plan), agent status and application validators, auth helpers (claims, refresh token, submit rule), settings parser.
+- **Ports** (`ports/`), **fakes** (`testing/`), **pure rules** and the **services** (sign-in, application, me, config, referral list, code validate/attach, quote) — as described in the previous version of this file.
+- **Prisma adapters** (`adapters/prisma/`, #153/#154) for every Phase 1 port, the unit of work, bounded purge, unique-violation mapping, and a DB-gated test suite.
+- **Platform adapters** (`adapters/admin/agent-admin-platform.adapters.ts`, #158): `AdminPermissionAdapter` (`assert` only on `main`), `AdminAuditAdapter`, `IdentifierHashAdapter`, `SystemClock`. **No settings adapter and no OTP adapter yet.**
+- **Admin** (`admin/`, #158): `AgentAdminAgentsService`, `AgentAdminController`, DTOs, an error filter.
+- `AesGcmSecretSealer` (`crypto/`) is still our sealer; Shaaz's `SecretSealer` is on `main` (`libs/common/src/crypto/secret-sealer.ts`) and the switch is not done yet.
+- `AGENT_REFERRAL_QUOTE` is **declared but not provided**: the module provides nothing under it, so checkout (when Shaaz's Payments PR lands) charges the list price.
 
-### Contract changes (all on `main`)
+### The 18 settings keys (no defaults in code)
 
-- Applicants (no agent record yet) get an **access token only** (`ApplicantSession`, no refresh token); `POST /agent/application` returns an **`AgentSession`**.
-- `POST /agent/auth/otp/request` returns `{ challengeId, expiresInSeconds, resendAfterSeconds }`; `verify` takes `{ challengeId, code }` (the phone comes from the verified challenge).
-- Refusals documented: application (401, 403, 409 with `agentStatus`), member attach (400, 404, 409, 422 `SELF_REFERRAL` / `ALREADY_PAID` / `PHONE_NOT_VERIFIED`, 429). `ALREADY_PAID` and `PHONE_NOT_VERIFIED` are new error codes.
-- Refresh: a reused token revokes every refresh token of the agent; **clients must serialise refresh calls, including across tabs**. Logout revokes only the given token.
-- Share messages are rendered by the backend (placeholders `{agent_name}`, `{code}`, `{discount_percent}`, `{link}`).
+**Decided — seed these** (Ishu, 29 Oct): `commission.auto_approve` true, `commission.require_verified_profile` false, `referral.credit_window_days` 60, `referral.member_discount_bps` 500, `referral.discount_stacks_with_coupons` false, `referral.discount_only_in_credit_window` true, `payout.minimum_amount_paise` 50000, `agent.client_draft_limit` 10, `agent.payout_details_wait_hours` 72, `commission.base` `"AMOUNT_PAID_EXCLUDING_GST"`, `commission.base_provisional` false, `payout.tax_withholding` `null` (only if our parser accepts `null` as "not set").
 
-### The Phase 1 migration (#116)
+**Undecided — a SEPARATE migration with proposed values, for Ishu's approval:** `agent.access_token_ttl_seconds`, `agent.refresh_token_ttl_seconds`, `agent.otp_resend_after_seconds` (at least 30, Shaaz's OTP floor), `referral.code_validation_ip_limit`, `referral.code_validation_code_limit`, `referral.code_validation_window_seconds`.
 
-- Branch `feat/agent-phase1-migration` replaces the never-merged `20261027141658_agent_phase1` with **`20261028095916_agent_program_phase1`**, which sorts after every migration on `main` (latest there: `20261027120100_membership_catalog`), edited **in place** after review (it was never applied anywhere, so no second migration). It also carries the one added back-relation line on `User` (**Shaaz has approved it, per Ishu**).
-- Additions after Shaaz's review: `agents.pan_verified_at TIMESTAMP(3) NULL`; **`referral_attributions.phone_hash` is NOT NULL** (still unique); and **two hand-written CHECKs** after the existing block: a REJECTED agent must have a non-blank `rejection_reason`, and `pan_verified_at` requires `pan_encrypted`.
-- Checked on a throwaway local database: replay of all migrations, CI's drift check ("No difference detected") and a control that fails, an additivity comparison (additions only), 19 `psql` behaviour tests (the earlier 74-test script was lost with its scratchpad) and a control that fails 7 without the new constraints, 3315 tests, build.
-- **It is NOT applied to any database.** Nothing runs `prisma migrate deploy` on Render. Shaaz ran a read-only check on the **production** Neon database on 28 Oct: no agent migration rows and no agent tables (**per Shaaz; To be confirmed**; other shared databases, if any, were not checked as far as is known).
-- **Migration order (corrected 29 Oct).** Ours, merged in #116: `20261028095916_agent_program_phase1`. Shaaz's two, on `feat/admin-rbac-foundation` (verified in git) and renamed to sort **after** ours: `20261029053600_admin_rbac_foundation` and `20261029053700_plan_drafts`. Apply order in production: **all three in one window, in that order** (production has 33 migrations applied today, per Ishu; **To be confirmed**). None of them is applied anywhere yet, and nothing applies migrations automatically on Render. His later migrations (settings table, OTP challenges, payment fields) come after these (per Shaaz). Any new migration of ours must sort **after** `20261029053700` and after anything newer on `origin/main`.
-- **Shaaz's facts (29 Oct, verified on his branch where noted):** `PAYOUT_MANAGER` has **no** `agent.view`; his admin guard sets `Cache-Control: no-store` on **every** admin response; `hasFreshStepUp(admin)` exists; the payout destination is included only when the admin holds `payout.execute` **and** has a fresh step-up, otherwise the field is left out, the response is still 200 and **no audit row** is written.
-
-### The 18 settings keys that must be seeded (no defaults in code)
-
-`commission.auto_approve`, `commission.require_verified_profile`, `referral.credit_window_days`, `referral.member_discount_bps`, `referral.discount_stacks_with_coupons`, `referral.discount_only_in_credit_window`, `payout.minimum_amount_paise`, `agent.client_draft_limit`, `agent.payout_details_wait_hours`, `commission.base`, `commission.base_provisional`, `payout.tax_withholding`, `agent.access_token_ttl_seconds`, `agent.refresh_token_ttl_seconds`, `agent.otp_resend_after_seconds`, `referral.code_validation_ip_limit`, `referral.code_validation_code_limit`, `referral.code_validation_window_seconds`.
-
-The three newest are positive integers, as are the three before them. `payout.tax_withholding` legitimately stays `null` ("not decided", the CA). **Decided values (Final Build Spec §4, and Raja 28 Oct):** `commission.auto_approve` = `true`; `agent.payout_details_wait_hours` = `72`; `commission.require_verified_profile` = `false`; `commission.base` = `AMOUNT_PAID_EXCLUDING_GST`; `commission.base_provisional` = `false`; `payout.tax_withholding` = `null`; `referral.discount_only_in_credit_window` = `true` as the default, still pending Raja's confirmation. The rest need values from Ishu/Raja. The commission handler computes `base = amountPaid` (after the referral discount) `minus the GST part` (`taxPaise` from Shaaz's `PaymentSucceeded` event); the commission is 10% of that base. Hold days come from the commission policy, **not** from these settings.
-
-### Every table the ports imply
-
-| Port | Table | In migration `20261028095916_agent_program_phase1`? |
-|---|---|---|
-| `AgentRepository` | `agents` (`phone`, `phone_hash`, `pan_last4`, `pan_encrypted` = the sealed PAN, `payout_details_set`, …) | yes |
-| `ReferralCodeRepository` | `referral_codes` (+ code-format CHECK and one-primary-per-agent index, hand-written) | yes |
-| `AgentRefreshTokenRepository` | `agent_refresh_tokens` (no `family_id`) | yes |
-| `ReferralAttributionRepository` | `referral_attributions` (`phone_hash` nullable-unique, `needs_review`) | yes |
-| `AgentApplicantRepository` | `agent_applicants` | yes |
-| `AgentPayoutDetailsRepository` | `agent_payout_details` (+ `agent_payout_method` enum) | yes |
-| `ReferralCodeAttemptStore` | `referral_code_attempts` | yes |
-| (device push tokens, no port yet) | `agent_device_tokens` | yes |
-| `AgentCommissionPolicyPort` | a commission policy version table (`hold_days`, …) | **no, deferred to the commission batch** |
-| `AgentMemberReadPort` | none (reads existing member data) | n/a |
-
-Expired `agent_applicants` and `referral_code_attempts` rows are purged **opportunistically inside the real adapters** (a small limited batch on write); no scheduler (noted in the ports' doc comments).
+**Seed format** (Shaaz's table `platform_settings`): `INSERT INTO "platform_settings" ("key", "value", "description") VALUES ('commission.auto_approve', 'true'::jsonb, '...') ON CONFLICT ("key") DO NOTHING;` — `value` is JSONB NOT NULL (undecided = `'null'::jsonb`, never SQL NULL; numbers `'72'::jsonb`; strings `'"TEXT"'::jsonb`); keys match `^[a-z]+(\.[a-z_]+)+$`; version and timestamps have defaults. **The seed is its own PR after #155, with a timestamp later than `20261029110100`, and must never reach production before #155's migrations.** Shaaz's Payments migration is `20261029130000_payment_referral_gst` (on his branch); pick timestamps that do not collide with it.
 
 ---
 
 ## 5. Decisions, and what is still open
 
-### Decided on 28 Oct
+### Decided (29 Oct)
 
-- Raja approved the **Tamil share message** (wording in `FRONTEND_HANDOFF_DHATRI.md` section 6, in `content/agent-content.ts`); other Tamil labels are still `'<to be supplied>'`.
-- The **Partner Program button is on the landing page only**, not in the app.
-- **No separate agent KYC: the PAN is enough** (Raja, 29 Oct). **Dummy OTP until the Firebase paid plan** is bought. **No coupons** in the agent program (`referral.discount_stacks_with_coupons` exists in the settings list but must not be used).
-- Applicants get an **access token only**; applying returns an **agent session**; **strict refresh reuse** (a revoked token presented again revokes everything; accepted as strict by design).
-- `family_id` is **dropped**; the **commission policy table is deferred**; **`payout_details_set` is a column** and the payout-details update must set it; **purge of expired rows happens inside the real adapters**.
-- A self-referring agent **stays blocked** (an admin can correct it with a recorded reason, once the admin endpoint exists). The REJECTED row kept for a self-referral sets `needsReview = true` so it shows up for review.
-- **A member with no verified phone can never be credited** (`phone_hash` NOT NULL); a code entered at payment follows the same rule. This replaced the old pending decision `decideMissingPhoneHash()`, which no longer exists.
-- **The sealer** stays `AesGcmSecretSealer` until #129 merges; then `AgentSecretSealer` switches to Shaaz's `SecretSealer(key, purpose)` with the purposes `agent.pan`, `agent.payout_details`, `agent.applicant_phone` and the key `AGENT_PII_ENCRYPTION_KEY`.
-- Check-then-record counting and a non-constant-time code check are **accepted for now**; note both as limits for the real adapters.
+- **GST is ADDED to prices** (prices exclusive of GST). The company is **not registered for GST yet**, so `payment.gst_rate_bps` (Shaaz's setting, seeded `0` in his Payments migration — verified on `origin/feat/payments-referral-gst`) stays `0` until registration; then a Super Admin sets it (commonly 1800).
+- **The commission is 10% of `taxableAmountPaise`.** `quoteReferral` returns `taxableAfterDiscountPaise` (on `main`, `9d05d7f`). `PaymentSucceeded.amountPaidPaise` = taxable + tax (`referral-events.ts`, #148: `addExclusiveTax`, `refundTaxPaise`, `ReferralEventPublisher`, `REFERRAL_EVENT_PUBLISHER`).
+- **Prices are not final** and live in Shaaz's plan data (changed through admin drafts, no deploy). Each payment stores its own numbers.
+- **A partial refund before approval reduces the commission in proportion**; a full refund cancels it (on the stack, `fix/agent-partial-refund-proportional`).
+- **No separate agent KYC** (the PAN is enough). **A rejected agent may re-apply.** **A terminated agent's waiting commission stays frozen.**
+- **Roles live** (seeded in `20261029053600_admin_rbac_foundation`, verified): `SUPER_ADMIN` (Raja plus one more, per Ishu), `PARTNER_MANAGER` (`agent.view`, `agent.approve`), `PAYOUT_MANAGER` (`payout.view`, `payout.execute`, step-up).
+- The **support contact** for the portal's Help screen was supplied by Raja and lives **only in Dhatri's portal config**, never in this repo.
+
+### Shaaz's design answers (29 Oct; per Shaaz unless noted)
+
+- **Payments PR** (draft 29 Oct evening, ready 30 Oct; branch `feat/payments-referral-gst`, **merged as #159**): payment fields; checkout calls our `quoteReferral` through `AGENT_REFERRAL_QUOTE`, **imported from our file** `modules/agents/agent-referral-quote.token.ts`, injected `@Optional()`. **It must be provided from a `@Global()` module** (SubscriptionModule cannot import AgentsModule: AgentsModule → AdminModule → SubscriptionModule; verified in his commit `c3d7d79`). Without it checkout charges the list price and a typed code gets 422 `PROMO_CODES_UNAVAILABLE`.
+- Payment events go through an **outbox** with in-process delivery after commit (at-least-once); our handlers are idempotent by `paymentId` and `refundId`.
+- A **daily GitHub Actions job** calls `POST /internal/jobs/daily` (header with `JOBS_SECRET`), which runs his outbox sweep and then our `runDailyApproval()`. It must **catch up**: approve everything past `hold_until` (test a two-day gap). Not in git yet (**To be confirmed** when it lands).
+- **Sealer:** `SecretSealer(key: Buffer, purpose)` from `@app/common` with `parseSealingKey(process.env.AGENT_PII_ENCRYPTION_KEY, 'AGENT_PII_ENCRYPTION_KEY')` (returns `Buffer | null`; throws if malformed) — both on `main`, verified. Purposes `agent.pan`, `agent.payout_details`, `agent.applicant_phone`. A **missing** key means 503 on the agent PII routes plus a startup warning (never refuse to start); a **malformed** key stops startup. `AGENT_PII_ENCRYPTION_KEY` is **not** in `libs/config/src/validation.ts` on `main` (that file is Shaaz's).
+- **Dummy OTP** (verified in `validation.ts` and `OtpService`): `AGENT_OTP_DUMMY_ENABLED`, `AGENT_OTP_DUMMY_PHONES` (comma-separated E.164), `AGENT_OTP_DUMMY_CODE` (exactly 6 digits). Set CODE and PHONES first and ENABLED last: enabling without a code, or in production without an allow-list, fails Joi and **stops the whole API**. `OtpService` has a 30-second resend floor of its own, so `agent.otp_resend_after_seconds` must be at least 30.
+- **Admin routes:** `@AdminController` + `@RequirePermissions` (every route must declare one, or `AdminRouteCheck` stops the API), `@CurrentAdmin`, `@AdminContext`, `hasFreshStepUp(admin)`, `AdminAuditService.record(tx, entry)`, `assertAdminPermission(tx, userId, key)`. The **payout destination** is included only with `payout.execute` AND a fresh step-up; otherwise it is omitted, the answer is still 200, and no audit row is written.
+
+### Open questions (do NOT build around them)
+
+- **Real OTP** will use Firebase pay-as-you-go (not bought yet). Ishu asked Shaaz whether agents use his `OtpService` or Firebase ID tokens: **build no Firebase-specific agent sign-in.**
+- GST registration and final prices wait for Raja. TDS (the CA). How an agent pays for a client's plan. Tamil wording for the other labels. The referral link web address. Where scheduled jobs run beyond Shaaz's daily job. How migrations get applied on Render (Shaaz's manual window today).
+
+### Secrets (never ask for them, never print them)
+
+`AGENT_PII_ENCRYPTION_KEY`, `AGENT_JWT_SECRET` and the dummy-OTP values are generated or chosen by Ishu and kept in Ishu's password manager. **None of them is on Render yet** (per Ishu). `IDENTIFIER_HASH_PEPPERS` on Render: **To be confirmed**.
 
 ### Marked pending-decision places in the code
 
 | Decision | Place |
 |---|---|
-| ~~Rejected agent may re-apply~~ **DECIDED (Raja, 28 Oct): yes**; resubmission goes back to `PENDING_APPROVAL` for admin review | `REJECTED_MAY_REAPPLY` in `agent/agent-status.ts` (stays `true`); consumed by `decideApplicationSubmit` and injectable into `AgentApplicationService` |
-| ~~Terminated agents' pending commission~~ **DECIDED (Raja, 28 Oct)**: waiting commission stays FROZEN until Raja decides otherwise; already-approved commission is still paid | `frozenForAgent()` in `commission/decide-commission-transition.ts` |
-| Partial refund before approval | `planRefundEffect()` in `commission/plan-refund-effect.ts` (cancels the whole commission) |
 | Tax withholding (CA) | `planPayout()` in `payout/plan-payout.ts` refuses any set value with `TAX_RULE_UNSUPPORTED` — **must change when the CA answers** |
-| ~~Commission base~~ **DECIDED (Raja, 28 Oct)**: 10% of the amount without GST | `commission.base` = `AMOUNT_PAID_EXCLUDING_GST`, `commission.base_provisional` = `false` (seed values); `buildCommissionDraft()` still returns `amountPaise: null` while the setting is `null` |
 | Tamil labels | `AGENT_TAMIL_LABEL_PENDING` in `content/agent-content.ts` |
 
-### Decided by Raja on 28 Oct (evening)
-
-- **GST is ADDED to the plan price (Raja, 29 Oct): plan prices are EXCLUSIVE of GST.** The rate is a platform setting with no default in code (commonly 18%, not fixed yet). `taxableAmountPaise` = list price minus the referral discount; `taxPaise` = round(taxable x rateBps / 10000); the member pays taxable + tax (`amountPaidPaise`, GST included). Example: Rs. 1,000 with the 5% discount at 18%: taxable 95000 paise, GST 17100, member pays 112100. The commission is 10% of `taxableAmountPaise`, so it does not depend on the rate; the cap (never above what the member paid) uses the amount paid including GST. This reverses the earlier GST-inclusive assumption (Shaaz's plan and #148's `splitInclusiveTax`; Shaaz is changing them). `quoteReferral` now returns `taxableAfterDiscountPaise` (not `amountPaidPaise`): it is the taxable amount, not what the member pays.
-- **Commission base:** 10% of the amount **without GST**. Seed `commission.base` = `AMOUNT_PAID_EXCLUDING_GST` and `commission.base_provisional` = `false`; `payout.tax_withholding` stays `null`. The commission handler computes `base = amountPaid` (after the referral discount) minus the GST part (`taxPaise` from Shaaz's `PaymentSucceeded` event).
-- **A rejected agent may re-apply**; the resubmission goes back to `PENDING_APPROVAL` for admin review. `REJECTED_MAY_REAPPLY` stays `true`.
-- **Roles:** Raja plus one more person as Super Admin; a **Partner Manager** role for approving and rejecting agents; **payouts only for Raja and the person who pays**. Pause, terminate and PAN/phone reveal are **not specified yet**: Super Admin only for now. (The roles are Shaaz's to seed; only `SUPER_ADMIN` exists on his branch.)
-- **The four agent terms** shown on the Help screen are approved (in the portal's `helpContent.ts`); a lawyer checks them before launch.
-- **A terminated agent's waiting commission stays FROZEN** until Raja decides otherwise; commission already approved is still paid (he accepted all the suggestions).
-- **Answered by Raja on 29 Oct:** a **support contact was supplied** for the agent Help screen (the numbers live in the portal's config, not in this repo); agents need **no separate KYC, the PAN is enough**.
-- **Still open:** plan prices, TDS (the CA), the referral web address.
-
-### Open decisions
-
-Plan prices; TDS (CA); how an agent pays for a client's plan; Tamil wording for the other labels; the referral link web address (`link` and `qrPayload` are `null` until decided); partial refund before approval; **roles beyond what Raja said** (see above); where scheduled jobs run (no worker or scheduler on Render); **how migrations get applied on Render** (nothing does today).
+(Re-apply, frozen commission, commission base and partial refund are decided; see above.)
 
 ---
 
-## 6. Shaaz's answers (28 Oct)
+## 6. Shaaz's work on `main` (verified)
 
-Verified in git on `origin/feat/admin-rbac-foundation` (PR #129, draft; two feature commits `9b4e996` and `a97133a`):
-
-- Permission model: `Role` / `Permission` / `RolePermission` / `AdminUserRole` tables, plus `AdminGuard` and the `@RequirePermissions` decorator.
-- The real function is `assertAdminPermission(db, actorId, permission)` (`admin/rbac/assert-admin-permission.ts`): it takes a transaction client or Prisma (`Pick<TransactionClient, 'user'>`), the **User id**, and a key of the form `module.action`; it throws Nest's `ForbiddenException`. Our `AgentPermissionPort` adapter must convert that to `AgentPermissionDeniedError`.
-- `AdminAuditService.record(tx, entry)` with `actorType` one of `STAFF` / `MEMBER` / `AGENT` / `SYSTEM` (a CHECK on `audit_logs.actor_type`). His migration adds the `audit_logs` columns `actor_type`, `before`, `after`, `reason`, `request_id` and `user_agent`.
-- **48 permission keys** are seeded, including `agent.pii.reveal`. **Step-up** (a fresh authenticator code) is required for `payout.execute`, `agent.pii.reveal`, `member.pii.reveal`, `refund.approve` and `rbac.manage`. **Only `SUPER_ADMIN`** is seeded as a role.
-- Admin TOTP sign-in (`admin/auth/totp.ts`, secrets stored sealed) and provisioning only by an operator-run script, `pnpm admin:provision` (`backend/scripts/admin-provision.ts`: grant, revoke, reset-mfa, deactivate; there is no HTTP route for it). **Overlap to decide:** his `admin/auth/secret-box.ts` is also AES-256-GCM, with a different format (`v1.<iv>.<tag>.<ciphertext>`) and its own key `ADMIN_MFA_ENCRYPTION_KEY`; our `AesGcmSecretSealer` uses `v1:` + base64url and a key passed in. The sealer overlap is **decided**: once #129 merges we switch to his `SecretSealer` (see section 5).
-
-**Per Shaaz, not yet in git (To be confirmed when they land):**
-
-- A `PlatformSettingsService` (key, JSON value, version). **Our settings seed must be a SEPARATE migration that sorts after his settings table.**
-- Agent OTP dummy (his variable names): `AGENT_OTP_DUMMY_ENABLED` (off unless `true`), `AGENT_OTP_DUMMY_PHONES` (the allow-list; only these numbers in production) and `AGENT_OTP_DUMMY_CODE` (**exactly 6 digits**, no default, **never logged**).
-- **Shaaz's Thursday PRs** (per Shaaz; not in git yet): *platform* - the OTP service, `hashIdentifier`, the settings table (`PlatformSetting`), `referral-events.ts` and the global `VALIDATION_FAILED` error (a `validationFailed` helper in `@app/common`, to use with `ParseUUIDPipe` on id parameters); *payments* - the payment fields, offline payments, and the checkout calling `quoteReferral`.
-- `hashIdentifier(kind, value)` with `IDENTIFIER_HASH_PEPPERS` = `v1:<secret>[,v0:<old>]` (newest first), an **`IP` kind**, and `hashIdentifierAll`.
-- He wires `quoteReferral` into `checkout.service.ts` (`planPriceId` = the `SubscriptionPlanDuration` id, `listAmountPaise` = `duration.priceInPaise`) and adds the payment fields `paid_by`, `payment_source_hash`, `is_first_paid_plan`, `held_referral_code_id` (no foreign key), `discount_paise`, `discount_source`, plus `referral-events.ts`.
-- The production Neon database had no agent migration rows and no agent tables on 28 Oct.
-
-### Admin endpoints he wants
-
-- `GET /admin/agents/summary`
-- `GET /admin/agents` with filters
-- `GET /admin/agents/:id`
-- `POST` approve and reject `{ reason }`
-- `POST` pause, resume, terminate `{ reason }`
-- `POST` codes/replace `{ reason }`
-- `POST` payout-details/verify
-- `POST` reveal `{ reason }` (`agent.pii.reveal`, step-up, returned once, never cached)
-- `GET /admin/agents/:id/referrals`
-- `POST /admin/referrals/:id/correct { reason }`
-- Commissions: list, approve, cancel `{ reason }`, override `{ amountPaise, reason }`
-- Payouts: payable list, create (`Idempotency-Key`), mark-paid `{ reference, paidAt }`, cancel `{ reason }`
-
-Conventions: `{ items, nextCursor }`, paise, ISO dates, every mutation takes `{ reason }` and audits in the same transaction.
+- `PlatformSettingsService.getMany(keys)` (only keys that exist, JSON `null` is a value) and `registerValidator(key, fn)` (one validator per key; `fn(value)` returns a problem string or `null`; refused values answer 400 `VALIDATION_FAILED` at admin entry).
+- `IdentifierHashService.hashIdentifier` / `hashIdentifierAll`, kinds `PHONE`, `EMAIL`, `PAN`, `IP`; **503 `IDENTIFIER_HASHING_UNAVAILABLE`** until `IDENTIFIER_HASH_PEPPERS` is set; **RangeError** for an empty or malformed value.
+- `OtpService.send(purpose, phoneE164)` / `verify(purpose, challengeId, code)`, purpose `AGENT_SIGN_IN`; `OtpRateLimitError.retryAfterSeconds`; **503 `OTP_DELIVERY_UNAVAILABLE`** (`OtpDeliveryUnavailableError`, a Nest `ServiceUnavailableException`) when no code can reach the phone; RangeError for a non-E.164 phone.
+- `validationFailed` in `@app/common` (`libs/common/src/pipes/validation-failed.ts`).
+- `SecretSealer` and `parseSealingKey` in `@app/common`.
+- `referral-events.ts` (#148), see section 5.
 
 ---
 
-## 7. Next steps, in order
+## 7. Next steps, in order (Ishu's 29 Oct evening prompt)
 
-Done since the last version: the admin contract (#136) and `quoteReferral` (#137).
-
-After **#116 merges** and **Shaaz's platform PR lands** (OTP service, hashing, settings table, `validationFailed`):
-
-1. The **real Prisma adapters** for the ports (repositories, unit of work, applicant and attempts stores). They must also: purge expired rows in small batches, make the attempt counter atomic, refuse a raw IP as requester key, and convert `ForbiddenException` to `AgentPermissionDeniedError`.
-2. The **controllers and `AgentsModule` wiring** (until then the portal gets 404), with the `validationFailed` helper on every id parameter (`ParseUUIDPipe`, `exceptionFactory: validationFailed`).
-3. The **settings seed** as its own migration, sorted after Shaaz's settings table.
-4. The **sealer switch** (`AgentSecretSealer` to his `SecretSealer`, purposes per section 5) after **#129 merges**; then set `AGENT_PII_ENCRYPTION_KEY` on Render and add the sealed PAN reveal path.
-5. **Commission creation, refund handling, the daily approval job and payouts**, after his payment events exist and it is decided where scheduled jobs run.
-6. The end-of-project **`FRONTEND_HANDOFF` update**.
+0. This file (`docs/agent-session-context-29oct-pm`).
+1. `feat/agent-platform-adapters`: settings (validators registered in `onModuleInit`), OTP, hashing, permission with `has()`, audit adapters; the settings seed after #155.
+2. `feat/agent-routes-flagged` (stacked on 1): the agent and member routes, registered only when `AGENT_PROGRAM_ENABLED=true`; provide `AGENT_REFERRAL_QUOTE` from a `@Global()` module.
+3. `feat/agent-sealer-switch` (from `main`): Shaaz's `SecretSealer` replaces `AesGcmSecretSealer`.
+4. `feat/agent-admin-routes-rest` (stacked on the commission stack): the remaining admin routes.
+5. `docs/agent-contract-conformance`: a route-vs-contract check.
+6. `docs/agent-golive-runbook`: the go-live order and checks.
 
 ---
 
 ## 8. Known traps
 
 1. **`backend/prisma.config.ts` loads `.env.local` with `override: true`.** A `DATABASE_URL` set in the shell is silently replaced. **Never run Prisma with the repo config.** Use a guarded wrapper (trap 2).
-2. **Throwaway Postgres procedure.** PostgreSQL 17 is at `C:\Program Files\PostgreSQL\17\bin`; a Windows service already runs on port **5432** — do not touch it. In the scratchpad: `initdb -D <dir> -U postgres -A trust -E UTF8 --locale=C`; start with `pg_ctl ... -o "-p 55432 -c listen_addresses=127.0.0.1" -l <log> -w start` (run it in the background: from Git Bash it can hang the foreground); create empty databases with `createdb`. Write a **wrapper script** that builds `postgresql://postgres@127.0.0.1:55432/<db>`, **refuses any host except `localhost` / `127.0.0.1`**, prints the masked URL before every command, allows only `validate`, `format`, `generate`, `migrate deploy|dev|diff|status`, and passes a minimal environment; pair it with a **scratch config** (no `.env` loaded, throws on a non-local host) via `prisma --config`. Quote the PG path (it has a space). Stop the cluster and delete its data directory when done. CI uses `postgres:16`; the throwaway is 17 — keep SQL portable. CI's drift check passes only if the output contains **"No difference detected"**.
+2. **Throwaway Postgres procedure.** PostgreSQL 17 is at `C:\Program Files\PostgreSQL\17\bin`; a Windows service already runs on port **5432** — do not touch it. Run the throwaway cluster on **55432** (`initdb -D <dir> -U postgres -A trust -E UTF8 --locale=C`; `pg_ctl ... -o "-p 55432 -c listen_addresses=127.0.0.1" -l <log> -w start`, in the background). Use a **wrapper** (`guarded-prisma.cjs`) that builds `postgresql://postgres@127.0.0.1:55432/<db>`, refuses any non-local host, prints the masked URL, allows only `validate`, `format`, `generate`, `migrate deploy|dev|diff|status`, passes a minimal environment, and uses a **scratch config** (`prisma.scratch.config.cjs`: no `.env`, throws on a non-local host) via `--config`. The helper scripts live in **`D:\claude-scripts\`** (outside the repo; see its README): `guarded-prisma.cjs`, `prisma.scratch.config.cjs`, `smoke-local.sh`, `checkhere.sh`, `checkall.sh`, `mutate-fast.cjs`, `verify155.sh`, `sqlmut155.sh`. Read and verify them before use. CI uses `postgres:16`; keep SQL portable. CI's drift check passes only if the output contains **"No difference detected"**.
 3. **Generated Prisma client is gitignored** (`backend/libs/database/generated/`). Regenerate locally after a schema change so `tsc` passes; don't commit it.
 4. **`CLAUDE.md` says Railway**; deployment is Render.
-5. **`git diff a..b` vs `a...b`**: when `origin/main` moves, a two-dot diff shows unrelated files. Use three-dot for "what this branch adds". `git diff --no-renames` shows a replaced file as delete + add.
-6. **Prettier reformats files** after you write them; re-read before editing, and expect patterns written for unformatted code to stop matching.
-7. **ESLint** (typed rules) flags `Object.prototype.hasOwnProperty.call` returns, unnecessary type assertions (`eslint --fix` removes them), trailing unused parameters and `expect.any(...)` assignments. New code must lint clean.
+5. **`git diff a..b` vs `a...b`**: use three-dot for "what this branch adds".
+6. **Prettier reformats files** after you write them; re-read before editing.
+7. **ESLint** (typed rules) flags `Object.prototype.hasOwnProperty.call` returns, unnecessary type assertions, trailing unused parameters and `expect.any(...)` assignments. New code must lint clean.
 8. **Make your commit step stop on `tsc` failure too**, not just ESLint.
-9. A bash heredoc containing some characters once broke the shell parse; prefer the Write tool for file contents.
+9. Prefer the Write tool for file contents over heredocs.
 10. **No `python`, no `gh` CLI.** Use node for scripts; give compare links. `git show origin/main:path` needs `MSYS_NO_PATHCONV=1` in Git Bash.
 11. Shell is Windows (Git Bash and PowerShell). Paths: `/d/nenjam_matrimony-app` in bash.
-12. The settings list includes `referral.discount_stacks_with_coupons`, but there is **no coupon feature**. Don't use it; don't remove it without asking.
+12. `referral.discount_stacks_with_coupons` exists but there is **no coupon feature**. Seed it `false`; don't use it.
 13. `POST /agent/devices` only accepts `ANDROID`/`IOS` — the website portal has no push yet.
 14. **Approved fake test values:** `+919876543210`, `+919000000001`, `+919000000002`, `+919999999999`, `ABCDE1234F`, `AAAAA1111A`, `HDFC0001234`, `ravi@okbank`, `NM7K2P9X`. Nothing else that looks real.
-15. **Mutation checks must use a script that refuses a mutation whose pattern does not match** (prettier wraps lines, so a plain `sed` can silently do nothing and a "surviving" mutation proves nothing). Compare a surviving mutant with an equivalent one before adding a test.
-16. **`prisma format` reformats Shaaz's models.** After running it, restore everything outside the agent section byte-for-byte from the merge result. Prisma 7 `migrate dev` no longer accepts `--skip-generate` / `--skip-seed` (it does not generate or seed on its own).
-17. **Check `git branch --show-current` before a merge or commit.** `git checkout -b X` fails silently-ish if a local branch `X` already exists, and the next command then runs on the wrong branch (this happened once; it was undone before any push).
-18. **Nothing runs `prisma migrate deploy` on Render.** A merged migration is not applied until someone runs it, and applying one to the shared Neon database is a separate step Ishu must approve.
-19. Applicants have **no refresh token**. Contract limits and HTTP mappings for the refusals are in the service header comments (`agent-application.service.ts`, `agent-referral-code.service.ts`).
+15. **Mutation checks must use a script that refuses a mutation whose pattern does not match** (`mutate-fast.cjs`: absent or non-unique pattern stops the run). Compare a surviving mutant with an equivalent one before adding a test.
+16. **`prisma format` reformats Shaaz's models.** Restore everything outside the agent section byte-for-byte. Prisma 7 `migrate dev` no longer accepts `--skip-generate` / `--skip-seed`.
+17. **Check `git branch --show-current` before a merge or commit.** `git checkout -b X` fails if a local `X` exists and the next command runs on the wrong branch.
+18. **Nothing runs `prisma migrate deploy` on Render.** A merged migration is not applied until Shaaz's window.
+19. Applicants have **no refresh token**. HTTP mappings for refusals are in the service header comments.
 20. A **PR's GitHub title and Draft state are not in git**; take them from Ishu.
+21. **`git switch -c X origin/main` tracks `origin/main`.** Unset the upstream immediately (section 2).
+22. **`backend/scripts/smoke-boot.mjs` boots the built apps in the CURRENT folder, so they load `backend/.env.local` and can reach the REMOTE (Neon) database** (it happened once on 29 Oct; the connection failed, nothing was read or written). Never run it from `backend/`. Always use `D:\claude-scripts\smoke-local.sh <local db>`: it runs from an empty folder (`D:\claude-scripts\smoke-root`, junctions to `dist` and `node_modules` only, no `.env` file) with a cleared environment pointed only at the local throwaway database. The same holds for any `node dist/...` run. **Never print or store a connection string**; mask it (`postgresql://***@127.0.0.1:55432/<db>`).
+23. Specs that import `@app/config` need CI's dummy environment (`ELASTICSEARCH_NODE`, `SMTP_HOST`, `SMTP_PORT`, `JWT_SECRET`, local `DATABASE_URL` / `REDIS_URL`) when run outside the main checkout (a worktree has no `.env.local`).
 
 ---
 
@@ -323,27 +260,26 @@ one member earn two commissions, or one phone be credited to two agents.
 
 After each batch:
 
-1. A table: branch, commit, new tests, results (tsc, pnpm test totals, build:all, ESLint).
+1. A table: branch, commit, new tests, results (tsc, pnpm test totals, agent-db tests, build:all, smoke boot, ESLint).
 2. Extra choices made that were not specified.
 3. Decisions to confirm (who: Raja, Shaaz, CA, Dhatri).
 4. Honest limits: what was not run or not verified, and any mutation checks (what was broken, whether it was caught).
 
-Then **stop and wait**.
-
 **PR description format** (one per batch), plus the compare link
-`https://github.com/GrowSpark-Consulting/nenjam_matrimony-app/compare/main...<branch>?expand=1`:
+`https://github.com/GrowSpark-Consulting/nenjam_matrimony-app/compare/main...<branch>?expand=1`
+(for a stacked branch, compare against its base branch):
 
 - **Title**
 - **What** (one short section per step)
 - **Why** — cite real sections: Final Build Spec §2 (decisions), §3 (rules), §4 (flexibility), §5 workflows A–F; and Final Plan sections (e.g. §13 Safeguards)
 - **Files**
 - **Tests** — exact commands and results; say what was not run; number of new tests
-- **Risk** — "Not wired into any module, no schema change, no migration, no new dependency, no behaviour change. Merging to main triggers a deploy to the live Render site, with no effect on users." (adjust when true)
+- **Risk** (adjust to what is true)
 - **Decisions to confirm**
 - **Not included**
 - End each PR description with the attribution line your Claude Code setup requires.
 
-**Before any push** (only when Ishu names the branch): `git remote -v`; `git fetch`; `git log --oneline origin/main..<branch>`; `git diff --stat origin/main...<branch>`; dry-run merge (`git merge-tree --write-tree origin/main <branch>`); secret scan of added lines (keys, tokens, connection strings, emails, phone numbers, PAN); confirm nothing from the scratchpad is included. If `origin/main` moved, merge it into the branch with a regular merge (no rebase, no force) and rerun the checks.
+**Before any push** (only the branches Ishu names): `git remote -v`; `git fetch --all`; `git log --oneline <base>..<branch>`; `git diff --stat <base>...<branch>`; dry-run merge (`git merge-tree --write-tree origin/main <branch>`); secret scan of added lines (keys, tokens, connection strings, emails, phone numbers, PAN); confirm nothing from the scratchpad is included. If `origin/main` moved, merge it into the branch with a regular merge (no rebase, no force) and rerun the checks.
 
 Ishu likes plain language and copy-paste-ready output.
 
@@ -351,6 +287,6 @@ Ishu likes plain language and copy-paste-ready output.
 
 ## 10. First thing to do next session
 
-1. `git fetch`; check what merged (`git log --merges origin/main`), whether #116 and #129 are still open, and whether Shaaz's later migrations (settings table, OTP challenges, payment fields) are on `main`.
-2. Check whether `PlatformSetting`, `OtpChallenge`, `hashIdentifier`, `quoteReferral` and the payment fields now exist (`git grep` on `origin/main` and on his branch); update section 6.
-3. Ask Ishu which step from section 7 to start and wait. Steps 1 and 2 are blocked until #116 and Shaaz's platform PR land.
+1. `git fetch --all`; check what merged (`git log --merges origin/main`), whether #155 and its stack are merged, and whether Shaaz's Payments PR (`feat/payments-referral-gst`) and the daily job (`/internal/jobs/daily`) are on `main`.
+2. Check the state of the branches in section 7 (local and remote) and continue from the last commit of any unfinished one.
+3. Ask Ishu which step to start and wait.
