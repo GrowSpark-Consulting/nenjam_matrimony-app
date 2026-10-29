@@ -22,8 +22,10 @@ schema already has every migration applied (including
 * If it is not set, `pnpm test:agent-db` fails with a message (it does not skip).
 * If its host is anything but `localhost` or `127.0.0.1`, the specs refuse to
   open a connection.
-* The specs **truncate** `agents`, `referral_codes`, `referral_attributions`,
-  `agent_refresh_tokens`, `agent_payout_details` and `audit_logs`. Never point
+* The specs **truncate** the agent tables (`agents`, `referral_codes`, `referral_attributions`,
+  `agent_refresh_tokens`, `agent_payout_details`, `commissions`, `agent_ledger_entries`,
+  `agent_payouts`, `agent_applicants`, `referral_code_attempts`) and `audit_logs`, delete the
+  test users (`*@example.invalid`) and the policy versions they add (numbers above 100). Never point
   it at a database that holds data you want.
 * The specs never read `backend/prisma.config.ts` or any `.env` file, and the
   URL is printed with its credentials hidden at the start of each suite.
@@ -60,6 +62,11 @@ schema already has every migration applied (including
   the Prisma adapters, plus what only a real database shows: the same phone
   under another hash, CHECK violations not hidden as conflicts, cascade delete,
   a finished transaction refused, and the transaction timeout option.
+
+* `prisma-agent-stores.db-spec.ts` — the attribution repository, applicant store and attempt store (contract suite), delete rules and the bounded purge.
+* `prisma-agent-commission.db-spec.ts` — the commission policy, commission, ledger and payout adapters (contract suite), the append-only ledger trigger, the CHECK constraints and the seeded policy version.
+
+The SQL behaviour tests for the commission migration (every unique rule, the CHECKs, the append-only trigger, the delete rules, with controls) are in `agent-commission-tables-behaviour.sql`; run it with `psql` against a throwaway local database that has every migration applied (it runs in one transaction and rolls back).
 
 ## Known limit
 
