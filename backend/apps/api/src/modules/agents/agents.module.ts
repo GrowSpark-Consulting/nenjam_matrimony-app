@@ -28,9 +28,11 @@ import { PrismaReferralAttributionRepository } from './adapters/prisma/prisma-re
 import { PrismaReferralCodeRepository } from './adapters/prisma/prisma-referral-code.repository';
 import { AgentAdminAgentsService } from './admin/agent-admin-agents.service';
 import { AgentAdminController } from './admin/agent-admin.controller';
+import { AgentReferralQuoteModule } from './quote/agent-referral-quote.module';
 
 @Module({
-  imports: [AdminModule, PlatformModule],
+  // The referral quote for the checkout (global; not an agent route).
+  imports: [AdminModule, PlatformModule, AgentReferralQuoteModule],
   controllers: [AgentAdminController],
   providers: [
     {
