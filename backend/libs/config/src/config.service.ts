@@ -93,6 +93,10 @@ export class AppConfigService implements OnModuleInit {
     return this.configService.get('razorpay', { infer: true });
   }
 
+  get admin(): AppConfig['admin'] {
+    return this.configService.get('admin', { infer: true });
+  }
+
   checkHealth(): ConfigHealth {
     const details: Record<string, boolean> = {
       envFileLoaded: Boolean(this.nodeEnv),

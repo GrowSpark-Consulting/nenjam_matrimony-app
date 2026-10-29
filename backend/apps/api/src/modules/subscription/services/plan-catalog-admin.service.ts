@@ -9,6 +9,7 @@ import type {
   Prisma,
   SubscriptionPlanName,
 } from '../../../../../../libs/database/generated/client';
+import type { CatalogPlan } from '../../entitlements/domain/membership.types';
 import {
   parseEntitlements,
   reductionsBetween,
@@ -18,7 +19,7 @@ import {
 } from '../../entitlements/catalog/feature-catalog';
 import { PlanCatalogService } from '../../entitlements/catalog/plan-catalog.service';
 import { SubscriptionRepository } from '../repositories/subscription.repository';
-import { assertAdminPermission } from '../domain/admin-permission';
+import { assertAdminPermission } from '../../admin/rbac/assert-admin-permission';
 
 /** Allowance for clock skew when refusing a backdated version. */
 const BACKDATE_TOLERANCE_MS = 60_000;
@@ -71,8 +72,9 @@ export interface SetDurationInput {
  * methods (see docs/membership/README.md § Future admin API).
  *
  * Every method requires a reason, checks — inside its transaction — that the
- * actor is an ACTIVE admin holding the permission (membership.plans.write /
- * membership.prices.write; see domain/admin-permission.ts), validates, and
+ * actor is an ACTIVE admin whose roles grant the permission (plan.publish for
+ * anything members see change — versions, prices, availability; plan.edit for
+ * display text; see admin/rbac/assert-admin-permission.ts), validates, and
  * writes its change and an AuditLog row (with the before/after state) in that
  * ONE transaction, then refreshes the catalogue cache.
  *
@@ -101,14 +103,7 @@ export class PlanCatalogAdminService {
     now: Date = new Date(),
   ): Promise<PublishVersionResult> {
     this.assertText(input.changeNote, 'changeNote');
-    const problems = validateEntitlementsForPublish(input.entitlements);
-    if (problems.length > 0) {
-      throw new BadRequestException({
-        message: 'The entitlements are not valid.',
-        problems,
-      });
-    }
-    const next = parseEntitlements(input.entitlements).map;
+    const next = assertPublishableEntitlements(input.entitlements);
     const effectiveFrom = input.effectiveFrom ?? now;
     if (effectiveFrom.getTime() < now.getTime() - BACKDATE_TOLERANCE_MS) {
       throw new BadRequestException('effectiveFrom cannot be in the past.');
@@ -120,72 +115,77 @@ export class PlanCatalogAdminService {
     }
 
     const plan = await this.requirePlan(input.planCode);
-    const current = this.catalog.versionEffectiveAt(plan, now);
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await assertAdminPermission(tx, input.actorId, 'plan.publish');
+        return this.writeVersion(tx, plan, {
+          entitlements: next,
+          effectiveFrom,
+          changeNote: input.changeNote,
+          actorId: input.actorId,
+          applyToExistingSubscribers: input.applyToExistingSubscribers,
+          now,
+        });
+      });
+    } finally {
+      await this.refreshCatalog();
+    }
+  }
+
+  async setDuration(input: SetDurationInput): Promise<void> {
+    this.assertText(input.reason, 'reason');
+    assertDurationInput(input);
+    const plan = await this.requirePlan(input.planCode);
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await assertAdminPermission(tx, input.actorId, 'plan.publish');
+        await this.writeDuration(tx, plan, input);
+      });
+    } finally {
+      await this.refreshCatalog();
+    }
+  }
+
+  /**
+   * Creates the next version of [plan] inside the caller's transaction, and
+   * audits it. The caller has already checked the permission and validated
+   * the entitlements. Used by publishVersion and by publishing a draft.
+   */
+  async writeVersion(
+    tx: Prisma.TransactionClient,
+    plan: CatalogPlan,
+    input: {
+      entitlements: EntitlementMap;
+      effectiveFrom: Date;
+      changeNote: string;
+      actorId: string;
+      applyToExistingSubscribers?: boolean;
+      now: Date;
+    },
+  ): Promise<PublishVersionResult> {
+    const next = input.entitlements;
+    const current = this.catalog.versionEffectiveAt(plan, input.now);
     const reductionsVsCurrent = current
       ? reductionsBetween(current.entitlements, next)
       : [];
-
+    const latest = await tx.subscriptionPlanVersion.aggregate({
+      where: { planId: plan.id },
+      _max: { version: true },
+    });
+    const version = (latest._max.version ?? 0) + 1;
+    let created: { id: string };
     try {
-      const result = await this.prisma.$transaction(async (tx) => {
-        await assertAdminPermission(tx, input.actorId, {
-          module: 'membership',
-          action: 'plans.write',
-        });
-        const latest = await tx.subscriptionPlanVersion.aggregate({
-          where: { planId: plan.id },
-          _max: { version: true },
-        });
-        const version = (latest._max.version ?? 0) + 1;
-        const created = await tx.subscriptionPlanVersion.create({
-          data: {
-            planId: plan.id,
-            version,
-            entitlements: next as unknown as Prisma.InputJsonValue,
-            effectiveFrom,
-            changeNote: input.changeNote,
-            createdById: input.actorId,
-          },
-        });
-
-        let appliedToExisting = 0;
-        let skippedExisting = 0;
-        if (input.applyToExistingSubscribers && plan.code !== 'FREE') {
-          ({ appliedToExisting, skippedExisting } =
-            await this.applyToSubscribers(
-              tx,
-              plan.id,
-              created.id,
-              next,
-              input.actorId,
-              now,
-            ));
-        }
-
-        await this.audit(
-          tx,
-          input.actorId,
-          'membership.plan.version.publish',
-          'SubscriptionPlan',
-          plan.id,
-          {
-            plan: plan.code,
-            version,
-            effectiveFrom: effectiveFrom.toISOString(),
-            changeNote: input.changeNote,
-            previousVersion: current?.version ?? null,
-            reductionsVsCurrent,
-            appliedToExisting,
-            skippedExisting,
-          },
-        );
-        return {
-          versionId: created.id,
+      created = await tx.subscriptionPlanVersion.create({
+        data: {
+          planId: plan.id,
           version,
-          appliedToExisting,
-          skippedExisting,
-        };
+          entitlements: next as unknown as Prisma.InputJsonValue,
+          effectiveFrom: input.effectiveFrom,
+          changeNote: input.changeNote,
+          createdById: input.actorId,
+        },
+        select: { id: true },
       });
-      return { ...result, reductionsVsCurrent };
     } catch (error) {
       // Two admins publishing at once collide on (plan_id, version).
       if ((error as { code?: string })?.code === 'P2002') {
@@ -194,89 +194,102 @@ export class PlanCatalogAdminService {
         );
       }
       throw error;
-    } finally {
-      await this.refreshCatalog();
     }
+
+    let appliedToExisting = 0;
+    let skippedExisting = 0;
+    if (input.applyToExistingSubscribers && plan.code !== 'FREE') {
+      ({ appliedToExisting, skippedExisting } = await this.applyToSubscribers(
+        tx,
+        plan.id,
+        created.id,
+        next,
+        input.actorId,
+        input.now,
+      ));
+    }
+
+    await this.audit(
+      tx,
+      input.actorId,
+      'membership.plan.version.publish',
+      'SubscriptionPlan',
+      plan.id,
+      {
+        plan: plan.code,
+        version,
+        effectiveFrom: input.effectiveFrom.toISOString(),
+        changeNote: input.changeNote,
+        previousVersion: current?.version ?? null,
+        reductionsVsCurrent,
+        appliedToExisting,
+        skippedExisting,
+      },
+    );
+    return {
+      versionId: created.id,
+      version,
+      reductionsVsCurrent,
+      appliedToExisting,
+      skippedExisting,
+    };
   }
 
-  async setDuration(input: SetDurationInput): Promise<void> {
-    this.assertText(input.reason, 'reason');
-    if (input.planCode === 'FREE') {
-      throw new BadRequestException('The Free plan has no price or durations.');
-    }
-    if (
-      !Number.isInteger(input.months) ||
-      input.months < 1 ||
-      input.months > 36
-    ) {
+  /**
+   * Creates or updates one duration of [plan] inside the caller's
+   * transaction, and audits it with its before/after state. The caller has
+   * checked the permission and run assertDurationInput.
+   */
+  async writeDuration(
+    tx: Prisma.TransactionClient,
+    plan: CatalogPlan,
+    input: Omit<SetDurationInput, 'planCode'>,
+  ): Promise<void> {
+    const before = await tx.subscriptionPlanDuration.findUnique({
+      where: { planId_months: { planId: plan.id, months: input.months } },
+    });
+    const price =
+      input.priceInPaise !== undefined
+        ? input.priceInPaise
+        : (before?.priceInPaise ?? null);
+    const active = input.isActive ?? before?.isActive ?? false;
+    if (active && price === null) {
       throw new BadRequestException(
-        'months must be a whole number from 1 to 36.',
+        'A duration must be priced before it can be sold.',
       );
     }
-    this.assertOptionalInt(input.durationDays, 'durationDays', 1);
-    this.assertOptionalInt(input.bonusDays, 'bonusDays', 0);
-    this.assertOptionalInt(input.displayOrder, 'displayOrder', 0);
-    if (input.priceInPaise !== undefined && input.priceInPaise !== null) {
-      this.assertOptionalInt(input.priceInPaise, 'priceInPaise', 1);
+    const durationDays = input.durationDays ?? before?.durationDays;
+    if (durationDays === undefined) {
+      throw new BadRequestException(
+        'durationDays is required for a new duration.',
+      );
     }
-
-    const plan = await this.requirePlan(input.planCode);
-    try {
-      await this.prisma.$transaction(async (tx) => {
-        await assertAdminPermission(tx, input.actorId, {
-          module: 'membership',
-          action: 'prices.write',
-        });
-        const before = await tx.subscriptionPlanDuration.findUnique({
-          where: { planId_months: { planId: plan.id, months: input.months } },
-        });
-        const price =
-          input.priceInPaise !== undefined
-            ? input.priceInPaise
-            : (before?.priceInPaise ?? null);
-        const active = input.isActive ?? before?.isActive ?? false;
-        if (active && price === null) {
-          throw new BadRequestException(
-            'A duration must be priced before it can be sold.',
-          );
-        }
-        const durationDays = input.durationDays ?? before?.durationDays;
-        if (durationDays === undefined) {
-          throw new BadRequestException(
-            'durationDays is required for a new duration.',
-          );
-        }
-        const data = {
-          durationDays,
-          bonusDays: input.bonusDays ?? before?.bonusDays ?? 0,
-          priceInPaise: price,
-          isActive: active,
-          displayOrder:
-            input.displayOrder ?? before?.displayOrder ?? input.months,
-        };
-        const after = await tx.subscriptionPlanDuration.upsert({
-          where: { planId_months: { planId: plan.id, months: input.months } },
-          create: { planId: plan.id, months: input.months, ...data },
-          update: data,
-        });
-        await this.audit(
-          tx,
-          input.actorId,
-          'membership.plan.duration.set',
-          'SubscriptionPlanDuration',
-          after.id,
-          {
-            plan: plan.code,
-            months: input.months,
-            reason: input.reason,
-            before: before ? durationSnapshot(before) : null,
-            after: durationSnapshot(after),
-          },
-        );
-      });
-    } finally {
-      await this.refreshCatalog();
-    }
+    const data = {
+      durationDays,
+      bonusDays: input.bonusDays ?? before?.bonusDays ?? 0,
+      priceInPaise: price,
+      isActive: active,
+      displayOrder: input.displayOrder ?? before?.displayOrder ?? input.months,
+    };
+    const after = await tx.subscriptionPlanDuration.upsert({
+      where: { planId_months: { planId: plan.id, months: input.months } },
+      create: { planId: plan.id, months: input.months, ...data },
+      update: data,
+    });
+    await this.audit(
+      tx,
+      input.actorId,
+      'membership.plan.duration.set',
+      'SubscriptionPlanDuration',
+      after.id,
+      {
+        plan: plan.code,
+        months: input.months,
+        reason: input.reason,
+        before: before ? durationSnapshot(before) : null,
+        after: durationSnapshot(after),
+      },
+    );
   }
 
   async setPlanActive(input: {
@@ -292,10 +305,7 @@ export class PlanCatalogAdminService {
     const plan = await this.requirePlan(input.planCode);
     try {
       await this.prisma.$transaction(async (tx) => {
-        await assertAdminPermission(tx, input.actorId, {
-          module: 'membership',
-          action: 'plans.write',
-        });
+        await assertAdminPermission(tx, input.actorId, 'plan.publish');
         await tx.subscriptionPlan.update({
           where: { id: plan.id },
           data: { isActive: input.isActive },
@@ -330,7 +340,7 @@ export class PlanCatalogAdminService {
     this.assertText(input.reason, 'reason');
     if (input.displayName !== undefined)
       this.assertText(input.displayName, 'displayName');
-    this.assertOptionalInt(input.displayOrder, 'displayOrder', 0);
+    assertOptionalInt(input.displayOrder, 'displayOrder', 0);
     const plan = await this.requirePlan(input.planCode);
     const data = {
       ...(input.displayName !== undefined && {
@@ -345,10 +355,7 @@ export class PlanCatalogAdminService {
     };
     try {
       await this.prisma.$transaction(async (tx) => {
-        await assertAdminPermission(tx, input.actorId, {
-          module: 'membership',
-          action: 'plans.write',
-        });
+        await assertAdminPermission(tx, input.actorId, 'plan.edit');
         await tx.subscriptionPlan.update({ where: { id: plan.id }, data });
         await this.audit(
           tx,
@@ -418,7 +425,7 @@ export class PlanCatalogAdminService {
 
   /** The plan as stored right now — admin changes must not act on a cached
    *  copy up to a minute old. Loaded before any transaction opens. */
-  private async requirePlan(code: SubscriptionPlanName) {
+  async requirePlan(code: SubscriptionPlanName): Promise<CatalogPlan> {
     const { plans } = await this.catalog.refresh();
     const plan = plans.find((p) => p.code === code);
     if (!plan) throw new NotFoundException(`No plan ${code}.`);
@@ -428,25 +435,13 @@ export class PlanCatalogAdminService {
   /** After a committed change: make this process serve it immediately (other
    *  replicas pick it up within the catalogue TTL). A failed reload doesn't
    *  undo the committed change, so it is logged by the catalogue, not thrown. */
-  private async refreshCatalog(): Promise<void> {
+  async refreshCatalog(): Promise<void> {
     await this.catalog.refresh().catch(() => undefined);
   }
 
   private assertText(value: string, field: string): void {
     if (typeof value !== 'string' || value.trim().length < 3) {
       throw new BadRequestException(`${field} is required.`);
-    }
-  }
-
-  private assertOptionalInt(
-    value: number | undefined,
-    field: string,
-    min: number,
-  ): void {
-    if (value !== undefined && (!Number.isInteger(value) || value < min)) {
-      throw new BadRequestException(
-        `${field} must be a whole number >= ${min}.`,
-      );
     }
   }
 
@@ -467,6 +462,61 @@ export class PlanCatalogAdminService {
         metadata: metadata as Prisma.InputJsonValue,
       },
     });
+  }
+}
+
+/** Strict entitlement validation for anything about to be published;
+ *  returns the parsed map. */
+export function assertPublishableEntitlements(raw: unknown): EntitlementMap {
+  const problems = validateEntitlementsForPublish(raw);
+  if (problems.length > 0) {
+    throw new BadRequestException({
+      message: 'The entitlements are not valid.',
+      problems,
+    });
+  }
+  return parseEntitlements(raw).map;
+}
+
+/** The shape checks for one duration, before any database read. */
+export function assertDurationInput(
+  input: Pick<
+    SetDurationInput,
+    | 'planCode'
+    | 'months'
+    | 'durationDays'
+    | 'bonusDays'
+    | 'displayOrder'
+    | 'priceInPaise'
+  >,
+): void {
+  if (input.planCode === 'FREE') {
+    throw new BadRequestException('The Free plan has no price or durations.');
+  }
+  if (
+    !Number.isInteger(input.months) ||
+    input.months < 1 ||
+    input.months > 36
+  ) {
+    throw new BadRequestException(
+      'months must be a whole number from 1 to 36.',
+    );
+  }
+  assertOptionalInt(input.durationDays, 'durationDays', 1);
+  assertOptionalInt(input.bonusDays, 'bonusDays', 0);
+  assertOptionalInt(input.displayOrder, 'displayOrder', 0);
+  if (input.priceInPaise !== undefined && input.priceInPaise !== null) {
+    assertOptionalInt(input.priceInPaise, 'priceInPaise', 1);
+  }
+}
+
+function assertOptionalInt(
+  value: number | undefined,
+  field: string,
+  min: number,
+): void {
+  if (value !== undefined && (!Number.isInteger(value) || value < min)) {
+    throw new BadRequestException(`${field} must be a whole number >= ${min}.`);
   }
 }
 

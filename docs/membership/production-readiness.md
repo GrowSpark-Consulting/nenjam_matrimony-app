@@ -16,9 +16,9 @@ must be true before limits are ever enforced. Pair with [README.md](README.md)
 | P6 | **Payment records on account deletion**: deleted with the account today (pre-existing cascade). Tax/GST retention may require keeping them | Legal retention | Deleted with the account |
 | P7 | **Web purchases**: support via Razorpay `checkout.js` or hide buying on web. The backend checkout and verify endpoints are the same either way | Flutter scope | Open, but not blocking: checkout is unavailable on every platform today |
 
-Prices are set with `PlanCatalogAdminService.setDuration` by an admin holding
-`membership.prices.write` (audited). There is no HTTP surface for it yet; until the
-admin panel exists, use a reviewed one-off script run by an engineer.
+Prices are set with `PlanCatalogAdminService.setDuration` by an admin whose role grants
+`plan.publish` (audited). There is no HTTP surface for it yet; until the admin panel's
+plan screens exist, use a reviewed one-off script run by an engineer.
 
 ### Current state (28 Oct 2026)
 

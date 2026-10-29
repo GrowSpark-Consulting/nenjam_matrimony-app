@@ -326,21 +326,23 @@ the schema rollback — restoring the pre-migration backup is the only way to re
 
 ### Authorization — enforced inside the services today
 
-Every write method checks, **inside its own transaction**, that `actorId` is a user with
-`role = ADMIN`, `status = ACTIVE`, not deleted, whose `AdminAccount.permissions` grants the
-action, in the format the admin seeder already uses (`{ <module>: [<action>, …] }`):
+Every write method checks, **inside its own transaction**, that `actorId` is an ACTIVE,
+undeleted staff user with an **active** `AdminAccount` whose **roles** grant the permission
+(RBAC — see [docs/admin/README.md](../admin/README.md);
+`admin/rbac/assert-admin-permission.ts`):
 
-| Service method | Permission (`module` → action) |
+| Service method | Permission |
 |---|---|
-| `SubscriptionLifecycleService.grant`, `.extend` | `subscriptions` → `write` |
-| `SubscriptionLifecycleService.revoke` | `subscriptions` → `cancel` |
-| `PlanCatalogAdminService.publishVersion`, `.setPlanActive`, `.updatePlanDisplay` | `membership` → `plans.write` |
-| `PlanCatalogAdminService.setDuration` | `membership` → `prices.write` |
+| `SubscriptionLifecycleService.grant` | `subscription.grant` |
+| `SubscriptionLifecycleService.extend` | `subscription.extend` |
+| `SubscriptionLifecycleService.revoke` | `subscription.cancel` |
+| `PlanCatalogAdminService.publishVersion`, `.setDuration` (prices), `.setPlanActive` | `plan.publish` — members see the change |
+| `PlanCatalogAdminService.updatePlanDisplay` | `plan.edit` |
 
 All of them also require a reason (≥ 3 characters) and write an `AuditLog` row in the same
-transaction. The seeded admin holds `subscriptions: [read, write, cancel]` but **not**
-`membership`, so catalogue/price changes need an explicit grant. A future controller can't
-skip these checks by forgetting a guard.
+transaction (a failed audit write rolls the change back — integration-tested). The legacy
+`AdminAccount.permissions` JSON is no longer read, so the old seeder's placeholder admin has
+no access. A future controller can't skip these checks by forgetting a guard.
 
 ### Before any admin endpoint exists
 

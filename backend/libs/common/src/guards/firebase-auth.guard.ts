@@ -1,5 +1,6 @@
 import {
   CanActivate,
+  ConflictException,
   ExecutionContext,
   ForbiddenException,
   Injectable,
@@ -17,6 +18,7 @@ import {
   isAccountUsable,
   setCachedAuthUser,
 } from '../auth/auth-user-cache';
+import { isStaffRole } from '../auth/staff-identity';
 
 interface RequestWithUser extends Request {
   user?: AuthenticatedUser;
@@ -101,6 +103,7 @@ export class FirebaseAuthGuard implements CanActivate {
     decoded: {
       uid: string;
       email?: string;
+      email_verified?: boolean;
       phone_number?: string;
     },
     idToken: string,
@@ -149,6 +152,8 @@ export class FirebaseAuthGuard implements CanActivate {
         where: { email: decoded.email },
       });
       if (existingByEmail) {
+        this.refuseStaffRelink(existingByEmail, decoded.uid);
+        this.refuseUnverifiedEmailRelink(existingByEmail, decoded);
         this.logger.log(
           `Re-linking existing user ${existingByEmail.id} to new Firebase uid=${decoded.uid} (was ${existingByEmail.firebaseUid})`,
         );
@@ -170,6 +175,7 @@ export class FirebaseAuthGuard implements CanActivate {
         where: { phone: decoded.phone_number },
       });
       if (existingByPhone) {
+        this.refuseStaffRelink(existingByPhone, decoded.uid);
         this.logger.log(
           `Re-linking existing user ${existingByPhone.id} to new Firebase uid=${decoded.uid} (was ${existingByPhone.firebaseUid})`,
         );
@@ -236,6 +242,52 @@ export class FirebaseAuthGuard implements CanActivate {
       email: decoded.email,
       phone_number: decoded.phone_number,
     };
+  }
+
+  /**
+   * Refuses to hand a staff row to a Firebase account other than its own.
+   *
+   * The re-link paths above match on an email or phone the new account merely
+   * claims. For a member that recovers their own account after a Firebase
+   * re-creation; for an admin it would let whoever claimed the admin's address
+   * or number inherit the admin row. A staff row's Firebase link changes only
+   * through `pnpm admin:provision`.
+   */
+  private refuseStaffRelink(
+    existing: { id: string; role?: unknown },
+    uid: string,
+  ): void {
+    if (!isStaffRole(existing.role)) return;
+    this.logger.warn(
+      `Refused to re-link staff user ${existing.id} to Firebase uid=${uid}`,
+    );
+    throw new ForbiddenException(
+      'This account is no longer active. Please contact support.',
+    );
+  }
+
+  /**
+   * Re-linking by email trusts that the new Firebase account really owns the
+   * address. Anyone can create an email/password Firebase account for an
+   * address they don't own, so only a Firebase-VERIFIED email may claim an
+   * existing row; otherwise this is refused (and nothing is created — a
+   * second row with the same email could not exist anyway).
+   */
+  private refuseUnverifiedEmailRelink(
+    existing: { id: string },
+    decoded: { uid: string; email_verified?: boolean },
+  ): void {
+    if (decoded.email_verified === true) return;
+    this.logger.warn(
+      `Refused to re-link user ${existing.id} by an unverified email (uid=${decoded.uid})`,
+    );
+    throw new ConflictException({
+      statusCode: 409,
+      error: 'Conflict',
+      code: 'EMAIL_ALREADY_REGISTERED',
+      message:
+        'This email belongs to an existing account. Verify your email address, or sign in to that account.',
+    });
   }
 
   /**

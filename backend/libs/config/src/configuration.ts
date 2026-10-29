@@ -141,6 +141,10 @@ export interface AppConfig {
     keySecret?: string;
     webhookSecret?: string;
   };
+  admin: {
+    /** Base64 of 32 bytes; unset → admin sign-in answers 503. */
+    mfaEncryptionKey?: string;
+  };
 }
 
 export type MembershipEnforcementMode = 'off' | 'shadow' | 'enforce';
@@ -288,5 +292,8 @@ export default (): AppConfig => ({
     keyId: process.env.RAZORPAY_KEY_ID?.trim() || undefined,
     keySecret: process.env.RAZORPAY_KEY_SECRET?.trim() || undefined,
     webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET?.trim() || undefined,
+  },
+  admin: {
+    mfaEncryptionKey: process.env.ADMIN_MFA_ENCRYPTION_KEY?.trim() || undefined,
   },
 });

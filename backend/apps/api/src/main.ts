@@ -136,6 +136,8 @@ async function bootstrap() {
       'X-App-Version',
       'Accept',
       'Accept-Version',
+      // The admin panel's second-factor session (admin/auth/admin-auth.policy.ts).
+      'X-Admin-Session',
     ],
     // Lets a browser app read Retry-After on a 429.
     exposedHeaders: ['Retry-After'],
