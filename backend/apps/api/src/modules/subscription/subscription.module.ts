@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
+import { REFERRAL_EVENT_PUBLISHER } from '@app/common';
 import { AppConfigModule } from '@app/config';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
+import { PlatformModule } from '../platform/platform.module';
+import { PaymentEventDispatcher } from './events/payment-event-outbox';
+import { ReferralEventBus } from './events/referral-event-bus';
 import { PlansController } from './controllers/plans.controller';
 import { CheckoutController } from './controllers/checkout.controller';
 import { RazorpayWebhookController } from './controllers/razorpay-webhook.controller';
@@ -22,9 +26,12 @@ import { SubscriptionRepository } from './repositories/subscription.repository';
  * Exports the services the admin module wraps (PlanCatalogAdminService,
  * PlanDraftService, SubscriptionLifecycleService) — there is deliberately no
  * admin HTTP surface in this module; /admin/* lives in AdminModule.
+ *
+ * Payment events: ReferralEventBus (also as REFERRAL_EVENT_PUBLISHER) is where
+ * the agent program subscribes; PaymentEventDispatcher delivers the outbox.
  */
 @Module({
-  imports: [AppConfigModule, EntitlementsModule],
+  imports: [AppConfigModule, EntitlementsModule, PlatformModule],
   controllers: [PlansController, CheckoutController, RazorpayWebhookController],
   providers: [
     PlansService,
@@ -35,12 +42,18 @@ import { SubscriptionRepository } from './repositories/subscription.repository';
     PlanCatalogAdminService,
     PlanDraftService,
     RazorpaySignatureGuard,
+    ReferralEventBus,
+    { provide: REFERRAL_EVENT_PUBLISHER, useExisting: ReferralEventBus },
+    PaymentEventDispatcher,
     SubscriptionRepository,
   ],
   exports: [
     PlanCatalogAdminService,
     PlanDraftService,
     SubscriptionLifecycleService,
+    ReferralEventBus,
+    REFERRAL_EVENT_PUBLISHER,
+    PaymentEventDispatcher,
   ],
 })
 export class SubscriptionModule {}
