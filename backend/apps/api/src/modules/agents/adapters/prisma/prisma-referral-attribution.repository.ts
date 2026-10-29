@@ -16,6 +16,7 @@
  */
 import type { PrismaClient } from '@app/database';
 import type {
+  AgentAttributionStatus,
   AttributionPageCursor,
   ReferralAttributionRecord,
   ReferralAttributionRepository,
@@ -84,6 +85,39 @@ export class PrismaReferralAttributionRepository implements ReferralAttributionR
       where: { phoneHash },
     });
     return row ? toRecord(row) : null;
+  }
+
+  async findById(
+    attributionId: string,
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord | null> {
+    const row = await dbFor(this.prisma, tx).referralAttribution.findUnique({
+      where: { id: attributionId },
+    });
+    return row ? toRecord(row) : null;
+  }
+
+  async correct(
+    attributionId: string,
+    expectedStatus: AgentAttributionStatus,
+    changes: Parameters<ReferralAttributionRepository['correct']>[2],
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord | null> {
+    const db = dbFor(this.prisma, tx);
+    // One conditional statement: only while the attribution is still in the
+    // state the caller saw.
+    const { count } = await db.referralAttribution.updateMany({
+      where: { id: attributionId, status: expectedStatus },
+      data: {
+        agentId: changes.agentId,
+        codeId: changes.codeId,
+        source: changes.source,
+        status: changes.status,
+        needsReview: changes.needsReview,
+      },
+    });
+    if (count === 0) return null;
+    return this.findById(attributionId, tx);
   }
 
   async findByMemberId(

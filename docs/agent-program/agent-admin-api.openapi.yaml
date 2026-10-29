@@ -766,11 +766,15 @@ paths:
           schema: { type: string, format: uuid }
         - name: from
           in: query
-          description: Earned on or after this date (`YYYY-MM-DD`, Indian time).
+          description: |
+            Earned on or after this date (`YYYY-MM-DD`, Indian time).
+            **Not implemented yet:** sending it answers 400 VALIDATION_FAILED.
           schema: { type: string, format: date }
         - name: to
           in: query
-          description: Earned on or before this date.
+          description: |
+            Earned on or before this date.
+            **Not implemented yet:** sending it answers 400 VALIDATION_FAILED.
           schema: { type: string, format: date }
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -996,9 +1000,11 @@ paths:
           schema: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$' }
         - name: from
           in: query
+          description: '**Not implemented yet:** sending it answers 400 VALIDATION_FAILED.'
           schema: { type: string, format: date }
         - name: to
           in: query
+          description: '**Not implemented yet:** sending it answers 400 VALIDATION_FAILED.'
           schema: { type: string, format: date }
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
