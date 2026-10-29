@@ -195,6 +195,25 @@ describe('FakeReferralAttributionRepository', () => {
     expect(await repo.findByMemberId('other')).toBeNull();
   });
 
+  it('allows several attributions whose member or code is gone (null)', async () => {
+    const repo = new FakeReferralAttributionRepository();
+    await repo.create(attribution({ memberId: null, codeId: null }));
+    await repo.create(
+      attribution({
+        id: 'attr-2',
+        memberId: null,
+        codeId: null,
+        memberPhoneHash: 'other-hash',
+      }),
+    );
+    expect(await repo.findByMemberId('member-1')).toBeNull();
+    expect((await repo.listByAgent('agent-1')).length).toBe(2);
+    // The phone hash stays unique even when the member is gone.
+    await expect(
+      repo.create(attribution({ id: 'attr-3', memberId: null })),
+    ).rejects.toEqual(conflict('DUPLICATE_ATTRIBUTION'));
+  });
+
   it('lists by agent and reports credited phone hashes', async () => {
     const repo = new FakeReferralAttributionRepository();
     await repo.create(attribution());

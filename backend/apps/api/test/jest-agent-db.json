@@ -1,0 +1,23 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "../../..",
+  "testEnvironment": "node",
+  "testRegex": "apps/api/src/.*[.]db-spec[.]ts$",
+  "maxWorkers": 1,
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "transformIgnorePatterns": ["node_modules/\\.pnpm/(?!(jose|jwks-rsa)@)"],
+  "moduleNameMapper": {
+    "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
+    "^@app/config(|/.*)$": "<rootDir>/libs/config/src/$1",
+    "^@app/logger(|/.*)$": "<rootDir>/libs/logger/src/$1",
+    "^@app/database(|/.*)$": "<rootDir>/libs/database/src/$1",
+    "^@app/cache(|/.*)$": "<rootDir>/libs/cache/src/$1",
+    "^@app/search(|/.*)$": "<rootDir>/libs/search/src/$1",
+    "^@app/queue(|/.*)$": "<rootDir>/libs/queue/src/$1",
+    "^@app/firebase(|/.*)$": "<rootDir>/libs/firebase/src/$1",
+    "^@app/storage(|/.*)$": "<rootDir>/libs/storage/src/$1",
+    "^@app/mail(|/.*)$": "<rootDir>/libs/mail/src/$1"
+  }
+}
