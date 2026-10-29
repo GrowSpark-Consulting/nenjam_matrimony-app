@@ -247,8 +247,8 @@ Response is masked only: `{ method: 'UPI' | 'BANK', display }`, e.g.
 ### 4.9 Help
 No help endpoint exists in the contract. Static content for now. The text
 is the **approved** Help & Support wording, including the four agent terms
-(Raja, 28 Oct; a lawyer checks them before launch). The **support contact is
-still pending**: show the placeholder until it is confirmed, never invent one.
+(Raja, 28 Oct; a lawyer checks them before launch). The **support contact was
+supplied by Raja (29 Oct)** and lives in the portal's config, not in this repo.
 
 ### 4.10 Sign out → `POST /agent/auth/logout`
 Body `{ "refreshToken" }` (agent sessions). An applicant has nothing to revoke;
@@ -363,11 +363,10 @@ states arrive as `ON_HOLD`.
 
 ## 9. Open decisions that may change your screens
 
-- The support contact for the Help screen (still pending).
 - The referral link web address (shows the link and QR).
 - Tamil wording for the other labels (statuses, stages).
 - How an agent can pay for a client's plan (a future screen).
-- Whether agents will need KYC later (a future screen).
+- ~~Whether agents will need KYC later~~ **Answered 29 Oct: no separate KYC, the PAN is enough.**
 - Plan prices (shown in commission and discount amounts).
 
 ---

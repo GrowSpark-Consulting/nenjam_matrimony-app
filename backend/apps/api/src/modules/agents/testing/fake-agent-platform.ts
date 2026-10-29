@@ -148,11 +148,36 @@ export class FakeAgentSettings implements AgentSettingsPort {
  * trimmed: E.164 is NOT validated here.
  */
 export class FakeAgentIdentifierHasher implements AgentIdentifierHasher {
-  constructor(private readonly secret: string) {
+  /**
+   * `olderSecrets` are earlier pepper versions still active during a rotation
+   * (newest first, after `secret`). Their hashes are labelled "v0:", "v-1:" ...
+   */
+  constructor(
+    private readonly secret: string,
+    private readonly olderSecrets: readonly string[] = [],
+  ) {
     if (!secret) throw new RangeError('secret must be a non-empty string.');
   }
 
+  hashAll(kind: AgentIdentifierKind, value: string): string[] {
+    return [
+      this.hash(kind, value),
+      ...this.olderSecrets.map((older, index) =>
+        this.hashWith(older, `v${index === 0 ? 0 : -index}`, kind, value),
+      ),
+    ];
+  }
+
   hash(kind: AgentIdentifierKind, value: string): string {
+    return this.hashWith(this.secret, 'v1', kind, value);
+  }
+
+  private hashWith(
+    secret: string,
+    label: string,
+    kind: AgentIdentifierKind,
+    value: string,
+  ): string {
     if (typeof value !== 'string') {
       throw new RangeError('value must be a string.');
     }
@@ -162,10 +187,10 @@ export class FakeAgentIdentifierHasher implements AgentIdentifierHasher {
     if (normalised.length === 0) {
       throw new RangeError('value must not be empty.');
     }
-    const digest = createHmac('sha256', this.secret)
+    const digest = createHmac('sha256', secret)
       .update(`${kind}:${normalised}`)
       .digest('hex');
-    return `v1:${digest}`;
+    return `${label}:${digest}`;
   }
 }
 

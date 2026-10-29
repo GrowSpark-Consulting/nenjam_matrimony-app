@@ -296,6 +296,18 @@ export function defineAgentCommissionContract(
         ).rejects.toThrow('Unknown commission nope');
       });
 
+      it('finds a commission by its exact phone hash (and not by another hash)', async () => {
+        await w.commissions.create(commission(1));
+        expect(
+          (await w.commissions.findByPhoneHash('v1:member-hash-1'))?.id,
+        ).toBe('com-01');
+        // The same digest under another pepper version label is another string.
+        expect(
+          await w.commissions.findByPhoneHash('v0:member-hash-1'),
+        ).toBeNull();
+        expect(await w.commissions.findByPhoneHash('nope')).toBeNull();
+      });
+
       it('transition changes the row only if it is still in the expected state', async () => {
         await w.commissions.create(commission(1));
         expect(

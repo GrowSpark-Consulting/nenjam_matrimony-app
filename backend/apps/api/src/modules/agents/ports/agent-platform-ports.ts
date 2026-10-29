@@ -97,6 +97,14 @@ export type AgentIdentifierKind = 'PHONE' | 'EMAIL' | 'PAN';
  */
 export interface AgentIdentifierHasher {
   hash(kind: AgentIdentifierKind, value: string): string;
+  /**
+   * The hash under EVERY active pepper version, newest first (the first one
+   * is `hash(kind, value)`). A stored hash may have been made under an older
+   * version while IDENTIFIER_HASH_PEPPERS is being rotated, so a lookup that
+   * must not miss (a duplicate check) compares against all of them. Same
+   * normalisation and the same RangeError as `hash`.
+   */
+  hashAll(kind: AgentIdentifierKind, value: string): string[];
 }
 
 // --- Permissions ----------------------------------------------------------
