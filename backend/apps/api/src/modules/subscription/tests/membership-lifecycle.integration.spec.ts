@@ -27,7 +27,10 @@ import { CheckoutService } from '../services/checkout.service';
 import { RazorpayWebhookService } from '../services/razorpay-webhook.service';
 import { IdentifierHashService } from '../../platform/identifier-hash.service';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
-import { PaymentEventDispatcher } from '../events/payment-event-outbox';
+import {
+  MAX_DELIVERY_ATTEMPTS,
+  PaymentEventDispatcher,
+} from '../events/payment-event-outbox';
 import { ReferralEventBus } from '../events/referral-event-bus';
 
 /**
@@ -1177,6 +1180,60 @@ describeIntegration('membership lifecycle', () => {
         delivered: 0,
         failed: 0,
       });
+    });
+
+    it('sets an event aside after the attempt limit, so it no longer blocks newer ones', async () => {
+      const bus = new ReferralEventBus();
+      const dispatcher = new PaymentEventDispatcher(
+        prisma as unknown as PrismaService,
+        bus,
+      );
+      const poisoned = await buy(A, 'GOLD');
+      await confirm(poisoned.orderId, 'pay_poison');
+      const poisonedPayment = await prisma.paymentTransaction.findUniqueOrThrow(
+        { where: { razorpayOrderId: poisoned.orderId } },
+      );
+      const delivered: string[] = [];
+      bus.subscribe((event) => {
+        if (
+          event.type === 'payment.succeeded' &&
+          event.paymentId === poisonedPayment.id
+        ) {
+          return Promise.reject(new Error('cannot handle this one'));
+        }
+        delivered.push(event.type);
+        return Promise.resolve();
+      });
+
+      for (let run = 0; run < MAX_DELIVERY_ATTEMPTS; run++) {
+        await dispatcher.dispatchPending();
+      }
+      expect(
+        await prisma.paymentEventOutbox.findFirstOrThrow({
+          where: { dedupeKey: `payment.succeeded:${poisonedPayment.id}` },
+        }),
+      ).toMatchObject({
+        attempts: MAX_DELIVERY_ATTEMPTS,
+        deliveredAt: null,
+        lastError: 'cannot handle this one',
+      });
+      // Set aside: not tried again.
+      expect(await dispatcher.dispatchPending()).toEqual({
+        delivered: 0,
+        failed: 0,
+      });
+
+      // A newer event still goes through, and the daily drain reports both.
+      const next = await buy(B, 'GOLD');
+      await confirm(next.orderId, 'pay_after_poison');
+      expect(await dispatcher.drain()).toEqual({
+        delivered: 1,
+        failed: 0,
+        waiting: 0,
+        deadLettered: 1,
+        subscribers: true,
+      });
+      expect(delivered).toEqual(['payment.succeeded']);
     });
 
     it('refuses to store a pricing breakdown that does not add up (database CHECK)', async () => {

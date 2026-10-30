@@ -27,6 +27,7 @@ import { PsychologyModule } from './modules/psychology/psychology.module';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AgentsModule } from './modules/agents/agents.module';
+import { JobsModule } from './modules/jobs/jobs.module';
 import { throttlerConfig } from './throttling';
 
 @Module({
@@ -84,6 +85,8 @@ import { throttlerConfig } from './throttling';
     AdminModule,
     // The agent program: today only the staff routes under /admin/agents.
     AgentsModule,
+    // POST /internal/jobs/daily (the scheduled daily run).
+    JobsModule,
   ],
   controllers: [AppController],
   providers: [

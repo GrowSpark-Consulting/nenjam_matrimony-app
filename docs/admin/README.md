@@ -195,6 +195,17 @@ caller (the payout destination) checks `hasFreshStepUp(admin)`. Every admin resp
     after commit, oldest first, **at least once**.
   - A handler that throws leaves its event to be retried. With no subscriber, events wait.
   - `livemode: false` marks Razorpay test-mode payments: never a real commission.
+- **Daily jobs:** register yours with `DailyJobRegistry.register('area.job_name', (now) => …)`
+  (`PlatformModule`) in `onModuleInit`.
+  - `POST /internal/jobs/daily` (header `X-Jobs-Secret` = `JOBS_SECRET`) first redelivers
+    waiting payment events, then runs every registered job in order.
+  - A failing job is reported (`ok: false`) and the rest still run.
+  - The GitHub Actions workflow `.github/workflows/daily-jobs.yml` calls it at 02:00 IST and
+    fails the run when `ok` is false.
+  - Jobs must catch up and be safe to repeat.
+  - The outbox stops retrying an event after 10 failed deliveries. It stays in
+    `payment_event_outbox` (`attempts >= 10`, `delivered_at` null), the log says
+    "SET ASIDE", and the daily report counts it as `deadLettered`.
 - **GST:** the `payment.gst_rate_bps` setting, seeded at 0. Checkout answers 503
   `CHECKOUT_UNAVAILABLE` if it's missing, and `PUT /admin/settings` refuses anything but an
   integer 0–10000.
@@ -206,6 +217,7 @@ caller (the payout destination) checks `hasFreshStepUp(admin)`. Every admin resp
 | `ADMIN_MFA_ENCRYPTION_KEY` | API | 32 random bytes, base64 (`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`). Unset → admin sign-in answers 503, the app still boots. Malformed → the API refuses to boot. One per environment; changing it invalidates every enrolled authenticator (`reset-mfa` each admin). |
 | `CORS_ORIGINS` | API | Add the admin panel's origin (e.g. `https://admin.<domain>`). `X-Admin-Session` is already an allowed header. |
 | `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_FIREBASE_*` | admin web build | Public values, set at build time — see `admin/.env.example`. |
+| `JOBS_SECRET` | API **and** GitHub repository secret (same value) | The daily job caller's secret, 32+ characters (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`). Unset on the API → the route answers 503; unset in GitHub → the workflow skips with a warning. |
 | `IDENTIFIER_HASH_PEPPERS` | API | `v1:<secret>` (32+ characters; same generator as above). Unset → hashing answers 503, the app still boots. Never change or drop a pepper in use: rotate by putting a new version in front (`v2:<new>,v1:<old>`). |
 | `AGENT_OTP_DUMMY_ENABLED`, `AGENT_OTP_DUMMY_PHONES`, `AGENT_OTP_DUMMY_CODE` | API | Testing only: off unless `true`; the code is exactly 6 digits and never logged; in production the phone allow-list is required. |
 
