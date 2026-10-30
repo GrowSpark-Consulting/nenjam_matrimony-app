@@ -159,6 +159,20 @@ describe('validationSchema', () => {
     });
   });
 
+  describe('JOBS_SECRET', () => {
+    const withSecret = (secret: string) =>
+      validationSchema.validate(
+        { ...validEnv, JOBS_SECRET: secret },
+        { abortEarly: false },
+      ).error;
+
+    it('is optional, and at least 32 characters when set', () => {
+      expect(withSecret('')).toBeUndefined();
+      expect(withSecret('x'.repeat(32))).toBeUndefined();
+      expect(withSecret('too-short')).toBeDefined();
+    });
+  });
+
   describe('AGENT_OTP_DUMMY_*', () => {
     const withDummy = (env: Record<string, string>) =>
       validationSchema.validate({ ...validEnv, ...env }, { abortEarly: false })
