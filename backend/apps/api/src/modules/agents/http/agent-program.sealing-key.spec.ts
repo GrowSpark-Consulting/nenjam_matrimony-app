@@ -12,7 +12,7 @@ const GOOD_KEY = Buffer.alloc(32, 7).toString('base64');
 
 function deps(
   env: Record<string, string | undefined>,
-  warn: jest.Mock,
+  warn: jest.Mock<void, [string]>,
 ): AgentProgramDeps {
   return {
     prisma: {} as PrismaClient,
@@ -27,7 +27,7 @@ function deps(
 
 describe('AGENT_PII_ENCRYPTION_KEY at startup', () => {
   it('a missing key logs a warning and the program still builds', () => {
-    const warn = jest.fn();
+    const warn = jest.fn<void, [string]>();
     expect(() => buildAgentProgram(deps({}, warn))).not.toThrow();
     expect(
       warn.mock.calls.some((c) =>
@@ -37,7 +37,7 @@ describe('AGENT_PII_ENCRYPTION_KEY at startup', () => {
   });
 
   it('a blank key counts as missing', () => {
-    const warn = jest.fn();
+    const warn = jest.fn<void, [string]>();
     buildAgentProgram(deps({ AGENT_PII_ENCRYPTION_KEY: '   ' }, warn));
     expect(
       warn.mock.calls.some((c) => String(c[0]).includes('AGENT_PII_ENC')),
@@ -45,7 +45,7 @@ describe('AGENT_PII_ENCRYPTION_KEY at startup', () => {
   });
 
   it('a valid key builds with no warning about it', () => {
-    const warn = jest.fn();
+    const warn = jest.fn<void, [string]>();
     buildAgentProgram(deps({ AGENT_PII_ENCRYPTION_KEY: GOOD_KEY }, warn));
     expect(
       warn.mock.calls.some((c) => String(c[0]).includes('AGENT_PII_ENC')),
@@ -56,7 +56,9 @@ describe('AGENT_PII_ENCRYPTION_KEY at startup', () => {
     const bad = Buffer.alloc(16, 5).toString('base64');
     let message = '';
     try {
-      buildAgentProgram(deps({ AGENT_PII_ENCRYPTION_KEY: bad }, jest.fn()));
+      buildAgentProgram(
+        deps({ AGENT_PII_ENCRYPTION_KEY: bad }, jest.fn<void, [string]>()),
+      );
     } catch (e) {
       message = (e as Error).message;
     }
@@ -65,10 +67,13 @@ describe('AGENT_PII_ENCRYPTION_KEY at startup', () => {
   });
 
   it('piiSealing follows the key', () => {
-    expect(buildAgentProgram(deps({}, jest.fn())).piiSealing).toBe(false);
     expect(
-      buildAgentProgram(deps({ AGENT_PII_ENCRYPTION_KEY: GOOD_KEY }, jest.fn()))
-        .piiSealing,
+      buildAgentProgram(deps({}, jest.fn<void, [string]>())).piiSealing,
+    ).toBe(false);
+    expect(
+      buildAgentProgram(
+        deps({ AGENT_PII_ENCRYPTION_KEY: GOOD_KEY }, jest.fn<void, [string]>()),
+      ).piiSealing,
     ).toBe(true);
   });
 
