@@ -1,0 +1,48 @@
+name: Daily jobs
+
+# Render runs no scheduler, so this calls the API's daily run once a day:
+# payment event catch-up, then every feature's daily job (agent commission
+# approval). Needs the repository secret JOBS_SECRET, equal to JOBS_SECRET on
+# the API service. Run it by hand from the Actions tab (workflow_dispatch).
+on:
+  schedule:
+    # 20:30 UTC = 02:00 IST, a quiet hour.
+    - cron: '30 20 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: daily-jobs
+  cancel-in-progress: false
+
+jobs:
+  daily:
+    name: Daily jobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Run the API's daily jobs
+        env:
+          JOBS_SECRET: ${{ secrets.JOBS_SECRET }}
+          API_BASE_URL: ${{ vars.API_BASE_URL || 'https://nenjam-matrimony.onrender.com' }}
+        run: |
+          if [ -z "$JOBS_SECRET" ]; then
+            # Not set up yet: say so without failing every night. Once the
+            # secret exists, any failure below fails the run.
+            echo "::warning::Repository secret JOBS_SECRET is not set; the daily jobs did not run."
+            exit 0
+          fi
+          # Render's free plan sleeps: the first call can take a minute while
+          # it wakes, so connection errors and 502/503/504 are retried. Every
+          # job catches up and is safe to repeat.
+          curl --silent --show-error --fail-with-body \
+            --retry 4 --retry-delay 30 --retry-connrefused --max-time 300 \
+            -X POST -H "X-Jobs-Secret: $JOBS_SECRET" \
+            "$API_BASE_URL/internal/jobs/daily" > report.json
+          cat report.json
+          # 200 with ok:false means a job failed: fail the run so it is seen.
+          jq -e '.ok == true' report.json > /dev/null || {
+            echo "::error::A daily job failed — see the report above."
+            exit 1
+          }
