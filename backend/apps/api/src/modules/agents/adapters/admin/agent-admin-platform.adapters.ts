@@ -62,6 +62,21 @@ export class AdminPermissionAdapter implements AgentPermissionPort {
       throw error;
     }
   }
+
+  /** The same check as `assert`: only a denial is `false`; any other failure still throws. */
+  async has(
+    actorId: string,
+    permission: AgentPermission,
+    tx?: AgentTx,
+  ): Promise<boolean> {
+    try {
+      await this.assert(actorId, permission, tx);
+      return true;
+    } catch (error) {
+      if (error instanceof AgentPermissionDeniedError) return false;
+      throw error;
+    }
+  }
 }
 
 export class AdminAuditAdapter implements AgentAuditPort {

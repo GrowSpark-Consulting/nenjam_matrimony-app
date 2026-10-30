@@ -225,7 +225,7 @@ confirm the full-suite total rose by that count.
 
 - **#155** (MERGED as `ba28426` after Shaaz's production window), branch `feat/agent-commission-tables`, head **`5896821`**: migrations `20261029110000_agent_commission_tables` (TRUNCATE triggers on every money table; partial-refund columns `refunded_paise`, `pre_refund_amount_paise` and `commissions_refund_chk`) and `20261029110100_agent_commission_policy_seed`. **The SQL is FINAL.** It is **not applied anywhere and not merged**: Shaaz runs the production window, tells Ishu, then Ishu merges #155. After the window the SQL must never change.
 - Stacked on it: `feat/agent-commission-services` (`a85c69e`), `feat/agent-admin-services` (`e2e0717`), `fix/agent-gst-exclusive` (`3df4e62`), `fix/agent-partial-refund-proportional` (`328541e`). **Merge order after #155:** services, admin-services, gst-exclusive, partial-refund.
-- The stack adds `AgentPermissionPort.has()` (and its adapter and fake), the commission/payout services, `runDailyApproval()`, the partial-refund rule and the runbook for pepper rotation (its own copy of this file has a section 8b; when it merges, take this version and re-add 8b).
+- The stack adds `AgentPermissionPort.has()` (and its adapter and fake), the commission/payout services, `runDailyApproval()`, the partial-refund rule and the runbook for pepper rotation (its pepper-rotation runbook is section 8b below).
 
 ### What is on `main` under `modules/agents/`
 

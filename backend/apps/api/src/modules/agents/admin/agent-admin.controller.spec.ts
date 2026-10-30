@@ -39,6 +39,8 @@ import { AdminGuard } from '../../admin/auth/admin.guard';
 import { AdminAuditService } from '../../admin/services/admin-audit.service';
 import { IdentifierHashService } from '../../platform/identifier-hash.service';
 import { PlatformModule } from '../../platform/platform.module';
+import { ReferralEventBus } from '../../subscription/events/referral-event-bus';
+import { SubscriptionModule } from '../../subscription/subscription.module';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 import { AgentsModule } from '../agents.module';
 import {
@@ -149,6 +151,12 @@ class StandInAdminModule {}
 })
 class StandInPlatformModule {}
 
+@Module({
+  providers: [ReferralEventBus],
+  exports: [ReferralEventBus],
+})
+class StandInSubscriptionModule {}
+
 async function bootApp(
   service?: AgentAdminAgentsService,
   extraControllers: Array<new (...args: never[]) => unknown> = [],
@@ -161,6 +169,8 @@ async function bootApp(
     .useModule(StandInAdminModule)
     .overrideModule(PlatformModule)
     .useModule(StandInPlatformModule)
+    .overrideModule(SubscriptionModule)
+    .useModule(StandInSubscriptionModule)
     .overrideGuard(FirebaseAuthGuard)
     .useValue(allow)
     .overrideGuard(AdminGuard)

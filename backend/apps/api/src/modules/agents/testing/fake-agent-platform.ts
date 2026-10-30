@@ -205,18 +205,26 @@ export class FakeAgentPermission implements AgentPermissionPort {
     this.grants.set(actorId, modules);
   }
 
-  /** Default-deny. The `tx` is accepted (reads see the live state). */
-  assert(actorId: string, permission: AgentPermission): Promise<void> {
-    const allowed =
+  private holds(actorId: string, permission: AgentPermission): boolean {
+    return (
       typeof actorId === 'string' &&
       actorId.length > 0 &&
       this.grants
         .get(actorId)
         ?.get(permission.module)
-        ?.has(permission.action) === true;
-    return allowed
+        ?.has(permission.action) === true
+    );
+  }
+
+  /** Default-deny. The `tx` is accepted (reads see the live state). */
+  assert(actorId: string, permission: AgentPermission): Promise<void> {
+    return this.holds(actorId, permission)
       ? Promise.resolve()
       : Promise.reject(new AgentPermissionDeniedError(permission));
+  }
+
+  has(actorId: string, permission: AgentPermission): Promise<boolean> {
+    return Promise.resolve(this.holds(actorId, permission));
   }
 }
 

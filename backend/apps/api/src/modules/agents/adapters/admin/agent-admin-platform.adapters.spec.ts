@@ -57,6 +57,29 @@ describe('AdminPermissionAdapter (over assertAdminPermission)', () => {
     await expect(adapter.assert('user-1', approve)).rejects.toBe(bad);
   });
 
+  it('has() answers true when held and false when denied, on the TRANSACTION client', async () => {
+    assertAdminPermission.mockResolvedValueOnce(undefined);
+    await expect(
+      adapter.has('user-1', approve, asTx(txClient as never)),
+    ).resolves.toBe(true);
+    expect(assertAdminPermission).toHaveBeenCalledWith(
+      txClient,
+      'user-1',
+      'agent.approve',
+    );
+    assertAdminPermission.mockRejectedValueOnce(new ForbiddenException('no'));
+    await expect(adapter.has('user-1', approve)).resolves.toBe(false);
+    await expect(
+      adapter.has('user-1', { module: 'agent', action: 'everything' }),
+    ).resolves.toBe(false);
+  });
+
+  it('has() lets any other error through (a failure is not a "no")', async () => {
+    const boom = new Error('database down');
+    assertAdminPermission.mockRejectedValueOnce(boom);
+    await expect(adapter.has('user-1', approve)).rejects.toBe(boom);
+  });
+
   it('a key that is not a seeded permission is denied without asking', async () => {
     await expect(
       adapter.assert('user-1', { module: 'agent', action: 'everything' }),
