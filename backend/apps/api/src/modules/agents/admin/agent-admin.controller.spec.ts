@@ -38,6 +38,7 @@ import { AdminController } from '../../admin/auth/admin-route.decorators';
 import { AdminGuard } from '../../admin/auth/admin.guard';
 import { AdminAuditService } from '../../admin/services/admin-audit.service';
 import { IdentifierHashService } from '../../platform/identifier-hash.service';
+import { DailyJobRegistry } from '../../platform/jobs/daily-job.registry';
 import { PlatformModule } from '../../platform/platform.module';
 import { ReferralEventBus } from '../../subscription/events/referral-event-bus';
 import { SubscriptionModule } from '../../subscription/subscription.module';
@@ -146,8 +147,9 @@ class StandInAdminModule {}
       provide: PlatformSettingsService,
       useValue: { getMany: jest.fn(), registerValidator: jest.fn() },
     },
+    DailyJobRegistry,
   ],
-  exports: [IdentifierHashService, PlatformSettingsService],
+  exports: [IdentifierHashService, PlatformSettingsService, DailyJobRegistry],
 })
 class StandInPlatformModule {}
 
@@ -192,6 +194,22 @@ async function bootApp(
   await app.init();
   return app;
 }
+
+describe('AgentsModule at boot', () => {
+  it('registers agent.daily_approval with the daily job registry', async () => {
+    const app = await bootApp();
+    try {
+      expect(
+        app
+          .get(DailyJobRegistry)
+          .list()
+          .map((job) => job.name),
+      ).toEqual(['agent.daily_approval']);
+    } finally {
+      await app.close();
+    }
+  });
+});
 
 describe('/admin/agents over HTTP', () => {
   let h: AgentAdminHarness;

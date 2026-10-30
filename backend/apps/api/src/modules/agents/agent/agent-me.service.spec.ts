@@ -1,3 +1,4 @@
+import { AGENT_SEAL_PURPOSES } from '../ports/agent-secret-sealer.port';
 import type { AgentAccessClaims } from '../auth/agent-access-claims';
 import {
   AgentHarness,
@@ -72,7 +73,10 @@ describe('AgentMeService', () => {
     it('is masked: phone, PAN and everything sealed or hashed stay out', async () => {
       const claims = await asAgent('ACTIVE', {
         panLast4: '234F',
-        panSealed: h.sealer.seal('ABCDE1234F'),
+        panSealed: h.sealer.seal(
+          AGENT_SEAL_PURPOSES.payoutDetails,
+          'ABCDE1234F',
+        ),
       });
       const profile = await h.me.getProfile(claims);
       expect(profile.phoneMasked).toBe('+91 98***210');
@@ -279,7 +283,14 @@ describe('AgentMeService', () => {
       const stored = await h.payoutDetails.find('agent-1');
       expect(stored!.method).toBe('UPI');
       expect(stored!.detailsSealed).not.toContain('ravi@okbank');
-      expect(JSON.parse(h.sealer.open(stored!.detailsSealed))).toEqual({
+      expect(
+        JSON.parse(
+          h.sealer.open(
+            AGENT_SEAL_PURPOSES.payoutDetails,
+            stored!.detailsSealed,
+          ),
+        ),
+      ).toEqual({
         vpa: 'ravi@okbank',
       });
     });
@@ -290,7 +301,14 @@ describe('AgentMeService', () => {
       expect(summary).toEqual({ method: 'BANK', display: 'HDFC ****9012' });
       const stored = await h.payoutDetails.find('agent-1');
       expect(stored!.detailsSealed).not.toContain('123456789012');
-      expect(JSON.parse(h.sealer.open(stored!.detailsSealed))).toEqual({
+      expect(
+        JSON.parse(
+          h.sealer.open(
+            AGENT_SEAL_PURPOSES.payoutDetails,
+            stored!.detailsSealed,
+          ),
+        ),
+      ).toEqual({
         accountHolderName: 'Ravi Kumar',
         accountNumber: '123456789012',
         ifsc: 'HDFC0001234',
@@ -302,7 +320,10 @@ describe('AgentMeService', () => {
       await h.me.updatePayoutDetails(claims, { upi: { vpa: ' Ravi@OkBank ' } });
       expect(
         JSON.parse(
-          h.sealer.open((await h.payoutDetails.find('agent-1'))!.detailsSealed),
+          h.sealer.open(
+            AGENT_SEAL_PURPOSES.payoutDetails,
+            (await h.payoutDetails.find('agent-1'))!.detailsSealed,
+          ),
         ),
       ).toEqual({ vpa: 'ravi@okbank' });
       await h.me.updatePayoutDetails(claims, {
@@ -314,7 +335,10 @@ describe('AgentMeService', () => {
       });
       expect(
         JSON.parse(
-          h.sealer.open((await h.payoutDetails.find('agent-1'))!.detailsSealed),
+          h.sealer.open(
+            AGENT_SEAL_PURPOSES.payoutDetails,
+            (await h.payoutDetails.find('agent-1'))!.detailsSealed,
+          ),
         ),
       ).toEqual({
         accountHolderName: 'Ravi Kumar',
@@ -339,7 +363,10 @@ describe('AgentMeService', () => {
       await h.payoutDetails.save({
         agentId: 'agent-1',
         method: 'UPI',
-        detailsSealed: h.sealer.seal('{"vpa":"old@okbank"}'),
+        detailsSealed: h.sealer.seal(
+          AGENT_SEAL_PURPOSES.payoutDetails,
+          '{"vpa":"old@okbank"}',
+        ),
         display: 'o***@okbank',
         verifiedAt: START,
         changedAt: START,

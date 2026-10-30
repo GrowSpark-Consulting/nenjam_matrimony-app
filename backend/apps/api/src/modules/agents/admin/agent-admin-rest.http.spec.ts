@@ -24,6 +24,7 @@ import {
 import { AdminRouteCheck } from '../../admin/auth/admin-route-check';
 import { AdminAuditService } from '../../admin/services/admin-audit.service';
 import { IdentifierHashService } from '../../platform/identifier-hash.service';
+import { DailyJobRegistry } from '../../platform/jobs/daily-job.registry';
 import { PlatformModule } from '../../platform/platform.module';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 import { ReferralEventBus } from '../../subscription/events/referral-event-bus';
@@ -115,8 +116,9 @@ class StandInAdminModule {}
         registerValidator: jest.fn(),
       },
     },
+    DailyJobRegistry,
   ],
-  exports: [IdentifierHashService, PlatformSettingsService],
+  exports: [IdentifierHashService, PlatformSettingsService, DailyJobRegistry],
 })
 class StandInPlatformModule {}
 

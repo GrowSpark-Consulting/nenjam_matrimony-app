@@ -304,6 +304,37 @@ describe('agent-program routes conform to the contracts', () => {
     expect([...sent].filter((c) => !documented.has(c))).toEqual([]);
   });
 
+  it('the 503 codes passed through from the platform services are in the enum, spelled as those services send them', () => {
+    const text = readFileSync(join(DOCS, 'agent-api.openapi.yaml'), 'utf8');
+    const block = /\n {8}code:\n[\s\S]*?enum:\n((?: {12}- \S+\n)+)/.exec(text);
+    const documented = new Set(
+      (block?.[1] ?? '').split('\n').map((l) => l.trim().replace(/^- /, '')),
+    );
+    const platform = join(__dirname, '../../platform');
+    for (const [file, code] of [
+      ['identifier-hash.service.ts', 'IDENTIFIER_HASHING_UNAVAILABLE'],
+      ['otp/otp.service.ts', 'OTP_DELIVERY_UNAVAILABLE'],
+    ]) {
+      expect(readFileSync(join(platform, file), 'utf8')).toContain(
+        `code: '${code}'`,
+      );
+      expect([code, documented.has(code)]).toEqual([code, true]);
+    }
+  });
+
+  it('every code the contract text names as `NNN CODE` is in the enum', () => {
+    const text = readFileSync(join(DOCS, 'agent-api.openapi.yaml'), 'utf8');
+    const block = /\n {8}code:\n[\s\S]*?enum:\n((?: {12}- \S+\n)+)/.exec(text);
+    const documented = new Set(
+      (block?.[1] ?? '').split('\n').map((l) => l.trim().replace(/^- /, '')),
+    );
+    const named = [
+      ...text.matchAll(/`[1-5][0-9]{2}\s+([A-Z][A-Z_]{3,})`/g),
+    ].map((m) => m[1]);
+    expect(named).toContain('IDENTIFIER_HASHING_UNAVAILABLE');
+    expect([...new Set(named)].filter((c) => !documented.has(c))).toEqual([]);
+  });
+
   it('a listed gap is really missing (remove it when it is built)', () => {
     const done = new Set(implemented.map((r) => r.key));
     expect(Object.keys(GAPS).filter((k) => done.has(k))).toEqual([]);
