@@ -921,11 +921,10 @@ paths:
       summary: Agents with a payable balance for a period
       operationId: adminPayoutsPayable
       x-permission: payout.view
-      x-readiness: not-yet-implementable
       description: |
-        **Not yet implementable:** needs the commission and payout tables and
-        the settings seed (`payout.minimum_amount_paise`,
-        `agent.payout_details_wait_hours`, `payout.tax_withholding`).
+        Needs the settings seed (`payout.minimum_amount_paise`,
+        `agent.payout_details_wait_hours`, `payout.tax_withholding`); without
+        them 503 `SETTINGS_NOT_CONFIGURED`.
 
         For each agent with approved, unpaid commissions: the balance, and
         whether a payout can be created now with **every** reason it cannot
@@ -1502,7 +1501,11 @@ components:
 
     PayoutIneligibleReason:
       type: string
-      enum: [AGENT_NOT_PAYABLE, PAN_NOT_VERIFIED, DETAILS_NOT_VERIFIED, WAIT_NOT_OVER, NOTHING_TO_PAY, BELOW_MINIMUM, PAYOUT_EXISTS]
+      description: |
+        TAX_RULE_UNSUPPORTED while payout.tax_withholding is set (the rule is
+        not built yet); LEDGER_BALANCE_TOO_LOW when an earlier clawback left
+        the ledger below the balance (the same check as creating the payout).
+      enum: [AGENT_NOT_PAYABLE, PAN_NOT_VERIFIED, DETAILS_NOT_VERIFIED, WAIT_NOT_OVER, NOTHING_TO_PAY, BELOW_MINIMUM, PAYOUT_EXISTS, TAX_RULE_UNSUPPORTED, LEDGER_BALANCE_TOO_LOW]
 
     PayoutRefusalReason:
       description: A reason a payout cannot be created, from `decidePayoutEligibility` and `planPayout`.

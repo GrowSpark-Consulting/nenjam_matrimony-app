@@ -169,56 +169,14 @@ export function implementedRoutes(): ImplementedRoute[] {
   return routes;
 }
 
-const ROUTES_BRANCH = 'feat/agent-routes-flagged';
-const ADMIN_BRANCH = 'feat/agent-admin-routes-rest';
+/**
+ * Contract routes that may be missing on this branch, and why (the branch
+ * that brings them). Empty: every route is on main.
+ */
+const PENDING: Record<string, string> = {};
 
-/** Contract routes that may be missing on this branch, and why. */
-const PENDING: Record<string, string> = Object.fromEntries<string>(
-  [
-    'POST /agent/auth/otp/request',
-    'POST /agent/auth/otp/verify',
-    'POST /agent/auth/refresh',
-    'POST /agent/auth/logout',
-    'POST /agent/application',
-    'GET /agent/me',
-    'PATCH /agent/me/payout-details',
-    'GET /agent/config',
-    'GET /agent/referral-links',
-    'GET /agent/referrals',
-    'GET /agent/referrals/{id}',
-    'POST /referrals/codes/validate',
-    'POST /registration/referral-code',
-  ]
-    .map((k): [string, string] => [k, ROUTES_BRANCH])
-    .concat(
-      [
-        'POST /admin/agents/{id}/pause',
-        'POST /admin/agents/{id}/resume',
-        'POST /admin/agents/{id}/terminate',
-        'POST /admin/agents/{id}/codes/replace',
-        'POST /admin/agents/{id}/payout-details/verify',
-        'POST /admin/agents/{id}/reveal',
-        'POST /admin/agents/{id}/pan/verify',
-        'GET /admin/agents/{id}/referrals',
-        'POST /admin/referrals/{id}/correct',
-        'GET /admin/commissions',
-        'POST /admin/commissions/{id}/approve',
-        'POST /admin/commissions/{id}/cancel',
-        'POST /admin/commissions/{id}/override',
-        'GET /admin/payouts',
-        'POST /admin/payouts',
-        'GET /admin/payouts/{id}',
-        'POST /admin/payouts/{id}/mark-paid',
-        'POST /admin/payouts/{id}/cancel',
-      ].map((k): [string, string] => [k, ADMIN_BRANCH]),
-    ),
-);
-
-/** Contract routes deliberately not built yet. */
-const GAPS: Record<string, string> = {
-  'GET /admin/payouts/payable':
-    'needs a cross-agent payable query (new repository method); not built',
-};
+/** Contract routes deliberately not built yet. Empty: every route is built. */
+const GAPS: Record<string, string> = {};
 
 const contract = [
   ...readContract('agent-api.openapi.yaml', 'agent'),
@@ -337,5 +295,7 @@ describe('agent-program routes conform to the contracts', () => {
     expect(Object.keys(GAPS).filter((k) => done.has(k))).toEqual([]);
     expect(Object.keys(GAPS).filter((k) => !byKey.has(k))).toEqual([]);
     expect(Object.keys(PENDING).filter((k) => !byKey.has(k))).toEqual([]);
+    // A route that is implemented is no longer pending: remove it from PENDING.
+    expect(Object.keys(PENDING).filter((k) => done.has(k))).toEqual([]);
   });
 });

@@ -103,6 +103,39 @@ export interface AdminPayoutWithDestination extends AdminPayout {
   destination: PayoutDestination;
 }
 
+const PERIOD = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** An opaque cursor over agent ids; a malformed one is VALIDATION_FAILED. */
+function decodeAgentCursor(cursor: string | undefined): string | undefined {
+  if (!cursor) return undefined;
+  const id = Buffer.from(cursor, 'base64url').toString('utf8');
+  if (!/^[\w-]{1,64}$/.test(id)) {
+    throw new AgentMoneyError('VALIDATION_FAILED', { fields: ['cursor'] });
+  }
+  return id;
+}
+
+/** The contract's PayableAgent. */
+export interface AdminPayableAgent {
+  agentId: string;
+  agentName: string;
+  agentCode: string | null;
+  agentStatus: string;
+  period: string;
+  balancePaise: number;
+  commissionCount: number;
+  panVerified: boolean;
+  payoutDetails: {
+    method: string;
+    display: string;
+    verifiedAt: string | null;
+    changedAt: string;
+  } | null;
+  eligible: boolean;
+  reasons: string[];
+  warnings: string[];
+}
+
 export class AgentAdminPayoutService {
   constructor(private readonly deps: AgentAdminPayoutServiceDeps) {}
 
@@ -129,6 +162,79 @@ export class AgentAdminPayoutService {
         nextCursor:
           rows.length > limit && last
             ? encodeCursor({ at: last.createdAt, id: last.id })
+            : null,
+      };
+    });
+  }
+
+  /**
+   * GET /admin/payouts/payable: the agents with approved, unpaid commission,
+   * each with its balance for [period] and EVERY reason a payout cannot be
+   * created now (the payout service's own judgement). Paged by agent id;
+   * "eligible" filters the page, so a page may be shorter than the limit.
+   */
+  async listPayable(
+    actor: AdminActor,
+    query: {
+      period: string;
+      eligible?: boolean;
+      cursor?: string;
+      limit?: number;
+    },
+  ): Promise<{ items: AdminPayableAgent[]; nextCursor: string | null }> {
+    if (typeof query.period !== 'string' || !PERIOD.test(query.period)) {
+      throw new AgentMoneyError('VALIDATION_FAILED', { fields: ['period'] });
+    }
+    const limit = pageLimit(query.limit);
+    const afterAgentId = decodeAgentCursor(query.cursor);
+    return this.deps.uow.run(async (tx) => {
+      await requirePermission(this.deps.permission, actor, PERM.payoutView, tx);
+      // Settings first: a missing one is 503 even when nobody is payable.
+      await this.deps.payoutService.payoutSettings();
+      const ids = await this.deps.commissions.listAgentIdsWithPayable(
+        { afterAgentId, limit: limit + 1 },
+        tx,
+      );
+      const page = ids.slice(0, limit);
+      const items: AdminPayableAgent[] = [];
+      for (const agentId of page) {
+        const a = await this.deps.payoutService.assess(
+          agentId,
+          query.period,
+          tx,
+        );
+        if (a === null) continue;
+        if (query.eligible !== undefined && a.eligible !== query.eligible)
+          continue;
+        const codes = await this.deps.codes.listByAgent(agentId, tx);
+        items.push({
+          agentId,
+          agentName: a.agent.name,
+          agentCode: codes.find((c) => c.isPrimary)?.code ?? null,
+          agentStatus: a.agent.status,
+          period: query.period,
+          balancePaise: a.balancePaise,
+          commissionCount: a.commissionCount,
+          panVerified: a.agent.panVerifiedAt !== null,
+          payoutDetails: a.details
+            ? {
+                method: a.details.method,
+                display: a.details.display,
+                verifiedAt: a.details.verifiedAt?.toISOString() ?? null,
+                changedAt: a.details.changedAt.toISOString(),
+              }
+            : null,
+          eligible: a.eligible,
+          reasons: a.reasons,
+          warnings: a.warnings,
+        });
+      }
+      const last = page[page.length - 1];
+      return {
+        items,
+        nextCursor:
+          ids.length > limit && last
+            ? Buffer.from(last).toString('base64url')
             : null,
       };
     });

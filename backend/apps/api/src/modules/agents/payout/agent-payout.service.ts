@@ -31,6 +31,7 @@ import type {
 import {
   AgentConflictError,
   type AgentPayoutDetailsRepository,
+  type AgentRecord,
   type AgentRepository,
 } from '../ports/agent-data-ports';
 import type { AgentClock } from '../ports/agent-infra-ports';
@@ -101,6 +102,18 @@ export interface CancelPayoutInput {
   tx?: AgentTx;
 }
 
+/** One agent's payable position for a period (read only). */
+export interface PayoutAssessment {
+  agent: AgentRecord;
+  details: Awaited<ReturnType<AgentPayoutDetailsRepository['find']>>;
+  commissionCount: number;
+  balancePaise: number;
+  eligible: boolean;
+  /** decidePayoutEligibility's reasons, then TAX_RULE_UNSUPPORTED, LEDGER_BALANCE_TOO_LOW. */
+  reasons: string[];
+  warnings: string[];
+}
+
 export class AgentPayoutService {
   private readonly newId: () => string;
 
@@ -109,6 +122,96 @@ export class AgentPayoutService {
     options: { newId?: () => string } = {},
   ) {
     this.newId = options.newId ?? randomUUID;
+  }
+
+  /**
+   * The payout settings, or AgentConfigError naming every missing one
+   * (`payout.tax_withholding` legitimately stays null: "not decided").
+   */
+  async payoutSettings(): Promise<{
+    minimumPaise: number;
+    waitHours: number;
+    taxWithholding: unknown;
+  }> {
+    const raw = await this.deps.settings.getMany([
+      PAYOUT_MINIMUM_AMOUNT_PAISE_KEY,
+      AGENT_PAYOUT_DETAILS_WAIT_HOURS_KEY,
+      PAYOUT_TAX_WITHHOLDING_KEY,
+    ]);
+    const { settings } = parseAgentProgramSettings(raw);
+    const missing = [
+      settings.payoutMinimumAmountPaise === undefined &&
+        PAYOUT_MINIMUM_AMOUNT_PAISE_KEY,
+      settings.agentPayoutDetailsWaitHours === undefined &&
+        AGENT_PAYOUT_DETAILS_WAIT_HOURS_KEY,
+    ].filter((k): k is string => typeof k === 'string');
+    if (missing.length > 0) throw new AgentConfigError(missing);
+    const taxWithholding = raw[PAYOUT_TAX_WITHHOLDING_KEY] ?? null;
+    return {
+      minimumPaise: settings.payoutMinimumAmountPaise as number,
+      waitHours: settings.agentPayoutDetailsWaitHours as number,
+      taxWithholding,
+    };
+  }
+
+  /**
+   * What GET /admin/payouts/payable shows for one agent and period: the
+   * balance and EVERY reason a payout cannot be created now, judged exactly
+   * as create() would (the same settings, eligibility, plan and ledger
+   * checks), without writing anything. Null when the agent does not exist.
+   */
+  async assess(
+    agentId: string,
+    period: string,
+    tx?: AgentTx,
+  ): Promise<PayoutAssessment | null> {
+    const { minimumPaise, waitHours, taxWithholding } =
+      await this.payoutSettings();
+
+    const agent = await this.deps.agents.findById(agentId, tx);
+    if (agent === null) return null;
+    const details = await this.deps.payoutDetails.find(agent.id, tx);
+    const commissions = await this.deps.commissions.listPayableByAgent(
+      agent.id,
+      tx,
+    );
+    const existing = await this.deps.payouts.findActiveByAgentPeriod(
+      agent.id,
+      period,
+      tx,
+    );
+    const balancePaise = commissions.reduce(
+      (sum, c) => sum + (c.creditedPaise - c.reversedPaise),
+      0,
+    );
+    const eligibility = decidePayoutEligibility({
+      agentStatus: agent.status,
+      panVerified: agent.panVerifiedAt !== null,
+      payoutDetailsVerified: details?.verifiedAt != null,
+      payoutDetailsChangedAt: details?.changedAt ?? null,
+      waitHours,
+      now: this.deps.clock.now(),
+      balancePaise,
+      minimumPaise,
+      hasPayoutForPeriod: existing !== null,
+    });
+    const reasons: string[] = [...eligibility.reasons];
+    if (taxWithholding !== null) reasons.push('TAX_RULE_UNSUPPORTED');
+    if (
+      reasons.length === 0 &&
+      (await this.deps.ledger.balance(agent.id, tx)) < balancePaise
+    ) {
+      reasons.push('LEDGER_BALANCE_TOO_LOW');
+    }
+    return {
+      agent,
+      details,
+      commissionCount: commissions.length,
+      balancePaise,
+      eligible: reasons.length === 0,
+      reasons,
+      warnings: taxWithholding === null ? ['TAX_RULE_NOT_SET'] : [],
+    };
   }
 
   async create(

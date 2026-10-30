@@ -202,6 +202,15 @@ export interface CommissionRepository {
     agentId: string,
     tx?: AgentTx,
   ): Promise<CommissionRecord[]>;
+  /**
+   * The agents that have at least one APPROVED commission not in any payout,
+   * by agent id ascending, after [afterAgentId] when given, at most [limit].
+   * For the payable list (a page of agents, not of commissions).
+   */
+  listAgentIdsWithPayable(
+    input: { afterAgentId?: string; limit: number },
+    tx?: AgentTx,
+  ): Promise<string[]>;
   listByPayout(payoutId: string, tx?: AgentTx): Promise<CommissionRecord[]>;
   /** Newest first, ordered by (createdAt, id) descending. */
   listPage(

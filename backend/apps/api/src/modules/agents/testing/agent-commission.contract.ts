@@ -381,6 +381,34 @@ export function defineAgentCommissionContract(
         expect(second.map((c) => c.id)).toEqual(['com-05', 'com-06']);
       });
 
+      it('listAgentIdsWithPayable pages the agents with approved, unattached commissions', async () => {
+        await w.commissions.create(commission(1, { status: 'ON_HOLD' }));
+        expect(
+          await w.commissions.listAgentIdsWithPayable({ limit: 10 }),
+        ).toEqual([]);
+        await w.commissions.create(commission(2, { status: 'APPROVED' }));
+        await w.commissions.create(commission(3, { status: 'APPROVED' }));
+        await w.commissions.create(commission(7, { status: 'APPROVED' })); // agent-2
+        expect(
+          await w.commissions.listAgentIdsWithPayable({ limit: 10 }),
+        ).toEqual(['agent-1', 'agent-2']);
+        expect(
+          await w.commissions.listAgentIdsWithPayable({ limit: 1 }),
+        ).toEqual(['agent-1']);
+        expect(
+          await w.commissions.listAgentIdsWithPayable({
+            afterAgentId: 'agent-1',
+            limit: 10,
+          }),
+        ).toEqual(['agent-2']);
+        // In a payout already: not payable.
+        await w.payouts.create(payout(1, { agentId: 'agent-2' }));
+        await w.commissions.attachToPayout(['com-07'], 'po-01');
+        expect(
+          await w.commissions.listAgentIdsWithPayable({ limit: 10 }),
+        ).toEqual(['agent-1']);
+      });
+
       it("listPayableByAgent returns only that agent's approved, unattached commissions", async () => {
         await w.commissions.create(commission(1, { status: 'APPROVED' }));
         await w.commissions.create(commission(2, { status: 'ON_HOLD' }));

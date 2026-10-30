@@ -5,8 +5,7 @@
  * permission; payout create, mark-paid and cancel need payout.execute with a
  * fresh step-up (AdminGuard, and the service again). A payout's destination
  * is included only with payout.execute AND a fresh step-up (the service);
- * otherwise it is left out, 200, and no audit row. GET /admin/payouts/payable
- * is NOT here yet (see the report: it needs a cross-agent query).
+ * otherwise it is left out, 200, and no audit row.
  */
 import {
   Body,
@@ -39,6 +38,7 @@ import { AgentAdminRestDeps } from './agent-admin-rest.wiring';
 import {
   AdminCommissionOverrideDto,
   AdminCommissionsQueryDto,
+  AdminPayableQueryDto,
   AdminPayoutCreateDto,
   AdminPayoutMarkPaidDto,
   AdminPayoutsQueryDto,
@@ -166,6 +166,18 @@ export class AgentAdminMoneyController {
     );
     response.status(created ? HttpStatus.CREATED : HttpStatus.OK);
     return payout;
+  }
+
+  // Before 'payouts/:id', so "payable" is not read as an id.
+  @Get('payouts/payable')
+  @RequirePermissions('payout.view')
+  @ApiOperation({ summary: 'Agents with a payable balance for a period' })
+  payable(
+    @Query() query: AdminPayableQueryDto,
+    @CurrentAdmin() admin: AuthenticatedAdmin,
+    @AdminContext() context: AdminRequestContext,
+  ) {
+    return this.rest.payouts.listPayable(restActorOf(admin, context), query);
   }
 
   @Get('payouts/:id')
