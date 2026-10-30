@@ -159,6 +159,50 @@ describe('validationSchema', () => {
     });
   });
 
+  describe('secrets never appear in a validation error', () => {
+    const messageFor = (env: Record<string, string>) =>
+      validationSchema.validate({ ...validEnv, ...env }, { abortEarly: false })
+        .error?.message ?? '';
+
+    it.each([
+      [
+        'IDENTIFIER_HASH_PEPPERS',
+        {
+          IDENTIFIER_HASH_PEPPERS:
+            'secret-pepper-value-that-is-long-enough-123',
+        },
+        'secret-pepper-value',
+      ],
+      [
+        'IDENTIFIER_HASH_PEPPERS',
+        {
+          IDENTIFIER_HASH_PEPPERS:
+            'IDENTIFIER_HASH_PEPPERS=v1:abcdefghijklmnopqrstuvwxyz0123456789',
+        },
+        'abcdefghijklmnop',
+      ],
+      [
+        'AGENT_OTP_DUMMY_CODE',
+        { AGENT_OTP_DUMMY_ENABLED: 'true', AGENT_OTP_DUMMY_CODE: '98765 ' },
+        '98765',
+      ],
+      [
+        'AGENT_OTP_DUMMY_PHONES',
+        {
+          NODE_ENV: 'production',
+          AGENT_OTP_DUMMY_ENABLED: 'true',
+          AGENT_OTP_DUMMY_CODE: '123456',
+          AGENT_OTP_DUMMY_PHONES: '44556-11223',
+        },
+        '44556',
+      ],
+    ])('%s: names the variable, never shows the value', (name, env, secret) => {
+      const message = messageFor(env);
+      expect(message).toContain(name);
+      expect(message).not.toContain(secret);
+    });
+  });
+
   describe('JOBS_SECRET', () => {
     const withSecret = (secret: string) =>
       validationSchema.validate(
