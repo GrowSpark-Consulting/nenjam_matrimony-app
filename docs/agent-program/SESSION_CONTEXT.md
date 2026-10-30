@@ -2,8 +2,8 @@
 
 Audience: the next Claude Code session working on the Nenjam Agent / Partner
 Program backend for Ishu. Read this, then `CLAUDE.md`, then continue without
-asking Ishu to repeat anything below. Updated 30 Oct 2026 (evening);
-`origin/main` was `5100e42` (PR #187). **Section 0 is the current state and
+asking Ishu to repeat anything below. Updated 30 Oct 2026 (late);
+`origin/main` was `fe51cd4` (PR #194). **Section 0 is the current state and
 wins wherever an older section below disagrees** (sections 1–10 are the 29 Oct
 record). Re-verify anything load-bearing against the code — things move.
 Statements marked **To be confirmed** could not be checked from git (GitHub,
@@ -13,7 +13,35 @@ not proven by this repository.
 
 ---
 
-## 0. State on 30 Oct, evening (read first)
+## 0. State on 30 Oct, late (read first)
+
+### In one look (late 30 Oct)
+
+- **Merged today, all of the agent backend so far:** #166–#168, #171, #172,
+  #174, #175, #179, #180, #181, #184, and later in the evening **#188 money
+  routes, #189 quote kill switch, #190 GST exclusive, #192 partial refund,
+  #194 remaining admin routes** (tables below).
+- **Open, ready to merge, either order:** #191
+  `feat/agent-referral-commission-status` (head `9c92a8d`), #195
+  `feat/agent-payouts-payable` (head `5a332f6`); both contain `main`
+  `fe51cd4` and merge into it and into each other without a conflict. Docs:
+  #193 `docs/agent-session-context-30oct-pm` (head `1dd0ad0`) and this branch,
+  `docs/agent-session-context-30oct-late`, which contains #193 (merge either
+  first; the other then has nothing left to conflict).
+- **`tsc --noEmit` fails on `main` `fe51cd4`** (one error in
+  `agent/agent-money.service.spec.ts`: #192 added two fields to
+  `CommissionRecord` after #188's spec was written). Tests and the build pass.
+  Merging #191 or #195 fixes it (both carry the same two-line fix).
+- **After #195 the route-vs-contract check has no PENDING or GAP entries**:
+  every route in both contracts is implemented, and the check fails if one
+  goes missing or an implemented route is listed as pending.
+- **Local DB suite is intermittent on this machine:** a per-test
+  `CREATE DATABASE ... TEMPLATE` sometimes takes longer than Jest's 5 s hook
+  timeout, and the next file then reuses that database's name ("already
+  exists"). No assertion fails; a re-run passes (#191: 138/138 twice; #195:
+  139/139 twice). Possible fix, not made: a longer hook timeout in
+  `apps/api/test/jest-agent-db.json` (ask Ishu).
+
 
 ### Merged to `main` on 30 Oct (from `git log --merges`)
 
