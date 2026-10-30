@@ -8,7 +8,7 @@ import { ApiError } from './api/errors';
 import { HttpClient } from './api/http';
 import { MockAgentApi } from './api/mockAgentApi';
 import { SessionStore } from './api/session';
-import type { AgentConfig, AgentProfile } from './api/types';
+import type { AgentConfig, AgentProfile, Balance } from './api/types';
 import { AppRoutes } from './App';
 import { PROGRAM_UNAVAILABLE_MESSAGE } from './components/ErrorText';
 import { PortalProvider, usePortal } from './state/PortalContext';
@@ -37,6 +37,12 @@ class ScriptedApi extends MockAgentApi {
   override getConfig(): Promise<AgentConfig> {
     this.cfgCalls += 1;
     return this.cfg ? this.cfg(this.cfgCalls) : super.getConfig();
+  }
+  balCalls = 0;
+  bal?: (call: number) => Promise<Balance>;
+  override getBalance(): Promise<Balance> {
+    this.balCalls += 1;
+    return this.bal ? this.bal(this.balCalls) : super.getBalance();
   }
   realMe() {
     return super.getMe();
@@ -231,6 +237,72 @@ describe('/agent/config failures', () => {
     await user.click(screen.getByRole('button', { name: 'test-reload' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(SERVER_TROUBLE);
     expect(screen.getByText(PENDING_TEXT)).toBeInTheDocument(); // stale copy still shown
+  });
+});
+
+describe('money routes', () => {
+  // Observed on Render: GET /agent/balance, /commissions and /payouts answer
+  // Nest's own 404 "Cannot GET ..." with no error code: built, not deployed
+  // yet. That is a "coming soon" state, never an error screen.
+  const notDeployed = (path: string) =>
+    new ApiError(404, `Cannot GET ${path}`, { code: null });
+
+  it('Home: referral code stays, balance shows coming soon (no alert, no retry)', async () => {
+    const { api, sessions, setup } = await signedIn('+919000000005');
+    api.bal = () => Promise.reject(notDeployed('/agent/balance'));
+    const log: string[] = [];
+    renderAt('/', setup, log);
+    expect(await screen.findByText('Your referral code')).toBeInTheDocument();
+    expect(await screen.findByText('Your balance will be available here soon.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(document.body).not.toHaveTextContent('Cannot GET');
+    expect(screen.getByLabelText('Referral code')).toBeInTheDocument();
+    await settle();
+    expect(api.balCalls).toBe(1);
+    expect(log).toEqual(['/']);
+    expect(sessions.get()).not.toBeNull();
+  });
+
+  it('Earnings: balance and commissions show coming soon, not errors', async () => {
+    const { api, setup } = await signedIn('+919000000005');
+    api.bal = () => Promise.reject(notDeployed('/agent/balance'));
+    api.getCommissions = () => Promise.reject(notDeployed('/agent/commissions'));
+    renderAt('/earnings', setup);
+    expect(await screen.findByText('Your balance will be available here soon.')).toBeInTheDocument();
+    expect(await screen.findByText('Your commissions list will be available here soon.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('No commissions yet.')).toBeNull();
+  });
+
+  it('Payouts: coming soon, not an error', async () => {
+    const { api, setup } = await signedIn('+919000000005');
+    api.getPayouts = () => Promise.reject(notDeployed('/agent/payouts'));
+    renderAt('/payouts', setup);
+    expect(await screen.findByText('Your payout history will be available here soon.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('a real 503 on the balance is still a retryable error that recovers', async () => {
+    const { api, setup } = await signedIn('+919000000005');
+    api.bal = (call) =>
+      call === 1 ? Promise.reject(programUnavailable()) : MockAgentApi.prototype.getBalance.call(api);
+    const user = userEvent.setup();
+    renderAt('/', setup);
+    expect(await screen.findByRole('alert')).toHaveTextContent(PROGRAM_UNAVAILABLE_MESSAGE);
+    expect(screen.getByLabelText('Referral code')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByText('Available')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(api.balCalls).toBe(2);
+  });
+
+  it('a 500 on the balance is recoverable and does not hide the referral code', async () => {
+    const { api, setup } = await signedIn('+919000000005');
+    api.bal = () => Promise.reject(serverError(500));
+    renderAt('/', setup);
+    expect(await screen.findByRole('alert')).toHaveTextContent(SERVER_TROUBLE);
+    expect(screen.getByLabelText('Referral code')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 });
 

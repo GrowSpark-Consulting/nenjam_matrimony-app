@@ -1,6 +1,8 @@
 import { QRCodeSVG } from 'qrcode.react';
 import { useCallback, useState } from 'react';
 import type { ReferralLink, ShareMessage } from '../api/types';
+import { isRouteNotDeployed } from '../api/errors';
+import { ComingSoon } from '../components/ComingSoon';
 import { ErrorText } from '../components/ErrorText';
 import { Loading } from '../components/Loading';
 import { useAsync } from '../components/useAsync';
@@ -35,7 +37,11 @@ export function HomePage() {
 
       <h2>Balance</h2>
       {balance.loading && <Loading />}
-      <ErrorText error={balance.error} onRetry={balance.reload} />
+      {isRouteNotDeployed(balance.error) ? (
+        <ComingSoon what="Your balance" />
+      ) : (
+        <ErrorText error={balance.error} onRetry={balance.reload} />
+      )}
       {balance.data && (
         <dl className="facts">
           <dt>On hold</dt>
