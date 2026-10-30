@@ -5,10 +5,13 @@
  * Built only from what is on main: the Prisma adapters for the Phase 1
  * tables, the permission and audit ports over admin RBAC and
  * `AdminAuditService` (both on the request's transaction, through our unit
- * of work), and the identifier hasher over `IdentifierHashService`. No agent
- * (member- or agent-facing) route is registered here.
+ * of work), and the identifier hasher over `IdentifierHashService`.
+ *
+ * The agent-facing and member referral routes live in `AgentProgramModule`
+ * (`http/`), imported only when AGENT_PROGRAM_ENABLED=true.
  */
 import { Module } from '@nestjs/common';
+import { ConditionalModule } from '@nestjs/config';
 import { PrismaService } from '@app/database';
 import { AdminModule } from '../admin/admin.module';
 import { AdminAuditService } from '../admin/services/admin-audit.service';
@@ -23,6 +26,7 @@ import {
   IdentifierHashAdapter,
   SystemClock,
 } from './adapters/admin/agent-admin-platform.adapters';
+import { AgentSettingValidators } from './adapters/platform/agent-platform.adapters';
 import { PrismaAgentAdminRead } from './adapters/prisma/prisma-agent-admin-read';
 import { PrismaAgentLedgerRepository } from './adapters/prisma/prisma-agent-ledger.repository';
 import { PrismaAgentMemberRead } from './adapters/prisma/prisma-agent-member-read';
@@ -44,6 +48,10 @@ import {
 } from './admin/agent-admin-rest.wiring';
 import { AgentCommissionEventsService } from './commission/agent-commission-events.service';
 import { AgentPaymentEventsSubscriber } from './commission/agent-payment-events.subscriber';
+import {
+  AgentProgramModule,
+  agentProgramEnabled,
+} from './http/agent-program.module';
 import { AgentReferralQuoteModule } from './quote/agent-referral-quote.module';
 
 @Module({
@@ -53,6 +61,9 @@ import { AgentReferralQuoteModule } from './quote/agent-referral-quote.module';
     SubscriptionModule,
     // The referral quote for the checkout (global; not an agent route).
     AgentReferralQuoteModule,
+    // The agent-facing and member referral routes: registered only when
+    // AGENT_PROGRAM_ENABLED=true; otherwise they do not exist (404).
+    ConditionalModule.registerWhen(AgentProgramModule, agentProgramEnabled),
   ],
   controllers: [
     AgentAdminController,
@@ -60,6 +71,8 @@ import { AgentReferralQuoteModule } from './quote/agent-referral-quote.module';
     AgentAdminMoneyController,
   ],
   providers: [
+    // Refuses a bad agent-program setting when an admin enters it.
+    AgentSettingValidators,
     {
       provide: AgentAdminRestDeps,
       inject: [

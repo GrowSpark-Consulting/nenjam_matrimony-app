@@ -25,6 +25,16 @@
 -dontwarn java.lang.invoke.**
 -dontwarn build.IgnoreJava8API
 
+# --- Razorpay Checkout (razorpay_flutter) -----------------------------------
+# The plugin README's rules: Checkout calls its result callbacks
+# (onPaymentSuccess / onPaymentError) by name. Its `-optimizations` line is a
+# ProGuard-only option that R8 ignores, so it is left out.
+-dontwarn com.razorpay.**
+-keep class com.razorpay.** { *; }
+-keepclasseswithmembers class * {
+  public void onPayment*(...);
+}
+
 # --- Kotlin metadata --------------------------------------------------------
 -keepattributes *Annotation*, InnerClasses, Signature, RuntimeVisible*Annotations
 

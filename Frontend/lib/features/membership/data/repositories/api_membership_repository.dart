@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_exception.dart';
@@ -9,7 +11,9 @@ import '../../domain/repositories/membership_repository.dart';
 /// ID token attached by `AuthInterceptor`). 4xx bodies become an
 /// [ApiException] through [unwrapOrThrow], which keeps the membership 403
 /// details. A 5xx (502 from Razorpay, 503 when payments aren't configured)
-/// surfaces as Dio's own exception.
+/// surfaces as Dio's own exception — except a checkout/verify 5xx whose body
+/// carries a stable `code` (e.g. `503 CHECKOUT_UNAVAILABLE`), which becomes an
+/// [ApiException] so the app can branch on that code.
 class ApiMembershipRepository implements MembershipRepository {
   ApiMembershipRepository(this._apiClient);
 
@@ -53,10 +57,22 @@ class ApiMembershipRepository implements MembershipRepository {
 
   @override
   Future<CheckoutSession> startCheckout(CheckoutRequest request) async {
-    final response = await _apiClient.post<Map<String, dynamic>>(
+    final response = await _postCheckout(
       ApiEndpoints.membershipCheckout,
-      data: request.toJson(),
+      request.toJson(),
     );
+    // A rejected referral code carries a `reason` the shared helper drops.
+    final data = response.data;
+    if (response.statusCode == 422 &&
+        data != null &&
+        data['code'] == kPromoCodeRejected) {
+      final message = data['message'];
+      final reason = data['reason'];
+      throw PromoCodeRejectedException(
+        message is String ? message : 'That code can’t be used.',
+        reason: reason is String && reason.isNotEmpty ? reason : null,
+      );
+    }
     return CheckoutSession.fromJson(
       unwrapOrThrow(response.statusCode, response.data) ?? const {},
     );
@@ -66,12 +82,27 @@ class ApiMembershipRepository implements MembershipRepository {
   Future<CheckoutVerifyResult> verifyCheckout(
     CheckoutVerifyRequest request,
   ) async {
-    final response = await _apiClient.post<Map<String, dynamic>>(
+    final response = await _postCheckout(
       ApiEndpoints.membershipCheckoutVerify,
-      data: request.toJson(),
+      request.toJson(),
     );
     return CheckoutVerifyResult.fromJson(
       unwrapOrThrow(response.statusCode, response.data) ?? const {},
     );
+  }
+
+  Future<Response<Map<String, dynamic>>> _postCheckout(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      return await _apiClient.post<Map<String, dynamic>>(path, data: body);
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['code'] is String) {
+        unwrapOrThrow<Object>(e.response?.statusCode, data);
+      }
+      rethrow;
+    }
   }
 }

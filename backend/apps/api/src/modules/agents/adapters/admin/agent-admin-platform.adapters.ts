@@ -10,7 +10,8 @@
  * - `AdminAuditAdapter`: `AdminAuditService.record(tx, entry)`, on the same
  *   transaction (a failed audit write rolls the change back).
  * - `IdentifierHashAdapter`: `IdentifierHashService.hashIdentifier` /
- *   `hashIdentifierAll` (503 while IDENTIFIER_HASH_PEPPERS is not set).
+ *   `hashIdentifierAll` (503 while IDENTIFIER_HASH_PEPPERS is not set; his
+ *   RangeError for a bad value becomes our VALIDATION_FAILED).
  * - `SystemClock`: the wall clock.
  */
 import { ForbiddenException } from '@nestjs/common';
@@ -22,6 +23,7 @@ import {
 } from '../../../admin/rbac/permissions';
 import type { IdentifierHashService } from '../../../platform/identifier-hash.service';
 import type { PrismaClient } from '@app/database';
+import { AgentServiceError } from '../../errors/agent-service-error';
 import type { AgentClock } from '../../ports/agent-infra-ports';
 import {
   AgentPermissionDeniedError,
@@ -110,11 +112,40 @@ export class IdentifierHashAdapter implements AgentIdentifierHasher {
   constructor(private readonly hashing: IdentifierHashService) {}
 
   hash(kind: AgentIdentifierKind, value: string): string {
-    return this.hashing.hashIdentifier(kind, value);
+    return invalidIdentifierAsValidation(kind, () =>
+      this.hashing.hashIdentifier(kind, value),
+    );
   }
 
   hashAll(kind: AgentIdentifierKind, value: string): string[] {
-    return this.hashing.hashIdentifierAll(kind, value);
+    return invalidIdentifierAsValidation(kind, () =>
+      this.hashing.hashIdentifierAll(kind, value),
+    );
+  }
+}
+
+const IDENTIFIER_FIELD: Record<AgentIdentifierKind, string> = {
+  PHONE: 'phone',
+  EMAIL: 'email',
+  PAN: 'pan',
+};
+
+/** His RangeError (an empty or malformed value) is the caller's mistake: our
+ *  VALIDATION_FAILED naming the field, never the value. His 503 and any other
+ *  error pass through unchanged. */
+function invalidIdentifierAsValidation<T>(
+  kind: AgentIdentifierKind,
+  run: () => T,
+): T {
+  try {
+    return run();
+  } catch (error) {
+    if (error instanceof RangeError) {
+      throw new AgentServiceError('VALIDATION_FAILED', {
+        fields: [IDENTIFIER_FIELD[kind]],
+      });
+    }
+    throw error;
   }
 }
 
