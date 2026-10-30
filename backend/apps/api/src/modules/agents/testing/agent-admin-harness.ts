@@ -10,6 +10,7 @@ import { AgentAdminService } from '../admin/agent-admin.service';
 import type { AdminActor } from '../admin/agent-admin-support';
 import type { AgentStatusHistoryPort } from '../ports/agent-money-ports';
 import { makeCommissionHarness, T0 } from './agent-commission-harness';
+import { AGENT_SEAL_PURPOSES } from '../ports/agent-secret-sealer.port';
 import { FakeAgentSecretSealer } from './fake-agent-secret-sealer';
 import {
   FakeAgentIdentifierHasher,
@@ -140,7 +141,7 @@ export function makeAdminHarness() {
     });
     return base.agents.update(agent.id, {
       panLast4: '234F',
-      panSealed: sealer.seal('ABCDE1234F'),
+      panSealed: sealer.seal(AGENT_SEAL_PURPOSES.pan, 'ABCDE1234F'),
     });
   };
 
@@ -154,6 +155,7 @@ export function makeAdminHarness() {
       agentId,
       method: 'UPI',
       detailsSealed: sealer.seal(
+        AGENT_SEAL_PURPOSES.payoutDetails,
         JSON.stringify({ upi: { vpa: 'ravi@okbank' } }),
       ),
       display: 'r***@okbank',
