@@ -87,10 +87,11 @@ export interface CommissionRecord {
   ruleValue: number;
   /** What the percentage was taken of; null while commission.base is not set. */
   basePaise: number | null;
-  /** Null until the base is known. Between 0 and `amountPaidPaise`. */
+  /** Null until the base is known. Between 0 and `amountPaidPaise` (GST included). */
   amountPaise: number | null;
+  /** What the member paid, GST INCLUDED (taxable amount + GST; prices are exclusive of GST). */
   amountPaidPaise: number;
-  /** The part of `amountPaidPaise` without GST, as stored on the payment. */
+  /** The taxable amount (list price minus the discount, before GST), as stored on the payment. */
   taxableAmountPaise: number;
   /** What has been credited to the agent's ledger for this commission. */
   creditedPaise: number;

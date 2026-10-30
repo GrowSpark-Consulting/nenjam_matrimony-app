@@ -31,10 +31,10 @@ describe('onPaymentSucceeded', () => {
       status: 'ON_HOLD',
       calcType: 'PERCENTAGE',
       ruleValue: 1000,
-      basePaise: 8051, // commission.base AMOUNT_PAID_EXCLUDING_GST: the stored taxable amount
-      amountPaise: 805, // 10% of 8051, rounded down
-      amountPaidPaise: 9500,
-      taxableAmountPaise: 8051,
+      basePaise: 9500, // commission.base AMOUNT_PAID_EXCLUDING_GST: the stored taxable amount
+      amountPaise: 950, // 10% of 9500
+      amountPaidPaise: 11210, // taxable 9500 + GST 1710: what the member paid
+      taxableAmountPaise: 9500,
       creditedPaise: 0,
       reversedPaise: 0,
       reviewReasons: [],
@@ -53,8 +53,23 @@ describe('onPaymentSucceeded', () => {
     h.settings.set('commission.base', 'AMOUNT_PAID');
     await h.events.onPaymentSucceeded(h.paymentSucceeded(1));
     expect(await h.commissions.findByPaymentId('pay-1')).toMatchObject({
-      basePaise: 9500,
-      amountPaise: 950,
+      basePaise: 11210, // what the member paid, GST included
+      amountPaise: 1121,
+    });
+  });
+
+  it('the cap is what the member paid, GST included: a 100% rule on that base is not cut to the taxable amount', async () => {
+    const hh = makeCommissionHarness();
+    hh.seedPolicy({ value: 10_000 });
+    await hh.seedAgent();
+    await hh.seedAttribution(1);
+    hh.settings.set('commission.base', 'AMOUNT_PAID');
+    await hh.events.onPaymentSucceeded(hh.paymentSucceeded(1));
+    expect(await hh.commissions.findByPaymentId('pay-1')).toMatchObject({
+      basePaise: 11210,
+      amountPaise: 11210,
+      amountPaidPaise: 11210,
+      taxableAmountPaise: 9500,
     });
   });
 
@@ -67,15 +82,15 @@ describe('onPaymentSucceeded', () => {
       expect(await h.commissions.findByPaymentId('pay-1')).toMatchObject({
         basePaise: null,
         amountPaise: null,
-        taxableAmountPaise: 8051,
+        taxableAmountPaise: 9500,
       });
     },
   );
 
   it('NEVER recomputes the tax: the stored taxable amount is used as given', async () => {
-    // 18% of 9500 would give 8051, but the payment stored something else.
+    // GST is added on top: 18% of 9500 would be 1710, but the payment stored something else.
     await h.events.onPaymentSucceeded(
-      h.paymentSucceeded(1, { taxableAmountPaise: 5_000, taxPaise: 4_500 }),
+      h.paymentSucceeded(1, { taxableAmountPaise: 5_000, taxPaise: 6_210 }),
     );
     expect(await h.commissions.findByPaymentId('pay-1')).toMatchObject({
       basePaise: 5000,
@@ -277,7 +292,7 @@ describe('onPaymentSucceeded', () => {
       expect(await h.commissions.findByPaymentId('pay-1')).toMatchObject({
         policyVersionId: 'pol-1',
         ruleValue: 1000,
-        amountPaise: 805,
+        amountPaise: 950,
       });
     });
 
@@ -341,63 +356,63 @@ describe('onPaymentRefunded', () => {
   it('a full refund of an approved commission reverses what was credited', async () => {
     const c = await approved();
     const result = await h.events.onPaymentRefunded(h.paymentRefunded(1, 1));
-    expect(result).toMatchObject({ outcome: 'REVERSED', reversalPaise: 805 });
+    expect(result).toMatchObject({ outcome: 'REVERSED', reversalPaise: 950 });
     expect(await h.commissions.findById(c.id)).toMatchObject({
       status: 'REVERSED',
-      reversedPaise: 805,
-      creditedPaise: 805,
+      reversedPaise: 950,
+      creditedPaise: 950,
     });
     expect(await h.ledger.balance('agent-1')).toBe(0);
-    expect((await h.ledger.findByKey('reversal:rf-1'))?.amountPaise).toBe(-805);
+    expect((await h.ledger.findByKey('reversal:rf-1'))?.amountPaise).toBe(-950);
   });
 
   it('a partial refund reverses a proportional part and keeps the status', async () => {
     const c = await approved();
     const result = await h.events.onPaymentRefunded(
       h.paymentRefunded(1, 1, {
-        refundedPaise: 2_375,
-        totalRefundedPaise: 2_375,
+        refundedPaise: 2_802,
+        totalRefundedPaise: 2_802,
         fullyRefunded: false,
       }),
     );
-    // floor(805 * 2375 / 9500) = 201
-    expect(result).toMatchObject({ outcome: 'REVERSED', reversalPaise: 201 });
+    // floor(950 * 2802 / 11210) = 237
+    expect(result).toMatchObject({ outcome: 'REVERSED', reversalPaise: 237 });
     expect(await h.commissions.findById(c.id)).toMatchObject({
       status: 'APPROVED',
-      reversedPaise: 201,
+      reversedPaise: 237,
     });
-    expect(await h.ledger.balance('agent-1')).toBe(805 - 201);
+    expect(await h.ledger.balance('agent-1')).toBe(950 - 237);
   });
 
   it('several partial refunds and then the full one add up to exactly what was credited', async () => {
     const c = await approved();
     await h.events.onPaymentRefunded(
       h.paymentRefunded(1, 1, {
-        refundedPaise: 2_375,
-        totalRefundedPaise: 2_375,
+        refundedPaise: 2_802,
+        totalRefundedPaise: 2_802,
         fullyRefunded: false,
       }),
     );
     await h.events.onPaymentRefunded(
       h.paymentRefunded(1, 2, {
-        refundedPaise: 2_375,
-        totalRefundedPaise: 4_750,
+        refundedPaise: 2_803,
+        totalRefundedPaise: 5_605,
         fullyRefunded: false,
       }),
     );
     // After the second partial refund the total refunded is half the payment,
-    // so half of the credit (floor(805 * 4750 / 9500) = 402) is reversed.
-    expect((await h.commissions.findById(c.id))?.reversedPaise).toBe(402);
+    // so half of the credit (floor(950 * 5605 / 11210) = 475) is reversed.
+    expect((await h.commissions.findById(c.id))?.reversedPaise).toBe(475);
     await h.events.onPaymentRefunded(
       h.paymentRefunded(1, 3, {
-        refundedPaise: 4_750,
-        totalRefundedPaise: 9_500,
+        refundedPaise: 5_605,
+        totalRefundedPaise: 11_210,
         fullyRefunded: true,
       }),
     );
     expect(await h.commissions.findById(c.id)).toMatchObject({
       status: 'REVERSED',
-      reversedPaise: 805,
+      reversedPaise: 950,
     });
     expect(await h.ledger.balance('agent-1')).toBe(0);
   });
@@ -405,14 +420,14 @@ describe('onPaymentRefunded', () => {
   it('a replayed refund reverses nothing twice', async () => {
     await approved();
     const event = h.paymentRefunded(1, 1, {
-      refundedPaise: 2_375,
-      totalRefundedPaise: 2_375,
+      refundedPaise: 2_802,
+      totalRefundedPaise: 2_802,
       fullyRefunded: false,
     });
     await h.events.onPaymentRefunded(event);
     const again = await h.events.onPaymentRefunded(event);
     expect(again.outcome).toBe('ALREADY_PROCESSED');
-    expect(await h.ledger.balance('agent-1')).toBe(805 - 201);
+    expect(await h.ledger.balance('agent-1')).toBe(950 - 237);
     expect(h.ledger.all.filter((e) => e.type === 'REVERSAL')).toHaveLength(1);
   });
 
@@ -422,7 +437,7 @@ describe('onPaymentRefunded', () => {
     await h.ledger.append({
       agentId: 'agent-1',
       type: 'PAYOUT_DEBIT',
-      amountPaise: -805,
+      amountPaise: -950,
       idempotencyKey: 'payout:x',
       commissionId: null,
       refundId: null,
@@ -433,7 +448,7 @@ describe('onPaymentRefunded', () => {
       reason: null,
     });
     await h.events.onPaymentRefunded(h.paymentRefunded(1, 1));
-    expect(await h.ledger.balance('agent-1')).toBe(-805);
+    expect(await h.ledger.balance('agent-1')).toBe(-950);
     expect((await h.commissions.findById(c.id))?.status).toBe('REVERSED');
   });
 
@@ -466,8 +481,8 @@ describe('onPaymentRefunded', () => {
     await expect(
       h.events.onPaymentRefunded(
         h.paymentRefunded(1, 1, {
-          refundedPaise: 2_375,
-          totalRefundedPaise: 2_375,
+          refundedPaise: 2_802,
+          totalRefundedPaise: 2_802,
           fullyRefunded: false,
         }),
       ),

@@ -90,6 +90,11 @@ export interface ReferralQuote {
   discountBps: number;
   discountPaise: number;
   discountSource: ReferralDiscount['source'];
+  /**
+   * The list price minus the discount: the TAXABLE amount. Plan prices are
+   * exclusive of GST, so GST is added on top of this (the payments code
+   * computes and stores it); this is not what the member pays.
+   */
   taxableAfterDiscountPaise: number;
   /** The typed code to hold on the payment so it can be attached when paid. */
   heldReferralCodeId?: string;

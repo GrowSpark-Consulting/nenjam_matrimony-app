@@ -102,7 +102,7 @@ in code. The setting keys below are the ones defined in
 | Auto-approve commissions after the hold | On (an admin can switch to manual later, without a deploy) | `commission.auto_approve` = `true` | Decided |
 | Wait after payout details change | 72 hours | `agent.payout_details_wait_hours` = `72` | Decided |
 | Discount only inside the credit window | Yes (default) | `referral.discount_only_in_credit_window` = `true` | Default set; **Pending decision** (Raja to confirm) |
-| Commission base (with or without GST) | 10% of the amount **without GST** | `commission.base` = `AMOUNT_PAID_EXCLUDING_GST` and `commission.base_provisional` = `false`. The commission handler computes `base = amountPaid` (after the referral discount) minus the GST part (`taxPaise` from the `PaymentSucceeded` event) | Decided (Raja, 28 Oct) |
+| Commission base (with or without GST) | 10% of the amount **without GST**. Plan prices are **exclusive** of GST (Raja, 29 Oct): GST is added on top, so the member pays taxable + GST. `quoteReferral` returns `taxableAfterDiscountPaise` (before GST), never what the member pays | `commission.base` = `AMOUNT_PAID_EXCLUDING_GST` and `commission.base_provisional` = `false`. The commission handler computes `base = amountPaid` (after the referral discount) minus the GST part (`taxPaise` from the `PaymentSucceeded` event) | Decided (Raja, 28 Oct) |
 | Tax withholding (TDS) | — | `payout.tax_withholding` (shape unknown, passed through as-is) | **Pending decision** (CA) |
 
 Note: the settings list also contains `referral.discount_stacks_with_coupons`.

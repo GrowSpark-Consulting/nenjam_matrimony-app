@@ -12,9 +12,12 @@
  *   state (an already cancelled commission is left alone).
  *
  * Amounts come from the event as stored on the payment and are used as they
- * are: the tax is never recomputed. The commission base follows the
+ * are: the tax is never recomputed. Plan prices are EXCLUSIVE of GST (Raja,
+ * 29 Oct): the member pays `taxableAmountPaise + taxPaise` = `amountPaidPaise`,
+ * and GST is added on top, never found inside. The commission base follows the
  * `commission.base` setting: AMOUNT_PAID_EXCLUDING_GST uses
- * `taxableAmountPaise`, AMOUNT_PAID uses `amountPaidPaise`, and no setting
+ * `taxableAmountPaise`, AMOUNT_PAID uses `amountPaidPaise` (GST included, what
+ * the member paid; the cap uses it too), and no setting
  * leaves the amount empty (filled by the daily approval once it is set).
  */
 import { randomUUID } from 'node:crypto';
@@ -455,8 +458,9 @@ function checkSucceeded(event: PaymentSucceeded): Date {
   assertPaise('amountPaidPaise', event.amountPaidPaise);
   assertPaise('taxPaise', event.taxPaise);
   assertPaise('taxableAmountPaise', event.taxableAmountPaise);
-  // The two parts are stored on the payment and add up to what was paid. A
-  // mismatch is a broken event: refuse it rather than pay on wrong numbers.
+  // The member pays the taxable amount plus the GST added on top, so the two
+  // parts add up to what was paid. A mismatch is a broken event: refuse it
+  // rather than pay on wrong numbers.
   if (event.taxPaise + event.taxableAmountPaise !== event.amountPaidPaise) {
     throw new RangeError(
       'taxPaise and taxableAmountPaise must add up to amountPaidPaise.',

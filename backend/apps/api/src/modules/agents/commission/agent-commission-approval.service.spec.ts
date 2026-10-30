@@ -39,13 +39,13 @@ describe('runDailyApproval', () => {
     const commission = await h.commissions.findByPaymentId('pay-1');
     expect(commission).toMatchObject({
       status: 'APPROVED',
-      creditedPaise: 805,
+      creditedPaise: 950,
       approvedAt: HOLD_END,
     });
     const credit = await h.ledger.findByKey(`credit:${commission!.id}`);
     expect(credit).toMatchObject({
       type: 'CREDIT',
-      amountPaise: 805,
+      amountPaise: 950,
       calcType: 'PERCENTAGE',
       value: 1000,
       ruleSnapshot: {
@@ -57,7 +57,7 @@ describe('runDailyApproval', () => {
     expect(h.audit.entries.map((e) => e.action)).toContain(
       'COMMISSION_APPROVED',
     );
-    expect(await h.ledger.balance('agent-1')).toBe(805);
+    expect(await h.ledger.balance('agent-1')).toBe(950);
   });
 
   it('running it again credits nothing more', async () => {
@@ -65,14 +65,14 @@ describe('runDailyApproval', () => {
     await run(HOLD_END);
     const second = await run(HOLD_END);
     expect(second.examined).toBe(0); // APPROVED is no longer open
-    expect(await h.ledger.balance('agent-1')).toBe(805);
+    expect(await h.ledger.balance('agent-1')).toBe(950);
     expect(h.ledger.all).toHaveLength(1);
   });
 
   it('two runs at once credit the commission once', async () => {
     await h.seedCommission(1);
     await Promise.all([run(HOLD_END), run(HOLD_END)]);
-    expect(await h.ledger.balance('agent-1')).toBe(805);
+    expect(await h.ledger.balance('agent-1')).toBe(950);
     expect(h.ledger.all).toHaveLength(1);
   });
 
@@ -145,9 +145,24 @@ describe('runDailyApproval', () => {
       expect(await run(HOLD_END)).toMatchObject({ approved: 1 });
       expect(await h.commissions.findByPaymentId('pay-1')).toMatchObject({
         status: 'APPROVED',
-        basePaise: 8051,
-        amountPaise: 805,
-        creditedPaise: 805,
+        basePaise: 9500,
+        amountPaise: 950,
+        creditedPaise: 950,
+      });
+    });
+
+    it('a late-filled amount is capped by what the member paid, GST included', async () => {
+      const hh = makeCommissionHarness();
+      hh.seedPolicy({ value: 10_000 });
+      await hh.seedAgent();
+      await hh.seedAttribution(1);
+      hh.settings.set('commission.base', null);
+      await hh.events.onPaymentSucceeded(hh.paymentSucceeded(1));
+      hh.settings.set('commission.base', 'AMOUNT_PAID');
+      await hh.approval.runDailyApproval(HOLD_END, 10);
+      expect(await hh.commissions.findByPaymentId('pay-1')).toMatchObject({
+        status: 'APPROVED',
+        amountPaise: 11210,
       });
     });
 
@@ -172,7 +187,7 @@ describe('runDailyApproval', () => {
         approved: 5,
         failedIds: [],
       });
-      expect(await h.ledger.balance('agent-1')).toBe(805 * 5);
+      expect(await h.ledger.balance('agent-1')).toBe(950 * 5);
     });
 
     it('one failing commission does not stop the others', async () => {
@@ -196,7 +211,7 @@ describe('runDailyApproval', () => {
       });
       expect(await status(2)).toBe('ON_HOLD');
       // The failed one left no credit behind.
-      expect(await h.ledger.balance('agent-1')).toBe(805 * 2);
+      expect(await h.ledger.balance('agent-1')).toBe(950 * 2);
     });
 
     it('losing a race on a commission counts it as failed, not credited twice', async () => {
