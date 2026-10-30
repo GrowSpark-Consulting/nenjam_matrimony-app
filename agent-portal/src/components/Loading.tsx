@@ -1,8 +1,11 @@
-/** A polite, screen-reader-announced loading line. */
-export function Loading({ label = 'Loading…' }: { label?: string }) {
+import { Skeleton } from './ui';
+
+/** A polite, screen-reader-announced loading line with a quiet placeholder. */
+export function Loading({ label = 'Loading…', lines = 2 }: { label?: string; lines?: number }) {
   return (
-    <p className="hint" role="status" aria-live="polite">
-      {label}
-    </p>
+    <div className="loading" role="status" aria-live="polite">
+      <span className="hint">{label}</span>
+      <Skeleton lines={lines} />
+    </div>
   );
 }
