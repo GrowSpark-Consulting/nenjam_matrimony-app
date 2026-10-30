@@ -2144,6 +2144,48 @@
   "membershipPurchaseFailed": "The payment didn't go through.",
   "membershipPurchaseContactSupport": "We couldn't confirm this payment. Please contact support.",
   "membershipPurchaseStartFailed": "Couldn't start the payment, try again.",
+  "membershipCheckoutPlanPrice": "Plan price",
+  "membershipCheckoutReferralDiscount": "Referral discount",
+  "membershipCheckoutGst": "GST ({rate}%)",
+  "@membershipCheckoutGst": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "membershipCheckoutTotal": "Total payable",
+  "membershipCheckoutPay": "Pay {amount}",
+  "@membershipCheckoutPay": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "membershipCheckoutVerifying": "Confirming your payment…",
+  "membershipCheckoutUnavailable": "Checkout isn't available right now. Try again shortly.",
+  "membershipPromoCodesUnavailable": "Referral codes can't be used yet.",
+  "membershipPromoCodeApplied": "Code {code} applied",
+  "@membershipPromoCodeApplied": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "membershipVerificationUncertain": "We couldn't confirm your payment yet. Please don't pay again: if money was taken, your plan will be activated.",
+  "membershipCheckAgain": "Check again",
+  "membershipCheckoutContinue": "Continue",
+  "membershipCheckoutActivating": "Payment received, activating your plan…",
+  "membershipPurchaseAlreadyApplied": "This payment has already been applied to your membership.",
+  "membershipPurchaseRefunded": "This payment was refunded, so no plan was added. Please contact support if you need help.",
+  "membershipPromoInvalid": "Code not found.",
+  "membershipPromoNotFirstPlan": "Codes apply to your first plan only.",
+  "membershipPromoAlreadyAttributed": "You're already linked to an agent; their discount applies automatically.",
+  "membershipPromoSelfReferral": "You can't use your own referral code.",
+  "membershipPromoAgentPaused": "This referral code can't be used right now.",
+  "membershipPromoPhoneNotVerified": "Verify your mobile number to use a referral code.",
   "membershipDenialTitle": "Your membership plan",
   "membershipDenialSeePlans": "See membership plans",
   "membershipDenialResetsOn": "Your allowance resets on {date}.",
