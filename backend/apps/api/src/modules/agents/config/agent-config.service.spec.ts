@@ -135,15 +135,45 @@ describe('AgentConfigService.getConfig', () => {
       [REFERRAL_MEMBER_DISCOUNT_BPS_KEY, 10_001],
       [REFERRAL_CREDIT_WINDOW_DAYS_KEY, -1],
       [PAYOUT_MINIMUM_AMOUNT_PAISE_KEY, 500.5],
-    ])('names %s when it is %p', async (key, value) => {
-      const { service } = make({ ...FULL_SETTINGS, [key]: value });
-      await expect(service.getConfig()).rejects.toThrow(RangeError);
-      await expect(service.getConfig()).rejects.toThrow(key);
-    });
+    ])(
+      'is unavailable (not a 500) and names %s as invalid when it is %p, never the value',
+      async (key, value) => {
+        const { service } = make({ ...FULL_SETTINGS, [key]: value });
+        const error = await service.getConfig().catch((e: unknown) => e);
+        expect(error).toBeInstanceOf(AgentConfigError);
+        expect((error as AgentConfigError).missing).toEqual([]);
+        expect((error as AgentConfigError).invalid).toEqual([key]);
+        expect((error as Error).message).toBe(
+          `Agent config is not available: invalid ${key}.`,
+        );
+        expect((error as Error).message).not.toContain(String(value));
+      },
+    );
 
-    it.each([-1, 1.5])('refuses hold days of %p', async (holdDays) => {
-      const { service } = make(FULL_SETTINGS, holdDays);
-      await expect(service.getConfig()).rejects.toThrow(RangeError);
+    it.each([-1, 1.5])(
+      'names the hold days as invalid when they are %p',
+      async (holdDays) => {
+        const { service } = make(FULL_SETTINGS, holdDays);
+        const error = await service.getConfig().catch((e: unknown) => e);
+        expect(error).toBeInstanceOf(AgentConfigError);
+        expect((error as AgentConfigError).invalid).toEqual([
+          'hold days of the active commission policy',
+        ]);
+      },
+    );
+
+    it('lists missing and invalid together', async () => {
+      const { service } = make(
+        {
+          [REFERRAL_MEMBER_DISCOUNT_BPS_KEY]: 'five',
+          [PAYOUT_MINIMUM_AMOUNT_PAISE_KEY]: null,
+        },
+        null,
+      );
+      const error = await service.getConfig().catch((e: unknown) => e);
+      expect((error as Error).message).toBe(
+        'Agent config is not available: missing referral.credit_window_days, payout.minimum_amount_paise, hold days of the active commission policy; invalid referral.member_discount_bps.',
+      );
     });
 
     it('is not broken by an unrelated invalid setting', async () => {
