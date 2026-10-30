@@ -43,23 +43,31 @@ window (**To be confirmed**; do not touch it). `platform_settings` holds the
 `IDENTIFIER_HASH_PEPPERS` and `JOBS_SECRET` are set on Render (per Ishu); the
 daily job runs at 02:00 IST and a manual run worked (per Shaaz).
 
-### Pushed branches, not merged yet (compare against the base shown)
+### Merged later on 30 Oct (from `git log --merges`, `origin/main` `fe51cd4`)
 
-| Order | Branch | Head | Safe? | Compare against | Notes |
-|---|---|---|---|---|---|
-| 1 | `feat/agent-money-routes` | `839c74a` | **yes** | `main` | GET `/agent/commissions`, `/agent/balance`, `/agent/payouts`, POST `/agent/devices`; mutation checks 32/32 |
-| 2 | `feat/agent-referral-commission-status` | `daf3993` | **yes** | `feat/agent-money-routes` until #1 merges, then `main` | `commissionStatus` on the referral routes (public mapping); contains #1; mutation checks 7/7 |
-| 3 | `feat/agent-quote-kill-switch` | `eeee131` | **yes** | `main` | `agent.quote_enabled` (missing = enabled, not seeded); mutation checks 12/12; independent of 1–2 |
-| 4 | `fix/agent-gst-exclusive` | `a594afb` | **yes** | `main` | mutation sets `mut-gst`+`mut-gst2`: 13 ran, 13 caught |
-| 5 | `fix/agent-partial-refund-proportional` | `ad8cda8` | **yes** | `fix/agent-gst-exclusive` | after #4; `mut-refund`+`mut-refund2`: 14 ran, 14 caught |
-| 6 | `feat/agent-admin-routes-rest` | `f608b67` | **yes** | `fix/agent-partial-refund-proportional` | after #5; `mut-admin-rest`+`-2`: 16 listed, 15 ran: 14 caught, 1 equivalent (pause from SUSPENDED: `SAME_STATUS` either way), 1 not run (a stale one-line duplicate of a mutant that ran and was caught in set 2) |
-| 7 | `feat/agent-payouts-payable` | `a5c1b22` | **yes** | `feat/agent-admin-routes-rest` | after #6; `GET /admin/payouts/payable`; mutation checks 17/17 unit + 4/4 DB (four gaps closed with tests) |
+| PR | Branch | What |
+|---|---|---|
+| #188 | `feat/agent-money-routes` | **MERGED**: GET `/agent/commissions`, `/agent/balance`, `/agent/payouts`, POST `/agent/devices` |
+| #189 | `feat/agent-quote-kill-switch` | **MERGED**: `agent.quote_enabled` (missing = enabled, not seeded) |
+| #190 | `fix/agent-gst-exclusive` | **MERGED**: commission on the price without GST |
+| #192 | `fix/agent-partial-refund-proportional` | **MERGED**: a partial refund before approval reduces the commission in proportion |
+| #194 | `feat/agent-admin-routes-rest` | **MERGED**: the remaining admin routes |
 
-Every head passed: tsc, `pnpm test`, `test:agent-db` (fresh local database
-from that branch's migrations), `build:all`, isolated smoke boot, ESLint
-(agents). Each merges into `5100e42` without a conflict (`git merge-tree`).
-1–3 and 4–7 are independent chains. After a branch below merges, the next one
-needs no new merge unless `main` moved under it.
+**`tsc --noEmit` fails on `main` `fe51cd4`** (CI type-check step): #192 added
+`refundedPaise` / `preRefundAmountPaise` to `CommissionRecord` after #188's
+`agent/agent-money.service.spec.ts` was written. Tests and the build still pass
+(the test runner and `nest build` do not type-check that spec). Fixed on both
+open branches below (the same two lines).
+
+### Open, not merged yet
+
+| Order | PR | Branch | Compare against | Notes |
+|---|---|---|---|---|
+| 1 | #191 | `feat/agent-referral-commission-status` | `main` | `commissionStatus` on the referral routes; carries the tsc fix |
+| 2 | #195 | `feat/agent-payouts-payable` | `main` | `GET /admin/payouts/payable`; carries the same tsc fix; the conformance spec's PENDING and GAPS lists are now empty |
+
+Either order works (the shared fix is identical, so they merge cleanly into
+each other).
 
 ### The commission-stack mutation re-run (merged code, on `main`)
 

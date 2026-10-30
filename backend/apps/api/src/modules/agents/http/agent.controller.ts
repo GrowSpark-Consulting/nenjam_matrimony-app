@@ -1,8 +1,9 @@
 /**
  * The signed-in agent's routes (docs/agent-program/agent-api.openapi.yaml):
  * POST /agent/application, GET /agent/me, PATCH /agent/me/payout-details,
- * GET /agent/config, GET /agent/referral-links, GET /agent/referrals and
- * GET /agent/referrals/:id.
+ * GET /agent/config, GET /agent/referral-links, GET /agent/referrals,
+ * GET /agent/referrals/:id, GET /agent/commissions, GET /agent/balance,
+ * GET /agent/payouts and POST /agent/devices.
  *
  * Every route needs an agent access token (AgentAccessGuard); only the
  * application and GET /agent/me also accept an APPLICANT token. What each
@@ -26,6 +27,12 @@ import {
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { validationFailed } from '@app/common';
 import type { AgentPayoutDetailsSummary } from '../agent/agent-me.service';
+import type {
+  AgentBalance,
+  AgentCommissionView,
+  AgentPage,
+  AgentPayoutView,
+} from '../agent/agent-money.service';
 import type { AgentProfile } from '../agent/agent-profile-builder';
 import type { AgentAccessClaims } from '../auth/agent-access-claims';
 import type { AgentSession } from '../auth/agent-session-issuer';
@@ -49,7 +56,10 @@ import {
 } from './agent-program';
 import {
   ApplicationDto,
+  CommissionsQueryDto,
+  DeviceDto,
   PayoutDetailsDto,
+  PayoutsQueryDto,
   ReferralsQueryDto,
 } from './agent-program.dto';
 
@@ -120,6 +130,42 @@ export class AgentController {
     id: string,
   ): Promise<AgentReferralView> {
     return this.program.referrals.getReferral(claims, id);
+  }
+
+  @Get('commissions')
+  @ApiOperation({ summary: 'Commission entries' })
+  commissions(
+    @AgentClaims() claims: AgentAccessClaims,
+    @Query() query: CommissionsQueryDto,
+  ): Promise<AgentPage<AgentCommissionView>> {
+    return this.program.money.listCommissions(claims, query);
+  }
+
+  @Get('balance')
+  @ApiOperation({
+    summary: 'Totals by commission status, and payout eligibility',
+  })
+  balance(@AgentClaims() claims: AgentAccessClaims): Promise<AgentBalance> {
+    return this.program.money.getBalance(claims);
+  }
+
+  @Get('payouts')
+  @ApiOperation({ summary: 'Payout history (read-only)' })
+  payouts(
+    @AgentClaims() claims: AgentAccessClaims,
+    @Query() query: PayoutsQueryDto,
+  ): Promise<AgentPage<AgentPayoutView>> {
+    return this.program.money.listPayouts(claims, query);
+  }
+
+  @Post('devices')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Register this device for push notifications' })
+  async registerDevice(
+    @AgentClaims() claims: AgentAccessClaims,
+    @Body() body: DeviceDto,
+  ): Promise<void> {
+    await this.program.money.registerDevice(claims, body);
   }
 
   private requirePiiSealing(): void {

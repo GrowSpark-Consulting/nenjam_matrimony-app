@@ -20,6 +20,11 @@ export interface ReferralDiscountInput {
 export interface ReferralDiscount {
   discountPaise: number;
   source: 'REFERRAL_FIRST_PLAN' | 'NONE';
+  /**
+   * The list price minus the discount. Plan prices are EXCLUSIVE of GST, so
+   * this is the TAXABLE amount: GST is added on top of it, and the member
+   * pays more than this. It is never what the member pays.
+   */
   taxableAfterDiscountPaise: number;
 }
 

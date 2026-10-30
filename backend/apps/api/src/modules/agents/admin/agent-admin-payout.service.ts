@@ -177,6 +177,7 @@ export class AgentAdminPayoutService {
           agentId: input.agentId,
           period: input.period,
           actorId: actor.userId,
+          context: actor.context,
           reason: input.reason,
           tx,
         });
@@ -219,6 +220,7 @@ export class AgentAdminPayoutService {
         reference: input.reference,
         paidAt: input.paidAt,
         actorId: actor.userId,
+        context: actor.context,
         reason: input.reason,
         tx,
       });
@@ -242,6 +244,7 @@ export class AgentAdminPayoutService {
       const payout = await this.deps.payoutService.cancel({
         payoutId: id,
         actorId: actor.userId,
+        context: actor.context,
         reason,
         tx,
       });
@@ -298,6 +301,7 @@ export class AgentAdminPayoutService {
     await this.deps.audit.record(
       {
         actorId: actor.userId,
+        ...(actor.context !== undefined && { context: actor.context }),
         action: 'payout.destination.disclose',
         entity: 'Payout',
         entityId: payout.id,

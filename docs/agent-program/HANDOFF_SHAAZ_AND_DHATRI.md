@@ -102,7 +102,7 @@ in code. The setting keys below are the ones defined in
 | Auto-approve commissions after the hold | On (an admin can switch to manual later, without a deploy) | `commission.auto_approve` = `true` | Decided |
 | Wait after payout details change | 72 hours | `agent.payout_details_wait_hours` = `72` | Decided |
 | Discount only inside the credit window | Yes (default) | `referral.discount_only_in_credit_window` = `true` | Default set; **Pending decision** (Raja to confirm) |
-| Commission base (with or without GST) | 10% of the amount **without GST** | `commission.base` = `AMOUNT_PAID_EXCLUDING_GST` and `commission.base_provisional` = `false`. The commission handler computes `base = amountPaid` (after the referral discount) minus the GST part (`taxPaise` from the `PaymentSucceeded` event) | Decided (Raja, 28 Oct) |
+| Commission base (with or without GST) | 10% of the amount **without GST**. Plan prices are **exclusive** of GST (Raja, 29 Oct): GST is added on top, so the member pays taxable + GST. `quoteReferral` returns `taxableAfterDiscountPaise` (before GST), never what the member pays | `commission.base` = `AMOUNT_PAID_EXCLUDING_GST` and `commission.base_provisional` = `false`. The commission handler computes `base = amountPaid` (after the referral discount) minus the GST part (`taxPaise` from the `PaymentSucceeded` event) | Decided (Raja, 28 Oct) |
 | Tax withholding (TDS) | — | `payout.tax_withholding` (shape unknown, passed through as-is) | **Pending decision** (CA) |
 
 Note: the settings list also contains `referral.discount_stacks_with_coupons`.
@@ -118,8 +118,8 @@ The referral discount is the only discount we handle.
 |---|---|---|
 | Plan prices | Raja | — |
 | TDS | CA | `planPayout()` refuses any set tax value with `TAX_RULE_UNSUPPORTED` |
-| Partial refund before approval | Raja | `planRefundEffect()` in `commission/plan-refund-effect.ts` (currently cancels the whole commission) |
-| Tamil wording for the other labels (statuses, stages) | Raja | Comes from `GET /agent/config` (not built yet). The share messages are approved and final (28 Oct); see `FRONTEND_HANDOFF_DHATRI.md` section 6 |
+| Partial refund before approval | **Decided (Ishu, 29 Oct)** | A full refund cancels; a partial refund before approval reduces the commission in proportion to what is still paid (running total, idempotent per refund; the ledger is not touched before approval). `planRefundEffect()` in `commission/plan-refund-effect.ts` |
+| Tamil wording for the other labels (statuses, stages) | Raja | Comes from `GET /agent/config` (live since #184). The share messages are approved and final (28 Oct); see `FRONTEND_HANDOFF_DHATRI.md` section 6 |
 | Referral link web address | Raja | `link` and `qrPayload` are `null` until decided |
 | Will agents need KYC later? | Raja | **Answered 29 Oct: no separate KYC, the PAN is enough** |
 
@@ -143,9 +143,12 @@ The referral discount is the only discount we handle.
 
 ## 6. What is merged and what is next
 
-Everything merged so far is **pure functions with tests**. None of it is wired
-into a NestJS module yet (checked: `app.module.ts` does not reference it and
-nothing outside `modules/agents/` imports it), so **none of it is live**.
+**Updated 30 Oct (late).** The agent program is wired and live on `main`:
+`AgentsModule` is imported in `app.module.ts`; the agent and member routes are
+registered only when `AGENT_PROGRAM_ENABLED=true` (on in production, per
+Ishu); the admin routes, the commission handlers, the daily approval job and
+the checkout quote are always registered. The table starts with the 28 Oct pure
+functions; the rows after them are the wiring.
 
 All files are under `backend/apps/api/src/modules/agents/`. PR numbers and
 branch names were checked against `git log --merges origin/main`.
@@ -172,20 +175,35 @@ branch names were checked against `git log --merges origin/main`.
 | Access token claims | `auth/agent-access-claims.ts` | #118 | Done (merged) |
 | `decideApplicationSubmit` | `auth/decide-application-submit.ts` | #119 | Done (merged) |
 | Code validation helpers, `computeReferralDiscount`, ledger entry builders, `planPayout` | `referral/code-validation.ts`, `referral/compute-referral-discount.ts`, `commission/ledger-entries.ts`, `payout/plan-payout.ts` | #121 | Done (merged) |
-| Phase 1 database migration (agents, referral codes, attribution, tokens) | branch `feat/agent-phase1-migration` | #116 (confirmed: GitHub's `refs/pull/116/head` is this branch) | **In review** (Draft per Ishu; Draft status To be confirmed on GitHub). **Waiting on Shaaz**'s Day 1 migration. |
+| Phase 1 database migration (agents, referral codes, attribution, tokens) | `20261028095916_agent_program_phase1` | #116 | Done (merged, applied) |
+| Prisma adapters for every Phase 1 port | `adapters/prisma/` | #153, #154 | Done (merged) |
+| Commission tables and policy v1 | migrations `20261029110000`, `20261029110100` | #155 | Done (merged, applied) |
+| `AgentsModule` and the five admin agent routes | `agents.module.ts`, `admin/` | #158 | Done (merged) |
+| Checkout quote provider (global) | `quote/agent-referral-quote.module.ts` | #162 | Done (merged) |
+| The 18 agent settings | migrations `20261029130100`, `20261029130200` | #163 | Done (merged, applied) |
+| Commission services and payment-event subscription | `commission/` | #171 | Done (merged) |
+| Platform adapters (settings, OTP, hashing, permission, audit) | `adapters/platform/` | #172 | Done (merged) |
+| Agent and member routes behind `AGENT_PROGRAM_ENABLED` | `http/` | #174 | Done (merged) |
+| Admin services | `admin/` | #175 | Done (merged) |
+| Daily approval registered with `DailyJobRegistry` | `commission/agent-daily-jobs.ts` | #179 | Done (merged) |
+| Sealer switch to `SecretSealer(key, purpose)` | `crypto/agent-pii-sealer.ts` | #180 | Done (merged) |
+| `GET /agent/config` reads the commission policy (was always 503) | `config/active-policy-hold-days.ts` | #184 | Done (merged) |
+| **Money routes**: `GET /agent/commissions`, `/agent/balance`, `/agent/payouts`, `POST /agent/devices` | `agent/agent-money.service.ts` | #188 | **MERGED** |
+| **Quote kill switch** `agent.quote_enabled` | `settings/agent-quote-switch.ts` | #189 | **MERGED** |
+| **GST exclusive** (commission on the price without GST) | `commission/`, `referral/` | #190 | **MERGED** |
+| **Partial refund** reduces the commission in proportion | `commission/plan-refund-effect.ts` | #192 | **MERGED** |
+| **Remaining admin routes** (agent actions, referrals, commissions, payouts) | `admin/` | #194 | **MERGED** |
+| `commissionStatus` on the referral routes | `referral/agent-referral.service.ts` | #191 | Open (not merged) |
+| `GET /admin/payouts/payable` | `admin/agent-admin-payout.service.ts` | #195 | Open (not merged) |
 
 Next, in order:
 
-1. After Shaaz's Day 1 merges: regenerate the Phase 1 migration so it sorts
-   after his, re-append the two hand-written constraints, rerun the replay and
-   drift check, and add the agent-program settings seed. — **Waiting on Shaaz**
-2. Services and endpoints: sign-in, application, `me`, `config`, referral
-   links and list, code validate and attach. — **Not started**
-3. Admin endpoints, behind Shaaz's permission guard. — **Waiting on Shaaz**
-4. Commission creation, refund handling and the daily approval job, once
-   payments exist and we decide where the daily job runs (there is no worker
-   or scheduler on Render). — **Not started**
-5. End-of-project handoff update. — **Not started**
+1. Merge #191 and #195 (both ready).
+2. Decide what happens when a refund after a PAID payout makes an agent's
+   ledger negative (today nothing alerts anyone). — **Pending decision**
+3. Real OTP for agents (after the demo; build no Firebase-specific agent
+   sign-in until then). — **Not started**
+4. End-of-project handoff update. — **Not started**
 
 ---
 

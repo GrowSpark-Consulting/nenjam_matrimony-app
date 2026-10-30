@@ -35,6 +35,7 @@ import {
 } from '../ports/agent-data-ports';
 import type { AgentClock } from '../ports/agent-infra-ports';
 import type {
+  AgentAuditEntry,
   AgentAuditPort,
   AgentSettingsPort,
 } from '../ports/agent-platform-ports';
@@ -69,6 +70,8 @@ export interface CreatePayoutInput {
   period: string;
   /** The staff user who asked. */
   actorId: string;
+  /** The request the change came from, for the audit row. */
+  context?: AgentAuditEntry['context'];
   reason: string;
   /**
    * Join the caller's transaction (the admin service checks the permission in
@@ -83,6 +86,8 @@ export interface MarkPaidInput {
   reference: string;
   paidAt: Date;
   actorId: string;
+  /** The request the change came from, for the audit row. */
+  context?: AgentAuditEntry['context'];
   reason: string;
   tx?: AgentTx;
 }
@@ -90,6 +95,8 @@ export interface MarkPaidInput {
 export interface CancelPayoutInput {
   payoutId: string;
   actorId: string;
+  /** The request the change came from, for the audit row. */
+  context?: AgentAuditEntry['context'];
   reason: string;
   tx?: AgentTx;
 }
@@ -216,6 +223,7 @@ export class AgentPayoutService {
         await this.deps.audit.record(
           {
             actorId: input.actorId,
+            ...(input.context !== undefined && { context: input.context }),
             action: 'payout.create',
             entity: 'payout',
             entityId: payout.id,
@@ -292,6 +300,7 @@ export class AgentPayoutService {
         await this.deps.audit.record(
           {
             actorId: input.actorId,
+            ...(input.context !== undefined && { context: input.context }),
             action: 'payout.mark_paid',
             entity: 'payout',
             entityId: current.id,
@@ -350,6 +359,7 @@ export class AgentPayoutService {
       await this.deps.audit.record(
         {
           actorId: input.actorId,
+          ...(input.context !== undefined && { context: input.context }),
           action: 'payout.cancel',
           entity: 'payout',
           entityId: current.id,

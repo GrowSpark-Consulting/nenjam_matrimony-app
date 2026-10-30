@@ -42,6 +42,12 @@ import { PrismaReferralAttributionRepository } from './adapters/prisma/prisma-re
 import { PrismaReferralCodeRepository } from './adapters/prisma/prisma-referral-code.repository';
 import { AgentAdminAgentsService } from './admin/agent-admin-agents.service';
 import { AgentAdminController } from './admin/agent-admin.controller';
+import { AgentAdminActionsController } from './admin/agent-admin-actions.controller';
+import { AgentAdminMoneyController } from './admin/agent-admin-money.controller';
+import {
+  AgentAdminRestDeps,
+  buildAgentAdminRest,
+} from './admin/agent-admin-rest.wiring';
 import { AgentCommissionApprovalService } from './commission/agent-commission-approval.service';
 import { registerAgentDailyJobs } from './commission/agent-daily-jobs';
 import { AgentCommissionEventsService } from './commission/agent-commission-events.service';
@@ -63,10 +69,36 @@ import { AgentReferralQuoteModule } from './quote/agent-referral-quote.module';
     // AGENT_PROGRAM_ENABLED=true; otherwise they do not exist (404).
     ConditionalModule.registerWhen(AgentProgramModule, agentProgramEnabled),
   ],
-  controllers: [AgentAdminController],
+  controllers: [
+    AgentAdminController,
+    AgentAdminActionsController,
+    AgentAdminMoneyController,
+  ],
   providers: [
     // Refuses a bad agent-program setting when an admin enters it.
     AgentSettingValidators,
+    {
+      provide: AgentAdminRestDeps,
+      inject: [
+        PrismaService,
+        AdminAuditService,
+        IdentifierHashService,
+        PlatformSettingsService,
+      ],
+      useFactory: (
+        prisma: PrismaService,
+        adminAudit: AdminAuditService,
+        hashing: IdentifierHashService,
+        platformSettings: PlatformSettingsService,
+      ) =>
+        buildAgentAdminRest({
+          prisma,
+          adminAudit,
+          hashing,
+          platformSettings,
+          env: process.env,
+        }),
+    },
     {
       // The commission handlers, subscribed to the payment events (see the
       // subscriber). Not an agent route: independent of AGENT_PROGRAM_ENABLED.

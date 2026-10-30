@@ -237,6 +237,7 @@ export class AgentAdminCommissionService {
       await this.deps.audit.record(
         {
           actorId: actor.userId,
+          ...(actor.context !== undefined && { context: actor.context }),
           action: 'commission.cancel',
           entity: 'Commission',
           entityId: id,
@@ -295,6 +296,11 @@ export class AgentAdminCommissionService {
       if (amountPaise > commission.amountPaidPaise) {
         throw new AgentMoneyError('AMOUNT_EXCEEDS_PAID');
       }
+      // A partial refund before approval reduced this amount from an
+      // original; a typed amount would be reduced again by the next refund.
+      if (commission.status !== 'APPROVED' && commission.refundedPaise > 0) {
+        throw new AgentMoneyError('COMMISSION_PARTLY_REFUNDED');
+      }
       // A refund may already have clawed some of the credit back.
       if (
         commission.status === 'APPROVED' &&
@@ -318,6 +324,7 @@ export class AgentAdminCommissionService {
       await this.deps.audit.record(
         {
           actorId: actor.userId,
+          ...(actor.context !== undefined && { context: actor.context }),
           action: 'commission.override',
           entity: 'Commission',
           entityId: id,
