@@ -241,8 +241,28 @@ class _ReelSurfaceState extends State<_ReelSurface> {
 
   @override
   Widget build(BuildContext context) {
-    // Translucent: the desktop margins are empty space with nothing for a
-    // deferring hit test to land on.
+    widget.wheelPager.reduceMotion = MediaQuery.disableAnimationsOf(context);
+    // Arrow keys step one profile while the page has focus. A text field,
+    // dialog or sheet holds focus (and the arrows) itself, so they never
+    // reach this.
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(
+          LogicalKeyboardKey.arrowDown,
+          includeRepeats: false,
+        ): () =>
+            widget.wheelPager.step(1, widget.pageCount),
+        const SingleActivator(
+          LogicalKeyboardKey.arrowUp,
+          includeRepeats: false,
+        ): () =>
+            widget.wheelPager.step(-1, widget.pageCount),
+      },
+      child: Focus(autofocus: true, child: _buildSurface(context)),
+    );
+  }
+
+  Widget _buildSurface(BuildContext context) {
     return Listener(
       behavior: HitTestBehavior.translucent,
       onPointerSignal: (event) =>
@@ -298,8 +318,15 @@ class ReelWheelPager {
   static const double _notch = 50;
   static const Duration _cooldown = Duration(milliseconds: 450);
 
+  /// A trackpad's momentum keeps emitting events after the fingers lift, well
+  /// past [_cooldown]. Events closer together than this belong to the gesture
+  /// that already moved the reel, and deltas older than it are not part of the
+  /// current gesture.
+  static const Duration _gestureGap = Duration(milliseconds: 150);
+
   double _pending = 0;
   DateTime _lastMove = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime _lastEvent = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// Wire to a [Listener.onPointerSignal] *inside* the [PageView]'s items:
   /// the deepest registrant wins [PointerSignalResolver], so registering
@@ -311,20 +338,46 @@ class ReelWheelPager {
     GestureBinding.instance.pointerSignalResolver.register(event, (_) {
       if (!controller.hasClients) return;
       final now = _now();
+      final sinceEvent = now.difference(_lastEvent);
+      _lastEvent = now;
       if (now.difference(_lastMove) < _cooldown) return;
+      // Still the same unbroken stream that already moved the reel: momentum.
+      if (_streamMoved && sinceEvent < _gestureGap) return;
+      _streamMoved = false;
+      if (sinceEvent > _gestureGap) _pending = 0;
       _pending += dy;
       if (_pending.abs() < _notch) return;
-      final page = controller.page?.round() ?? 0;
-      final target = _pending > 0 ? page + 1 : page - 1;
+      final delta = _pending > 0 ? 1 : -1;
       _pending = 0;
-      if (target < 0 || target >= pageCount) return;
-      _lastMove = now;
+      if (step(delta, pageCount)) _streamMoved = true;
+    });
+  }
+
+  bool _streamMoved = false;
+
+  /// Set from the platform's reduce-motion preference: pages change at once.
+  bool reduceMotion = false;
+
+  /// Moves one profile by [delta] (+1 / -1), clamped to the first and last,
+  /// unless the previous move is still animating. Returns whether it moved.
+  /// Shared by the wheel and the arrow keys.
+  bool step(int delta, int pageCount) {
+    if (!controller.hasClients) return false;
+    final now = _now();
+    if (now.difference(_lastMove) < _cooldown) return false;
+    final target = (controller.page?.round() ?? 0) + delta;
+    if (target < 0 || target >= pageCount) return false;
+    _lastMove = now;
+    if (reduceMotion) {
+      controller.jumpToPage(target);
+    } else {
       controller.animateToPage(
         target,
         duration: AppAnimationTokens.normal,
         curve: AppAnimationTokens.buttonPressCurve,
       );
-    });
+    }
+    return true;
   }
 }
 

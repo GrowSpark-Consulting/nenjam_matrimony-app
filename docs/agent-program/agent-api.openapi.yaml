@@ -951,7 +951,15 @@ components:
         error: { type: string, example: Forbidden }
         code:
           type: string
-          description: Stable machine-readable code.
+          description: |
+            Stable machine-readable code. The 503 codes are temporary (show
+            "not available right now", retry later):
+            `AGENT_PROGRAM_UNAVAILABLE` (the agent program is not fully set up
+            on the server), `IDENTIFIER_HASHING_UNAVAILABLE` (the shared
+            hashing of phones and codes is not configured on the server) and
+            `OTP_DELIVERY_UNAVAILABLE` (no one-time code can be sent to this
+            phone right now). `CONCURRENT_CHANGE` (409): two requests changed
+            the same thing at once; retry.
           enum:
             - VALIDATION_FAILED
             - UNAUTHORIZED
@@ -973,6 +981,8 @@ components:
             - ALREADY_PAID
             - PHONE_NOT_VERIFIED
             - AGENT_PROGRAM_UNAVAILABLE
+            - IDENTIFIER_HASHING_UNAVAILABLE
+            - OTP_DELIVERY_UNAVAILABLE
             - CONCURRENT_CHANGE
         agentStatus:
           allOf:

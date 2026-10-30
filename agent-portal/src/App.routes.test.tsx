@@ -62,6 +62,21 @@ describe('protected routes and agent-status restrictions', () => {
     }
   });
 
+  it('pending agent still sees the status when /agent/config is unavailable (503)', async () => {
+    class ConfigDown extends MockAgentApi {
+      override async getConfig(): Promise<never> {
+        throw new ApiError(503, 'The agent program is not available yet.', {
+          code: 'AGENT_PROGRAM_UNAVAILABLE',
+        });
+      }
+    }
+    const s = setup((sessions) => new ConfigDown(sessions));
+    await signedInAs(s, '+919000000001');
+    // A fresh page load: no in-memory profile from sign-in, only /agent/me.
+    renderAt('/status', s);
+    expect(await screen.findByText("We're reviewing your application.")).toBeInTheDocument();
+  });
+
   it('rejected agent sees the reason and an "Apply again" link to the form', async () => {
     const s = setup();
     await signedInAs(s, '+919000000002');
