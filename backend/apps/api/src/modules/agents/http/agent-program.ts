@@ -53,6 +53,7 @@ import {
 import { AgentSessionIssuer } from '../auth/agent-session-issuer';
 import { AgentSignInService } from '../auth/agent-sign-in.service';
 import { PrismaCommissionPolicyRepository } from '../adapters/prisma/prisma-commission-policy.repository';
+import { PrismaCommissionRepository } from '../adapters/prisma/prisma-commission.repository';
 import { ActivePolicyHoldDays } from '../config/active-policy-hold-days';
 import { AgentConfigService } from '../config/agent-config.service';
 import { StaticAgentContent } from '../content/agent-content';
@@ -245,6 +246,7 @@ export function buildAgentProgram(deps: AgentProgramDeps): AgentProgram {
       codes,
       attributions,
       members,
+      commissions: new PrismaCommissionRepository(prisma),
       content,
       settings,
     }),

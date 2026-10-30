@@ -51,6 +51,7 @@ import {
   FakeReferralCodeRepository,
 } from './fake-agent-repositories';
 import { FakeAgentSecretSealer } from './fake-agent-secret-sealer';
+import { FakeCommissionRepository } from './fake-agent-commission-repositories';
 import { FakeAgentUnitOfWork } from './fake-agent-unit-of-work';
 
 export const PHONE = '+919876543210';
@@ -171,11 +172,13 @@ export function makeAgentHarness(
     audit,
     clock,
   });
+  const commissions = new FakeCommissionRepository();
   const referrals = new AgentReferralService({
     access: me,
     codes,
     attributions,
     members,
+    commissions,
     content,
     settings,
   });
@@ -345,6 +348,7 @@ export function makeAgentHarness(
     referrals,
     referralCodes,
     referralQuote,
+    commissions,
     claimsOf,
     seedAgent,
     seedReferral,

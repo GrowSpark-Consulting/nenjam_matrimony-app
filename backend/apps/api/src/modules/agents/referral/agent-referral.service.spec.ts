@@ -1,4 +1,5 @@
 import { AgentConfigError } from '../config/agent-config.service';
+import type { CommissionStatusValue } from '../ports/agent-commission-ports';
 import { REFERRAL_MEMBER_DISCOUNT_BPS_KEY } from '../settings/agent-program-settings';
 import {
   AgentHarness,
@@ -94,6 +95,7 @@ describe('AgentReferralService', () => {
         codes: h.codes,
         attributions: h.attributions,
         members: h.members,
+        commissions: h.commissions,
         content: h.content,
         settings: h.settings,
         linkFor: (code) => `https://portal.example.invalid/r/${code}`,
@@ -530,6 +532,94 @@ describe('AgentReferralService', () => {
           agentStatus: 'TERMINATED',
         },
       );
+    });
+  });
+
+  describe('commissionStatus (the public mapping)', () => {
+    const commissionFor = (
+      attributionId: string,
+      status: CommissionStatusValue,
+    ) =>
+      h.commissions.create({
+        id: `com-${attributionId}`,
+        agentId: 'agent-1',
+        attributionId,
+        paymentId: `pay-${attributionId}`,
+        phoneHash: `v1:member-${attributionId}`,
+        policyVersionId: 'pol-1',
+        status,
+        calcType: 'PERCENTAGE',
+        ruleValue: 1000,
+        basePaise: 99_900,
+        amountPaise: 9_990,
+        amountPaidPaise: 99_900,
+        taxableAmountPaise: 99_900,
+        creditedPaise: 0,
+        reversedPaise: 0,
+        holdUntil: new Date(START.getTime() + 14 * DAY),
+        reviewReasons: status === 'IN_REVIEW' ? ['PAID_BY_AGENT'] : [],
+        approvedAt: null,
+        paidAt: null,
+        cancelledAt: null,
+        payoutId: null,
+        createdAt: START,
+      });
+
+    it.each<[CommissionStatusValue, string]>([
+      ['ON_HOLD', 'ON_HOLD'],
+      ['AWAITING_VERIFICATION', 'ON_HOLD'],
+      ['IN_REVIEW', 'ON_HOLD'],
+      ['FROZEN', 'ON_HOLD'],
+      ['READY', 'ON_HOLD'],
+      ['APPROVED', 'APPROVED'],
+      ['PAID', 'PAID'],
+      ['CANCELLED', 'CANCELLED'],
+      ['REVERSED', 'CANCELLED'],
+    ])(
+      'a %s commission shows as %s, in the list and in the detail',
+      async (internal, shown) => {
+        const claims = await asAgent();
+        await h.seedReferral({ id: 'r01' });
+        await commissionFor('r01', internal);
+        const page = await h.referrals.listReferrals(claims);
+        expect(page.items.map((i) => i.commissionStatus)).toEqual([shown]);
+        expect(
+          (await h.referrals.getReferral(claims, 'r01')).commissionStatus,
+        ).toBe(shown);
+        expect(JSON.stringify(page)).not.toMatch(
+          /IN_REVIEW|FROZEN|READY|AWAITING|REVERSED|PAID_BY_AGENT/,
+        );
+      },
+    );
+
+    it('is null for a referral with no commission, next to one that has one', async () => {
+      const claims = await asAgent();
+      await h.seedReferral({ id: 'r01', at: new Date(START.getTime() + DAY) });
+      await h.seedReferral({
+        id: 'r02',
+        at: new Date(START.getTime() + 2 * DAY),
+      });
+      await commissionFor('r01', 'APPROVED');
+      const page = await h.referrals.listReferrals(claims);
+      expect(page.items.map((i) => [i.id, i.commissionStatus])).toEqual([
+        ['r02', null],
+        ['r01', 'APPROVED'],
+      ]);
+      expect(
+        (await h.referrals.getReferral(claims, 'r02')).commissionStatus,
+      ).toBeNull();
+    });
+
+    it('the stage filter still works with commissions present', async () => {
+      const claims = await asAgent();
+      await h.seedReferral({ id: 'r01', stage: 'PURCHASED' });
+      await commissionFor('r01', 'ON_HOLD');
+      const page = await h.referrals.listReferrals(claims, {
+        stage: 'PURCHASED',
+      });
+      expect(page.items.map((i) => [i.id, i.commissionStatus])).toEqual([
+        ['r01', 'ON_HOLD'],
+      ]);
     });
   });
 });
