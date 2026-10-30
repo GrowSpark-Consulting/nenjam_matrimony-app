@@ -8,11 +8,12 @@
  * of work), and the identifier hasher over `IdentifierHashService`. No agent
  * (member- or agent-facing) route is registered here.
  */
-import { Module } from '@nestjs/common';
+import { Module, type OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '@app/database';
 import { AdminModule } from '../admin/admin.module';
 import { AdminAuditService } from '../admin/services/admin-audit.service';
 import { IdentifierHashService } from '../platform/identifier-hash.service';
+import { DailyJobRegistry } from '../platform/jobs/daily-job.registry';
 import { PlatformModule } from '../platform/platform.module';
 import { PlatformSettingsService } from '../platform/settings/platform-settings.service';
 import { ReferralEventBus } from '../subscription/events/referral-event-bus';
@@ -31,11 +32,14 @@ import { PrismaCommissionPolicyRepository } from './adapters/prisma/prisma-commi
 import { PrismaCommissionRepository } from './adapters/prisma/prisma-commission.repository';
 import { PrismaAgentPayoutDetailsRepository } from './adapters/prisma/prisma-agent-payout-details.repository';
 import { PrismaAgentRepository } from './adapters/prisma/prisma-agent.repository';
+import { UnverifiedMemberProfiles } from './adapters/prisma/unverified-member-profiles';
 import { PrismaAgentUnitOfWork } from './adapters/prisma/prisma-agent-unit-of-work';
 import { PrismaReferralAttributionRepository } from './adapters/prisma/prisma-referral-attribution.repository';
 import { PrismaReferralCodeRepository } from './adapters/prisma/prisma-referral-code.repository';
 import { AgentAdminAgentsService } from './admin/agent-admin-agents.service';
 import { AgentAdminController } from './admin/agent-admin.controller';
+import { AgentCommissionApprovalService } from './commission/agent-commission-approval.service';
+import { registerAgentDailyJobs } from './commission/agent-daily-jobs';
 import { AgentCommissionEventsService } from './commission/agent-commission-events.service';
 import { AgentPaymentEventsSubscriber } from './commission/agent-payment-events.subscriber';
 import { AgentReferralQuoteModule } from './quote/agent-referral-quote.module';
@@ -95,6 +99,27 @@ import { AgentReferralQuoteModule } from './quote/agent-referral-quote.module';
       },
     },
     {
+      // The daily approval (see registerAgentDailyJobs). Not an agent route.
+      provide: AgentCommissionApprovalService,
+      inject: [PrismaService, PlatformSettingsService, AdminAuditService],
+      useFactory: (
+        prisma: PrismaService,
+        settings: PlatformSettingsService,
+        audit: AdminAuditService,
+      ) =>
+        new AgentCommissionApprovalService({
+          uow: new PrismaAgentUnitOfWork(prisma),
+          agents: new PrismaAgentRepository(prisma),
+          attributions: new PrismaReferralAttributionRepository(prisma),
+          commissions: new PrismaCommissionRepository(prisma),
+          ledger: new PrismaAgentLedgerRepository(prisma),
+          settings: { getMany: (keys) => settings.getMany(keys) },
+          audit: new AdminAuditAdapter(prisma, audit),
+          clock: new SystemClock(),
+          profiles: new UnverifiedMemberProfiles(),
+        }),
+    },
+    {
       provide: AgentAdminAgentsService,
       inject: [PrismaService, AdminAuditService, IdentifierHashService],
       useFactory: (
@@ -118,4 +143,13 @@ import { AgentReferralQuoteModule } from './quote/agent-referral-quote.module';
     },
   ],
 })
-export class AgentsModule {}
+export class AgentsModule implements OnModuleInit {
+  constructor(
+    private readonly registry: DailyJobRegistry,
+    private readonly approval: AgentCommissionApprovalService,
+  ) {}
+
+  onModuleInit(): void {
+    registerAgentDailyJobs(this.registry, this.approval);
+  }
+}
