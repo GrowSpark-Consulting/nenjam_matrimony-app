@@ -49,6 +49,7 @@ describe('AppConfigService', () => {
     membership: { enforcementMode: 'shadow' },
     razorpay: {},
     admin: {},
+    jobs: {},
     identifierHash: {},
     agentOtp: { dummyEnabled: false, dummyPhones: [] },
   };

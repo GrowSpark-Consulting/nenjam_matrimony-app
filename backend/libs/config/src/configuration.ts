@@ -145,6 +145,11 @@ export interface AppConfig {
     /** Base64 of 32 bytes; unset → admin sign-in answers 503. */
     mfaEncryptionKey?: string;
   };
+  jobs: {
+    /** JOBS_SECRET: what the daily job caller sends as X-Jobs-Secret. At
+     *  least 32 characters; unset → POST /internal/jobs/daily answers 503. */
+    secret?: string;
+  };
   identifierHash: {
     /** "v1:<secret>[,v0:<older>]", newest first. Unset → identifier hashing
      *  is unavailable (the agent program's routes answer 503). */
@@ -319,6 +324,9 @@ export default (): AppConfig => ({
   },
   admin: {
     mfaEncryptionKey: process.env.ADMIN_MFA_ENCRYPTION_KEY?.trim() || undefined,
+  },
+  jobs: {
+    secret: process.env.JOBS_SECRET?.trim() || undefined,
   },
   identifierHash: {
     peppers: process.env.IDENTIFIER_HASH_PEPPERS?.trim() || undefined,
