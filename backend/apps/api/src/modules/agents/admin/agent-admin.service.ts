@@ -269,6 +269,7 @@ export class AgentAdminService {
       await this.deps.audit.record(
         {
           actorId: actor.userId,
+          ...(actor.context !== undefined && { context: actor.context }),
           action: 'agent.code.replace',
           entity: 'Agent',
           entityId: id,
@@ -313,6 +314,7 @@ export class AgentAdminService {
       await this.deps.audit.record(
         {
           actorId: actor.userId,
+          ...(actor.context !== undefined && { context: actor.context }),
           action: 'agent.payout_details.verify',
           entity: 'Agent',
           entityId: id,
@@ -357,6 +359,7 @@ export class AgentAdminService {
       await this.deps.audit.record(
         {
           actorId: actor.userId,
+          ...(actor.context !== undefined && { context: actor.context }),
           action: 'agent.pan.verify',
           entity: 'Agent',
           entityId: id,
@@ -431,6 +434,7 @@ export class AgentAdminService {
         await this.deps.audit.record(
           {
             actorId: actor.userId,
+            ...(actor.context !== undefined && { context: actor.context }),
             action: 'agent.pii.reveal',
             entity: 'Agent',
             entityId: id,
@@ -486,6 +490,7 @@ export class AgentAdminService {
       await this.deps.audit.record(
         {
           actorId: actor.userId,
+          ...(actor.context !== undefined && { context: actor.context }),
           action: step.action,
           entity: 'Agent',
           entityId: id,
