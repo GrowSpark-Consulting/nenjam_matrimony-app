@@ -19,11 +19,7 @@ import {
 import { AgentAuthController } from './agent-auth.controller';
 import { AgentController } from './agent.controller';
 import { AgentAccessGuard } from './agent-http';
-import {
-  AGENT_PROGRAM,
-  NO_COMMISSION_POLICY_YET,
-  type AgentProgram,
-} from './agent-program';
+import { AGENT_PROGRAM, type AgentProgram } from './agent-program';
 import { MemberReferralController } from './member-referral.controller';
 
 const SECRET = 'test-only-agent-jwt-secret-not-real-0000';
@@ -460,11 +456,9 @@ describe('agent routes over HTTP', () => {
     it('with no commission policy yet it is 503 AGENT_PROGRAM_UNAVAILABLE', async () => {
       const first = await boot();
       w = await boot({
-        config: new AgentConfigService(
-          first.h.settings,
-          first.h.content,
-          NO_COMMISSION_POLICY_YET,
-        ),
+        config: new AgentConfigService(first.h.settings, first.h.content, {
+          getActiveHoldDays: () => Promise.resolve(null),
+        }),
       });
       await first.app.close();
       const token = await agentToken(w);

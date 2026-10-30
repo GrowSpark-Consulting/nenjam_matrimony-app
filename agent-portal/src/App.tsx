@@ -1,7 +1,9 @@
 import type { ReactElement } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import type { AgentStatus } from './api/types';
+import { AgentLoadError } from './components/AgentLoadError';
 import { Layout } from './components/Layout';
+import { Loading } from './components/Loading';
 import { ApplyPage } from './pages/ApplyPage';
 import { HelpPage } from './pages/HelpPage';
 import { HomePage } from './pages/HomePage';
@@ -30,8 +32,10 @@ function Guard({ allow, children }: { allow?: AgentStatus[]; children: ReactElem
   const { stored, agent, loading } = usePortal();
   if (!stored) return <Navigate to="/sign-in" replace />;
   if (stored.session.scope === 'APPLICANT') return <Navigate to="/apply" replace />;
-  if (loading && !agent) return <p className="main">Loading…</p>;
-  if (!agent) return <Navigate to="/sign-in" replace />;
+  if (loading && !agent) return <Loading />;
+  // No profile and not loading: /agent/me failed. That is not "signed out"
+  // (a 401 already cleared the session), so stay and offer a retry.
+  if (!agent) return <AgentLoadError />;
   if (allow && !allow.includes(agent.status)) return <Navigate to={homeFor(agent.status)} replace />;
   return children;
 }
@@ -41,8 +45,9 @@ function ApplyGuard({ children }: { children: ReactElement }) {
   const { stored, agent, loading } = usePortal();
   if (!stored) return <Navigate to="/sign-in" replace />;
   if (stored.session.scope === 'APPLICANT') return children;
-  if (loading && !agent) return <p className="main">Loading…</p>;
-  if (agent?.status !== 'REJECTED') return <Navigate to="/" replace />;
+  if (loading && !agent) return <Loading />;
+  if (!agent) return <AgentLoadError />;
+  if (agent.status !== 'REJECTED') return <Navigate to="/" replace />;
   return children;
 }
 

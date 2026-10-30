@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
 import type { Commission, Payout } from '../api/types';
+import { isRouteNotDeployed } from '../api/errors';
+import { ComingSoon } from '../components/ComingSoon';
 import { ErrorText } from '../components/ErrorText';
 import { Loading } from '../components/Loading';
 import { useAsync } from '../components/useAsync';
@@ -19,7 +21,11 @@ export function EarningsPage() {
     <section>
       <h1>Earnings</h1>
       {balance.loading && <Loading />}
-      <ErrorText error={balance.error} onRetry={balance.reload} />
+      {isRouteNotDeployed(balance.error) ? (
+        <ComingSoon what="Your balance" />
+      ) : (
+        <ErrorText error={balance.error} onRetry={balance.reload} />
+      )}
       {balance.data && (
         <dl className="facts">
           <dt>On hold</dt>
@@ -34,7 +40,11 @@ export function EarningsPage() {
       )}
       <p className="hint">Payouts are made by the Nenjam team; you don't need to request one.</p>
       {list.loading && list.items.length === 0 && <Loading />}
-      <ErrorText error={list.error} onRetry={list.retry} />
+      {isRouteNotDeployed(list.error) ? (
+        <ComingSoon what="Your commissions list" />
+      ) : (
+        <ErrorText error={list.error} onRetry={list.retry} />
+      )}
       {!list.loading && !list.error && list.items.length === 0 && <p>No commissions yet.</p>}
       <ul className="list">
         {list.items.map((c) => (
@@ -68,7 +78,11 @@ export function PayoutsPage() {
     <section>
       <h1>Payouts</h1>
       {list.loading && list.items.length === 0 && <Loading />}
-      <ErrorText error={list.error} onRetry={list.retry} />
+      {isRouteNotDeployed(list.error) ? (
+        <ComingSoon what="Your payout history" />
+      ) : (
+        <ErrorText error={list.error} onRetry={list.retry} />
+      )}
       {!list.loading && !list.error && list.items.length === 0 && <p>No payouts yet.</p>}
       <ul className="list">
         {list.items.map((p) => (
