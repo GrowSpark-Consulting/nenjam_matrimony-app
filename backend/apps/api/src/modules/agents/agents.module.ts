@@ -23,6 +23,7 @@ import {
   IdentifierHashAdapter,
   SystemClock,
 } from './adapters/admin/agent-admin-platform.adapters';
+import { AgentSettingValidators } from './adapters/platform/agent-platform.adapters';
 import { PrismaAgentAdminRead } from './adapters/prisma/prisma-agent-admin-read';
 import { PrismaAgentLedgerRepository } from './adapters/prisma/prisma-agent-ledger.repository';
 import { PrismaAgentMemberRead } from './adapters/prisma/prisma-agent-member-read';
@@ -50,6 +51,8 @@ import { AgentReferralQuoteModule } from './quote/agent-referral-quote.module';
   ],
   controllers: [AgentAdminController],
   providers: [
+    // Refuses a bad agent-program setting when an admin enters it.
+    AgentSettingValidators,
     {
       // The commission handlers, subscribed to the payment events (see the
       // subscriber). Not an agent route: independent of AGENT_PROGRAM_ENABLED.
