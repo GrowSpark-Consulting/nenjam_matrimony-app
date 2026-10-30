@@ -30,6 +30,12 @@ const BOOT_TIMEOUT_MS = 90_000;
 const FAILURE_RE =
   /UnknownDependenciesException|Nest can't resolve dependencies|ERROR \[ExceptionHandler\]|EADDRINUSE|Cannot find module/i;
 
+/** Smoke-only: signs the agent token the probe sends. Not a real secret. */
+const SMOKE_AGENT_JWT_SECRET = 'smoke-only-agent-jwt-secret-not-real-0000';
+/** The deployment identifiers of agent tokens (agents/http/agent-program.ts). */
+const AGENT_TOKEN_ISSUER = 'nenjam-api';
+const AGENT_TOKEN_AUDIENCE = 'nenjam-agent-portal';
+
 const APPS = [
   {
     name: 'api',
@@ -67,12 +73,6 @@ const APPS = [
     env: { WEBSOCKET_PORT: '3101' },
   },
 ];
-
-/** Smoke-only: signs the agent token the probe sends. Not a real secret. */
-const SMOKE_AGENT_JWT_SECRET = 'smoke-only-agent-jwt-secret-not-real-0000';
-/** The deployment identifiers of agent tokens (agents/http/agent-program.ts). */
-const AGENT_TOKEN_ISSUER = 'nenjam-api';
-const AGENT_TOKEN_AUDIENCE = 'nenjam-agent-portal';
 
 const b64url = (value) => Buffer.from(value).toString('base64url');
 
