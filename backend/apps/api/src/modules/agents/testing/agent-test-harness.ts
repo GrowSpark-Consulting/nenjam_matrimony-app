@@ -65,7 +65,9 @@ export const CODE_LIMIT = 2;
 export const VALIDATION_WINDOW = 60;
 export const CREDIT_WINDOW_DAYS = 60;
 
-export const AUTH_OPTIONS: AgentAuthOptions = {
+export const AUTH_OPTIONS: AgentAuthOptions & {
+  applicantPhoneTtlSeconds: number;
+} = {
   issuer: 'nenjam-agent',
   audience: 'agent-portal',
   refreshTokenPepper: 'test-pepper',
@@ -75,7 +77,11 @@ export const AUTH_OPTIONS: AgentAuthOptions = {
 /** Signs like the fake, but can be told to fail. */
 export class ControllableSigner implements AgentTokenSigner {
   failing = false;
-  private readonly inner = new FakeAgentTokenSigner('signer-key');
+  constructor(
+    private readonly inner: AgentTokenSigner = new FakeAgentTokenSigner(
+      'signer-key',
+    ),
+  ) {}
 
   sign(claims: AgentAccessClaims): Promise<string> {
     return this.failing
@@ -90,6 +96,10 @@ export class ControllableSigner implements AgentTokenSigner {
 
 export function makeAgentHarness(
   settingsOverrides: Record<string, unknown> = {},
+  options: {
+    /** A different signer on the harness clock (e.g. the real HS256 one). */
+    signerFor?: (clock: FakeAgentClock) => AgentTokenSigner;
+  } = {},
 ) {
   const clock = new FakeAgentClock(START);
   const settings = new FakeAgentSettings({
@@ -124,7 +134,7 @@ export function makeAgentHarness(
   const audit = new FakeAgentAudit();
   const permission = new FakeAgentPermission();
   const uow = new FakeAgentUnitOfWork();
-  const signer = new ControllableSigner();
+  const signer = new ControllableSigner(options.signerFor?.(clock));
   const content = new StaticAgentContent();
   const profiles = new AgentProfileBuilder(content, codes);
   let counter = 0;
