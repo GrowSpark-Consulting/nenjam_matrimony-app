@@ -2,12 +2,127 @@
 
 Audience: the next Claude Code session working on the Nenjam Agent / Partner
 Program backend for Ishu. Read this, then `CLAUDE.md`, then continue without
-asking Ishu to repeat anything below. Updated 29 Oct 2026 (evening);
-`origin/main` was `930626e` (PR #160). Re-verify anything load-bearing against the code —
-things move. Statements marked **To be confirmed** could not be checked from
-git (GitHub, Render, Neon, Vercel and what other people told Ishu are not
-visible there); statements marked **(per Ishu)** or **(per Shaaz)** are what
-they said, and are not proven by this repository.
+asking Ishu to repeat anything below. Updated 30 Oct 2026 (early morning);
+`origin/main` was `0a2f839` (PR #164). **Section 0 is the current state and
+wins wherever an older section below disagrees** (sections 1–10 are the 29 Oct
+record). Re-verify anything load-bearing against the code — things move.
+Statements marked **To be confirmed** could not be checked from git (GitHub,
+Render, Neon, Vercel and what other people told Ishu are not visible there);
+statements marked **(per Ishu)** or **(per Shaaz)** are what they said, and are
+not proven by this repository.
+
+---
+
+## 0. State on 30 Oct (read first)
+
+### Merged to `main` on 29 Oct (from `git log --merges`)
+
+| PR | Branch | What |
+|---|---|---|
+| #155 | `feat/agent-commission-tables` | commission migrations `20261029110000`, `20261029110100` (applied in production with Shaaz's `20261029130000`; production at 40 migrations, per Shaaz) |
+| #159 | `feat/payments-referral-gst` | Shaaz: GST on top, checkout calls `AGENT_REFERRAL_QUOTE` optionally, payment outbox + `ReferralEventBus`, `livemode` on both events |
+| #161 | `docs/agent-session-context-29oct-pm` | the 29 Oct session context |
+| #162 | `feat/agent-quote-provider` | `AgentReferralQuoteModule` (global); the quote is provided only when `IDENTIFIER_HASH_PEPPERS` and its six settings exist, otherwise null |
+| #163 | `feat/agent-settings-seed` | seed migrations `20261029130100_agent_program_settings_seed`, `20261029130200_agent_program_settings_approved` (**merged, NOT applied**: Shaaz's window) |
+| #164 | `docs/agent-contract-conformance` | the route-vs-contract check (`agents/contract/agent-contract-conformance.spec.ts`) |
+| #165 | `docs/agent-golive-runbook` | `docs/agent-program/GO_LIVE_RUNBOOK.md` |
+
+`origin/main` has 42 migration folders; production has 40 applied (per
+Shaaz, **To be confirmed**): the two seeds are pending.
+
+### Pushed branches, in merge order (heads as on the remote)
+
+Every one of these merges into `origin/main` `0a2f839` without a conflict
+(`git merge-tree`). Compare each against `main`; once the branches before it
+have merged, Files changed shows only its own work.
+
+| # | Branch | Head | Safe to merge? | Notes |
+|---|---|---|---|---|
+| 1 | `fix/agent-seed-spec-order` | `f0d5f82` | **yes** | the seed spec stops pinning the seeds as the LAST migrations (see the rule below) |
+| 2 | `feat/agent-commission-services` | `cc08a1d` | **yes** | commission services, payment-event subscription, `livemode`, payment-source adapter; all checks passed |
+| 3 | `feat/agent-platform-adapters` | `51a0858` | **yes** | after #2 (it contains it); all checks passed; mutation checks 14/15 + 1 equivalent |
+| 4 | `feat/agent-routes-flagged` | `801dd8d` | **yes** | after #3 (it contains it); all checks passed |
+| 5 | `feat/agent-admin-services` | `31b51ae` | **yes** | after #2; all checks passed |
+| 6 | `fix/agent-gst-exclusive` | `bc117da` | **no — checks not run** | merge of #5 committed (WIP marker commit); run the checks first |
+| 7 | `fix/agent-partial-refund-proportional` | `38d1740` | **no — checks not run** | as #6 |
+| 8 | `feat/agent-admin-routes-rest` | `8e27688` | **no — checks not run** | as #6; the branch itself passed all checks at `23dcb23` before the merge |
+| 9 | `feat/agent-payouts-payable` | `e686818` | **no — WIP** | see "Unfinished" |
+
+### The seed spec rule (fix pending)
+
+On `main` the seed spec (`settings/agent-program-settings.seed.spec.ts`)
+asserts the two seed migrations are **the last two migrations**. The first
+newer migration (anyone's, e.g. Shaaz's next one) makes CI fail.
+`fix/agent-seed-spec-order` changes it to: both exist, both sort after
+`20261029130000_payment_referral_gst`, decided values first. **Merge it before
+anyone adds a migration.**
+
+### Unfinished, and what remains
+
+- **Step 3 (mutation re-runs)**: done for the platform adapters (15 mutants:
+  14 caught, 1 equivalent — `Math.max(0,x)||1` equals `Math.max(1,x)`). The
+  re-runs of the earlier mutation sets on the stacked commission branches
+  (commission-services, admin-services, gst-exclusive, partial-refund,
+  admin-routes-rest) were **stopped before they produced results**: run them
+  again (`D:\claude-scripts\mutate-tips.sh`, configs in
+  `D:\claude-scripts\old-mutations\` and `D:\claude-scripts\mut-*.cjs`).
+- **Branches 6–8**: the merges that bring in the updated branch below are
+  committed but their checks (tsc, `pnpm test`, `test:agent-db`, build:all,
+  isolated smoke boot, ESLint) were stopped: run them, then they are safe.
+- **Step 4 — `GET /admin/payouts/payable`** (`feat/agent-payouts-payable`,
+  WIP, stacked on `feat/agent-admin-routes-rest`): code and 8 tests written,
+  tsc clean, 556 unit tests in admin/contract/payout/testing pass. Remains:
+  the DB-gated suite failed to run in the worktree ("Test suite failed to
+  run", cause not found), full `pnpm test`, build, smoke, ESLint, mutation
+  checks. It also fixes a real bug: a missing payout setting answered 500 on
+  admin payout routes; it now answers 503 `SETTINGS_NOT_CONFIGURED`.
+- **Step 5 — quote kill switch** (`agent.quote_enabled`, missing = enabled,
+  not seeded, validator registered): **not started**.
+- **Step 6 — agent money routes** (`GET /agent/commissions`,
+  `GET /agent/balance`, `GET /agent/payouts`, `POST /agent/devices` ANDROID/IOS
+  only, behind the flag, stacked on `feat/agent-routes-flagged`, conformance
+  check updated): **not started**.
+- **Sealer switch** (Shaaz's `SecretSealer`, from `main`): waits for Ishu's go
+  after the adapters merge; must be live before `AGENT_PII_ENCRYPTION_KEY` is
+  set and before any agent PII is stored.
+
+### Open items for Shaaz
+
+1. **Settings seed window**: apply `20261029130100` and `20261029130200`
+   (check: 42 rows in `_prisma_migrations`, 18 agent keys, no drift).
+2. **`IDENTIFIER_HASH_PEPPERS`** on Render (format `v1:<32+ chars>`); never
+   rotate without the section 8b runbook (on the commission stack).
+3. **Dummy OTP variables, in this order**: `AGENT_OTP_DUMMY_PHONES`, then
+   `AGENT_OTP_DUMMY_CODE`, then `AGENT_OTP_DUMMY_ENABLED=true` last (the Joi
+   schema stops the API otherwise).
+4. **The quote check at checkout**: checkout turns ANY quote error into
+   "checkout unavailable" for every purchase; our provider protects by being
+   null until peppers and settings exist. Confirm he is fine with that, and
+   with a runtime kill switch (step 5) as the next protection.
+5. **The daily job hook** (`POST /internal/jobs/daily`, `JOBS_SECRET`): not in
+   git yet (**To be confirmed**).
+6. **The outbox retry limit**: each run retries the oldest 50 undelivered
+   events with no backoff and no attempt limit, so 50+ permanently failing
+   events would block newer ones.
+7. **An index on `payment_transactions.payment_source_hash`** (the
+   payment-source check scans today).
+8. **Firebase versus `OtpService`** for real agent OTP (still his call; build
+   no Firebase-specific agent sign-in until answered).
+9. **A second Super Admin** (Raja plus one more, per Raja) — **To be confirmed**
+   whether it is set up.
+10. **Prices** through admin plan drafts; `payment.gst_rate_bps` stays 0 until
+    GST registration.
+
+### Local environment
+
+- Helper scripts: `D:\claude-scripts\` (README there). The throwaway Postgres
+  cluster on 55432 was **stopped and its data directory deleted** on 30 Oct;
+  start a new one per trap 2. All scratch worktrees were removed.
+- Never run `backend/scripts/smoke-boot.mjs` from `backend/` (trap 22): use
+  `D:\claude-scripts\smoke-local.sh`.
+- When creating a worktree, link `backend/node_modules` (a junction) BEFORE
+  running `npx`, or `npx` downloads packages; remove the junction (the link
+  only) BEFORE deleting the worktree.
 
 ---
 
