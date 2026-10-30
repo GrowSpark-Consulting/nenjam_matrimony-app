@@ -507,6 +507,16 @@ describe('GET /agent/payouts (listPayouts)', () => {
   });
 });
 
+describe('GET /agent/payouts paging edge', () => {
+  it('a page exactly full has no next cursor', async () => {
+    const claims = await asAgent();
+    for (const n of [1, 2]) await payout(n);
+    expect(
+      (await h.money.listPayouts(claims, { limit: 2 })).nextCursor,
+    ).toBeNull();
+  });
+});
+
 describe('POST /agent/devices (registerDevice)', () => {
   it('stores the device for the caller', async () => {
     const claims = await asAgent();
