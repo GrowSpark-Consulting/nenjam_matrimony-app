@@ -230,6 +230,7 @@ export class AgentCommissionApprovalService {
     actorId: string | null,
     reason: string,
     tx: AgentTx,
+    auditAction = 'COMMISSION_APPROVED',
   ): Promise<CommissionRecord> {
     if (commission.amountPaise === null) {
       throw new AgentMoneyError('COMMISSION_AMOUNT_NOT_SET');
@@ -248,9 +249,10 @@ export class AgentCommissionApprovalService {
     await this.deps.audit.record(
       {
         actorId,
-        action: 'COMMISSION_APPROVED',
+        action: auditAction,
         entity: 'commission',
         entityId: commission.id,
+        reason: actorId === null ? undefined : reason,
         metadata: { from: commission.status, reason },
       },
       tx,
