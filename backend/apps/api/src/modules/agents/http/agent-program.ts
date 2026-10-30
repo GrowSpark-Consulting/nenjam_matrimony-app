@@ -54,7 +54,7 @@ import { AgentSessionIssuer } from '../auth/agent-session-issuer';
 import { AgentSignInService } from '../auth/agent-sign-in.service';
 import { AgentConfigService } from '../config/agent-config.service';
 import { StaticAgentContent } from '../content/agent-content';
-import { AesGcmSecretSealer } from '../crypto/aes-gcm-secret-sealer';
+import { AgentPiiSealer } from '../crypto/agent-pii-sealer';
 import type { AgentCommissionPolicyPort } from '../ports/agent-commission-policy.port';
 import type { AgentTokenSigner } from '../ports/agent-infra-ports';
 import type { AgentSecretSealer } from '../ports/agent-secret-sealer.port';
@@ -135,6 +135,11 @@ export interface AgentProgramDeps {
   logger?: Pick<Logger, 'warn'>;
 }
 
+/** The PII sealer for a parsed key; with no key every seal and open answers 503. */
+export function agentPiiSealerFor(key: Buffer | null): AgentSecretSealer {
+  return key ? new AgentPiiSealer(key) : UNAVAILABLE_SEALER;
+}
+
 export function buildAgentProgram(deps: AgentProgramDeps): AgentProgram {
   const logger = deps.logger ?? new Logger('AgentProgram');
   const { prisma } = deps;
@@ -183,7 +188,7 @@ export function buildAgentProgram(deps: AgentProgramDeps): AgentProgram {
       'AGENT_PII_ENCRYPTION_KEY is not set: agent sign-in, application and payout details answer 503.',
     );
   }
-  const sealer = key ? new AesGcmSecretSealer(key) : UNAVAILABLE_SEALER;
+  const sealer = agentPiiSealerFor(key);
 
   const options = {
     issuer: AGENT_TOKEN_ISSUER,
