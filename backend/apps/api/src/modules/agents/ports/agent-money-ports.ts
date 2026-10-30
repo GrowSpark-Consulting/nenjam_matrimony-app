@@ -27,3 +27,23 @@ export interface AgentPaymentSourcePort {
 export interface AgentMemberProfilePort {
   isProfileVerified(memberId: string): Promise<boolean>;
 }
+
+/**
+ * The status-change entries of one agent (`agent.approve`, `agent.reject`,
+ * `agent.pause`, `agent.resume`, `agent.terminate`) read from the audit log,
+ * and ONLY those: `agent.view` does not grant `audit.view`. The real adapter
+ * reads `audit_logs` (Shaaz's audit service); until then a fake.
+ */
+export interface AgentStatusHistoryPort {
+  listForAgent(
+    agentId: string,
+    tx?: import('./agent-unit-of-work.port').AgentTx,
+  ): Promise<
+    Array<{
+      action: string;
+      at: Date;
+      actorId: string | null;
+      reason: string | null;
+    }>
+  >;
+}

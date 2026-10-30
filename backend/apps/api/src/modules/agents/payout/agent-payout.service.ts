@@ -38,7 +38,10 @@ import type {
   AgentAuditPort,
   AgentSettingsPort,
 } from '../ports/agent-platform-ports';
-import type { AgentUnitOfWork } from '../ports/agent-unit-of-work.port';
+import type {
+  AgentTx,
+  AgentUnitOfWork,
+} from '../ports/agent-unit-of-work.port';
 import {
   AGENT_PAYOUT_DETAILS_WAIT_HOURS_KEY,
   PAYOUT_MINIMUM_AMOUNT_PAISE_KEY,
@@ -67,6 +70,12 @@ export interface CreatePayoutInput {
   /** The staff user who asked. */
   actorId: string;
   reason: string;
+  /**
+   * Join the caller's transaction (the admin service checks the permission in
+   * it). A unique conflict then propagates to the caller, because Postgres has
+   * aborted that transaction; the caller handles it after the transaction.
+   */
+  tx?: AgentTx;
 }
 
 export interface MarkPaidInput {
@@ -75,12 +84,14 @@ export interface MarkPaidInput {
   paidAt: Date;
   actorId: string;
   reason: string;
+  tx?: AgentTx;
 }
 
 export interface CancelPayoutInput {
   payoutId: string;
   actorId: string;
   reason: string;
+  tx?: AgentTx;
 }
 
 export class AgentPayoutService {
@@ -118,7 +129,7 @@ export class AgentPayoutService {
     const taxWithholding = raw[PAYOUT_TAX_WITHHOLDING_KEY] ?? null;
 
     try {
-      return await this.deps.uow.run(async (tx) => {
+      return await this.within(input.tx, async (tx) => {
         const { payouts } = this.deps;
         const existing = await payouts.findActiveByAgentPeriod(
           input.agentId,
@@ -232,6 +243,7 @@ export class AgentPayoutService {
       // Two requests for the same agent and period at once: the database kept
       // the first; answer with it.
       if (
+        input.tx === undefined &&
         error instanceof AgentConflictError &&
         error.reason === 'DUPLICATE_PAYOUT'
       ) {
@@ -259,7 +271,7 @@ export class AgentPayoutService {
       throw new AgentMoneyError('VALIDATION_FAILED', { fields: ['paidAt'] });
     }
     try {
-      return await this.deps.uow.run(async (tx) => {
+      return await this.within(input.tx, async (tx) => {
         const { payouts } = this.deps;
         const current = await payouts.findById(input.payoutId, tx);
         if (current === null) throw new AgentMoneyError('PAYOUT_NOT_FOUND');
@@ -301,6 +313,7 @@ export class AgentPayoutService {
         }
       }
       if (
+        input.tx === undefined &&
         error instanceof AgentMoneyError &&
         error.code === 'CONCURRENT_CHANGE'
       ) {
@@ -319,7 +332,7 @@ export class AgentPayoutService {
     requireText('actorId', input.actorId);
     requireReason(input.reason);
     const now = this.deps.clock.now();
-    return this.deps.uow.run(async (tx) => {
+    return this.within(input.tx, async (tx) => {
       const { payouts } = this.deps;
       const current = await payouts.findById(input.payoutId, tx);
       if (current === null) throw new AgentMoneyError('PAYOUT_NOT_FOUND');
@@ -358,6 +371,14 @@ export class AgentPayoutService {
       );
       return cancelled;
     });
+  }
+
+  /** Runs in the caller's transaction when given one, else in a new one. */
+  private within<T>(
+    tx: AgentTx | undefined,
+    fn: (tx: AgentTx) => Promise<T>,
+  ): Promise<T> {
+    return tx === undefined ? this.deps.uow.run(fn) : fn(tx);
   }
 }
 

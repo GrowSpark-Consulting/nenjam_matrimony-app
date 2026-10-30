@@ -56,4 +56,6 @@ final profilePhotoCapProvider = Provider<int?>((ref) {
 /// The latest membership refusal from a chat send. Chat sends are optimistic
 /// (a refused one just turns the bubble red), so the notifier parks the 403
 /// here and the open chat page shows the plan sheet once, then clears it.
-final chatMembershipDenialProvider = StateProvider<ApiException?>((ref) => null);
+final chatMembershipDenialProvider = StateProvider<ApiException?>(
+  (ref) => null,
+);
