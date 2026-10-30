@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { PageHeader } from '../components/ui';
 import { pickLabel } from '../lib/labels';
 import { usePortal } from '../state/PortalContext';
 
@@ -13,11 +14,11 @@ export function StatusPage() {
   if (!agent) return null;
   const label = pickLabel(config?.statusLabels[agent.status] ?? agent.statusLabel, agent.status);
   return (
-    <section>
-      <h1>{label}</h1>
+    <>
+      <PageHeader title={label} />
       {agent.status === 'PENDING_APPROVAL' && <p>We're reviewing your application.</p>}
       {agent.status === 'REJECTED' && agent.rejectionReason && (
-        <p>
+        <p className="notice">
           <strong>Reason:</strong> {agent.rejectionReason}
         </p>
       )}
@@ -34,7 +35,7 @@ export function StatusPage() {
       {agent.status === 'TERMINATED' && (
         <p>Your account is closed. Your earnings, balance and payouts stay visible.</p>
       )}
-      <dl className="facts">
+      <dl className="facts card">
         <dt>Name</dt>
         <dd>{agent.name}</dd>
         <dt>Phone</dt>
@@ -50,6 +51,6 @@ export function StatusPage() {
           </>
         )}
       </dl>
-    </section>
+    </>
   );
 }
