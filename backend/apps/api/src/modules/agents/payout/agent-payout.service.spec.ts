@@ -28,6 +28,8 @@ async function approvedCommission(n: number, amount: number) {
     amountPaise: amount,
     amountPaidPaise: amount * 12,
     taxableAmountPaise: amount * 10,
+    refundedPaise: 0,
+    preRefundAmountPaise: null,
     creditedPaise: 0,
     reversedPaise: 0,
     holdUntil: HOLD_END,

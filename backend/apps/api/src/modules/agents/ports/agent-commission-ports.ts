@@ -93,6 +93,18 @@ export interface CommissionRecord {
   amountPaidPaise: number;
   /** The taxable amount (list price minus the discount, before GST), as stored on the payment. */
   taxableAmountPaise: number;
+  /**
+   * The running total refunded BEFORE approval. A partial refund reduces the
+   * commission in proportion (nothing was credited yet). After approval a
+   * refund goes through the ledger (`reversedPaise`) instead.
+   */
+  refundedPaise: number;
+  /**
+   * The amount before a refund reduced it: the reference for later refunds
+   * (floor(original x (paid - refundedTotal) / paid)). Null until a refund
+   * reduced it, and while the amount is unknown.
+   */
+  preRefundAmountPaise: number | null;
   /** What has been credited to the agent's ledger for this commission. */
   creditedPaise: number;
   /** What refunds have clawed back so far. */
@@ -113,6 +125,8 @@ export type CommissionChanges = Partial<
     | 'status'
     | 'basePaise'
     | 'amountPaise'
+    | 'refundedPaise'
+    | 'preRefundAmountPaise'
     | 'creditedPaise'
     | 'reversedPaise'
     | 'reviewReasons'
