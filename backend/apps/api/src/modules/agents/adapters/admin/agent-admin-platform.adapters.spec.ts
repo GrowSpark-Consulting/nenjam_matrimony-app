@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import type { PrismaClient } from '@app/database';
 import type { AdminAuditService } from '../../../admin/services/admin-audit.service';
 import type { IdentifierHashService } from '../../../platform/identifier-hash.service';
+import { AgentServiceError } from '../../errors/agent-service-error';
 import { AgentPermissionDeniedError } from '../../ports/agent-platform-ports';
 import { asTx } from '../prisma/prisma-agent-tx';
 import {
@@ -198,5 +199,34 @@ describe('IdentifierHashAdapter (over IdentifierHashService)', () => {
     expect(() => adapter.hashAll('PHONE', '+919000000001')).toThrow(
       unavailable,
     );
+  });
+
+  it('turns his RangeError into VALIDATION_FAILED naming the field, never the value', () => {
+    const service = {
+      hashIdentifier: jest.fn(() => {
+        throw new RangeError('not a phone');
+      }),
+      hashIdentifierAll: jest.fn(() => {
+        throw new RangeError('not a PAN');
+      }),
+    };
+    const adapter = new IdentifierHashAdapter(
+      service as unknown as IdentifierHashService,
+    );
+    const caught = (run: () => unknown): AgentServiceError => {
+      try {
+        run();
+      } catch (error) {
+        return error as AgentServiceError;
+      }
+      throw new Error('expected a throw');
+    };
+    const phone = caught(() => adapter.hash('PHONE', 'x'));
+    expect(phone).toBeInstanceOf(AgentServiceError);
+    expect(phone.code).toBe('VALIDATION_FAILED');
+    expect(phone.fields).toEqual(['phone']);
+    expect(phone.message).not.toContain('x');
+    expect(caught(() => adapter.hashAll('PAN', 'x')).fields).toEqual(['pan']);
+    expect(caught(() => adapter.hash('EMAIL', 'x')).fields).toEqual(['email']);
   });
 });

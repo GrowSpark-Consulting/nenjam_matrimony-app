@@ -88,6 +88,7 @@ dependencies:
   firebase_messaging: ^16.4.3
   flutter_local_notifications: ^20.1.0
   google_sign_in: ^7.2.0
+  razorpay_flutter: ^1.4.7
 
 dev_dependencies:
   flutter_test:

@@ -190,13 +190,23 @@ export const validationSchema = Joi.object({
     .length(44)
     .optional(),
 
+  // The shared secret the scheduled caller of POST /internal/jobs/daily sends
+  // (X-Jobs-Secret). Optional: unset, that route answers 503.
+  JOBS_SECRET: Joi.string().allow('').min(32).optional(),
+
   // Keyed hashing of phones, emails, PANs and IPs: "v1:<secret>[,v0:<old>]",
   // newest first, each secret at least 32 characters. Optional: without it
   // the app boots and the agent program's routes answer 503.
+  // Secrets: a failure names the variable and the expected shape but never
+  // repeats the value (Joi's default pattern message does, into the logs).
   IDENTIFIER_HASH_PEPPERS: Joi.string()
     .allow('')
     .pattern(/^v\d{1,6}:[^,]{32,}(,\s*v\d{1,6}:[^,]{32,})*$/)
-    .optional(),
+    .optional()
+    .messages({
+      'string.pattern.base':
+        'IDENTIFIER_HASH_PEPPERS must be "v1:<secret of 32+ characters>" (newest first, comma-separated), with no quotes and no "IDENTIFIER_HASH_PEPPERS=" in the value. The value is not shown.',
+    }),
 
   // Agent sign-in codes in testing (no SMS provider yet). Off unless `true`;
   // when on, the code is required, and in production so is the allow-list.
@@ -210,6 +220,9 @@ export const validationSchema = Joi.object({
       .allow('')
       .pattern(/^\d{6}$/)
       .optional(),
+  }).messages({
+    'string.pattern.base':
+      'AGENT_OTP_DUMMY_CODE must be exactly 6 digits, with no spaces. The value is not shown.',
   }),
   AGENT_OTP_DUMMY_PHONES: Joi.when('AGENT_OTP_DUMMY_ENABLED', {
     is: true,
@@ -221,5 +234,8 @@ export const validationSchema = Joi.object({
       otherwise: Joi.string().allow('').optional(),
     }),
     otherwise: Joi.string().allow('').optional(),
+  }).messages({
+    'string.pattern.base':
+      'AGENT_OTP_DUMMY_PHONES must list E.164 numbers (+919876543210), comma-separated. The value is not shown.',
   }),
 }).unknown(true);

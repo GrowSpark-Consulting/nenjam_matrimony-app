@@ -1,12 +1,10 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/layout/content_width.dart';
-import '../../../../core/network/api_exception.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -17,6 +15,7 @@ import '../../../membership/domain/models/membership_models.dart';
 import '../../../membership/presentation/providers/membership_providers.dart';
 import '../../../membership/presentation/purchase/membership_purchase.dart';
 import '../../../membership/presentation/utils/membership_format.dart';
+import '../../../membership/presentation/widgets/membership_checkout_sheet.dart';
 
 /// Premium tab, driven by `GET /membership/plans` and `GET /membership/me`.
 ///
@@ -320,32 +319,14 @@ class _BuyButton extends ConsumerStatefulWidget {
 class _BuyButtonState extends ConsumerState<_BuyButton> {
   bool _busy = false;
 
+  /// Opens the order summary, which runs checkout → Razorpay → verify. Busy
+  /// until it closes, so a second tap can't start a second order.
   Future<void> _buy() async {
-    final l10n = AppLocalizations.of(context);
     setState(() => _busy = true);
-    String message;
-    try {
-      final result = await ref
-          .read(membershipPurchaseServiceProvider)
-          .purchase(widget.option);
-      message = switch (result) {
-        PurchaseResult.activated => l10n.membershipPurchaseActivated,
-        PurchaseResult.activationPending =>
-          l10n.membershipPurchaseActivationPending,
-        PurchaseResult.cancelled => l10n.membershipPurchaseCancelled,
-        PurchaseResult.paymentFailed => l10n.membershipPurchaseFailed,
-        PurchaseResult.contactSupport => l10n.membershipPurchaseContactSupport,
-        PurchaseResult.unavailable => l10n.membershipPurchaseUnavailableHere,
-      };
-    } on ApiException catch (e) {
-      // 400 "not on sale" and similar: the server's own sentence.
-      message = e.message;
-    } on DioException {
-      // 502 from Razorpay, 503 not configured, or no connection.
-      message = l10n.membershipPurchaseStartFailed;
-    }
+    final message = await showMembershipCheckoutSheet(context, widget.option);
     if (!mounted) return;
     setState(() => _busy = false);
+    if (message == null) return;
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));

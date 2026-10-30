@@ -93,7 +93,8 @@ export type AgentIdentifierKind = 'PHONE' | 'EMAIL' | 'PAN';
  * Contract: synchronous; two spellings of the same identifier give the same
  * hash; a different kind or value gives a different hash; the output never
  * contains the input; a value that is empty after trimming is refused with a
- * RangeError.
+ * RangeError (the real adapter reports it as AgentServiceError
+ * VALIDATION_FAILED naming the field, so it answers 400, never 500).
  */
 export interface AgentIdentifierHasher {
   hash(kind: AgentIdentifierKind, value: string): string;

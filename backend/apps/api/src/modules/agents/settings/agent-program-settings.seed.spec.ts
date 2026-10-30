@@ -17,6 +17,8 @@ const MIGRATIONS = join(
 );
 const DECIDED = '20261029130100_agent_program_settings_seed';
 const PROPOSED = '20261029130200_agent_program_settings_approved';
+/** Shaaz's Payments migration: the seeds must be applied after it. */
+const PAYMENTS = '20261029130000_payment_referral_gst';
 
 function sqlOf(folder: string): string {
   return readFileSync(join(MIGRATIONS, folder, 'migration.sql'), 'utf8');
@@ -42,11 +44,16 @@ const proposed = rowsOf(sqlOf(PROPOSED));
 const all = [...decided, ...proposed];
 
 describe('agent-program settings seed migrations', () => {
-  it('are the last two migrations, decided values first', () => {
+  it('both exist and sort after the Payments migration, decided values first', () => {
+    // Later migrations (anyone's) may follow them; only this order matters.
     const folders = readdirSync(MIGRATIONS)
       .filter((f) => /^\d{14}_/.test(f))
       .sort();
-    expect(folders.slice(-2)).toEqual([DECIDED, PROPOSED]);
+    expect(folders).toEqual(
+      expect.arrayContaining([PAYMENTS, DECIDED, PROPOSED]),
+    );
+    expect(PAYMENTS < DECIDED).toBe(true);
+    expect(DECIDED < PROPOSED).toBe(true);
   });
 
   it('seed exactly the decided values', () => {
