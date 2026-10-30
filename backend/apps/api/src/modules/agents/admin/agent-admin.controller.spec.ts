@@ -195,6 +195,22 @@ async function bootApp(
   return app;
 }
 
+describe('AgentsModule at boot', () => {
+  it('registers agent.daily_approval with the daily job registry', async () => {
+    const app = await bootApp();
+    try {
+      expect(
+        app
+          .get(DailyJobRegistry)
+          .list()
+          .map((job) => job.name),
+      ).toEqual(['agent.daily_approval']);
+    } finally {
+      await app.close();
+    }
+  });
+});
+
 describe('/admin/agents over HTTP', () => {
   let h: AgentAdminHarness;
   let app: INestApplication<App>;
