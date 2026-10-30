@@ -22,3 +22,40 @@ export function hasTamil(text: LocalizedText | undefined): boolean {
   const ta = text?.ta?.trim();
   return !!ta && ta !== '<to be supplied>';
 }
+
+type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info';
+
+/** Badge tone for an agent status. The label text always carries the meaning too. */
+export function statusTone(status: string): Tone {
+  switch (status) {
+    case 'ACTIVE':
+      return 'success';
+    case 'PENDING_APPROVAL':
+    case 'SUSPENDED':
+      return 'warning';
+    case 'REJECTED':
+    case 'TERMINATED':
+      return 'danger';
+    default:
+      return 'neutral';
+  }
+}
+
+/** Tone for a commission/payout/stage key from the contract. */
+export function moneyTone(key: string): Tone {
+  switch (key) {
+    case 'PAID':
+    case 'PURCHASED':
+      return 'success';
+    case 'ON_HOLD':
+    case 'CREATED':
+    case 'PROFILE_COMPLETE':
+      return 'warning';
+    case 'APPROVED':
+      return 'info';
+    case 'CANCELLED':
+      return 'danger';
+    default:
+      return 'neutral';
+  }
+}
