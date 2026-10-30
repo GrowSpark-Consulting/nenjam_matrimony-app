@@ -190,6 +190,10 @@ export const validationSchema = Joi.object({
     .length(44)
     .optional(),
 
+  // The shared secret the scheduled caller of POST /internal/jobs/daily sends
+  // (X-Jobs-Secret). Optional: unset, that route answers 503.
+  JOBS_SECRET: Joi.string().allow('').min(32).optional(),
+
   // Keyed hashing of phones, emails, PANs and IPs: "v1:<secret>[,v0:<old>]",
   // newest first, each secret at least 32 characters. Optional: without it
   // the app boots and the agent program's routes answer 503.
