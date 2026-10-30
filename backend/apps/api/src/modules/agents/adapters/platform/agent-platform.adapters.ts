@@ -37,6 +37,10 @@ import {
   AGENT_PROGRAM_SETTING_KEYS,
   agentProgramSettingProblem,
 } from '../../settings/agent-program-settings';
+import {
+  AGENT_QUOTE_ENABLED_KEY,
+  agentQuoteEnabledProblem,
+} from '../../settings/agent-quote-switch';
 
 export class PlatformSettingsAdapter implements AgentSettingsPort {
   constructor(
@@ -115,6 +119,11 @@ export class AgentSettingValidators implements OnModuleInit {
     for (const key of AGENT_PROGRAM_SETTING_KEYS) {
       this.settings.registerValidator(key, agentSettingValidator(key));
     }
+    // The quote kill switch (not one of the seeded keys).
+    this.settings.registerValidator(
+      AGENT_QUOTE_ENABLED_KEY,
+      agentQuoteEnabledProblem,
+    );
   }
 }
 

@@ -12,9 +12,12 @@
  *   state (an already cancelled commission is left alone).
  *
  * Amounts come from the event as stored on the payment and are used as they
- * are: the tax is never recomputed. The commission base follows the
+ * are: the tax is never recomputed. Plan prices are EXCLUSIVE of GST (Raja,
+ * 29 Oct): the member pays `taxableAmountPaise + taxPaise` = `amountPaidPaise`,
+ * and GST is added on top, never found inside. The commission base follows the
  * `commission.base` setting: AMOUNT_PAID_EXCLUDING_GST uses
- * `taxableAmountPaise`, AMOUNT_PAID uses `amountPaidPaise`, and no setting
+ * `taxableAmountPaise`, AMOUNT_PAID uses `amountPaidPaise` (GST included, what
+ * the member paid; the cap uses it too), and no setting
  * leaves the amount empty (filled by the daily approval once it is set).
  */
 import { randomUUID } from 'node:crypto';
@@ -88,6 +91,7 @@ export interface PaymentSucceededResult {
 
 export type PaymentRefundedOutcome =
   | 'REVERSED'
+  | 'REDUCED'
   /** livemode is not true: nothing to change. */
   | 'TEST_MODE'
   | 'CANCELLED'
@@ -99,6 +103,8 @@ export interface PaymentRefundedResult {
   outcome: PaymentRefundedOutcome;
   commissionId?: string;
   reversalPaise?: number;
+  /** With REDUCED: the new amount (null while the amount is still unknown). */
+  reducedAmountPaise?: number | null;
 }
 
 export class AgentCommissionPolicyMissingError extends Error {
@@ -230,6 +236,8 @@ export class AgentCommissionEventsService {
             amountPaise: draft.amountPaise,
             amountPaidPaise: event.amountPaidPaise,
             taxableAmountPaise: event.taxableAmountPaise,
+            refundedPaise: 0,
+            preRefundAmountPaise: null,
             creditedPaise: 0,
             reversedPaise: 0,
             holdUntil: draft.holdUntil,
@@ -305,10 +313,52 @@ export class AgentCommissionEventsService {
         refundedTotalPaise: event.totalRefundedPaise,
         isFullRefund: event.fullyRefunded,
         payoutStatus: commission.status === 'PAID' ? 'PAID' : 'NONE',
+        // Before approval: the amount before any refund reduced it, and the
+        // running total already applied. After approval: only set when a
+        // refund reduced the commission before it was approved.
+        originalAmountPaise:
+          commission.preRefundAmountPaise ??
+          (isOpen(commission.status) ? commission.amountPaise : null),
+        alreadyRefundedPaise: commission.refundedPaise,
       });
 
       if (plan.commissionNext === 'UNCHANGED' && plan.reversalPaise === 0) {
         return { outcome: 'NOTHING_TO_REVERSE', commissionId: commission.id };
+      }
+
+      // A PARTIAL refund before approval REDUCES the commission in
+      // proportion (DECIDED, Ishu 29 Oct). Nothing was credited, so the ledger
+      // is not touched; the status, rule snapshot and review reasons stay.
+      // The running total makes a replayed refund a no-op (handled above, by
+      // the plan returning UNCHANGED).
+      if (plan.commissionNext === 'REDUCED') {
+        const reduced = await commissions.transition(
+          commission.id,
+          commission.status,
+          {
+            refundedPaise: plan.refundedPaise,
+            ...(plan.reducedAmountPaise !== null &&
+              plan.reducedAmountPaise !== undefined && {
+                amountPaise: plan.reducedAmountPaise,
+                preRefundAmountPaise:
+                  commission.preRefundAmountPaise ?? commission.amountPaise,
+              }),
+          },
+          tx,
+        );
+        if (reduced === null) throw new AgentMoneyError('CONCURRENT_CHANGE');
+        await this.audit(
+          commission,
+          event,
+          'COMMISSION_REDUCED_BY_REFUND',
+          0,
+          tx,
+        );
+        return {
+          outcome: 'REDUCED',
+          commissionId: commission.id,
+          reducedAmountPaise: plan.reducedAmountPaise ?? null,
+        };
       }
 
       if (plan.commissionNext === 'CANCELLED') {
@@ -437,6 +487,15 @@ export class AgentCommissionEventsService {
   }
 }
 
+const OPEN_STATUSES: ReadonlySet<string> = new Set([
+  'ON_HOLD',
+  'AWAITING_VERIFICATION',
+  'IN_REVIEW',
+  'FROZEN',
+  'READY',
+]);
+const isOpen = (status: string): boolean => OPEN_STATUSES.has(status);
+
 function assertPaise(name: string, value: unknown): asserts value is number {
   if (!Number.isSafeInteger(value) || (value as number) < 0) {
     throw new RangeError(`${name} must be a non-negative integer (paise).`);
@@ -455,8 +514,9 @@ function checkSucceeded(event: PaymentSucceeded): Date {
   assertPaise('amountPaidPaise', event.amountPaidPaise);
   assertPaise('taxPaise', event.taxPaise);
   assertPaise('taxableAmountPaise', event.taxableAmountPaise);
-  // The two parts are stored on the payment and add up to what was paid. A
-  // mismatch is a broken event: refuse it rather than pay on wrong numbers.
+  // The member pays the taxable amount plus the GST added on top, so the two
+  // parts add up to what was paid. A mismatch is a broken event: refuse it
+  // rather than pay on wrong numbers.
   if (event.taxPaise + event.taxableAmountPaise !== event.amountPaidPaise) {
     throw new RangeError(
       'taxPaise and taxableAmountPaise must add up to amountPaidPaise.',

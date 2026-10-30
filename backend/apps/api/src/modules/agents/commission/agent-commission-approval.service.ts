@@ -48,6 +48,7 @@ import {
 } from './decide-commission-transition';
 import { buildCreditEntry } from './ledger-entries';
 import { isProfileEligibleForCommission } from './profile-eligibility';
+import { reduceForRefund } from './plan-refund-effect';
 
 export interface AgentCommissionApprovalDeps {
   uow: AgentUnitOfWork;
@@ -161,14 +162,29 @@ export class AgentCommissionApprovalService {
     if (commission.amountPaise === null && run.base !== null) {
       const basePaise = baseFor(run.base, commission);
       if (basePaise !== null) {
-        const amountPaise = calculateCommission(
+        const fullAmount = calculateCommission(
           { calcType: commission.calcType, value: commission.ruleValue },
           basePaise,
           commission.amountPaidPaise,
         );
+        // A partial refund that came in before the base was set was recorded
+        // as a running total: apply the same refunded fraction now, so a
+        // later base does not undo the refund.
+        const refunded = commission.refundedPaise > 0;
+        const amountPaise = refunded
+          ? reduceForRefund(
+              fullAmount,
+              commission.amountPaidPaise,
+              commission.refundedPaise,
+            )
+          : fullAmount;
         commission = await commissions.update(
           id,
-          { basePaise, amountPaise },
+          {
+            basePaise,
+            amountPaise,
+            ...(refunded && { preRefundAmountPaise: fullAmount }),
+          },
           tx,
         );
       }

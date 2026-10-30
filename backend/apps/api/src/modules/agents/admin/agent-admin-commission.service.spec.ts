@@ -89,8 +89,8 @@ describe('approve', () => {
       const c = await make(1, from);
       h.clock.set(LATE);
       const view = await h.commissionsAdmin.approve(super_, c.id, REASON);
-      expect(view).toMatchObject({ status: 'APPROVED', creditedPaise: 805 });
-      expect(await h.ledger.balance('agent-1')).toBe(805);
+      expect(view).toMatchObject({ status: 'APPROVED', creditedPaise: 950 });
+      expect(await h.ledger.balance('agent-1')).toBe(950);
       expect(h.audit.entries.at(-1)).toMatchObject({
         actorId: SUPER,
         action: 'commission.approve',
@@ -178,7 +178,7 @@ describe('cancel', () => {
     const c = await make(1, 'READY');
     await h.commissionsAdmin.approve(super_, c.id, REASON);
     const view = await h.commissionsAdmin.cancel(super_, c.id, 'paid in error');
-    expect(view).toMatchObject({ status: 'CANCELLED', reversedPaise: 805 });
+    expect(view).toMatchObject({ status: 'CANCELLED', reversedPaise: 950 });
     expect(await h.ledger.balance('agent-1')).toBe(0);
     expect(
       (await h.ledger.findByKey(`commission-cancel:${c.id}`))?.reason,
@@ -190,26 +190,26 @@ describe('cancel', () => {
     await h.commissionsAdmin.approve(super_, c.id, REASON);
     await h.events.onPaymentRefunded(
       h.paymentRefunded(1, 1, {
-        refundedPaise: 2_375,
-        totalRefundedPaise: 2_375,
+        refundedPaise: 2_802,
+        totalRefundedPaise: 2_802,
         fullyRefunded: false,
       }),
     );
-    expect(await h.ledger.balance('agent-1')).toBe(805 - 201);
+    expect(await h.ledger.balance('agent-1')).toBe(950 - 237);
     await h.commissionsAdmin.cancel(super_, c.id, REASON);
     expect(await h.ledger.balance('agent-1')).toBe(0);
   });
 
   it('refuses a commission in a payout, and PAID, CANCELLED or REVERSED ones', async () => {
     const c = await make(1, 'APPROVED');
-    await h.commissions.update(c.id, { creditedPaise: 805 });
+    await h.commissions.update(c.id, { creditedPaise: 950 });
     await h.payouts.create({
       id: 'po-1',
       agentId: 'agent-1',
       period: '2026-11',
-      amountPaise: 805,
+      amountPaise: 950,
       taxWithheldPaise: 0,
-      netPaise: 805,
+      netPaise: 950,
       status: 'CREATED',
       reference: null,
       paidAt: null,
@@ -268,7 +268,7 @@ describe('override', () => {
     expect(view).toMatchObject({ amountPaise: 500, status: 'IN_REVIEW' });
     expect(h.audit.entries.at(-1)).toMatchObject({
       action: 'commission.override',
-      before: { amountPaise: 805 },
+      before: { amountPaise: 950 },
       after: { amountPaise: 500 },
     });
     expect(h.ledger.all).toHaveLength(0);
@@ -295,12 +295,12 @@ describe('override', () => {
   it('refuses above what the member paid, a bad amount, and a closed or attached commission', async () => {
     const c = await make(1, 'READY');
     await expect(
-      h.commissionsAdmin.override(super_, c.id, 9_501, REASON),
+      h.commissionsAdmin.override(super_, c.id, 11_211, REASON),
     ).rejects.toMatchObject({ code: 'AMOUNT_EXCEEDS_PAID' });
     expect(
-      (await h.commissionsAdmin.override(super_, c.id, 9_500, REASON))
+      (await h.commissionsAdmin.override(super_, c.id, 11_210, REASON))
         .amountPaise,
-    ).toBe(9_500);
+    ).toBe(11_210);
     for (const bad of [-1, 1.5, Number.NaN]) {
       await expect(
         h.commissionsAdmin.override(super_, c.id, bad, REASON),
@@ -312,13 +312,29 @@ describe('override', () => {
     ).rejects.toMatchObject({ code: 'COMMISSION_STATUS_NOT_ALLOWED' });
   });
 
+  it('refuses a typed amount over a commission a partial refund already reduced', async () => {
+    const c = await make(1, 'IN_REVIEW');
+    await h.events.onPaymentRefunded(
+      h.paymentRefunded(1, 1, {
+        refundedPaise: 2_802,
+        totalRefundedPaise: 2_802,
+        fullyRefunded: false,
+      }),
+    );
+    expect((await h.commissions.findById(c.id))?.amountPaise).toBe(712);
+    await expect(
+      h.commissionsAdmin.override(super_, c.id, 800, REASON),
+    ).rejects.toMatchObject({ code: 'COMMISSION_PARTLY_REFUNDED' });
+    expect((await h.commissions.findById(c.id))?.amountPaise).toBe(712);
+  });
+
   it('will not drop an approved amount below what refunds already reversed', async () => {
     const c = await make(1, 'READY');
     await h.commissionsAdmin.approve(super_, c.id, REASON);
     await h.events.onPaymentRefunded(
       h.paymentRefunded(1, 1, {
-        refundedPaise: 2_375,
-        totalRefundedPaise: 2_375,
+        refundedPaise: 2_802,
+        totalRefundedPaise: 2_802,
         fullyRefunded: false,
       }),
     );
@@ -338,6 +354,6 @@ describe('override', () => {
       h.commissionsAdmin.override(super_, c.id, 1000, REASON),
     ).rejects.toThrow('ledger down');
     expect(h.audit.entries).toHaveLength(before);
-    expect((await h.commissions.findById(c.id))?.amountPaise).toBe(805);
+    expect((await h.commissions.findById(c.id))?.amountPaise).toBe(950);
   });
 });
