@@ -1,3 +1,4 @@
+import { AGENT_SEAL_PURPOSES } from '../ports/agent-secret-sealer.port';
 import type { AgentSession } from '../auth/agent-session-issuer';
 import { AgentConflictError } from '../ports/agent-data-ports';
 import { hashRefreshToken } from '../auth/refresh-token';
@@ -92,7 +93,9 @@ describe('AgentApplicationService.submit', () => {
       expect(stored!.panLast4).toBe('234F');
       expect(stored!.panSealed).not.toBeNull();
       expect(stored!.panSealed).not.toContain('ABCDE1234F');
-      expect(h.sealer.open(stored!.panSealed!)).toBe('ABCDE1234F');
+      expect(h.sealer.open(AGENT_SEAL_PURPOSES.pan, stored!.panSealed!)).toBe(
+        'ABCDE1234F',
+      );
       expect(JSON.stringify(session)).not.toContain('ABCDE1234F');
     });
 
@@ -102,7 +105,9 @@ describe('AgentApplicationService.submit', () => {
         pan: ' abcde1234f ',
       });
       const stored = await h.agents.findById(session.agent.id);
-      expect(h.sealer.open(stored!.panSealed!)).toBe('ABCDE1234F');
+      expect(h.sealer.open(AGENT_SEAL_PURPOSES.pan, stored!.panSealed!)).toBe(
+        'ABCDE1234F',
+      );
     });
 
     it('PAN is optional: without it nothing is stored', async () => {
@@ -255,7 +260,7 @@ describe('AgentApplicationService.submit', () => {
     it('keeps the earlier PAN when none is sent, and replaces it when one is', async () => {
       await h.seedAgent('REJECTED', {
         panLast4: '111A',
-        panSealed: h.sealer.seal('AAAAA1111A'),
+        panSealed: h.sealer.seal(AGENT_SEAL_PURPOSES.pan, 'AAAAA1111A'),
       });
       const claims = await h.claimsOf(await h.signInAs());
       const withoutPan: AgentApplicationBody = {
@@ -277,7 +282,9 @@ describe('AgentApplicationService.submit', () => {
       );
       const second = await h.agents.findById('agent-2');
       expect(second!.panLast4).toBe('234F');
-      expect(h.sealer.open(second!.panSealed!)).toBe('ABCDE1234F');
+      expect(h.sealer.open(AGENT_SEAL_PURPOSES.pan, second!.panSealed!)).toBe(
+        'ABCDE1234F',
+      );
     });
 
     describe('PAN verification when re-applying', () => {
@@ -286,7 +293,7 @@ describe('AgentApplicationService.submit', () => {
         h.seedAgent('REJECTED', {
           rejectionReason: 'Incomplete details',
           panLast4: pan.slice(-4),
-          panSealed: h.sealer.seal(pan),
+          panSealed: h.sealer.seal(AGENT_SEAL_PURPOSES.pan, pan),
           panVerifiedAt: VERIFIED_AT,
         });
       const submit = async (body: AgentApplicationBody) =>
@@ -296,7 +303,9 @@ describe('AgentApplicationService.submit', () => {
         await seedVerified('AAAAA1111A');
         await submit(BODY); // ABCDE1234F
         const agent = await h.agents.findById('agent-1');
-        expect(h.sealer.open(agent!.panSealed!)).toBe('ABCDE1234F');
+        expect(h.sealer.open(AGENT_SEAL_PURPOSES.pan, agent!.panSealed!)).toBe(
+          'ABCDE1234F',
+        );
         expect(agent!.panVerifiedAt).toBeNull();
       });
 

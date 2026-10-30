@@ -26,7 +26,10 @@ import type {
   AgentIdentifierHasher,
   AgentPermissionPort,
 } from '../ports/agent-platform-ports';
-import type { AgentSecretSealer } from '../ports/agent-secret-sealer.port';
+import {
+  AGENT_SEAL_PURPOSES,
+  type AgentSecretSealer,
+} from '../ports/agent-secret-sealer.port';
 import type {
   AgentTx,
   AgentUnitOfWork,
@@ -415,11 +418,15 @@ export class AgentAdminService {
 
       for (const field of wanted) {
         if (field === 'PAN')
-          result.pan = this.deps.sealer.open(agent.panSealed as string);
+          result.pan = this.deps.sealer.open(
+            AGENT_SEAL_PURPOSES.pan,
+            agent.panSealed as string,
+          );
         if (field === 'PHONE') result.phone = agent.phoneE164;
         if (field === 'PAYOUT_DETAILS') {
           result.payoutDetails = JSON.parse(
             this.deps.sealer.open(
+              AGENT_SEAL_PURPOSES.payoutDetails,
               (details as { detailsSealed: string }).detailsSealed,
             ),
           ) as Record<string, unknown>;

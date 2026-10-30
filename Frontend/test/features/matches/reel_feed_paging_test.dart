@@ -82,16 +82,19 @@ void main() {
     expect(backend.requests, hasLength(1));
   });
 
-  test('a backend that reports more but returns no cursor is treated as exhausted', () async {
-    // Otherwise the reel would ask for the same first page forever.
-    final backend = _RankedFeedBackend(total: 60, withholdCursor: true);
-    final container = containerWith(backend);
-    final state = await load(container);
+  test(
+    'a backend that reports more but returns no cursor is treated as exhausted',
+    () async {
+      // Otherwise the reel would ask for the same first page forever.
+      final backend = _RankedFeedBackend(total: 60, withholdCursor: true);
+      final container = containerWith(backend);
+      final state = await load(container);
 
-    expect(state.hasMore, isFalse);
-    await container.read(reelFeedProvider.notifier).loadMore();
-    expect(backend.requests, hasLength(1));
-  });
+      expect(state.hasMore, isFalse);
+      await container.read(reelFeedProvider.notifier).loadMore();
+      expect(backend.requests, hasLength(1));
+    },
+  );
 
   test('a failed page keeps what is loaded and can be retried', () async {
     final backend = _RankedFeedBackend(total: 60);
@@ -142,8 +145,9 @@ class _RankedFeedBackend implements DiscoverRepository {
   final List<_Request> requests = [];
 
   List<String> ids(int from, int to) => [
-        for (var i = from; i < to && i < total; i++) 'u${i.toString().padLeft(2, '0')}',
-      ];
+    for (var i = from; i < to && i < total; i++)
+      'u${i.toString().padLeft(2, '0')}',
+  ];
 
   String cursorAfter(int index) => 'cursor-after-$index';
 
@@ -178,13 +182,15 @@ class _RankedFeedBackend implements DiscoverRepository {
       items: items,
       page: page,
       hasMore: more,
-      nextCursor:
-          more && !withholdCursor && items.isNotEmpty ? cursorAfter(end - 1) : null,
+      nextCursor: more && !withholdCursor && items.isNotEmpty
+          ? cursorAfter(end - 1)
+          : null,
     );
   }
 
   @override
-  Future<DiscoverFeedEntity> getDiscoverFeed() async => const DiscoverFeedEntity(
+  Future<DiscoverFeedEntity> getDiscoverFeed() async =>
+      const DiscoverFeedEntity(
         aiRecommended: [],
         recentlyJoined: [],
         stories: [],

@@ -34,7 +34,7 @@ import { PrismaCommissionRepository } from '../adapters/prisma/prisma-commission
 import { PrismaReferralAttributionRepository } from '../adapters/prisma/prisma-referral-attribution.repository';
 import { PrismaReferralCodeRepository } from '../adapters/prisma/prisma-referral-code.repository';
 import { AgentCommissionApprovalService } from '../commission/agent-commission-approval.service';
-import { AesGcmSecretSealer } from '../crypto/aes-gcm-secret-sealer';
+import { AgentPiiSealer } from '../crypto/agent-pii-sealer';
 import { AgentPayoutService } from '../payout/agent-payout.service';
 import type { AgentSecretSealer } from '../ports/agent-secret-sealer.port';
 import { AgentAdminCommissionService } from './agent-admin-commission.service';
@@ -102,7 +102,7 @@ export function buildAgentAdminRest(deps: {
       'AGENT_PII_ENCRYPTION_KEY is not set: revealing agent PAN, phone and payout details answers 503.',
     );
   }
-  const sealer = key ? new AesGcmSecretSealer(key) : UNAVAILABLE_SEALER;
+  const sealer = key ? new AgentPiiSealer(key) : UNAVAILABLE_SEALER;
 
   const approval = new AgentCommissionApprovalService({
     uow,

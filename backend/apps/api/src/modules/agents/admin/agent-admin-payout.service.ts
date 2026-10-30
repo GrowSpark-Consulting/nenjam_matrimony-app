@@ -33,7 +33,10 @@ import type {
   AgentAuditPort,
   AgentPermissionPort,
 } from '../ports/agent-platform-ports';
-import type { AgentSecretSealer } from '../ports/agent-secret-sealer.port';
+import {
+  AGENT_SEAL_PURPOSES,
+  type AgentSecretSealer,
+} from '../ports/agent-secret-sealer.port';
 import type {
   AgentTx,
   AgentUnitOfWork,
@@ -290,7 +293,10 @@ export class AgentAdminPayoutService {
     const details = await this.deps.payoutDetails.find(payout.agentId, tx);
     if (details === null) return null;
     const destination = JSON.parse(
-      this.deps.sealer.open(details.detailsSealed),
+      this.deps.sealer.open(
+        AGENT_SEAL_PURPOSES.payoutDetails,
+        details.detailsSealed,
+      ),
     ) as PayoutDestination;
     await this.deps.audit.record(
       {
