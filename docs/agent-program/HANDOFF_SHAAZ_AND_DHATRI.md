@@ -119,7 +119,6 @@ The referral discount is the only discount we handle.
 | Plan prices | Raja | — |
 | TDS | CA | `planPayout()` refuses any set tax value with `TAX_RULE_UNSUPPORTED` |
 | Partial refund before approval | Raja | `planRefundEffect()` in `commission/plan-refund-effect.ts` (currently cancels the whole commission) |
-| How an agent can pay for a client's plan | Raja | Not started |
 | Tamil wording for the other labels (statuses, stages) | Raja | Comes from `GET /agent/config` (not built yet). The share messages are approved and final (28 Oct); see `FRONTEND_HANDOFF_DHATRI.md` section 6 |
 | Referral link web address | Raja | `link` and `qrPayload` are `null` until decided |
 | Will agents need KYC later? | Raja | **Answered 29 Oct: no separate KYC, the PAN is enough** |
@@ -128,11 +127,15 @@ The referral discount is the only discount we handle.
 - **Commission base:** 10% of the amount without GST (see the settings table above).
 - **A rejected agent may re-apply**; the resubmission goes back to `PENDING_APPROVAL` for admin review (`REJECTED_MAY_REAPPLY` stays `true`).
 - **A terminated agent's waiting commission stays FROZEN** until Raja decides otherwise; commission already approved is still paid.
-- **Roles (Shaaz):** Raja plus one more as Super Admin; a **Partner Manager** role for approving and rejecting agents; payouts only for Raja and the person who pays. Pause, terminate and PAN/phone reveal are not specified yet: Super Admin only for now.
+- **Roles (Shaaz):** Raja plus one more as Super Admin; a **Partner Manager** role for approving and rejecting agents. Pause, terminate and PAN/phone reveal are not specified yet: Super Admin only for now. (Who creates payouts: see the 30 Oct decision below.)
 - **The four agent terms** on the Help screen are approved (a lawyer checks them before launch).
 - **Answered 29 Oct:** a support contact was supplied for the Help screen (it lives in the portal's config, not in this repo); agents need no separate KYC, the PAN is enough.
 - **Migration order:** `20261028095916_agent_program_phase1` (ours, merged), then Shaaz's `20261029053600_admin_rbac_foundation` and `20261029053700_plan_drafts`; apply all three in one window, in that order.
 - **Still open:** plan prices, TDS (the CA), the web address.
+
+**Decided 30 Oct (per Ishu), no longer pending:**
+- **Agents never pay for a client's plan: `paidBy` is always `MEMBER`.** The question "how an agent pays for a client's plan" is closed; no screen or route is planned for it. The `PAID_BY_AGENT` review flag stays as a safety net: a payment recorded as paid by an agent still sends the commission to review instead of crediting it.
+- **Raja creates and records agent payouts himself**, as Super Admin (`payout.view` and `payout.execute`, with step-up). There is no separate `PAYOUT_MANAGER` account for now; the role stays seeded and available for later.
 
 **Decided (no longer pending): members with no verified phone.** A member with no verified phone can never be credited to an agent (`referral_attributions.phone_hash` is NOT NULL), from any source. `quoteReferral` returns no discount with `PHONE_NOT_VERIFIED` and payment goes on; a code entered at payment follows the same rule.
 
