@@ -1,3 +1,4 @@
+import { buildReversalEntry } from '../commission/ledger-entries';
 import { AgentConfigError } from '../config/agent-config.service';
 import { AgentMoneyError } from '../errors/agent-money-error';
 import { AgentPermissionDeniedError } from '../ports/agent-platform-ports';
@@ -171,6 +172,64 @@ describe('GET /admin/payouts/payable (service)', () => {
   it('a missing setting is AgentConfigError (503 SETTINGS_NOT_CONFIGURED)', async () => {
     h.settings.remove('payout.minimum_amount_paise');
     await expect(payable()).rejects.toBeInstanceOf(AgentConfigError);
+  });
+
+  it('a missing payout-details wait is refused too, naming the key', async () => {
+    h.settings.remove('agent.payout_details_wait_hours');
+    const error = await payable().catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(AgentConfigError);
+    expect((error as AgentConfigError).missing).toEqual([
+      'agent.payout_details_wait_hours',
+    ]);
+  });
+
+  it('shows the PRIMARY code, not the first one', async () => {
+    await h.seedAgent('ACTIVE', {
+      id: 'agent-3',
+      name: 'Mala',
+      phoneE164: '+919000000002',
+    });
+    await h.codes.create({
+      id: 'code-3a',
+      agentId: 'agent-3',
+      code: 'NM3H4J5K',
+      isPrimary: false,
+      isActive: true,
+      createdAt: T0,
+    });
+    await h.codes.create({
+      id: 'code-3b',
+      agentId: 'agent-3',
+      code: 'NM7K2P9Y',
+      isPrimary: true,
+      isActive: true,
+      createdAt: T0,
+    });
+    await approvedCommission(9, 'agent-3', 100);
+    const three = (await payable()).items.find((i) => i.agentId === 'agent-3');
+    expect(three?.agentCode).toBe('NM7K2P9Y');
+  });
+
+  it('the balance is credited minus reversed', async () => {
+    await h.commissions.update('com-1', { reversedPaise: 10_000 });
+    const one = (await payable()).items.find((i) => i.agentId === 'agent-1');
+    expect(one?.balancePaise).toBe(50_000);
+  });
+
+  it('a ledger below the commission balance is LEDGER_BALANCE_TOO_LOW', async () => {
+    await h.ledger.append(
+      buildReversalEntry({
+        agentId: 'agent-1',
+        commissionId: 'com-1',
+        refundId: 'refund-1',
+        reversalPaise: 5_000,
+      }),
+    );
+    const one = (await payable()).items.find((i) => i.agentId === 'agent-1');
+    expect(one).toMatchObject({
+      eligible: false,
+      reasons: ['LEDGER_BALANCE_TOO_LOW'],
+    });
   });
 
   it('needs payout.view; a bad period or cursor is VALIDATION_FAILED', async () => {
