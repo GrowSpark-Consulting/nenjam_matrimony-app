@@ -1,10 +1,23 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { pickLabel } from '../lib/labels';
+import { ErrorText } from './ErrorText';
+import { Loading } from './Loading';
 import { usePortal } from '../state/PortalContext';
 
 /** Signed-in agent shell: header, status-aware navigation, sign out. */
 export function Layout() {
-  const { agent, config, signOut, usingMocks } = usePortal();
+  const {
+    agent,
+    config,
+    signOut,
+    usingMocks,
+    loading,
+    configLoading,
+    agentError,
+    configError,
+    retryAgent,
+    retryConfig,
+  } = usePortal();
   const navigate = useNavigate();
   const status = agent?.status;
   const canSeeReferrals = status === 'ACTIVE' || status === 'SUSPENDED';
@@ -47,6 +60,11 @@ export function Layout() {
         <NavLink to="/help">Help</NavLink>
       </nav>
       <main className="main" id="main" tabIndex={-1}>
+        {/* Secondary requests fail on their own: the page below stays usable. */}
+        {agent && loading && <Loading label="Refreshing your account…" />}
+        {agent && <ErrorText error={agentError} onRetry={retryAgent} />}
+        {configLoading && !config && <Loading label="Loading labels…" />}
+        <ErrorText error={configError} onRetry={retryConfig} />
         <Outlet />
       </main>
     </div>
