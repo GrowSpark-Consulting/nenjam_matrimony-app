@@ -12,6 +12,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  Length,
   Max,
   Min,
   ValidateNested,
@@ -105,6 +106,48 @@ export class ReferralsQueryDto {
   @IsOptional()
   @IsIn(['REGISTERED', 'PROFILE_COMPLETE', 'PURCHASED'])
   stage?: string;
+}
+
+export class CommissionsQueryDto {
+  @IsOptional()
+  @IsString()
+  cursor?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number;
+
+  @IsOptional()
+  @IsIn(['ON_HOLD', 'APPROVED', 'PAID', 'CANCELLED'])
+  status?: string;
+}
+
+export class PayoutsQueryDto {
+  @IsOptional()
+  @IsString()
+  cursor?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number;
+}
+
+/** POST /agent/devices: the website portal has no push, so only the apps. */
+export class DeviceDto {
+  @IsDefined()
+  @IsString()
+  @Length(20, 4096)
+  fcmToken!: string;
+
+  @IsDefined()
+  @IsIn(['ANDROID', 'IOS'])
+  platform!: string;
 }
 
 export class ReferralCodeDto {

@@ -51,6 +51,10 @@ import {
   REFERRAL_DISCOUNT_ONLY_IN_CREDIT_WINDOW_KEY,
   REFERRAL_MEMBER_DISCOUNT_BPS_KEY,
 } from '../settings/agent-program-settings';
+import {
+  AGENT_QUOTE_ENABLED_KEY,
+  isAgentQuoteEnabled,
+} from '../settings/agent-quote-switch';
 import { splitName } from './agent-referral-code.service';
 import { toDisplayName } from './agent-referral-view';
 import {
@@ -67,7 +71,9 @@ export type ReferralQuoteRejectedReason =
   | 'NOT_FIRST_PLAN'
   | 'AGENT_PAUSED'
   | 'SELF_REFERRAL'
-  | 'PHONE_NOT_VERIFIED';
+  | 'PHONE_NOT_VERIFIED'
+  /** The quote is switched off (`agent.quote_enabled` false); only when a code was typed. */
+  | 'QUOTE_DISABLED';
 
 export interface ReferralQuoteInput {
   memberId: string;
@@ -138,6 +144,16 @@ export class AgentReferralQuoteService {
       withinCreditWindow: false,
       onlyInCreditWindow: false,
     });
+
+    // The kill switch: nothing else is read, nothing is counted or held.
+    const switchValue = await this.deps.settings.getMany([
+      AGENT_QUOTE_ENABLED_KEY,
+    ]);
+    if (!isAgentQuoteEnabled(switchValue)) {
+      const typedCode =
+        typeof input.promoCode === 'string' && input.promoCode.trim() !== '';
+      return none(list, typedCode ? 'QUOTE_DISABLED' : undefined);
+    }
 
     const member = await this.deps.members.getMember(input.memberId);
     if (member === null) throw new AgentServiceError('UNAUTHORIZED');

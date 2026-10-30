@@ -52,10 +52,19 @@ import {
 } from '../auth/agent-jwt-token-signer';
 import { AgentSessionIssuer } from '../auth/agent-session-issuer';
 import { AgentSignInService } from '../auth/agent-sign-in.service';
+import { PrismaAgentLedgerRepository } from '../adapters/prisma/prisma-agent-ledger.repository';
+import {
+  PrismaAgentCommissionDisplay,
+  PrismaAgentDeviceRepository,
+} from '../adapters/prisma/prisma-agent-money-read';
+import { PrismaAgentPayoutRepository } from '../adapters/prisma/prisma-agent-payout.repository';
+import { PrismaCommissionRepository } from '../adapters/prisma/prisma-commission.repository';
+import { AgentMoneyService } from '../agent/agent-money.service';
+import { PrismaCommissionPolicyRepository } from '../adapters/prisma/prisma-commission-policy.repository';
+import { ActivePolicyHoldDays } from '../config/active-policy-hold-days';
 import { AgentConfigService } from '../config/agent-config.service';
 import { StaticAgentContent } from '../content/agent-content';
 import { AgentPiiSealer } from '../crypto/agent-pii-sealer';
-import type { AgentCommissionPolicyPort } from '../ports/agent-commission-policy.port';
 import type { AgentTokenSigner } from '../ports/agent-infra-ports';
 import type { AgentSecretSealer } from '../ports/agent-secret-sealer.port';
 import { AgentReferralCodeService } from '../referral/agent-referral-code.service';
@@ -74,6 +83,8 @@ export interface AgentProgram {
   config: AgentConfigService;
   referrals: AgentReferralService;
   referralCodes: AgentReferralCodeService;
+  /** Commissions, balance, payouts and push devices of the signed-in agent. */
+  money: AgentMoneyService;
   /** null: AGENT_JWT_SECRET is not usable, every agent route answers 503. */
   tokens: AgentTokenChecker | null;
   /** false: AGENT_PII_ENCRYPTION_KEY is not set, the sealing routes answer 503. */
@@ -96,15 +107,6 @@ export function refreshTokenPepperFrom(secret: string): string {
     .update('agent.refresh_token_pepper.v1', 'utf8')
     .digest('base64url');
 }
-
-/**
- * The hold period comes from the commission policy table, which arrives with
- * the commission migrations (#155). Until that adapter is wired here there is
- * no active policy, so GET /agent/config answers 503 (AgentConfigError).
- */
-export const NO_COMMISSION_POLICY_YET: AgentCommissionPolicyPort = {
-  getActiveHoldDays: () => Promise.resolve(null),
-};
 
 /** Stands in while a secret or key is missing; the controllers refuse first. */
 const UNAVAILABLE_SIGNER: AgentTokenSigner = {
@@ -240,7 +242,14 @@ export function buildAgentProgram(deps: AgentProgramDeps): AgentProgram {
       issuer,
     }),
     me,
-    config: new AgentConfigService(settings, content, NO_COMMISSION_POLICY_YET),
+    config: new AgentConfigService(
+      settings,
+      content,
+      new ActivePolicyHoldDays(
+        new PrismaCommissionPolicyRepository(prisma),
+        clock,
+      ),
+    ),
     referrals: new AgentReferralService({
       access: me,
       codes,
@@ -259,6 +268,15 @@ export function buildAgentProgram(deps: AgentProgramDeps): AgentProgram {
       uow,
       audit,
       clock,
+    }),
+    money: new AgentMoneyService({
+      access: me,
+      commissions: new PrismaCommissionRepository(prisma),
+      ledger: new PrismaAgentLedgerRepository(prisma),
+      payouts: new PrismaAgentPayoutRepository(prisma),
+      display: new PrismaAgentCommissionDisplay(prisma),
+      devices: new PrismaAgentDeviceRepository(prisma),
+      settings,
     }),
     tokens: jwt,
     piiSealing: key !== null,

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { PageHeader } from '../components/ui';
 import { help, SUPPORT_CONTACT_PLACEHOLDER } from '../lib/helpContent';
 import { usePortal } from '../state/PortalContext';
 
@@ -9,29 +10,36 @@ import { usePortal } from '../state/PortalContext';
  */
 export function HelpPage() {
   const { stored } = usePortal();
-  return (
-    <section className="help">
-      <h1>{help.title}</h1>
-      <p>{help.welcome}</p>
-      {help.sections.map((s) => (
-        <div key={s.title}>
-          <h2>{s.title}</h2>
-          <p>{s.body}</p>
-        </div>
-      ))}
-      <h2>{help.termsTitle}</h2>
-      <ul>
-        {help.terms.map((t) => (
-          <li key={t}>{t}</li>
+  const body = (
+    <>
+      <PageHeader title={help.title} description={help.welcome} />
+      <div className="help">
+        {help.sections.map((s) => (
+          <section key={s.title} className="card">
+            <h2>{s.title}</h2>
+            <p>{s.body}</p>
+          </section>
         ))}
-      </ul>
-      <p>{help.termsConsequence}</p>
-      <h2>{help.needHelpTitle}</h2>
-      <p>{help.contact.replace('{contact}', SUPPORT_CONTACT_PLACEHOLDER)}</p>
-      <p>
-        <strong>{help.otpWarning}</strong>
-      </p>
+        <section className="card">
+          <h2>{help.termsTitle}</h2>
+          <ul>
+            {help.terms.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+          </ul>
+          <p>{help.termsConsequence}</p>
+        </section>
+        <section className="card">
+          <h2>{help.needHelpTitle}</h2>
+          <p>{help.contact.replace('{contact}', SUPPORT_CONTACT_PLACEHOLDER)}</p>
+          <p className="notice">
+            <strong>{help.otpWarning}</strong>
+          </p>
+        </section>
+      </div>
       {!stored && <Link to="/sign-in">Back to sign in</Link>}
-    </section>
+    </>
   );
+  // Signed in, the shell already provides <main>; signed out it stands alone.
+  return stored ? body : <main className="main help-public">{body}</main>;
 }

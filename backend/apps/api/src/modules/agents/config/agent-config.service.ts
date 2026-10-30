@@ -15,6 +15,7 @@ import type {
 import type { AgentSettingsPort } from '../ports/agent-platform-ports';
 import { renderShareMessage } from '../referral/render-share-message';
 import {
+  agentProgramSettingProblem,
   parseAgentProgramSettings,
   PAYOUT_MINIMUM_AMOUNT_PAISE_KEY,
   REFERRAL_CREDIT_WINDOW_DAYS_KEY,
@@ -53,10 +54,21 @@ export interface AgentConfig {
   settings: AgentConfigSettings;
 }
 
-/** Thrown when a required setting or policy value has not been set. */
+/**
+ * Thrown when a required setting or policy value is not set (`missing`) or
+ * is set to a value that cannot be used (`invalid`). Answered as 503
+ * AGENT_PROGRAM_UNAVAILABLE; the message names keys only, never values.
+ */
 export class AgentConfigError extends Error {
-  constructor(public readonly missing: string[]) {
-    super(`Agent config is not available: missing ${missing.join(', ')}.`);
+  constructor(
+    public readonly missing: string[],
+    public readonly invalid: string[] = [],
+  ) {
+    const parts = [
+      ...(missing.length > 0 ? [`missing ${missing.join(', ')}`] : []),
+      ...(invalid.length > 0 ? [`invalid ${invalid.join(', ')}`] : []),
+    ];
+    super(`Agent config is not available: ${parts.join('; ')}.`);
     this.name = 'AgentConfigError';
   }
 }
@@ -69,8 +81,8 @@ export class AgentConfigService {
   ) {}
 
   /**
-   * Throws `AgentConfigError` listing every missing value, or a RangeError
-   * naming the setting when one is present but invalid. Never supplies a
+   * Throws `AgentConfigError` listing every value that is missing or
+   * present but unusable (a 503 that names the keys). Never supplies a
    * default.
    */
   async getConfig(): Promise<AgentConfig> {
@@ -82,20 +94,23 @@ export class AgentConfigService {
 
     // Only the keys this response needs are read, so an unrelated setting
     // that is wrong cannot break the config.
-    const parsed = parseAgentProgramSettings(raw);
-    const missing: string[] = REQUIRED_SETTING_KEYS.filter((key) =>
-      parsed.missing.includes(key),
-    );
+    const missing: string[] = [];
+    const invalid: string[] = [];
+    for (const key of REQUIRED_SETTING_KEYS) {
+      const value = raw[key];
+      if (value === undefined || value === null) missing.push(key);
+      else if (agentProgramSettingProblem(key, value) !== null)
+        invalid.push(key);
+    }
     if (holdDays === null) missing.push(HOLD_DAYS_SOURCE);
-    if (holdDays === null || missing.length > 0) {
-      throw new AgentConfigError(missing);
+    else if (!Number.isSafeInteger(holdDays) || holdDays < 0) {
+      invalid.push(HOLD_DAYS_SOURCE);
+    }
+    if (missing.length > 0 || invalid.length > 0 || holdDays === null) {
+      throw new AgentConfigError(missing, invalid);
     }
 
-    if (!Number.isSafeInteger(holdDays) || holdDays < 0) {
-      throw new RangeError(`The ${HOLD_DAYS_SOURCE} must be an integer >= 0.`);
-    }
-
-    const { settings } = parsed;
+    const { settings } = parseAgentProgramSettings(raw);
     const discountPercent =
       settings.referralMemberDiscountBps! / BASIS_POINTS_PER_PERCENT;
 
