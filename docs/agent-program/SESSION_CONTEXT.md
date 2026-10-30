@@ -68,7 +68,10 @@ Sets `mut-batch4`, `mut-batch4b`, `mut-batch4c`, `mut-pepper`, `mut-pepper2`,
 `origin/main` `5100e42` (`D:\claude-scripts\mutate-main.sh`, log
 `mutate-main.log`). RESULT: see the line below (filled in when it finished).
 
-MUTATION_MAIN_RESULT
+**Result (finished 30 Oct, evening): 145 mutants in 9 sets; 143 caught, 1 survived, 1 not run.** Per set (caught): `mut-batch4` 40, `mut-batch4b` 21, `mut-batch4c` 3, `mut-pepper` 11, `mut-pepper2` 4, `mut-sub` 7, `mut-batch5r` 40, `mut-batch5s` 2, `db-batch3` 15 (all 15 DB-gated).
+
+- **Survived, equivalent:** "refund: paid payouts not recognised" (`mut-batch4`). It changes `payoutStatus` given to `planRefundEffect`, which only affects `balanceMayGoNegative`, and **nothing reads that field**. **Finding (decision for Ishu/Raja):** a refund after a PAID payout makes the agent's ledger negative and nobody is told; no alert or flag acts on `balanceMayGoNegative` today.
+- **Not run:** "agents: reveal returns the PAN even when not asked" (`mut-batch5r`): its pattern predates the sealer switch. Rewritten for the current code (`D:claude-scriptsmut-batch5r-pan.cjs`) and run separately: **caught**.
 
 `mut-batch4.cjs` did not parse (a pattern with real line breaks); fixed on
 30 Oct, the broken copy kept as `old-mutations\mut-batch4.cjs.broken-30oct`.
