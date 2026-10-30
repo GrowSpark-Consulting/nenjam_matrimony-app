@@ -207,6 +207,23 @@ export const AGENT_PROGRAM_SETTING_KEYS: readonly string[] = RULES.map(
   (rule) => rule.key,
 );
 
+/**
+ * Why [value] is not acceptable for the agent-program setting [key], or null
+ * when it is. For refusing a bad value when an admin enters it. Stricter than
+ * `parseAgentProgramSettings` in one way: null is refused for a key where
+ * null is not a real value (the parser would treat it as missing, which turns
+ * the feature off). A key that is not one of ours is a programming error.
+ */
+export function agentProgramSettingProblem(
+  key: string,
+  value: unknown,
+): string | null {
+  const rule = RULES.find((r) => r.key === key);
+  if (!rule) throw new RangeError(`${key} is not an agent-program setting.`);
+  const ok = value === null ? rule.nullIsValue === true : rule.check(value);
+  return ok ? null : `Setting ${key} must be ${rule.expected}.`;
+}
+
 export function parseAgentProgramSettings(
   raw: Record<string, unknown>,
 ): ParsedAgentProgramSettings {

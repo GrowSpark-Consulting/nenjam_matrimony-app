@@ -5323,6 +5323,87 @@ class AppLocalizationsTa extends AppLocalizations {
       'பணம் செலுத்துதலைத் தொடங்க முடியவில்லை, மீண்டும் முயற்சிக்கவும்.';
 
   @override
+  String get membershipCheckoutPlanPrice => 'திட்ட விலை';
+
+  @override
+  String get membershipCheckoutReferralDiscount => 'பரிந்துரை தள்ளுபடி';
+
+  @override
+  String membershipCheckoutGst(String rate) {
+    return 'GST ($rate%)';
+  }
+
+  @override
+  String get membershipCheckoutTotal => 'செலுத்த வேண்டிய மொத்தம்';
+
+  @override
+  String membershipCheckoutPay(String amount) {
+    return '$amount செலுத்தவும்';
+  }
+
+  @override
+  String get membershipCheckoutVerifying =>
+      'உங்கள் பணம் செலுத்துதல் உறுதிசெய்யப்படுகிறது…';
+
+  @override
+  String get membershipCheckoutUnavailable =>
+      'இப்போது பணம் செலுத்த முடியாது. சிறிது நேரத்தில் மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get membershipPromoCodesUnavailable =>
+      'பரிந்துரைக் குறியீடுகளை இன்னும் பயன்படுத்த முடியாது.';
+
+  @override
+  String membershipPromoCodeApplied(String code) {
+    return '$code குறியீடு பயன்படுத்தப்பட்டது';
+  }
+
+  @override
+  String get membershipVerificationUncertain =>
+      'உங்கள் பணம் செலுத்துதலை இன்னும் உறுதிப்படுத்த முடியவில்லை. மீண்டும் பணம் செலுத்த வேண்டாம்: பணம் எடுக்கப்பட்டிருந்தால், உங்கள் திட்டம் செயல்படுத்தப்படும்.';
+
+  @override
+  String get membershipCheckAgain => 'மீண்டும் சரிபார்க்கவும்';
+
+  @override
+  String get membershipCheckoutContinue => 'தொடரவும்';
+
+  @override
+  String get membershipCheckoutActivating =>
+      'பணம் பெறப்பட்டது, உங்கள் திட்டம் செயல்படுத்தப்படுகிறது…';
+
+  @override
+  String get membershipPurchaseAlreadyApplied =>
+      'இந்தப் பணம் ஏற்கனவே உங்கள் உறுப்பினர் திட்டத்தில் சேர்க்கப்பட்டுள்ளது.';
+
+  @override
+  String get membershipPurchaseRefunded =>
+      'இந்தப் பணம் திருப்பி அளிக்கப்பட்டது, எனவே திட்டம் சேர்க்கப்படவில்லை. உதவி தேவைப்பட்டால் ஆதரவுக் குழுவைத் தொடர்பு கொள்ளவும்.';
+
+  @override
+  String get membershipPromoInvalid => 'குறியீடு கிடைக்கவில்லை.';
+
+  @override
+  String get membershipPromoNotFirstPlan =>
+      'குறியீடுகள் உங்கள் முதல் திட்டத்திற்கு மட்டுமே பொருந்தும்.';
+
+  @override
+  String get membershipPromoAlreadyAttributed =>
+      'நீங்கள் ஏற்கனவே ஒரு முகவருடன் இணைக்கப்பட்டுள்ளீர்கள்; அவரது தள்ளுபடி தானாகவே பொருந்தும்.';
+
+  @override
+  String get membershipPromoSelfReferral =>
+      'உங்கள் சொந்த பரிந்துரைக் குறியீட்டைப் பயன்படுத்த முடியாது.';
+
+  @override
+  String get membershipPromoAgentPaused =>
+      'இந்தப் பரிந்துரைக் குறியீட்டை இப்போது பயன்படுத்த முடியாது.';
+
+  @override
+  String get membershipPromoPhoneNotVerified =>
+      'பரிந்துரைக் குறியீட்டைப் பயன்படுத்த உங்கள் மொபைல் எண்ணைச் சரிபார்க்கவும்.';
+
+  @override
   String get membershipDenialTitle => 'உங்கள் உறுப்பினர் திட்டம்';
 
   @override
