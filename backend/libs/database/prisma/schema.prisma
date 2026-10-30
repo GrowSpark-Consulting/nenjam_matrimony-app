@@ -948,6 +948,8 @@ model PaymentTransaction {
   @@index([userId])
   @@index([status])
   @@index([paidAt])
+  /// "Has this UPI id paid before?" (agent program abuse checks).
+  @@index([paymentSourceHash])
   @@map("payment_transactions")
 }
 
