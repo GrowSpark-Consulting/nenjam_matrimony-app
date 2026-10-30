@@ -52,6 +52,14 @@ import {
 } from '../auth/agent-jwt-token-signer';
 import { AgentSessionIssuer } from '../auth/agent-session-issuer';
 import { AgentSignInService } from '../auth/agent-sign-in.service';
+import { PrismaAgentLedgerRepository } from '../adapters/prisma/prisma-agent-ledger.repository';
+import {
+  PrismaAgentCommissionDisplay,
+  PrismaAgentDeviceRepository,
+} from '../adapters/prisma/prisma-agent-money-read';
+import { PrismaAgentPayoutRepository } from '../adapters/prisma/prisma-agent-payout.repository';
+import { PrismaCommissionRepository } from '../adapters/prisma/prisma-commission.repository';
+import { AgentMoneyService } from '../agent/agent-money.service';
 import { AgentConfigService } from '../config/agent-config.service';
 import { StaticAgentContent } from '../content/agent-content';
 import { AesGcmSecretSealer } from '../crypto/aes-gcm-secret-sealer';
@@ -74,6 +82,8 @@ export interface AgentProgram {
   config: AgentConfigService;
   referrals: AgentReferralService;
   referralCodes: AgentReferralCodeService;
+  /** Commissions, balance, payouts and push devices of the signed-in agent. */
+  money: AgentMoneyService;
   /** null: AGENT_JWT_SECRET is not usable, every agent route answers 503. */
   tokens: AgentTokenChecker | null;
   /** false: AGENT_PII_ENCRYPTION_KEY is not set, the sealing routes answer 503. */
@@ -254,6 +264,15 @@ export function buildAgentProgram(deps: AgentProgramDeps): AgentProgram {
       uow,
       audit,
       clock,
+    }),
+    money: new AgentMoneyService({
+      access: me,
+      commissions: new PrismaCommissionRepository(prisma),
+      ledger: new PrismaAgentLedgerRepository(prisma),
+      payouts: new PrismaAgentPayoutRepository(prisma),
+      display: new PrismaAgentCommissionDisplay(prisma),
+      devices: new PrismaAgentDeviceRepository(prisma),
+      settings,
     }),
     tokens: jwt,
     piiSealing: key !== null,

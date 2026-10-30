@@ -51,6 +51,16 @@ import {
   FakeReferralCodeRepository,
 } from './fake-agent-repositories';
 import { FakeAgentSecretSealer } from './fake-agent-secret-sealer';
+import { AgentMoneyService } from '../agent/agent-money.service';
+import {
+  FakeAgentLedgerRepository,
+  FakeAgentPayoutRepository,
+  FakeCommissionRepository,
+} from './fake-agent-commission-repositories';
+import {
+  FakeAgentCommissionDisplay,
+  FakeAgentDeviceRepository,
+} from './fake-agent-money-read';
 import { FakeAgentUnitOfWork } from './fake-agent-unit-of-work';
 
 export const PHONE = '+919876543210';
@@ -213,6 +223,21 @@ export function makeAgentHarness(
     newId: () => `new-agent-${++agentCounter}`,
   });
 
+  const commissions = new FakeCommissionRepository();
+  const ledger = new FakeAgentLedgerRepository();
+  const payouts = new FakeAgentPayoutRepository();
+  const commissionDisplay = new FakeAgentCommissionDisplay();
+  const devices = new FakeAgentDeviceRepository();
+  const money = new AgentMoneyService({
+    access: me,
+    commissions,
+    ledger,
+    payouts,
+    display: commissionDisplay,
+    devices,
+    settings,
+  });
+
   /** The verified claims inside a session's access token. */
   const claimsOf = async (session: { accessToken: string }) => {
     const claims = await signer.verify(session.accessToken);
@@ -345,6 +370,12 @@ export function makeAgentHarness(
     referrals,
     referralCodes,
     referralQuote,
+    commissions,
+    ledger,
+    payouts,
+    commissionDisplay,
+    devices,
+    money,
     claimsOf,
     seedAgent,
     seedReferral,
