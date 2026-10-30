@@ -55,6 +55,8 @@ const commission = (
     amountPaise: 9_990,
     amountPaidPaise: 99_900,
     taxableAmountPaise: 99_900,
+    refundedPaise: 0,
+    preRefundAmountPaise: null,
     creditedPaise: 0,
     reversedPaise: 0,
     holdUntil: new Date(START.getTime() + n * HOUR + 14 * DAY),
