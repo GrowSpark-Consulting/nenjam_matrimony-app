@@ -75,6 +75,7 @@ async function boot(
     }),
     referrals: h.referrals,
     referralCodes: h.referralCodes,
+    money: h.money,
     tokens: jwt,
     piiSealing: true,
     requesterKey: () => 'v1:hashed-test-ip',
@@ -517,6 +518,166 @@ describe('agent routes over HTTP', () => {
           .set(bearer(token));
         expect([path, res.status]).toEqual([path, 400]);
         expect(res.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+      }
+    });
+  });
+
+  describe('commissions, balance, payouts and devices', () => {
+    const FCM = 'f'.repeat(40);
+    beforeEach(async () => (w = await boot()));
+
+    it('an ACTIVE agent reads empty commissions, balance and payouts', async () => {
+      const token = await agentToken(w);
+      const server = w.app.getHttpServer();
+      expect(
+        (
+          await request(server)
+            .get('/agent/commissions')
+            .set(bearer(token))
+            .expect(200)
+        ).body,
+      ).toEqual({ items: [], nextCursor: null });
+      expect(
+        (
+          await request(server)
+            .get('/agent/balance')
+            .set(bearer(token))
+            .expect(200)
+        ).body,
+      ).toEqual({
+        onHoldPaise: 0,
+        availablePaise: 0,
+        paidPaise: 0,
+        minPayoutPaise: 50000,
+        canRequestPayout: false,
+      });
+      expect(
+        (
+          await request(server)
+            .get('/agent/payouts')
+            .set(bearer(token))
+            .expect(200)
+        ).body,
+      ).toEqual({ items: [], nextCursor: null });
+    });
+
+    it('query parameters are checked: 400 VALIDATION_FAILED', async () => {
+      const token = await agentToken(w);
+      for (const path of [
+        '/agent/commissions?status=IN_REVIEW',
+        '/agent/commissions?limit=0',
+        '/agent/commissions?limit=51',
+        '/agent/commissions?cursor=bad',
+        '/agent/commissions?other=1',
+        '/agent/payouts?limit=abc',
+        '/agent/payouts?status=PAID',
+      ]) {
+        const res = await request(w.app.getHttpServer())
+          .get(path)
+          .set(bearer(token));
+        expect([
+          path,
+          res.status,
+          (res.body as { code?: string }).code,
+        ]).toEqual([path, 400, 'VALIDATION_FAILED']);
+      }
+    });
+
+    it('a status and a page size in range are accepted', async () => {
+      const token = await agentToken(w);
+      await request(w.app.getHttpServer())
+        .get('/agent/commissions?status=ON_HOLD&limit=50')
+        .set(bearer(token))
+        .expect(200);
+      await request(w.app.getHttpServer())
+        .get('/agent/payouts?limit=1')
+        .set(bearer(token))
+        .expect(200);
+    });
+
+    it('a PENDING agent is 403 AGENT_NOT_ACTIVE on the money routes', async () => {
+      const token = await agentToken(w, 'PENDING_APPROVAL');
+      for (const path of [
+        '/agent/commissions',
+        '/agent/balance',
+        '/agent/payouts',
+      ]) {
+        const res = await request(w.app.getHttpServer())
+          .get(path)
+          .set(bearer(token));
+        expect([path, res.status]).toEqual([path, 403]);
+        expect(res.body).toMatchObject({
+          code: 'AGENT_NOT_ACTIVE',
+          agentStatus: 'PENDING_APPROVAL',
+        });
+      }
+    });
+
+    it('no token is 401 on all four', async () => {
+      const server = w.app.getHttpServer();
+      for (const res of [
+        await request(server).get('/agent/commissions'),
+        await request(server).get('/agent/balance'),
+        await request(server).get('/agent/payouts'),
+        await request(server)
+          .post('/agent/devices')
+          .send({ fcmToken: FCM, platform: 'IOS' }),
+      ]) {
+        expect(res.status).toBe(401);
+      }
+    });
+
+    it('POST /agent/devices answers 204 with no body and stores the device', async () => {
+      const token = await agentToken(w);
+      const res = await request(w.app.getHttpServer())
+        .post('/agent/devices')
+        .set(bearer(token))
+        .send({ fcmToken: FCM, platform: 'ANDROID' });
+      expect(res.status).toBe(204);
+      expect(res.text).toBe('');
+      expect(w.h.devices.byToken.get(FCM)).toMatchObject({
+        agentId: 'agent-1',
+        platform: 'ANDROID',
+      });
+    });
+
+    it('POST /agent/devices accepts ANDROID and IOS only, and refuses extra fields', async () => {
+      const token = await agentToken(w);
+      for (const body of [
+        { fcmToken: FCM, platform: 'WEB' },
+        { fcmToken: FCM, platform: 'ios' },
+        { fcmToken: FCM },
+        { fcmToken: 'short', platform: 'IOS' },
+        { fcmToken: FCM, platform: 'IOS', agentId: 'agent-2' },
+      ]) {
+        const res = await request(w.app.getHttpServer())
+          .post('/agent/devices')
+          .set(bearer(token))
+          .send(body);
+        expect([body, res.status]).toEqual([body, 400]);
+        expect(res.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+      }
+      expect(w.h.devices.byToken.size).toBe(0);
+    });
+
+    it('a pending applicant AGENT can register a device; an APPLICANT token cannot', async () => {
+      const pending = await agentToken(w, 'PENDING_APPROVAL');
+      await request(w.app.getHttpServer())
+        .post('/agent/devices')
+        .set(bearer(pending))
+        .send({ fcmToken: FCM, platform: 'IOS' })
+        .expect(204);
+      const other = await boot();
+      try {
+        const applicant = (await signInOverHttp(other)).accessToken;
+        const res = await request(other.app.getHttpServer())
+          .post('/agent/devices')
+          .set(bearer(applicant))
+          .send({ fcmToken: FCM, platform: 'IOS' });
+        expect(res.status).toBe(401);
+        expect(other.h.devices.byToken.size).toBe(0);
+      } finally {
+        await other.app.close();
       }
     });
   });

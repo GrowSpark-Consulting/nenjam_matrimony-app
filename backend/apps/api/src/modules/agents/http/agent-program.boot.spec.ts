@@ -44,6 +44,7 @@ function program(): AgentProgram {
     }),
     referrals: h.referrals,
     referralCodes: h.referralCodes,
+    money: h.money,
     tokens: jwt,
     piiSealing: true,
     requesterKey: () => 'v1:hashed-test-ip',
