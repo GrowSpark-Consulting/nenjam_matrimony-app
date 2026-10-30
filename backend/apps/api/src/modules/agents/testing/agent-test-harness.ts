@@ -181,11 +181,13 @@ export function makeAgentHarness(
     audit,
     clock,
   });
+  const commissions = new FakeCommissionRepository();
   const referrals = new AgentReferralService({
     access: me,
     codes,
     attributions,
     members,
+    commissions,
     content,
     settings,
   });
@@ -223,7 +225,6 @@ export function makeAgentHarness(
     newId: () => `new-agent-${++agentCounter}`,
   });
 
-  const commissions = new FakeCommissionRepository();
   const ledger = new FakeAgentLedgerRepository();
   const payouts = new FakeAgentPayoutRepository();
   const commissionDisplay = new FakeAgentCommissionDisplay();

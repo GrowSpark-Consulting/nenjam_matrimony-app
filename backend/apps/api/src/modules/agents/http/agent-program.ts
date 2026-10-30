@@ -255,6 +255,7 @@ export function buildAgentProgram(deps: AgentProgramDeps): AgentProgram {
       codes,
       attributions,
       members,
+      commissions: new PrismaCommissionRepository(prisma),
       content,
       settings,
     }),
