@@ -203,6 +203,36 @@ describe('validationSchema', () => {
     });
   });
 
+  describe('AGENT_PII_ENCRYPTION_KEY', () => {
+    const key = Buffer.alloc(32, 9).toString('base64');
+    const errorFor = (value: string) =>
+      validationSchema.validate(
+        { ...validEnv, AGENT_PII_ENCRYPTION_KEY: value },
+        { abortEarly: false },
+      ).error;
+
+    it('is optional: absent or blank boots (the sealing routes answer 503)', () => {
+      expect(
+        validationSchema.validate(validEnv, { abortEarly: false }).error,
+      ).toBeUndefined();
+      expect(errorFor('')).toBeUndefined();
+    });
+
+    it('accepts every key the runtime accepts: padded, unpadded, surrounding spaces', () => {
+      expect(errorFor(key)).toBeUndefined();
+      expect(errorFor(key.replace(/=+$/, ''))).toBeUndefined();
+      expect(errorFor(` ${key} `)).toBeUndefined();
+    });
+
+    it('refuses a key that is not 32 bytes, without showing it', () => {
+      const short = Buffer.alloc(16, 9).toString('base64');
+      const error = errorFor(short);
+      expect(error?.message).toContain('AGENT_PII_ENCRYPTION_KEY');
+      expect(error?.message).not.toContain(short);
+      expect(errorFor('not-a-key-at-all')).toBeDefined();
+    });
+  });
+
   describe('JOBS_SECRET', () => {
     const withSecret = (secret: string) =>
       validationSchema.validate(

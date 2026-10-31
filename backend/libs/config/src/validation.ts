@@ -190,6 +190,24 @@ export const validationSchema = Joi.object({
     .length(44)
     .optional(),
 
+  // Seals agent PAN, payout details and applicant phones. Optional: without
+  // it the reveal/sealing routes answer 503. When set it must be what the
+  // runtime accepts (parseSealingKey: trimmed, base64 of exactly 32 bytes;
+  // padding optional) — a stricter rule here would refuse to boot with a key
+  // the API already uses. The message never shows the value.
+  AGENT_PII_ENCRYPTION_KEY: Joi.string()
+    .allow('')
+    .optional()
+    .custom((value: string, helpers) =>
+      Buffer.from(value.trim(), 'base64').length === 32
+        ? value
+        : helpers.error('string.sealingKey'),
+    )
+    .messages({
+      'string.sealingKey':
+        "AGENT_PII_ENCRYPTION_KEY must be 32 random bytes, base64-encoded (node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"). The value is not shown.",
+    }),
+
   // The shared secret the scheduled caller of POST /internal/jobs/daily sends
   // (X-Jobs-Secret). Optional: unset, that route answers 503.
   JOBS_SECRET: Joi.string().allow('').min(32).optional(),
