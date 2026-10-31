@@ -84,3 +84,14 @@ describe('agents', () => {
     expect(AGENT_STATUSES.filter(canDecide)).toEqual(['PENDING_APPROVAL']);
   });
 });
+
+describe('agent actions', () => {
+  it('offers only moves the API allows', async () => {
+    const { manageActions } = await import('./agents');
+    expect(manageActions('ACTIVE')).toEqual(['pause', 'terminate', 'replaceCode']);
+    expect(manageActions('SUSPENDED')).toEqual(['resume', 'terminate']);
+    for (const status of ['PENDING_APPROVAL', 'REJECTED', 'TERMINATED'] as const) {
+      expect(manageActions(status)).toEqual([]);
+    }
+  });
+});

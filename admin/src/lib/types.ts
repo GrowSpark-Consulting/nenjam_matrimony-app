@@ -311,3 +311,14 @@ export interface AgentDetail {
     reason: string | null;
   }>;
 }
+
+/** `POST /admin/agents/:id/reveal`: shown once, never stored or cached. */
+export interface RevealedValues {
+  revealedAt: string;
+  pan?: string;
+  phone?: string;
+  payoutDetails?: {
+    upi?: { vpa: string };
+    bank?: { accountHolderName: string; accountNumber: string; ifsc: string };
+  };
+}
