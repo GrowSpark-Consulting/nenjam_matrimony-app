@@ -95,3 +95,30 @@ describe('agent actions', () => {
     }
   });
 });
+
+describe('money helpers', () => {
+  it('offers commission actions only while they can still change', async () => {
+    const { commissionActions } = await import('./money');
+    expect(commissionActions('READY')).toEqual(['approve', 'cancel', 'override']);
+    expect(commissionActions('APPROVED')).toEqual(['cancel', 'override']);
+    for (const status of ['PAID', 'CANCELLED', 'REVERSED'] as const) {
+      expect(commissionActions(status)).toEqual([]);
+    }
+  });
+
+  it('works out payout periods in Indian time', async () => {
+    const { periodOf, previousPeriod, PERIOD_PATTERN } = await import('./money');
+    // 31 Oct 20:00 UTC is already 1 Nov in India.
+    expect(periodOf(new Date('2026-10-31T20:00:00Z'))).toBe('2026-11');
+    expect(previousPeriod(new Date('2026-10-31T20:00:00Z'))).toBe('2026-10');
+    expect(previousPeriod(new Date('2027-01-15T10:00:00Z'))).toBe('2026-12');
+    expect(PERIOD_PATTERN.test('2026-11')).toBe(true);
+    expect(PERIOD_PATTERN.test('2026-13')).toBe(false);
+  });
+
+  it('shows basis points as a percentage', async () => {
+    const { formatBps } = await import('./money');
+    expect(formatBps(1000)).toBe('10%');
+    expect(formatBps(550)).toBe('5.5%');
+  });
+});

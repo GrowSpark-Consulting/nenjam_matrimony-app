@@ -322,3 +322,96 @@ export interface RevealedValues {
     bank?: { accountHolderName: string; accountNumber: string; ifsc: string };
   };
 }
+
+export type CommissionStatus =
+  | 'ON_HOLD'
+  | 'AWAITING_VERIFICATION'
+  | 'IN_REVIEW'
+  | 'FROZEN'
+  | 'READY'
+  | 'APPROVED'
+  | 'PAID'
+  | 'CANCELLED'
+  | 'REVERSED';
+
+export interface CommissionRow {
+  id: string;
+  agentId: string;
+  agentName: string;
+  agentStatus: AgentStatus;
+  referralId: string;
+  planName: string;
+  /** What the member paid: the cap for an override. */
+  paidPaise: number;
+  /** Null while commission.base is undecided. */
+  basePaise: number | null;
+  /** Null while the base is undecided, until set by an override. */
+  amountPaise: number | null;
+  creditedPaise: number;
+  reversedPaise: number;
+  rate: { calcType: 'PERCENTAGE'; value: number };
+  status: CommissionStatus;
+  publicStatus: string;
+  earnedOn: string;
+  holdEndsOn: string | null;
+  approvedOn: string | null;
+  paidOn: string | null;
+  payoutId: string | null;
+}
+
+export type PayoutStatus = 'CREATED' | 'PAID' | 'CANCELLED';
+
+export type PayoutIneligibleReason =
+  | 'AGENT_NOT_PAYABLE'
+  | 'PAN_NOT_VERIFIED'
+  | 'DETAILS_NOT_VERIFIED'
+  | 'WAIT_NOT_OVER'
+  | 'NOTHING_TO_PAY'
+  | 'BELOW_MINIMUM'
+  | 'PAYOUT_EXISTS'
+  | 'TAX_RULE_UNSUPPORTED'
+  | 'LEDGER_BALANCE_TOO_LOW';
+
+export interface PayableAgent {
+  agentId: string;
+  agentName: string;
+  agentCode: string | null;
+  agentStatus: AgentStatus;
+  period: string;
+  /** Approved and unpaid. */
+  balancePaise: number;
+  commissionCount: number;
+  panVerified: boolean;
+  payoutDetails: { method: 'UPI' | 'BANK'; display: string; verifiedAt: string | null } | null;
+  eligible: boolean;
+  reasons: PayoutIneligibleReason[];
+  warnings: string[];
+}
+
+export interface PayoutRow {
+  id: string;
+  agentId: string;
+  agentName: string;
+  agentCode: string | null;
+  period: string;
+  amountPaise: number;
+  taxWithheldPaise: number;
+  netPaise: number;
+  status: PayoutStatus;
+  reference: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  createdBy: string;
+  commissionIds: string[];
+  warnings: string[];
+  cancelReason: string | null;
+}
+
+export interface PayoutDetail extends PayoutRow {
+  commissions: CommissionRow[];
+  /** Present only with payout.execute and a fresh authenticator check. */
+  destination?: {
+    upi?: { vpa: string };
+    bank?: { accountHolderName: string; accountNumber: string; ifsc: string };
+  };
+}
