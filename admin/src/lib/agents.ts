@@ -27,3 +27,26 @@ export function agentStatusLabel(status: AgentStatus): string {
 export function canDecide(status: AgentStatus): boolean {
   return status === 'PENDING_APPROVAL';
 }
+
+/** What an admin with `agent.manage` may do next (the API refuses the rest
+ *  with 409 AGENT_TRANSITION_NOT_ALLOWED). TERMINATED is final. */
+export function manageActions(
+  status: AgentStatus,
+): Array<'pause' | 'resume' | 'terminate' | 'replaceCode'> {
+  switch (status) {
+    case 'ACTIVE':
+      return ['pause', 'terminate', 'replaceCode'];
+    case 'SUSPENDED':
+      return ['resume', 'terminate'];
+    default:
+      return [];
+  }
+}
+
+export type RevealField = 'PAN' | 'PAYOUT_DETAILS' | 'PHONE';
+
+export const REVEAL_FIELDS: ReadonlyArray<{ value: RevealField; label: string }> = [
+  { value: 'PHONE', label: 'Phone number' },
+  { value: 'PAN', label: 'PAN' },
+  { value: 'PAYOUT_DETAILS', label: 'Payout details (UPI or bank)' },
+];
