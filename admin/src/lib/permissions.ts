@@ -14,6 +14,18 @@ export const NAV: readonly NavItem[] = [
   { href: '/', label: 'Overview', permission: 'dashboard.view' },
   { href: '/agents/', label: 'Agents', permission: 'agent.view' },
   {
+    href: '/commissions/',
+    label: 'Commissions',
+    permission: 'commission.view',
+    group: 'Agent program',
+  },
+  {
+    href: '/payouts/',
+    label: 'Payouts',
+    permission: 'payout.view',
+    group: 'Agent program',
+  },
+  {
     href: '/plans/',
     label: 'Plans',
     permission: 'plan.view',
