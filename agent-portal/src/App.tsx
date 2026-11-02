@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import type { AgentStatus } from './api/types';
 import { AgentLoadError } from './components/AgentLoadError';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { Loading } from './components/Loading';
 import { ApplyPage } from './pages/ApplyPage';
@@ -57,6 +58,7 @@ const MONEY_STATUSES: AgentStatus[] = ['ACTIVE', 'SUSPENDED', 'TERMINATED'];
 export function AppRoutes() {
   const { stored } = usePortal();
   return (
+    <ErrorBoundary fullScreen>
     <Routes>
       <Route path="/sign-in" element={<SignInPage />} />
       <Route path="/apply" element={<ApplyGuard><ApplyPage /></ApplyGuard>} />
@@ -71,6 +73,7 @@ export function AppRoutes() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </ErrorBoundary>
   );
 }
 
