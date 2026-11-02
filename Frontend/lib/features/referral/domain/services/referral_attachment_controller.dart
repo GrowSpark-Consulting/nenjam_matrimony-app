@@ -15,7 +15,8 @@ enum ReferralAttachOutcome {
   /// `404 CODE_NOT_FOUND`, or a `400` (the code cannot pass validation).
   codeNotFound,
 
-  /// `422 SELF_REFERRAL`.
+  /// `422 SELF_REFERRAL`, or `422 ALREADY_PAID` (the member already bought a
+  /// plan, so a code can no longer be added).
   notAllowed,
 
   /// Network, `401`, `429`, `5xx` or a code the contract does not list (the
@@ -131,6 +132,9 @@ class ReferralAttachmentController {
       case 'CODE_NOT_FOUND':
         return ReferralAttachOutcome.codeNotFound;
       case 'SELF_REFERRAL':
+      // A code can only be added before the first paid plan; that never
+      // changes, so it is final rather than something to retry.
+      case 'ALREADY_PAID':
         return ReferralAttachOutcome.notAllowed;
     }
     // A 400 is a body the server will refuse every time; retrying is futile.

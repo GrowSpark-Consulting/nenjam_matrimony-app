@@ -1,6 +1,7 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { pickLabel, statusTone } from '../lib/labels';
 import { usePortal } from '../state/PortalContext';
+import { ErrorBoundary } from './ErrorBoundary';
 import { ErrorText } from './ErrorText';
 import { Loading } from './Loading';
 import { Icon, StatusBadge, type IconName } from './ui';
@@ -27,6 +28,7 @@ export function Layout() {
     retryConfig,
   } = usePortal();
   const navigate = useNavigate();
+  const location = useLocation();
   const status = agent?.status;
   const canSeeReferrals = status === 'ACTIVE' || status === 'SUSPENDED';
   const canSeeMoney = canSeeReferrals || status === 'TERMINATED';
@@ -104,7 +106,10 @@ export function Layout() {
           {agent && <ErrorText error={agentError} onRetry={retryAgent} />}
           {configLoading && !config && <Loading label="Loading labels…" lines={1} />}
           <ErrorText error={configError} onRetry={retryConfig} />
-          <Outlet />
+          {/* Keyed by route: leaving a page that failed to render clears it. */}
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

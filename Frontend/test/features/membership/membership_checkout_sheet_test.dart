@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nenjam_matrimony/core/network/api_exception.dart';
@@ -613,6 +614,49 @@ void main() {
       await open(tester);
       await tapContinue(tester);
       expect(find.text('Gold is not available for 3 months.'), findsOneWidget);
+    });
+  });
+
+  group('checkout cannot start (network / session)', () {
+    testWidgets('no connection: start-failed message, no Pay, retry works', (
+      tester,
+    ) async {
+      repo.checkoutErrors.add(
+        DioException(
+          requestOptions: RequestOptions(path: '/membership/checkout'),
+          type: DioExceptionType.connectionError,
+        ),
+      );
+      repo.sessions.add(sessionJson());
+      await open(tester);
+      await tapContinue(tester);
+
+      expect(find.text(l10n.membershipPurchaseStartFailed), findsOneWidget);
+      expect(payButton('₹3,999'), findsNothing);
+      expect(gateway.sessions, isEmpty, reason: 'nothing reaches Razorpay');
+      expect(repo.checkoutRequests, hasLength(1), reason: 'no auto-retry');
+
+      await tester.tap(find.text(l10n.commonRetry));
+      await settle(tester);
+      expect(repo.checkoutRequests, hasLength(2));
+      expect(payButton('₹3,999'), findsOneWidget);
+      expect(find.text(l10n.membershipPurchaseStartFailed), findsNothing);
+    });
+
+    testWidgets('401 (session ended): no order, no Pay, nothing opened', (
+      tester,
+    ) async {
+      repo.checkoutErrors.add(
+        ApiException(401, 'Please sign in again.', code: 'UNAUTHORIZED'),
+      );
+      await open(tester);
+      await tapContinue(tester);
+
+      expect(find.text('Please sign in again.'), findsOneWidget);
+      expect(find.textContaining('Pay '), findsNothing);
+      expect(gateway.sessions, isEmpty);
+      expect(repo.verifyRequests, isEmpty);
+      expect(closedWith, isNull);
     });
   });
 
