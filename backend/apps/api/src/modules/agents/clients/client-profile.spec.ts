@@ -233,6 +233,15 @@ describe('missingRequiredClientFields', () => {
     ).toEqual(['educationDetails.qualification']);
   });
 
+  it('a blank stored value still counts as missing (data saved before, or by another path)', () => {
+    expect(
+      missingRequiredClientFields({
+        ...FULL,
+        educationDetails: { qualification: '   ' },
+      }),
+    ).toEqual(['educationDetails.qualification']);
+  });
+
   it('every optional field can be left out', () => {
     const minimal: ClientProfile = {
       basicDetails: FULL.basicDetails,

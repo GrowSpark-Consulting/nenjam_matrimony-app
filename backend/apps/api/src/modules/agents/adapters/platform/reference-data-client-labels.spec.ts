@@ -49,6 +49,20 @@ describe('ReferenceDataClientLabels', () => {
     });
   });
 
+  it('a label handed in is replaced by the master data’s, never kept', async () => {
+    const result = await labels.withLabels({
+      religionDetails: { religionCode: 'HINDU', religion: 'Not this' },
+      locationDetails: { countryCode: 'IN', country: 'Not this either' },
+    });
+    expect(result).toEqual({
+      ok: true,
+      profile: {
+        religionDetails: { religionCode: 'HINDU', religion: 'Hindu' },
+        locationDetails: { countryCode: 'IN', country: 'India' },
+      },
+    });
+  });
+
   it('a section without codes gets no label (none is ever taken from the caller)', async () => {
     await expect(
       labels.withLabels({ locationDetails: { nativePlace: 'Tirunelveli' } }),
