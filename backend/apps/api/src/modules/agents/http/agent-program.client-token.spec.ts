@@ -21,6 +21,8 @@ function program(env: Record<string, string | undefined>) {
     adminAudit: {} as AgentProgramDeps['adminAudit'],
     firebase: {} as AgentProgramDeps['firebase'],
     agentOtp: { dummyEnabled: false, dummyPhones: [] },
+    locations: { resolve: () => Promise.resolve(null) },
+    religions: { resolve: () => Promise.resolve(null) },
     env,
     logger: { warn: jest.fn() },
   };

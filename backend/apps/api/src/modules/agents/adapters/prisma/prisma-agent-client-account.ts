@@ -7,9 +7,10 @@
  *   every phone-only signup uses (`<uid>@firebase.invalid`, as the dummy-OTP
  *   session and FirebaseAuthGuard do). Role and status are the defaults of a
  *   new member.
- * - `registration_steps`: the wizard's draft with step 1 (`basicDetails`)
- *   filled in and marked done, exactly what saving step 1 in the app writes
- *   (`ProfileRepository.mergeDraftSection`), so `GET /profiles/draft`
+ * - `registration_steps`: the wizard's draft holding every section the
+ *   agent filled, under the wizard's own names (`toClientWizardDraft`),
+ *   with those steps marked done: what saving each of them in the app
+ *   writes (`ProfileRepository.mergeDraftSection`), so `GET /profiles/draft`
  *   resumes from it.
  *
  * The Firebase account is made BEFORE the transaction (`ensureFirebaseUser`,
@@ -22,15 +23,18 @@
  * AGENT_PROGRAM_UNAVAILABLE), not as a 500.
  */
 import { InternalServerErrorException } from '@nestjs/common';
-import type { PrismaClient } from '@app/database';
+import type { Prisma, PrismaClient } from '@app/database';
 import type { FirebaseService } from '@app/firebase';
 import { AgentConfigError } from '../../config/agent-config.service';
 import type {
   AgentClientAccountPort,
   AgentClientMember,
-  ClientBasicDetails,
 } from '../../ports/agent-client-ports';
 import type { AgentTx } from '../../ports/agent-unit-of-work.port';
+import {
+  toClientWizardDraft,
+  type ClientProfile,
+} from '../../clients/client-profile';
 import { dbFor, unwrapTx } from './prisma-agent-tx';
 import {
   withConflictMapping,
@@ -59,9 +63,6 @@ export const CLIENT_MEMBER_UNIQUE_RULES: readonly UniqueViolationRule[] = [
 /** What `FirebaseService` says when its credentials are missing. */
 const NOT_CONFIGURED = /not configured/i;
 const FIREBASE_SOURCE = 'Firebase Admin credentials (FIREBASE_*)';
-
-/** Wizard step 1 is `basicDetails` (`DRAFT_SECTIONS[0]`). */
-const BASIC_DETAILS_STEP = 1;
 
 async function firebaseCall<T>(call: () => Promise<T>): Promise<T> {
   try {
@@ -117,7 +118,7 @@ export class PrismaAgentClientAccount implements AgentClientAccountPort {
   }
 
   createMember(
-    input: { uid: string; phoneE164: string; basicDetails: ClientBasicDetails },
+    input: { uid: string; phoneE164: string; profile: ClientProfile },
     tx: AgentTx,
   ): Promise<{ memberId: string }> {
     const db = unwrapTx(tx);
@@ -130,12 +131,13 @@ export class PrismaAgentClientAccount implements AgentClientAccountPort {
         },
         select: { id: true },
       });
+      const draft = toClientWizardDraft(input.profile);
       await db.registrationStep.create({
         data: {
           userId: user.id,
-          draftData: { basicDetails: { ...input.basicDetails } },
-          completedSteps: [BASIC_DETAILS_STEP],
-          currentStep: BASIC_DETAILS_STEP,
+          draftData: draft.draftData as Prisma.InputJsonValue,
+          completedSteps: draft.completedSteps,
+          currentStep: draft.currentStep,
         },
       });
       return { memberId: user.id };

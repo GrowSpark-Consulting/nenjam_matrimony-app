@@ -24,7 +24,11 @@ async function world() {
     audit: h.audit,
   });
   const add = (phone = CLIENT_PHONE) =>
-    h.clients.create(agent, { phone, details: CLIENT_DETAILS });
+    h.clients.create(agent, {
+      phone,
+      consentConfirmed: true,
+      details: CLIENT_DETAILS,
+    });
   return { h, agent, expiry, add };
 }
 
@@ -135,6 +139,7 @@ describe('AgentClientExpiryService.runDailyExpiry', () => {
     const other = await h.claimsOf(await h.signInAs(UNAPPROVED_PHONE));
     await h.clients.create(other, {
       phone: CLIENT_PHONE_2,
+      consentConfirmed: true,
       details: CLIENT_DETAILS,
     });
     await h.clients.submit(agent, 'draft-1');

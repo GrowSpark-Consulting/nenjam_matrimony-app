@@ -21,7 +21,8 @@
  *     retry, an orphan from a failed attempt is reused).
  *  3. One transaction: lock the invitation (and every open draft of the
  *     phone), check everything again, judge `expires_at` itself (never the
- *     daily job), create the member and her registration draft, credit the
+ *     daily job), create the member and her registration draft (every
+ *     section the agent filled, toClientWizardDraft), credit the
  *     agent (`ADDED_BY_AGENT`, ACTIVE, the credit window from now), mark it
  *     ACCEPTED (its PII deleted), close every other open invitation for the
  *     phone, and audit.
@@ -51,7 +52,6 @@ import type {
   AgentClientAccountPort,
   AgentClientDraftRecord,
   AgentClientDraftRepository,
-  ClientBasicDetails,
   ClientPhoneProofFailure,
   ClientPhoneProofPort,
 } from '../ports/agent-client-ports';
@@ -86,7 +86,7 @@ import {
 } from '../settings/agent-program-settings';
 import { CLIENT_DRAFT_ENTITY } from './agent-client-draft.service';
 import { assertAgentClientsEnabled } from './agent-clients-enabled';
-import { parseStoredClientBasicDetails } from './client-basic-details';
+import { parseStoredClientProfile, type ClientProfile } from './client-profile';
 import {
   decideClientAccept,
   effectiveClientDraftStatus,
@@ -112,7 +112,8 @@ export interface ClientInviteView {
   id: string;
   /** "Ravi K." */
   agentDisplayName: string;
-  details: ClientBasicDetails;
+  /** The full profile the agent entered (wizard sections, with master-data labels). */
+  details: ClientProfile;
   /** The last day she can answer, YYYY-MM-DD (IST). */
   expiresOn: string;
   referredMemberDiscountPercent: number;
@@ -420,7 +421,7 @@ export class ClientInviteService {
       {
         uid: input.uid,
         phoneE164: phone,
-        basicDetails: this.detailsOf(locked),
+        profile: this.detailsOf(locked),
       },
       tx,
     );
@@ -557,8 +558,8 @@ export class ClientInviteService {
     return phone;
   }
 
-  private detailsOf(row: AgentClientDraftRecord): ClientBasicDetails {
-    return parseStoredClientBasicDetails(
+  private detailsOf(row: AgentClientDraftRecord): ClientProfile {
+    return parseStoredClientProfile(
       this.deps.sealer.open(
         AGENT_SEAL_PURPOSES.clientDetails,
         row.detailsSealed ?? '',

@@ -9,6 +9,8 @@ import { Module } from '@nestjs/common';
 import { AppConfigModule, AppConfigService } from '@app/config';
 import { PrismaService } from '@app/database';
 import { FirebaseService } from '@app/firebase';
+import { LocationService } from '../../reference-data/services/location.service';
+import { ReligionService } from '../../reference-data/services/religion.service';
 import { AdminModule } from '../../admin/admin.module';
 import { AdminAuditService } from '../../admin/services/admin-audit.service';
 import { IdentifierHashService } from '../../platform/identifier-hash.service';
@@ -56,6 +58,9 @@ export function agentProgramEnabled(
         AdminAuditService,
         FirebaseService,
         AppConfigService,
+        // The reference-data module is global.
+        LocationService,
+        ReligionService,
       ],
       useFactory: (
         prisma: PrismaService,
@@ -65,6 +70,8 @@ export function agentProgramEnabled(
         adminAudit: AdminAuditService,
         firebase: FirebaseService,
         config: AppConfigService,
+        locations: LocationService,
+        religions: ReligionService,
       ): AgentProgram =>
         buildAgentProgram({
           prisma,
@@ -74,6 +81,8 @@ export function agentProgramEnabled(
           adminAudit,
           firebase,
           agentOtp: config.agentOtp,
+          locations,
+          religions,
           env: process.env,
         }),
     },

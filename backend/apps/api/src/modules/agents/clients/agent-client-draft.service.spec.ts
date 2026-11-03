@@ -6,6 +6,7 @@ import {
 } from '../settings/agent-program-settings';
 import {
   CLIENT_DETAILS,
+  CLIENT_DETAILS_SEEN,
   CLIENT_PHONE,
   CLIENT_PHONE_2,
   expectServiceError,
@@ -22,7 +23,12 @@ const add = (
   h: AgentHarness,
   claims: AgentAccessClaims,
   phone = CLIENT_PHONE,
-) => h.clients.create(claims, { phone, details: CLIENT_DETAILS });
+) =>
+  h.clients.create(claims, {
+    phone,
+    consentConfirmed: true,
+    details: CLIENT_DETAILS,
+  });
 
 async function world(
   o: {
@@ -130,7 +136,8 @@ describe('AgentClientDraftService.create', () => {
       statusLabel: expect.objectContaining({ en: 'Draft' }) as unknown,
       displayName: 'Priya S.',
       phoneMasked: '+91 90***001',
-      details: CLIENT_DETAILS,
+      details: CLIENT_DETAILS_SEEN,
+      missingRequired: [],
       editable: true,
       createdAt: START.toISOString(),
       submittedOn: null,
@@ -162,12 +169,24 @@ describe('AgentClientDraftService.create', () => {
     const error = await h.clients
       .create(claims, {
         phone: '98765',
-        details: { ...CLIENT_DETAILS, firstName: '', gender: 'X' },
+        consentConfirmed: true,
+        details: {
+          ...CLIENT_DETAILS,
+          basicDetails: {
+            ...CLIENT_DETAILS.basicDetails,
+            firstName: 7,
+            gender: 'X',
+          },
+        },
       })
       .catch((e: unknown) => e);
     expect(error).toMatchObject({
       code: 'VALIDATION_FAILED',
-      fields: ['phone', 'details.firstName', 'details.gender'],
+      fields: [
+        'phone',
+        'details.basicDetails.firstName',
+        'details.basicDetails.gender',
+      ],
     });
     expect(JSON.stringify(error)).not.toContain('98765');
   });
@@ -370,11 +389,18 @@ describe('AgentClientDraftService.update and discard', () => {
     const { h, claims } = await world();
     await add(h, claims);
     const view = await h.clients.update(claims, 'draft-1', {
-      details: { ...CLIENT_DETAILS, firstName: 'Meena', lastName: 'Raman' },
+      details: {
+        ...CLIENT_DETAILS,
+        basicDetails: {
+          ...CLIENT_DETAILS.basicDetails,
+          firstName: 'Meena',
+          lastName: 'Raman',
+        },
+      },
     });
     expect(view).toMatchObject({
       displayName: 'Meena R.',
-      details: { firstName: 'Meena', lastName: 'Raman' },
+      details: { basicDetails: { firstName: 'Meena', lastName: 'Raman' } },
     });
     expect(h.audit.entries[1]).toMatchObject({
       action: 'AGENT_CLIENT_DRAFT_UPDATED',

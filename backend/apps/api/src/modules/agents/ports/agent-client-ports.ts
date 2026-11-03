@@ -60,7 +60,7 @@ export interface AgentClientDraftRecord {
   phoneMasked: string;
   /** "Priya S.". */
   displayName: string;
-  /** Sealed JSON of `ClientBasicDetails` (`agent.client_details`). Set only while open. */
+  /** Sealed JSON of the `ClientProfile` (`agent.client_details`). Set only while open. */
   detailsSealed: string | null;
   expiresAt: Date;
   submittedAt: Date | null;
@@ -318,23 +318,6 @@ export interface ClientPhoneProofPort {
 
 // --- The member account an accepted invitation creates ---------------------
 
-export interface ClientBasicDetails {
-  firstName: string;
-  lastName: string;
-  gender: 'MALE' | 'FEMALE';
-  /** YYYY-MM-DD. */
-  dob: string;
-  maritalStatus: 'NEVER_MARRIED' | 'DIVORCED' | 'WIDOWED' | 'AWAITING_DIVORCE';
-  profileCreatedFor:
-    | 'Myself'
-    | 'Son'
-    | 'Daughter'
-    | 'Brother'
-    | 'Sister'
-    | 'Friend'
-    | 'Relative';
-}
-
 export interface AgentClientMember {
   memberId: string;
   /** Null for a row that has no Firebase account any more. */
@@ -360,12 +343,13 @@ export interface AgentClientAccountPort {
   /** The Firebase account for the phone, created if needed. Safe to retry. Not in a transaction. */
   ensureFirebaseUser(phoneE164: string): Promise<{ uid: string }>;
   /**
-   * Creates the member row and her registration draft with step 1 filled
-   * in. Throws AgentConflictError DUPLICATE_MEMBER_PHONE when the phone or
-   * the Firebase account already has a member row.
+   * Creates the member row and her registration draft holding every section
+   * of the profile the agent filled (`toClientWizardDraft`). Throws
+   * AgentConflictError DUPLICATE_MEMBER_PHONE when the phone or the Firebase
+   * account already has a member row.
    */
   createMember(
-    input: { uid: string; phoneE164: string; basicDetails: ClientBasicDetails },
+    input: { uid: string; phoneE164: string; profile: ClientProfile },
     tx: AgentTx,
   ): Promise<{ memberId: string }>;
   /** A Firebase custom token for `signInWithCustomToken`. */

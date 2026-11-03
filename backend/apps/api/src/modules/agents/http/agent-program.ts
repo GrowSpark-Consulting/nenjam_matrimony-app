@@ -79,6 +79,9 @@ import {
   type ClientDummyCodeConfig,
 } from '../adapters/platform/dummy-client-phone-proof';
 import { PrismaAgentClientAccount } from '../adapters/prisma/prisma-agent-client-account';
+import { ReferenceDataClientLabels } from '../adapters/platform/reference-data-client-labels';
+import type { LocationService } from '../../reference-data/services/location.service';
+import type { ReligionService } from '../../reference-data/services/religion.service';
 import { PrismaAgentClientConsentCodeStore } from '../adapters/prisma/prisma-agent-client-consent-code.store';
 import { PrismaAgentClientDraftRepository } from '../adapters/prisma/prisma-agent-client-draft.repository';
 import { AgentClientDraftService } from '../clients/agent-client-draft.service';
@@ -161,6 +164,9 @@ export interface AgentProgramDeps {
   firebase: Pick<FirebaseService, 'findOrCreateUser' | 'createCustomToken'>;
   /** AGENT_OTP_DUMMY_* as parsed by the config (who a code can reach). */
   agentOtp: ClientDummyCodeConfig;
+  /** The member side's master data: client profile codes are checked against it. */
+  locations: Pick<LocationService, 'resolve'>;
+  religions: Pick<ReligionService, 'resolve'>;
   env: Record<string, string | undefined>;
   logger?: Pick<Logger, 'warn'>;
 }
@@ -333,6 +339,10 @@ export function buildAgentProgram(deps: AgentProgramDeps): AgentProgram {
       attributions,
       accounts: clientAccounts,
       proof: clientProof,
+      referenceData: new ReferenceDataClientLabels(
+        deps.locations,
+        deps.religions,
+      ),
       hasher,
       sealer,
       settings,

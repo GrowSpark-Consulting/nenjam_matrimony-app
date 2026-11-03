@@ -9,6 +9,15 @@
  * ACTIVE or SUSPENDED (`viewReferrals`). Every read and write is scoped to
  * the caller's own drafts in the repository query.
  *
+ * THE PROFILE. The full profile of plan section 7.1 and the partner
+ * preferences, in the member wizard's own sections and values
+ * (`client-profile.ts`). A draft may be saved with any field missing; SUBMIT
+ * needs the fields of CLIENT_PROFILE_REQUIRED_AT_SUBMIT (one list, in
+ * `client-profile-required.ts`). Master-data codes are checked, and their
+ * labels filled in, by `ClientReferenceDataPort`. Creating a draft needs
+ * `consentConfirmed: true` (the agent confirms the client or family agreed);
+ * only that it was confirmed is kept, in the audit row.
+ *
  * PII. The client's phone and details are stored sealed (`agent.client_phone`,
  * `agent.client_details`); the agent only ever sees the masked phone, and the
  * details only while the draft is open. Phones are looked up under every
@@ -26,7 +35,8 @@
  * |-----------------------------|---------------------------------------------------|------|
  * | CLIENT_INVITES_DISABLED     | the switch is off                                 | 403  |
  * | AGENT_NOT_ACTIVE            | the agent's status does not allow it              | 403  |
- * | VALIDATION_FAILED           | phone or details (fields named, never values)     | 400  |
+ * | VALIDATION_FAILED           | phone, consentConfirmed or details (fields named) | 400  |
+ * | CLIENT_PROFILE_INCOMPLETE   | submit: a required field is empty (missingFields) | 422  |
  * | OTP_DELIVERY_UNAVAILABLE    | no code can reach the phone (not a test number)   | 503  |
  * | CLIENT_DRAFT_EXISTS         | this agent already has an open draft for it       | 409  |
  * | CLIENT_DRAFT_LIMIT_REACHED  | at the limit of open drafts                       | 422  |
@@ -47,6 +57,7 @@ import type {
   ClientDraftPageCursor,
   ClientDraftStatus,
   ClientPhoneProofPort,
+  ClientReferenceDataPort,
 } from '../ports/agent-client-ports';
 import { CLIENT_DRAFT_STATUSES } from '../ports/agent-client-ports';
 import type { AgentContentPort } from '../ports/agent-content.port';
@@ -77,9 +88,11 @@ import {
 } from '../settings/agent-program-settings';
 import { assertAgentClientsEnabled } from './agent-clients-enabled';
 import {
-  parseStoredClientBasicDetails,
-  validateClientBasicDetails,
-} from './client-basic-details';
+  missingRequiredClientFields,
+  parseStoredClientProfile,
+  validateClientProfile,
+  type ClientProfile,
+} from './client-profile';
 import { clientDraftView, type ClientDraftView } from './client-draft-view';
 import {
   clientDraftExpiresAt,
@@ -105,6 +118,8 @@ export const AGENT_CLIENT_EXPIRY_BATCH_SIZE = 500;
 export const CLIENT_DRAFT_ENTITY = 'agent_client_draft';
 
 export interface AgentClientDraftInput {
+  /** Must be exactly true: the client or the family agreed to be added. */
+  consentConfirmed?: unknown;
   phone?: unknown;
   details?: unknown;
 }
@@ -126,6 +141,7 @@ export interface AgentClientDraftServiceDeps {
   attributions: Pick<ReferralAttributionRepository, 'isPhoneHashCredited'>;
   accounts: Pick<AgentClientAccountPort, 'findMemberByPhone'>;
   proof: Pick<ClientPhoneProofPort, 'canReach' | 'send'>;
+  referenceData: ClientReferenceDataPort;
   hasher: AgentIdentifierHasher;
   sealer: AgentSecretSealer;
   settings: AgentSettingsPort;
@@ -159,14 +175,16 @@ export class AgentClientDraftService {
     await this.deps.access.assertCan(claims, 'addMembers');
     const now = this.deps.clock.now();
     const phone = typeof input?.phone === 'string' ? input.phone : '';
-    const checked = validateClientBasicDetails(input?.details, now);
+    const checked = validateClientProfile(input?.details, now);
     const invalid = [
       ...(E164.test(phone) ? [] : ['phone']),
+      ...(input?.consentConfirmed === true ? [] : ['consentConfirmed']),
       ...(checked.ok ? [] : checked.fields),
     ];
     if (invalid.length > 0 || !checked.ok) {
       throw new AgentServiceError('VALIDATION_FAILED', { fields: invalid });
     }
+    const details = await this.withLabels(checked.profile);
     const { limit, expiryDays } = await this.draftSettings();
     // Before anything is looked up about the phone: every number that is not
     // an approved test number gets the same answer.
@@ -174,7 +192,6 @@ export class AgentClientDraftService {
       throw new AgentServiceError('OTP_DELIVERY_UNAVAILABLE');
     }
     const hashes = this.deps.hasher.hashAll('PHONE', phone);
-    const details = checked.details;
 
     let outcome: CreateOutcome;
     try {
@@ -205,7 +222,7 @@ export class AgentClientDraftService {
             phoneHash: hashes[0],
             phoneSealed: sealer.seal(AGENT_SEAL_PURPOSES.clientPhone, phone),
             phoneMasked: maskPhone(phone),
-            displayName: toDisplayName(details.firstName, details.lastName),
+            displayName: displayNameOf(details, maskPhone(phone)),
             detailsSealed: sealer.seal(
               AGENT_SEAL_PURPOSES.clientDetails,
               JSON.stringify(details),
@@ -221,6 +238,8 @@ export class AgentClientDraftService {
             action: 'AGENT_CLIENT_DRAFT_CREATED',
             entity: CLIENT_DRAFT_ENTITY,
             entityId: row.id,
+            // The agent confirmed the client or family agreed. Only that.
+            metadata: { consentConfirmed: true },
           },
           tx,
         );
@@ -281,23 +300,23 @@ export class AgentClientDraftService {
     await assertAgentClientsEnabled(this.deps.settings);
     await this.deps.access.assertCan(claims, 'addMembers');
     const now = this.deps.clock.now();
-    const checked = validateClientBasicDetails(input?.details, now);
+    const checked = validateClientProfile(input?.details, now);
     if (!checked.ok) {
       throw new AgentServiceError('VALIDATION_FAILED', {
         fields: checked.fields,
       });
     }
-    const details = checked.details;
+    const details = await this.withLabels(checked.profile);
     const row = await this.deps.uow.run(async (tx) => {
       const agent = await this.deps.access.assertCan(claims, 'addMembers', {
         tx,
       });
-      await this.requireOwnDraft(id, agent.id, now, tx);
+      const draft = await this.requireOwnDraft(id, agent.id, now, tx);
       const updated = await this.deps.drafts.updateDetails(
         id,
         agent.id,
         {
-          displayName: toDisplayName(details.firstName, details.lastName),
+          displayName: displayNameOf(details, draft.phoneMasked),
           detailsSealed: this.deps.sealer.seal(
             AGENT_SEAL_PURPOSES.clientDetails,
             JSON.stringify(details),
@@ -373,6 +392,13 @@ export class AgentClientDraftService {
           tx,
         });
         const draft = await this.requireOwnDraft(id, agent.id, now, tx);
+        // Every required field (one list: client-profile-required.ts).
+        const missing = missingRequiredClientFields(this.profileOf(draft));
+        if (missing.length > 0) {
+          throw new AgentServiceError('CLIENT_PROFILE_INCOMPLETE', {
+            missingFields: missing,
+          });
+        }
         const phone = this.deps.sealer.open(
           AGENT_SEAL_PURPOSES.clientPhone,
           draft.phoneSealed ?? '',
@@ -552,16 +578,44 @@ export class AgentClientDraftService {
     const status = effectiveClientDraftStatus(row, now);
     const open = status === 'DRAFT' || status === 'WAITING_FOR_CLIENT';
     const details =
-      open && row.detailsSealed !== null
-        ? parseStoredClientBasicDetails(
-            this.deps.sealer.open(
-              AGENT_SEAL_PURPOSES.clientDetails,
-              row.detailsSealed,
-            ),
-          )
-        : null;
+      open && row.detailsSealed !== null ? this.profileOf(row) : null;
     return clientDraftView(row, now, { labels, details });
   }
+
+  /** The draft's opened profile (empty when it has none). */
+  private profileOf(row: AgentClientDraftRecord): ClientProfile {
+    return row.detailsSealed === null
+      ? {}
+      : parseStoredClientProfile(
+          this.deps.sealer.open(
+            AGENT_SEAL_PURPOSES.clientDetails,
+            row.detailsSealed,
+          ),
+        );
+  }
+
+  /** The master-data labels filled in; a code the master data refuses is VALIDATION_FAILED. */
+  private async withLabels(profile: ClientProfile): Promise<ClientProfile> {
+    const resolved = await this.deps.referenceData.withLabels(profile);
+    if (!resolved.ok) {
+      throw new AgentServiceError('VALIDATION_FAILED', {
+        fields: resolved.fields,
+      });
+    }
+    return resolved.profile;
+  }
+}
+
+/**
+ * "Priya S.", or the masked phone while the names are not filled in yet (a
+ * draft may be saved before them).
+ */
+function displayNameOf(profile: ClientProfile, phoneMasked: string): string {
+  const first = profile.basicDetails?.firstName;
+  const last = profile.basicDetails?.lastName;
+  return typeof first === 'string' && first !== ''
+    ? toDisplayName(first, typeof last === 'string' ? last : null)
+    : phoneMasked;
 }
 
 /** The agent hears one code per refusal; the phone reasons stay internal. */

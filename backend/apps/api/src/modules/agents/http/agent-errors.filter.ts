@@ -95,6 +95,10 @@ export const AGENT_ERROR_HTTP: Record<AgentServiceErrorCode, Mapping> = {
     status: 409,
     message: 'This phone number already has an account. Sign in instead.',
   },
+  CLIENT_PROFILE_INCOMPLETE: {
+    status: 422,
+    message: 'Fill in the required fields before submitting.',
+  },
   OTP_DELIVERY_UNAVAILABLE: {
     status: 503,
     message: 'Codes cannot be sent to this number yet.',
@@ -188,6 +192,9 @@ export class AgentErrorsFilter implements ExceptionFilter {
       ...(exception.agentStatus !== undefined && {
         agentStatus: exception.agentStatus,
       }),
+      ...(exception.missingFields !== undefined && {
+        missingFields: exception.missingFields,
+      }),
     });
   }
 }
@@ -195,7 +202,12 @@ export class AgentErrorsFilter implements ExceptionFilter {
 function send(
   response: Response,
   status: number,
-  body: { code: string; message: string | string[]; agentStatus?: string },
+  body: {
+    code: string;
+    message: string | string[];
+    agentStatus?: string;
+    missingFields?: string[];
+  },
 ): void {
   response.status(status).json({
     statusCode: status,

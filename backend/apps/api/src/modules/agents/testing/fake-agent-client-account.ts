@@ -9,8 +9,8 @@ import {
 import type {
   AgentClientAccountPort,
   AgentClientMember,
-  ClientBasicDetails,
 } from '../ports/agent-client-ports';
+import type { ClientProfile } from '../clients/client-profile';
 import type { AgentTx } from '../ports/agent-unit-of-work.port';
 import { trackWrite } from './fake-agent-unit-of-work';
 
@@ -18,8 +18,8 @@ interface FakeMember {
   memberId: string;
   firebaseUid: string | null;
   phoneE164: string;
-  /** The registration draft's step 1, for members made by `createMember`. */
-  basicDetails: ClientBasicDetails | null;
+  /** The profile her registration draft was made from, for members made by `createMember`. */
+  profile: ClientProfile | null;
 }
 
 export class FakeAgentClientAccount implements AgentClientAccountPort {
@@ -43,7 +43,7 @@ export class FakeAgentClientAccount implements AgentClientAccountPort {
       memberId,
       firebaseUid,
       phoneE164,
-      basicDetails: null,
+      profile: null,
     });
   }
 
@@ -93,7 +93,7 @@ export class FakeAgentClientAccount implements AgentClientAccountPort {
   }
 
   createMember(
-    input: { uid: string; phoneE164: string; basicDetails: ClientBasicDetails },
+    input: { uid: string; phoneE164: string; profile: ClientProfile },
     tx: AgentTx,
   ): Promise<{ memberId: string }> {
     const track = trackWrite(tx);
@@ -111,7 +111,7 @@ export class FakeAgentClientAccount implements AgentClientAccountPort {
       memberId,
       firebaseUid: input.uid,
       phoneE164: input.phoneE164,
-      basicDetails: { ...input.basicDetails },
+      profile: structuredClone(input.profile),
     });
     track(() => {
       this.members.delete(memberId);
