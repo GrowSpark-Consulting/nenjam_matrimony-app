@@ -4,12 +4,17 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { FirebaseAuthGuard } from '@app/common';
+import { AppConfigModule } from '@app/config';
 import { AdminModule } from '../../admin/admin.module';
 import { PlatformModule } from '../../platform/platform.module';
 import { AGENT_REFERRAL_QUOTE } from '../agent-referral-quote.token';
 import { AgentJwtTokenSigner } from '../auth/agent-jwt-token-signer';
 import { AgentConfigService } from '../config/agent-config.service';
-import { AUTH_OPTIONS, makeAgentHarness } from '../testing/agent-test-harness';
+import {
+  AUTH_OPTIONS,
+  CLIENT_TOKEN_OPTIONS,
+  makeAgentHarness,
+} from '../testing/agent-test-harness';
 import { AGENT_PROGRAM, type AgentProgram } from './agent-program';
 import {
   AgentProgramModule,
@@ -21,6 +26,7 @@ class Empty {}
 
 function program(): AgentProgram {
   let jwt!: AgentJwtTokenSigner;
+  let clientJwt!: AgentJwtTokenSigner;
   const h = makeAgentHarness(
     {},
     {
@@ -30,6 +36,15 @@ function program(): AgentProgram {
             secret: 'test-only-agent-jwt-secret-not-real-0000',
             issuer: AUTH_OPTIONS.issuer,
             audience: AUTH_OPTIONS.audience,
+          },
+          clock,
+        )),
+      clientSignerFor: (clock) =>
+        (clientJwt = new AgentJwtTokenSigner(
+          {
+            secret: 'test-only-agent-jwt-secret-not-real-0000',
+            ...CLIENT_TOKEN_OPTIONS,
+            scopes: ['CLIENT'],
           },
           clock,
         )),
@@ -45,7 +60,10 @@ function program(): AgentProgram {
     referrals: h.referrals,
     referralCodes: h.referralCodes,
     money: h.money,
+    clients: h.clients,
+    clientInvites: h.clientInvites,
     tokens: jwt,
+    clientTokens: clientJwt,
     piiSealing: true,
     requesterKey: () => 'v1:hashed-test-ip',
   };
@@ -65,6 +83,8 @@ async function bootWith(flag: string | undefined) {
     .useModule(Empty)
     .overrideModule(PlatformModule)
     .useModule(Empty)
+    .overrideModule(AppConfigModule)
+    .useModule(Empty)
     .overrideProvider(AGENT_PROGRAM)
     .useValue(program())
     .overrideGuard(FirebaseAuthGuard)
@@ -75,7 +95,12 @@ async function bootWith(flag: string | undefined) {
   return { app, moduleRef };
 }
 
-const ROUTES: Array<[method: 'get' | 'post' | 'patch', path: string]> = [
+const DRAFT = '/agent/clients/11111111-1111-4111-8111-000000000009';
+const INVITE = '/client-invites/11111111-1111-4111-8111-000000000009';
+
+const ROUTES: Array<
+  [method: 'get' | 'post' | 'patch' | 'delete', path: string]
+> = [
   ['post', '/agent/auth/otp/request'],
   ['post', '/agent/auth/otp/verify'],
   ['post', '/agent/auth/refresh'],
@@ -89,6 +114,18 @@ const ROUTES: Array<[method: 'get' | 'post' | 'patch', path: string]> = [
   ['get', '/agent/referrals/11111111-1111-4111-8111-000000000001'],
   ['post', '/referrals/codes/validate'],
   ['post', '/registration/referral-code'],
+  // Agent-added clients (Way 2).
+  ['post', '/agent/clients'],
+  ['get', '/agent/clients'],
+  ['get', DRAFT],
+  ['patch', DRAFT],
+  ['delete', DRAFT],
+  ['post', `${DRAFT}/submit`],
+  ['post', '/client-invites/otp/request'],
+  ['post', '/client-invites/otp/verify'],
+  ['get', '/client-invites'],
+  ['post', `${INVITE}/accept`],
+  ['post', `${INVITE}/reject`],
 ];
 
 describe('AGENT_PROGRAM_ENABLED', () => {

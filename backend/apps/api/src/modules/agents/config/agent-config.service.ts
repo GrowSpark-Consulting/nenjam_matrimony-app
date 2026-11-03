@@ -5,6 +5,11 @@
  * `AgentSettingsPort` on every call (so a change needs no deploy and nothing
  * is cached or defaulted here); labels and share-message templates come from
  * `AgentContentPort`; the hold period from `AgentCommissionPolicyPort`.
+ *
+ * Agent-added clients (Way 2) add `clientStatusLabels` and `clients`. They
+ * are NEVER a reason for this call to fail: their settings are read
+ * separately and a missing, invalid or unreadable one only makes `enabled`
+ * false (and its number null). They are not in REQUIRED_SETTING_KEYS.
  */
 import type { AgentCommissionPolicyPort } from '../ports/agent-commission-policy.port';
 import type {
@@ -15,6 +20,12 @@ import type {
 import type { AgentSettingsPort } from '../ports/agent-platform-ports';
 import { renderShareMessage } from '../referral/render-share-message';
 import {
+  AGENT_CLIENTS_ENABLED_KEY,
+  isAgentClientsEnabled,
+} from '../settings/agent-clients-switch';
+import {
+  AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY,
+  AGENT_CLIENT_DRAFT_LIMIT_KEY,
   agentProgramSettingProblem,
   parseAgentProgramSettings,
   PAYOUT_MINIMUM_AMOUNT_PAISE_KEY,
@@ -52,7 +63,25 @@ export interface AgentConfig {
    */
   shareMessages: AgentShareMessageTemplate[];
   settings: AgentConfigSettings;
+  /** Keyed by the client draft status the agent sees (Way 2). */
+  clientStatusLabels?: Record<string, AgentLocalizedText>;
+  /** Way 2. `enabled` false: hide "Add a client". */
+  clients?: AgentClientsConfig;
 }
+
+export interface AgentClientsConfig {
+  enabled: boolean;
+  /** Null when the setting is not set (or not usable). */
+  draftLimit: number | null;
+  expiryDays: number | null;
+}
+
+/** What /agent/config says about Way 2 when its settings cannot be read. */
+const CLIENTS_OFF: AgentClientsConfig = {
+  enabled: false,
+  draftLimit: null,
+  expiryDays: null,
+};
 
 /**
  * Thrown when a required setting or policy value is not set (`missing`) or
@@ -86,10 +115,11 @@ export class AgentConfigService {
    * default.
    */
   async getConfig(): Promise<AgentConfig> {
-    const [raw, holdDays, content] = await Promise.all([
+    const [raw, holdDays, content, clients] = await Promise.all([
       this.settings.getMany(REQUIRED_SETTING_KEYS),
       this.commissionPolicy.getActiveHoldDays(),
       this.content.getContent(),
+      this.clientsConfig(),
     ]);
 
     // Only the keys this response needs are read, so an unrelated setting
@@ -132,7 +162,40 @@ export class AgentConfigService {
         minPayoutPaise: settings.payoutMinimumAmountPaise!,
         referredMemberDiscountPercent: discountPercent,
       },
+      clientStatusLabels: content.clientStatusLabels,
+      clients,
     };
+  }
+
+  /** Way 2's part of the config. Never rejects. */
+  private async clientsConfig(): Promise<AgentClientsConfig> {
+    try {
+      const raw = await this.settings.getMany([
+        AGENT_CLIENTS_ENABLED_KEY,
+        AGENT_CLIENT_DRAFT_LIMIT_KEY,
+        AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY,
+      ]);
+      const usable = (key: string): number | null => {
+        const value = raw[key];
+        return value === undefined ||
+          value === null ||
+          agentProgramSettingProblem(key, value) !== null
+          ? null
+          : (value as number);
+      };
+      const draftLimit = usable(AGENT_CLIENT_DRAFT_LIMIT_KEY);
+      const expiryDays = usable(AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY);
+      return {
+        enabled:
+          isAgentClientsEnabled(raw) &&
+          draftLimit !== null &&
+          expiryDays !== null,
+        draftLimit,
+        expiryDays,
+      };
+    } catch {
+      return { ...CLIENTS_OFF };
+    }
   }
 }
 

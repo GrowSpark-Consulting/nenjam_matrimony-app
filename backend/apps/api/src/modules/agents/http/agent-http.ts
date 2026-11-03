@@ -11,6 +11,10 @@
  *   the scopes it names (default AGENT only), so an applicant token can call
  *   nothing but what explicitly allows APPLICANT.
  * - `@AgentClaims()`: the verified claims the guard attached.
+ * - `ClientInviteGuard` + `@ClientClaims()`: the same for the client token
+ *   of agent-added clients (Way 2): its own signer and audience, CLIENT
+ *   scope only, so an agent token fails here and a client token fails on
+ *   every route behind `AgentAccessGuard`.
  */
 import {
   CanActivate,
@@ -65,6 +69,7 @@ export const AgentScopes = (...scopes: AgentTokenScope[]) =>
 
 interface RequestWithAgent extends Request {
   agentClaims?: AgentAccessClaims;
+  clientClaims?: AgentAccessClaims;
 }
 
 export function unauthorized(code: 'UNAUTHORIZED' | 'TOKEN_EXPIRED') {
@@ -78,6 +83,25 @@ export function unauthorized(code: 'UNAUTHORIZED' | 'TOKEN_EXPIRED') {
         : 'A valid agent access token is required.',
   });
 }
+
+function clientUnauthorized(code: 'UNAUTHORIZED' | 'TOKEN_EXPIRED') {
+  return new UnauthorizedException({
+    statusCode: 401,
+    error: 'Unauthorized',
+    code,
+    message:
+      code === 'TOKEN_EXPIRED'
+        ? 'The client token has expired. Verify your phone again.'
+        : 'A valid client token is required.',
+  });
+}
+
+const bearerOf = (request: Request): string | null => {
+  const header = request.headers.authorization;
+  const match =
+    typeof header === 'string' ? /^Bearer ([^\s]+)$/.exec(header) : null;
+  return match ? match[1] : null;
+};
 
 @Injectable()
 export class AgentAccessGuard implements CanActivate {
@@ -112,6 +136,43 @@ export class AgentAccessGuard implements CanActivate {
     return true;
   }
 }
+
+/** A Bearer client token (scope CLIENT, the client audience). */
+@Injectable()
+export class ClientInviteGuard implements CanActivate {
+  constructor(@Inject(AGENT_PROGRAM) private readonly program: AgentProgram) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const tokens = this.program.clientTokens;
+    if (tokens === null) throw agentProgramUnavailable();
+    const request = context.switchToHttp().getRequest<RequestWithAgent>();
+    const token = bearerOf(request);
+    if (token === null) throw clientUnauthorized('UNAUTHORIZED');
+    const checked = await tokens.check(token);
+    if (!checked.ok) {
+      throw clientUnauthorized(
+        checked.reason === 'EXPIRED' ? 'TOKEN_EXPIRED' : 'UNAUTHORIZED',
+      );
+    }
+    // The client signer only ever accepts CLIENT; checked again here.
+    if (checked.claims.scope !== 'CLIENT') {
+      throw clientUnauthorized('UNAUTHORIZED');
+    }
+    request.clientClaims = checked.claims;
+    return true;
+  }
+}
+
+export const ClientClaims = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): AgentAccessClaims => {
+    const claims = context
+      .switchToHttp()
+      .getRequest<RequestWithAgent>().clientClaims;
+    // Only reachable on a route without ClientInviteGuard: a programming error.
+    if (!claims) throw clientUnauthorized('UNAUTHORIZED');
+    return claims;
+  },
+);
 
 export const AgentClaims = createParamDecorator(
   (_data: unknown, context: ExecutionContext): AgentAccessClaims => {

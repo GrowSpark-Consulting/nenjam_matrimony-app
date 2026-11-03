@@ -155,3 +155,79 @@ export class ReferralCodeDto {
   @IsString()
   code!: string;
 }
+
+// --- Agent-added clients (Way 2) --------------------------------------------
+
+/** Shape only: the values are checked by the service (validateClientBasicDetails). */
+export class ClientBasicDetailsDto {
+  @IsDefined()
+  @IsString()
+  firstName!: string;
+
+  @IsDefined()
+  @IsString()
+  lastName!: string;
+
+  @IsDefined()
+  @IsString()
+  gender!: string;
+
+  @IsDefined()
+  @IsString()
+  dob!: string;
+
+  @IsDefined()
+  @IsString()
+  maritalStatus!: string;
+
+  @IsDefined()
+  @IsString()
+  profileCreatedFor!: string;
+}
+
+export class ClientCreateDto {
+  @IsDefined()
+  @IsString()
+  phone!: string;
+
+  @IsDefined()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => ClientBasicDetailsDto)
+  details!: ClientBasicDetailsDto;
+}
+
+export class ClientUpdateDto {
+  @IsDefined()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => ClientBasicDetailsDto)
+  details!: ClientBasicDetailsDto;
+}
+
+export class ClientsQueryDto {
+  @IsOptional()
+  @IsString()
+  cursor?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number;
+
+  @IsOptional()
+  @IsIn(['DRAFT', 'WAITING_FOR_CLIENT', 'ACCEPTED', 'REJECTED', 'EXPIRED'])
+  status?: string;
+}
+
+export class ClientOtpVerifyDto {
+  @IsDefined()
+  @IsString()
+  phone!: string;
+
+  @IsDefined()
+  @IsString()
+  code!: string;
+}

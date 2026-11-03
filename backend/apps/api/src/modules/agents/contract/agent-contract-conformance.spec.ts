@@ -182,22 +182,9 @@ export function implementedRoutes(): ImplementedRoute[] {
 
 /**
  * Contract routes that may be missing on this branch, and why (the branch
- * that brings them).
+ * that brings them). Empty: every route is on this branch.
  */
-const WAY_2_ROUTES = 'agent-added clients: feat/agent-clients-routes (PR 2)';
-const PENDING: Record<string, string> = {
-  'POST /agent/clients': WAY_2_ROUTES,
-  'GET /agent/clients': WAY_2_ROUTES,
-  'GET /agent/clients/{id}': WAY_2_ROUTES,
-  'PATCH /agent/clients/{id}': WAY_2_ROUTES,
-  'DELETE /agent/clients/{id}': WAY_2_ROUTES,
-  'POST /agent/clients/{id}/submit': WAY_2_ROUTES,
-  'POST /client-invites/otp/request': WAY_2_ROUTES,
-  'POST /client-invites/otp/verify': WAY_2_ROUTES,
-  'GET /client-invites': WAY_2_ROUTES,
-  'POST /client-invites/{id}/accept': WAY_2_ROUTES,
-  'POST /client-invites/{id}/reject': WAY_2_ROUTES,
-};
+const PENDING: Record<string, string> = {};
 
 /** Contract routes deliberately not built yet. Empty: every route is built. */
 const GAPS: Record<string, string> = {};

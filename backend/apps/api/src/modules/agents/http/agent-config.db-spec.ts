@@ -15,7 +15,9 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { ApiValidationPipe, FirebaseAuthGuard } from '@app/common';
+import { AppConfigModule, AppConfigService } from '@app/config';
 import { PrismaService } from '@app/database';
+import { FirebaseService } from '@app/firebase';
 import { AdminModule } from '../../admin/admin.module';
 import { AdminAuditService } from '../../admin/services/admin-audit.service';
 import { IdentifierHashService } from '../../platform/identifier-hash.service';
@@ -82,6 +84,20 @@ class StandInAdminModule {}
 })
 class StandInPlatformModule {}
 
+/** The config route reads neither; the factory only needs them to exist. */
+@Global()
+@Module({
+  providers: [
+    {
+      provide: AppConfigService,
+      useValue: { agentOtp: { dummyEnabled: false, dummyPhones: [] } },
+    },
+    { provide: FirebaseService, useValue: {} },
+  ],
+  exports: [AppConfigService, FirebaseService],
+})
+class StandInConfigModule {}
+
 const saved = process.env.AGENT_JWT_SECRET;
 let app: INestApplication<App>;
 
@@ -96,6 +112,8 @@ beforeAll(async () => {
     .useModule(StandInAdminModule)
     .overrideModule(PlatformModule)
     .useModule(StandInPlatformModule)
+    .overrideModule(AppConfigModule)
+    .useModule(StandInConfigModule)
     .overrideGuard(FirebaseAuthGuard)
     .useValue({ canActivate: () => false })
     .compile();
@@ -195,7 +213,18 @@ describe('GET /agent/config with the real wiring', () => {
         AGENT_CONTENT.shareMessageTemplates.length,
       );
       expect(JSON.stringify(shareMessages)).not.toContain('{discount_percent}');
+      // Way 2, from the seeded rows: switched off, limit 10, 14 days.
+      expect((res.body as { clients: unknown }).clients).toEqual({
+        enabled: false,
+        draftLimit: 10,
+        expiryDays: 14,
+      });
+      expect(
+        (res.body as { clientStatusLabels: unknown }).clientStatusLabels,
+      ).toEqual(AGENT_CONTENT.clientStatusLabels);
       expect(Object.keys(res.body as object).sort()).toEqual([
+        'clientStatusLabels',
+        'clients',
         'commissionStatusLabels',
         'payoutStatusLabels',
         'settings',

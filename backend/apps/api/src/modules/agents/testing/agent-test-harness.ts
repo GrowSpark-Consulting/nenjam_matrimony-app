@@ -141,6 +141,8 @@ export function makeAgentHarness(
   options: {
     /** A different signer on the harness clock (e.g. the real HS256 one). */
     signerFor?: (clock: FakeAgentClock) => AgentTokenSigner;
+    /** A different client-token signer on the harness clock (e.g. the real HS256 one). */
+    clientSignerFor?: (clock: FakeAgentClock) => AgentTokenSigner;
     /** Earlier pepper versions still active (a rotation in progress). */
     olderPeppers?: readonly string[];
   } = {},
@@ -313,7 +315,9 @@ export function makeAgentHarness(
   });
 
   // Its own key: the agent signer can never verify a client token.
-  const clientSigner = new FakeAgentTokenSigner('client-signer-key');
+  const clientSigner =
+    options.clientSignerFor?.(clock) ??
+    new FakeAgentTokenSigner('client-signer-key');
   let clientAttributionCounter = 0;
   const clientInvites = new ClientInviteService({
     settings,
