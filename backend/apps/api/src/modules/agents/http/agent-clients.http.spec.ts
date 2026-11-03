@@ -12,6 +12,7 @@ import { FakeAgentSettings } from '../testing/fake-agent-platform';
 import {
   AUTH_OPTIONS,
   CLIENT_DETAILS,
+  CLIENT_DETAILS_SEEN,
   CLIENT_PHONE,
   CLIENT_PHONE_2,
   CLIENT_TOKEN_OPTIONS,
@@ -27,6 +28,11 @@ import { AGENT_PROGRAM, type AgentProgram } from './agent-program';
 import { ClientInvitesController } from './client-invites.controller';
 
 const SECRET = 'test-only-agent-jwt-secret-not-real-0000';
+/** CLIENT_DETAILS with the last name changed. */
+const RAMAN = {
+  ...CLIENT_DETAILS,
+  basicDetails: { ...CLIENT_DETAILS.basicDetails, lastName: 'Raman' },
+};
 const NO_SUCH = '11111111-1111-4111-8111-000000000009';
 
 interface World {
@@ -76,6 +82,7 @@ async function boot(over: Partial<AgentProgram> = {}): Promise<World> {
       attributions: h.attributions,
       accounts: h.clientAccount,
       proof: h.clientProof,
+      referenceData: h.referenceData,
       hasher: h.hasher,
       sealer: h.sealer,
       settings: h.settings,
@@ -132,7 +139,7 @@ async function addClient(w: World, token: string, phone = CLIENT_PHONE) {
   const res = await http(w)
     .post('/agent/clients')
     .set(bearer(token))
-    .send({ phone, details: CLIENT_DETAILS })
+    .send({ phone, consentConfirmed: true, details: CLIENT_DETAILS })
     .expect(201);
   return (res.body as { id: string }).id;
 }
@@ -162,7 +169,11 @@ describe('agent-added clients over HTTP', () => {
       const created = await http(w)
         .post('/agent/clients')
         .set(bearer(agent))
-        .send({ phone: CLIENT_PHONE, details: CLIENT_DETAILS })
+        .send({
+          phone: CLIENT_PHONE,
+          consentConfirmed: true,
+          details: CLIENT_DETAILS,
+        })
         .expect(201);
       expect(created.headers['content-version']).toBe('1');
       expect(created.body).toMatchObject({
@@ -177,7 +188,7 @@ describe('agent-added clients over HTTP', () => {
       await http(w)
         .patch(`/agent/clients/${id}`)
         .set(bearer(agent))
-        .send({ details: { ...CLIENT_DETAILS, lastName: 'Raman' } })
+        .send({ details: RAMAN })
         .expect(200);
       const submitted = await http(w)
         .post(`/agent/clients/${id}/submit`)
@@ -207,7 +218,10 @@ describe('agent-added clients over HTTP', () => {
           {
             id,
             agentDisplayName: 'Ravi K.',
-            details: { ...CLIENT_DETAILS, lastName: 'Raman' },
+            details: {
+              ...CLIENT_DETAILS_SEEN,
+              basicDetails: RAMAN.basicDetails,
+            },
             expiresOn: '2026-11-11',
             referredMemberDiscountPercent: 5,
           },
@@ -286,7 +300,11 @@ describe('agent-added clients over HTTP', () => {
       const again = await http(w)
         .post('/agent/clients')
         .set(bearer(agent))
-        .send({ phone: CLIENT_PHONE, details: CLIENT_DETAILS })
+        .send({
+          phone: CLIENT_PHONE,
+          consentConfirmed: true,
+          details: CLIENT_DETAILS,
+        })
         .expect(422);
       expect(again.body).toEqual({
         statusCode: 422,
@@ -311,10 +329,11 @@ describe('agent-added clients over HTTP', () => {
       w.h.settings.remove(AGENT_CLIENTS_ENABLED_KEY);
       const calls = [
         () =>
-          http(w)
-            .post('/agent/clients')
-            .set(bearer(agent))
-            .send({ phone: CLIENT_PHONE_2, details: CLIENT_DETAILS }),
+          http(w).post('/agent/clients').set(bearer(agent)).send({
+            phone: CLIENT_PHONE_2,
+            consentConfirmed: true,
+            details: CLIENT_DETAILS,
+          }),
         () => http(w).get('/agent/clients').set(bearer(agent)),
         () => http(w).get(`/agent/clients/${id}`).set(bearer(agent)),
         () =>
@@ -469,7 +488,11 @@ describe('agent-added clients over HTTP', () => {
       const add = await http(w)
         .post('/agent/clients')
         .set(bearer(agent))
-        .send({ phone: UNAPPROVED_PHONE, details: CLIENT_DETAILS })
+        .send({
+          phone: UNAPPROVED_PHONE,
+          consentConfirmed: true,
+          details: CLIENT_DETAILS,
+        })
         .expect(503);
       expect(add.body).toMatchObject({ code: 'OTP_DELIVERY_UNAVAILABLE' });
       const req = await http(w)
@@ -482,10 +505,23 @@ describe('agent-added clients over HTTP', () => {
     it('validation: an extra property, a missing field, a bad id', async () => {
       const agent = await agentToken(w);
       for (const body of [
-        { phone: CLIENT_PHONE, details: { ...CLIENT_DETAILS, caste: 'x' } },
-        { phone: CLIENT_PHONE, details: { firstName: 'Priya' } },
-        { phone: CLIENT_PHONE, details: CLIENT_DETAILS, agentId: 'x' },
-        { phone: '12345', details: CLIENT_DETAILS },
+        {
+          phone: CLIENT_PHONE,
+          consentConfirmed: true,
+          details: { ...CLIENT_DETAILS, caste: 'x' },
+        },
+        {
+          phone: CLIENT_PHONE,
+          consentConfirmed: true,
+          details: { firstName: 'Priya' },
+        },
+        {
+          phone: CLIENT_PHONE,
+          consentConfirmed: true,
+          details: CLIENT_DETAILS,
+          agentId: 'x',
+        },
+        { phone: '12345', consentConfirmed: true, details: CLIENT_DETAILS },
       ]) {
         const res = await http(w)
           .post('/agent/clients')
@@ -511,19 +547,21 @@ describe('agent-added clients over HTTP', () => {
       };
       expect(
         await code(
-          http(w)
-            .post('/agent/clients')
-            .set(bearer(agent))
-            .send({ phone: CLIENT_PHONE, details: CLIENT_DETAILS }),
+          http(w).post('/agent/clients').set(bearer(agent)).send({
+            phone: CLIENT_PHONE,
+            consentConfirmed: true,
+            details: CLIENT_DETAILS,
+          }),
         ),
       ).toEqual([409, 'CLIENT_DRAFT_EXISTS']);
       w.h.settings.set(AGENT_CLIENT_DRAFT_LIMIT_KEY, 1);
       expect(
         await code(
-          http(w)
-            .post('/agent/clients')
-            .set(bearer(agent))
-            .send({ phone: CLIENT_PHONE_2, details: CLIENT_DETAILS }),
+          http(w).post('/agent/clients').set(bearer(agent)).send({
+            phone: CLIENT_PHONE_2,
+            consentConfirmed: true,
+            details: CLIENT_DETAILS,
+          }),
         ),
       ).toEqual([422, 'CLIENT_DRAFT_LIMIT_REACHED']);
       await http(w)
@@ -553,7 +591,11 @@ describe('agent-added clients over HTTP', () => {
       const res = await http(w)
         .post('/agent/clients')
         .set(bearer(agent))
-        .send({ phone: CLIENT_PHONE, details: CLIENT_DETAILS })
+        .send({
+          phone: CLIENT_PHONE,
+          consentConfirmed: true,
+          details: CLIENT_DETAILS,
+        })
         .expect(403);
       expect(res.body).toMatchObject({
         code: 'AGENT_NOT_ACTIVE',
@@ -644,5 +686,91 @@ describe('agent-added clients over HTTP', () => {
       await http(w).get('/client-invites').set(bearer('x')).expect(503);
       expect(send).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('the full profile over HTTP', () => {
+  let w: World;
+  afterEach(() => w?.app.close());
+  beforeEach(async () => (w = await boot()));
+
+  it('POST without consentConfirmed true is 400 VALIDATION_FAILED naming it', async () => {
+    const agent = await agentToken(w);
+    for (const body of [
+      { phone: CLIENT_PHONE, details: CLIENT_DETAILS },
+      { phone: CLIENT_PHONE, consentConfirmed: false, details: CLIENT_DETAILS },
+      { phone: CLIENT_PHONE, consentConfirmed: 'yes', details: CLIENT_DETAILS },
+    ]) {
+      const res = await http(w)
+        .post('/agent/clients')
+        .set(bearer(agent))
+        .send(body);
+      expect([res.status, (res.body as { code?: string }).code]).toEqual([
+        400,
+        'VALIDATION_FAILED',
+      ]);
+    }
+  });
+
+  it('a draft may start empty; submit is 422 CLIENT_PROFILE_INCOMPLETE with missingFields until it is filled', async () => {
+    const agent = await agentToken(w);
+    const created = await http(w)
+      .post('/agent/clients')
+      .set(bearer(agent))
+      .send({ phone: CLIENT_PHONE, consentConfirmed: true })
+      .expect(201);
+    const id = (created.body as { id: string }).id;
+    expect(created.body).toMatchObject({
+      details: {},
+      displayName: '+91 90***001',
+    });
+    const refused = await http(w)
+      .post(`/agent/clients/${id}/submit`)
+      .set(bearer(agent))
+      .expect(422);
+    expect(refused.body).toEqual({
+      statusCode: 422,
+      error: 'Unprocessable Entity',
+      code: 'CLIENT_PROFILE_INCOMPLETE',
+      message: 'Fill in the required fields before submitting.',
+      missingFields: [
+        'basicDetails.firstName',
+        'basicDetails.lastName',
+        'basicDetails.gender',
+        'basicDetails.dob',
+        'basicDetails.maritalStatus',
+        'religionDetails.religionCode',
+        'locationDetails.stateCode',
+        'locationDetails.cityCode',
+        'educationDetails.qualification',
+      ],
+    });
+    const edited = await http(w)
+      .patch(`/agent/clients/${id}`)
+      .set(bearer(agent))
+      .send({ details: CLIENT_DETAILS })
+      .expect(200);
+    expect(
+      (edited.body as { missingRequired: unknown }).missingRequired,
+    ).toEqual([]);
+    await http(w)
+      .post(`/agent/clients/${id}/submit`)
+      .set(bearer(agent))
+      .expect(200);
+  });
+
+  it('a field the wizard does not have, or "who is this profile for", is 400', async () => {
+    const agent = await agentToken(w);
+    for (const details of [
+      { basicDetails: { profileCreatedFor: 'Myself' } },
+      { basicDetails: { numberOfChildren: 1 } },
+      { photos: ['x'] },
+    ]) {
+      const res = await http(w)
+        .post('/agent/clients')
+        .set(bearer(agent))
+        .send({ phone: CLIENT_PHONE, consentConfirmed: true, details });
+      expect(res.status).toBe(400);
+    }
   });
 });

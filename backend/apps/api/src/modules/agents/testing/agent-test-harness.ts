@@ -67,7 +67,9 @@ import { FakeAgentUnitOfWork } from './fake-agent-unit-of-work';
 import { DummyClientPhoneProof } from '../adapters/platform/dummy-client-phone-proof';
 import { AgentClientDraftService } from '../clients/agent-client-draft.service';
 import { ClientInviteService } from '../clients/client-invite.service';
-import type { ClientBasicDetails } from '../ports/agent-client-ports';
+import { ReferenceDataClientLabels } from '../adapters/platform/reference-data-client-labels';
+import type { ClientProfile } from '../clients/client-profile';
+import { fakeLocations, fakeReligions } from './fake-client-reference-data';
 import { AGENT_CLIENTS_ENABLED_KEY } from '../settings/agent-clients-switch';
 import { FakeAgentClientAccount } from './fake-agent-client-account';
 import {
@@ -98,13 +100,52 @@ export const CLIENT_TOKEN_OPTIONS = {
   issuer: 'nenjam-agent',
   audience: 'client-invite',
 };
-export const CLIENT_DETAILS: ClientBasicDetails = {
-  firstName: 'Priya',
-  lastName: 'Sundaram',
-  gender: 'FEMALE',
-  dob: '1998-04-12',
-  maritalStatus: 'NEVER_MARRIED',
-  profileCreatedFor: 'Daughter',
+/**
+ * A client profile with every required field and a few optional ones, as
+ * an agent sends it (master-data codes only).
+ */
+export const CLIENT_DETAILS: ClientProfile = {
+  basicDetails: {
+    firstName: 'Priya',
+    lastName: 'Sundaram',
+    gender: 'FEMALE',
+    dob: '1998-04-12',
+    maritalStatus: 'NEVER_MARRIED',
+  },
+  religionDetails: { religionCode: 'HINDU', communityCode: 'HINDU-VELLALAR' },
+  locationDetails: {
+    countryCode: 'IN',
+    stateCode: 'IN-TN',
+    cityCode: 'IN-TN-MADURAI',
+  },
+  educationDetails: {
+    qualification: 'B.E / B.Tech',
+    annualIncome: '10 - 20 Lakhs',
+  },
+  lifestyleDetails: { eatingHabit: 'Vegetarian' },
+  partnerPreference: {
+    preferredAgeRange: '26-30',
+    extended: { diet: 'Vegetarian' },
+  },
+};
+
+/** CLIENT_DETAILS as stored and shown: the master-data labels filled in. */
+export const CLIENT_DETAILS_SEEN: ClientProfile = {
+  ...CLIENT_DETAILS,
+  religionDetails: {
+    religionCode: 'HINDU',
+    communityCode: 'HINDU-VELLALAR',
+    religion: 'Hindu',
+    community: 'Vellalar',
+  },
+  locationDetails: {
+    countryCode: 'IN',
+    stateCode: 'IN-TN',
+    cityCode: 'IN-TN-MADURAI',
+    country: 'India',
+    state: 'Tamil Nadu',
+    city: 'Madurai',
+  },
 };
 
 export const AUTH_OPTIONS: AgentAuthOptions & {
@@ -297,12 +338,17 @@ export function makeAgentHarness(
   });
   const clientLog = { warn: jest.fn<void, [message: string]>() };
   let draftCounter = 0;
+  const referenceData = new ReferenceDataClientLabels(
+    fakeLocations,
+    fakeReligions,
+  );
   const clients = new AgentClientDraftService({
     access: me,
     drafts,
     attributions,
     accounts: clientAccount,
     proof: clientProof,
+    referenceData,
     hasher,
     sealer,
     settings,
@@ -495,6 +541,7 @@ export function makeAgentHarness(
     clientProof,
     clientLog,
     clients,
+    referenceData,
     clientSigner,
     clientInvites,
     clientSignIn,

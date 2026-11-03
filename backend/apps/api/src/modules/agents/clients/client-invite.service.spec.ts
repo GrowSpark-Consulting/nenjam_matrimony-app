@@ -4,6 +4,7 @@ import { AGENT_CLIENTS_ENABLED_KEY } from '../settings/agent-clients-switch';
 import { REFERRAL_CREDIT_WINDOW_DAYS_KEY } from '../settings/agent-program-settings';
 import {
   CLIENT_DETAILS,
+  CLIENT_DETAILS_SEEN,
   CLIENT_PHONE,
   CLIENT_PHONE_2,
   CREDIT_WINDOW_DAYS,
@@ -42,6 +43,7 @@ async function invite(
 ): Promise<string> {
   const draft = await h.clients.create(agent, {
     phone,
+    consentConfirmed: true,
     details: CLIENT_DETAILS,
   });
   await h.clients.submit(agent, draft.id);
@@ -190,6 +192,7 @@ describe('ClientInviteService.listInvites', () => {
     await h.agents.update('agent-2', { status: 'SUSPENDED' });
     await h.clients.create(agent, {
       phone: CLIENT_PHONE_2,
+      consentConfirmed: true,
       details: CLIENT_DETAILS,
     });
     expect(await h.clientInvites.listInvites(await signedIn(h))).toEqual({
@@ -197,7 +200,7 @@ describe('ClientInviteService.listInvites', () => {
         {
           id,
           agentDisplayName: 'Ravi K.',
-          details: CLIENT_DETAILS,
+          details: CLIENT_DETAILS_SEEN,
           expiresOn: '2026-11-11',
           referredMemberDiscountPercent: 5,
         },
@@ -266,7 +269,7 @@ describe('ClientInviteService.accept', () => {
       memberId,
       firebaseUid: 'firebase-uid-1',
       phoneE164: CLIENT_PHONE,
-      basicDetails: CLIENT_DETAILS,
+      profile: CLIENT_DETAILS_SEEN,
     });
     expect(await h.attributions.findByMemberId(memberId)).toEqual({
       id: 'client-attribution-1',
@@ -547,7 +550,11 @@ describe('ClientInviteService.reject', () => {
     });
     expect(h.clientAccount.count()).toBe(0);
     await expectServiceError(
-      h.clients.create(agent, { phone: CLIENT_PHONE, details: CLIENT_DETAILS }),
+      h.clients.create(agent, {
+        phone: CLIENT_PHONE,
+        consentConfirmed: true,
+        details: CLIENT_DETAILS,
+      }),
       'CLIENT_PHONE_UNAVAILABLE',
     );
   });
@@ -610,5 +617,34 @@ describe('ClientInviteService: no PII outside the sealed columns', () => {
     ]) {
       expect(text).not.toContain(secret);
     }
+  });
+});
+
+describe('ClientInviteService: the full profile', () => {
+  it('the invitation and the new member carry every section the agent filled', async () => {
+    const { h, agent } = await world();
+    const extra = {
+      languageDetails: { motherTongue: 'Tamil' },
+      physicalDetails: { height: `5'3" (160 cm)` },
+      familyDetails: {
+        father: { occupation: 'Retired teacher' },
+        siblings: [{ relation: 'BROTHER', age: 30 }],
+        familyType: 'Nuclear Family',
+      },
+      horoscopeDetails: { rashi: 'Simha', star: 'Rohini' },
+    };
+    const draft = await h.clients.create(agent, {
+      phone: CLIENT_PHONE,
+      consentConfirmed: true,
+      details: { ...CLIENT_DETAILS, ...extra },
+    });
+    await h.clients.submit(agent, draft.id);
+    const client = await signedIn(h);
+    const seen = { ...CLIENT_DETAILS_SEEN, ...extra };
+    expect(
+      (await h.clientInvites.listInvites(client)).items[0].details,
+    ).toEqual(seen);
+    await h.clientInvites.accept(client, draft.id);
+    expect(h.clientAccount.member('new-member-1')?.profile).toEqual(seen);
   });
 });

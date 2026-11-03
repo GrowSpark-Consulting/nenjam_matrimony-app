@@ -12,8 +12,10 @@ info:
     agent-added clients ("Way 2", below).
 
     **Agent-added clients ("Way 2").** An `ACTIVE` agent creates a DRAFT of a
-    client's profile (the client's phone and the basic details of step 1 of
-    the member registration), may edit or discard it, then SUBMITS it. From
+    client's profile (the client's phone and her full profile: the member
+    registration's sections and partner preferences, `ClientProfile`), may
+    save it incomplete, edit or discard it, then SUBMITS it once the required
+    fields are filled. Photos are not taken from agents (out of scope). From
     then on the draft is locked: the agent cannot change it. The client signs
     in with her phone and a one-time code (`/client-invites/*`), sees the
     profile and accepts or rejects it. Only on ACCEPT does a member account
@@ -781,6 +783,15 @@ paths:
         or submit. The phone is stored encrypted and only ever shown masked.
         Nothing is sent to the client yet, and no member account is made.
 
+        `consentConfirmed` must be `true`: the agent confirms the client or
+        her family agreed to be added (only that it was confirmed is kept,
+        in the audit record). `details` may be partial or left out: the
+        required fields (see `ClientProfile`) are checked at submit.
+        Master-data codes (religion, community, country, state, city) are
+        checked as for a member's own profile: an unknown code, a city outside
+        its state, a community outside its religion, or a state without its
+        country is `VALIDATION_FAILED`.
+
         Refused when:
         - the feature switch is off (`CLIENT_INVITES_DISABLED`);
         - the agent already has as many open drafts (`DRAFT` plus
@@ -806,13 +817,17 @@ paths:
           application/json:
             schema:
               type: object
-              required: [phone, details]
+              required: [phone, consentConfirmed]
               additionalProperties: false
               properties:
                 phone:
                   $ref: '#/components/schemas/PhoneE164'
+                consentConfirmed:
+                  type: boolean
+                  enum: [true]
+                  description: The client or her family agreed to be added. Must be true.
                 details:
-                  $ref: '#/components/schemas/ClientBasicDetails'
+                  $ref: '#/components/schemas/ClientProfile'
       responses:
         '201':
           description: Draft created (`DRAFT`).
@@ -934,7 +949,7 @@ paths:
               additionalProperties: false
               properties:
                 details:
-                  $ref: '#/components/schemas/ClientBasicDetails'
+                  $ref: '#/components/schemas/ClientProfile'
       responses:
         '200':
           description: Saved.
@@ -979,7 +994,9 @@ paths:
         fresh one in the app; if the code service is busy for that phone
         the submit still succeeds.
 
-        The phone is checked again (`CLIENT_PHONE_UNAVAILABLE`,
+        Every required field of `ClientProfile` must be filled
+        (`CLIENT_PROFILE_INCOMPLETE`, with `missingFields` naming the
+        empty ones). The phone is checked again (`CLIENT_PHONE_UNAVAILABLE`,
         `OTP_DELIVERY_UNAVAILABLE`), as on create.
       operationId: agentClientSubmit
       security:
@@ -998,7 +1015,10 @@ paths:
         '404': { $ref: '#/components/responses/ClientDraftNotFound' }
         '409': { $ref: '#/components/responses/ClientDraftLocked' }
         '422':
-          description: This phone can no longer be added (`CLIENT_PHONE_UNAVAILABLE`).
+          description: |
+            Branch on `code`: `CLIENT_PROFILE_INCOMPLETE` (a required field
+            is empty; `missingFields` lists them as `section.field`) or
+            `CLIENT_PHONE_UNAVAILABLE` (this phone can no longer be added).
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1469,7 +1489,8 @@ components:
             hashing of phones and codes is not configured on the server) and
             `OTP_DELIVERY_UNAVAILABLE` (no one-time code can be sent to this
             phone right now). `CONCURRENT_CHANGE` (409): two requests changed
-            the same thing at once; retry. The `CLIENT_*`, `INVITE_*` and
+            the same thing at once; retry. The `CLIENT_*` (including
+            `CLIENT_PROFILE_INCOMPLETE`), `INVITE_*` and
             `ALREADY_MEMBER` codes belong to agent-added clients (Way 2).
           enum:
             - VALIDATION_FAILED
@@ -1504,6 +1525,14 @@ components:
             - INVITE_NOT_FOUND
             - INVITE_UNAVAILABLE
             - ALREADY_MEMBER
+            - CLIENT_PROFILE_INCOMPLETE
+        missingFields:
+          type: array
+          items: { type: string }
+          description: |
+            On `CLIENT_PROFILE_INCOMPLETE`: the required fields still empty,
+            as `section.field` (for example `educationDetails.qualification`).
+          example: [religionDetails.religionCode, educationDetails.qualification]
         agentStatus:
           allOf:
             - $ref: '#/components/schemas/AgentStatus'
@@ -1863,54 +1892,215 @@ components:
         never add this phone again. `EXPIRED`: not answered in time, or
         closed (for example the client joined another way).
 
-    ClientBasicDetails:
+    ClientProfile:
       type: object
       description: |
-        Step 1 of the member registration, as the agent entered it. It
-        becomes the client's own registration draft when she accepts.
-      required: [firstName, lastName, gender, dob, maritalStatus, profileCreatedFor]
+        The client's profile, in the member registration's own sections and
+        field names: on accept it becomes her registration draft exactly as
+        if she had typed it (with "who is this profile for" = `Myself`).
+        Every field may be left out while drafting. **Required to submit**
+        (and only these; the client's mobile number is the draft's own
+        phone): `basicDetails.firstName`, `basicDetails.lastName`,
+        `basicDetails.gender`, `basicDetails.dob`,
+        `basicDetails.maritalStatus`, `religionDetails.religionCode`,
+        `locationDetails.stateCode`, `locationDetails.cityCode`,
+        `educationDetails.qualification`. Everything else is optional, so a
+        "Skip" is always possible for it.
+
+        Religion, community, country, state and city are master-data codes
+        (`GET /reference-data/religions`, `/communities`, `/countries`,
+        `/states`, `/cities`, no token). The labels (`religion`,
+        `community`, `country`, `state`, `city`) are filled in by the server;
+        they may be sent back but are ignored. A state needs its country
+        code, a city its state code, a community its religion code.
+
+        Photos are not part of it: agents cannot add photos (out of scope).
+      x-required-at-submit:
+        - basicDetails.firstName
+        - basicDetails.lastName
+        - basicDetails.gender
+        - basicDetails.dob
+        - basicDetails.maritalStatus
+        - religionDetails.religionCode
+        - locationDetails.stateCode
+        - locationDetails.cityCode
+        - educationDetails.qualification
       additionalProperties: false
       properties:
-        firstName: { type: string, minLength: 1, maxLength: 50, example: Priya }
-        lastName: { type: string, minLength: 1, maxLength: 50, example: Sundaram }
-        gender:
-          type: string
-          enum: [MALE, FEMALE]
-        dob:
-          type: string
-          format: date
-          description: Date of birth (`YYYY-MM-DD`). The client must be at least 21.
-          example: '1998-04-12'
-        maritalStatus:
-          type: string
-          enum: [NEVER_MARRIED, DIVORCED, WIDOWED, AWAITING_DIVORCE]
-        profileCreatedFor:
-          type: string
-          enum: [Myself, Son, Daughter, Brother, Sister, Friend, Relative]
-          description: Who the profile is for, the same values as the member app.
+        basicDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            firstName: { type: string, minLength: 1, maxLength: 50, example: Priya, description: Required to submit. }
+            lastName: { type: string, minLength: 1, maxLength: 50, example: Sundaram, description: Required to submit. }
+            gender:
+              type: string
+              enum: [MALE, FEMALE]
+              description: Required to submit.
+            dob:
+              type: string
+              format: date
+              description: Required to submit. `YYYY-MM-DD`; the client must be at least 21.
+              example: '1998-04-12'
+            maritalStatus:
+              type: string
+              enum: [NEVER_MARRIED, DIVORCED, WIDOWED, AWAITING_DIVORCE]
+              description: Required to submit.
+        religionDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            religionCode: { type: string, example: HINDU, description: Required to submit. A `GET /reference-data/religions` code. }
+            religion: { type: string, readOnly: true, example: Hindu }
+            communityCode: { type: string, example: HINDU-VELLALAR, description: Optional. A `GET /reference-data/communities` code of that religion. }
+            community: { type: string, readOnly: true, example: Vellalar }
+            subCaste: { type: string, maxLength: 50, example: Pillai, description: Optional. Sub-community. }
+        languageDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            motherTongue: { type: string, maxLength: 50, example: Tamil, description: Optional. }
+        locationDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            countryCode: { type: string, example: IN, description: Optional, but needed with a state code. }
+            country: { type: string, readOnly: true, example: India }
+            stateCode: { type: string, example: IN-TN, description: Required to submit. }
+            state: { type: string, readOnly: true, example: Tamil Nadu }
+            cityCode: { type: string, example: IN-TN-MADURAI, description: Required to submit (current city). }
+            city: { type: string, readOnly: true, example: Madurai }
+            nativePlace: { type: string, maxLength: 100, example: Tirunelveli, description: Optional. }
+        educationDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            qualification:
+              type: string
+              maxLength: 100
+              description: Required to submit. Highest education; the member app offers B.E / B.Tech, M.Tech / M.E, MBBS / MD, MBA / PGDM, B.Sc / M.Sc, CA / CFA, B.Com / M.Com, Ph.D, Diploma, or free text.
+              example: B.E / B.Tech
+            occupation:
+              type: string
+              maxLength: 100
+              description: Optional. The app offers Software Engineer, Doctor, IAS / IPS / Govt, Business Owner, Finance / Banking, Civil / Mechanical Engg, Teacher / Professor, Lawyer, Architect, or free text.
+            employmentType:
+              type: string
+              enum: [Private, Government, Business, Self-Employed, Not Working, Student, Retired]
+              description: Optional. Employer type.
+            annualIncome:
+              type: string
+              enum: [Below 5 Lakhs, 5 - 10 Lakhs, 10 - 20 Lakhs, 20 - 50 Lakhs, 50 Lakhs - 1 Crore, 1 Crore+]
+              description: Optional. Yearly income range.
+        physicalDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            height:
+              type: string
+              pattern: '^\d''\d{1,2}" \(\d{3} cm\)$'
+              description: Optional. The member app's height labels, 122 to 213 cm, for example `5'9" (175 cm)`.
+              example: 5'3" (160 cm)
+        lifestyleDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            eatingHabit:
+              type: string
+              enum: [Vegetarian, Non-Vegetarian, Eggetarian, Vegan, Jain]
+              description: Optional. Diet.
+            aboutMe: { type: string, maxLength: 1000, description: Optional. About the client. }
+        familyDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            father:
+              type: object
+              additionalProperties: false
+              properties:
+                occupation: { type: string, maxLength: 100, description: Optional. }
+            mother:
+              type: object
+              additionalProperties: false
+              properties:
+                occupation: { type: string, maxLength: 100, description: Optional. }
+            siblings:
+              type: array
+              maxItems: 10
+              description: Optional.
+              items:
+                type: object
+                required: [relation]
+                additionalProperties: false
+                properties:
+                  relation: { type: string, enum: [BROTHER, SISTER] }
+                  name: { type: string, maxLength: 50 }
+                  age: { type: integer, minimum: 0, maximum: 120 }
+                  occupation: { type: string, maxLength: 100 }
+            familyType:
+              type: string
+              enum: [Joint Family, Nuclear Family]
+              description: Optional.
+        horoscopeDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            rashi:
+              type: string
+              enum: [Mesha, Vrishabha, Mithuna, Kataka, Simha, Kanya, Tula, Vrischika, Dhanu, Makara, Kumbha, Meena, "Don't Know"]
+              description: Optional. Zodiac.
+            star:
+              type: string
+              enum: [Aswini, Bharani, Karthigai, Rohini, Mrigasheersham, Thiruvaathirai, Punarpoosam, Poosam, Aayilyam, Magam, Pooram, Uthiram, Hastham, Chithirai, Swaathi, Visaagam, Anusham, Kettai, Moolam, Pooraadam, Uthiraadam, Thiruvonam, Avittam, Sadhayam, Poorattathi, Uthirattathi, Revathi, "Don't Know"]
+              description: Optional.
+        partnerPreference:
+          type: object
+          additionalProperties: false
+          description: Optional, every field. One value each, as in the member app.
+          properties:
+            preferredAgeRange: { type: string, enum: [18-22, 22-26, 26-30, 30-35, 35-40, 40-50, Any] }
+            preferredHeightRange: { type: string, enum: ['4''6"-5''0"', '5''0"-5''4"', '5''4"-5''8"', '5''8"-6''0"', '6''0"+', Any] }
+            maritalStatusPref: { type: string, enum: [Never Married, "Doesn't Matter", Any] }
+            religionPref: { type: string, enum: [Hindu, Christian, Muslim, Jain, Sikh, Any], description: '`Any`: open to all.' }
+            castePref: { type: string, enum: [Same Caste, Any Caste, Inter-Caste OK], description: Communities. }
+            occupationPref: { type: string, enum: [Software / IT, Doctor, Government, Business, Any] }
+            incomePref: { type: string, enum: [5-10 Lakhs, 10-20 Lakhs, 20-50 Lakhs, 50 Lakhs+, Any] }
+            locationPref: { type: string, enum: [Same City, Same State, Anywhere in India, NRI OK, Any] }
+            extended:
+              type: object
+              additionalProperties: false
+              properties:
+                minEducation: { type: string, enum: [High School, Bachelors, Masters, Doctorate, Any] }
+                diet: { type: string, enum: [Vegetarian, Eggetarian, Vegan, Non-Vegetarian, "Doesn't Matter"] }
 
     ClientDraft:
       type: object
       description: |
         A client the agent added, as the agent sees it. `details` is shown
         while the draft is open and is `null` once it is closed (accepted,
-        rejected or expired: the agent's copy is deleted).
-      required: [id, status, statusLabel, displayName, phoneMasked, details, editable, createdAt, submittedOn, expiresOn, acceptedOn, referralId]
+        rejected or expired: the agent's copy is deleted). `missingRequired`
+        lists the required fields still empty (submit needs it empty).
+      required: [id, status, statusLabel, displayName, phoneMasked, details, missingRequired, editable, createdAt, submittedOn, expiresOn, acceptedOn, referralId]
       properties:
         id: { type: string, format: uuid }
         status: { $ref: '#/components/schemas/ClientDraftStatus' }
         statusLabel: { $ref: '#/components/schemas/LocalizedText' }
         displayName:
           type: string
-          description: First name and last initial.
+          description: First name and last initial; the masked phone until the names are filled in.
           example: Priya S.
         phoneMasked:
           type: string
           example: '+91 98***210'
         details:
           allOf:
-            - $ref: '#/components/schemas/ClientBasicDetails'
+            - $ref: '#/components/schemas/ClientProfile'
           nullable: true
+        missingRequired:
+          type: array
+          items: { type: string }
+          description: The required fields still empty, as `section.field`; `[]` once closed.
+          example: [educationDetails.qualification]
         editable:
           type: boolean
           description: True only while `DRAFT`.
@@ -1941,7 +2131,10 @@ components:
         agentDisplayName:
           type: string
           example: Ravi K.
-        details: { $ref: '#/components/schemas/ClientBasicDetails' }
+        details:
+          allOf:
+            - $ref: '#/components/schemas/ClientProfile'
+          description: The full profile the agent entered (with the master-data labels).
         expiresOn:
           type: string
           format: date

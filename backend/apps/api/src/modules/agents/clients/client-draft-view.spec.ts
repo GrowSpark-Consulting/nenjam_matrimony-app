@@ -4,13 +4,15 @@ import { clientDraftView } from './client-draft-view';
 
 const NOW = new Date('2026-11-03T10:00:00.000Z');
 const DAY = 86_400_000;
+/** A partial profile: step 1 only. */
 const DETAILS = {
-  firstName: 'Priya',
-  lastName: 'Sundaram',
-  gender: 'FEMALE' as const,
-  dob: '1998-04-12',
-  maritalStatus: 'NEVER_MARRIED' as const,
-  profileCreatedFor: 'Daughter' as const,
+  basicDetails: {
+    firstName: 'Priya',
+    lastName: 'Sundaram',
+    gender: 'FEMALE',
+    dob: '1998-04-12',
+    maritalStatus: 'NEVER_MARRIED',
+  },
 };
 
 const row = (
@@ -50,6 +52,13 @@ describe('clientDraftView', () => {
       displayName: 'Priya S.',
       phoneMasked: '+91 98***210',
       details: DETAILS,
+      // The required fields this partial profile still lacks.
+      missingRequired: [
+        'religionDetails.religionCode',
+        'locationDetails.stateCode',
+        'locationDetails.cityCode',
+        'educationDetails.qualification',
+      ],
       editable: true,
       createdAt: '2026-11-02T10:00:00.000Z',
       submittedOn: null,
@@ -90,6 +99,9 @@ describe('clientDraftView', () => {
   it('a closed draft never shows details, even if the caller passed them', () => {
     for (const status of ['REJECTED', 'EXPIRED'] as const) {
       expect(view(row({ status, detailsSealed: null })).details).toBeNull();
+      expect(
+        view(row({ status, detailsSealed: null })).missingRequired,
+      ).toEqual([]);
     }
   });
 

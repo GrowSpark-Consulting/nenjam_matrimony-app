@@ -6,6 +6,7 @@
  */
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsDefined,
   IsIn,
   IsInt,
@@ -158,51 +159,32 @@ export class ReferralCodeDto {
 
 // --- Agent-added clients (Way 2) --------------------------------------------
 
-/** Shape only: the values are checked by the service (validateClientBasicDetails). */
-export class ClientBasicDetailsDto {
-  @IsDefined()
-  @IsString()
-  firstName!: string;
-
-  @IsDefined()
-  @IsString()
-  lastName!: string;
-
-  @IsDefined()
-  @IsString()
-  gender!: string;
-
-  @IsDefined()
-  @IsString()
-  dob!: string;
-
-  @IsDefined()
-  @IsString()
-  maritalStatus!: string;
-
-  @IsDefined()
-  @IsString()
-  profileCreatedFor!: string;
-}
-
+/**
+ * The client profile (`details`) is the member wizard's sections. The DTO
+ * only checks it is an object: the service checks every section and field
+ * (validateClientProfile), refusing an unknown one, so the rules live in one
+ * place.
+ */
 export class ClientCreateDto {
   @IsDefined()
   @IsString()
   phone!: string;
 
+  /** Must be true: the client or the family agreed to be added. */
   @IsDefined()
+  @IsBoolean()
+  consentConfirmed!: boolean;
+
+  /** May be partial; the required fields are checked at submit. */
+  @IsOptional()
   @IsObject()
-  @ValidateNested()
-  @Type(() => ClientBasicDetailsDto)
-  details!: ClientBasicDetailsDto;
+  details?: Record<string, unknown>;
 }
 
 export class ClientUpdateDto {
   @IsDefined()
   @IsObject()
-  @ValidateNested()
-  @Type(() => ClientBasicDetailsDto)
-  details!: ClientBasicDetailsDto;
+  details!: Record<string, unknown>;
 }
 
 export class ClientsQueryDto {

@@ -21,6 +21,7 @@
  * (`AgentIdentifierHasher.hashAll`), so a draft stored under an older pepper
  * is still found during a rotation; a new row is written under the newest.
  */
+import type { ClientProfile } from '../clients/client-profile';
 import type { AgentTx } from './agent-unit-of-work.port';
 
 export type ClientDraftStatus =
@@ -59,7 +60,7 @@ export interface AgentClientDraftRecord {
   phoneMasked: string;
   /** "Priya S.". */
   displayName: string;
-  /** Sealed JSON of `ClientBasicDetails` (`agent.client_details`). Set only while open. */
+  /** Sealed JSON of the `ClientProfile` (`agent.client_details`). Set only while open. */
   detailsSealed: string | null;
   expiresAt: Date;
   submittedAt: Date | null;
@@ -317,23 +318,6 @@ export interface ClientPhoneProofPort {
 
 // --- The member account an accepted invitation creates ---------------------
 
-export interface ClientBasicDetails {
-  firstName: string;
-  lastName: string;
-  gender: 'MALE' | 'FEMALE';
-  /** YYYY-MM-DD. */
-  dob: string;
-  maritalStatus: 'NEVER_MARRIED' | 'DIVORCED' | 'WIDOWED' | 'AWAITING_DIVORCE';
-  profileCreatedFor:
-    | 'Myself'
-    | 'Son'
-    | 'Daughter'
-    | 'Brother'
-    | 'Sister'
-    | 'Friend'
-    | 'Relative';
-}
-
 export interface AgentClientMember {
   memberId: string;
   /** Null for a row that has no Firebase account any more. */
@@ -359,14 +343,33 @@ export interface AgentClientAccountPort {
   /** The Firebase account for the phone, created if needed. Safe to retry. Not in a transaction. */
   ensureFirebaseUser(phoneE164: string): Promise<{ uid: string }>;
   /**
-   * Creates the member row and her registration draft with step 1 filled
-   * in. Throws AgentConflictError DUPLICATE_MEMBER_PHONE when the phone or
-   * the Firebase account already has a member row.
+   * Creates the member row and her registration draft holding every section
+   * of the profile the agent filled (`toClientWizardDraft`). Throws
+   * AgentConflictError DUPLICATE_MEMBER_PHONE when the phone or the Firebase
+   * account already has a member row.
    */
   createMember(
-    input: { uid: string; phoneE164: string; basicDetails: ClientBasicDetails },
+    input: { uid: string; phoneE164: string; profile: ClientProfile },
     tx: AgentTx,
   ): Promise<{ memberId: string }>;
   /** A Firebase custom token for `signInWithCustomToken`. */
   mintSessionToken(uid: string): Promise<string>;
+}
+
+// --- Master data for the client profile ---------------------------------------
+
+/**
+ * Checks the master-data codes of a client profile (religion, community,
+ * country, state, city) exactly as the member's own profile save does, and
+ * fills in their labels, so the profile holds both, as the wizard does.
+ * A code that is unknown, or does not belong to its parent (a city outside
+ * its state, a community outside its religion), or a child without its
+ * parent code, is refused naming its section.
+ */
+export interface ClientReferenceDataPort {
+  withLabels(
+    profile: ClientProfile,
+  ): Promise<
+    { ok: true; profile: ClientProfile } | { ok: false; fields: string[] }
+  >;
 }

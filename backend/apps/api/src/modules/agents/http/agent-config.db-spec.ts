@@ -18,6 +18,8 @@ import { ApiValidationPipe, FirebaseAuthGuard } from '@app/common';
 import { AppConfigModule, AppConfigService } from '@app/config';
 import { PrismaService } from '@app/database';
 import { FirebaseService } from '@app/firebase';
+import { LocationService } from '../../reference-data/services/location.service';
+import { ReligionService } from '../../reference-data/services/religion.service';
 import { AdminModule } from '../../admin/admin.module';
 import { AdminAuditService } from '../../admin/services/admin-audit.service';
 import { IdentifierHashService } from '../../platform/identifier-hash.service';
@@ -93,8 +95,15 @@ class StandInPlatformModule {}
       useValue: { agentOtp: { dummyEnabled: false, dummyPhones: [] } },
     },
     { provide: FirebaseService, useValue: {} },
+    { provide: LocationService, useValue: {} },
+    { provide: ReligionService, useValue: {} },
   ],
-  exports: [AppConfigService, FirebaseService],
+  exports: [
+    AppConfigService,
+    FirebaseService,
+    LocationService,
+    ReligionService,
+  ],
 })
 class StandInConfigModule {}
 

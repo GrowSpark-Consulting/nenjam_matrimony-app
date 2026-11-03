@@ -6,6 +6,11 @@
  */
 import type { PrismaService } from '@app/database';
 import { ProfileRepository } from '../../../profiles/repositories/profile.repository';
+import {
+  isBasicDetailsComplete,
+  isMatchableFromDraft,
+} from '../../../profiles/validation/registration-rules';
+import type { ClientProfile } from '../../clients/client-profile';
 import { AgentConflictError } from '../../ports/agent-data-ports';
 import { PrismaAgentClientAccount } from './prisma-agent-client-account';
 import { PrismaAgentUnitOfWork } from './prisma-agent-unit-of-work';
@@ -18,13 +23,46 @@ afterAll(() => db.close());
 beforeEach(() => freshTestDatabase(prisma));
 
 const PHONE = '+919000000001';
-const DETAILS = {
-  firstName: 'Priya',
-  lastName: 'Sundaram',
-  gender: 'FEMALE' as const,
-  dob: '1998-04-12',
-  maritalStatus: 'NEVER_MARRIED' as const,
-  profileCreatedFor: 'Daughter' as const,
+/** A full profile as stored (codes with their master-data labels). */
+const DETAILS: ClientProfile = {
+  basicDetails: {
+    firstName: 'Priya',
+    lastName: 'Sundaram',
+    gender: 'FEMALE',
+    dob: '1998-04-12',
+    maritalStatus: 'NEVER_MARRIED',
+  },
+  religionDetails: {
+    religionCode: 'HINDU',
+    religion: 'Hindu',
+    communityCode: 'HINDU-VELLALAR',
+    community: 'Vellalar',
+  },
+  locationDetails: {
+    countryCode: 'IN',
+    country: 'India',
+    stateCode: 'IN-TN',
+    state: 'Tamil Nadu',
+    cityCode: 'IN-TN-MADURAI',
+    city: 'Madurai',
+  },
+  educationDetails: {
+    qualification: 'B.E / B.Tech',
+    annualIncome: '10 - 20 Lakhs',
+  },
+  physicalDetails: { height: `5'3" (160 cm)` },
+  lifestyleDetails: { eatingHabit: 'Vegetarian', aboutMe: 'Loves music.' },
+  familyDetails: {
+    father: { occupation: 'Retired teacher' },
+    siblings: [{ relation: 'BROTHER', age: 30 }],
+    familyType: 'Nuclear Family',
+  },
+  horoscopeDetails: { rashi: 'Simha', star: 'Rohini' },
+  partnerPreference: {
+    preferredAgeRange: '26-30',
+    religionPref: 'Hindu',
+    extended: { diet: 'Vegetarian' },
+  },
 };
 
 const firebase = {
@@ -36,11 +74,11 @@ const uow = () => new PrismaAgentUnitOfWork(prisma);
 
 const create = (uid = 'uid-1', phoneE164 = PHONE) =>
   uow().run((tx) =>
-    account().createMember({ uid, phoneE164, basicDetails: DETAILS }, tx),
+    account().createMember({ uid, phoneE164, profile: DETAILS }, tx),
   );
 
 describe('PrismaAgentClientAccount on the real database', () => {
-  it('creates the member and her draft with step 1 done; the wizard resumes from it', async () => {
+  it('creates the member and her draft with every section the agent filled; the wizard resumes from it', async () => {
     const { memberId } = await create();
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: memberId },
@@ -56,11 +94,20 @@ describe('PrismaAgentClientAccount on the real database', () => {
       prisma as unknown as PrismaService,
     ).getOrCreateRegistrationStep(memberId);
     expect(step).toMatchObject({
-      currentStep: 1,
-      completedSteps: [1],
+      currentStep: 10,
+      // Every section but the language step (step 3), which was left empty.
+      completedSteps: [1, 2, 4, 5, 6, 7, 8, 9, 10],
       isComplete: false,
-      draftData: { basicDetails: DETAILS },
+      draftData: {
+        ...DETAILS,
+        basicDetails: { ...DETAILS.basicDetails, profileCreatedFor: 'Myself' },
+      },
     });
+    // By the member side's own rules: step 1 is complete and the profile
+    // has what it needs to become matchable.
+    const data = step.draftData as Record<string, Record<string, unknown>>;
+    expect(isBasicDetailsComplete(data.basicDetails)).toBe(true);
+    expect(isMatchableFromDraft(data)).toBe(true);
   });
 
   it('finds members by phone and by id, whatever their role or status', async () => {
@@ -99,7 +146,7 @@ describe('PrismaAgentClientAccount on the real database', () => {
     await expect(
       uow().run(async (tx) => {
         await account().createMember(
-          { uid: 'uid-1', phoneE164: PHONE, basicDetails: DETAILS },
+          { uid: 'uid-1', phoneE164: PHONE, profile: DETAILS },
           tx,
         );
         throw new Error('boom');
