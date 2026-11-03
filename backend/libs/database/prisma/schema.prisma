@@ -35,6 +35,7 @@ model User {
   chatRoomsAsUser2  ChatRoom[]           @relation("ChatUser2")
   deviceTokens      DevicePushToken[]
   referralAttribution ReferralAttribution?
+  agentClientDrafts AgentClientDraft[]
   receivedInterests ExpressInterest[]    @relation("ReceivedInterests")
   sentInterests     ExpressInterest[]    @relation("SentInterests")
   faceVerification  FaceVerification?
@@ -1571,6 +1572,8 @@ enum PaymentDiscountSource {
 
 enum OtpPurpose {
   AGENT_SIGN_IN
+  /// A client an agent added (Way 2) proving her phone before she accepts.
+  AGENT_CLIENT_CONSENT
 
   @@map("otp_purpose")
 }
@@ -2058,6 +2061,7 @@ model Agent {
   commissions        Commission[]
   ledgerEntries      AgentLedgerEntry[]
   payouts            AgentPayout[]
+  clientDrafts       AgentClientDraft[]
 
   @@index([status])
   @@map("agents")
@@ -2109,7 +2113,8 @@ model ReferralAttribution {
   /// commission history).
   user  User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  commission Commission?
+  commission  Commission?
+  clientDraft AgentClientDraft?
 
   @@index([agentId, createdAt])
   @@index([codeId])
@@ -2393,4 +2398,83 @@ model AgentPayout {
   @@index([agentId, period])
   @@index([status])
   @@map("agent_payouts")
+}
+
+// ---------------------------------------------------------------------------
+// Agent-added clients, "Way 2" (migration 20261103090000).
+// Rules Prisma cannot express live only in the migration SQL: one open draft
+// per agent and phone (partial unique index), the allowed status changes and
+// "locked after submit" (trigger), only a DRAFT may be deleted and the table
+// refuses TRUNCATE (triggers), and the CHECKs on which columns are set in
+// which status.
+// ---------------------------------------------------------------------------
+
+/// Where a client draft is. The agent sees these five as they are.
+enum AgentClientDraftStatus {
+  DRAFT
+  WAITING_FOR_CLIENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+
+  @@map("agent_client_draft_status")
+}
+
+/// A client an agent added: the client's phone and the basic details of
+/// registration step 1. Editable only while DRAFT; locked once submitted,
+/// until the client accepts, rejects, or it expires. Closed rows keep their
+/// phone hash (a REJECTED one blocks that agent from that phone for good) but
+/// lose the details.
+model AgentClientDraft {
+  id            String                 @id @default(uuid())
+  agentId       String                 @map("agent_id")
+  status        AgentClientDraftStatus @default(DRAFT)
+  /// "v1:"-prefixed keyed hash of the client's phone. Never changes.
+  phoneHash     String                 @map("phone_hash")
+  /// The client's E.164 phone, sealed (purpose agent.client_phone). Set while open, and kept on REJECTED (for a pepper rotation); null otherwise.
+  phoneSealed   String?                @map("phone_sealed")
+  /// "+91 98***210": safe to show, kept after the draft closes.
+  phoneMasked   String                 @map("phone_masked")
+  /// First name and last initial, safe to show, kept after the draft closes.
+  displayName   String                 @map("display_name")
+  /// The step-1 details as JSON, sealed (purpose agent.client_details). Set exactly while the draft is open.
+  detailsSealed String?                @map("details_sealed")
+  /// The draft closes at this time: set at creation and again at submit.
+  expiresAt     DateTime               @map("expires_at")
+  submittedAt   DateTime?              @map("submitted_at")
+  acceptedAt    DateTime?              @map("accepted_at")
+  /// When it was rejected or expired.
+  closedAt      DateTime?              @map("closed_at")
+  /// Why an EXPIRED draft closed (internal, never shown to the agent): TIMED_OUT, CLIENT_ACCEPTED_ANOTHER, CLIENT_ALREADY_MEMBER or AGENT_TERMINATED.
+  closedReason  String?                @map("closed_reason")
+  /// The member the client became, once ACCEPTED. Null again if she deletes her account.
+  memberId      String?                @map("member_id")
+  /// The attribution the acceptance created.
+  attributionId String?                @unique @map("attribution_id")
+  createdAt     DateTime               @default(now()) @map("created_at")
+  updatedAt     DateTime               @updatedAt @map("updated_at")
+
+  agent       Agent                @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  member      User?                @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  attribution ReferralAttribution? @relation(fields: [attributionId], references: [id], onDelete: Restrict)
+
+  @@index([agentId, createdAt])
+  @@index([memberId])
+  @@map("agent_client_drafts")
+}
+
+/// The newest one-time code sent to a client's phone. The code itself is an
+/// otp_challenges row (purpose AGENT_CLIENT_CONSENT); this only remembers
+/// which challenge is current, so the client verifies with her phone and the
+/// code. A newer send replaces it. Expired rows are purged in small batches.
+model AgentClientConsentCode {
+  /// "v1:"-prefixed keyed hash of the client's phone.
+  phoneHash   String   @id @map("phone_hash")
+  /// The otp_challenges id. A plain id: the OTP service purges its own rows.
+  challengeId String   @map("challenge_id")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([expiresAt])
+  @@map("agent_client_consent_codes")
 }
