@@ -617,3 +617,197 @@ describe('AgentClientDraftService: no PII outside the sealed columns', () => {
     }
   });
 });
+
+describe('AgentClientDraftService: the full profile', () => {
+  it('create needs consentConfirmed exactly true; nothing is stored or audited without it', async () => {
+    const { h, claims } = await world();
+    for (const consentConfirmed of [undefined, false, 'true', 1]) {
+      await expectServiceError(
+        h.clients.create(claims, {
+          phone: CLIENT_PHONE,
+          consentConfirmed,
+          details: CLIENT_DETAILS,
+        }),
+        'VALIDATION_FAILED',
+        { fields: ['consentConfirmed'] },
+      );
+    }
+    expect(h.drafts.all()).toEqual([]);
+    expect(h.audit.entries).toEqual([]);
+  });
+
+  it('keeps only that consent was confirmed, in the audit row', async () => {
+    const { h, claims } = await world();
+    await add(h, claims);
+    expect(h.audit.entries[0]).toMatchObject({
+      action: 'AGENT_CLIENT_DRAFT_CREATED',
+      metadata: { consentConfirmed: true },
+    });
+    const row = h.drafts.peek('draft-1')!;
+    expect(JSON.stringify(row)).not.toContain('consent');
+    expect(
+      h.sealer.open(AGENT_SEAL_PURPOSES.clientDetails, row.detailsSealed!),
+    ).not.toContain('consent');
+  });
+
+  it('a draft may be saved empty: shown by its masked phone, every required field listed', async () => {
+    const { h, claims } = await world();
+    const view = await h.clients.create(claims, {
+      phone: CLIENT_PHONE,
+      consentConfirmed: true,
+    });
+    expect(view).toMatchObject({
+      status: 'DRAFT',
+      displayName: '+91 90***001',
+      details: {},
+      missingRequired: [
+        'basicDetails.firstName',
+        'basicDetails.lastName',
+        'basicDetails.gender',
+        'basicDetails.dob',
+        'basicDetails.maritalStatus',
+        'religionDetails.religionCode',
+        'locationDetails.stateCode',
+        'locationDetails.cityCode',
+        'educationDetails.qualification',
+      ],
+    });
+  });
+
+  it('submit refuses CLIENT_PROFILE_INCOMPLETE naming what is missing; nothing changes and no code is sent', async () => {
+    const { h, claims } = await world();
+    await h.clients.create(claims, {
+      phone: CLIENT_PHONE,
+      consentConfirmed: true,
+      details: {
+        ...CLIENT_DETAILS,
+        educationDetails: { annualIncome: '10 - 20 Lakhs' },
+      },
+    });
+    const send = jest.spyOn(h.otp, 'send');
+    await expectServiceError(
+      h.clients.submit(claims, 'draft-1'),
+      'CLIENT_PROFILE_INCOMPLETE',
+      { missingFields: ['educationDetails.qualification'] },
+    );
+    expect(h.drafts.peek('draft-1')?.status).toBe('DRAFT');
+    expect(send).not.toHaveBeenCalled();
+    // Filling it in lets it through.
+    await h.clients.update(claims, 'draft-1', { details: CLIENT_DETAILS });
+    await expect(h.clients.submit(claims, 'draft-1')).resolves.toMatchObject({
+      status: 'WAITING_FOR_CLIENT',
+      missingRequired: [],
+    });
+  });
+
+  it('every optional field may be left out at submit', async () => {
+    const { h, claims } = await world();
+    await h.clients.create(claims, {
+      phone: CLIENT_PHONE,
+      consentConfirmed: true,
+      details: {
+        basicDetails: CLIENT_DETAILS.basicDetails,
+        religionDetails: { religionCode: 'HINDU' },
+        locationDetails: {
+          countryCode: 'IN',
+          stateCode: 'IN-TN',
+          cityCode: 'IN-TN-MADURAI',
+        },
+        educationDetails: { qualification: 'Diploma' },
+      },
+    });
+    await expect(h.clients.submit(claims, 'draft-1')).resolves.toMatchObject({
+      status: 'WAITING_FOR_CLIENT',
+    });
+  });
+
+  it("master-data codes are checked like a member's: an unknown or mismatched code is refused, naming the section", async () => {
+    const { h, claims } = await world();
+    const cases: Array<[Record<string, unknown>, string]> = [
+      [
+        {
+          locationDetails: {
+            countryCode: 'IN',
+            stateCode: 'IN-KL',
+            cityCode: 'IN-TN-MADURAI',
+          },
+        },
+        'details.locationDetails',
+      ],
+      [
+        {
+          religionDetails: {
+            religionCode: 'CHRISTIAN',
+            communityCode: 'HINDU-VELLALAR',
+          },
+        },
+        'details.religionDetails',
+      ],
+      [{ locationDetails: { stateCode: 'IN-TN' } }, 'details.locationDetails'],
+    ];
+    for (const [details, field] of cases) {
+      await expectServiceError(
+        h.clients.create(claims, {
+          phone: CLIENT_PHONE,
+          consentConfirmed: true,
+          details,
+        }),
+        'VALIDATION_FAILED',
+        { fields: [field] },
+      );
+    }
+    await add(h, claims);
+    await expectServiceError(
+      h.clients.update(claims, 'draft-1', {
+        details: { religionDetails: { religionCode: 'ZORO' } },
+      }),
+      'VALIDATION_FAILED',
+      { fields: ['details.religionDetails'] },
+    );
+  });
+
+  it('labels come from the master data, never from the agent', async () => {
+    const { h, claims } = await world();
+    const view = await h.clients.create(claims, {
+      phone: CLIENT_PHONE,
+      consentConfirmed: true,
+      details: {
+        ...CLIENT_DETAILS,
+        religionDetails: { religionCode: 'HINDU', religion: 'Something else' },
+      },
+    });
+    expect(view.details?.religionDetails).toEqual({
+      religionCode: 'HINDU',
+      religion: 'Hindu',
+    });
+  });
+
+  it('"who is this profile for" cannot be set: it is always the client\'s own', async () => {
+    const { h, claims } = await world();
+    await expectServiceError(
+      h.clients.create(claims, {
+        phone: CLIENT_PHONE,
+        consentConfirmed: true,
+        details: {
+          basicDetails: {
+            ...CLIENT_DETAILS.basicDetails,
+            profileCreatedFor: 'Son',
+          },
+        },
+      }),
+      'VALIDATION_FAILED',
+      { fields: ['details.basicDetails'] },
+    );
+  });
+
+  it('edit replaces the whole profile, and may leave it partial again', async () => {
+    const { h, claims } = await world();
+    await add(h, claims);
+    const view = await h.clients.update(claims, 'draft-1', {
+      details: { basicDetails: { firstName: 'Meena' } },
+    });
+    expect(view.details).toEqual({ basicDetails: { firstName: 'Meena' } });
+    expect(view.displayName).toBe('Meena');
+    expect(view.missingRequired).toContain('basicDetails.lastName');
+  });
+});

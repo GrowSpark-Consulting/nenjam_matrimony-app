@@ -688,3 +688,89 @@ describe('agent-added clients over HTTP', () => {
     });
   });
 });
+
+describe('the full profile over HTTP', () => {
+  let w: World;
+  afterEach(() => w?.app.close());
+  beforeEach(async () => (w = await boot()));
+
+  it('POST without consentConfirmed true is 400 VALIDATION_FAILED naming it', async () => {
+    const agent = await agentToken(w);
+    for (const body of [
+      { phone: CLIENT_PHONE, details: CLIENT_DETAILS },
+      { phone: CLIENT_PHONE, consentConfirmed: false, details: CLIENT_DETAILS },
+      { phone: CLIENT_PHONE, consentConfirmed: 'yes', details: CLIENT_DETAILS },
+    ]) {
+      const res = await http(w)
+        .post('/agent/clients')
+        .set(bearer(agent))
+        .send(body);
+      expect([res.status, (res.body as { code?: string }).code]).toEqual([
+        400,
+        'VALIDATION_FAILED',
+      ]);
+    }
+  });
+
+  it('a draft may start empty; submit is 422 CLIENT_PROFILE_INCOMPLETE with missingFields until it is filled', async () => {
+    const agent = await agentToken(w);
+    const created = await http(w)
+      .post('/agent/clients')
+      .set(bearer(agent))
+      .send({ phone: CLIENT_PHONE, consentConfirmed: true })
+      .expect(201);
+    const id = (created.body as { id: string }).id;
+    expect(created.body).toMatchObject({
+      details: {},
+      displayName: '+91 90***001',
+    });
+    const refused = await http(w)
+      .post(`/agent/clients/${id}/submit`)
+      .set(bearer(agent))
+      .expect(422);
+    expect(refused.body).toEqual({
+      statusCode: 422,
+      error: 'Unprocessable Entity',
+      code: 'CLIENT_PROFILE_INCOMPLETE',
+      message: 'Fill in the required fields before submitting.',
+      missingFields: [
+        'basicDetails.firstName',
+        'basicDetails.lastName',
+        'basicDetails.gender',
+        'basicDetails.dob',
+        'basicDetails.maritalStatus',
+        'religionDetails.religionCode',
+        'locationDetails.stateCode',
+        'locationDetails.cityCode',
+        'educationDetails.qualification',
+      ],
+    });
+    const edited = await http(w)
+      .patch(`/agent/clients/${id}`)
+      .set(bearer(agent))
+      .send({ details: CLIENT_DETAILS })
+      .expect(200);
+    expect(
+      (edited.body as { missingRequired: unknown }).missingRequired,
+    ).toEqual([]);
+    await http(w)
+      .post(`/agent/clients/${id}/submit`)
+      .set(bearer(agent))
+      .expect(200);
+  });
+
+  it('a field the wizard does not have, or "who is this profile for", is 400', async () => {
+    const agent = await agentToken(w);
+    for (const details of [
+      { basicDetails: { profileCreatedFor: 'Myself' } },
+      { basicDetails: { numberOfChildren: 1 } },
+      { photos: ['x'] },
+    ]) {
+      const res = await http(w)
+        .post('/agent/clients')
+        .set(bearer(agent))
+        .send({ phone: CLIENT_PHONE, consentConfirmed: true, details });
+      expect(res.status).toBe(400);
+    }
+  });
+});

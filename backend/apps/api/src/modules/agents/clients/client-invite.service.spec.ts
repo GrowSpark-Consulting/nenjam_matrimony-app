@@ -619,3 +619,32 @@ describe('ClientInviteService: no PII outside the sealed columns', () => {
     }
   });
 });
+
+describe('ClientInviteService: the full profile', () => {
+  it('the invitation and the new member carry every section the agent filled', async () => {
+    const { h, agent } = await world();
+    const extra = {
+      languageDetails: { motherTongue: 'Tamil' },
+      physicalDetails: { height: `5'3" (160 cm)` },
+      familyDetails: {
+        father: { occupation: 'Retired teacher' },
+        siblings: [{ relation: 'BROTHER', age: 30 }],
+        familyType: 'Nuclear Family',
+      },
+      horoscopeDetails: { rashi: 'Simha', star: 'Rohini' },
+    };
+    const draft = await h.clients.create(agent, {
+      phone: CLIENT_PHONE,
+      consentConfirmed: true,
+      details: { ...CLIENT_DETAILS, ...extra },
+    });
+    await h.clients.submit(agent, draft.id);
+    const client = await signedIn(h);
+    const seen = { ...CLIENT_DETAILS_SEEN, ...extra };
+    expect(
+      (await h.clientInvites.listInvites(client)).items[0].details,
+    ).toEqual(seen);
+    await h.clientInvites.accept(client, draft.id);
+    expect(h.clientAccount.member('new-member-1')?.profile).toEqual(seen);
+  });
+});

@@ -23,7 +23,11 @@ import {
 import { AGENT_SEAL_PURPOSES } from '../ports/agent-secret-sealer.port';
 import { AGENT_CLIENTS_ENABLED_KEY } from '../settings/agent-clients-switch';
 import { REFERRAL_CREDIT_WINDOW_DAYS_KEY } from '../settings/agent-program-settings';
-import { CLIENT_DETAILS } from '../testing/agent-test-harness';
+import {
+  CLIENT_DETAILS,
+  CLIENT_DETAILS_SEEN,
+} from '../testing/agent-test-harness';
+import { toClientWizardDraft, type ClientProfile } from './client-profile';
 import {
   FakeAgentClock,
   FakeAgentTokenSigner,
@@ -142,6 +146,7 @@ async function waitingInvite(
   agentId: string,
   expiresAt = new Date(T0.getTime() + 14 * DAY),
   phone = PHONE,
+  profile: ClientProfile = CLIENT_DETAILS,
 ) {
   const drafts = new PrismaAgentClientDraftRepository(prisma);
   await drafts.create({
@@ -153,7 +158,7 @@ async function waitingInvite(
     displayName: 'Priya S.',
     detailsSealed: sealer.seal(
       AGENT_SEAL_PURPOSES.clientDetails,
-      JSON.stringify(CLIENT_DETAILS),
+      JSON.stringify(profile),
     ),
     expiresAt,
     createdAt: new Date(T0.getTime() - DAY),
@@ -259,5 +264,38 @@ describe('ClientInviteService races on the real database', () => {
         row.status === 'ACCEPTED' ? 1 : 0,
       );
     }
+  });
+});
+
+describe('accept on the real database writes the whole profile', () => {
+  it('every section the agent filled lands in her registration draft, in the same transaction as the member', async () => {
+    await seedAgent('agent-1');
+    const profile: ClientProfile = {
+      ...CLIENT_DETAILS_SEEN,
+      languageDetails: { motherTongue: 'Tamil' },
+      physicalDetails: { height: `5'3" (160 cm)` },
+      familyDetails: {
+        father: { occupation: 'Retired teacher' },
+        siblings: [{ relation: 'BROTHER', age: 30 }],
+        familyType: 'Nuclear Family',
+      },
+      horoscopeDetails: { rashi: 'Simha', star: 'Rohini' },
+    };
+    await waitingInvite('draft-1', 'agent-1', undefined, PHONE, profile);
+    await service(new FakeAgentClock(T0)).accept(clientClaims(), 'draft-1');
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { phone: PHONE },
+      include: { registrationStep: true },
+    });
+    const expected = toClientWizardDraft(profile);
+    expect(user.registrationStep).toMatchObject({
+      draftData: expected.draftData,
+      completedSteps: expected.completedSteps,
+      currentStep: expected.currentStep,
+    });
+    expect(
+      (user.registrationStep?.draftData as { basicDetails: unknown })
+        .basicDetails,
+    ).toMatchObject({ profileCreatedFor: 'Myself' });
   });
 });
