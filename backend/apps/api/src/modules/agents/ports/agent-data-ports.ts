@@ -27,7 +27,9 @@ export type AgentConflictReason =
   | 'DUPLICATE_ID'
   | 'DUPLICATE_COMMISSION'
   | 'DUPLICATE_PAYOUT'
-  | 'DUPLICATE_PAYOUT_REFERENCE';
+  | 'DUPLICATE_PAYOUT_REFERENCE'
+  | 'DUPLICATE_OPEN_CLIENT_DRAFT'
+  | 'DUPLICATE_MEMBER_PHONE';
 
 export class AgentConflictError extends Error {
   constructor(public readonly reason: AgentConflictReason) {

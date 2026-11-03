@@ -337,3 +337,40 @@ describe('validateAgentAccessClaims', () => {
     });
   });
 });
+
+describe('CLIENT tokens (agent-added clients)', () => {
+  const client = (o: Partial<BuildAgentAccessClaimsInput> = {}) =>
+    buildInput({
+      agentId: null,
+      scope: 'CLIENT',
+      clientRef: 'sealed-phone',
+      ...o,
+    });
+
+  it('the subject is the sealed phone, never an agent id', () => {
+    expect(buildAgentAccessClaims(client()).sub).toBe('sealed-phone');
+    expect(() =>
+      buildAgentAccessClaims(client({ agentId: 'agent-1' })),
+    ).toThrow('A CLIENT token has no agentId.');
+    expect(() =>
+      buildAgentAccessClaims(client({ clientRef: undefined })),
+    ).toThrow('A CLIENT token needs a clientRef.');
+  });
+
+  it('is refused by the default (agent portal) check, accepted only where CLIENT is allowed', () => {
+    const token = claims({ sub: 'sealed-phone', scope: 'CLIENT' });
+    expect(validateAgentAccessClaims(token, expected())).toEqual({
+      ok: false,
+      reason: 'BAD_SCOPE',
+    });
+    expect(
+      validateAgentAccessClaims(token, { ...expected(), scopes: ['CLIENT'] }),
+    ).toMatchObject({ ok: true, claims: { scope: 'CLIENT' } });
+    expect(
+      validateAgentAccessClaims(claims(), {
+        ...expected(),
+        scopes: ['CLIENT'],
+      }),
+    ).toEqual({ ok: false, reason: 'BAD_SCOPE' });
+  });
+});

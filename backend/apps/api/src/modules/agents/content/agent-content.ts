@@ -56,6 +56,13 @@ export const AGENT_CONTENT: AgentContent = {
     PAID: pending('Paid'),
     CANCELLED: pending('Cancelled'),
   },
+  clientStatusLabels: {
+    DRAFT: pending('Draft'),
+    WAITING_FOR_CLIENT: pending('Waiting for client'),
+    ACCEPTED: pending('Accepted'),
+    REJECTED: pending('Declined'),
+    EXPIRED: pending('Expired'),
+  },
   shareMessageTemplates: [
     {
       id: 'default',

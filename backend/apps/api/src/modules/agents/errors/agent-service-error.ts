@@ -27,6 +27,18 @@ export type AgentServiceErrorCode =
   | 'SELF_REFERRAL'
   | 'ALREADY_PAID'
   | 'PHONE_NOT_VERIFIED'
+  // Agent-added clients (Way 2).
+  | 'CLIENT_INVITES_DISABLED'
+  | 'CLIENT_DRAFT_NOT_FOUND'
+  | 'CLIENT_DRAFT_EXISTS'
+  | 'CLIENT_DRAFT_LOCKED'
+  | 'CLIENT_DRAFT_LIMIT_REACHED'
+  | 'CLIENT_PHONE_UNAVAILABLE'
+  | 'INVITE_NOT_FOUND'
+  | 'INVITE_UNAVAILABLE'
+  | 'ALREADY_MEMBER'
+  /** No one-time code can reach the phone (only approved test numbers while the code is the dummy one). */
+  | 'OTP_DELIVERY_UNAVAILABLE'
   | ApplicationSubmitRejectReason;
 
 export interface AgentServiceErrorOptions {

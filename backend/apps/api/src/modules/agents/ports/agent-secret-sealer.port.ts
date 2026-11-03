@@ -1,6 +1,7 @@
 /**
  * Port for encrypting small secrets before they are stored (the full PAN,
- * payout details, an applicant's phone).
+ * payout details, an applicant's phone, an agent-added client's phone and
+ * details).
  *
  * Every value is sealed for one PURPOSE (one of `AGENT_SEAL_PURPOSES`) and
  * opens only under that same purpose: a PAN copied into the payout-details
@@ -15,6 +16,8 @@ export const AGENT_SEAL_PURPOSES = {
   pan: 'agent.pan',
   payoutDetails: 'agent.payout_details',
   applicantPhone: 'agent.applicant_phone',
+  clientPhone: 'agent.client_phone',
+  clientDetails: 'agent.client_details',
 } as const;
 
 export type AgentSealPurpose =

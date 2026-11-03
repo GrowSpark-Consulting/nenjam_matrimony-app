@@ -889,7 +889,7 @@ paths:
                     nullable: true
         '400': { $ref: '#/components/responses/ValidationFailed' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/AgentNotActive' }
+        '403': { $ref: '#/components/responses/ClientsForbidden' }
 
   /agent/clients/{id}:
     get:
@@ -909,7 +909,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ClientDraft' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/AgentNotActive' }
+        '403': { $ref: '#/components/responses/ClientsForbidden' }
         '404': { $ref: '#/components/responses/ClientDraftNotFound' }
     patch:
       tags: [Clients]
@@ -1405,7 +1405,7 @@ components:
           schema: { $ref: '#/components/schemas/Error' }
     ClientsForbidden:
       description: |
-        The agent's status does not allow changing clients
+        The agent's status does not allow this client call
         (`AGENT_NOT_ACTIVE`, with `agentStatus`), or the feature is switched
         off (`CLIENT_INVITES_DISABLED`).
       content:

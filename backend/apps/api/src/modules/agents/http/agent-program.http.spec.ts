@@ -12,6 +12,7 @@ import { AgentJwtTokenSigner } from '../auth/agent-jwt-token-signer';
 import { AgentConfigService } from '../config/agent-config.service';
 import {
   AUTH_OPTIONS,
+  CLIENT_TOKEN_OPTIONS,
   makeAgentHarness,
   PHONE,
   type AgentHarness,
@@ -52,6 +53,7 @@ async function boot(
   settings: Record<string, unknown> = {},
 ): Promise<World> {
   let jwt!: AgentJwtTokenSigner;
+  let clientJwt!: AgentJwtTokenSigner;
   const h = makeAgentHarness(
     { 'payout.minimum_amount_paise': 50000, ...settings },
     {
@@ -62,6 +64,11 @@ async function boot(
             issuer: AUTH_OPTIONS.issuer,
             audience: AUTH_OPTIONS.audience,
           },
+          clock,
+        )),
+      clientSignerFor: (clock) =>
+        (clientJwt = new AgentJwtTokenSigner(
+          { secret: SECRET, ...CLIENT_TOKEN_OPTIONS, scopes: ['CLIENT'] },
           clock,
         )),
     },
@@ -76,7 +83,10 @@ async function boot(
     referrals: h.referrals,
     referralCodes: h.referralCodes,
     money: h.money,
+    clients: h.clients,
+    clientInvites: h.clientInvites,
     tokens: jwt,
+    clientTokens: clientJwt,
     piiSealing: true,
     requesterKey: () => 'v1:hashed-test-ip',
     ...over,

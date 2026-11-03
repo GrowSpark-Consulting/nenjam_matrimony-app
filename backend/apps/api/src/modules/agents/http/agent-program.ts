@@ -14,6 +14,12 @@
  *    routes that seal answer 503 and startup warns. MALFORMED:
  *    `parseSealingKey` throws and startup stops (a wrong key is a
  *    misconfiguration, not "off").
+ *
+ * Agent-added clients (Way 2) use the same two: AGENT_JWT_SECRET also signs
+ * the client token (its own audience, CLIENT only) and the PII key seals the
+ * client's phone and details. Who a one-time code can reach comes from
+ * AGENT_OTP_DUMMY_* (`AppConfigService.agentOtp`, the OTP service's own
+ * settings), read through `DummyClientPhoneProof` (approved numbers only).
  */
 import { createHmac } from 'node:crypto';
 import { Logger, ServiceUnavailableException } from '@nestjs/common';
@@ -67,6 +73,16 @@ import { StaticAgentContent } from '../content/agent-content';
 import { AgentPiiSealer } from '../crypto/agent-pii-sealer';
 import type { AgentTokenSigner } from '../ports/agent-infra-ports';
 import type { AgentSecretSealer } from '../ports/agent-secret-sealer.port';
+import type { FirebaseService } from '@app/firebase';
+import {
+  DummyClientPhoneProof,
+  type ClientDummyCodeConfig,
+} from '../adapters/platform/dummy-client-phone-proof';
+import { PrismaAgentClientAccount } from '../adapters/prisma/prisma-agent-client-account';
+import { PrismaAgentClientConsentCodeStore } from '../adapters/prisma/prisma-agent-client-consent-code.store';
+import { PrismaAgentClientDraftRepository } from '../adapters/prisma/prisma-agent-client-draft.repository';
+import { AgentClientDraftService } from '../clients/agent-client-draft.service';
+import { ClientInviteService } from '../clients/client-invite.service';
 import { AgentReferralCodeService } from '../referral/agent-referral-code.service';
 import { AgentReferralService } from '../referral/agent-referral.service';
 
@@ -75,6 +91,8 @@ export const AGENT_PROGRAM = Symbol('AGENT_PROGRAM');
 /** Deployment identifiers of agent access tokens (not secrets, not settings). */
 export const AGENT_TOKEN_ISSUER = 'nenjam-api';
 export const AGENT_TOKEN_AUDIENCE = 'nenjam-agent-portal';
+/** The client token's own audience: never accepted where an agent token is. */
+export const CLIENT_TOKEN_AUDIENCE = 'nenjam-client-invite';
 
 export interface AgentProgram {
   signIn: AgentSignInService;
@@ -85,8 +103,14 @@ export interface AgentProgram {
   referralCodes: AgentReferralCodeService;
   /** Commissions, balance, payouts and push devices of the signed-in agent. */
   money: AgentMoneyService;
+  /** Agent-added clients, the agent's side (/agent/clients). */
+  clients: AgentClientDraftService;
+  /** Agent-added clients, the client's side (/client-invites). */
+  clientInvites: ClientInviteService;
   /** null: AGENT_JWT_SECRET is not usable, every agent route answers 503. */
   tokens: AgentTokenChecker | null;
+  /** The client-token checker; null exactly when `tokens` is. */
+  clientTokens: AgentTokenChecker | null;
   /** false: AGENT_PII_ENCRYPTION_KEY is not set, the sealing routes answer 503. */
   piiSealing: boolean;
   /** The opaque key the public code check is limited by (a hashed IP). */
@@ -133,6 +157,10 @@ export interface AgentProgramDeps {
   otp: OtpService;
   hashing: IdentifierHashService;
   adminAudit: AdminAuditService;
+  /** The member account an accepted client invitation creates. */
+  firebase: Pick<FirebaseService, 'findOrCreateUser' | 'createCustomToken'>;
+  /** AGENT_OTP_DUMMY_* as parsed by the config (who a code can reach). */
+  agentOtp: ClientDummyCodeConfig;
   env: Record<string, string | undefined>;
   logger?: Pick<Logger, 'warn'>;
 }
@@ -176,6 +204,17 @@ export function buildAgentProgram(deps: AgentProgramDeps): AgentProgram {
           clock,
         )
       : null;
+  const clientJwt = jwt
+    ? new AgentJwtTokenSigner(
+        {
+          secret,
+          issuer: AGENT_TOKEN_ISSUER,
+          audience: CLIENT_TOKEN_AUDIENCE,
+          scopes: ['CLIENT'],
+        },
+        clock,
+      )
+    : null;
   if (!jwt) {
     logger.warn(
       `AGENT_JWT_SECRET is not set (or shorter than ${MIN_AGENT_JWT_SECRET_LENGTH} characters): the agent routes answer 503.`,
@@ -215,10 +254,19 @@ export function buildAgentProgram(deps: AgentProgramDeps): AgentProgram {
     audit,
     clock,
   });
+  const otp = new PlatformOtpAdapter(deps.otp);
+  const drafts = new PrismaAgentClientDraftRepository(prisma);
+  const clientAccounts = new PrismaAgentClientAccount(prisma, deps.firebase);
+  const clientProof = new DummyClientPhoneProof({
+    otp,
+    codes: new PrismaAgentClientConsentCodeStore(prisma),
+    hasher,
+    config: deps.agentOtp,
+  });
 
   return {
     signIn: new AgentSignInService({
-      otp: new PlatformOtpAdapter(deps.otp),
+      otp,
       hasher,
       agents,
       refreshTokens,
@@ -279,7 +327,38 @@ export function buildAgentProgram(deps: AgentProgramDeps): AgentProgram {
       devices: new PrismaAgentDeviceRepository(prisma),
       settings,
     }),
+    clients: new AgentClientDraftService({
+      access: me,
+      drafts,
+      attributions,
+      accounts: clientAccounts,
+      proof: clientProof,
+      hasher,
+      sealer,
+      settings,
+      content,
+      uow,
+      audit,
+      clock,
+      logger,
+    }),
+    clientInvites: new ClientInviteService({
+      settings,
+      proof: clientProof,
+      hasher,
+      drafts,
+      agents,
+      attributions,
+      accounts: clientAccounts,
+      sealer,
+      uow,
+      audit,
+      clock,
+      signer: clientJwt ?? UNAVAILABLE_SIGNER,
+      options: { issuer: AGENT_TOKEN_ISSUER, audience: CLIENT_TOKEN_AUDIENCE },
+    }),
     tokens: jwt,
+    clientTokens: clientJwt,
     piiSealing: key !== null,
     requesterKey: (ip) => requesterKeyFor(deps.hashing, ip),
   };

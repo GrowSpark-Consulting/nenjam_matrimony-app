@@ -8,11 +8,18 @@ import {
   makeCommissionHarness,
   type CommissionHarness,
 } from '../testing/agent-commission-harness';
+import { AGENT_CLIENT_EXPIRY_BATCH_SIZE } from '../clients/agent-client-draft.service';
 import {
+  AGENT_CLIENT_DRAFT_EXPIRY_JOB,
   AGENT_DAILY_APPROVAL_BATCH_SIZE,
   AGENT_DAILY_APPROVAL_JOB,
   registerAgentDailyJobs,
 } from './agent-daily-jobs';
+
+/** The client expiry, where these tests are about the approval. */
+const noClientExpiry = () => ({
+  runDailyExpiry: jest.fn().mockResolvedValue({ expired: 0 }),
+});
 
 const HOLD_END = new Date(T0.getTime() + HOUR + 14 * DAY);
 
@@ -23,7 +30,7 @@ beforeEach(() => {
   h = makeCommissionHarness();
   h.seedPolicy();
   registry = new DailyJobRegistry();
-  registerAgentDailyJobs(registry, h.approval);
+  registerAgentDailyJobs(registry, h.approval, noClientExpiry());
 });
 
 const jobsService = () =>
@@ -35,17 +42,32 @@ const jobsService = () =>
   );
 
 describe('agent daily jobs', () => {
-  it('registers agent.daily_approval', () => {
+  it('registers agent.daily_approval and then agent.client_draft_expiry', () => {
     expect(registry.list().map((j) => j.name)).toEqual([
       'agent.daily_approval',
+      'agent.client_draft_expiry',
     ]);
     expect(AGENT_DAILY_APPROVAL_JOB).toBe('agent.daily_approval');
+    expect(AGENT_CLIENT_DRAFT_EXPIRY_JOB).toBe('agent.client_draft_expiry');
+  });
+
+  it('runs the client expiry with its named batch size', async () => {
+    const expiry = noClientExpiry();
+    const r = new DailyJobRegistry();
+    registerAgentDailyJobs(r, { runDailyApproval: jest.fn() }, expiry);
+    const now = new Date(T0);
+    await r.list()[1].run(now);
+    expect(expiry.runDailyExpiry).toHaveBeenCalledWith(
+      now,
+      AGENT_CLIENT_EXPIRY_BATCH_SIZE,
+    );
+    expect(AGENT_CLIENT_EXPIRY_BATCH_SIZE).toBe(500);
   });
 
   it('runs the approval with the named batch size', async () => {
     const spy = jest.fn().mockResolvedValue({ examined: 0 });
     const r = new DailyJobRegistry();
-    registerAgentDailyJobs(r, { runDailyApproval: spy });
+    registerAgentDailyJobs(r, { runDailyApproval: spy }, noClientExpiry());
     const now = new Date(T0);
     await r.list()[0].run(now);
     expect(spy).toHaveBeenCalledWith(now, AGENT_DAILY_APPROVAL_BATCH_SIZE);
@@ -112,7 +134,7 @@ describe('agent daily jobs', () => {
   it('reports the approval as failed (not silently ok) when a required setting is missing', async () => {
     const bare = makeCommissionHarness({});
     const r = new DailyJobRegistry();
-    registerAgentDailyJobs(r, bare.approval);
+    registerAgentDailyJobs(r, bare.approval, noClientExpiry());
     const svc = new DailyJobsService(
       {
         drain: jest.fn().mockResolvedValue({}),

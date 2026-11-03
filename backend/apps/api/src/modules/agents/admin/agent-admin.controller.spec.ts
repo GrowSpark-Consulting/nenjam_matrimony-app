@@ -196,7 +196,7 @@ async function bootApp(
 }
 
 describe('AgentsModule at boot', () => {
-  it('registers agent.daily_approval with the daily job registry', async () => {
+  it('registers agent.daily_approval and agent.client_draft_expiry with the daily job registry', async () => {
     const app = await bootApp();
     try {
       expect(
@@ -204,7 +204,7 @@ describe('AgentsModule at boot', () => {
           .get(DailyJobRegistry)
           .list()
           .map((job) => job.name),
-      ).toEqual(['agent.daily_approval']);
+      ).toEqual(['agent.daily_approval', 'agent.client_draft_expiry']);
     } finally {
       await app.close();
     }
