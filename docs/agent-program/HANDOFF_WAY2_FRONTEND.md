@@ -2,7 +2,8 @@
 
 For the frontend developer building the **Agent Portal** (React) and the
 **member app** (Flutter). Everything here is on the backend branch
-`feat/agent-clients-routes` and is described formally in
+`feat/agent-clients-routes` (the flow) and `feat/agent-clients-full-profile`
+(the full profile), and is described formally in
 `docs/agent-program/agent-api.openapi.yaml` (tags **Clients** and **Client
 invites**). If this file and the contract ever disagree, the contract wins;
 please tell the backend owner.
@@ -12,25 +13,30 @@ please tell the backend owner.
 ## 1. The flow in plain words
 
 An agent meets someone who wants to join Nenjam. Instead of sharing a
-referral code, the agent fills in the person's phone number and the six
-fields of step 1 of registration (name, gender, date of birth, marital
-status, who the profile is for). That is a **draft**. The agent can still
-change it or throw it away.
+referral code, the agent ticks "the client (or her family) agreed", types
+the person's phone number and fills in her **profile**: the same sections
+and fields the member app's registration asks (basic details, religion,
+location, education and work, height, lifestyle, family, horoscope) plus
+her **partner preferences**. That is a **draft**. The agent can save it
+half-filled, come back, change it or throw it away. The profile is always
+the client's own: there is no "who is this profile for" question.
 
-When the agent is happy, they **submit** it. From that moment the draft is
-locked: the agent can no longer change anything. The person (we call her
-the **client**) now has an **invitation** waiting.
+When the required fields are filled (section 5a), the agent **submits** it.
+From that moment the draft is locked: the agent can no longer change
+anything. The person (we call her the **client**) now has an
+**invitation** waiting.
 
 The client opens the member app, taps "Added by an agent? Confirm here",
 types her phone number, receives a one-time code, and types it. She sees
 who invited her and the details the agent entered. She either:
 
-- **Accepts**: her member account is created right then, with step 1 of
-  her registration already filled in from what the agent typed. She is
-  signed in and continues the registration wizard from step 2 like any
-  other member. The agent gets credit for her exactly as if she had used
-  the agent's referral code (same discount on her first plan, same
-  commission rules).
+- **Accepts**: her member account is created right then, and every section
+  the agent filled becomes her own registration draft, exactly as if she
+  had typed it. She is signed in and the member app continues her
+  registration from the first question that is still unanswered, like
+  for any other member. The agent gets credit for her exactly as if she
+  had used the agent's referral code (same discount on her first plan,
+  same commission rules).
 - **Rejects**: nothing is created. That agent can never add her number
   again.
 
@@ -40,15 +46,20 @@ added.
 
 ### Worked example
 
-1. Ravi Kumar (an ACTIVE agent) adds Priya Sundaram, `+91 98xxxxxxx`. The
-   portal shows a new row "Priya S. · +91 98***210 · Draft".
-2. Ravi corrects her last name, then taps **Submit**. The row becomes
-   "Waiting for client", with "open until 11 Nov 2026".
+1. Ravi Kumar (an ACTIVE agent) ticks "Priya's family agreed", types
+   Priya Sundaram's number and her name, gender and date of birth, and
+   saves. The portal shows "Priya S. · +91 98***210 · Draft · 4 required
+   fields left" (from `missingRequired`).
+2. Later he fills in her religion, city, education and partner
+   preferences, then taps **Submit**. The row becomes "Waiting for
+   client", with "open until 11 Nov 2026".
 3. Priya opens the member app, taps "Added by an agent?", enters her number,
-   then the code. She sees one card: "Ravi K. added you", her details, "5%
-   off your first plan", "Answer by 11 Nov 2026".
+   then the code. She sees one card: "Ravi K. added you", her whole
+   profile and partner preferences, "5% off your first plan", "Answer by
+   11 Nov 2026".
 4. Priya taps **Accept**. The app receives a Firebase custom token, signs
-   her in with it, loads her registration draft and opens step 2.
+   her in with it, loads her registration draft and continues at the first
+   question Ravi left empty (for example her height or her income).
 5. Ravi's portal row now reads "Accepted · 28 Oct 2026". It links to her
    entry in **My referrals** (the `referralId`).
 
@@ -148,31 +159,35 @@ On `401 TOKEN_EXPIRED`, refresh once and retry, as everywhere else.
 
 ### `POST /agent/clients`: add a client (creates a DRAFT)
 
-Request:
+Request (`details` may be partial or left out; see section 5a for every
+field):
 
 ```json
 {
   "phone": "+919876543210",
+  "consentConfirmed": true,
   "details": {
-    "firstName": "Priya",
-    "lastName": "Sundaram",
-    "gender": "FEMALE",
-    "dob": "1998-04-12",
-    "maritalStatus": "NEVER_MARRIED",
-    "profileCreatedFor": "Daughter"
+    "basicDetails": {
+      "firstName": "Priya",
+      "lastName": "Sundaram",
+      "gender": "FEMALE",
+      "dob": "1998-04-12",
+      "maritalStatus": "NEVER_MARRIED"
+    },
+    "religionDetails": { "religionCode": "HINDU", "communityCode": "HINDU-VELLALAR" },
+    "locationDetails": { "countryCode": "IN", "stateCode": "IN-TN", "cityCode": "IN-TN-MADURAI" },
+    "educationDetails": { "qualification": "B.E / B.Tech", "annualIncome": "10 - 20 Lakhs" },
+    "partnerPreference": { "preferredAgeRange": "26-30", "extended": { "diet": "Vegetarian" } }
   }
 }
 ```
 
-Field rules (check them in the form too; the server checks them again):
-
-- `phone`: E.164, for example `+919876543210`.
-- `firstName`, `lastName`: 1 to 50 characters after trimming.
-- `gender`: `MALE` or `FEMALE`.
-- `dob`: `YYYY-MM-DD`, a real date, at least 21 years ago.
-- `maritalStatus`: `NEVER_MARRIED`, `DIVORCED`, `WIDOWED` or `AWAITING_DIVORCE`.
-- `profileCreatedFor`: `Myself`, `Son`, `Daughter`, `Brother`, `Sister`,
-  `Friend` or `Relative`. These are the member app's values.
+- `phone`: E.164, for example `+919876543210`. It is the client's own
+  mobile number (required, and it can't be changed later).
+- `consentConfirmed`: **must be `true`**. Show a required checkbox: "The
+  client (or her family) agreed to be added." Anything else is
+  `400 VALIDATION_FAILED` naming `consentConfirmed`. Only the fact that it
+  was ticked is kept.
 
 Response `201`:
 
@@ -183,9 +198,17 @@ Response `201`:
   "statusLabel": { "en": "Draft", "ta": "<to be supplied>" },
   "displayName": "Priya S.",
   "phoneMasked": "+91 98***210",
-  "details": { "firstName": "Priya", "lastName": "Sundaram", "gender": "FEMALE",
-               "dob": "1998-04-12", "maritalStatus": "NEVER_MARRIED",
-               "profileCreatedFor": "Daughter" },
+  "details": {
+    "basicDetails": { "firstName": "Priya", "lastName": "Sundaram", "gender": "FEMALE",
+                      "dob": "1998-04-12", "maritalStatus": "NEVER_MARRIED" },
+    "religionDetails": { "religionCode": "HINDU", "religion": "Hindu",
+                         "communityCode": "HINDU-VELLALAR", "community": "Vellalar" },
+    "locationDetails": { "countryCode": "IN", "country": "India", "stateCode": "IN-TN",
+                         "state": "Tamil Nadu", "cityCode": "IN-TN-MADURAI", "city": "Madurai" },
+    "educationDetails": { "qualification": "B.E / B.Tech", "annualIncome": "10 - 20 Lakhs" },
+    "partnerPreference": { "preferredAgeRange": "26-30", "extended": { "diet": "Vegetarian" } }
+  },
+  "missingRequired": [],
   "editable": true,
   "createdAt": "2026-10-28T10:00:00.000Z",
   "submittedOn": null,
@@ -195,11 +218,18 @@ Response `201`:
 }
 ```
 
+- `missingRequired`: the required fields still empty (section 5a). Show
+  them as "N fields left" and disable **Submit** until it is `[]`.
+- `displayName` is "first name + last initial", or the masked phone while
+  no name is filled in yet.
+- The labels (`religion`, `city`, ...) are filled in by the server from
+  the codes.
+
 Errors:
 
 | HTTP | `code` | What the UI should say |
 |---|---|---|
-| 400 | `VALIDATION_FAILED` | Highlight the named fields. |
+| 400 | `VALIDATION_FAILED` | Highlight the named fields (`consentConfirmed`, `phone`, or `details.<section>.<field>`; a wrong master-data code names just its section, for example `details.locationDetails`). |
 | 403 | `AGENT_NOT_ACTIVE` | "Your account is paused; you can't add clients right now." |
 | 409 | `CLIENT_DRAFT_EXISTS` | "You have already added this number." Offer to open the list. |
 | 422 | `CLIENT_DRAFT_LIMIT_REACHED` | "You can have at most {draftLimit} open clients. Submit, discard or wait for one to close." |
@@ -228,9 +258,11 @@ this), `403`.
 
 ### `PATCH /agent/clients/{id}`: edit a DRAFT
 
-Request `{ "details": { ...all six fields... } }`. This replaces all six
-fields. The phone cannot be changed: to change it, discard the draft and
-add the client again.
+Request `{ "details": { ...the whole profile... } }`. This **replaces the
+whole profile**: send every section you want to keep (it may still be
+partial). You can send back exactly what you read, labels included (the
+server ignores the labels and fills them in again). The phone cannot be
+changed: to change it, discard the draft and add the client again.
 
 Response `200`: the updated `ClientDraft`.
 
@@ -257,6 +289,11 @@ Errors:
 
 - `404`.
 - `409 CLIENT_DRAFT_LOCKED`.
+- `422 CLIENT_PROFILE_INCOMPLETE`: a required field is empty. The body
+  carries `missingFields`, for example
+  `["religionDetails.religionCode", "educationDetails.qualification"]`.
+  Open the form at the first one: "Please fill in: Religion, Highest
+  education." Nothing was changed and nothing was sent to the client.
 - `422 CLIENT_PHONE_UNAVAILABLE`: the number joined in the meantime. Say
   "This number can no longer be added." The draft stays a DRAFT; offer to
   discard it.
@@ -266,6 +303,90 @@ Errors:
 The server also sends the client a one-time code at submit (with the test
 code nothing is really sent). The client can always ask for a fresh code in
 the app, so do not promise "she got an SMS".
+
+---
+
+## 5a. The client profile: every field
+
+`details` uses the member app's own registration sections and field names,
+so whatever the agent enters becomes her registration draft unchanged.
+
+**Required to submit (★): exactly nine fields** (plus her mobile number,
+which is the draft's phone). **Every other field is optional**, so you can
+put a "Skip" on it now or later without any backend change. The list
+lives in one place on the server; if it changes, `missingRequired` and the
+`422 CLIENT_PROFILE_INCOMPLETE` body change with it, so drive the "required"
+markers from `missingRequired` rather than hard-coding them.
+
+Rules for every field: an empty string or `null` means "not answered"
+(it is dropped). An unknown section or field is `400`. Text is trimmed.
+
+### Sections the portal should show (in this order)
+
+1. **Basic details**: name, gender, date of birth, marital status.
+2. **Religion**: religion, community, sub-community.
+3. **Language**: mother tongue.
+4. **Location**: country, state, city, native place.
+5. **Education and work**: highest education, occupation, employer type, yearly income.
+6. **Physical**: height.
+7. **Lifestyle**: diet, about the client.
+8. **Family**: father's and mother's occupation, siblings, family type.
+9. **Horoscope**: zodiac (rashi), star.
+10. **Partner preferences**.
+
+### Field by field
+
+| Section · field (send as) | Plan field | ★ | Input | Allowed values |
+|---|---|---|---|---|
+| `basicDetails.firstName` | Full name | ★ | text | 1 to 50 characters |
+| `basicDetails.lastName` | Full name | ★ | text | 1 to 50 characters |
+| `basicDetails.gender` | Gender | ★ | choice | `MALE`, `FEMALE` |
+| `basicDetails.dob` | Date of birth | ★ | date | `YYYY-MM-DD`, at least 21 years ago |
+| `basicDetails.maritalStatus` | Marital status | ★ | choice | `NEVER_MARRIED`, `DIVORCED`, `WIDOWED`, `AWAITING_DIVORCE` |
+| `religionDetails.religionCode` | Religion | ★ | dropdown | a code from `GET /reference-data/religions` |
+| `religionDetails.communityCode` | Community | | dropdown | a code from `GET /reference-data/communities?religionCode=` (of that religion) |
+| `religionDetails.subCaste` | Sub-community | | text or dropdown | up to 50 characters; the member app suggests Iyer, Iyengar, Mudaliar, Pillai, Chettiar, Gounder, Nadar, Vanniyar, Don't Wish to Specify |
+| `languageDetails.motherTongue` | Mother tongue | | text | up to 50 characters |
+| `locationDetails.countryCode` | Country | | dropdown | a code from `GET /reference-data/countries`; **needed whenever a state is given** |
+| `locationDetails.stateCode` | Current state | ★ | dropdown | a code from `GET /reference-data/states?countryCode=` |
+| `locationDetails.cityCode` | Current city | ★ | searchable dropdown | a code from `GET /reference-data/cities?stateCode=` |
+| `locationDetails.nativePlace` | Native place | | text | up to 100 characters |
+| `educationDetails.qualification` | Highest education | ★ | dropdown + "Other" text | up to 100 characters; the app offers B.E / B.Tech, M.Tech / M.E, MBBS / MD, MBA / PGDM, B.Sc / M.Sc, CA / CFA, B.Com / M.Com, Ph.D, Diploma |
+| `educationDetails.occupation` | Occupation | | dropdown + "Other" text | up to 100 characters; the app offers Software Engineer, Doctor, IAS / IPS / Govt, Business Owner, Finance / Banking, Civil / Mechanical Engg, Teacher / Professor, Lawyer, Architect |
+| `educationDetails.employmentType` | Employer type | | choice | Private, Government, Business, Self-Employed, Not Working, Student, Retired |
+| `educationDetails.annualIncome` | Yearly income range | | choice | Below 5 Lakhs, 5 - 10 Lakhs, 10 - 20 Lakhs, 20 - 50 Lakhs, 50 Lakhs - 1 Crore, 1 Crore+ |
+| `physicalDetails.height` | Height | | dropdown | the app's labels, 122 to 213 cm, exactly like `5'9" (175 cm)` |
+| `lifestyleDetails.eatingHabit` | Diet | | choice | Vegetarian, Non-Vegetarian, Eggetarian, Vegan, Jain |
+| `lifestyleDetails.aboutMe` | About | | long text | up to 1000 characters |
+| `familyDetails.father.occupation` | Parents' occupation | | text | up to 100 characters |
+| `familyDetails.mother.occupation` | Parents' occupation | | text | up to 100 characters |
+| `familyDetails.siblings[]` | Siblings | | repeatable rows | up to 10 rows; each `relation` (`BROTHER` or `SISTER`, required in a row), optional `name` (50), `age` (0 to 120), `occupation` (100) |
+| `familyDetails.familyType` | Family type | | choice | Joint Family, Nuclear Family |
+| `horoscopeDetails.rashi` | Zodiac | | dropdown | Mesha, Vrishabha, Mithuna, Kataka, Simha, Kanya, Tula, Vrischika, Dhanu, Makara, Kumbha, Meena, Don't Know |
+| `horoscopeDetails.star` | Star | | dropdown | Aswini, Bharani, Karthigai, Rohini, Mrigasheersham, Thiruvaathirai, Punarpoosam, Poosam, Aayilyam, Magam, Pooram, Uthiram, Hastham, Chithirai, Swaathi, Visaagam, Anusham, Kettai, Moolam, Pooraadam, Uthiraadam, Thiruvonam, Avittam, Sadhayam, Poorattathi, Uthirattathi, Revathi, Don't Know |
+| `partnerPreference.preferredAgeRange` | Partner: age range | | choice | 18-22, 22-26, 26-30, 30-35, 35-40, 40-50, Any |
+| `partnerPreference.preferredHeightRange` | Partner: height range | | choice | 4'6"-5'0", 5'0"-5'4", 5'4"-5'8", 5'8"-6'0", 6'0"+, Any |
+| `partnerPreference.maritalStatusPref` | Partner: marital status | | choice | Never Married, Doesn't Matter, Any |
+| `partnerPreference.religionPref` | Partner: religion, or open to all | | choice | Hindu, Christian, Muslim, Jain, Sikh, Any ("Any" = open to all) |
+| `partnerPreference.castePref` | Partner: communities | | choice | Same Caste, Any Caste, Inter-Caste OK |
+| `partnerPreference.extended.minEducation` | Partner: minimum education | | choice | High School, Bachelors, Masters, Doctorate, Any |
+| `partnerPreference.occupationPref` | Partner: occupation type | | choice | Software / IT, Doctor, Government, Business, Any |
+| `partnerPreference.incomePref` | Partner: income range | | choice | 5-10 Lakhs, 10-20 Lakhs, 20-50 Lakhs, 50 Lakhs+, Any |
+| `partnerPreference.locationPref` | Partner: locations, or anywhere | | choice | Same City, Same State, Anywhere in India, NRI OK, Any |
+| `partnerPreference.extended.diet` | Partner: diet | | choice | Vegetarian, Eggetarian, Vegan, Non-Vegetarian, Doesn't Matter |
+
+Each partner preference is **one** choice, as in the member app.
+
+**Master data.** The five reference-data lists need no token. Send the
+`code`; the server checks it exactly as it does for a member's own profile
+and returns the `label` next to it. Refused with
+`400 VALIDATION_FAILED` naming the section: an unknown code, a city
+outside its state, a state outside its country, a community outside its
+religion, a state without a country code, a city without a state code, a
+community without a religion code. When the country or religion changes,
+clear the state/city or community, as the member app does.
+
+**Photos** cannot be added by the agent (not built; see section 10).
 
 ---
 
@@ -292,13 +413,25 @@ looks at invitations. She uses a separate, short-lived **client token**.
    { "items": [ {
        "id": "5b0f6a52-4f0e-4c6e-9d6b-2f1a3c7e8d90",
        "agentDisplayName": "Ravi K.",
-       "details": { "firstName": "Priya", "lastName": "Sundaram", "gender": "FEMALE",
-                    "dob": "1998-04-12", "maritalStatus": "NEVER_MARRIED",
-                    "profileCreatedFor": "Daughter" },
+       "details": {
+         "basicDetails": { "firstName": "Priya", "lastName": "Sundaram", "gender": "FEMALE",
+                           "dob": "1998-04-12", "maritalStatus": "NEVER_MARRIED" },
+         "religionDetails": { "religionCode": "HINDU", "religion": "Hindu",
+                              "communityCode": "HINDU-VELLALAR", "community": "Vellalar" },
+         "locationDetails": { "countryCode": "IN", "country": "India", "stateCode": "IN-TN",
+                              "state": "Tamil Nadu", "cityCode": "IN-TN-MADURAI", "city": "Madurai" },
+         "educationDetails": { "qualification": "B.E / B.Tech", "annualIncome": "10 - 20 Lakhs" },
+         "partnerPreference": { "preferredAgeRange": "26-30", "extended": { "diet": "Vegetarian" } }
+       },
        "expiresOn": "2026-11-11",
        "referredMemberDiscountPercent": 5
    } ] }
    ```
+
+   `details` is the whole profile the agent entered, in the same sections
+   and fields as section 5a (with the labels filled in). Show every
+   section that has an answer, read-only, with the partner preferences
+   last, so she can check it before she accepts. There are no photos.
 
    An empty `items` means nobody has invited this number (or the
    invitations ran out). Show "There's no invitation for this number." and
@@ -316,10 +449,15 @@ looks at invitations. She uses a separate, short-lived **client token**.
    From here on she is an ordinary member, and every request uses her
    Firebase ID token exactly like any other member. Forget the client token.
 6. **Resume registration.** `GET /profiles/draft` (member token). It returns
-   her draft with `data.basicDetails` filled in from the agent's details,
-   `completedSteps: [1]` and `currentStep: 1`: exactly what the app would
-   have after she saved step 1 herself. Open the wizard where the app
-   normally goes after step 1 is saved (step 2).
+   her draft with every section the agent filled in `data` (the same
+   section and field names as section 5a, labels included, and
+   `basicDetails.profileCreatedFor: "Myself"`), `completedSteps` listing
+   those sections' step numbers and `currentStep` the highest of them:
+   exactly what the app would hold had she saved each of them herself.
+   Send her through the app's normal routing for a signed-in member with a
+   draft: it opens the first onboarding question still unanswered (the
+   agent may have skipped her height, income, community, country or
+   "about me"), and lands in the app when nothing is left.
 
 **Reject** instead: ask first ("Decline {agentDisplayName}'s invitation?
 They won't be able to add your number again."), then
@@ -328,18 +466,22 @@ They won't be able to add your number again."), then
 
 ### What to verify about resuming a draft for an already-signed-in account
 
-The usual member path collects step 1 while signed out and signs in at the
-end. Here she arrives **already signed in with step 1 already saved**.
+The usual member path collects the profile while signed out and signs in
+at the end. Here she arrives **already signed in, with the agent's whole
+profile already saved**.
 Please check, and tell the backend owner about anything that doesn't hold:
 
-- Nothing in the app overwrites `basicDetails` with an empty or locally
-  cached step 1 (an older half-filled local draft on the same phone, for
-  example). The server's draft is the truth.
-- The app goes straight into the wizard. It does not show the
-  registration landing page, the language picker or the signed-out step 1
-  again.
-- She can still open step 1 and correct what the agent typed. Saving it
-  uses the normal `PATCH /profiles/draft/basic-details`.
+- Nothing in the app overwrites a section with an empty or locally cached
+  copy (an older half-filled local draft on the same phone, for example).
+  The server's draft is the truth.
+- The app goes straight to the first unanswered question. It does not
+  show the registration landing page, the "who is this profile for"
+  screen (it is `Myself`), or questions the agent already answered.
+- She can still open any section in Edit Profile and correct what the
+  agent typed. Saving uses the normal `PATCH /profiles/draft/<section>`.
+- If the agent started a section the wizard wants complete before
+  finishing (for example education without income), the app's normal
+  "finish it or clear it" check at the end applies, as for any member.
 - Her account email is a placeholder (`<uid>@firebase.invalid`), as for
   every phone-only signup today. If the wizard asks for an email later,
   that is the normal path.
@@ -430,6 +572,15 @@ code screen so either works:
 
 ## 10. What is NOT built
 
+**Plan fields with no place in the member app** (not stored at all, so
+the portal must not ask for them): number of children, the client's own
+"willing to relocate" (the app only has it as a partner filter), field of
+study, a family note, an alternate phone number, and a free-text partner
+preference note. **Photos from the agent** are not built either: the app's
+photos belong to a member account, which does not exist until she
+accepts; it needs a decision first.
+
+
 - **Real SMS** for clients (only approved test numbers, with the test code).
 - **Verifying by Firebase ID token** at `otp/verify` (section 9).
 - **Photo verification** of the client.
@@ -450,8 +601,9 @@ code screen so either works:
 
 - [ ] Hide the whole feature when `clients.enabled` is false, `clients` is missing, or the agent is not ACTIVE/SUSPENDED.
 - [ ] Clients list: tabs or a filter for the five statuses (labels from `clientStatusLabels`), name, masked phone, "open until {expiresOn}", "N of {draftLimit}" open, paging with `nextCursor`, empty state.
-- [ ] Add client form: phone plus the six fields, client-side checks, every error in section 5.
-- [ ] Draft detail (DRAFT): edit, discard (confirm), submit (confirm, "can't change after").
+- [ ] Add client form: the required "client or family agreed" checkbox (`consentConfirmed`), the phone, and the ten profile sections of section 5a (★ marked, everything else skippable), save at any point, every error in section 5.
+- [ ] Master-data dropdowns from `/reference-data` (country → state → city, religion → community), clearing the children when a parent changes.
+- [ ] Draft detail (DRAFT): edit, discard (confirm), "N required fields left" from `missingRequired`, submit disabled until it is `[]`, `422 CLIENT_PROFILE_INCOMPLETE` opens the first missing field, confirm "can't change after".
 - [ ] Waiting detail: read-only, "waiting until {expiresOn}".
 - [ ] Accepted detail: accepted date, link to the referral (`referralId`).
 - [ ] Declined / Expired detail: read-only, no details shown (they are deleted).
@@ -463,8 +615,8 @@ code screen so either works:
 - [ ] "Added by an agent? Confirm here" entry (hidden on `403 CLIENT_INVITES_DISABLED`).
 - [ ] Phone screen: E.164 input, send code, every error in section 6.
 - [ ] Code screen: code input, resend after `resendAfterSeconds`, wrong / expired / too many.
-- [ ] Invitations: loading, empty ("no invitation for this number"), one or more cards (agent name, details, discount, answer-by date).
-- [ ] Accept: confirm, call, `signInWithCustomToken`, `GET /profiles/draft`, continue at step 2; retry-safe on network loss.
+- [ ] Invitations: loading, empty ("no invitation for this number"), one or more cards (agent name, the full profile and partner preferences read-only, discount, answer-by date).
+- [ ] Accept: confirm, call, `signInWithCustomToken`, `GET /profiles/draft`, continue at the first unanswered question; retry-safe on network loss.
 - [ ] Reject: confirm dialog, `204`, card removed, stays signed out.
 - [ ] `ALREADY_MEMBER`: send her to normal sign-in.
 - [ ] Client token expired: back to the phone screen.
