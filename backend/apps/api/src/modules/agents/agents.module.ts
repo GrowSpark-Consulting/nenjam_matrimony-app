@@ -50,6 +50,9 @@ import {
 } from './admin/agent-admin-rest.wiring';
 import { AgentCommissionApprovalService } from './commission/agent-commission-approval.service';
 import { registerAgentDailyJobs } from './commission/agent-daily-jobs';
+import { AgentClientExpiryService } from './clients/agent-client-expiry.service';
+import { PrismaAgentClientConsentCodeStore } from './adapters/prisma/prisma-agent-client-consent-code.store';
+import { PrismaAgentClientDraftRepository } from './adapters/prisma/prisma-agent-client-draft.repository';
 import { AgentCommissionEventsService } from './commission/agent-commission-events.service';
 import { AgentPaymentEventsSubscriber } from './commission/agent-payment-events.subscriber';
 import {
@@ -165,6 +168,20 @@ import { AgentReferralQuoteModule } from './quote/agent-referral-quote.module';
         }),
     },
     {
+      // The daily client-draft expiry (see registerAgentDailyJobs). Not an
+      // agent route: independent of AGENT_PROGRAM_ENABLED and of
+      // agent.clients_enabled, so client PII is deleted on time regardless.
+      provide: AgentClientExpiryService,
+      inject: [PrismaService, AdminAuditService],
+      useFactory: (prisma: PrismaService, audit: AdminAuditService) =>
+        new AgentClientExpiryService({
+          drafts: new PrismaAgentClientDraftRepository(prisma),
+          codes: new PrismaAgentClientConsentCodeStore(prisma),
+          uow: new PrismaAgentUnitOfWork(prisma),
+          audit: new AdminAuditAdapter(prisma, audit),
+        }),
+    },
+    {
       provide: AgentAdminAgentsService,
       inject: [PrismaService, AdminAuditService, IdentifierHashService],
       useFactory: (
@@ -192,9 +209,10 @@ export class AgentsModule implements OnModuleInit {
   constructor(
     private readonly registry: DailyJobRegistry,
     private readonly approval: AgentCommissionApprovalService,
+    private readonly clientExpiry: AgentClientExpiryService,
   ) {}
 
   onModuleInit(): void {
-    registerAgentDailyJobs(this.registry, this.approval);
+    registerAgentDailyJobs(this.registry, this.approval, this.clientExpiry);
   }
 }
