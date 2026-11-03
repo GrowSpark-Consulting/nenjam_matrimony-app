@@ -23,7 +23,7 @@ import {
 } from '../ports/agent-client-ports';
 import type { AgentTx } from '../ports/agent-unit-of-work.port';
 import { effectiveClientDraftStatus } from '../clients/decide-client-draft';
-import { trackWrite } from './fake-agent-unit-of-work';
+import { onTxFinish, trackWrite } from './fake-agent-unit-of-work';
 
 const copy = <T extends object>(row: T): T => ({ ...row });
 
@@ -43,6 +43,11 @@ const oldestFirst = (a: AgentClientDraftRecord, b: AgentClientDraftRecord) =>
 
 export class FakeAgentClientDraftRepository implements AgentClientDraftRepository {
   private readonly rows = new Map<string, AgentClientDraftRecord>();
+  /** Held row locks ("agent:<id>", "draft:<id>"): released when the holding tx ends. */
+  private readonly locks = new Map<
+    string,
+    { tx: AgentTx; released: Promise<void> }
+  >();
 
   /** `agents` answers which agents are TERMINATED (the job closes their drafts). */
   constructor(private readonly agents?: Pick<AgentRepository, 'findById'>) {}
@@ -133,10 +138,8 @@ export class FakeAgentClientDraftRepository implements AgentClientDraftRepositor
     );
   }
 
-  lockAgent(_agentId: string, tx: AgentTx): Promise<void> {
-    // One test runs at a time: nothing to lock, but a tx is required.
-    trackWrite(tx);
-    return Promise.resolve();
+  lockAgent(agentId: string, tx: AgentTx): Promise<void> {
+    return this.lock(`agent:${agentId}`, tx);
   }
 
   findOpenByAgentAndHashes(
@@ -234,22 +237,39 @@ export class FakeAgentClientDraftRepository implements AgentClientDraftRepositor
     );
   }
 
-  lockWaitingForAccept(
+  async lockWaitingForAccept(
     id: string,
     phoneHashes: readonly string[],
     now: Date,
     tx: AgentTx,
   ): Promise<AgentClientDraftRecord | null> {
-    trackWrite(tx);
+    await this.lock(`draft:${id}`, tx);
     const row = this.rows.get(id);
-    return Promise.resolve(
-      row &&
-        row.status === 'WAITING_FOR_CLIENT' &&
-        phoneHashes.includes(row.phoneHash) &&
-        !due(row, now)
-        ? copy(row)
-        : null,
-    );
+    return row &&
+      row.status === 'WAITING_FOR_CLIENT' &&
+      phoneHashes.includes(row.phoneHash) &&
+      !due(row, now)
+      ? copy(row)
+      : null;
+  }
+
+  /** Waits for any other holder, then holds the lock until `tx` ends. */
+  private async lock(key: string, tx: AgentTx): Promise<void> {
+    trackWrite(tx);
+    // Re-entrant, as a database row lock is within its own transaction.
+    if (this.locks.get(key)?.tx === tx) return;
+    for (let held = this.locks.get(key); held; held = this.locks.get(key)) {
+      await held.released;
+    }
+    let release!: () => void;
+    this.locks.set(key, {
+      tx,
+      released: new Promise<void>((resolve) => (release = resolve)),
+    });
+    onTxFinish(tx, () => {
+      this.locks.delete(key);
+      release();
+    });
   }
 
   async markAccepted(

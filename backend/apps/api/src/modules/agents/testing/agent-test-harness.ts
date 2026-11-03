@@ -24,6 +24,8 @@ import type { ReferralStage } from '../referral/agent-referral-view';
 import type { AgentTokenSigner } from '../ports/agent-infra-ports';
 import {
   AGENT_ACCESS_TOKEN_TTL_SECONDS_KEY,
+  AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY,
+  AGENT_CLIENT_DRAFT_LIMIT_KEY,
   AGENT_OTP_RESEND_AFTER_SECONDS_KEY,
   AGENT_REFRESH_TOKEN_TTL_SECONDS_KEY,
   REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY,
@@ -62,6 +64,15 @@ import {
   FakeAgentDeviceRepository,
 } from './fake-agent-money-read';
 import { FakeAgentUnitOfWork } from './fake-agent-unit-of-work';
+import { DummyClientPhoneProof } from '../adapters/platform/dummy-client-phone-proof';
+import { AgentClientDraftService } from '../clients/agent-client-draft.service';
+import type { ClientBasicDetails } from '../ports/agent-client-ports';
+import { AGENT_CLIENTS_ENABLED_KEY } from '../settings/agent-clients-switch';
+import { FakeAgentClientAccount } from './fake-agent-client-account';
+import {
+  FakeAgentClientConsentCodeStore,
+  FakeAgentClientDraftRepository,
+} from './fake-agent-clients';
 
 export const PHONE = '+919876543210';
 export const START = new Date('2026-10-28T10:00:00.000Z');
@@ -74,6 +85,21 @@ export const IP_LIMIT = 3;
 export const CODE_LIMIT = 2;
 export const VALIDATION_WINDOW = 60;
 export const CREDIT_WINDOW_DAYS = 60;
+
+/** Agent-added clients: two approved test numbers and one that is not. */
+export const CLIENT_PHONE = '+919000000001';
+export const CLIENT_PHONE_2 = '+919000000002';
+export const UNAPPROVED_PHONE = '+919999999999';
+export const CLIENT_DRAFT_LIMIT = 3;
+export const CLIENT_EXPIRY_DAYS = 14;
+export const CLIENT_DETAILS: ClientBasicDetails = {
+  firstName: 'Priya',
+  lastName: 'Sundaram',
+  gender: 'FEMALE',
+  dob: '1998-04-12',
+  maritalStatus: 'NEVER_MARRIED',
+  profileCreatedFor: 'Daughter',
+};
 
 export const AUTH_OPTIONS: AgentAuthOptions & {
   applicantPhoneTtlSeconds: number;
@@ -109,6 +135,8 @@ export function makeAgentHarness(
   options: {
     /** A different signer on the harness clock (e.g. the real HS256 one). */
     signerFor?: (clock: FakeAgentClock) => AgentTokenSigner;
+    /** Earlier pepper versions still active (a rotation in progress). */
+    olderPeppers?: readonly string[];
   } = {},
 ) {
   const clock = new FakeAgentClock(START);
@@ -121,6 +149,9 @@ export function makeAgentHarness(
     [REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY]: IP_LIMIT,
     [REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY]: CODE_LIMIT,
     [REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY]: VALIDATION_WINDOW,
+    [AGENT_CLIENTS_ENABLED_KEY]: true,
+    [AGENT_CLIENT_DRAFT_LIMIT_KEY]: CLIENT_DRAFT_LIMIT,
+    [AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY]: CLIENT_EXPIRY_DAYS,
     ...settingsOverrides,
   });
   const otp = new FakeAgentOtp({
@@ -130,7 +161,10 @@ export function makeAgentHarness(
     sendLimit: 3,
     sendWindowMs: 600_000,
   });
-  const hasher = new FakeAgentIdentifierHasher('hash-secret');
+  const hasher = new FakeAgentIdentifierHasher(
+    'hash-secret',
+    options.olderPeppers ?? [],
+  );
   const agents = new FakeAgentRepository();
   const codes = new FakeReferralCodeRepository();
   const tokens = new FakeAgentRefreshTokenRepository();
@@ -237,6 +271,39 @@ export function makeAgentHarness(
     display: commissionDisplay,
     devices,
     settings,
+  });
+
+  const drafts = new FakeAgentClientDraftRepository(agents);
+  const consentCodes = new FakeAgentClientConsentCodeStore();
+  const clientAccount = new FakeAgentClientAccount();
+  const clientProof = new DummyClientPhoneProof({
+    otp,
+    codes: consentCodes,
+    hasher,
+    config: {
+      dummyEnabled: true,
+      dummyPhones: [CLIENT_PHONE, CLIENT_PHONE_2],
+      // Not used by the fake OTP (it makes its own codes); only must be set.
+      dummyCode: '000000',
+    },
+  });
+  const clientLog = { warn: jest.fn<void, [message: string]>() };
+  let draftCounter = 0;
+  const clients = new AgentClientDraftService({
+    access: me,
+    drafts,
+    attributions,
+    accounts: clientAccount,
+    proof: clientProof,
+    hasher,
+    sealer,
+    settings,
+    content,
+    uow,
+    audit,
+    clock,
+    newId: () => `draft-${++draftCounter}`,
+    logger: clientLog,
   });
 
   /** The verified claims inside a session's access token. */
@@ -377,6 +444,12 @@ export function makeAgentHarness(
     commissionDisplay,
     devices,
     money,
+    drafts,
+    consentCodes,
+    clientAccount,
+    clientProof,
+    clientLog,
+    clients,
     claimsOf,
     seedAgent,
     seedReferral,
