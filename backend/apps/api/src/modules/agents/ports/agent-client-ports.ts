@@ -21,6 +21,7 @@
  * (`AgentIdentifierHasher.hashAll`), so a draft stored under an older pepper
  * is still found during a rotation; a new row is written under the newest.
  */
+import type { ClientProfile } from '../clients/client-profile';
 import type { AgentTx } from './agent-unit-of-work.port';
 
 export type ClientDraftStatus =
@@ -369,4 +370,22 @@ export interface AgentClientAccountPort {
   ): Promise<{ memberId: string }>;
   /** A Firebase custom token for `signInWithCustomToken`. */
   mintSessionToken(uid: string): Promise<string>;
+}
+
+// --- Master data for the client profile ---------------------------------------
+
+/**
+ * Checks the master-data codes of a client profile (religion, community,
+ * country, state, city) exactly as the member's own profile save does, and
+ * fills in their labels, so the profile holds both, as the wizard does.
+ * A code that is unknown, or does not belong to its parent (a city outside
+ * its state, a community outside its religion), or a child without its
+ * parent code, is refused naming its section.
+ */
+export interface ClientReferenceDataPort {
+  withLabels(
+    profile: ClientProfile,
+  ): Promise<
+    { ok: true; profile: ClientProfile } | { ok: false; fields: string[] }
+  >;
 }
