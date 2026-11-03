@@ -10,10 +10,10 @@ import {
 } from './agent-quote-switch';
 
 describe('agent.quote_enabled', () => {
-  it('is named as agreed and is not one of the 18 seeded keys', () => {
+  it('is named as agreed and is not one of the 19 parsed keys', () => {
     expect(AGENT_QUOTE_ENABLED_KEY).toBe('agent.quote_enabled');
     expect(AGENT_PROGRAM_SETTING_KEYS).not.toContain(AGENT_QUOTE_ENABLED_KEY);
-    expect(AGENT_PROGRAM_SETTING_KEYS).toHaveLength(18);
+    expect(AGENT_PROGRAM_SETTING_KEYS).toHaveLength(19);
   });
 
   it('no migration seeds it', () => {
@@ -60,7 +60,8 @@ describe('agent.quote_enabled', () => {
         registered.set(key, fn),
     } as unknown as PlatformSettingsService;
     new AgentSettingValidators(settings).onModuleInit();
-    expect(registered.size).toBe(19);
+    // 19 parsed keys, the quote switch and the clients switch.
+    expect(registered.size).toBe(21);
     const fn = registered.get(AGENT_QUOTE_ENABLED_KEY);
     expect(fn?.(false)).toBeNull();
     expect(fn?.('no')).not.toBeNull();

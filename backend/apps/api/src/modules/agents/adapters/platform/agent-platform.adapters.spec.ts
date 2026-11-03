@@ -193,8 +193,8 @@ describe('AgentSettingValidators (registered with the real PlatformSettingsServi
 
   beforeEach(() => transaction.mockReset());
 
-  it('registers a validator for every one of the 18 keys', () => {
-    expect(AGENT_PROGRAM_SETTING_KEYS).toHaveLength(18);
+  it('registers a validator for every one of the 19 keys', () => {
+    expect(AGENT_PROGRAM_SETTING_KEYS).toHaveLength(19);
     for (const key of AGENT_PROGRAM_SETTING_KEYS) {
       expect(() => settings.registerValidator(key, () => null)).toThrow(
         /already registered/,

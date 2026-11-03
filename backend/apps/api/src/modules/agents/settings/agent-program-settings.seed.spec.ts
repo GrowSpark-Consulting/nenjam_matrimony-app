@@ -6,10 +6,12 @@ import {
   AGENT_PROGRAM_SETTING_KEYS,
   parseAgentProgramSettings,
 } from './agent-program-settings';
+import { AGENT_CLIENTS_ENABLED_KEY } from './agent-clients-switch';
 
 /**
  * The settings seed migrations, read as text: every row must be one of our
- * keys with a value our parser accepts, and together they must set all 18.
+ * keys with a value our parser accepts, and together they must set all 19
+ * (the Way 2 seed also sets the clients switch, which is not a parsed key).
  */
 const MIGRATIONS = join(
   __dirname,
@@ -17,6 +19,9 @@ const MIGRATIONS = join(
 );
 const DECIDED = '20261029130100_agent_program_settings_seed';
 const PROPOSED = '20261029130200_agent_program_settings_approved';
+const CLIENTS = '20261103090200_agent_client_settings_seed';
+/** The Way 2 table: its settings are seeded after it. */
+const CLIENT_DRAFTS = '20261103090000_agent_client_drafts';
 /** Shaaz's Payments migration: the seeds must be applied after it. */
 const PAYMENTS = '20261029130000_payment_referral_gst';
 
@@ -41,7 +46,12 @@ function rowsOf(sql: string): Array<{ key: string; value: unknown }> {
 
 const decided = rowsOf(sqlOf(DECIDED));
 const proposed = rowsOf(sqlOf(PROPOSED));
-const all = [...decided, ...proposed];
+const clients = rowsOf(sqlOf(CLIENTS));
+const all = [
+  ...decided,
+  ...proposed,
+  ...clients.filter((r) => r.key !== AGENT_CLIENTS_ENABLED_KEY),
+];
 
 describe('agent-program settings seed migrations', () => {
   it('both exist and sort after the Payments migration, decided values first', () => {
@@ -50,10 +60,25 @@ describe('agent-program settings seed migrations', () => {
       .filter((f) => /^\d{14}_/.test(f))
       .sort();
     expect(folders).toEqual(
-      expect.arrayContaining([PAYMENTS, DECIDED, PROPOSED]),
+      expect.arrayContaining([
+        PAYMENTS,
+        DECIDED,
+        PROPOSED,
+        CLIENT_DRAFTS,
+        CLIENTS,
+      ]),
     );
     expect(PAYMENTS < DECIDED).toBe(true);
     expect(DECIDED < PROPOSED).toBe(true);
+    expect(PROPOSED < CLIENT_DRAFTS).toBe(true);
+    expect(CLIENT_DRAFTS < CLIENTS).toBe(true);
+  });
+
+  it('seed the Way 2 switch OFF and the 14-day expiry, in their own migration', () => {
+    expect(Object.fromEntries(clients.map((r) => [r.key, r.value]))).toEqual({
+      'agent.clients_enabled': false,
+      'agent.client_draft_expiry_days': 14,
+    });
   });
 
   it('seed exactly the decided values', () => {
@@ -84,7 +109,7 @@ describe('agent-program settings seed migrations', () => {
     });
   });
 
-  it('together set every one of the 18 keys once, and the parser accepts them all', () => {
+  it('together set every one of the 19 keys once, and the parser accepts them all', () => {
     const keys = all.map((r) => r.key);
     expect(new Set(keys).size).toBe(keys.length);
     expect([...keys].sort()).toEqual([...AGENT_PROGRAM_SETTING_KEYS].sort());
@@ -103,7 +128,7 @@ describe('agent-program settings seed migrations', () => {
     );
   });
 
-  it.each([DECIDED, PROPOSED])(
+  it.each([DECIDED, PROPOSED, CLIENTS])(
     '%s follows the platform_settings seed format',
     (folder) => {
       const sql = sqlOf(folder);

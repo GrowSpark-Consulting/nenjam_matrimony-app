@@ -24,7 +24,7 @@ import {
 
 const DOCS = join(__dirname, '../../../../../../../docs/agent-program');
 
-type Auth = 'none' | 'agent' | 'member' | 'admin';
+type Auth = 'none' | 'agent' | 'member' | 'client' | 'admin';
 
 interface ContractRoute {
   key: string;
@@ -35,6 +35,13 @@ interface ContractRoute {
   successCodes: number[];
   statuses: number[];
 }
+
+/** The caller each security scheme stands for. */
+const SCHEME_AUTH: Record<string, Auth> = {
+  agentBearer: 'agent',
+  memberBearer: 'member',
+  clientBearer: 'client',
+};
 
 /** Reads `paths:` of one of our OpenAPI files (fixed 2/4/6/8-space layout). */
 export function readContract(file: string, defaultAuth: Auth): ContractRoute[] {
@@ -79,9 +86,9 @@ export function readContract(file: string, defaultAuth: Auth): ContractRoute[] {
     if (/^ {6}security:\s*\[\]/.test(line)) current.auth = 'none';
     if (/^ {6}security:\s*$/.test(line)) inSecurity = true;
     else if (/^ {6}\S/.test(line)) inSecurity = false;
-    const scheme = /^ {8}- (agentBearer|memberBearer):/.exec(line);
+    const scheme = /^ {8}- (agentBearer|memberBearer|clientBearer):/.exec(line);
     if (inSecurity && scheme) {
-      current.auth = scheme[1] === 'agentBearer' ? 'agent' : 'member';
+      current.auth = SCHEME_AUTH[scheme[1]];
     }
     const status = /^ {8}'(\d{3})':/.exec(line);
     if (status) {
@@ -108,6 +115,8 @@ const CONTROLLER_FILES = [
   '../http/agent-auth.controller',
   '../http/agent.controller',
   '../http/member-referral.controller',
+  '../http/agent-clients.controller',
+  '../http/client-invites.controller',
 ];
 
 const ADMIN_ROUTE_POLICY = 'nenjam:admin-route-policy';
@@ -147,13 +156,15 @@ export function implementedRoutes(): ImplementedRoute[] {
         const guards = [...guardNames(ctrl), ...guardNames(handler)];
         const policy = Reflect.getMetadata(ADMIN_ROUTE_POLICY, handler) as
           { permissions: readonly string[] } | undefined;
-        const auth: Auth = guards.includes('AgentAccessGuard')
-          ? 'agent'
-          : guards.includes('AdminGuard')
-            ? 'admin'
-            : guards.includes('FirebaseAuthGuard')
-              ? 'member'
-              : 'none';
+        const auth: Auth = guards.includes('ClientInviteGuard')
+          ? 'client'
+          : guards.includes('AgentAccessGuard')
+            ? 'agent'
+            : guards.includes('AdminGuard')
+              ? 'admin'
+              : guards.includes('FirebaseAuthGuard')
+                ? 'member'
+                : 'none';
         const code =
           (Reflect.getMetadata(HTTP_CODE_METADATA, handler) as
             number | undefined) ?? (verb === 'POST' ? 201 : 200);
@@ -171,9 +182,22 @@ export function implementedRoutes(): ImplementedRoute[] {
 
 /**
  * Contract routes that may be missing on this branch, and why (the branch
- * that brings them). Empty: every route is on main.
+ * that brings them).
  */
-const PENDING: Record<string, string> = {};
+const WAY_2_ROUTES = 'agent-added clients: feat/agent-clients-routes (PR 2)';
+const PENDING: Record<string, string> = {
+  'POST /agent/clients': WAY_2_ROUTES,
+  'GET /agent/clients': WAY_2_ROUTES,
+  'GET /agent/clients/{id}': WAY_2_ROUTES,
+  'PATCH /agent/clients/{id}': WAY_2_ROUTES,
+  'DELETE /agent/clients/{id}': WAY_2_ROUTES,
+  'POST /agent/clients/{id}/submit': WAY_2_ROUTES,
+  'POST /client-invites/otp/request': WAY_2_ROUTES,
+  'POST /client-invites/otp/verify': WAY_2_ROUTES,
+  'GET /client-invites': WAY_2_ROUTES,
+  'POST /client-invites/{id}/accept': WAY_2_ROUTES,
+  'POST /client-invites/{id}/reject': WAY_2_ROUTES,
+};
 
 /** Contract routes deliberately not built yet. Empty: every route is built. */
 const GAPS: Record<string, string> = {};
@@ -189,6 +213,23 @@ describe('agent-program routes conform to the contracts', () => {
   it('read both contracts', () => {
     expect(contract.length).toBeGreaterThan(40);
     expect(new Set(contract.map((r) => r.key)).size).toBe(contract.length);
+  });
+
+  it('reads each security scheme as its own kind of caller', () => {
+    const auth = (key: string) => byKey.get(key)?.auth;
+    expect({
+      agent: auth('POST /agent/clients'),
+      member: auth('POST /registration/referral-code'),
+      client: auth('GET /client-invites'),
+      clientAccept: auth('POST /client-invites/{id}/accept'),
+      open: auth('POST /client-invites/otp/request'),
+    }).toEqual({
+      agent: 'agent',
+      member: 'member',
+      client: 'client',
+      clientAccept: 'client',
+      open: 'none',
+    });
   });
 
   it('every implemented route is in a contract', () => {
