@@ -109,12 +109,20 @@ describe('AgentActorAuditAdapter', () => {
 });
 
 describe('the error table', () => {
-  it('every refusal has a 4xx status (only UNKNOWN_STATUS is a 500)', () => {
+  it('every refusal has a 4xx status (only UNKNOWN_STATUS is a 500, and OTP_DELIVERY_UNAVAILABLE the OTP service 503)', () => {
+    const not4xx: Record<string, number> = {
+      UNKNOWN_STATUS: 500,
+      // The same answer as the OTP service's own OtpDeliveryUnavailableError.
+      OTP_DELIVERY_UNAVAILABLE: 503,
+    };
     for (const [code, m] of Object.entries(AGENT_ERROR_HTTP)) {
-      expect([code, m.status >= 400 && m.status < 500]).toEqual([
+      expect([code, m.status]).toEqual([
         code,
-        code !== 'UNKNOWN_STATUS',
+        not4xx[code] ?? expect.any(Number),
       ]);
+      if (!(code in not4xx)) {
+        expect([code, m.status >= 400 && m.status < 500]).toEqual([code, true]);
+      }
     }
     expect(AGENT_ERROR_HTTP.PHONE_ALREADY_REGISTERED.code).toBe(
       'APPLICATION_EXISTS',

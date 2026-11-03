@@ -4,20 +4,24 @@ import { AgentPiiSealer } from './agent-pii-sealer';
 // Test-only keys, not secrets.
 const KEY = Buffer.alloc(32, 1);
 const OTHER_KEY = Buffer.alloc(32, 2);
-const { pan, payoutDetails, applicantPhone } = AGENT_SEAL_PURPOSES;
+const { pan, payoutDetails, applicantPhone, clientPhone, clientDetails } =
+  AGENT_SEAL_PURPOSES;
+const ALL = [pan, payoutDetails, applicantPhone, clientPhone, clientDetails];
 
 describe('AgentPiiSealer', () => {
   const sealer = new AgentPiiSealer(KEY);
 
-  it('uses the three agreed purpose names', () => {
+  it('uses the five agreed purpose names', () => {
     expect(Object.values(AGENT_SEAL_PURPOSES).sort()).toEqual([
       'agent.applicant_phone',
+      'agent.client_details',
+      'agent.client_phone',
       'agent.pan',
       'agent.payout_details',
     ]);
   });
 
-  it.each([pan, payoutDetails, applicantPhone])(
+  it.each(ALL)(
     'opens what it sealed for %s, including unicode and long text',
     (purpose) => {
       for (const text of ['ABCDE1234F', 'ரவி குமார்', 'x'.repeat(5000)]) {
@@ -35,8 +39,8 @@ describe('AgentPiiSealer', () => {
     expect(sealer.seal(pan, 'same')).not.toBe(sealer.seal(pan, 'same'));
   });
 
-  it('does not open a value under another purpose (all six pairings)', () => {
-    const purposes = [pan, payoutDetails, applicantPhone];
+  it('does not open a value under another purpose (all twenty pairings)', () => {
+    const purposes = ALL;
     for (const sealedFor of purposes) {
       const sealed = sealer.seal(sealedFor, 'ABCDE1234F');
       for (const openAs of purposes.filter((p) => p !== sealedFor)) {

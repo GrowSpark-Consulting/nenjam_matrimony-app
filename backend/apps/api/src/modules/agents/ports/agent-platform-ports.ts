@@ -24,7 +24,8 @@ import type { AgentTx } from './agent-unit-of-work.port';
 
 // --- OTP ------------------------------------------------------------------
 
-export type AgentOtpPurpose = 'AGENT_SIGN_IN';
+/** AGENT_CLIENT_CONSENT: an agent-added client proving her phone (Way 2). */
+export type AgentOtpPurpose = 'AGENT_SIGN_IN' | 'AGENT_CLIENT_CONSENT';
 
 export interface AgentOtpChallenge {
   challengeId: string;

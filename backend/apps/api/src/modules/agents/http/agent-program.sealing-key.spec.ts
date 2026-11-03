@@ -20,6 +20,8 @@ function deps(
     otp: {} as AgentProgramDeps['otp'],
     hashing: {} as AgentProgramDeps['hashing'],
     adminAudit: {} as AgentProgramDeps['adminAudit'],
+    firebase: {} as AgentProgramDeps['firebase'],
+    agentOtp: { dummyEnabled: false, dummyPhones: [] },
     env,
     logger: { warn },
   };

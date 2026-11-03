@@ -34,6 +34,13 @@ describe('AGENT_CONTENT', () => {
   });
 
   it('uses the English words the API contract names', () => {
+    expect(Object.keys(AGENT_CONTENT.clientStatusLabels).sort()).toEqual([
+      'ACCEPTED',
+      'DRAFT',
+      'EXPIRED',
+      'REJECTED',
+      'WAITING_FOR_CLIENT',
+    ]);
     expect(AGENT_CONTENT.statusLabels.PENDING_APPROVAL.en).toBe('Under review');
     expect(AGENT_CONTENT.statusLabels.SUSPENDED.en).toBe('Paused');
     expect(AGENT_CONTENT.payoutStatusLabels.CREATED.en).toBe('Processing');
@@ -45,6 +52,7 @@ describe('AGENT_CONTENT', () => {
       AGENT_CONTENT.stageLabels,
       AGENT_CONTENT.commissionStatusLabels,
       AGENT_CONTENT.payoutStatusLabels,
+      AGENT_CONTENT.clientStatusLabels,
     ];
     for (const group of groups) {
       for (const label of Object.values(group)) {

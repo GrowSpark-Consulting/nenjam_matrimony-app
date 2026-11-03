@@ -6,7 +6,9 @@
  * AgentReferralQuoteModule whatever the flag.
  */
 import { Module } from '@nestjs/common';
+import { AppConfigModule, AppConfigService } from '@app/config';
 import { PrismaService } from '@app/database';
+import { FirebaseService } from '@app/firebase';
 import { AdminModule } from '../../admin/admin.module';
 import { AdminAuditService } from '../../admin/services/admin-audit.service';
 import { IdentifierHashService } from '../../platform/identifier-hash.service';
@@ -15,7 +17,9 @@ import { PlatformModule } from '../../platform/platform.module';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 import { AgentAuthController } from './agent-auth.controller';
 import { AgentController } from './agent.controller';
-import { AgentAccessGuard } from './agent-http';
+import { AgentAccessGuard, ClientInviteGuard } from './agent-http';
+import { AgentClientsController } from './agent-clients.controller';
+import { ClientInvitesController } from './client-invites.controller';
 import {
   AGENT_PROGRAM,
   buildAgentProgram,
@@ -31,8 +35,16 @@ export function agentProgramEnabled(
 }
 
 @Module({
-  imports: [AdminModule, PlatformModule],
-  controllers: [AgentAuthController, AgentController, MemberReferralController],
+  // AppConfigModule is not global: the client invitations read
+  // AGENT_OTP_DUMMY_* from it, exactly as the OTP service does.
+  imports: [AdminModule, PlatformModule, AppConfigModule],
+  controllers: [
+    AgentAuthController,
+    AgentController,
+    MemberReferralController,
+    AgentClientsController,
+    ClientInvitesController,
+  ],
   providers: [
     {
       provide: AGENT_PROGRAM,
@@ -42,6 +54,8 @@ export function agentProgramEnabled(
         OtpService,
         IdentifierHashService,
         AdminAuditService,
+        FirebaseService,
+        AppConfigService,
       ],
       useFactory: (
         prisma: PrismaService,
@@ -49,6 +63,8 @@ export function agentProgramEnabled(
         otp: OtpService,
         hashing: IdentifierHashService,
         adminAudit: AdminAuditService,
+        firebase: FirebaseService,
+        config: AppConfigService,
       ): AgentProgram =>
         buildAgentProgram({
           prisma,
@@ -56,10 +72,13 @@ export function agentProgramEnabled(
           otp,
           hashing,
           adminAudit,
+          firebase,
+          agentOtp: config.agentOtp,
           env: process.env,
         }),
     },
     AgentAccessGuard,
+    ClientInviteGuard,
   ],
 })
 export class AgentProgramModule {}

@@ -15,7 +15,21 @@ import type {
 
 export class FakeAgentTx {
   readonly undo: Array<() => void> = [];
+  /** Run once the transaction has committed or rolled back (row locks release here). */
+  readonly afterFinish: Array<() => void> = [];
   finished = false;
+}
+
+/**
+ * Runs `fn` when the transaction ends, committed or not. A fake row lock
+ * uses it to release, like a database lock at COMMIT or ROLLBACK.
+ */
+export function onTxFinish(tx: AgentTx, fn: () => void): void {
+  if (!(tx instanceof FakeAgentTx)) {
+    throw new TypeError('tx was not created by FakeAgentUnitOfWork.run.');
+  }
+  if (tx.finished) throw new Error('The transaction has already finished.');
+  tx.afterFinish.push(fn);
 }
 
 /**
@@ -53,6 +67,7 @@ export class FakeAgentUnitOfWork implements AgentUnitOfWork {
       throw error;
     } finally {
       tx.finished = true;
+      for (const fn of tx.afterFinish) fn();
     }
   }
 }

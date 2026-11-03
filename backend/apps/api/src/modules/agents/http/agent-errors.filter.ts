@@ -63,6 +63,42 @@ export const AGENT_ERROR_HTTP: Record<AgentServiceErrorCode, Mapping> = {
     status: 422,
     message: 'A verified phone number is needed to use a code.',
   },
+  // Agent-added clients (Way 2). The messages never contain a phone, a
+  // name or a code, and CLIENT_PHONE_UNAVAILABLE never says why.
+  CLIENT_INVITES_DISABLED: {
+    status: 403,
+    message: 'Adding clients is not available yet.',
+  },
+  CLIENT_DRAFT_NOT_FOUND: { status: 404, message: 'No such client.' },
+  CLIENT_DRAFT_EXISTS: {
+    status: 409,
+    message: 'You have already added this client.',
+  },
+  CLIENT_DRAFT_LOCKED: {
+    status: 409,
+    message: 'This client can no longer be changed.',
+  },
+  CLIENT_DRAFT_LIMIT_REACHED: {
+    status: 422,
+    message: 'You have reached the most clients you can add at once.',
+  },
+  CLIENT_PHONE_UNAVAILABLE: {
+    status: 422,
+    message: 'This phone number cannot be added.',
+  },
+  INVITE_NOT_FOUND: { status: 404, message: 'No such invitation.' },
+  INVITE_UNAVAILABLE: {
+    status: 409,
+    message: 'This invitation is no longer open.',
+  },
+  ALREADY_MEMBER: {
+    status: 409,
+    message: 'This phone number already has an account. Sign in instead.',
+  },
+  OTP_DELIVERY_UNAVAILABLE: {
+    status: 503,
+    message: 'Codes cannot be sent to this number yet.',
+  },
   // The application refusals (decideApplicationSubmit), per the table in
   // agent-application.service.ts.
   BAD_SCOPE: {
