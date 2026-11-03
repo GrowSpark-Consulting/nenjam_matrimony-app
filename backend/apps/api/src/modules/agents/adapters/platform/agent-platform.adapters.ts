@@ -38,6 +38,10 @@ import {
   agentProgramSettingProblem,
 } from '../../settings/agent-program-settings';
 import {
+  AGENT_CLIENTS_ENABLED_KEY,
+  agentClientsEnabledProblem,
+} from '../../settings/agent-clients-switch';
+import {
   AGENT_QUOTE_ENABLED_KEY,
   agentQuoteEnabledProblem,
 } from '../../settings/agent-quote-switch';
@@ -123,6 +127,11 @@ export class AgentSettingValidators implements OnModuleInit {
     this.settings.registerValidator(
       AGENT_QUOTE_ENABLED_KEY,
       agentQuoteEnabledProblem,
+    );
+    // The agent-added clients switch (seeded, but not one of the parsed keys).
+    this.settings.registerValidator(
+      AGENT_CLIENTS_ENABLED_KEY,
+      agentClientsEnabledProblem,
     );
   }
 }

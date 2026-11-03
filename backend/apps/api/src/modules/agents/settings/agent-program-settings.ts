@@ -37,6 +37,9 @@ export const REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY =
   'referral.code_validation_code_limit';
 export const REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY =
   'referral.code_validation_window_seconds';
+/** Days an agent-added client draft stays open (from creation, and again from submit). */
+export const AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY =
+  'agent.client_draft_expiry_days';
 
 export type CommissionBase = 'AMOUNT_PAID' | 'AMOUNT_PAID_EXCLUDING_GST';
 
@@ -62,6 +65,7 @@ export interface AgentProgramSettings {
   codeValidationIpLimit?: number;
   codeValidationCodeLimit?: number;
   codeValidationWindowSeconds?: number;
+  agentClientDraftExpiryDays?: number;
 }
 
 export interface ParsedAgentProgramSettings {
@@ -198,6 +202,12 @@ const RULES: readonly Rule[] = [
   {
     key: REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY,
     field: 'codeValidationWindowSeconds',
+    check: isPositiveInteger,
+    expected: 'an integer >= 1',
+  },
+  {
+    key: AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY,
+    field: 'agentClientDraftExpiryDays',
     check: isPositiveInteger,
     expected: 'an integer >= 1',
   },
