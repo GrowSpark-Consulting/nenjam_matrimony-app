@@ -423,11 +423,26 @@ one member earn two commissions, or one phone be credited to two agents.
 
 1. **Run a re-hash step before the old version is retired**, for every table
    that stores a phone hash: `agents.phone_hash`, `referral_attributions.phone_hash`,
-   `agent_applicants.phone_hash` and `commissions.phone_hash`. Re-hash from the
+   `agent_applicants.phone_hash`, `commissions.phone_hash` and (Way 2,
+   migration `20261103090000`) `agent_client_drafts.phone_hash` and
+   `agent_client_consent_codes.phone_hash`. Re-hash from the
    raw phone where one is held (agents: `phone`; applicants: the sealed phone),
    in small batches, each in its own transaction. For attributions and
    commissions the raw phone is the member's phone on the user row. A row that
    cannot be re-hashed (the member is gone) keeps its old-version hash.
+   - `agent_client_drafts`: open drafts (`DRAFT`, `WAITING_FOR_CLIENT`) and
+     `REJECTED` ones hold the sealed phone (`phone_sealed`, purpose
+     `agent.client_phone`): re-hash from it. `REJECTED` rows matter most: they
+     are the lasting "this agent may never add this phone again" block, and
+     that is why they keep the sealed phone. `ACCEPTED` rows: re-hash from the
+     member's phone (`member_id` → `users.phone`); with no member left, keep
+     the old hash. `EXPIRED` rows hold no phone and block nothing: keep the old
+     hash. The table's trigger refuses any change to `phone_hash`, so the
+     re-hash needs a migration that allows it for that one change (approved
+     like any other production data change).
+   - `agent_client_consent_codes`: nothing to re-hash. Each row is only a
+     pointer to a code that lives minutes. Delete the rows (clients ask for a
+     new code) instead of re-hashing them.
 2. **Keep `hashAll` (Shaaz's `hashIdentifierAll`) in use until the re-hash has
    finished and been checked.** Every duplicate check and every lookup by phone
    hash must compare against **all** active versions, newest first, not only
@@ -435,7 +450,10 @@ one member earn two commissions, or one phone be credited to two agents.
    commission, and for an earlier attribution that earned one, before it inserts,
    and marks the attribution for review instead of crediting twice). The agent
    sign-in, the application and the referral-code attach still look up by the
-   newest version only: **widen them before the first rotation.**
+   newest version only: **widen them before the first rotation.** Way 2 (PR 2,
+   `feat/agent-clients-routes`) must look up `agent_client_drafts` by every
+   active version from the start: the one-open-draft check, the "rejected
+   before" block and the client's invitations list.
 3. The handler **copies the attribution's stored hash** onto the commission; it
    never re-hashes the phone. That keeps one hash per member through a rotation.
 4. Only after step 1 is verified (no row left on an old version, except the ones
