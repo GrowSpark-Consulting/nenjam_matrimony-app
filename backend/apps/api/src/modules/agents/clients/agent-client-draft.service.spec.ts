@@ -538,6 +538,20 @@ describe('AgentClientDraftService.list and get', () => {
     );
   });
 
+  it('never even opens the sealed details of a draft whose time ran out', async () => {
+    const { h, claims } = await world();
+    await add(h, claims);
+    h.clock.advance(14 * DAY);
+    const open = jest.spyOn(h.sealer, 'open');
+    await h.clients.list(claims);
+    await h.clients.get(claims, 'draft-1');
+    expect(
+      open.mock.calls.filter(
+        ([purpose]) => purpose === AGENT_SEAL_PURPOSES.clientDetails,
+      ),
+    ).toEqual([]);
+  });
+
   it('refuses a bad status, limit or cursor', async () => {
     const { h, claims } = await world();
     await expectServiceError(

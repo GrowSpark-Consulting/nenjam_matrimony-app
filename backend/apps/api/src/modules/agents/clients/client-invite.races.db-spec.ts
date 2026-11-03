@@ -48,7 +48,40 @@ const DAY = 86_400_000;
 const sealer = new FakeAgentSecretSealer();
 const hasher = new FakeAgentIdentifierHasher('race-pepper');
 
-function service(clock: FakeAgentClock) {
+/**
+ * Holds each accept right after its lock until a second accept has taken
+ * its lock too (or 500 ms pass), so two accepts really overlap. With the
+ * fix, the second one waits inside its lock for the first to commit, and
+ * the first goes on after the timeout. Without it, both get their own lock
+ * and Postgres has to break a deadlock.
+ */
+class OverlappingDrafts extends PrismaAgentClientDraftRepository {
+  private locked = 0;
+  private release!: () => void;
+  private readonly bothLocked = new Promise<void>(
+    (resolve) => (this.release = resolve),
+  );
+
+  override async lockWaitingForAccept(
+    ...args: Parameters<
+      PrismaAgentClientDraftRepository['lockWaitingForAccept']
+    >
+  ) {
+    const row = await super.lockWaitingForAccept(...args);
+    this.locked += 1;
+    if (this.locked >= 2) this.release();
+    await Promise.race([
+      this.bothLocked,
+      new Promise((resolve) => setTimeout(resolve, 500)),
+    ]);
+    return row;
+  }
+}
+
+function service(
+  clock: FakeAgentClock,
+  drafts = new PrismaAgentClientDraftRepository(prisma),
+) {
   const proofUnused = {
     canReach: () => true,
     send: () => Promise.reject(new Error('not used')),
@@ -61,7 +94,7 @@ function service(clock: FakeAgentClock) {
     }),
     proof: proofUnused,
     hasher,
-    drafts: new PrismaAgentClientDraftRepository(prisma),
+    drafts,
     agents: new PrismaAgentRepository(prisma),
     attributions: new PrismaReferralAttributionRepository(prisma),
     accounts: new PrismaAgentClientAccount(prisma, {
@@ -155,7 +188,10 @@ describe('ClientInviteService races on the real database', () => {
     await seedAgent('agent-2');
     await waitingInvite('draft-1', 'agent-1');
     await waitingInvite('draft-2', 'agent-2');
-    const invites = service(new FakeAgentClock(T0));
+    const invites = service(
+      new FakeAgentClock(T0),
+      new OverlappingDrafts(prisma),
+    );
     const results = await Promise.allSettled([
       invites.accept(clientClaims(), 'draft-2'),
       invites.accept(clientClaims(), 'draft-1'),
