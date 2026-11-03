@@ -10,8 +10,8 @@
  *   state they expect in their WHERE clause and report a lost race as
  *   null / false, never as an error. The table's trigger is the last line:
  *   a change it does not allow fails loudly (a bug, not a refusal).
- * - **Locks.** `lockAgent` and `lockWaitingForAccept` take a row lock
- *   (SELECT ... FOR UPDATE) by id only, then read the row's state with an
+ * - **Locks.** `lockAgent` and `lockWaitingForAccept` take row locks
+ *   (SELECT ... FOR UPDATE, by id and phone hash only, in id order), then read the row's state with an
  *   ordinary query: after the lock, that read sees the latest committed row,
  *   and no timestamp is compared in raw SQL (so the session time zone never
  *   matters).
@@ -273,7 +273,9 @@ export class PrismaAgentClientDraftRepository implements AgentClientDraftReposit
     tx: AgentTx,
   ): Promise<AgentClientDraftRecord | null> {
     const db = unwrapTx(tx);
-    await db.$queryRaw`SELECT "id" FROM "agent_client_drafts" WHERE "id" = ${id} FOR UPDATE`;
+    // This draft and every open draft of the phone, in id order: two accepts
+    // for one phone queue here instead of deadlocking on the member insert.
+    await db.$queryRaw`SELECT "id" FROM "agent_client_drafts" WHERE "id" = ${id} OR ("phone_hash" = ANY(${[...phoneHashes]}::text[]) AND "status" IN ('DRAFT', 'WAITING_FOR_CLIENT')) ORDER BY "id" FOR UPDATE`;
     const row = await db.agentClientDraft.findFirst({
       where: {
         id,

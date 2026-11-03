@@ -177,10 +177,13 @@ export interface AgentClientDraftRepository {
     tx?: AgentTx,
   ): Promise<AgentClientDraftRecord[]>;
   /**
-   * Locks the draft until the transaction ends, but only while it is
-   * WAITING_FOR_CLIENT, for one of these hashes and not past `expiresAt`;
-   * null otherwise. Accept starts with this, so an accept, a reject and the
-   * expiry can never all win. Needs a `tx`.
+   * Locks, until the transaction ends, this draft AND every open draft for
+   * these phone hashes (any agent), always in id order; then returns this
+   * draft if it is WAITING_FOR_CLIENT, for one of these hashes and not past
+   * `expiresAt`, else null. Accept starts with this: an accept, a reject and
+   * the expiry of one draft can never all win, and two accepts for one phone
+   * (two agents' invitations) wait for each other instead of deadlocking on
+   * the member's phone. Needs a `tx`.
    */
   lockWaitingForAccept(
     id: string,

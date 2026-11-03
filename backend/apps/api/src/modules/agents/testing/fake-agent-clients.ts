@@ -243,7 +243,12 @@ export class FakeAgentClientDraftRepository implements AgentClientDraftRepositor
     now: Date,
     tx: AgentTx,
   ): Promise<AgentClientDraftRecord | null> {
-    await this.lock(`draft:${id}`, tx);
+    // Every open draft of the phone, and this one, in id order (as the database does).
+    const ids = new Set([id]);
+    for (const r of this.rows.values()) {
+      if (isOpen(r) && phoneHashes.includes(r.phoneHash)) ids.add(r.id);
+    }
+    for (const key of [...ids].sort()) await this.lock(`draft:${key}`, tx);
     const row = this.rows.get(id);
     return row &&
       row.status === 'WAITING_FOR_CLIENT' &&

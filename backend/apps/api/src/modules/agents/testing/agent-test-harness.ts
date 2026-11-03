@@ -66,6 +66,7 @@ import {
 import { FakeAgentUnitOfWork } from './fake-agent-unit-of-work';
 import { DummyClientPhoneProof } from '../adapters/platform/dummy-client-phone-proof';
 import { AgentClientDraftService } from '../clients/agent-client-draft.service';
+import { ClientInviteService } from '../clients/client-invite.service';
 import type { ClientBasicDetails } from '../ports/agent-client-ports';
 import { AGENT_CLIENTS_ENABLED_KEY } from '../settings/agent-clients-switch';
 import { FakeAgentClientAccount } from './fake-agent-client-account';
@@ -92,6 +93,11 @@ export const CLIENT_PHONE_2 = '+919000000002';
 export const UNAPPROVED_PHONE = '+919999999999';
 export const CLIENT_DRAFT_LIMIT = 3;
 export const CLIENT_EXPIRY_DAYS = 14;
+/** The client token's own audience (the agent portal's is AUTH_OPTIONS.audience). */
+export const CLIENT_TOKEN_OPTIONS = {
+  issuer: 'nenjam-agent',
+  audience: 'client-invite',
+};
 export const CLIENT_DETAILS: ClientBasicDetails = {
   firstName: 'Priya',
   lastName: 'Sundaram',
@@ -306,6 +312,41 @@ export function makeAgentHarness(
     logger: clientLog,
   });
 
+  // Its own key: the agent signer can never verify a client token.
+  const clientSigner = new FakeAgentTokenSigner('client-signer-key');
+  let clientAttributionCounter = 0;
+  const clientInvites = new ClientInviteService({
+    settings,
+    proof: clientProof,
+    hasher,
+    drafts,
+    agents,
+    attributions,
+    accounts: clientAccount,
+    sealer,
+    uow,
+    audit,
+    clock,
+    signer: clientSigner,
+    options: CLIENT_TOKEN_OPTIONS,
+    newId: () => `client-attribution-${++clientAttributionCounter}`,
+  });
+
+  /** request + verify with the code she would have received: a client signing in. */
+  const clientSignIn = async (phone = CLIENT_PHONE) => {
+    await clientInvites.requestCode(phone);
+    const pointer = await consentCodes.find([hasher.hash('PHONE', phone)]);
+    if (pointer === null) throw new Error('no code was sent');
+    return clientInvites.verifyCode(phone, otp.codeFor(pointer.challengeId));
+  };
+
+  /** The verified claims inside a client token. */
+  const clientClaimsOf = async (session: { accessToken: string }) => {
+    const claims = await clientSigner.verify(session.accessToken);
+    if (claims === null) throw new Error('not a client token');
+    return claims;
+  };
+
   /** The verified claims inside a session's access token. */
   const claimsOf = async (session: { accessToken: string }) => {
     const claims = await signer.verify(session.accessToken);
@@ -450,6 +491,10 @@ export function makeAgentHarness(
     clientProof,
     clientLog,
     clients,
+    clientSigner,
+    clientInvites,
+    clientSignIn,
+    clientClaimsOf,
     claimsOf,
     seedAgent,
     seedReferral,
