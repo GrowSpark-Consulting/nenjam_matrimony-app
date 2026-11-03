@@ -35,7 +35,7 @@ async function seed() {
   await prisma.agent.create({
     data: {
       id: 'agent-1',
-      phone: '+919000000009',
+      phone: '+919876543210',
       phoneHash: 'v1:agent-1',
       name: 'Ravi Kumar',
       city: 'Madurai',
