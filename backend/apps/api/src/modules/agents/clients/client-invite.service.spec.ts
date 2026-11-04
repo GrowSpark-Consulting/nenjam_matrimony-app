@@ -779,6 +779,20 @@ describe('ClientInviteService.accept: her member profile (she lands on the home 
     expect(h.clientAccount.calls.createMember).toBe(1);
   });
 
+  it('a stale read of an invitation whose accepted account is gone, with the phone now on another account: ALREADY_MEMBER, not a sign-in', async () => {
+    const { h, agent } = await world();
+    const id = await invite(h, agent);
+    const client = await signedIn(h);
+    const stale = h.drafts.peek(id)!;
+    await h.clientInvites.accept(client, id);
+    h.clientAccount.deleteMember('new-member-1');
+    h.clientAccount.addMember('later-member', CLIENT_PHONE);
+    jest.spyOn(h.drafts, 'findForPhone').mockResolvedValueOnce(stale);
+    await expect(h.clientInvites.accept(client, id)).rejects.toMatchObject({
+      code: 'ALREADY_MEMBER',
+    });
+  });
+
   it("a phone that is really someone else's member account is still ALREADY_MEMBER", async () => {
     const { h, agent } = await world();
     const id = await invite(h, agent);
