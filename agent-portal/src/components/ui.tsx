@@ -12,6 +12,7 @@ export type IconName =
   | 'signout'
   | 'copy'
   | 'check'
+  | 'download'
   | 'clock'
   | 'alert'
   | 'whatsapp';
@@ -27,6 +28,7 @@ const PATHS: Record<IconName, string> = {
   signout: 'M9 4H5a1 1 0 00-1 1v14a1 1 0 001 1h4M16 8l4 4-4 4M20 12H9',
   copy: 'M9 9h10a1 1 0 011 1v10a1 1 0 01-1 1H9a1 1 0 01-1-1V10a1 1 0 011-1zM16 9V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3',
   check: 'M5 12.5l4.5 4.5L19 7.5',
+  download: 'M12 4v11M7.5 11l4.5 4.5 4.5-4.5M5 20h14',
   clock: 'M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 2',
   alert: 'M12 3l10 18H2L12 3zM12 10v5M12 18h.01',
   whatsapp:

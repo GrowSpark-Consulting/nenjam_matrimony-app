@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ApiSetup } from './api';
 import { MockAgentApi } from './api/mockAgentApi';
 import { SessionStore } from './api/session';
-import type { Balance, Commission, Page } from './api/types';
+import type { Balance, Commission, Page, ReferralLink } from './api/types';
 import { AppRoutes } from './App';
 import { PortalProvider } from './state/PortalContext';
 
@@ -98,5 +98,46 @@ describe('no white screen on an unexpected response', () => {
     await user.click(screen.getByRole('link', { name: 'Payouts' }));
     expect(await screen.findByText('No payouts yet.')).toBeInTheDocument();
     expect(screen.queryByText('Something went wrong showing this page.')).toBeNull();
+  });
+});
+
+describe('Agent Home share section states', () => {
+  it('shows a loading state, then the link and QR from the backend', async () => {
+    let release!: (l: ReferralLink[]) => void;
+    await renderAt('/', (a) => {
+      a.getReferralLinks = () => new Promise<ReferralLink[]>((r) => (release = r));
+    });
+    expect((await screen.findAllByText('Loading…')).length).toBeGreaterThan(0);
+    await waitFor(() => expect(release).toBeTypeOf('function'));
+    release([
+      {
+        codeId: 'c1',
+        code: 'NM7K2P9X',
+        isPrimary: true,
+        link: 'https://example.test/?ref=NM7K2P9X',
+        qrPayload: 'https://example.test/?ref=NM7K2P9X',
+        shareMessages: [],
+        shareable: true,
+      },
+    ]);
+    expect(await screen.findByLabelText('Share link')).toHaveTextContent('https://example.test/?ref=NM7K2P9X');
+    expect(screen.getByRole('button', { name: 'Download QR' })).toBeInTheDocument();
+  });
+
+  it('an API error shows a message with Try again, which reloads', async () => {
+    const user = userEvent.setup();
+    let fail = true;
+    const { api } = await renderAt('/', (a) => {
+      const real = a.getReferralLinks.bind(a);
+      a.getReferralLinks = async () => {
+        if (fail) throw new Error('down');
+        return real();
+      };
+    });
+    const retry = await screen.findByRole('button', { name: /try again/i });
+    fail = false;
+    await user.click(retry);
+    expect(await screen.findByLabelText('Referral code')).toHaveTextContent('NM7K2P9X');
+    expect(api).toBeDefined();
   });
 });

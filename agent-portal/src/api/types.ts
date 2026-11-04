@@ -76,6 +76,9 @@ export interface AgentConfig {
   payoutStatusLabels: Partial<Record<PayoutStatus, LocalizedText>>;
   /** Templates. The portal never renders them — see ReferralLink. */
   shareMessages: { id: string; text: LocalizedText }[];
+  /** Way 2 (agent-added clients). Missing = an older server = disabled. */
+  clientStatusLabels?: Partial<Record<ClientStatus, LocalizedText>>;
+  clients?: { enabled: boolean; draftLimit: number | null; expiryDays: number | null };
   settings: {
     holdDays: number;
     creditWindowDays: number;
@@ -164,4 +167,42 @@ export type PayoutDetailsInput =
 export interface PayoutDetailsSummary {
   method: 'UPI' | 'BANK';
   display: string;
+}
+
+// ─── Way 2: agent-added clients ───────────────────────────────────────
+
+export type ClientStatus = 'DRAFT' | 'WAITING_FOR_CLIENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+
+/** The client's profile: sections of fields, exactly as the API names them. */
+export type ClientDetails = Record<string, unknown>;
+
+export interface ClientDraft {
+  id: string;
+  status: ClientStatus;
+  statusLabel: LocalizedText;
+  displayName: string;
+  phoneMasked: string;
+  /** Null once the draft is closed (accepted, declined, expired). */
+  details: ClientDetails | null;
+  /** The required paths still empty. The only source for "N left" and Submit. */
+  missingRequired: string[];
+  editable: boolean;
+  createdAt: string;
+  submittedOn: string | null;
+  /** Backend date `YYYY-MM-DD`; shown as received, never calculated here. */
+  expiresOn: string | null;
+  acceptedOn: string | null;
+  referralId: string | null;
+}
+
+export interface CreateClientInput {
+  phone: string;
+  consentConfirmed: true;
+  details?: ClientDetails;
+}
+
+/** One master-data row (`GET /reference-data/*`, no token). */
+export interface RefItem {
+  code: string;
+  label: string;
 }

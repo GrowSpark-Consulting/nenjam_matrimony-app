@@ -1,5 +1,5 @@
 import { QRCodeSVG } from 'qrcode.react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ReferralLink, ShareMessage } from '../api/types';
 import { Icon } from './ui';
 
@@ -14,10 +14,14 @@ type CopyResult = { id: string; ok: boolean } | null;
  * One referral code with its ready-made share messages. Messages come from
  * the backend per code and are shown and shared exactly as received. `link`
  * and `qrPayload` are null until the public web address is decided, and are
- * then simply not shown.
+ * then simply not shown. The link is shown and copied exactly as received;
+ * the QR encodes `qrPayload` exactly as received (the contract says it is the
+ * string to encode), and "Download QR" saves that same QR as an SVG file.
  */
 export function ReferralCodeCard({ link }: { link: ReferralLink }) {
   const [result, setResult] = useState<CopyResult>(null);
+  const [qrError, setQrError] = useState(false);
+  const qrRef = useRef<SVGSVGElement>(null);
 
   async function copy(id: string, text: string) {
     try {
@@ -29,6 +33,31 @@ export function ReferralCodeCard({ link }: { link: ReferralLink }) {
   }
 
   const codeCopied = result?.id === 'code' && result.ok;
+  // Blank counts as missing: never a button or image for nothing.
+  const url = link.link && link.link.trim() ? link.link : null;
+  const qr = link.qrPayload && link.qrPayload.trim() ? link.qrPayload : null;
+  const linkCopied = result?.id === 'link' && result.ok;
+
+  function downloadQr() {
+    setQrError(false);
+    try {
+      const svg = qrRef.current;
+      if (!svg) throw new Error('no qr');
+      // XMLSerializer adds the SVG namespace, so the file opens on its own.
+      const xml = new XMLSerializer().serializeToString(svg);
+      const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = href;
+      a.download = `nenjam-referral-qr-${link.code}.svg`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(href);
+    } catch {
+      setQrError(true);
+    }
+  }
 
   return (
     <div className="card code-card">
@@ -50,10 +79,38 @@ export function ReferralCodeCard({ link }: { link: ReferralLink }) {
       {!link.shareable && (
         <p className="notice">Sharing is turned off while your account is paused.</p>
       )}
-      {link.link && <p className="hint">{link.link}</p>}
-      {link.qrPayload && (
+      {url && (
+        <div className="link-row">
+          <p className="hint" aria-label="Share link">
+            {url}
+          </p>
+          <button type="button" className="secondary" onClick={() => void copy('link', url)}>
+            <Icon name={linkCopied ? 'check' : 'copy'} size={18} />
+            {linkCopied ? 'Copied' : 'Copy link'}
+          </button>
+          {result?.id === 'link' && (
+            <p className="copy-feedback" role="status" aria-live="polite">
+              {result.ok ? (
+                'Link copied to your clipboard.'
+              ) : (
+                <span className="error">Couldn't copy. Select the link and copy it yourself.</span>
+              )}
+            </p>
+          )}
+        </div>
+      )}
+      {qr && (
         <div className="qr">
-          <QRCodeSVG value={link.qrPayload} size={160} />
+          <QRCodeSVG ref={qrRef} value={qr} size={160} marginSize={2} />
+          <button type="button" className="secondary" onClick={downloadQr}>
+            <Icon name="download" size={18} />
+            Download QR
+          </button>
+          {qrError && (
+            <p className="error field-error" role="alert">
+              Couldn't download the QR code. Please try again.
+            </p>
+          )}
         </div>
       )}
       <div className="share-list">

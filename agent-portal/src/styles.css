@@ -124,7 +124,9 @@ input[type='radio'], input[type='checkbox'] { width: 1.15rem; height: 1.15rem; m
 .facts.card { padding: 1.1rem; }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; overflow-wrap: anywhere; }
-.qr { margin: 0.75rem 0; }
+.qr { margin: 0.75rem 0; display: grid; justify-items: start; gap: 0.5rem; }
+.link-row { display: grid; justify-items: start; gap: 0.35rem; margin: 0.5rem 0; }
+.link-row .hint { margin: 0; overflow-wrap: anywhere; }
 
 /* Referral code */
 .code-card { padding: 1.25rem; }

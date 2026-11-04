@@ -13,6 +13,8 @@ export class ApiError extends Error {
   readonly agentStatus: AgentStatus | null;
   /** Seconds, from the `Retry-After` header on a 429. */
   readonly retryAfterSeconds: number | null;
+  /** `422 CLIENT_PROFILE_INCOMPLETE`: the required paths still empty. */
+  readonly missingFields: string[] | null;
 
   constructor(
     status: number,
@@ -21,6 +23,7 @@ export class ApiError extends Error {
       code?: string | null;
       agentStatus?: AgentStatus | null;
       retryAfterSeconds?: number | null;
+      missingFields?: string[] | null;
     } = {},
   ) {
     super(message);
@@ -29,6 +32,7 @@ export class ApiError extends Error {
     this.code = options.code ?? null;
     this.agentStatus = options.agentStatus ?? null;
     this.retryAfterSeconds = options.retryAfterSeconds ?? null;
+    this.missingFields = options.missingFields ?? null;
   }
 
   /** The request never reached the server (offline, DNS, CORS, timeout). */
@@ -81,5 +85,8 @@ export function toApiError(
     code,
     agentStatus,
     retryAfterSeconds: Number.isFinite(retry) && retry > 0 ? Math.ceil(retry) : null,
+    missingFields: Array.isArray(obj.missingFields)
+      ? obj.missingFields.filter((f): f is string => typeof f === 'string')
+      : null,
   });
 }
