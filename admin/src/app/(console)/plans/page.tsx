@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RequirePermission } from '@/components/AppShell';
 import {
   Badge,
@@ -49,6 +49,16 @@ function Plans() {
 
   const mayEdit = can(me?.permissions, 'plan.edit');
   const mayPublish = can(me?.permissions, 'plan.publish');
+
+  // /plans/#drafts (from the Overview): scroll to the drafts once the plans
+  // above them have loaded, as they push the drafts down the page.
+  const scrolledToDrafts = useRef(false);
+  const loaded = !!catalogue.data && !!drafts.data;
+  useEffect(() => {
+    if (!loaded || scrolledToDrafts.current || window.location.hash !== '#drafts') return;
+    scrolledToDrafts.current = true;
+    document.getElementById('drafts')?.scrollIntoView({ block: 'start' });
+  }, [loaded]);
 
   const openDisplay = (plan: PlanRow) => {
     setDisplayName(plan.name);
@@ -181,6 +191,7 @@ function Plans() {
         </Card>
       ))}
 
+      <div id="drafts" />
       <Card title="Drafts">
         {drafts.loading && !drafts.data ? <Loading /> : null}
         {drafts.error ? <ErrorState message={drafts.error} onRetry={drafts.reload} /> : null}

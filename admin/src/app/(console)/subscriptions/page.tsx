@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
 import { RequirePermission } from '@/components/AppShell';
 import {
   Badge,
@@ -14,6 +15,7 @@ import {
   PageHeader,
 } from '@/components/ui';
 import { formatDate, formatPaise } from '@/lib/format';
+import { readFilter, SUBSCRIPTION_PLANS, SUBSCRIPTION_STATUSES } from '@/lib/links';
 import type { Page, SubscriptionRow } from '@/lib/types';
 import { useApi } from '@/lib/use-api';
 
@@ -26,13 +28,26 @@ interface Filters {
 export default function SubscriptionsPage() {
   return (
     <RequirePermission permission="subscription.view">
-      <Subscriptions />
+      <Suspense fallback={<Loading />}>
+        <SubscriptionsFromAddress />
+      </Suspense>
     </RequirePermission>
   );
 }
 
-function Subscriptions() {
-  const [draft, setDraft] = useState<Filters>({ q: '', status: '', planCode: '' });
+/** ?status=ACTIVE&plan=GOLD (from the Overview) opens the list already filtered. */
+function SubscriptionsFromAddress() {
+  const params = useSearchParams();
+  const initial: Filters = {
+    q: '',
+    status: readFilter(params, 'status', SUBSCRIPTION_STATUSES),
+    planCode: readFilter(params, 'plan', SUBSCRIPTION_PLANS),
+  };
+  return <Subscriptions key={params.toString()} initial={initial} />;
+}
+
+function Subscriptions({ initial }: { initial: Filters }) {
+  const [draft, setDraft] = useState<Filters>(initial);
   const [filters, setFilters] = useState<Filters>(draft);
   const [cursors, setCursors] = useState<Array<string | null>>([null]);
   const cursor = cursors[cursors.length - 1] ?? null;
