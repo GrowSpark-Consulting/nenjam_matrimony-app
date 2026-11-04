@@ -31,6 +31,25 @@ describe('ApiClient', () => {
     expect(init.credentials).toBe('omit');
   });
 
+  it('signs in with POST /admin/auth/session and the code as JSON (the API has no GET there)', async () => {
+    const fetchImpl = vi.fn(() =>
+      Promise.resolve(respond(201, { sessionToken: 'new-session' })),
+    );
+    await client(fetchImpl, { getSessionToken: () => null }).post('/admin/auth/session', {
+      code: '123456',
+    });
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://api.example.test/admin/auth/session');
+    expect(init.method).toBe('POST');
+    expect(init.body).toBe(JSON.stringify({ code: '123456' }));
+    expect(init.headers).toMatchObject({
+      Authorization: 'Bearer id-token',
+      'Content-Type': 'application/json',
+    });
+    // No session yet: the header is left out rather than sent empty.
+    expect(init.headers).not.toHaveProperty('X-Admin-Session');
+  });
+
   it('turns an error body into an ApiError with its code and message', async () => {
     const fetchImpl = vi.fn(() =>
       Promise.resolve(
