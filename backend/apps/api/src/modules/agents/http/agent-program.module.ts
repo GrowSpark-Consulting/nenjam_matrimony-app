@@ -11,6 +11,8 @@ import { PrismaService } from '@app/database';
 import { FirebaseService } from '@app/firebase';
 import { LocationService } from '../../reference-data/services/location.service';
 import { ReligionService } from '../../reference-data/services/religion.service';
+import { ProfilesModule } from '../../profiles/profiles.module';
+import { ProfileService } from '../../profiles/services/profile.service';
 import { AdminModule } from '../../admin/admin.module';
 import { AdminAuditService } from '../../admin/services/admin-audit.service';
 import { IdentifierHashService } from '../../platform/identifier-hash.service';
@@ -39,7 +41,9 @@ export function agentProgramEnabled(
 @Module({
   // AppConfigModule is not global: the client invitations read
   // AGENT_OTP_DUMMY_* from it, exactly as the OTP service does.
-  imports: [AdminModule, PlatformModule, AppConfigModule],
+  // ProfilesModule: an accepted client's member profile is written by the
+  // member side's own ProfileService.
+  imports: [AdminModule, PlatformModule, AppConfigModule, ProfilesModule],
   controllers: [
     AgentAuthController,
     AgentController,
@@ -61,6 +65,7 @@ export function agentProgramEnabled(
         // The reference-data module is global.
         LocationService,
         ReligionService,
+        ProfileService,
       ],
       useFactory: (
         prisma: PrismaService,
@@ -72,6 +77,7 @@ export function agentProgramEnabled(
         config: AppConfigService,
         locations: LocationService,
         religions: ReligionService,
+        profiles: ProfileService,
       ): AgentProgram =>
         buildAgentProgram({
           prisma,
@@ -83,6 +89,7 @@ export function agentProgramEnabled(
           agentOtp: config.agentOtp,
           locations,
           religions,
+          profiles,
           env: process.env,
         }),
     },

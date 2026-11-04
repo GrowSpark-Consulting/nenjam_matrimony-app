@@ -356,6 +356,23 @@ export interface AgentClientAccountPort {
   mintSessionToken(uid: string): Promise<string>;
 }
 
+/**
+ * The member profile (`user_profiles`) of an accepted client, made from the
+ * registration draft accept wrote, exactly as a member's own registration
+ * save makes it, so the member app opens the home page and not the
+ * registration wizard. Not in a transaction: it runs after accept commits.
+ */
+export interface AgentClientMemberProfilePort {
+  /** Whether the member already has her profile row. */
+  exists(memberId: string): Promise<boolean>;
+  /**
+   * Makes it from her registration draft. Throws when it fails; makes
+   * nothing (and does not throw) when the draft lacks what a member's own
+   * save would need, which `exists` then shows.
+   */
+  createFromDraft(memberId: string): Promise<void>;
+}
+
 // --- Master data for the client profile ---------------------------------------
 
 /**

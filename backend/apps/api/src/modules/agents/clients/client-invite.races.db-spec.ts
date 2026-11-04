@@ -37,13 +37,23 @@ import {
   FakeAgentSettings,
 } from '../testing/fake-agent-platform';
 import { FakeAgentSecretSealer } from '../testing/fake-agent-secret-sealer';
+import {
+  realMemberProfiles,
+  realProfileService,
+  seedClientLocation,
+} from '../testing/real-member-profiles';
 import { ClientInviteService } from './client-invite.service';
 
 const db = openTestDatabase();
 const prisma = db.prisma;
 
 afterAll(() => db.close());
-beforeEach(() => freshTestDatabase(prisma));
+beforeEach(async () => {
+  await freshTestDatabase(prisma);
+  // Her member profile is written by the real ProfileService, which checks
+  // the location codes against the master data.
+  await seedClientLocation(prisma);
+});
 
 const PHONE = '+919000000001';
 const T0 = new Date('2026-11-03T09:00:00.000Z');
@@ -85,6 +95,7 @@ class OverlappingDrafts extends PrismaAgentClientDraftRepository {
 function service(
   clock: FakeAgentClock,
   drafts = new PrismaAgentClientDraftRepository(prisma),
+  memberProfiles = realMemberProfiles(prisma),
 ) {
   const proofUnused = {
     canReach: () => true,
@@ -106,6 +117,7 @@ function service(
         Promise.resolve({ uid: `uid-${phone.slice(1)}`, created: true }),
       createCustomToken: (uid) => Promise.resolve(`custom-token-${uid}`),
     }),
+    memberProfiles,
     sealer,
     uow: new PrismaAgentUnitOfWork(prisma),
     audit: new PrismaTestAudit(prisma),

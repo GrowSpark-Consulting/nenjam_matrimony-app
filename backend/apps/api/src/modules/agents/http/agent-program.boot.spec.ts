@@ -6,6 +6,7 @@ import type { App } from 'supertest/types';
 import { FirebaseAuthGuard } from '@app/common';
 import { AppConfigModule } from '@app/config';
 import { AdminModule } from '../../admin/admin.module';
+import { ProfilesModule } from '../../profiles/profiles.module';
 import { PlatformModule } from '../../platform/platform.module';
 import { AGENT_REFERRAL_QUOTE } from '../agent-referral-quote.token';
 import { AgentJwtTokenSigner } from '../auth/agent-jwt-token-signer';
@@ -84,6 +85,8 @@ async function bootWith(flag: string | undefined) {
     .overrideModule(PlatformModule)
     .useModule(Empty)
     .overrideModule(AppConfigModule)
+    .useModule(Empty)
+    .overrideModule(ProfilesModule)
     .useModule(Empty)
     .overrideProvider(AGENT_PROGRAM)
     .useValue(program())

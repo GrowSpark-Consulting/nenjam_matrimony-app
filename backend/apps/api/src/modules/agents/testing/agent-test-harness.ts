@@ -72,6 +72,7 @@ import type { ClientProfile } from '../clients/client-profile';
 import { fakeLocations, fakeReligions } from './fake-client-reference-data';
 import { AGENT_CLIENTS_ENABLED_KEY } from '../settings/agent-clients-switch';
 import { FakeAgentClientAccount } from './fake-agent-client-account';
+import { FakeAgentMemberProfiles } from './fake-agent-member-profiles';
 import {
   FakeAgentClientConsentCodeStore,
   FakeAgentClientDraftRepository,
@@ -325,6 +326,7 @@ export function makeAgentHarness(
   const drafts = new FakeAgentClientDraftRepository(agents);
   const consentCodes = new FakeAgentClientConsentCodeStore();
   const clientAccount = new FakeAgentClientAccount();
+  const memberProfiles = new FakeAgentMemberProfiles();
   const clientProof = new DummyClientPhoneProof({
     otp,
     codes: consentCodes,
@@ -373,10 +375,12 @@ export function makeAgentHarness(
     agents,
     attributions,
     accounts: clientAccount,
+    memberProfiles,
     sealer,
     uow,
     audit,
     clock,
+    logger: clientLog,
     signer: clientSigner,
     options: CLIENT_TOKEN_OPTIONS,
     newId: () => `client-attribution-${++clientAttributionCounter}`,
@@ -538,6 +542,7 @@ export function makeAgentHarness(
     drafts,
     consentCodes,
     clientAccount,
+    memberProfiles,
     clientProof,
     clientLog,
     clients,

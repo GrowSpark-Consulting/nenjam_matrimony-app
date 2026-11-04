@@ -236,6 +236,7 @@ describe('agent-added clients over HTTP', () => {
         firebaseCustomToken: 'custom-token-firebase-uid-1-1',
         agentDisplayName: 'Ravi K.',
         windowEndsAt: '2026-12-27',
+        profileReady: true,
       });
       const seen = await http(w)
         .get(`/agent/clients/${id}`)

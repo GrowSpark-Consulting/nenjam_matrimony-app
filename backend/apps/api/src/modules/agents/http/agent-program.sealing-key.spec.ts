@@ -24,6 +24,7 @@ function deps(
     agentOtp: { dummyEnabled: false, dummyPhones: [] },
     locations: { resolve: () => Promise.resolve(null) },
     religions: { resolve: () => Promise.resolve(null) },
+    profiles: { syncMatchableFromDraft: () => Promise.resolve() },
     env,
     logger: { warn },
   };
