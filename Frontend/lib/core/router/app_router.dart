@@ -13,6 +13,7 @@ import '../../features/authentication/presentation/pages/login_page.dart';
 import '../../features/authentication/presentation/pages/otp_page.dart';
 import '../../features/authentication/presentation/pages/phone_verify_screen.dart';
 import '../../features/authentication/presentation/pages/registration_landing_page.dart';
+import '../../features/client_invite/presentation/pages/client_invite_page.dart';
 import '../../features/discover/domain/entities/discovery_profile_entity.dart';
 import 'profile_navigation.dart';
 import 'route_entity_pages.dart';
@@ -293,6 +294,11 @@ GoRouter createRouter(WidgetRef ref) {
         path: RouteNames.authSelection,
         name: RouteNames.authSelectionName,
         redirect: (context, state) => RouteNames.registrationLanding,
+      ),
+      GoRoute(
+        path: RouteNames.clientInvite,
+        name: RouteNames.clientInviteName,
+        builder: (context, state) => const ClientInvitePage(),
       ),
       GoRoute(
         path: RouteNames.registrationLanding,

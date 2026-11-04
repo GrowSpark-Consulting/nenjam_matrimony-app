@@ -358,6 +358,26 @@ void main() {
         reason: 'an unverified member must not reach Discover');
   });
 
+  testWidgets('verification required but the profile is for a Son: no gate', (
+    tester,
+  ) async {
+    // Only "Myself" owes a selfie. Same unverified backend state as above.
+    final repository = _ControllableRepository()..profileCreatedFor = 'Son';
+    final container = containerWith(
+      repository,
+      _RecordingStarter(),
+      faceVerification: _verificationRequired,
+    );
+    addTearDown(container.dispose);
+
+    await pumpVerifyStep(tester, container);
+    await enterCode(tester);
+
+    expect(repository.finalizeCalls, 1);
+    expect(find.text('discover-reached'), findsOneWidget);
+    expect(find.text('face-verification-reached'), findsNothing);
+  });
+
   testWidgets('already verified: the new member goes straight to Discover', (
     tester,
   ) async {
@@ -450,6 +470,19 @@ class _ControllableRepository extends RecordingRegistrationRepository {
   /// Every finalize request, including ones that failed. The inherited
   /// `finalizeCalls` counts successes only.
   int finalizeAttempts = 0;
+
+  /// What `GET /profiles/draft` reports for "Who is this profile for?". The
+  /// face-verification gate reads it to decide whether a selfie is owed at
+  /// all, so the gate tests below need the member's real answer on the
+  /// backend — as it is after onboarding saved it.
+  String profileCreatedFor = 'Myself';
+
+  @override
+  Future<Map<String, dynamic>> getDraft() async => {
+    'data': {
+      'basicDetails': {'profileCreatedFor': profileCreatedFor},
+    },
+  };
 
   @override
   Future<void> updateReligionDetails(

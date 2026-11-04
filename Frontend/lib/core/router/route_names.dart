@@ -10,6 +10,9 @@ abstract final class RouteNames {
   static const String onboarding = '/onboarding';
   static const String login = '/login';
 
+  /// Way 2: an agent-added client confirms her invitation (signed out).
+  static const String clientInvite = '/client-invite';
+
   /// The email/password form. No longer the auth entry — Welcome Back and
   /// Sign Up are — but still the screen those two open for the email and
   /// password routes, so the working forms are reused rather than rebuilt.
@@ -108,6 +111,7 @@ abstract final class RouteNames {
   static const String registrationLandingName = 'registrationLanding';
   static const String onboardingName = 'onboarding';
   static const String loginName = 'login';
+  static const String clientInviteName = 'clientInvite';
   static const String loginFormName = 'loginForm';
   static const String otpName = 'otp';
   static const String loginOtpName = 'loginOtp';
@@ -192,6 +196,7 @@ abstract final class RouteNames {
     registrationLanding,
     onboarding,
     login,
+    clientInvite,
     loginForm,
     createProfileFor,
     onboardingNameDob,

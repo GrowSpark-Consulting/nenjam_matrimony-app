@@ -2,6 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nenjam_matrimony/core/router/route_names.dart';
+import 'package:nenjam_matrimony/core/services/storage_service.dart';
+import 'package:nenjam_matrimony/features/registration/domain/models/profile_for_relation.dart';
+import 'package:nenjam_matrimony/features/registration/domain/models/selfie_verification_requirement.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nenjam_matrimony/features/authentication/data/services/firebase_auth_service.dart';
 import 'package:nenjam_matrimony/features/authentication/presentation/providers/auth_providers.dart';
 import 'package:nenjam_matrimony/features/authentication/presentation/utils/post_auth_destination.dart';
@@ -138,12 +142,22 @@ class _FakeFaceVerificationRepository implements FaceVerificationRepository {
 
   final FaceVerificationState _state;
 
-  @override
-  Future<FaceVerificationState> getState() async => _state;
+  /// Every verification call the resolver made — a non-"Myself" profile must
+  /// leave all of these at zero.
+  static int getStateCalls = 0;
+  static int startSessionCalls = 0;
 
   @override
-  Future<LivenessSessionTicket> startSession({required bool consent}) =>
-      throw UnimplementedError();
+  Future<FaceVerificationState> getState() async {
+    getStateCalls++;
+    return _state;
+  }
+
+  @override
+  Future<LivenessSessionTicket> startSession({required bool consent}) {
+    startSessionCalls++;
+    throw UnimplementedError();
+  }
 
   @override
   Future<FaceVerificationResult> complete({
@@ -826,10 +840,15 @@ void main() {
   });
 
   group('Face verification gate', () {
+    setUp(() {
+      _FakeFaceVerificationRepository.getStateCalls = 0;
+      _FakeFaceVerificationRepository.startSessionCalls = 0;
+    });
+
     test('a finalized, unverified member is sent to face verification, not Discover',
         () async {
       final c = _container(
-        draft: () async => _draftBody(),
+        draft: () async => _answeredDraft(),
         hasFinalizedProfile: true,
         faceVerification: const FaceVerificationState(
           status: FaceVerificationStatus.unverified,
@@ -846,7 +865,7 @@ void main() {
 
     test('a verified member reaches Discover', () async {
       final c = _container(
-        draft: () async => _draftBody(),
+        draft: () async => _answeredDraft(),
         hasFinalizedProfile: true,
         faceVerification: const FaceVerificationState(
           status: FaceVerificationStatus.verified,
@@ -874,7 +893,7 @@ void main() {
     test('a REVOKED member (primary photo changed) is sent back to verify',
         () async {
       final c = _container(
-        draft: () async => _draftBody(),
+        draft: () async => _answeredDraft(),
         hasFinalizedProfile: true,
         faceVerification: const FaceVerificationState(
           status: FaceVerificationStatus.revoked,
@@ -887,6 +906,183 @@ void main() {
       );
 
       expect(await _resolve(c), RouteNames.faceVerification);
+    });
+
+    const unverifiedAndStartable = FaceVerificationState(
+      status: FaceVerificationStatus.unverified,
+      verifiedAt: null,
+      canStart: true,
+      blockedReason: null,
+      attemptsRemainingToday: 3,
+      retryAfter: null,
+    );
+
+    group('conditional on "Who is this profile for?"', () {
+      test('Myself cannot bypass it (finalized profile)', () async {
+        final c = _container(
+          draft: () async => _answeredDraft(relation: 'Myself'),
+          hasFinalizedProfile: true,
+          faceVerification: unverifiedAndStartable,
+        );
+        expect(await _resolve(c), RouteNames.faceVerification);
+        expect(_FakeFaceVerificationRepository.getStateCalls, 1);
+      });
+
+      test('Myself cannot bypass it (profile still being finalized)', () async {
+        final c = _container(
+          draft: () async => _answeredDraft(relation: 'Myself'),
+          faceVerification: unverifiedAndStartable,
+        );
+        expect(await _resolve(c), RouteNames.faceVerification);
+      });
+
+      // Every other option the app offers, one case each — a new
+      // ProfileForRelation value that is not Myself is covered automatically.
+      for (final relation in ProfileForRelation.values.where(
+        (r) => r != ProfileForRelation.myself,
+      )) {
+        test('${relation.storageValue} skips it and calls no verification API',
+            () async {
+          final finalized = _container(
+            draft: () async => _answeredDraft(relation: relation.storageValue),
+            hasFinalizedProfile: true,
+            faceVerification: unverifiedAndStartable,
+          );
+          expect(await _resolve(finalized), RouteNames.discover);
+
+          final finishing = _container(
+            draft: () async => _answeredDraft(relation: relation.storageValue),
+            faceVerification: unverifiedAndStartable,
+          );
+          expect(await _resolve(finishing), RouteNames.discover);
+
+          expect(_FakeFaceVerificationRepository.getStateCalls, 0);
+          expect(_FakeFaceVerificationRepository.startSessionCalls, 0);
+        });
+      }
+
+      test('a value this build does not offer is not Myself, so it skips',
+          () async {
+        final c = _container(
+          draft: () async => _answeredDraft(relation: 'Cousin'),
+          hasFinalizedProfile: true,
+          faceVerification: unverifiedAndStartable,
+        );
+        expect(await _resolve(c), RouteNames.discover);
+        expect(_FakeFaceVerificationRepository.getStateCalls, 0);
+      });
+
+      test('a skipped selfie never blocks completion or resume', () async {
+        // Resume mid-registration as a Son: the chain still walks the real
+        // incomplete step, and never detours through face verification.
+        final c = _container(
+          draft: () async => _answeredDraft(relation: 'Son', aboutMe: ''),
+          user: _contactableUser(),
+          faceVerification: unverifiedAndStartable,
+        );
+        expect(await _resolve(c), RouteNames.onboardingAbout);
+        expect(_FakeFaceVerificationRepository.getStateCalls, 0);
+
+        // And a draft that has not answered "profile is for" resumes there,
+        // not at a selfie.
+        final fresh = _container(
+          draft: () async => _draftBody(),
+          faceVerification: unverifiedAndStartable,
+        );
+        expect(await _resolve(fresh), RouteNames.createProfileFor);
+        expect(_FakeFaceVerificationRepository.getStateCalls, 0);
+      });
+
+      test('changing the answer recalculates the requirement', () async {
+        // Same account, first saved as Myself, later edited to Daughter.
+        var relation = 'Myself';
+        final c1 = _container(
+          draft: () async => _answeredDraft(relation: relation),
+          hasFinalizedProfile: true,
+          faceVerification: unverifiedAndStartable,
+        );
+        expect(await _resolve(c1), RouteNames.faceVerification);
+
+        relation = 'Daughter';
+        final c2 = _container(
+          draft: () async => _answeredDraft(relation: relation),
+          hasFinalizedProfile: true,
+          faceVerification: unverifiedAndStartable,
+        );
+        expect(await _resolve(c2), RouteNames.discover);
+
+        relation = 'Myself';
+        final c3 = _container(
+          draft: () async => _answeredDraft(relation: relation),
+          hasFinalizedProfile: true,
+          faceVerification: unverifiedAndStartable,
+        );
+        expect(await _resolve(c3), RouteNames.faceVerification);
+      });
+
+      test('an unreadable draft does not gate (ownership unknown)', () async {
+        final c = _container(
+          draft: () async => throw Exception('offline'),
+          hasFinalizedProfile: true,
+          faceVerification: unverifiedAndStartable,
+        );
+        expect(await _resolve(c), RouteNames.discover);
+        expect(_FakeFaceVerificationRepository.getStateCalls, 0);
+      });
+    });
+
+    group('referral-created profile', () {
+      setUpAll(() async {
+        SharedPreferences.setMockInitialValues({});
+        await storageService.init();
+      });
+      tearDown(() async => storageService.setReferralCreatedProfile(false));
+
+      test('skips it even though the backend stores the client as Myself',
+          () async {
+        await storageService.setReferralCreatedProfile(true);
+        final c = _container(
+          draft: () async => _answeredDraft(relation: 'Myself'),
+          hasFinalizedProfile: true,
+          faceVerification: unverifiedAndStartable,
+        );
+        expect(await _resolve(c), RouteNames.discover);
+        expect(_FakeFaceVerificationRepository.getStateCalls, 0);
+        expect(_FakeFaceVerificationRepository.startSessionCalls, 0);
+      });
+
+      test('sign-out clears the marker so the next member is not exempt',
+          () async {
+        await storageService.setReferralCreatedProfile(true);
+        await storageService.clearUserData();
+        expect(storageService.referralCreatedProfile, isFalse);
+        final c = _container(
+          draft: () async => _answeredDraft(relation: 'Myself'),
+          hasFinalizedProfile: true,
+          faceVerification: unverifiedAndStartable,
+        );
+        expect(await _resolve(c), RouteNames.faceVerification);
+      });
+    });
+  });
+
+  group('selfieVerificationRequired', () {
+    test('only Myself, and never for a referral-created profile', () {
+      expect(selfieVerificationRequired(profileCreatedFor: 'Myself'), isTrue);
+      expect(selfieVerificationRequired(profileCreatedFor: ' Myself '), isTrue);
+      expect(
+        selfieVerificationRequired(
+          profileCreatedFor: 'Myself',
+          referralCreated: true,
+        ),
+        isFalse,
+      );
+      for (final v in ['Son', 'Daughter', 'Brother', 'Sister', 'Friend',
+          'Relative', '', 'myself', 'Other']) {
+        expect(selfieVerificationRequired(profileCreatedFor: v), isFalse,
+            reason: v);
+      }
+      expect(selfieVerificationRequired(profileCreatedFor: null), isFalse);
     });
   });
 }

@@ -126,6 +126,20 @@ class StorageService {
     await _prefs.remove(AppConstants.keyPendingReferralCode);
   }
 
+  // ─── Referral-created profile marker (local-only) ────────────────
+  //
+  // The backend stores an agent-added client's profile as
+  // `profileCreatedFor: 'Myself'` and exposes no member-facing field that says
+  // a referral partner created it, so the one durable signal this device has
+  // is that the member accepted a client invitation. Written only after the
+  // backend's accept succeeded.
+  bool get referralCreatedProfile =>
+      _prefs.getBool(AppConstants.keyReferralCreatedProfile) ?? false;
+
+  Future<void> setReferralCreatedProfile(bool value) async {
+    await _prefs.setBool(AppConstants.keyReferralCreatedProfile, value);
+  }
+
   // ─── Onboarding completion (development bridge) ──────────────────
   //
   // Signup collects a whole profile before asking for any credential, so a
@@ -332,6 +346,7 @@ class StorageService {
       // A code that never attached belongs to the member who signed out; it
       // must not attach to whoever signs in next on this device.
       clearPendingReferralCode(),
+      _prefs.remove(AppConstants.keyReferralCreatedProfile),
     ]);
   }
 }

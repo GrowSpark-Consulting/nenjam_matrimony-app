@@ -17,6 +17,8 @@ import 'firebase_options.dart';
 import 'core/providers/locale_provider.dart';
 import 'core/realtime/realtime_providers.dart';
 import 'features/inbox/presentation/providers/chat_realtime_sync.dart';
+import 'features/referral/data/services/link_referral_store.dart';
+import 'features/referral/data/services/referral_link_capture.dart';
 import 'features/inbox/presentation/providers/inbox_providers.dart';
 import 'features/notifications/data/services/push_notification_service.dart';
 import 'features/notifications/presentation/providers/notification_providers.dart';
@@ -78,6 +80,12 @@ void main() async {
     storageService.init(),
   ]);
   StoryPerf.mark('init complete (orientation+firebase+config+storage)');
+
+  // A shared link (`/?ref=CODE`) must be read before the router redirects
+  // away from the landing URL. Web only: other platforms have no landing URL.
+  if (kIsWeb) {
+    captureReferralFromUrl(Uri.base, createLinkReferralStore());
+  }
 
   // Must be registered before runApp — a top-level function so the OS can
   // invoke it in a separate background isolate while the app is backgrounded

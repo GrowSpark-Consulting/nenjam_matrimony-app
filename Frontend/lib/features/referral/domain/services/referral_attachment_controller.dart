@@ -58,7 +58,11 @@ class ReferralAttachmentController {
     required PendingReferralStore store,
     required bool Function() isSignedIn,
     bool Function()? isEnabled,
-  }) : _repository = repository,
+    void Function()? onSettled,
+    void Function()? onAttributed,
+  }) : _onSettled = onSettled,
+       _onAttributed = onAttributed,
+       _repository = repository,
        _store = store,
        _isSignedIn = isSignedIn,
        _isEnabled = isEnabled ?? _always;
@@ -76,6 +80,28 @@ class ReferralAttachmentController {
   /// not live): then nothing is sent and any stored code is left alone.
   final bool Function() _isEnabled;
 
+  /// Called when the stored code reaches a final state (attached or refused
+  /// for good) — used to drop the landing-link copy of the same code.
+  final void Function()? _onSettled;
+
+  /// Called only when the backend itself confirms the member is attributed to
+  /// an agent — `200 attached` or `409 ALREADY_ATTRIBUTED`. Never on a
+  /// refusal or a retryable failure, so it cannot be set by a code that did
+  /// not actually attribute anyone.
+  final void Function()? _onAttributed;
+
+  void _attributed() {
+    try {
+      _onAttributed?.call();
+    } catch (_) {}
+  }
+
+  void _settled() {
+    try {
+      _onSettled?.call();
+    } catch (_) {}
+  }
+
   Future<ReferralAttachOutcome>? _inFlight;
 
   Future<ReferralAttachOutcome> attachPending() {
@@ -86,7 +112,11 @@ class ReferralAttachmentController {
     try {
       if (!_isEnabled()) return ReferralAttachOutcome.nothingPending;
       final pending = _store.read();
-      if (pending == null) return ReferralAttachOutcome.nothingPending;
+      if (pending == null) {
+        // A signed-in member has no use for a leftover landing-link code.
+        if (_isSignedIn()) _settled();
+        return ReferralAttachOutcome.nothingPending;
+      }
       if (!_isSignedIn()) return ReferralAttachOutcome.notSignedIn;
 
       try {
@@ -99,6 +129,8 @@ class ReferralAttachmentController {
         final mapped = outcomeForError(e);
         if (mapped != ReferralAttachOutcome.retryLater) {
           await _store.clear();
+          if (mapped == ReferralAttachOutcome.alreadyAttributed) _attributed();
+          _settled();
           return mapped;
         }
         return _retryOrGiveUp(pending);
@@ -106,6 +138,8 @@ class ReferralAttachmentController {
         return _retryOrGiveUp(pending);
       }
       await _store.clear();
+      _attributed();
+      _settled();
       return ReferralAttachOutcome.attached;
     } catch (_) {
       return ReferralAttachOutcome.retryLater;
@@ -118,6 +152,7 @@ class ReferralAttachmentController {
     final next = pending.withAttempt();
     if (next.attempts >= maxAttempts) {
       await _store.clear();
+      _settled();
       return ReferralAttachOutcome.gaveUp;
     }
     await _store.write(next);

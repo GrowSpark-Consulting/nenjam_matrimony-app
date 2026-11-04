@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import '../../data/services/link_referral_store.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -73,6 +76,12 @@ final referralCodeEntryEnabledProvider = Provider<bool>(
   (ref) => ref.watch(referralBackendModeProvider) != ReferralBackendMode.off,
 );
 
+/// Raw `?ref=` from a shared link, waiting for the signup box (see
+/// [LinkReferralStore]). One instance for the process.
+final linkReferralStoreProvider = Provider<LinkReferralStore>(
+  (ref) => createLinkReferralStore(),
+);
+
 final pendingReferralStoreProvider = Provider<PendingReferralStore>(
   (ref) => StoragePendingReferralStore(storageService),
 );
@@ -84,6 +93,15 @@ final referralAttachmentControllerProvider =
       (ref) => ReferralAttachmentController(
         repository: ref.watch(referralRepositoryProvider),
         store: ref.watch(pendingReferralStoreProvider),
+        onSettled: ref.read(linkReferralStoreProvider).clear,
+        // Code and link referrals both end here (a link only pre-fills the
+        // code). Remembered locally because the backend has no member-facing
+        // attribution read — see `selfieVerificationRequired`.
+        onAttributed: () => unawaited(
+          storageService
+              .setReferralCreatedProfile(true)
+              .catchError((Object _) {}),
+        ),
         isEnabled: () => ref.read(referralCodeEntryEnabledProvider),
         isSignedIn: () {
           try {

@@ -9,6 +9,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/face_verification.dart';
 import '../providers/face_verification_providers.dart';
+import '../providers/selfie_requirement_provider.dart';
 
 /// Verification Center card for the selfie/Face Match check. Sits above
 /// [StepVerification] on `verification_page.dart` — deliberately not inside
@@ -21,6 +22,11 @@ class FaceVerificationCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    // Only a "Myself" profile owes a selfie; for everyone else the card is
+    // absent and GET /verification/face is never requested.
+    final required =
+        ref.watch(selfieVerificationRequiredProvider).valueOrNull ?? false;
+    if (!required) return const SizedBox.shrink();
     final status = ref.watch(faceVerificationStatusProvider);
 
     return status.when(
