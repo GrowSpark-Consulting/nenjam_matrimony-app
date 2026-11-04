@@ -199,7 +199,7 @@ Each item: `codeId`, `code`, `isPrimary`, `link`, `qrPayload`,
   **"Copy link"** button (copy `link` exactly as received; do not build or
   change it in the portal).
 - **`qrPayload`** is exactly the same string as `link`. Draw a QR code from
-  it in the portal and offer **"Download QR"** (a PNG of that QR code).
+  it in the portal and offer **"Download QR"** (an image file of that same QR; the portal's `ReferralCodeCard` already does this, saving an SVG).
   The backend sends only the string, not an image.
 - Both are **`null`** until the web address is set (the platform setting
   `referral.share_link_base_url`, seeded empty; a Super Admin sets it in
