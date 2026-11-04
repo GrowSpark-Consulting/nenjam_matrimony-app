@@ -57,6 +57,14 @@ class FakeInviteRepo implements ClientInviteRepository {
   List<ClientInvite> invites = [_invite('i1', 'Ravi K.')];
   String? customToken = _customToken;
 
+  /// `profileReady` per accept call, in order; the last one repeats.
+  List<bool?> ready = [true];
+  int acceptCount = 0;
+
+  /// Custom token per accept call (overrides [customToken] when set).
+  List<String?>? tokensPerCall;
+  (int, Object)? errorOnCall;
+
   @override
   Future<ClientOtpChallenge> requestOtp(String phone) async {
     calls.add('otp:$phone');
@@ -89,10 +97,24 @@ class FakeInviteRepo implements ClientInviteRepository {
       acceptError = null; // fail once, then succeed (retry tests)
       throw e;
     }
+    final eoc = errorOnCall;
+    if (eoc != null && eoc.$1 == acceptCount) {
+      acceptCount++;
+      throw eoc.$2;
+    }
+    final r =
+        ready[acceptCount < ready.length ? acceptCount : ready.length - 1];
+    acceptCount++;
     return ClientAcceptResult(
-      firebaseCustomToken: customToken,
+      firebaseCustomToken: tokensPerCall != null
+          ? tokensPerCall![(acceptCount - 1).clamp(
+              0,
+              tokensPerCall!.length - 1,
+            )]
+          : customToken,
       agentDisplayName: 'Ravi K.',
       windowEndsAt: '2026-12-27',
+      profileReady: r,
     );
   }
 
@@ -139,12 +161,16 @@ ApiException _api(int status, String code, {int? retry}) =>
 void main() {
   late FakeInviteRepo repo;
   late FakeAuth auth;
+  late List<(String, Map<String, Object>)> warnings;
 
   ProviderContainer make() {
     final c = ProviderContainer(
       overrides: [
         clientInviteRepositoryProvider.overrideWithValue(repo),
         firebaseAuthServiceProvider.overrideWithValue(auth),
+        clientInviteWarningSinkProvider.overrideWithValue(
+          (event, fields) => warnings.add((event, fields)),
+        ),
       ],
     );
     addTearDown(c.dispose);
@@ -155,6 +181,7 @@ void main() {
 
   setUp(() {
     repo = FakeInviteRepo();
+    warnings = [];
     auth = FakeAuth();
     SharedPreferences.setMockInitialValues({});
   });
@@ -305,6 +332,166 @@ void main() {
       // A further accept has no token left to use.
       await ctl.accept('i1');
       expect(repo.calls.where((x) => x.startsWith('accept')), hasLength(1));
+    });
+
+    test('profileReady true: ONE accept call, then Firebase sign-in', () async {
+      final c = make();
+      final ctl = await toInvites(c);
+      await ctl.accept('i1');
+      expect(repo.calls.where((x) => x.startsWith('accept')), hasLength(1));
+      expect(auth.customTokens, [_customToken]);
+      expect(
+        c.read(clientInviteControllerProvider).step,
+        ClientInviteStep.signedIn,
+      );
+    });
+
+    test('profileReady false then true: exactly TWO accept calls, signs in '
+        'once', () async {
+      repo.ready = [false, true];
+      final c = make();
+      final ctl = await toInvites(c);
+      await ctl.accept('i1');
+      expect(repo.calls.where((x) => x.startsWith('accept')), hasLength(2));
+      expect(auth.customTokens, [_customToken]);
+      expect(
+        c.read(clientInviteControllerProvider).step,
+        ClientInviteStep.signedIn,
+      );
+    });
+
+    test('second response still not ready: signs in with the SECOND token, '
+        'goes home state, exactly two calls, one warning', () async {
+      repo.ready = [false, false];
+      repo.tokensPerCall = ['first-token-AAA', 'second-token-BBB'];
+      final c = make();
+      final ctl = await toInvites(c);
+      await ctl.accept('i1');
+      expect(repo.calls.where((x) => x.startsWith('accept')), hasLength(2));
+      expect(auth.customTokens, ['second-token-BBB']);
+      final s = c.read(clientInviteControllerProvider);
+      expect(s.step, ClientInviteStep.signedIn);
+      expect(s.issue, isNull, reason: 'she is never asked to retry');
+      expect(warnings, hasLength(1));
+      expect(warnings.single.$1, 'client_invite.accept_profile_not_ready');
+      // No third call, even when asked again after sign-in.
+      await ctl.accept('i1');
+      expect(repo.calls.where((x) => x.startsWith('accept')), hasLength(2));
+    });
+
+    test('the warning carries no personal data', () async {
+      repo.ready = [false, false];
+      repo.tokensPerCall = ['first-token-AAA', 'second-token-BBB'];
+      final c = make();
+      final ctl = await toInvites(c);
+      await ctl.accept('i1');
+      final text = warnings.map((w) => '${w.$1} ${w.$2}').join(' ');
+      for (final secret in [
+        '9876543210',
+        'i1',
+        'Ravi',
+        'Priya',
+        _secretToken,
+        _customToken,
+        'first-token',
+        'second-token',
+      ]) {
+        expect(text, isNot(contains(secret)), reason: secret);
+      }
+      expect(warnings.single.$2, {'acceptCalls': 2, 'secondCall': 'not_ready'});
+    });
+
+    test(
+      'no warning when the second response is ready, or the first was',
+      () async {
+        for (final ready in [
+          [true],
+          [false, true],
+        ]) {
+          repo = FakeInviteRepo()..ready = ready;
+          warnings.clear();
+          final c = make();
+          final ctl = await toInvites(c);
+          await ctl.accept('i1');
+          expect(warnings, isEmpty, reason: '$ready');
+        }
+      },
+    );
+
+    test('first not ready, second ready: the second token is used', () async {
+      repo.ready = [false, true];
+      repo.tokensPerCall = ['first-token-AAA', 'second-token-BBB'];
+      final c = make();
+      final ctl = await toInvites(c);
+      await ctl.accept('i1');
+      expect(auth.customTokens, ['second-token-BBB']);
+    });
+
+    test('a missing profileReady is treated as not ready (two calls, then '
+        'sign-in)', () async {
+      repo.ready = [null];
+      final c = make();
+      final ctl = await toInvites(c);
+      await ctl.accept('i1');
+      expect(repo.calls.where((x) => x.startsWith('accept')), hasLength(2));
+      expect(auth.customTokens, [_customToken]);
+      expect(warnings, hasLength(1));
+    });
+
+    test('a failing second call falls back to the first token, one warning, '
+        'no loop', () async {
+      repo.ready = [false];
+      repo.tokensPerCall = ['first-token-AAA'];
+      repo.errorOnCall = (1, const ClientInviteNetworkException());
+      final c = make();
+      final ctl = await toInvites(c);
+      await ctl.accept('i1');
+      expect(repo.calls.where((x) => x.startsWith('accept')), hasLength(2));
+      expect(auth.customTokens, ['first-token-AAA']);
+      expect(warnings.single.$2['secondCall'], 'failed');
+    });
+
+    test(
+      'second response without a token never fabricates a sign-in',
+      () async {
+        repo.ready = [false, false];
+        repo.tokensPerCall = [null, null];
+        final c = make();
+        final ctl = await toInvites(c);
+        await ctl.accept('i1');
+        expect(repo.calls.where((x) => x.startsWith('accept')), hasLength(2));
+        expect(auth.customTokens, isEmpty);
+        expect(
+          c.read(clientInviteControllerProvider).issue,
+          ClientInviteIssue.noSignInToken,
+        );
+      },
+    );
+
+    test('profile-ready accept never touches /profiles or the draft', () async {
+      repo.ready = [false, true];
+      final c = make();
+      final ctl = await toInvites(c);
+      await ctl.accept('i1');
+      expect(
+        repo.calls.where((x) => x.contains('profile') || x.contains('draft')),
+        isEmpty,
+      );
+    });
+
+    test('profileReady is parsed from the response, not invented', () {
+      expect(
+        ClientAcceptResult.fromJson({'firebaseCustomToken': 'x'}).profileReady,
+        isNull,
+      );
+      expect(
+        ClientAcceptResult.fromJson({'profileReady': 'true'}).profileReady,
+        isNull,
+      );
+      expect(
+        ClientAcceptResult.fromJson({'profileReady': false}).profileReady,
+        isFalse,
+      );
     });
 
     test('a dropped connection can be retried with the same token', () async {
@@ -551,6 +738,7 @@ void main() {
             'firebaseCustomToken': _customToken,
             'agentDisplayName': 'Ravi K.',
             'windowEndsAt': '2026-12-27',
+            'profileReady': true,
           },
         ),
         (204, null),
@@ -581,6 +769,7 @@ void main() {
         expect(x.headers['Authorization'], 'Bearer $_secretToken');
       }
       expect(accepted.firebaseCustomToken, _customToken);
+      expect(accepted.profileReady, isTrue);
     });
 
     test('refusals carry their contract code; 429 reads Retry-After; '
@@ -644,8 +833,13 @@ void main() {
                     builder: (_, __) => const ClientInvitePage(),
                   ),
                   GoRoute(
-                    path: '/other',
-                    builder: (_, __) => const Scaffold(body: Text('navigated')),
+                    path: RouteNames.discover,
+                    builder: (_, __) =>
+                        const Scaffold(body: Text('home-reached')),
+                  ),
+                  GoRoute(
+                    path: RouteNames.onboardingNameDob,
+                    builder: (_, __) => const Scaffold(body: Text('wizard')),
                   ),
                 ],
               ),
@@ -653,8 +847,9 @@ void main() {
       );
     }
 
-    testWidgets('full happy path ends on a signed-in message with no '
-        'navigation', (tester) async {
+    testWidgets('full happy path signs in and opens the normal home', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(900, 2400);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -685,9 +880,10 @@ void main() {
 
       await tester.tap(find.text('Accept'));
       await tester.pumpAndSettle();
-      expect(find.text("You're signed in."), findsOneWidget);
-      expect(find.text('navigated'), findsNothing);
       expect(auth.customTokens, [_customToken]);
+      // Normal authenticated home; never the registration wizard.
+      expect(find.text('home-reached'), findsOneWidget);
+      expect(find.text('wizard'), findsNothing);
     });
 
     testWidgets('decline asks first, then calls reject', (tester) async {

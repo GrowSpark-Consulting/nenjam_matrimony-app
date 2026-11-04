@@ -13,8 +13,7 @@ import '../../domain/models/client_invite_models.dart';
 import '../providers/client_invite_providers.dart';
 
 /// "Added by an agent? Confirm here": phone, code, invitations, accept or
-/// decline. Ends at "you are signed in": see [ClientInviteController] for why
-/// nothing navigates afterwards.
+/// decline. After sign-in it opens the member home ([RouteNames.discover]).
 ///
 /// English only for now (the Tamil copy is not supplied yet, as with the
 /// guide's status labels). The test environment uses test codes, so nothing
@@ -89,6 +88,15 @@ class _ClientInvitePageState extends ConsumerState<ClientInvitePage> {
   Widget build(BuildContext context) {
     final state = ref.watch(clientInviteControllerProvider);
     final c = ref.read(clientInviteControllerProvider.notifier);
+
+    // Signed in as an ordinary member: open the home page. Never the
+    // registration wizard.
+    ref.listen<ClientInviteState>(clientInviteControllerProvider, (prev, next) {
+      if (prev?.step != ClientInviteStep.signedIn &&
+          next.step == ClientInviteStep.signedIn) {
+        context.go(RouteNames.discover);
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(

@@ -148,7 +148,13 @@ class ClientAcceptResult {
     required this.firebaseCustomToken,
     required this.agentDisplayName,
     required this.windowEndsAt,
+    this.profileReady,
   });
+
+  /// `profileReady` from the response, exactly as sent. True: her member
+  /// profile exists. False: it could not be made yet (accept again once).
+  /// Null: the field was missing or not a boolean; treated as not ready.
+  final bool? profileReady;
 
   /// Null/empty means "no token to exchange" (the guide says this may happen
   /// once real SMS arrives, when she already holds a Firebase session).
@@ -160,10 +166,12 @@ class ClientAcceptResult {
     final t = json['firebaseCustomToken'];
     final a = json['agentDisplayName'];
     final w = json['windowEndsAt'];
+    final ready = json['profileReady'];
     return ClientAcceptResult(
       firebaseCustomToken: t is String && t.isNotEmpty ? t : null,
       agentDisplayName: a is String ? a : null,
       windowEndsAt: w is String ? w : null,
+      profileReady: ready is bool ? ready : null,
     );
   }
 
