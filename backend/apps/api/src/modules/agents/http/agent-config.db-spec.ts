@@ -356,12 +356,20 @@ ${BASE}/?ref=NM7K2P9X`),
   });
 
   it('a stored value the rule refuses (written around the admin route) gives no link, not an error', async () => {
-    await prisma.platformSetting.update({
-      where: { key: REFERRAL_SHARE_LINK_BASE_URL_KEY },
-      data: { value: 'https://agent.nenjammatrimony.com' },
-    });
-    const [item] = await linksOf(await activeAgentWithCode());
-    expect(item).toMatchObject({ link: null, qrPayload: null });
+    const token = await activeAgentWithCode();
+    for (const value of [
+      'https://agent.nenjammatrimony.com',
+      'http://testapp.nenjammatrimony.com',
+      `${BASE}/join`,
+      `${BASE}/`,
+    ]) {
+      await prisma.platformSetting.update({
+        where: { key: REFERRAL_SHARE_LINK_BASE_URL_KEY },
+        data: { value },
+      });
+      const [item] = await linksOf(token);
+      expect([value, item.link, item.qrPayload]).toEqual([value, null, null]);
+    }
   });
 
   it('the admin settings refuse a bad value with the registered validator and keep the stored null', async () => {
