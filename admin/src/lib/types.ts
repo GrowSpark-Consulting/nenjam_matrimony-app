@@ -248,3 +248,170 @@ export interface RolesResponse {
   }>;
   permissions: Array<{ key: string; description: string; isSensitive: boolean }>;
 }
+
+/** The agent program (`/admin/agents/*`, owned by the agent-program backend). */
+export type AgentStatus = 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED' | 'TERMINATED';
+
+export interface AgentsSummary {
+  byStatus: Record<AgentStatus, number>;
+  payoutDetailsAwaitingVerification: number;
+  referralsNeedingReview: number;
+  /** Null until the commission tables exist. */
+  commissionsReady: number | null;
+  payoutsCreated: number | null;
+}
+
+export interface AgentRow {
+  id: string;
+  name: string;
+  phoneMasked: string;
+  city: string;
+  state: string;
+  status: AgentStatus;
+  createdAt: string;
+  approvedAt: string | null;
+  panOnFile: boolean;
+  panVerified: boolean;
+  payoutDetailsSet: boolean;
+  payoutDetailsVerified: boolean;
+  primaryCode: string | null;
+}
+
+export interface AgentDetail {
+  id: string;
+  name: string;
+  phoneMasked: string;
+  city: string;
+  state: string;
+  status: AgentStatus;
+  rejectionReason: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  panLast4: string | null;
+  panOnFile: boolean;
+  panVerifiedAt: string | null;
+  payoutDetailsSet: boolean;
+  payoutDetails: {
+    method: 'UPI' | 'BANK';
+    display: string;
+    verifiedAt: string | null;
+    changedAt: string;
+  } | null;
+  codes: Array<{ id: string; code: string; isPrimary: boolean; isActive: boolean; createdAt: string }>;
+  counts: { referrals: number; byAttributionStatus: Record<string, number>; needsReview: number };
+  /** Null until the commission tables exist. */
+  commissions: null;
+  statusHistory: Array<{
+    from: AgentStatus;
+    to: AgentStatus;
+    at: string;
+    actorId: string | null;
+    actorType: 'STAFF' | 'MEMBER' | 'AGENT' | 'SYSTEM';
+    reason: string | null;
+  }>;
+}
+
+/** `POST /admin/agents/:id/reveal`: shown once, never stored or cached. */
+export interface RevealedValues {
+  revealedAt: string;
+  pan?: string;
+  phone?: string;
+  payoutDetails?: {
+    upi?: { vpa: string };
+    bank?: { accountHolderName: string; accountNumber: string; ifsc: string };
+  };
+}
+
+export type CommissionStatus =
+  | 'ON_HOLD'
+  | 'AWAITING_VERIFICATION'
+  | 'IN_REVIEW'
+  | 'FROZEN'
+  | 'READY'
+  | 'APPROVED'
+  | 'PAID'
+  | 'CANCELLED'
+  | 'REVERSED';
+
+export interface CommissionRow {
+  id: string;
+  agentId: string;
+  agentName: string;
+  agentStatus: AgentStatus;
+  referralId: string;
+  planName: string;
+  /** What the member paid: the cap for an override. */
+  paidPaise: number;
+  /** Null while commission.base is undecided. */
+  basePaise: number | null;
+  /** Null while the base is undecided, until set by an override. */
+  amountPaise: number | null;
+  creditedPaise: number;
+  reversedPaise: number;
+  rate: { calcType: 'PERCENTAGE'; value: number };
+  status: CommissionStatus;
+  publicStatus: string;
+  earnedOn: string;
+  holdEndsOn: string | null;
+  approvedOn: string | null;
+  paidOn: string | null;
+  payoutId: string | null;
+}
+
+export type PayoutStatus = 'CREATED' | 'PAID' | 'CANCELLED';
+
+export type PayoutIneligibleReason =
+  | 'AGENT_NOT_PAYABLE'
+  | 'PAN_NOT_VERIFIED'
+  | 'DETAILS_NOT_VERIFIED'
+  | 'WAIT_NOT_OVER'
+  | 'NOTHING_TO_PAY'
+  | 'BELOW_MINIMUM'
+  | 'PAYOUT_EXISTS'
+  | 'TAX_RULE_UNSUPPORTED'
+  | 'LEDGER_BALANCE_TOO_LOW';
+
+export interface PayableAgent {
+  agentId: string;
+  agentName: string;
+  agentCode: string | null;
+  agentStatus: AgentStatus;
+  period: string;
+  /** Approved and unpaid. */
+  balancePaise: number;
+  commissionCount: number;
+  panVerified: boolean;
+  payoutDetails: { method: 'UPI' | 'BANK'; display: string; verifiedAt: string | null } | null;
+  eligible: boolean;
+  reasons: PayoutIneligibleReason[];
+  warnings: string[];
+}
+
+export interface PayoutRow {
+  id: string;
+  agentId: string;
+  agentName: string;
+  agentCode: string | null;
+  period: string;
+  amountPaise: number;
+  taxWithheldPaise: number;
+  netPaise: number;
+  status: PayoutStatus;
+  reference: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  createdBy: string;
+  commissionIds: string[];
+  warnings: string[];
+  cancelReason: string | null;
+}
+
+export interface PayoutDetail extends PayoutRow {
+  commissions: CommissionRow[];
+  /** Present only with payout.execute and a fresh authenticator check. */
+  destination?: {
+    upi?: { vpa: string };
+    bank?: { accountHolderName: string; accountNumber: string; ifsc: string };
+  };
+}

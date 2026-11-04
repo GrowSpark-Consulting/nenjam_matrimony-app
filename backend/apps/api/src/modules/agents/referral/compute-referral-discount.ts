@@ -20,7 +20,12 @@ export interface ReferralDiscountInput {
 export interface ReferralDiscount {
   discountPaise: number;
   source: 'REFERRAL_FIRST_PLAN' | 'NONE';
-  amountPaidPaise: number;
+  /**
+   * The list price minus the discount. Plan prices are EXCLUSIVE of GST, so
+   * this is the TAXABLE amount: GST is added on top of it, and the member
+   * pays more than this. It is never what the member pays.
+   */
+  taxableAfterDiscountPaise: number;
 }
 
 const BASIS_POINTS_PER_UNIT = 10_000;
@@ -62,6 +67,6 @@ export function computeReferralDiscount(
   return {
     discountPaise,
     source: discountPaise > 0 ? 'REFERRAL_FIRST_PLAN' : 'NONE',
-    amountPaidPaise: input.listAmountPaise - discountPaise,
+    taxableAfterDiscountPaise: input.listAmountPaise - discountPaise,
   };
 }

@@ -24,7 +24,8 @@ import type { AgentTx } from './agent-unit-of-work.port';
 
 // --- OTP ------------------------------------------------------------------
 
-export type AgentOtpPurpose = 'AGENT_SIGN_IN';
+/** AGENT_CLIENT_CONSENT: an agent-added client proving her phone (Way 2). */
+export type AgentOtpPurpose = 'AGENT_SIGN_IN' | 'AGENT_CLIENT_CONSENT';
 
 export interface AgentOtpChallenge {
   challengeId: string;
@@ -93,10 +94,19 @@ export type AgentIdentifierKind = 'PHONE' | 'EMAIL' | 'PAN';
  * Contract: synchronous; two spellings of the same identifier give the same
  * hash; a different kind or value gives a different hash; the output never
  * contains the input; a value that is empty after trimming is refused with a
- * RangeError.
+ * RangeError (the real adapter reports it as AgentServiceError
+ * VALIDATION_FAILED naming the field, so it answers 400, never 500).
  */
 export interface AgentIdentifierHasher {
   hash(kind: AgentIdentifierKind, value: string): string;
+  /**
+   * The hash under EVERY active pepper version, newest first (the first one
+   * is `hash(kind, value)`). A stored hash may have been made under an older
+   * version while IDENTIFIER_HASH_PEPPERS is being rotated, so a lookup that
+   * must not miss (a duplicate check) compares against all of them. Same
+   * normalisation and the same RangeError as `hash`.
+   */
+  hashAll(kind: AgentIdentifierKind, value: string): string[];
 }
 
 // --- Permissions ----------------------------------------------------------
@@ -130,6 +140,16 @@ export interface AgentPermissionPort {
     permission: AgentPermission,
     tx?: AgentTx,
   ): Promise<void>;
+  /**
+   * The same check as `assert`, answered as a boolean (never rejects for a
+   * missing permission). For a route that shows sensitive data only to
+   * holders of a permission instead of refusing everyone else.
+   */
+  has(
+    actorId: string,
+    permission: AgentPermission,
+    tx?: AgentTx,
+  ): Promise<boolean>;
 }
 
 // --- Audit ----------------------------------------------------------------
@@ -141,6 +161,15 @@ export interface AgentAuditEntry {
   entityId: string | null;
   /** Never put tokens, OTPs, PAN or bank details here. */
   metadata?: Record<string, unknown>;
+  /** Admin actions: why (3 to 500 characters, the admin's own words). */
+  reason?: string;
+  /** Admin actions: the relevant fields before and after, never a secret. */
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
+  /** Who is acting: staff, a member, an agent, or the system. */
+  actorType?: 'STAFF' | 'MEMBER' | 'AGENT' | 'SYSTEM';
+  /** The request the change came from (request id, IP, user agent). */
+  context?: { requestId: string; ipAddress?: string; userAgent?: string };
 }
 
 /**

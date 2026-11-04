@@ -38,11 +38,20 @@ function build() {
   const prisma = {
     $transaction: jest.fn((cb: (t: unknown) => unknown) => cb(tx)),
   };
+  const dispatcher = { dispatchSoon: jest.fn() };
+  const hasher = {
+    available: true,
+    hashIdentifier: jest.fn(
+      (kind: string, value: string) => `v1:${kind}:${value}`,
+    ),
+  };
   const service = new RazorpayWebhookService(
     prisma as never,
     lifecycle as never,
+    dispatcher as never,
+    hasher as never,
   );
-  return { service, tx, lifecycle };
+  return { service, tx, lifecycle, dispatcher };
 }
 
 const captured = {
@@ -81,11 +90,32 @@ describe('RazorpayWebhookService', () => {
       currency: 'INR',
       actorId: null,
       via: 'WEBHOOK',
+      paymentSourceHash: null,
     });
   });
 
-  it('applies a redelivered event exactly once', async () => {
-    const { service, lifecycle } = build();
+  it('hashes the payer’s UPI id and delivers the payment event after commit', async () => {
+    const { service, lifecycle, dispatcher } = build();
+    const upi = {
+      ...captured,
+      payload: {
+        payment: {
+          entity: { ...captured.payload.payment.entity, vpa: 'Priya@OkICICI' },
+        },
+      },
+    };
+    await service.handle('evt_upi', upi, raw(upi));
+    expect(lifecycle.confirmPayment).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        paymentSourceHash: 'v1:UPI:Priya@OkICICI',
+      }),
+    );
+    expect(dispatcher.dispatchSoon).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies a redelivered event exactly once, delivering events once', async () => {
+    const { service, lifecycle, dispatcher } = build();
     await service.handle('evt_1', captured, raw(captured));
     await expect(
       service.handle('evt_1', captured, raw(captured)),
@@ -93,6 +123,7 @@ describe('RazorpayWebhookService', () => {
       status: 'DUPLICATE',
     });
     expect(lifecycle.confirmPayment).toHaveBeenCalledTimes(1);
+    expect(dispatcher.dispatchSoon).toHaveBeenCalledTimes(1);
   });
 
   it('falls back to the payload hash as the id when the event-id header is missing', async () => {

@@ -24,6 +24,8 @@ import type { ReferralStage } from '../referral/agent-referral-view';
 import type { AgentTokenSigner } from '../ports/agent-infra-ports';
 import {
   AGENT_ACCESS_TOKEN_TTL_SECONDS_KEY,
+  AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY,
+  AGENT_CLIENT_DRAFT_LIMIT_KEY,
   AGENT_OTP_RESEND_AFTER_SECONDS_KEY,
   AGENT_REFRESH_TOKEN_TTL_SECONDS_KEY,
   REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY,
@@ -51,7 +53,29 @@ import {
   FakeReferralCodeRepository,
 } from './fake-agent-repositories';
 import { FakeAgentSecretSealer } from './fake-agent-secret-sealer';
+import { AgentMoneyService } from '../agent/agent-money.service';
+import {
+  FakeAgentLedgerRepository,
+  FakeAgentPayoutRepository,
+  FakeCommissionRepository,
+} from './fake-agent-commission-repositories';
+import {
+  FakeAgentCommissionDisplay,
+  FakeAgentDeviceRepository,
+} from './fake-agent-money-read';
 import { FakeAgentUnitOfWork } from './fake-agent-unit-of-work';
+import { DummyClientPhoneProof } from '../adapters/platform/dummy-client-phone-proof';
+import { AgentClientDraftService } from '../clients/agent-client-draft.service';
+import { ClientInviteService } from '../clients/client-invite.service';
+import { ReferenceDataClientLabels } from '../adapters/platform/reference-data-client-labels';
+import type { ClientProfile } from '../clients/client-profile';
+import { fakeLocations, fakeReligions } from './fake-client-reference-data';
+import { AGENT_CLIENTS_ENABLED_KEY } from '../settings/agent-clients-switch';
+import { FakeAgentClientAccount } from './fake-agent-client-account';
+import {
+  FakeAgentClientConsentCodeStore,
+  FakeAgentClientDraftRepository,
+} from './fake-agent-clients';
 
 export const PHONE = '+919876543210';
 export const START = new Date('2026-10-28T10:00:00.000Z');
@@ -65,7 +89,68 @@ export const CODE_LIMIT = 2;
 export const VALIDATION_WINDOW = 60;
 export const CREDIT_WINDOW_DAYS = 60;
 
-export const AUTH_OPTIONS: AgentAuthOptions = {
+/** Agent-added clients: two approved test numbers and one that is not. */
+export const CLIENT_PHONE = '+919000000001';
+export const CLIENT_PHONE_2 = '+919000000002';
+export const UNAPPROVED_PHONE = '+919999999999';
+export const CLIENT_DRAFT_LIMIT = 3;
+export const CLIENT_EXPIRY_DAYS = 14;
+/** The client token's own audience (the agent portal's is AUTH_OPTIONS.audience). */
+export const CLIENT_TOKEN_OPTIONS = {
+  issuer: 'nenjam-agent',
+  audience: 'client-invite',
+};
+/**
+ * A client profile with every required field and a few optional ones, as
+ * an agent sends it (master-data codes only).
+ */
+export const CLIENT_DETAILS: ClientProfile = {
+  basicDetails: {
+    firstName: 'Priya',
+    lastName: 'Sundaram',
+    gender: 'FEMALE',
+    dob: '1998-04-12',
+    maritalStatus: 'NEVER_MARRIED',
+  },
+  religionDetails: { religionCode: 'HINDU', communityCode: 'HINDU-VELLALAR' },
+  locationDetails: {
+    countryCode: 'IN',
+    stateCode: 'IN-TN',
+    cityCode: 'IN-TN-MADURAI',
+  },
+  educationDetails: {
+    qualification: 'B.E / B.Tech',
+    annualIncome: '10 - 20 Lakhs',
+  },
+  lifestyleDetails: { eatingHabit: 'Vegetarian' },
+  partnerPreference: {
+    preferredAgeRange: '26-30',
+    extended: { diet: 'Vegetarian' },
+  },
+};
+
+/** CLIENT_DETAILS as stored and shown: the master-data labels filled in. */
+export const CLIENT_DETAILS_SEEN: ClientProfile = {
+  ...CLIENT_DETAILS,
+  religionDetails: {
+    religionCode: 'HINDU',
+    communityCode: 'HINDU-VELLALAR',
+    religion: 'Hindu',
+    community: 'Vellalar',
+  },
+  locationDetails: {
+    countryCode: 'IN',
+    stateCode: 'IN-TN',
+    cityCode: 'IN-TN-MADURAI',
+    country: 'India',
+    state: 'Tamil Nadu',
+    city: 'Madurai',
+  },
+};
+
+export const AUTH_OPTIONS: AgentAuthOptions & {
+  applicantPhoneTtlSeconds: number;
+} = {
   issuer: 'nenjam-agent',
   audience: 'agent-portal',
   refreshTokenPepper: 'test-pepper',
@@ -75,7 +160,11 @@ export const AUTH_OPTIONS: AgentAuthOptions = {
 /** Signs like the fake, but can be told to fail. */
 export class ControllableSigner implements AgentTokenSigner {
   failing = false;
-  private readonly inner = new FakeAgentTokenSigner('signer-key');
+  constructor(
+    private readonly inner: AgentTokenSigner = new FakeAgentTokenSigner(
+      'signer-key',
+    ),
+  ) {}
 
   sign(claims: AgentAccessClaims): Promise<string> {
     return this.failing
@@ -90,6 +179,14 @@ export class ControllableSigner implements AgentTokenSigner {
 
 export function makeAgentHarness(
   settingsOverrides: Record<string, unknown> = {},
+  options: {
+    /** A different signer on the harness clock (e.g. the real HS256 one). */
+    signerFor?: (clock: FakeAgentClock) => AgentTokenSigner;
+    /** A different client-token signer on the harness clock (e.g. the real HS256 one). */
+    clientSignerFor?: (clock: FakeAgentClock) => AgentTokenSigner;
+    /** Earlier pepper versions still active (a rotation in progress). */
+    olderPeppers?: readonly string[];
+  } = {},
 ) {
   const clock = new FakeAgentClock(START);
   const settings = new FakeAgentSettings({
@@ -101,6 +198,9 @@ export function makeAgentHarness(
     [REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY]: IP_LIMIT,
     [REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY]: CODE_LIMIT,
     [REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY]: VALIDATION_WINDOW,
+    [AGENT_CLIENTS_ENABLED_KEY]: true,
+    [AGENT_CLIENT_DRAFT_LIMIT_KEY]: CLIENT_DRAFT_LIMIT,
+    [AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY]: CLIENT_EXPIRY_DAYS,
     ...settingsOverrides,
   });
   const otp = new FakeAgentOtp({
@@ -110,7 +210,10 @@ export function makeAgentHarness(
     sendLimit: 3,
     sendWindowMs: 600_000,
   });
-  const hasher = new FakeAgentIdentifierHasher('hash-secret');
+  const hasher = new FakeAgentIdentifierHasher(
+    'hash-secret',
+    options.olderPeppers ?? [],
+  );
   const agents = new FakeAgentRepository();
   const codes = new FakeReferralCodeRepository();
   const tokens = new FakeAgentRefreshTokenRepository();
@@ -124,7 +227,7 @@ export function makeAgentHarness(
   const audit = new FakeAgentAudit();
   const permission = new FakeAgentPermission();
   const uow = new FakeAgentUnitOfWork();
-  const signer = new ControllableSigner();
+  const signer = new ControllableSigner(options.signerFor?.(clock));
   const content = new StaticAgentContent();
   const profiles = new AgentProfileBuilder(content, codes);
   let counter = 0;
@@ -161,11 +264,13 @@ export function makeAgentHarness(
     audit,
     clock,
   });
+  const commissions = new FakeCommissionRepository();
   const referrals = new AgentReferralService({
     access: me,
     codes,
     attributions,
     members,
+    commissions,
     content,
     settings,
   });
@@ -202,6 +307,95 @@ export function makeAgentHarness(
     issuer,
     newId: () => `new-agent-${++agentCounter}`,
   });
+
+  const ledger = new FakeAgentLedgerRepository();
+  const payouts = new FakeAgentPayoutRepository();
+  const commissionDisplay = new FakeAgentCommissionDisplay();
+  const devices = new FakeAgentDeviceRepository();
+  const money = new AgentMoneyService({
+    access: me,
+    commissions,
+    ledger,
+    payouts,
+    display: commissionDisplay,
+    devices,
+    settings,
+  });
+
+  const drafts = new FakeAgentClientDraftRepository(agents);
+  const consentCodes = new FakeAgentClientConsentCodeStore();
+  const clientAccount = new FakeAgentClientAccount();
+  const clientProof = new DummyClientPhoneProof({
+    otp,
+    codes: consentCodes,
+    hasher,
+    config: {
+      dummyEnabled: true,
+      dummyPhones: [CLIENT_PHONE, CLIENT_PHONE_2],
+      // Not used by the fake OTP (it makes its own codes); only must be set.
+      dummyCode: '000000',
+    },
+  });
+  const clientLog = { warn: jest.fn<void, [message: string]>() };
+  let draftCounter = 0;
+  const referenceData = new ReferenceDataClientLabels(
+    fakeLocations,
+    fakeReligions,
+  );
+  const clients = new AgentClientDraftService({
+    access: me,
+    drafts,
+    attributions,
+    accounts: clientAccount,
+    proof: clientProof,
+    referenceData,
+    hasher,
+    sealer,
+    settings,
+    content,
+    uow,
+    audit,
+    clock,
+    newId: () => `draft-${++draftCounter}`,
+    logger: clientLog,
+  });
+
+  // Its own key: the agent signer can never verify a client token.
+  const clientSigner =
+    options.clientSignerFor?.(clock) ??
+    new FakeAgentTokenSigner('client-signer-key');
+  let clientAttributionCounter = 0;
+  const clientInvites = new ClientInviteService({
+    settings,
+    proof: clientProof,
+    hasher,
+    drafts,
+    agents,
+    attributions,
+    accounts: clientAccount,
+    sealer,
+    uow,
+    audit,
+    clock,
+    signer: clientSigner,
+    options: CLIENT_TOKEN_OPTIONS,
+    newId: () => `client-attribution-${++clientAttributionCounter}`,
+  });
+
+  /** request + verify with the code she would have received: a client signing in. */
+  const clientSignIn = async (phone = CLIENT_PHONE) => {
+    await clientInvites.requestCode(phone);
+    const pointer = await consentCodes.find([hasher.hash('PHONE', phone)]);
+    if (pointer === null) throw new Error('no code was sent');
+    return clientInvites.verifyCode(phone, otp.codeFor(pointer.challengeId));
+  };
+
+  /** The verified claims inside a client token. */
+  const clientClaimsOf = async (session: { accessToken: string }) => {
+    const claims = await clientSigner.verify(session.accessToken);
+    if (claims === null) throw new Error('not a client token');
+    return claims;
+  };
 
   /** The verified claims inside a session's access token. */
   const claimsOf = async (session: { accessToken: string }) => {
@@ -335,6 +529,23 @@ export function makeAgentHarness(
     referrals,
     referralCodes,
     referralQuote,
+    commissions,
+    ledger,
+    payouts,
+    commissionDisplay,
+    devices,
+    money,
+    drafts,
+    consentCodes,
+    clientAccount,
+    clientProof,
+    clientLog,
+    clients,
+    referenceData,
+    clientSigner,
+    clientInvites,
+    clientSignIn,
+    clientClaimsOf,
     claimsOf,
     seedAgent,
     seedReferral,

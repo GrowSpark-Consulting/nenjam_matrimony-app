@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nenjam_matrimony/features/discover/presentation/providers/discover_providers.dart';
 import 'package:nenjam_matrimony/features/matches/presentation/pages/matches_page.dart';
@@ -115,6 +116,38 @@ void main() {
         expect(_page(tester), 1);
       });
     }
+  });
+
+  group('keyboard', () {
+    testWidgets('ArrowDown / ArrowUp step one profile, bounded', (
+      tester,
+    ) async {
+      await _pumpReel(tester, const Size(1366, 768));
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      expect(_page(tester), 0);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(_page(tester), 1);
+
+      // The pager's cooldown runs on the wall clock.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 500)),
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      expect(_page(tester), 0);
+    });
+  });
+
+  group('action buttons', () {
+    testWidgets('tapping Share does not change the page', (tester) async {
+      await _pumpReel(tester, const Size(390, 844));
+      await tester.tap(find.byIcon(Icons.share_rounded).first);
+      await tester.pumpAndSettle();
+      expect(_page(tester), 0);
+    });
   });
 
   group('the empty reel is not a dead end', () {

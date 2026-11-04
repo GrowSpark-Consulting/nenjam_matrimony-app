@@ -766,11 +766,15 @@ paths:
           schema: { type: string, format: uuid }
         - name: from
           in: query
-          description: Earned on or after this date (`YYYY-MM-DD`, Indian time).
+          description: |
+            Earned on or after this date (`YYYY-MM-DD`, Indian time).
+            **Not implemented yet:** sending it answers 400 VALIDATION_FAILED.
           schema: { type: string, format: date }
         - name: to
           in: query
-          description: Earned on or before this date.
+          description: |
+            Earned on or before this date.
+            **Not implemented yet:** sending it answers 400 VALIDATION_FAILED.
           schema: { type: string, format: date }
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -917,11 +921,10 @@ paths:
       summary: Agents with a payable balance for a period
       operationId: adminPayoutsPayable
       x-permission: payout.view
-      x-readiness: not-yet-implementable
       description: |
-        **Not yet implementable:** needs the commission and payout tables and
-        the settings seed (`payout.minimum_amount_paise`,
-        `agent.payout_details_wait_hours`, `payout.tax_withholding`).
+        Needs the settings seed (`payout.minimum_amount_paise`,
+        `agent.payout_details_wait_hours`, `payout.tax_withholding`); without
+        them 503 `SETTINGS_NOT_CONFIGURED`.
 
         For each agent with approved, unpaid commissions: the balance, and
         whether a payout can be created now with **every** reason it cannot
@@ -996,9 +999,11 @@ paths:
           schema: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$' }
         - name: from
           in: query
+          description: '**Not implemented yet:** sending it answers 400 VALIDATION_FAILED.'
           schema: { type: string, format: date }
         - name: to
           in: query
+          description: '**Not implemented yet:** sending it answers 400 VALIDATION_FAILED.'
           schema: { type: string, format: date }
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -1496,7 +1501,11 @@ components:
 
     PayoutIneligibleReason:
       type: string
-      enum: [AGENT_NOT_PAYABLE, PAN_NOT_VERIFIED, DETAILS_NOT_VERIFIED, WAIT_NOT_OVER, NOTHING_TO_PAY, BELOW_MINIMUM, PAYOUT_EXISTS]
+      description: |
+        TAX_RULE_UNSUPPORTED while payout.tax_withholding is set (the rule is
+        not built yet); LEDGER_BALANCE_TOO_LOW when an earlier clawback left
+        the ledger below the balance (the same check as creating the payout).
+      enum: [AGENT_NOT_PAYABLE, PAN_NOT_VERIFIED, DETAILS_NOT_VERIFIED, WAIT_NOT_OVER, NOTHING_TO_PAY, BELOW_MINIMUM, PAYOUT_EXISTS, TAX_RULE_UNSUPPORTED, LEDGER_BALANCE_TOO_LOW]
 
     PayoutRefusalReason:
       description: A reason a payout cannot be created, from `decidePayoutEligibility` and `planPayout`.

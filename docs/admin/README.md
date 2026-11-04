@@ -67,6 +67,8 @@ decide what to show.
 | `POST /admin/subscriptions/:id/revoke` `{ reason }` | `subscription.cancel` | Ends it now; no refund |
 | `GET /admin/audit-logs` `?action&entity&entityId&actorId&from&to&cursor&limit` | `audit.view` | Newest first; read-only (no edit/delete route exists) |
 | `GET /admin/roles` | `rbac.manage` (step-up) | Roles, grants and admins, read-only |
+| `GET /admin/settings` | `system.view` | Platform settings: `{ items: [{ key, value, description, version, updatedAt }] }` |
+| `PUT /admin/settings/:key` `{ value, version, reason }` | `config.edit` + fresh code | Change one value (any JSON, `null` included). 409 `SETTING_VERSION_CONFLICT` if it changed since it was read; 404 `SETTING_NOT_FOUND` (keys come from migrations only). Audited as `platform_setting.update` with the old and new value |
 
 **Maker-checker:** a plan draft is published or rejected only by an admin other than the
 one who submitted it — enforced in the service and by a database CHECK. Keep at least two
@@ -151,6 +153,63 @@ maps 1:1: `{ module: 'agent', action: 'approve' }` ↔ key `agent.approve`; an a
 `assertAdminPermission(tx, actorId, key)` (throws `ForbiddenException`). The actor always
 comes from `@CurrentAdmin()`, never from a request body.
 
+A route that is not itself sensitive but shows sensitive data only to a freshly confirmed
+caller (the payout destination) checks `hasFreshStepUp(admin)`. Every admin response is
+`Cache-Control: no-store` (set by the guard).
+
+### Platform services (`PlatformModule`, import it where needed)
+
+- **`PlatformSettingsService`**: `getMany(keys)` returns only the requested keys that
+  exist, as stored JSON (unvalidated; JSON `null` comes back as `null`). Keys are seeded by
+  each feature's own migration, sorted after `20261029100000_platform_foundation`.
+  `registerValidator(key, fn)` makes the admin API refuse values your parser can't use.
+- **`IdentifierHashService`**: `hashIdentifier(kind, raw)` stores, `hashIdentifierAll(kind,
+  raw)` looks up across pepper rotations. Kinds `PHONE` (normalised to E.164, a bare
+  10-digit number is Indian), `EMAIL`, `PAN`, `IP`. Output `v1:<hex>`. Throws 503
+  `IDENTIFIER_HASHING_UNAVAILABLE` until `IDENTIFIER_HASH_PEPPERS` is set.
+- **`OtpService`**: `send(purpose, phoneE164)` → `{ challengeId, expiresAt }` or
+  `OtpRateLimitError(retryAfterSeconds)` / 503 `OTP_DELIVERY_UNAVAILABLE`;
+  `verify(purpose, challengeId, code)` → `{ ok: true, phoneE164 }` or
+  `{ ok: false, reason }` (NOT_FOUND, EXPIRED, ALREADY_USED, INVALID_CODE,
+  TOO_MANY_ATTEMPTS). Codes live 5 minutes, 5 verify calls each; at most one send per
+  30 s and 5 per hour per phone and purpose. Only the dummy mode can deliver a code today.
+- **`validationFailed`** (`@app/common`): the 400 `VALIDATION_FAILED` body every validation
+  failure uses; on id parameters, `new ParseUUIDPipe({ exceptionFactory: validationFailed })`.
+
+### Payments for the agent program (`SubscriptionModule`)
+
+- **Referral quote:** provide your quote service under `AGENT_REFERRAL_QUOTE`
+  (`modules/agents/agent-referral-quote.token.ts`) from a **`@Global()`** module.
+  SubscriptionModule can't import AgentsModule (AgentsModule → AdminModule → SubscriptionModule). Checkout injects it optionally:
+  - Without it, there's no discount and a typed code gets 422 `PROMO_CODES_UNAVAILABLE`.
+  - With it, checkout calls `quote({ memberId, promoCode, planPriceId, listAmountPaise })` for
+    every purchase (with or without a typed code).
+  - Checkout refuses to charge when `taxableAfterDiscountPaise ≠ list − discount`, or when the
+    discount and its source disagree.
+- **Payment events:**
+  - Subscribe with `ReferralEventBus.subscribe(handler)` (import `SubscriptionModule`) in
+    `onModuleInit`.
+  - `PaymentSucceeded` is written when a purchase activates a plan. `PaymentRefunded` is written
+    for each refund of a captured payment, with `refundedTaxPaise` computed on the running total.
+  - Both are written in the payment's transaction (outbox `payment_event_outbox`) and delivered
+    after commit, oldest first, **at least once**.
+  - A handler that throws leaves its event to be retried. With no subscriber, events wait.
+  - `livemode: false` marks Razorpay test-mode payments: never a real commission.
+- **Daily jobs:** register yours with `DailyJobRegistry.register('area.job_name', (now) => …)`
+  (`PlatformModule`) in `onModuleInit`.
+  - `POST /internal/jobs/daily` (header `X-Jobs-Secret` = `JOBS_SECRET`) first redelivers
+    waiting payment events, then runs every registered job in order.
+  - A failing job is reported (`ok: false`) and the rest still run.
+  - The GitHub Actions workflow `.github/workflows/daily-jobs.yml` calls it at 02:00 IST and
+    fails the run when `ok` is false.
+  - Jobs must catch up and be safe to repeat.
+  - The outbox stops retrying an event after 10 failed deliveries. It stays in
+    `payment_event_outbox` (`attempts >= 10`, `delivered_at` null), the log says
+    "SET ASIDE", and the daily report counts it as `deadLettered`.
+- **GST:** the `payment.gst_rate_bps` setting, seeded at 0. Checkout answers 503
+  `CHECKOUT_UNAVAILABLE` if it's missing, and `PUT /admin/settings` refuses anything but an
+  integer 0–10000.
+
 ## Environment
 
 | Var | Where | Notes |
@@ -158,12 +217,16 @@ comes from `@CurrentAdmin()`, never from a request body.
 | `ADMIN_MFA_ENCRYPTION_KEY` | API | 32 random bytes, base64 (`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`). Unset → admin sign-in answers 503, the app still boots. Malformed → the API refuses to boot. One per environment; changing it invalidates every enrolled authenticator (`reset-mfa` each admin). |
 | `CORS_ORIGINS` | API | Add the admin panel's origin (e.g. `https://admin.<domain>`). `X-Admin-Session` is already an allowed header. |
 | `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_FIREBASE_*` | admin web build | Public values, set at build time — see `admin/.env.example`. |
+| `JOBS_SECRET` | API **and** GitHub repository secret (same value) | The daily job caller's secret, 32+ characters (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`). Unset on the API → the route answers 503; unset in GitHub → the workflow skips with a warning. |
+| `IDENTIFIER_HASH_PEPPERS` | API | `v1:<secret>` (32+ characters; same generator as above). Unset → hashing answers 503, the app still boots. Never change or drop a pepper in use: rotate by putting a new version in front (`v2:<new>,v1:<old>`). |
+| `AGENT_OTP_DUMMY_ENABLED`, `AGENT_OTP_DUMMY_PHONES`, `AGENT_OTP_DUMMY_CODE` | API | Testing only: off unless `true`; the code is exactly 6 digits and never logged; in production the phone allow-list is required. |
 
 ## Deploying
 
 1. Back up (Neon branch or `pg_dump`, restore-tested) — there is no down-migration.
 2. `pnpm prisma migrate deploy` → applies the agent tables (`20261028095916_agent_program_phase1`, Ishu), `20261029053600_admin_rbac_foundation` and
-   `20261029053700_plan_drafts` (additive: new tables and enum, nullable/defaulted columns,
+   `20261029053700_plan_drafts`, then `20261029100000_platform_foundation` (settings and
+   sign-in code tables, no seed) once the Platform PR is merged (additive: new tables and enum, nullable/defaulted columns,
    CHECKs, seed). Verify: `SELECT count(*) FROM permissions` = 48; `SUPER_ADMIN` has 48
    grants; the placeholder admin's `is_active` is false.
 3. Set `ADMIN_MFA_ENCRYPTION_KEY` on the API service; deploy the code.

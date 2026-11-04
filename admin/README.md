@@ -52,6 +52,11 @@ site, S3 + CloudFront) on its own domain, e.g. `admin.<domain>`:
 - Set the `NEXT_PUBLIC_*` variables at build time (they are public).
 - Add the admin origin to the API's `CORS_ORIGINS`.
 - Add the admin domain to Firebase → Authentication → Settings → Authorized domains.
-- Recommended response headers on the host: `Content-Security-Policy` allowing `self`,
-  the API origin and `*.googleapis.com` / `*.firebaseapp.com` for `connect-src`,
-  `frame-ancestors 'none'`, `Referrer-Policy: no-referrer`; optionally an IP allow-list.
+- On Vercel, `vercel.json` (this folder) sets the security headers (`X-Frame-Options: DENY`,
+  `frame-ancestors 'none'`, `nosniff`, `Referrer-Policy: no-referrer`, `X-Robots-Tag: noindex`).
+  It also sends a direct browser visit to a page's `index.txt` to the 404 page. That file is
+  the page's React data, written by the static export and fetched by the app's own
+  navigation, which sends `rsc: 1` and `?_rsc=`, so navigation is unaffected. If a request is
+  ever caught by mistake, Next.js falls back to a full page load.
+- `ignoreCommand` builds this project only when `admin/` changed. A deploy refused by
+  Vercel's daily limit is not retried, so redeploy it by hand (Deployments → Redeploy).

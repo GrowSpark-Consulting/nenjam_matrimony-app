@@ -18,7 +18,10 @@ import type {
 } from '../ports/agent-data-ports';
 import type { AgentClock } from '../ports/agent-infra-ports';
 import type { AgentAuditPort } from '../ports/agent-platform-ports';
-import type { AgentSecretSealer } from '../ports/agent-secret-sealer.port';
+import {
+  AGENT_SEAL_PURPOSES,
+  type AgentSecretSealer,
+} from '../ports/agent-secret-sealer.port';
 import type {
   AgentTx,
   AgentUnitOfWork,
@@ -119,7 +122,10 @@ export class AgentMeService {
         {
           agentId: agent.id,
           method: clean.method,
-          detailsSealed: sealer.seal(clean.secret),
+          detailsSealed: sealer.seal(
+            AGENT_SEAL_PURPOSES.payoutDetails,
+            clean.secret,
+          ),
           display: clean.display,
           verifiedAt: null,
           changedAt: clock.now(),

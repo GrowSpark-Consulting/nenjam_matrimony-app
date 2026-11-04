@@ -1,9 +1,10 @@
 import { NestFactory } from '@nestjs/core';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import compression from 'compression';
 import helmet from 'helmet';
+import { ApiValidationPipe } from '@app/common';
 import { AppConfigService } from '@app/config';
 import { RedisService } from '@app/cache';
 import { AppModule } from './app.module';
@@ -143,8 +144,9 @@ async function bootstrap() {
     exposedHeaders: ['Retry-After'],
   });
 
+  // Validation failures answer 400 with code VALIDATION_FAILED.
   app.useGlobalPipes(
-    new ValidationPipe({
+    new ApiValidationPipe({
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,

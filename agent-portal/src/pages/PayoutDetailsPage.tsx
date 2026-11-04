@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import type { PayoutDetailsInput, PayoutDetailsSummary } from '../api/types';
+import { isRouteNotDeployed } from '../api/errors';
 import { ErrorText } from '../components/ErrorText';
+import { ComingSoonState, FormField, PageHeader, StatusBadge } from '../components/ui';
 import {
   ACCOUNT_PATTERN,
   IFSC_PATTERN,
@@ -31,10 +33,12 @@ export function buildPayoutDetails(
 /**
  * `PATCH /agent/me/payout-details` (ACTIVE only). Only says WHERE an
  * admin-created payout goes — agents cannot create payouts. The response is
- * masked; the full number or UPI id is never shown back.
+ * masked; the full number or UPI id is never shown back. Fields are cleared
+ * after a successful save so what's on screen is never mistaken for what's
+ * stored, and nothing is reported as saved unless the request succeeded.
  */
 export function PayoutDetailsPage() {
-  const { api, reloadAgent } = usePortal();
+  const { api, agent, reloadAgent } = usePortal();
   const [method, setMethod] = useState<'UPI' | 'BANK'>('UPI');
   const [vpa, setVpa] = useState('');
   const [holder, setHolder] = useState('');
@@ -45,14 +49,35 @@ export function PayoutDetailsPage() {
   const [error, setError] = useState<unknown>(null);
 
   const body = buildPayoutDetails(method, { vpa, holder, account, ifsc });
+  const dirty = !!(vpa || holder || account || ifsc);
+
+  const vpaError = vpa && !body ? 'Enter a UPI ID like name@bank.' : null;
+  const holderError =
+    holder && holder.trim().length > 100 ? 'Use 100 characters or fewer.' : null;
+  const accountError =
+    account && !ACCOUNT_PATTERN.test(normalizeAccountNumber(account))
+      ? 'Enter 9 to 18 digits, with no letters.'
+      : null;
+  const ifscError =
+    ifsc && !IFSC_PATTERN.test(normalizeIfsc(ifsc)) ? 'An IFSC looks like HDFC0001234.' : null;
+
+  function cancel() {
+    setVpa('');
+    setHolder('');
+    setAccount('');
+    setIfsc('');
+    setError(null);
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!body || busy) return;
     setBusy(true);
     setError(null);
+    setSaved(null);
     try {
       setSaved(await api.updatePayoutDetails(body));
+      cancel();
       reloadAgent();
     } catch (e) {
       setError(e);
@@ -61,11 +86,41 @@ export function PayoutDetailsPage() {
     }
   }
 
+  if (isRouteNotDeployed(error)) {
+    return (
+      <>
+        <PageHeader title="Payout details" />
+        <ComingSoonState title="Payout details coming soon" icon="bank">
+          Saving payout details isn't switched on yet. Nothing you entered was saved. Please come
+          back later.
+        </ComingSoonState>
+      </>
+    );
+  }
+
   return (
-    <section>
-      <h1>Payout details</h1>
-      <p className="hint">Check these carefully before saving.</p>
-      <form onSubmit={submit}>
+    <>
+      <PageHeader
+        title="Payout details"
+        description="This is where the Nenjam team sends your payouts. Check these carefully before saving."
+        action={
+          (saved || agent?.payoutDetailsSet) && (
+            <StatusBadge tone="success">Details on file</StatusBadge>
+          )
+        }
+      />
+      {saved && (
+        <div className="notice success-notice" role="status">
+          Saved: {saved.method === 'UPI' ? 'UPI' : 'Bank'} {saved.display}
+        </div>
+      )}
+      <form className="card form-card" onSubmit={submit}>
+        <h2>{saved || agent?.payoutDetailsSet ? 'Replace your details' : 'Add your details'}</h2>
+        <p className="hint">
+          {dirty
+            ? 'You have changes that are not saved yet.'
+            : 'Details you enter here are only stored when you press Save.'}
+        </p>
         <fieldset>
           <legend>Paid to</legend>
           <label>
@@ -77,41 +132,51 @@ export function PayoutDetailsPage() {
           </label>
         </fieldset>
         {method === 'UPI' ? (
-          <>
-            <label htmlFor="vpa">UPI ID</label>
-            <input id="vpa" value={vpa} placeholder="name@bank" onChange={(e) => setVpa(e.target.value)} />
-          </>
+          <FormField id="vpa" label="UPI ID" error={vpaError}>
+            {(p) => (
+              <input {...p} value={vpa} placeholder="name@bank" onChange={(e) => setVpa(e.target.value)} />
+            )}
+          </FormField>
         ) : (
           <>
-            <label htmlFor="holder">Account holder name</label>
-            <input id="holder" value={holder} maxLength={100} onChange={(e) => setHolder(e.target.value)} />
-            <label htmlFor="account">Account number</label>
-            <input
-              id="account"
-              inputMode="numeric"
-              value={account}
-              onChange={(e) => setAccount(e.target.value)}
-            />
-            <label htmlFor="ifsc">IFSC</label>
-            <input
-              id="ifsc"
-              value={ifsc}
-              autoCapitalize="characters"
-              placeholder="HDFC0001234"
-              onChange={(e) => setIfsc(e.target.value)}
-            />
+            <FormField id="holder" label="Account holder name" error={holderError}>
+              {(p) => (
+                <input {...p} value={holder} maxLength={100} onChange={(e) => setHolder(e.target.value)} />
+              )}
+            </FormField>
+            <FormField id="account" label="Account number" error={accountError}>
+              {(p) => (
+                <input
+                  {...p}
+                  inputMode="numeric"
+                  value={account}
+                  onChange={(e) => setAccount(e.target.value)}
+                />
+              )}
+            </FormField>
+            <FormField id="ifsc" label="IFSC" error={ifscError}>
+              {(p) => (
+                <input
+                  {...p}
+                  value={ifsc}
+                  autoCapitalize="characters"
+                  placeholder="HDFC0001234"
+                  onChange={(e) => setIfsc(e.target.value)}
+                />
+              )}
+            </FormField>
           </>
         )}
-        <button type="submit" disabled={!body || busy}>
-          Save
-        </button>
+        <div className="actions">
+          <button type="submit" disabled={!body || busy}>
+            {busy ? 'Saving…' : 'Save'}
+          </button>
+          <button type="button" className="secondary" disabled={!dirty || busy} onClick={cancel}>
+            Cancel
+          </button>
+        </div>
       </form>
       <ErrorText error={error} />
-      {saved && (
-        <p role="status">
-          Saved: {saved.method === 'UPI' ? 'UPI' : 'Bank'} {saved.display}
-        </p>
-      )}
-    </section>
+    </>
   );
 }

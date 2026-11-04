@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nenjam_matrimony/core/network/api_client.dart';
-import 'package:nenjam_matrimony/core/network/api_providers.dart';
+import 'package:nenjam_matrimony/features/authentication/data/services/auth_token_service.dart';
+import 'package:nenjam_matrimony/features/authentication/presentation/providers/auth_providers.dart';
 import 'package:nenjam_matrimony/features/referral/data/repositories/api_referral_repository.dart';
 import 'package:nenjam_matrimony/features/referral/data/repositories/mock_referral_repository.dart';
 import 'package:nenjam_matrimony/features/referral/data/repositories/unavailable_referral_repository.dart';
@@ -68,16 +68,27 @@ void main() {
   });
 
   test('live: box shown, API repository', () {
-    // The real repository takes the shared API client, whose provider wires
-    // Firebase auth in; tests have no Firebase app, so give it a bare client.
+    // The real repository takes the shared API client, whose provider reads
+    // `authTokenServiceProvider`; tests have no Firebase app, so stub it.
     final c = ProviderContainer(
       overrides: [
         referralBackendModeProvider.overrideWithValue(ReferralBackendMode.live),
-        apiClientProvider.overrideWithValue(ApiClient()),
+        authTokenServiceProvider.overrideWithValue(_TokenService()),
       ],
     );
     addTearDown(c.dispose);
     expect(c.read(referralCodeEntryEnabledProvider), isTrue);
     expect(c.read(referralRepositoryProvider), isA<ApiReferralRepository>());
   });
+}
+
+/// Stands in for the Firebase-backed token service; the repository is only
+/// constructed here, never called.
+class _TokenService implements AuthTokenService {
+  @override
+  Future<String?> getFirebaseToken({bool forceRefresh = false}) async =>
+      'a-token';
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

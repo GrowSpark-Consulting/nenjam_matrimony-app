@@ -148,11 +148,36 @@ export class FakeAgentSettings implements AgentSettingsPort {
  * trimmed: E.164 is NOT validated here.
  */
 export class FakeAgentIdentifierHasher implements AgentIdentifierHasher {
-  constructor(private readonly secret: string) {
+  /**
+   * `olderSecrets` are earlier pepper versions still active during a rotation
+   * (newest first, after `secret`). Their hashes are labelled "v0:", "v-1:" ...
+   */
+  constructor(
+    private readonly secret: string,
+    private readonly olderSecrets: readonly string[] = [],
+  ) {
     if (!secret) throw new RangeError('secret must be a non-empty string.');
   }
 
+  hashAll(kind: AgentIdentifierKind, value: string): string[] {
+    return [
+      this.hash(kind, value),
+      ...this.olderSecrets.map((older, index) =>
+        this.hashWith(older, `v${index === 0 ? 0 : -index}`, kind, value),
+      ),
+    ];
+  }
+
   hash(kind: AgentIdentifierKind, value: string): string {
+    return this.hashWith(this.secret, 'v1', kind, value);
+  }
+
+  private hashWith(
+    secret: string,
+    label: string,
+    kind: AgentIdentifierKind,
+    value: string,
+  ): string {
     if (typeof value !== 'string') {
       throw new RangeError('value must be a string.');
     }
@@ -162,10 +187,10 @@ export class FakeAgentIdentifierHasher implements AgentIdentifierHasher {
     if (normalised.length === 0) {
       throw new RangeError('value must not be empty.');
     }
-    const digest = createHmac('sha256', this.secret)
+    const digest = createHmac('sha256', secret)
       .update(`${kind}:${normalised}`)
       .digest('hex');
-    return `v1:${digest}`;
+    return `${label}:${digest}`;
   }
 }
 
@@ -180,18 +205,26 @@ export class FakeAgentPermission implements AgentPermissionPort {
     this.grants.set(actorId, modules);
   }
 
-  /** Default-deny. The `tx` is accepted (reads see the live state). */
-  assert(actorId: string, permission: AgentPermission): Promise<void> {
-    const allowed =
+  private holds(actorId: string, permission: AgentPermission): boolean {
+    return (
       typeof actorId === 'string' &&
       actorId.length > 0 &&
       this.grants
         .get(actorId)
         ?.get(permission.module)
-        ?.has(permission.action) === true;
-    return allowed
+        ?.has(permission.action) === true
+    );
+  }
+
+  /** Default-deny. The `tx` is accepted (reads see the live state). */
+  assert(actorId: string, permission: AgentPermission): Promise<void> {
+    return this.holds(actorId, permission)
       ? Promise.resolve()
       : Promise.reject(new AgentPermissionDeniedError(permission));
+  }
+
+  has(actorId: string, permission: AgentPermission): Promise<boolean> {
+    return Promise.resolve(this.holds(actorId, permission));
   }
 }
 

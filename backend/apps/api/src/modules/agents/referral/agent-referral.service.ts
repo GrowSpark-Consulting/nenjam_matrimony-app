@@ -26,6 +26,7 @@ import type {
   ReferralAttributionRepository,
   ReferralCodeRepository,
 } from '../ports/agent-data-ports';
+import type { CommissionRepository } from '../ports/agent-commission-ports';
 import type { AgentSettingsPort } from '../ports/agent-platform-ports';
 import {
   AgentReferralView,
@@ -83,6 +84,8 @@ export interface AgentReferralServiceDeps {
   codes: ReferralCodeRepository;
   attributions: ReferralAttributionRepository;
   members: AgentMemberReadPort;
+  /** The commission of a referral (at most one), for its public status. */
+  commissions: Pick<CommissionRepository, 'findByAttributionId'>;
   content: AgentContentPort;
   settings: AgentSettingsPort;
   /** The public link for a code; null while the web address is not decided. */
@@ -205,11 +208,15 @@ export class AgentReferralService {
       record.memberId,
     );
     if (fields === null) return null;
-    // Commission status arrives with the commission service; until then none.
+    // The public status only (toAgentReferralView maps it): review states
+    // show as ON_HOLD, REVERSED as CANCELLED; no commission yet is null.
+    const commission = await this.deps.commissions.findByAttributionId(
+      record.id,
+    );
     return toAgentReferralView({
       ...fields,
       attributionId: record.id,
-      commissionStatus: null,
+      commissionStatus: commission?.status ?? null,
     });
   }
 

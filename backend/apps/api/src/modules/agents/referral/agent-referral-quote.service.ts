@@ -51,6 +51,10 @@ import {
   REFERRAL_DISCOUNT_ONLY_IN_CREDIT_WINDOW_KEY,
   REFERRAL_MEMBER_DISCOUNT_BPS_KEY,
 } from '../settings/agent-program-settings';
+import {
+  AGENT_QUOTE_ENABLED_KEY,
+  isAgentQuoteEnabled,
+} from '../settings/agent-quote-switch';
 import { splitName } from './agent-referral-code.service';
 import { toDisplayName } from './agent-referral-view';
 import {
@@ -67,7 +71,9 @@ export type ReferralQuoteRejectedReason =
   | 'NOT_FIRST_PLAN'
   | 'AGENT_PAUSED'
   | 'SELF_REFERRAL'
-  | 'PHONE_NOT_VERIFIED';
+  | 'PHONE_NOT_VERIFIED'
+  /** The quote is switched off (`agent.quote_enabled` false); only when a code was typed. */
+  | 'QUOTE_DISABLED';
 
 export interface ReferralQuoteInput {
   memberId: string;
@@ -84,7 +90,12 @@ export interface ReferralQuote {
   discountBps: number;
   discountPaise: number;
   discountSource: ReferralDiscount['source'];
-  amountPaidPaise: number;
+  /**
+   * The list price minus the discount: the TAXABLE amount. Plan prices are
+   * exclusive of GST, so GST is added on top of this (the payments code
+   * computes and stores it); this is not what the member pays.
+   */
+  taxableAfterDiscountPaise: number;
   /** The typed code to hold on the payment so it can be attached when paid. */
   heldReferralCodeId?: string;
   /** "Ravi K." - the agent the discount comes from. */
@@ -134,6 +145,16 @@ export class AgentReferralQuoteService {
       onlyInCreditWindow: false,
     });
 
+    // The kill switch: nothing else is read, nothing is counted or held.
+    const switchValue = await this.deps.settings.getMany([
+      AGENT_QUOTE_ENABLED_KEY,
+    ]);
+    if (!isAgentQuoteEnabled(switchValue)) {
+      const typedCode =
+        typeof input.promoCode === 'string' && input.promoCode.trim() !== '';
+      return none(list, typedCode ? 'QUOTE_DISABLED' : undefined);
+    }
+
     const member = await this.deps.members.getMember(input.memberId);
     if (member === null) throw new AgentServiceError('UNAUTHORIZED');
 
@@ -169,7 +190,7 @@ export class AgentReferralQuoteService {
       discountBps: discount.discountPaise > 0 ? bps : 0,
       discountPaise: discount.discountPaise,
       discountSource: discount.source,
-      amountPaidPaise: discount.amountPaidPaise,
+      taxableAfterDiscountPaise: discount.taxableAfterDiscountPaise,
     };
     if (discount.discountPaise > 0) {
       quote.agentDisplayName = toDisplayName(name.first ?? '', name.last);
@@ -342,7 +363,7 @@ function none(
     discountBps: 0,
     discountPaise: 0,
     discountSource: 'NONE',
-    amountPaidPaise: list.amountPaidPaise,
+    taxableAfterDiscountPaise: list.taxableAfterDiscountPaise,
   };
   if (rejectedReason !== undefined) quote.rejectedReason = rejectedReason;
   return quote;

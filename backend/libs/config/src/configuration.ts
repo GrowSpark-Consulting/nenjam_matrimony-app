@@ -145,6 +145,27 @@ export interface AppConfig {
     /** Base64 of 32 bytes; unset → admin sign-in answers 503. */
     mfaEncryptionKey?: string;
   };
+  jobs: {
+    /** JOBS_SECRET: what the daily job caller sends as X-Jobs-Secret. At
+     *  least 32 characters; unset → POST /internal/jobs/daily answers 503. */
+    secret?: string;
+  };
+  identifierHash: {
+    /** "v1:<secret>[,v0:<older>]", newest first. Unset → identifier hashing
+     *  is unavailable (the agent program's routes answer 503). */
+    peppers?: string;
+  };
+  /** One-time codes for agent sign-in (OtpService). No SMS provider exists
+   *  yet, so only the dummy mode can deliver a code. */
+  agentOtp: {
+    /** AGENT_OTP_DUMMY_ENABLED — off unless exactly `true`. */
+    dummyEnabled: boolean;
+    /** AGENT_OTP_DUMMY_PHONES — E.164, malformed entries dropped. Empty
+     *  means every phone outside production and NO phone in production. */
+    dummyPhones: string[];
+    /** AGENT_OTP_DUMMY_CODE — exactly 6 digits. Never logged. */
+    dummyCode?: string;
+  };
 }
 
 export type MembershipEnforcementMode = 'off' | 'shadow' | 'enforce';
@@ -160,6 +181,14 @@ const ENFORCEMENT_MODES: readonly MembershipEnforcementMode[] = [
 function enforcementModeOf(raw: string | undefined): MembershipEnforcementMode {
   const value = raw?.trim().toLowerCase();
   return ENFORCEMENT_MODES.find((mode) => mode === value) ?? 'shadow';
+}
+
+/** Comma-separated E.164 numbers; anything else in the list is dropped. */
+function e164List(raw: string | undefined): string[] {
+  return (raw ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => /^\+[1-9]\d{7,14}$/.test(entry));
 }
 
 /** A numeric env var, or `fallback` when it is absent/blank/not a number. */
@@ -295,5 +324,19 @@ export default (): AppConfig => ({
   },
   admin: {
     mfaEncryptionKey: process.env.ADMIN_MFA_ENCRYPTION_KEY?.trim() || undefined,
+  },
+  jobs: {
+    secret: process.env.JOBS_SECRET?.trim() || undefined,
+  },
+  identifierHash: {
+    peppers: process.env.IDENTIFIER_HASH_PEPPERS?.trim() || undefined,
+  },
+  agentOtp: {
+    dummyEnabled:
+      process.env.AGENT_OTP_DUMMY_ENABLED?.trim().toLowerCase() === 'true',
+    dummyPhones: e164List(process.env.AGENT_OTP_DUMMY_PHONES),
+    dummyCode: /^\d{6}$/.test(process.env.AGENT_OTP_DUMMY_CODE?.trim() ?? '')
+      ? process.env.AGENT_OTP_DUMMY_CODE?.trim()
+      : undefined,
   },
 });

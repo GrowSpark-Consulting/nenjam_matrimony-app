@@ -27,13 +27,12 @@ class ReelFeedState {
     String? cursor,
     bool? hasMore,
     bool? isLoadingMore,
-  }) =>
-      ReelFeedState(
-        profiles: profiles ?? this.profiles,
-        cursor: cursor ?? this.cursor,
-        hasMore: hasMore ?? this.hasMore,
-        isLoadingMore: isLoadingMore ?? this.isLoadingMore,
-      );
+  }) => ReelFeedState(
+    profiles: profiles ?? this.profiles,
+    cursor: cursor ?? this.cursor,
+    hasMore: hasMore ?? this.hasMore,
+    isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+  );
 }
 
 /// Drives the infinite-scroll Matches reel. `build()` loads the first page;
@@ -115,5 +114,5 @@ class ReelFeedNotifier extends AutoDisposeAsyncNotifier<ReelFeedState> {
 
 final reelFeedProvider =
     AutoDisposeAsyncNotifierProvider<ReelFeedNotifier, ReelFeedState>(
-  ReelFeedNotifier.new,
-);
+      ReelFeedNotifier.new,
+    );

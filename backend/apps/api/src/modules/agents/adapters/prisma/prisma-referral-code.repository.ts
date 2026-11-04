@@ -86,6 +86,31 @@ export class PrismaReferralCodeRepository implements ReferralCodeRepository {
     return row !== null;
   }
 
+  /**
+   * Demote before promoting: the partial unique index allows one primary code
+   * per agent, so promoting while another is primary is a DUPLICATE_PRIMARY_CODE.
+   */
+  setPrimary(
+    id: string,
+    isPrimary: boolean,
+    tx?: AgentTx,
+  ): Promise<ReferralCodeRecord> {
+    return withConflictMapping(REFERRAL_CODE_UNIQUE_RULES, async () => {
+      try {
+        const row = await dbFor(this.prisma, tx).referralCode.update({
+          where: { id },
+          data: { isPrimary },
+        });
+        return toRecord(row);
+      } catch (error) {
+        if ((error as { code?: unknown }).code === 'P2025') {
+          throw new Error(`Unknown referral code ${id}`);
+        }
+        throw error;
+      }
+    });
+  }
+
   create(code: ReferralCodeRecord, tx?: AgentTx): Promise<ReferralCodeRecord> {
     return withConflictMapping(REFERRAL_CODE_UNIQUE_RULES, async () => {
       const row = await dbFor(this.prisma, tx).referralCode.create({

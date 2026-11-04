@@ -20,6 +20,7 @@
  * Cross-platform on purpose: the team develops on Windows, CI runs on Linux.
  */
 import { spawn } from 'node:child_process';
+import { createHmac, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 
@@ -29,6 +30,12 @@ const BOOT_TIMEOUT_MS = 90_000;
 const FAILURE_RE =
   /UnknownDependenciesException|Nest can't resolve dependencies|ERROR \[ExceptionHandler\]|EADDRINUSE|Cannot find module/i;
 
+/** Smoke-only: signs the agent token the probe sends. Not a real secret. */
+const SMOKE_AGENT_JWT_SECRET = 'smoke-only-agent-jwt-secret-not-real-0000';
+/** The deployment identifiers of agent tokens (agents/http/agent-program.ts). */
+const AGENT_TOKEN_ISSUER = 'nenjam-api';
+const AGENT_TOKEN_AUDIENCE = 'nenjam-agent-portal';
+
 const APPS = [
   {
     name: 'api',
@@ -37,7 +44,16 @@ const APPS = [
     // The HTTP layer is the point of this app — a process that starts but
     // never serves is still broken, so poll the real endpoint.
     healthUrl: 'http://127.0.0.1:3000/health',
-    env: { PORT: '3000' },
+    // The agent routes are booted too, and GET /agent/config must answer 200:
+    // it reads the seeded settings and the commission policy through the real
+    // wiring (it was 503 in production while a placeholder stood in for the
+    // policy). Smoke-only secret, not a real one.
+    env: {
+      PORT: '3000',
+      AGENT_PROGRAM_ENABLED: 'true',
+      AGENT_JWT_SECRET: SMOKE_AGENT_JWT_SECRET,
+    },
+    probe: probeAgentConfig,
   },
   {
     name: 'worker',
@@ -57,6 +73,51 @@ const APPS = [
     env: { WEBSOCKET_PORT: '3101' },
   },
 ];
+
+const b64url = (value) => Buffer.from(value).toString('base64url');
+
+/** An HS256 agent access token, with node:crypto only. */
+function smokeAgentToken() {
+  const iat = Math.floor(Date.now() / 1000);
+  const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = b64url(
+    JSON.stringify({
+      sub: randomUUID(),
+      scope: 'AGENT',
+      iss: AGENT_TOKEN_ISSUER,
+      aud: AGENT_TOKEN_AUDIENCE,
+      iat,
+      exp: iat + 300,
+    }),
+  );
+  const signature = createHmac('sha256', SMOKE_AGENT_JWT_SECRET)
+    .update(`${header}.${payload}`)
+    .digest('base64url');
+  return `${header}.${payload}.${signature}`;
+}
+
+/** Null when GET /agent/config answers 200 with the four displayed settings. */
+async function probeAgentConfig() {
+  const url = 'http://127.0.0.1:3000/agent/config';
+  try {
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${smokeAgentToken()}`,
+        'Accept-Version': '1',
+      },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.status !== 200) {
+      return `GET /agent/config answered ${res.status} (expected 200; a 503 means a setting or the commission policy is missing - see the API log)`;
+    }
+    const body = await res.json();
+    const wanted = ['holdDays', 'creditWindowDays', 'minPayoutPaise', 'referredMemberDiscountPercent'];
+    const missing = wanted.filter((k) => typeof body?.settings?.[k] !== 'number');
+    return missing.length === 0 ? null : `GET /agent/config has no ${missing.join(', ')}`;
+  } catch (error) {
+    return `GET /agent/config failed: ${error.message}`;
+  }
+}
 
 async function pollHealth(url, deadline) {
   while (Date.now() < deadline) {
@@ -118,6 +179,11 @@ async function boot(app) {
       if (!healthy) {
         return { ok: false, reason: `started but ${app.healthUrl} never returned 200`, output };
       }
+    }
+
+    if (app.probe) {
+      const problem = await app.probe();
+      if (problem) return { ok: false, reason: problem, output };
     }
 
     return { ok: true };

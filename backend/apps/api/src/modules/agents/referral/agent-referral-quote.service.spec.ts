@@ -3,6 +3,7 @@ import {
   REFERRAL_DISCOUNT_ONLY_IN_CREDIT_WINDOW_KEY,
   REFERRAL_MEMBER_DISCOUNT_BPS_KEY,
 } from '../settings/agent-program-settings';
+import { AGENT_QUOTE_ENABLED_KEY } from '../settings/agent-quote-switch';
 import {
   AgentHarness,
   expectServiceError,
@@ -87,7 +88,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 500,
         discountPaise: 4_995,
         discountSource: 'REFERRAL_FIRST_PLAN',
-        amountPaidPaise: 94_905,
+        taxableAfterDiscountPaise: 94_905,
         heldReferralCodeId: 'code-of-agent-1',
         agentDisplayName: 'Ravi K.',
       });
@@ -105,7 +106,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
       });
       await expect(quoteFor(h, { promoCode: '   ' })).resolves.toMatchObject({
         discountSource: 'NONE',
@@ -123,7 +124,7 @@ describe('AgentReferralQuoteService', () => {
       await expect(quoteFor(h, { promoCode: CODE })).resolves.toMatchObject({
         discountBps: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
       });
     });
   });
@@ -136,7 +137,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
         rejectedReason: 'NOT_FIRST_PLAN',
       });
       expect(await attemptsRecorded()).toBe(0);
@@ -161,7 +162,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 500,
         discountPaise: 4_995,
         discountSource: 'REFERRAL_FIRST_PLAN',
-        amountPaidPaise: 94_905,
+        taxableAfterDiscountPaise: 94_905,
         agentDisplayName: 'Ravi K.',
       });
     });
@@ -180,7 +181,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 500,
         discountPaise: 4_995,
         discountSource: 'REFERRAL_FIRST_PLAN',
-        amountPaidPaise: 94_905,
+        taxableAfterDiscountPaise: 94_905,
         agentDisplayName: 'Ravi K.',
         rejectedReason: 'ALREADY_ATTRIBUTED',
       });
@@ -216,7 +217,7 @@ describe('AgentReferralQuoteService', () => {
       await expect(quoteFor(h)).resolves.toMatchObject({
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
       });
     });
 
@@ -241,7 +242,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
         rejectedReason: 'AGENT_PAUSED',
       });
     });
@@ -272,7 +273,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
         rejectedReason: 'SELF_REFERRAL',
       });
     });
@@ -315,7 +316,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
         rejectedReason: 'PHONE_NOT_VERIFIED',
       });
       expect(create).not.toHaveBeenCalled();
@@ -327,7 +328,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
       });
     });
 
@@ -349,7 +350,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
         rejectedReason: 'INVALID',
       });
     });
@@ -367,7 +368,7 @@ describe('AgentReferralQuoteService', () => {
       await expect(
         quoteFor(h, { promoCode: OTHER_CODE }),
       ).resolves.toMatchObject({
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
         rejectedReason: 'INVALID',
       });
     });
@@ -382,7 +383,7 @@ describe('AgentReferralQuoteService', () => {
         discountBps: 0,
         discountPaise: 0,
         discountSource: 'NONE',
-        amountPaidPaise: LIST,
+        taxableAfterDiscountPaise: LIST,
         rejectedReason: 'INVALID',
       });
     });
@@ -463,7 +464,10 @@ describe('AgentReferralQuoteService', () => {
       await seedAgentWithCode();
       await expect(
         quoteFor(h, { promoCode: CODE, listAmountPaise: 0 }),
-      ).resolves.toMatchObject({ discountPaise: 0, amountPaidPaise: 0 });
+      ).resolves.toMatchObject({
+        discountPaise: 0,
+        taxableAfterDiscountPaise: 0,
+      });
     });
 
     it('a missing discount setting is a config error only when a discount is possible', async () => {
@@ -475,6 +479,93 @@ describe('AgentReferralQuoteService', () => {
       await expect(quoteFor(h, { promoCode: CODE })).rejects.toBeInstanceOf(
         AgentConfigError,
       );
+    });
+  });
+
+  describe('the kill switch (agent.quote_enabled)', () => {
+    const NO_DISCOUNT = {
+      discountBps: 0,
+      discountPaise: 0,
+      discountSource: 'NONE',
+      taxableAfterDiscountPaise: LIST,
+    };
+
+    it('missing means enabled: the discount is given', async () => {
+      await seedAgentWithCode();
+      const quote = await quoteFor(h, { promoCode: CODE });
+      expect(quote.discountPaise).toBe(4_995);
+    });
+
+    it('true is enabled', async () => {
+      await seedAgentWithCode();
+      h.settings.set(AGENT_QUOTE_ENABLED_KEY, true);
+      expect((await quoteFor(h, { promoCode: CODE })).discountPaise).toBe(
+        4_995,
+      );
+    });
+
+    it('false: a typed code gets no discount and QUOTE_DISABLED, nothing held or counted', async () => {
+      await seedAgentWithCode();
+      h.settings.set(AGENT_QUOTE_ENABLED_KEY, false);
+      await expect(quoteFor(h, { promoCode: CODE })).resolves.toEqual({
+        ...NO_DISCOUNT,
+        rejectedReason: 'QUOTE_DISABLED',
+      });
+      expect(await attemptsRecorded()).toBe(0);
+    });
+
+    it('false: no code gets the list price with no reason, even through an attribution', async () => {
+      await seedAgentWithCode();
+      await seedAttribution();
+      h.settings.set(AGENT_QUOTE_ENABLED_KEY, false);
+      await expect(quoteFor(h)).resolves.toEqual(NO_DISCOUNT);
+    });
+
+    it('false: a blank code counts as no code', async () => {
+      h.settings.set(AGENT_QUOTE_ENABLED_KEY, false);
+      await expect(quoteFor(h, { promoCode: '   ' })).resolves.toEqual(
+        NO_DISCOUNT,
+      );
+    });
+
+    it('takes effect on the next quote, without a restart, and back again', async () => {
+      await seedAgentWithCode();
+      h.settings.set(AGENT_QUOTE_ENABLED_KEY, false);
+      expect((await quoteFor(h, { promoCode: CODE })).discountPaise).toBe(0);
+      h.settings.set(AGENT_QUOTE_ENABLED_KEY, true);
+      expect((await quoteFor(h, { promoCode: CODE })).discountPaise).toBe(
+        4_995,
+      );
+      h.settings.set(AGENT_QUOTE_ENABLED_KEY, false);
+      h.settings.remove(AGENT_QUOTE_ENABLED_KEY);
+      expect((await quoteFor(h, { promoCode: CODE })).discountPaise).toBe(
+        4_995,
+      );
+    });
+
+    it('a stored value that is not a boolean fails closed (no discount)', async () => {
+      await seedAgentWithCode();
+      for (const value of [null, 'false', 0, 'true', 1]) {
+        h.settings.set(AGENT_QUOTE_ENABLED_KEY, value);
+        expect((await quoteFor(h, { promoCode: CODE })).discountPaise).toBe(0);
+      }
+    });
+
+    it('false still validates the amount first', async () => {
+      h.settings.set(AGENT_QUOTE_ENABLED_KEY, false);
+      await expect(quoteFor(h, { listAmountPaise: -1 })).rejects.toThrow(
+        RangeError,
+      );
+    });
+
+    it('false needs none of the other settings', async () => {
+      await seedAgentWithCode();
+      h.settings.remove(REFERRAL_MEMBER_DISCOUNT_BPS_KEY);
+      h.settings.set(AGENT_QUOTE_ENABLED_KEY, false);
+      await expect(quoteFor(h, { promoCode: CODE })).resolves.toMatchObject({
+        discountPaise: 0,
+        rejectedReason: 'QUOTE_DISABLED',
+      });
     });
   });
 });

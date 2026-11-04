@@ -6,10 +6,25 @@
  * issuer and audience are parameters, never constants here.
  */
 
-export type AgentTokenScope = 'AGENT' | 'APPLICANT';
+/**
+ * AGENT and APPLICANT: agent portal tokens. CLIENT: an agent-added client
+ * who proved her phone (Way 2); signed with its own audience, so it never
+ * passes for an agent token and an agent token never passes for it.
+ */
+export type AgentTokenScope = 'AGENT' | 'APPLICANT' | 'CLIENT';
+
+/** The scopes an agent portal token may carry (the default of the check). */
+export const AGENT_PORTAL_SCOPES: readonly AgentTokenScope[] = [
+  'AGENT',
+  'APPLICANT',
+];
 
 export interface AgentAccessClaims {
-  /** AGENT: the agent id. APPLICANT: the phone hash (no agent exists yet). */
+  /**
+   * AGENT: the agent id. APPLICANT: the phone hash (no agent exists yet).
+   * CLIENT: the client's phone, SEALED (`agent.client_phone`), so every
+   * pepper version of its hash can be computed; never the plain phone.
+   */
   sub: string;
   scope: AgentTokenScope;
   aud: string;
@@ -23,6 +38,8 @@ export interface AgentAccessClaims {
 export interface BuildAgentAccessClaimsInput {
   agentId: string | null;
   phoneHash: string;
+  /** CLIENT only: the sealed phone (see `AgentAccessClaims.sub`). */
+  clientRef?: string;
   scope: AgentTokenScope;
   now: Date;
   ttlSeconds: number;
@@ -66,8 +83,16 @@ export function buildAgentAccessClaims(
       throw new RangeError('An APPLICANT token needs a phoneHash.');
     }
     sub = input.phoneHash;
+  } else if (input.scope === 'CLIENT') {
+    if (input.agentId !== null) {
+      throw new RangeError('A CLIENT token has no agentId.');
+    }
+    if (!isNonEmptyString(input.clientRef)) {
+      throw new RangeError('A CLIENT token needs a clientRef.');
+    }
+    sub = input.clientRef;
   } else {
-    throw new RangeError("scope must be 'AGENT' or 'APPLICANT'.");
+    throw new RangeError("scope must be 'AGENT', 'APPLICANT' or 'CLIENT'.");
   }
 
   const iat = Math.floor(input.now.getTime() / 1000);
@@ -93,6 +118,8 @@ export interface ExpectedAgentAccessClaims {
   issuer: string;
   audience: string;
   now: Date;
+  /** The scopes this audience accepts. Default: AGENT and APPLICANT. */
+  scopes?: readonly AgentTokenScope[];
 }
 
 export type AgentAccessClaimsCheck =
@@ -146,7 +173,8 @@ export function validateAgentAccessClaims(
   if (nowMs >= c.exp * 1000) return { ok: false, reason: 'EXPIRED' };
   if (c.iat * 1000 > nowMs) return { ok: false, reason: 'NOT_YET_VALID' };
 
-  if (c.scope !== 'AGENT' && c.scope !== 'APPLICANT') {
+  const scopes = expected.scopes ?? AGENT_PORTAL_SCOPES;
+  if (!scopes.includes(c.scope as AgentTokenScope)) {
     return { ok: false, reason: 'BAD_SCOPE' };
   }
 
@@ -154,7 +182,7 @@ export function validateAgentAccessClaims(
     ok: true,
     claims: {
       sub: c.sub,
-      scope: c.scope,
+      scope: c.scope as AgentTokenScope,
       aud: c.aud,
       iss: c.iss,
       iat: c.iat,

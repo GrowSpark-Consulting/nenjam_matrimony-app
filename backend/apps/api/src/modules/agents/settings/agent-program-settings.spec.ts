@@ -1,5 +1,6 @@
 import {
   AGENT_ACCESS_TOKEN_TTL_SECONDS_KEY,
+  AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY,
   AGENT_CLIENT_DRAFT_LIMIT_KEY,
   AGENT_OTP_RESEND_AFTER_SECONDS_KEY,
   AGENT_PAYOUT_DETAILS_WAIT_HOURS_KEY,
@@ -41,6 +42,7 @@ const ALL: Record<string, unknown> = {
   [REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY]: 10,
   [REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY]: 20,
   [REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY]: 60,
+  [AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY]: 14,
 };
 
 describe('setting keys', () => {
@@ -85,7 +87,10 @@ describe('setting keys', () => {
     expect(REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY).toBe(
       'referral.code_validation_window_seconds',
     );
-    expect(AGENT_PROGRAM_SETTING_KEYS).toHaveLength(18);
+    expect(AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY).toBe(
+      'agent.client_draft_expiry_days',
+    );
+    expect(AGENT_PROGRAM_SETTING_KEYS).toHaveLength(19);
   });
 });
 
@@ -111,6 +116,7 @@ describe('parseAgentProgramSettings', () => {
         codeValidationIpLimit: 10,
         codeValidationCodeLimit: 20,
         codeValidationWindowSeconds: 60,
+        agentClientDraftExpiryDays: 14,
       },
       missing: [],
     });
@@ -129,7 +135,7 @@ describe('parseAgentProgramSettings', () => {
       delete raw[key];
       const result = parseAgentProgramSettings(raw);
       expect(result.missing).toEqual([key]);
-      expect(Object.keys(result.settings)).toHaveLength(17);
+      expect(Object.keys(result.settings)).toHaveLength(18);
     },
   );
 
@@ -148,8 +154,8 @@ describe('parseAgentProgramSettings', () => {
       (key) => !NULL_IS_VALUE.includes(key),
     );
 
-    it('counts as missing for exactly sixteen keys', () => {
-      expect(NULL_IS_MISSING).toHaveLength(16);
+    it('counts as missing for exactly seventeen keys', () => {
+      expect(NULL_IS_MISSING).toHaveLength(17);
     });
 
     it.each(NULL_IS_MISSING.map((k) => [k]))(
@@ -157,7 +163,7 @@ describe('parseAgentProgramSettings', () => {
       (key) => {
         const result = parseAgentProgramSettings({ ...ALL, [key]: null });
         expect(result.missing).toEqual([key]);
-        expect(Object.keys(result.settings)).toHaveLength(17);
+        expect(Object.keys(result.settings)).toHaveLength(18);
         expect(Object.values(result.settings)).not.toContain(null);
       },
     );
@@ -167,7 +173,7 @@ describe('parseAgentProgramSettings', () => {
       (key) => {
         const result = parseAgentProgramSettings({ ...ALL, [key]: null });
         expect(result.missing).toEqual([]);
-        expect(Object.keys(result.settings)).toHaveLength(18);
+        expect(Object.keys(result.settings)).toHaveLength(19);
       },
     );
 
@@ -371,6 +377,7 @@ describe('positive-integer settings (timing and rate limits)', () => {
     REFERRAL_CODE_VALIDATION_IP_LIMIT_KEY,
     REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY,
     REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY,
+    AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY,
   ];
 
   it.each(KEYS.map((k) => [k]))(
@@ -380,7 +387,7 @@ describe('positive-integer settings (timing and rate limits)', () => {
       delete raw[key];
       const result = parseAgentProgramSettings(raw);
       expect(result.missing).toEqual([key]);
-      expect(Object.keys(result.settings)).toHaveLength(17);
+      expect(Object.keys(result.settings)).toHaveLength(18);
     },
   );
 

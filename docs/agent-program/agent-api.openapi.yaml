@@ -8,8 +8,25 @@ info:
 
     **Scope.** Agent sign-in, application, profile, referral links, referred
     members, commissions, balance, payouts (read-only), push devices, plus the
-    two member endpoints (validate a code, attach a code after sign-in).
-    Agent-added clients ("Way 2") are deliberately left out and come later.
+    two member endpoints (validate a code, attach a code after sign-in), and
+    agent-added clients ("Way 2", below).
+
+    **Agent-added clients ("Way 2").** An `ACTIVE` agent creates a DRAFT of a
+    client's profile (the client's phone and her full profile: the member
+    registration's sections and partner preferences, `ClientProfile`), may
+    save it incomplete, edit or discard it, then SUBMITS it once the required
+    fields are filled. Photos are not taken from agents (out of scope). From
+    then on the draft is locked: the agent cannot change it. The client signs
+    in with her phone and a one-time code (`/client-invites/*`), sees the
+    profile and accepts or rejects it. Only on ACCEPT does a member account
+    exist: it is hers, credited to the agent exactly as if she had used the
+    agent's code (same commission, hold, credit window and first-plan
+    discount). REJECT closes the draft, and that agent can never add that
+    phone again. A draft not accepted in time expires (a setting). A phone
+    that already belongs to a member cannot be added. The whole feature is
+    behind its own switch (a setting, off by default); while the one-time
+    code is the test (dummy) code, only the approved test numbers can be
+    added or can receive a code.
 
     **Two kinds of caller.**
     - *Agent*: signs in with phone + OTP and gets our own access token and a
@@ -24,6 +41,15 @@ info:
       plus refresh token), so no second OTP is needed after applying. Token
       lifetimes are settings, not constants.
     - *Member*: the existing Firebase ID token (`Authorization: Bearer ...`).
+    - *Client* (Way 2): a person an agent has added, before she is a member.
+      Signs in with phone + one-time code (purpose `AGENT_CLIENT_CONSENT` of
+      the same `OtpService`, so a client code never signs anyone in as an
+      agent) and gets a short-lived **client token** (`scope: CLIENT`, access
+      token only, no refresh). It is not an agent token and not a Firebase
+      token: agent routes refuse it and client routes refuse an agent token.
+      It only allows `GET /client-invites` and accepting or rejecting one of
+      them. Accepting returns a Firebase custom token for the new member
+      account.
 
     **Conventions**
     - Money is always an integer number of **paise** (Rs. 500 = `50000`).
@@ -41,6 +67,14 @@ info:
       a new envelope because the live Flutter app already parses the current
       shape; the added `code` is additive and safe for it to ignore. New
       clients branch on `code`, never on `message`.
+    - **Any agent or member referral route may also answer:** `503
+      AGENT_PROGRAM_UNAVAILABLE` while the agent program is not fully set up
+      on the server (token secret, sealing key, a setting or the commission
+      policy missing; show "not available yet", retry later); `503
+      IDENTIFIER_HASHING_UNAVAILABLE` or `503 OTP_DELIVERY_UNAVAILABLE`
+      from the shared platform services; and `409 CONCURRENT_CHANGE` when
+      two requests changed the same thing at once (retry). With
+      `AGENT_PROGRAM_ENABLED` off on the server the routes do not exist (404).
     - **Settings are not constants.** Hold days, credit window, minimum payout,
       referred-member discount and commission rate are settings; clients read
       the ones they display from `GET /agent/config`.
@@ -52,9 +86,9 @@ info:
     | (no agent yet) | yes, `scope: APPLICANT`, **access token only** (no refresh; verify by OTP again if it expires before applying) | `POST /agent/application` (returns an agent session), `GET /agent/me` (404) |
     | `PENDING_APPROVAL` | yes | `GET /agent/me`, `GET /agent/config`, refresh, logout |
     | `REJECTED` | yes | as above; `rejectionReason` is returned; may re-apply |
-    | `ACTIVE` | yes | everything |
-    | `SUSPENDED` (shown as "Paused") | yes | all reads; new referrals are not credited; payout-details edits blocked |
-    | `TERMINATED` | yes, **read-only** | `GET /agent/me` (status), `GET /agent/config`, `GET /agent/commissions`, `GET /agent/balance`, `GET /agent/payouts`, refresh, logout. No new credit, cannot add members, no referral links, no payout-details edits. Approved balance is still paid. |
+    | `ACTIVE` | yes | everything, including adding clients |
+    | `SUSPENDED` (shown as "Paused") | yes | all reads, including `GET /agent/clients`; new referrals are not credited; payout-details edits blocked; cannot add, edit, discard or submit clients, and its waiting clients cannot accept until it is active again |
+    | `TERMINATED` | yes, **read-only** | `GET /agent/me` (status), `GET /agent/config`, `GET /agent/commissions`, `GET /agent/balance`, `GET /agent/payouts`, refresh, logout. No new credit, cannot add members (no client routes), no referral links, no payout-details edits. Its open client drafts are closed. Approved balance is still paid. |
 
     Calls not allowed in the caller's state get `403 AGENT_NOT_ACTIVE`.
   contact:
@@ -70,6 +104,8 @@ tags:
   - name: Referrals
   - name: Money
   - name: Member
+  - name: Clients
+  - name: Client invites
 
 paths:
   /agent/auth/otp/request:
@@ -738,6 +774,260 @@ paths:
         '400': { $ref: '#/components/responses/ValidationFailed' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /agent/clients:
+    post:
+      tags: [Clients]
+      summary: Add a client (create a DRAFT)
+      description: |
+        Needs `ACTIVE`. Creates a `DRAFT` the agent may still edit, discard
+        or submit. The phone is stored encrypted and only ever shown masked.
+        Nothing is sent to the client yet, and no member account is made.
+
+        `consentConfirmed` must be `true`: the agent confirms the client or
+        her family agreed to be added (only that it was confirmed is kept,
+        in the audit record). `details` may be partial or left out: the
+        required fields (see `ClientProfile`) are checked at submit.
+        Master-data codes (religion, community, country, state, city) are
+        checked as for a member's own profile: an unknown code, a city outside
+        its state, a community outside its religion, or a state without its
+        country is `VALIDATION_FAILED`.
+
+        Refused when:
+        - the feature switch is off (`CLIENT_INVITES_DISABLED`);
+        - the agent already has as many open drafts (`DRAFT` plus
+          `WAITING_FOR_CLIENT`) as the limit setting allows
+          (`CLIENT_DRAFT_LIMIT_REACHED`);
+        - this agent already has an open draft for this phone
+          (`CLIENT_DRAFT_EXISTS`);
+        - the phone cannot be added (`CLIENT_PHONE_UNAVAILABLE`): one answer
+          for every reason (it already belongs to a member, it is already
+          credited to an agent, it is the agent's own phone, or this client
+          rejected this agent before), so the reason is never revealed;
+        - no one-time code can reach the phone (`OTP_DELIVERY_UNAVAILABLE`):
+          while the test (dummy) code is in use, only the approved test
+          numbers can be added.
+      operationId: agentClientCreate
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, consentConfirmed]
+              additionalProperties: false
+              properties:
+                phone:
+                  $ref: '#/components/schemas/PhoneE164'
+                consentConfirmed:
+                  type: boolean
+                  enum: [true]
+                  description: The client or her family agreed to be added. Must be true.
+                details:
+                  $ref: '#/components/schemas/ClientProfile'
+      responses:
+        '201':
+          description: Draft created (`DRAFT`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClientDraft' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: |
+            The agent's status does not allow adding clients
+            (`AGENT_NOT_ACTIVE`, with `agentStatus`), or the feature is
+            switched off (`CLIENT_INVITES_DISABLED`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: This agent already has an open draft for this phone (`CLIENT_DRAFT_EXISTS`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: |
+            Branch on `code`:
+
+            | `code` | Meaning |
+            |---|---|
+            | `CLIENT_DRAFT_LIMIT_REACHED` | Too many open drafts. Submit, discard or wait for one to close. |
+            | `CLIENT_PHONE_UNAVAILABLE` | This phone cannot be added (the reason is not given). |
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503':
+          description: |
+            No one-time code can reach this phone right now
+            (`OTP_DELIVERY_UNAVAILABLE`; only the approved test numbers
+            while the test code is in use), or the program is not set up
+            (`AGENT_PROGRAM_UNAVAILABLE`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    get:
+      tags: [Clients]
+      summary: The agent's clients, newest first
+      description: |
+        Needs `ACTIVE` or `SUSPENDED`. Every draft the agent made, in any
+        status. A draft whose time has run out is shown as `EXPIRED` even
+        before the nightly job records it.
+      operationId: agentClientsList
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/ClientDraftStatus' }
+      responses:
+        '200':
+          description: A page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/ClientDraft' }
+                  nextCursor:
+                    type: string
+                    nullable: true
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ClientsForbidden' }
+
+  /agent/clients/{id}:
+    get:
+      tags: [Clients]
+      summary: One client draft
+      description: Needs `ACTIVE` or `SUSPENDED`. Only the agent's own drafts.
+      operationId: agentClientGet
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+        - $ref: '#/components/parameters/ClientDraftId'
+      responses:
+        '200':
+          description: The draft.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClientDraft' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ClientsForbidden' }
+        '404': { $ref: '#/components/responses/ClientDraftNotFound' }
+    patch:
+      tags: [Clients]
+      summary: Edit a DRAFT's details
+      description: |
+        Needs `ACTIVE`. Only while the draft is `DRAFT`; after submit it is
+        locked (`CLIENT_DRAFT_LOCKED`). Replaces all of `details`. The phone
+        cannot be changed: discard the draft and add the client again.
+      operationId: agentClientUpdate
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+        - $ref: '#/components/parameters/ClientDraftId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [details]
+              additionalProperties: false
+              properties:
+                details:
+                  $ref: '#/components/schemas/ClientProfile'
+      responses:
+        '200':
+          description: Saved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClientDraft' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ClientsForbidden' }
+        '404': { $ref: '#/components/responses/ClientDraftNotFound' }
+        '409': { $ref: '#/components/responses/ClientDraftLocked' }
+    delete:
+      tags: [Clients]
+      summary: Discard a DRAFT
+      description: |
+        Needs `ACTIVE`. Only while the draft is `DRAFT`
+        (`CLIENT_DRAFT_LOCKED` otherwise). The draft and the client's
+        details are deleted.
+      operationId: agentClientDiscard
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+        - $ref: '#/components/parameters/ClientDraftId'
+      responses:
+        '204': { description: Discarded. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ClientsForbidden' }
+        '404': { $ref: '#/components/responses/ClientDraftNotFound' }
+        '409': { $ref: '#/components/responses/ClientDraftLocked' }
+
+  /agent/clients/{id}/submit:
+    post:
+      tags: [Clients]
+      summary: Submit a DRAFT to the client (locks it)
+      description: |
+        Needs `ACTIVE`. Moves the draft from `DRAFT` to
+        `WAITING_FOR_CLIENT`, locks it for good, starts its expiry time (a
+        setting, counted from now) and sends a one-time code to the client's
+        phone. With the test (dummy) code nothing is actually delivered. A
+        code lives only a few minutes, so the client can always ask for a
+        fresh one in the app; if the code service is busy for that phone
+        the submit still succeeds.
+
+        Every required field of `ClientProfile` must be filled
+        (`CLIENT_PROFILE_INCOMPLETE`, with `missingFields` naming the
+        empty ones). The phone is checked again (`CLIENT_PHONE_UNAVAILABLE`,
+        `OTP_DELIVERY_UNAVAILABLE`), as on create.
+      operationId: agentClientSubmit
+      security:
+        - agentBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+        - $ref: '#/components/parameters/ClientDraftId'
+      responses:
+        '200':
+          description: Submitted (`WAITING_FOR_CLIENT`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClientDraft' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ClientsForbidden' }
+        '404': { $ref: '#/components/responses/ClientDraftNotFound' }
+        '409': { $ref: '#/components/responses/ClientDraftLocked' }
+        '422':
+          description: |
+            Branch on `code`: `CLIENT_PROFILE_INCOMPLETE` (a required field
+            is empty; `missingFields` lists them as `section.field`) or
+            `CLIENT_PHONE_UNAVAILABLE` (this phone can no longer be added).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503':
+          description: No one-time code can reach this phone (`OTP_DELIVERY_UNAVAILABLE`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
   /referrals/codes/validate:
     post:
       tags: [Member]
@@ -864,6 +1154,200 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
+  /client-invites/otp/request:
+    post:
+      tags: [Client invites]
+      summary: Send a one-time code to a client's phone
+      description: |
+        The first step for a person an agent has added. **No token.** The
+        answer is the same whether or not any agent has added this phone, so
+        it cannot be used to find out. Uses `OtpService` with purpose
+        `AGENT_CLIENT_CONSENT`; a newer code for the same phone replaces the
+        older one. While the test (dummy) code is in use, only the approved
+        test numbers get a code; every other number gets
+        `OTP_DELIVERY_UNAVAILABLE`. Rate limited per phone and per IP.
+      operationId: clientInviteOtpRequest
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              additionalProperties: false
+              properties:
+                phone:
+                  $ref: '#/components/schemas/PhoneE164'
+      responses:
+        '200':
+          description: Code sent (or, with the test code, accepted).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [expiresInSeconds, resendAfterSeconds]
+                properties:
+                  expiresInSeconds: { type: integer, example: 300 }
+                  resendAfterSeconds: { type: integer, example: 30 }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '403': { $ref: '#/components/responses/ClientInvitesDisabled' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503':
+          description: No code can be sent to this phone (`OTP_DELIVERY_UNAVAILABLE`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /client-invites/otp/verify:
+    post:
+      tags: [Client invites]
+      summary: Verify the code and get a client token
+      description: |
+        Send the phone and the code: the newest code sent to that phone, by
+        `POST /client-invites/otp/request` or by an agent's submit, is
+        checked. A wrong code, an unknown phone or a used code is
+        `OTP_INVALID`; an expired one `OTP_EXPIRED`. Success returns a
+        `ClientSession`: an access token only, `scope: CLIENT`, no refresh
+        token. When it expires, verify again. Its lifetime is the agent
+        access-token setting.
+
+        A successful verify proves the phone; it does not say whether any
+        invitation exists (`GET /client-invites` may be empty).
+      operationId: clientInviteOtpVerify
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code]
+              additionalProperties: false
+              properties:
+                phone:
+                  $ref: '#/components/schemas/PhoneE164'
+                code:
+                  type: string
+                  pattern: '^[0-9]{4,8}$'
+                  example: '123456'
+      responses:
+        '200':
+          description: Verified.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClientSession' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401':
+          description: Code wrong, used or unknown (`OTP_INVALID`), or expired (`OTP_EXPIRED`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403': { $ref: '#/components/responses/ClientInvitesDisabled' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /client-invites:
+    get:
+      tags: [Client invites]
+      summary: The invitations waiting for the verified phone
+      description: |
+        Client token only. Every `WAITING_FOR_CLIENT` draft for the verified
+        phone whose agent is `ACTIVE` and whose time has not run out (one per
+        agent that added her). Bounded, so not paginated. Empty when there is
+        none.
+      operationId: clientInvitesList
+      security:
+        - clientBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+      responses:
+        '200':
+          description: Invitations.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/ClientInvite' }
+        '401': { $ref: '#/components/responses/ClientUnauthorized' }
+        '403': { $ref: '#/components/responses/ClientInvitesDisabled' }
+
+  /client-invites/{id}/accept:
+    post:
+      tags: [Client invites]
+      summary: Accept an invitation (creates her member account)
+      description: |
+        Client token only. Creates the member account for the verified phone
+        (a Firebase account, the member record and a registration draft
+        holding the details the agent entered) and credits her to the agent,
+        exactly as a referral code would: the first-plan discount, the
+        credit window and the commission rules all apply unchanged. The
+        invitation becomes `ACCEPTED`, the agent can no longer change
+        anything, and any other agent's open invitation for this phone is
+        closed.
+
+        Returns a Firebase **custom token**: exchange it with
+        `signInWithCustomToken()` and continue the registration as the new
+        member. Calling accept again for an invitation this phone already
+        accepted returns a fresh custom token (safe to retry).
+      operationId: clientInviteAccept
+      security:
+        - clientBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+        - $ref: '#/components/parameters/ClientInviteId'
+      responses:
+        '200':
+          description: Accepted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClientAcceptResult' }
+        '401': { $ref: '#/components/responses/ClientUnauthorized' }
+        '403': { $ref: '#/components/responses/ClientInvitesDisabled' }
+        '404': { $ref: '#/components/responses/InviteNotFound' }
+        '409':
+          description: |
+            Branch on `code`: `INVITE_UNAVAILABLE` (it expired, was closed,
+            or its agent is not active now), `ALREADY_MEMBER` (this phone
+            already has a member account: sign in instead), or
+            `CONCURRENT_CHANGE` (retry).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /client-invites/{id}/reject:
+    post:
+      tags: [Client invites]
+      summary: Reject an invitation
+      description: |
+        Client token only. The invitation becomes `REJECTED`, the details
+        the agent entered are deleted, and that agent can never add this
+        phone again. No account is created. Rejecting an invitation this
+        phone already rejected answers 204 again.
+      operationId: clientInviteReject
+      security:
+        - clientBearer: []
+      parameters:
+        - $ref: '#/components/parameters/AcceptVersion'
+        - $ref: '#/components/parameters/ClientInviteId'
+      responses:
+        '204': { description: Rejected. }
+        '401': { $ref: '#/components/responses/ClientUnauthorized' }
+        '403': { $ref: '#/components/responses/ClientInvitesDisabled' }
+        '404': { $ref: '#/components/responses/InviteNotFound' }
+        '409':
+          description: It expired, was accepted or was closed (`INVITE_UNAVAILABLE`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
 components:
   securitySchemes:
     agentBearer:
@@ -879,6 +1363,15 @@ components:
       scheme: bearer
       bearerFormat: Firebase ID token
       description: The existing member token.
+    clientBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: Client token (our own, not Firebase, not an agent token)
+      description: |
+        Issued by `POST /client-invites/otp/verify`, short-lived, no refresh.
+        Carries `scope: CLIENT` and its own audience, so an agent token is
+        refused where this is required and this token is refused on every
+        agent route.
 
   parameters:
     AcceptVersion:
@@ -901,6 +1394,18 @@ components:
       in: query
       required: false
       schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+    ClientDraftId:
+      name: id
+      in: path
+      required: true
+      description: The draft id (`ClientDraft.id`).
+      schema: { type: string, format: uuid }
+    ClientInviteId:
+      name: id
+      in: path
+      required: true
+      description: The invitation id (`ClientInvite.id`).
+      schema: { type: string, format: uuid }
 
   responses:
     ValidationFailed:
@@ -915,6 +1420,39 @@ components:
           schema: { $ref: '#/components/schemas/Error' }
     AgentNotActive:
       description: The agent's status does not allow this call (`AGENT_NOT_ACTIVE`). The body includes the current `agentStatus`.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ClientsForbidden:
+      description: |
+        The agent's status does not allow this client call
+        (`AGENT_NOT_ACTIVE`, with `agentStatus`), or the feature is switched
+        off (`CLIENT_INVITES_DISABLED`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ClientDraftNotFound:
+      description: Not found, or another agent's draft (`CLIENT_DRAFT_NOT_FOUND`). Both look identical.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ClientDraftLocked:
+      description: The draft is no longer a `DRAFT` (submitted or closed), so it cannot be changed (`CLIENT_DRAFT_LOCKED`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ClientInvitesDisabled:
+      description: Agent-added clients are switched off on the server (`CLIENT_INVITES_DISABLED`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ClientUnauthorized:
+      description: Missing, invalid or expired client token (`UNAUTHORIZED`, `TOKEN_EXPIRED`). Verify by code again.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    InviteNotFound:
+      description: No such invitation for this phone (`INVITE_NOT_FOUND`).
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -943,7 +1481,17 @@ components:
         error: { type: string, example: Forbidden }
         code:
           type: string
-          description: Stable machine-readable code.
+          description: |
+            Stable machine-readable code. The 503 codes are temporary (show
+            "not available right now", retry later):
+            `AGENT_PROGRAM_UNAVAILABLE` (the agent program is not fully set up
+            on the server), `IDENTIFIER_HASHING_UNAVAILABLE` (the shared
+            hashing of phones and codes is not configured on the server) and
+            `OTP_DELIVERY_UNAVAILABLE` (no one-time code can be sent to this
+            phone right now). `CONCURRENT_CHANGE` (409): two requests changed
+            the same thing at once; retry. The `CLIENT_*` (including
+            `CLIENT_PROFILE_INCOMPLETE`), `INVITE_*` and
+            `ALREADY_MEMBER` codes belong to agent-added clients (Way 2).
           enum:
             - VALIDATION_FAILED
             - UNAUTHORIZED
@@ -964,6 +1512,27 @@ components:
             - SELF_REFERRAL
             - ALREADY_PAID
             - PHONE_NOT_VERIFIED
+            - AGENT_PROGRAM_UNAVAILABLE
+            - IDENTIFIER_HASHING_UNAVAILABLE
+            - OTP_DELIVERY_UNAVAILABLE
+            - CONCURRENT_CHANGE
+            - CLIENT_INVITES_DISABLED
+            - CLIENT_DRAFT_NOT_FOUND
+            - CLIENT_DRAFT_EXISTS
+            - CLIENT_DRAFT_LOCKED
+            - CLIENT_DRAFT_LIMIT_REACHED
+            - CLIENT_PHONE_UNAVAILABLE
+            - INVITE_NOT_FOUND
+            - INVITE_UNAVAILABLE
+            - ALREADY_MEMBER
+            - CLIENT_PROFILE_INCOMPLETE
+        missingFields:
+          type: array
+          items: { type: string }
+          description: |
+            On `CLIENT_PROFILE_INCOMPLETE`: the required fields still empty,
+            as `section.field` (for example `educationDetails.qualification`).
+          example: [religionDetails.religionCode, educationDetails.qualification]
         agentStatus:
           allOf:
             - $ref: '#/components/schemas/AgentStatus'
@@ -1143,6 +1712,30 @@ components:
             creditWindowDays: { type: integer, example: 60 }
             minPayoutPaise: { type: integer, example: 50000 }
             referredMemberDiscountPercent: { type: integer, example: 5 }
+        clientStatusLabels:
+          type: object
+          description: |
+            Keyed by `ClientDraftStatus`. Optional: absent on a server without
+            agent-added clients.
+          additionalProperties: { $ref: '#/components/schemas/LocalizedText' }
+        clients:
+          type: object
+          description: |
+            Agent-added clients. Optional, and never a reason for this call to
+            fail: when the feature is off or not set up, `enabled` is false.
+          required: [enabled, draftLimit, expiryDays]
+          properties:
+            enabled: { type: boolean, description: 'False: hide "Add a client".' }
+            draftLimit:
+              type: integer
+              nullable: true
+              description: Most open drafts (`DRAFT` plus `WAITING_FOR_CLIENT`) at once. Null when not set.
+              example: 10
+            expiryDays:
+              type: integer
+              nullable: true
+              description: Days a draft stays open (from creation, and again from submit). Null when not set.
+              example: 14
 
     ReferralLink:
       type: object
@@ -1287,3 +1880,291 @@ components:
           format: date
           nullable: true
         commissionCount: { type: integer }
+
+    ClientDraftStatus:
+      type: string
+      enum: [DRAFT, WAITING_FOR_CLIENT, ACCEPTED, REJECTED, EXPIRED]
+      description: |
+        `DRAFT`: the agent may still edit, discard or submit it.
+        `WAITING_FOR_CLIENT`: submitted and locked; the client has not
+        answered. `ACCEPTED`: the client accepted; she is now a member
+        credited to the agent. `REJECTED`: the client said no; the agent can
+        never add this phone again. `EXPIRED`: not answered in time, or
+        closed (for example the client joined another way).
+
+    ClientProfile:
+      type: object
+      description: |
+        The client's profile, in the member registration's own sections and
+        field names: on accept it becomes her registration draft exactly as
+        if she had typed it (with "who is this profile for" = `Myself`).
+        Every field may be left out while drafting. **Required to submit**
+        (and only these; the client's mobile number is the draft's own
+        phone): `basicDetails.firstName`, `basicDetails.lastName`,
+        `basicDetails.gender`, `basicDetails.dob`,
+        `basicDetails.maritalStatus`, `religionDetails.religionCode`,
+        `locationDetails.stateCode`, `locationDetails.cityCode`,
+        `educationDetails.qualification`. Everything else is optional, so a
+        "Skip" is always possible for it.
+
+        Religion, community, country, state and city are master-data codes
+        (`GET /reference-data/religions`, `/communities`, `/countries`,
+        `/states`, `/cities`, no token). The labels (`religion`,
+        `community`, `country`, `state`, `city`) are filled in by the server;
+        they may be sent back but are ignored. A state needs its country
+        code, a city its state code, a community its religion code.
+
+        Photos are not part of it: agents cannot add photos (out of scope).
+      x-required-at-submit:
+        - basicDetails.firstName
+        - basicDetails.lastName
+        - basicDetails.gender
+        - basicDetails.dob
+        - basicDetails.maritalStatus
+        - religionDetails.religionCode
+        - locationDetails.stateCode
+        - locationDetails.cityCode
+        - educationDetails.qualification
+      additionalProperties: false
+      properties:
+        basicDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            firstName: { type: string, minLength: 1, maxLength: 50, example: Priya, description: Required to submit. }
+            lastName: { type: string, minLength: 1, maxLength: 50, example: Sundaram, description: Required to submit. }
+            gender:
+              type: string
+              enum: [MALE, FEMALE]
+              description: Required to submit.
+            dob:
+              type: string
+              format: date
+              description: Required to submit. `YYYY-MM-DD`; the client must be at least 21.
+              example: '1998-04-12'
+            maritalStatus:
+              type: string
+              enum: [NEVER_MARRIED, DIVORCED, WIDOWED, AWAITING_DIVORCE]
+              description: Required to submit.
+        religionDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            religionCode: { type: string, example: HINDU, description: Required to submit. A `GET /reference-data/religions` code. }
+            religion: { type: string, readOnly: true, example: Hindu }
+            communityCode: { type: string, example: HINDU-VELLALAR, description: Optional. A `GET /reference-data/communities` code of that religion. }
+            community: { type: string, readOnly: true, example: Vellalar }
+            subCaste: { type: string, maxLength: 50, example: Pillai, description: Optional. Sub-community. }
+        languageDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            motherTongue: { type: string, maxLength: 50, example: Tamil, description: Optional. }
+        locationDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            countryCode: { type: string, example: IN, description: Optional, but needed with a state code. }
+            country: { type: string, readOnly: true, example: India }
+            stateCode: { type: string, example: IN-TN, description: Required to submit. }
+            state: { type: string, readOnly: true, example: Tamil Nadu }
+            cityCode: { type: string, example: IN-TN-MADURAI, description: Required to submit (current city). }
+            city: { type: string, readOnly: true, example: Madurai }
+            nativePlace: { type: string, maxLength: 100, example: Tirunelveli, description: Optional. }
+        educationDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            qualification:
+              type: string
+              maxLength: 100
+              description: Required to submit. Highest education; the member app offers B.E / B.Tech, M.Tech / M.E, MBBS / MD, MBA / PGDM, B.Sc / M.Sc, CA / CFA, B.Com / M.Com, Ph.D, Diploma, or free text.
+              example: B.E / B.Tech
+            occupation:
+              type: string
+              maxLength: 100
+              description: Optional. The app offers Software Engineer, Doctor, IAS / IPS / Govt, Business Owner, Finance / Banking, Civil / Mechanical Engg, Teacher / Professor, Lawyer, Architect, or free text.
+            employmentType:
+              type: string
+              enum: [Private, Government, Business, Self-Employed, Not Working, Student, Retired]
+              description: Optional. Employer type.
+            annualIncome:
+              type: string
+              enum: [Below 5 Lakhs, 5 - 10 Lakhs, 10 - 20 Lakhs, 20 - 50 Lakhs, 50 Lakhs - 1 Crore, 1 Crore+]
+              description: Optional. Yearly income range.
+        physicalDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            height:
+              type: string
+              pattern: '^\d''\d{1,2}" \(\d{3} cm\)$'
+              description: Optional. The member app's height labels, 122 to 213 cm, for example `5'9" (175 cm)`.
+              example: 5'3" (160 cm)
+        lifestyleDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            eatingHabit:
+              type: string
+              enum: [Vegetarian, Non-Vegetarian, Eggetarian, Vegan, Jain]
+              description: Optional. Diet.
+            aboutMe: { type: string, maxLength: 1000, description: Optional. About the client. }
+        familyDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            father:
+              type: object
+              additionalProperties: false
+              properties:
+                occupation: { type: string, maxLength: 100, description: Optional. }
+            mother:
+              type: object
+              additionalProperties: false
+              properties:
+                occupation: { type: string, maxLength: 100, description: Optional. }
+            siblings:
+              type: array
+              maxItems: 10
+              description: Optional.
+              items:
+                type: object
+                required: [relation]
+                additionalProperties: false
+                properties:
+                  relation: { type: string, enum: [BROTHER, SISTER] }
+                  name: { type: string, maxLength: 50 }
+                  age: { type: integer, minimum: 0, maximum: 120 }
+                  occupation: { type: string, maxLength: 100 }
+            familyType:
+              type: string
+              enum: [Joint Family, Nuclear Family]
+              description: Optional.
+        horoscopeDetails:
+          type: object
+          additionalProperties: false
+          properties:
+            rashi:
+              type: string
+              enum: [Mesha, Vrishabha, Mithuna, Kataka, Simha, Kanya, Tula, Vrischika, Dhanu, Makara, Kumbha, Meena, "Don't Know"]
+              description: Optional. Zodiac.
+            star:
+              type: string
+              enum: [Aswini, Bharani, Karthigai, Rohini, Mrigasheersham, Thiruvaathirai, Punarpoosam, Poosam, Aayilyam, Magam, Pooram, Uthiram, Hastham, Chithirai, Swaathi, Visaagam, Anusham, Kettai, Moolam, Pooraadam, Uthiraadam, Thiruvonam, Avittam, Sadhayam, Poorattathi, Uthirattathi, Revathi, "Don't Know"]
+              description: Optional.
+        partnerPreference:
+          type: object
+          additionalProperties: false
+          description: Optional, every field. One value each, as in the member app.
+          properties:
+            preferredAgeRange: { type: string, enum: [18-22, 22-26, 26-30, 30-35, 35-40, 40-50, Any] }
+            preferredHeightRange: { type: string, enum: ['4''6"-5''0"', '5''0"-5''4"', '5''4"-5''8"', '5''8"-6''0"', '6''0"+', Any] }
+            maritalStatusPref: { type: string, enum: [Never Married, "Doesn't Matter", Any] }
+            religionPref: { type: string, enum: [Hindu, Christian, Muslim, Jain, Sikh, Any], description: '`Any`: open to all.' }
+            castePref: { type: string, enum: [Same Caste, Any Caste, Inter-Caste OK], description: Communities. }
+            occupationPref: { type: string, enum: [Software / IT, Doctor, Government, Business, Any] }
+            incomePref: { type: string, enum: [5-10 Lakhs, 10-20 Lakhs, 20-50 Lakhs, 50 Lakhs+, Any] }
+            locationPref: { type: string, enum: [Same City, Same State, Anywhere in India, NRI OK, Any] }
+            extended:
+              type: object
+              additionalProperties: false
+              properties:
+                minEducation: { type: string, enum: [High School, Bachelors, Masters, Doctorate, Any] }
+                diet: { type: string, enum: [Vegetarian, Eggetarian, Vegan, Non-Vegetarian, "Doesn't Matter"] }
+
+    ClientDraft:
+      type: object
+      description: |
+        A client the agent added, as the agent sees it. `details` is shown
+        while the draft is open and is `null` once it is closed (accepted,
+        rejected or expired: the agent's copy is deleted). `missingRequired`
+        lists the required fields still empty (submit needs it empty).
+      required: [id, status, statusLabel, displayName, phoneMasked, details, missingRequired, editable, createdAt, submittedOn, expiresOn, acceptedOn, referralId]
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/ClientDraftStatus' }
+        statusLabel: { $ref: '#/components/schemas/LocalizedText' }
+        displayName:
+          type: string
+          description: First name and last initial; the masked phone until the names are filled in.
+          example: Priya S.
+        phoneMasked:
+          type: string
+          example: '+91 98***210'
+        details:
+          allOf:
+            - $ref: '#/components/schemas/ClientProfile'
+          nullable: true
+        missingRequired:
+          type: array
+          items: { type: string }
+          description: The required fields still empty, as `section.field`; `[]` once closed.
+          example: [educationDetails.qualification]
+        editable:
+          type: boolean
+          description: True only while `DRAFT`.
+        createdAt: { type: string, format: date-time }
+        submittedOn:
+          type: string
+          format: date
+          nullable: true
+        expiresOn:
+          type: string
+          format: date
+          description: Last day it stays open (IST).
+        acceptedOn:
+          type: string
+          format: date
+          nullable: true
+        referralId:
+          type: string
+          nullable: true
+          description: Once `ACCEPTED`, the attribution id (`AgentReferralView.id`, see `GET /agent/referrals/{id}`).
+
+    ClientInvite:
+      type: object
+      description: An invitation as the client sees it.
+      required: [id, agentDisplayName, details, expiresOn, referredMemberDiscountPercent]
+      properties:
+        id: { type: string, format: uuid }
+        agentDisplayName:
+          type: string
+          example: Ravi K.
+        details:
+          allOf:
+            - $ref: '#/components/schemas/ClientProfile'
+          description: The full profile the agent entered (with the master-data labels).
+        expiresOn:
+          type: string
+          format: date
+          description: Last day she can answer (IST).
+        referredMemberDiscountPercent:
+          type: integer
+          description: The discount on her first plan, from the settings.
+          example: 5
+
+    ClientSession:
+      type: object
+      description: The client token. Access token only; no refresh token.
+      required: [accessToken, expiresInSeconds, scope]
+      additionalProperties: false
+      properties:
+        accessToken: { type: string }
+        expiresInSeconds: { type: integer, example: 900 }
+        scope:
+          type: string
+          enum: [CLIENT]
+
+    ClientAcceptResult:
+      type: object
+      required: [firebaseCustomToken, agentDisplayName, windowEndsAt]
+      properties:
+        firebaseCustomToken:
+          type: string
+          description: Exchange with `signInWithCustomToken()`; she is then signed in as the new member.
+        agentDisplayName: { type: string, example: Ravi K. }
+        windowEndsAt:
+          type: string
+          format: date
+          description: Last day the credit window covers (IST).

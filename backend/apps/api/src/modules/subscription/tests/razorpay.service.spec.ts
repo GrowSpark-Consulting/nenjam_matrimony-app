@@ -180,6 +180,7 @@ describe('RazorpayService.fetchPayment', () => {
       amount: 499_900,
       currency: 'INR',
       status: 'captured',
+      vpa: null,
     });
     const [url, init] = fetchMock.mock.calls[0] as unknown as [
       string,

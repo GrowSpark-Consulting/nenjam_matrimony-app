@@ -7,6 +7,8 @@
 import type { ReferralViewSource } from '../referral/agent-referral-view';
 import { looksLikeRawIp } from '../referral/requester-key';
 import {
+  AgentAttributionStatus,
+  AgentListFilter,
   AgentApplicantRecord,
   AgentApplicantRepository,
   AgentConflictError,
@@ -46,6 +48,36 @@ export class FakeAgentRepository implements AgentRepository {
       if (row.phoneHash === phoneHash) return Promise.resolve(copy(row));
     }
     return Promise.resolve(null);
+  }
+
+  listPage(
+    filter: AgentListFilter,
+    page: { limit: number; after?: { at: Date; id: string } },
+  ): Promise<AgentRecord[]> {
+    const prefix = filter.namePrefix?.toLowerCase();
+    const { after } = page;
+    return Promise.resolve(
+      [...this.rows.values()]
+        .filter(
+          (r) =>
+            (filter.status === undefined || r.status === filter.status) &&
+            (prefix === undefined || r.name.toLowerCase().startsWith(prefix)) &&
+            (filter.phoneHash === undefined ||
+              r.phoneHash === filter.phoneHash) &&
+            (filter.ids === undefined || filter.ids.includes(r.id)) &&
+            (after === undefined ||
+              r.createdAt.getTime() < after.at.getTime() ||
+              (r.createdAt.getTime() === after.at.getTime() &&
+                r.id < after.id)),
+        )
+        .sort(
+          (a, b) =>
+            b.createdAt.getTime() - a.createdAt.getTime() ||
+            (a.id < b.id ? 1 : a.id > b.id ? -1 : 0),
+        )
+        .slice(0, page.limit)
+        .map(copy),
+    );
   }
 
   create(agent: NewAgentRecord, tx?: AgentTx): Promise<AgentRecord> {
@@ -112,6 +144,30 @@ export class FakeReferralCodeRepository implements ReferralCodeRepository {
     return Promise.resolve(
       [...this.rows.values()].some((row) => row.code === code),
     );
+  }
+
+  setPrimary(
+    id: string,
+    isPrimary: boolean,
+    tx?: AgentTx,
+  ): Promise<ReferralCodeRecord> {
+    const track = trackWrite(tx);
+    const row = this.rows.get(id);
+    if (!row) return Promise.reject(new Error(`Unknown referral code ${id}`));
+    if (
+      isPrimary &&
+      [...this.rows.values()].some(
+        (r) => r.agentId === row.agentId && r.isPrimary && r.id !== id,
+      )
+    ) {
+      return Promise.reject(new AgentConflictError('DUPLICATE_PRIMARY_CODE'));
+    }
+    const before = row.isPrimary;
+    row.isPrimary = isPrimary;
+    track(() => {
+      row.isPrimary = before;
+    });
+    return Promise.resolve(copy(row));
   }
 
   create(code: ReferralCodeRecord, tx?: AgentTx): Promise<ReferralCodeRecord> {
@@ -217,6 +273,40 @@ export class FakeAgentRefreshTokenRepository implements AgentRefreshTokenReposit
 
 export class FakeReferralAttributionRepository implements ReferralAttributionRepository {
   private readonly rows = new Map<string, ReferralAttributionRecord>();
+
+  findByPhoneHash(
+    phoneHash: string,
+  ): Promise<ReferralAttributionRecord | null> {
+    for (const row of this.rows.values()) {
+      if (row.memberPhoneHash === phoneHash) return Promise.resolve(copy(row));
+    }
+    return Promise.resolve(null);
+  }
+
+  findById(attributionId: string): Promise<ReferralAttributionRecord | null> {
+    const row = this.rows.get(attributionId);
+    return Promise.resolve(row ? copy(row) : null);
+  }
+
+  correct(
+    attributionId: string,
+    expectedStatus: AgentAttributionStatus,
+    changes: Parameters<ReferralAttributionRepository['correct']>[2],
+    tx?: AgentTx,
+  ): Promise<ReferralAttributionRecord | null> {
+    const track = trackWrite(tx);
+    const row = this.rows.get(attributionId);
+    if (!row || row.status !== expectedStatus) return Promise.resolve(null);
+    const before = copy(row);
+    for (const [key, value] of Object.entries(changes)) {
+      if (value !== undefined)
+        (row as unknown as Record<string, unknown>)[key] = value;
+    }
+    track(() => {
+      this.rows.set(attributionId, before);
+    });
+    return Promise.resolve(copy(row));
+  }
 
   findByMemberId(memberId: string): Promise<ReferralAttributionRecord | null> {
     for (const row of this.rows.values()) {

@@ -3,6 +3,7 @@
  * share-message templates, in English and Tamil.
  */
 import type { AgentStatus } from '../agent/agent-status';
+import type { ClientDraftStatus } from './agent-client-ports';
 import type {
   PublicCommissionStatus,
   ReferralStage,
@@ -26,6 +27,8 @@ export interface AgentContent {
   stageLabels: Record<ReferralStage, AgentLocalizedText>;
   commissionStatusLabels: Record<PublicCommissionStatus, AgentLocalizedText>;
   payoutStatusLabels: Record<AgentPayoutStatus, AgentLocalizedText>;
+  /** Agent-added clients (Way 2), keyed by the status the agent sees. */
+  clientStatusLabels: Record<ClientDraftStatus, AgentLocalizedText>;
   shareMessageTemplates: readonly AgentShareMessageTemplate[];
 }
 

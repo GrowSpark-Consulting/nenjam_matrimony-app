@@ -48,7 +48,10 @@ import {
 } from '../ports/agent-data-ports';
 import type { AgentClock } from '../ports/agent-infra-ports';
 import type { AgentAuditPort } from '../ports/agent-platform-ports';
-import type { AgentSecretSealer } from '../ports/agent-secret-sealer.port';
+import {
+  AGENT_SEAL_PURPOSES,
+  type AgentSecretSealer,
+} from '../ports/agent-secret-sealer.port';
 import type { AgentUnitOfWork } from '../ports/agent-unit-of-work.port';
 
 export interface AgentApplicationBody {
@@ -134,7 +137,8 @@ export class AgentApplicationService {
           const panChanged =
             clean.pan !== null &&
             (existing!.panSealed === null ||
-              sealer.open(existing!.panSealed) !== clean.pan);
+              sealer.open(AGENT_SEAL_PURPOSES.pan, existing!.panSealed) !==
+                clean.pan);
           const agent = await agents.update(
             existing!.id,
             {
@@ -147,7 +151,7 @@ export class AgentApplicationService {
                 ? {}
                 : {
                     panLast4: clean.pan.slice(-4),
-                    panSealed: sealer.seal(clean.pan),
+                    panSealed: sealer.seal(AGENT_SEAL_PURPOSES.pan, clean.pan),
                     ...(panChanged ? { panVerifiedAt: null } : {}),
                   }),
             },
@@ -179,12 +183,18 @@ export class AgentApplicationService {
           {
             id: this.newId(),
             phoneHash: claims.sub,
-            phoneE164: sealer.open(applicant.phoneSealed),
+            phoneE164: sealer.open(
+              AGENT_SEAL_PURPOSES.applicantPhone,
+              applicant.phoneSealed,
+            ),
             name: clean.name,
             city: clean.city,
             state: clean.state,
             panLast4: clean.pan === null ? null : clean.pan.slice(-4),
-            panSealed: clean.pan === null ? null : sealer.seal(clean.pan),
+            panSealed:
+              clean.pan === null
+                ? null
+                : sealer.seal(AGENT_SEAL_PURPOSES.pan, clean.pan),
             createdAt: now,
           },
           tx,

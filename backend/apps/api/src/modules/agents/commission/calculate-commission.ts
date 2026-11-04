@@ -6,7 +6,7 @@
  * Amounts are integers in paise. `PERCENTAGE` values are basis points
  * (1000 = 10%), so no floating point is involved. The percentage is taken of
  * `basePaise`, which may be lower than what the member paid (e.g. excluding
- * GST), and the result is capped at `amountPaidPaise`. New calculation types
+ * GST), and the result is capped at `amountPaidPaise` (what the member paid, GST included). New calculation types
  * are added here as another `case`; anything unrecognised throws rather than
  * silently paying zero or a guessed amount.
  */

@@ -20,7 +20,9 @@
 import { JwtService } from '@nestjs/jwt';
 import type { AgentClock, AgentTokenSigner } from '../ports/agent-infra-ports';
 import {
+  AGENT_PORTAL_SCOPES,
   AgentAccessClaims,
+  type AgentTokenScope,
   validateAgentAccessClaims,
 } from './agent-access-claims';
 
@@ -31,12 +33,19 @@ export interface AgentJwtTokenSignerOptions {
   secret: string;
   issuer: string;
   audience: string;
+  /**
+   * The scopes this signer issues and accepts. Default: the agent portal's
+   * (AGENT, APPLICANT). The client-token signer has its own audience and
+   * only CLIENT.
+   */
+  scopes?: readonly AgentTokenScope[];
 }
 
 export class AgentJwtTokenSigner implements AgentTokenSigner {
   private readonly jwt: JwtService;
   private readonly issuer: string;
   private readonly audience: string;
+  private readonly scopes: readonly AgentTokenScope[];
 
   constructor(
     options: AgentJwtTokenSignerOptions,
@@ -58,22 +67,38 @@ export class AgentJwtTokenSigner implements AgentTokenSigner {
     }
     this.issuer = options.issuer;
     this.audience = options.audience;
+    this.scopes = options.scopes ?? AGENT_PORTAL_SCOPES;
     // A private instance with only the agent secret: nothing shared.
     this.jwt = new JwtService({ secret: options.secret });
   }
 
   async sign(claims: AgentAccessClaims): Promise<string> {
-    // Signing for another issuer or audience is a programming error.
+    // Signing for another issuer, audience or scope is a programming error.
     if (claims.iss !== this.issuer || claims.aud !== this.audience) {
       throw new RangeError(
         'The claims do not match the configured issuer and audience.',
       );
     }
+    if (!this.scopes.includes(claims.scope)) {
+      throw new RangeError('This signer does not issue that scope.');
+    }
     return this.jwt.signAsync({ ...claims }, { algorithm: 'HS256' });
   }
 
   async verify(token: string): Promise<AgentAccessClaims | null> {
-    if (typeof token !== 'string' || token.length === 0) return null;
+    const checked = await this.check(token);
+    return checked.ok ? checked.claims : null;
+  }
+
+  /**
+   * Like `verify`, but says whether a GENUINE token has merely expired (so a
+   * client knows to refresh). The reason is only ever EXPIRED after the
+   * signature has been checked: a forged or altered token is always INVALID.
+   */
+  async check(token: string): Promise<AgentTokenCheck> {
+    if (typeof token !== 'string' || token.length === 0) {
+      return { ok: false, reason: 'INVALID' };
+    }
 
     let payload: unknown;
     try {
@@ -85,14 +110,29 @@ export class AgentJwtTokenSigner implements AgentTokenSigner {
       });
     } catch {
       // Bad signature, wrong algorithm, malformed: no detail is passed on.
-      return null;
+      return { ok: false, reason: 'INVALID' };
     }
 
     const checked = validateAgentAccessClaims(payload, {
       issuer: this.issuer,
       audience: this.audience,
       now: this.clock.now(),
+      scopes: this.scopes,
     });
-    return checked.ok ? checked.claims : null;
+    if (checked.ok) return { ok: true, claims: checked.claims };
+    return {
+      ok: false,
+      reason: checked.reason === 'EXPIRED' ? 'EXPIRED' : 'INVALID',
+    };
   }
+}
+
+/** What `AgentJwtTokenSigner.check` answers. */
+export type AgentTokenCheck =
+  | { ok: true; claims: AgentAccessClaims }
+  | { ok: false; reason: 'INVALID' | 'EXPIRED' };
+
+/** The part of the signer the agent guard needs. */
+export interface AgentTokenChecker {
+  check(token: string): Promise<AgentTokenCheck>;
 }

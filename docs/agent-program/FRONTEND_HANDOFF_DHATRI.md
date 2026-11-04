@@ -365,7 +365,7 @@ states arrive as `ON_HOLD`.
 
 - The referral link web address (shows the link and QR).
 - Tamil wording for the other labels (statuses, stages).
-- How an agent can pay for a client's plan (a future screen).
+- ~~How an agent can pay for a client's plan~~ **Answered 30 Oct: agents never pay for a client's plan (the member always pays), so no such screen is planned.**
 - ~~Whether agents will need KYC later~~ **Answered 29 Oct: no separate KYC, the PAN is enough.**
 - Plan prices (shown in commission and discount amounts).
 

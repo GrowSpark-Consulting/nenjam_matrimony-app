@@ -13,6 +13,11 @@ import { PlanCatalogService } from '../../entitlements/catalog/plan-catalog.serv
 import { SubscriptionRepository } from '../repositories/subscription.repository';
 import { assertAdminPermission } from '../../admin/rbac/assert-admin-permission';
 import { windowFor, type PlanWindow } from '../domain/schedule';
+import { enqueuePaymentEvent } from '../events/payment-event-outbox';
+import {
+  paymentRefundedEvent,
+  paymentSucceededEvent,
+} from '../events/payment-events';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -42,6 +47,8 @@ export interface PaymentConfirmation {
   /** The member (verify) or null (webhook). */
   actorId: string | null;
   via: 'CHECKOUT_VERIFY' | 'WEBHOOK';
+  /** Keyed hash of the payer's UPI id, when Razorpay reported one. */
+  paymentSourceHash?: string | null;
 }
 
 export interface AdminActor {
@@ -71,7 +78,10 @@ export interface AdminActor {
  * and no proration is computed.
  *
  * Every transition writes a SubscriptionEvent in the same transaction, and
- * admin exceptions also an AuditLog row.
+ * admin exceptions also an AuditLog row. A payment that activates a plan, and
+ * a refund of a captured payment, also write a payment event to the outbox
+ * (PaymentSucceeded / PaymentRefunded) in that transaction; callers deliver
+ * it after commit with PaymentEventDispatcher.dispatchSoon().
  */
 @Injectable()
 export class SubscriptionLifecycleService {
@@ -148,6 +158,17 @@ export class SubscriptionLifecycleService {
     });
     if (count === 0) return 'ALREADY_APPLIED';
 
+    const isFirstPaidPlan = await this.isFirstPaidPlan(
+      tx,
+      payment.userId,
+      payment.id,
+    );
+    const paymentSourceHash = input.paymentSourceHash ?? null;
+    await tx.paymentTransaction.update({
+      where: { id: payment.id },
+      data: { isFirstPaidPlan, paymentSourceHash },
+    });
+
     const subscription = await tx.userSubscription.findUnique({
       where: { id: payment.subscriptionId },
       include: { plan: { select: { tier: true, name: true } } },
@@ -196,7 +217,41 @@ export class SubscriptionLifecycleService {
         scheduled: window.scheduled,
       },
     });
+    if (subscription.durationId && payment.currency === 'INR') {
+      await enqueuePaymentEvent(
+        tx,
+        paymentSucceededEvent(payment, {
+          subscriptionId: subscription.id,
+          planDurationId: subscription.durationId,
+          isFirstPaidPlan,
+          paymentSourceHash,
+          paidAt: now,
+        }),
+      );
+    } else {
+      this.logger.error(
+        `Order ${input.orderId} activated without a payment event: duration ${subscription.durationId ?? 'missing'}, currency ${payment.currency}.`,
+      );
+    }
     return 'ACTIVATED';
+  }
+
+  /**
+   * Whether [paymentId] is the member's first successful payment. Taken under
+   * a per-member lock held to commit, so two of their payments confirming at
+   * once can't both be first: the second waits, then sees the first.
+   */
+  private async isFirstPaidPlan(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    paymentId: string,
+  ): Promise<boolean> {
+    const key = `first-paid-plan:${userId}`;
+    await tx.$queryRaw`SELECT 1 FROM (SELECT pg_advisory_xact_lock(hashtextextended(${key}, 0))) AS locked`;
+    const earlier = await tx.paymentTransaction.count({
+      where: { userId, id: { not: paymentId }, paidAt: { not: null } },
+    });
+    return earlier === 0;
   }
 
   /** A failed payment attempt. Grants nothing and changes no access; the
@@ -270,6 +325,25 @@ export class SubscriptionLifecycleService {
       select: { refundedAmount: true, amountInr: true },
     });
     const full = updated.refundedAmount >= updated.amountInr;
+    // A refund of a captured payment reverses what its PaymentSucceeded
+    // started. One that overtook the capture had no success to reverse.
+    if (!beforeCapture) {
+      if (updated.refundedAmount > updated.amountInr) {
+        this.logger.error(
+          `Refunds on payment ${payment.id} total ${updated.refundedAmount}, above the ${updated.amountInr} paid — no payment event written.`,
+        );
+      } else {
+        await enqueuePaymentEvent(
+          tx,
+          paymentRefundedEvent(payment, {
+            refundId: input.refundId,
+            refundedPaise: input.amountInPaise,
+            totalRefundedPaise: updated.refundedAmount,
+            refundedAt: now,
+          }),
+        );
+      }
+    }
     const metadata = {
       paymentId: input.paymentId,
       refundId: input.refundId,

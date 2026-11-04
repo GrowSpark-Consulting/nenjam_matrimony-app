@@ -1,13 +1,9 @@
-import {
-  DynamicModule,
-  INestApplication,
-  Type,
-  ValidationPipe,
-} from '@nestjs/common';
+import { DynamicModule, INestApplication, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { randomBytes } from 'node:crypto';
 import request from 'supertest';
 import type { App } from 'supertest/types';
+import { ApiValidationPipe } from '@app/common';
 import { AppConfigService } from '@app/config';
 import { PrismaService, type PrismaClient } from '@app/database';
 import { FirebaseService } from '@app/firebase';
@@ -58,11 +54,13 @@ export async function createAdminTestApp(
       admin: { mfaEncryptionKey: randomBytes(32).toString('base64') },
       membership: { enforcementMode: 'shadow' },
       razorpay: {},
+      identifierHash: {},
+      agentOtp: { dummyEnabled: false, dummyPhones: [] },
     })
     .compile();
   const app = moduleRef.createNestApplication<INestApplication<App>>();
   app.useGlobalPipes(
-    new ValidationPipe({
+    new ApiValidationPipe({
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,

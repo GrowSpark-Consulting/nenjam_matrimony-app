@@ -4,13 +4,13 @@
  * recorded error shape in the default spec cannot drift from reality.
  */
 import { readUniqueViolation } from './prisma-unique-violation';
-import { openTestDatabase, truncateAgentTables } from './prisma-test-database';
+import { openTestDatabase, freshTestDatabase } from './prisma-test-database';
 
 const db = openTestDatabase();
 const prisma = db.prisma;
 
 afterAll(() => db.close());
-beforeEach(() => truncateAgentTables(prisma));
+beforeEach(() => freshTestDatabase(prisma));
 
 const person = { name: 'Ravi', city: 'Madurai', state: 'Tamil Nadu' };
 
@@ -113,6 +113,28 @@ describe('readUniqueViolation on the real engine', () => {
       }),
     );
     expect(found).toEqual({ constraint, fields });
+  });
+
+  it('agent client drafts: the one-open-per-agent-and-phone partial index', async () => {
+    const draft = (id: string) => ({
+      id,
+      agentId: 'a1',
+      phoneHash: 'v1:client',
+      phoneSealed: 'sealed-phone',
+      phoneMasked: '+91 90***001',
+      displayName: 'Priya S.',
+      detailsSealed: 'sealed-details',
+      expiresAt: new Date(Date.now() + 86_400_000),
+    });
+    await prisma.agentClientDraft.create({ data: draft('d1') });
+    expect(
+      await violationOf(() =>
+        prisma.agentClientDraft.create({ data: draft('d2') }),
+      ),
+    ).toEqual({
+      constraint: 'agent_client_drafts_one_open_per_agent_phone_uq',
+      fields: ['agent_id', 'phone_hash'],
+    });
   });
 
   it('does not call a CHECK violation a unique violation', async () => {

@@ -1,3 +1,4 @@
+import { AGENT_SEAL_PURPOSES } from '../ports/agent-secret-sealer.port';
 import type { AgentOtpPurpose } from '../ports/agent-platform-ports';
 import { AgentConfigError } from '../config/agent-config.service';
 import {
@@ -260,7 +261,9 @@ describe('AgentSignInService', () => {
       expect(stored).not.toBeNull();
       expect(stored!.phoneSealed.startsWith('v1:')).toBe(true);
       expect(stored!.phoneSealed).not.toContain('9876543210');
-      expect(h.sealer.open(stored!.phoneSealed)).toBe(PHONE);
+      expect(
+        h.sealer.open(AGENT_SEAL_PURPOSES.applicantPhone, stored!.phoneSealed),
+      ).toBe(PHONE);
       expect(stored!.expiresAt.getTime()).toBe(
         h.clock.now().getTime() + AUTH_OPTIONS.applicantPhoneTtlSeconds * 1000,
       );

@@ -24,6 +24,7 @@ void main() {
             scrollDirection: Axis.vertical,
             itemCount: 5,
             itemBuilder: (context, i) => Listener(
+              behavior: HitTestBehavior.opaque,
               onPointerSignal: (event) => pager.handle(event, 5),
               child: ColoredBox(
                 color: Colors.primaries[i],
@@ -73,6 +74,44 @@ void main() {
     await wheel(tester, 100);
     await wheel(tester, 100);
     expect(controller.page, 1);
+  });
+
+  testWidgets('momentum events after the cooldown do not skip a profile', (
+    tester,
+  ) async {
+    final controller = await pumpReel(tester);
+    // Handed to the pager directly: the pointer is not what is under test, and
+    // a hit test mid-animation depends on layout timing.
+    final pager = ReelWheelPager(controller, now: () => clock);
+    // A trackpad flick: events every 100ms for 1.2s, longer than the cooldown.
+    for (var i = 0; i < 12; i++) {
+      const event = PointerScrollEvent(scrollDelta: Offset(0, 80));
+      pager.handle(event, 5);
+      GestureBinding.instance.pointerSignalResolver.resolve(event);
+      clock = clock.add(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pumpAndSettle();
+    expect(controller.page, 1);
+  });
+
+  testWidgets('stale small deltas do not add up to a later move', (
+    tester,
+  ) async {
+    final controller = await pumpReel(tester);
+    await wheel(tester, 30);
+    clock = clock.add(const Duration(seconds: 2));
+    await wheel(tester, 30);
+    expect(controller.page, 0);
+  });
+
+  testWidgets('the last profile is a boundary', (tester) async {
+    final controller = await pumpReel(tester);
+    for (var i = 0; i < 7; i++) {
+      await wheel(tester, 100);
+      clock = clock.add(const Duration(seconds: 1));
+    }
+    expect(controller.page, 4);
   });
 
   testWidgets('small trackpad deltas do not move a page on their own', (

@@ -5,6 +5,11 @@
  * `AgentSettingsPort` on every call (so a change needs no deploy and nothing
  * is cached or defaulted here); labels and share-message templates come from
  * `AgentContentPort`; the hold period from `AgentCommissionPolicyPort`.
+ *
+ * Agent-added clients (Way 2) add `clientStatusLabels` and `clients`. They
+ * are NEVER a reason for this call to fail: their settings are read
+ * separately and a missing, invalid or unreadable one only makes `enabled`
+ * false (and its number null). They are not in REQUIRED_SETTING_KEYS.
  */
 import type { AgentCommissionPolicyPort } from '../ports/agent-commission-policy.port';
 import type {
@@ -15,6 +20,13 @@ import type {
 import type { AgentSettingsPort } from '../ports/agent-platform-ports';
 import { renderShareMessage } from '../referral/render-share-message';
 import {
+  AGENT_CLIENTS_ENABLED_KEY,
+  isAgentClientsEnabled,
+} from '../settings/agent-clients-switch';
+import {
+  AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY,
+  AGENT_CLIENT_DRAFT_LIMIT_KEY,
+  agentProgramSettingProblem,
   parseAgentProgramSettings,
   PAYOUT_MINIMUM_AMOUNT_PAISE_KEY,
   REFERRAL_CREDIT_WINDOW_DAYS_KEY,
@@ -51,12 +63,41 @@ export interface AgentConfig {
    */
   shareMessages: AgentShareMessageTemplate[];
   settings: AgentConfigSettings;
+  /** Keyed by the client draft status the agent sees (Way 2). */
+  clientStatusLabels?: Record<string, AgentLocalizedText>;
+  /** Way 2. `enabled` false: hide "Add a client". */
+  clients?: AgentClientsConfig;
 }
 
-/** Thrown when a required setting or policy value has not been set. */
+export interface AgentClientsConfig {
+  enabled: boolean;
+  /** Null when the setting is not set (or not usable). */
+  draftLimit: number | null;
+  expiryDays: number | null;
+}
+
+/** What /agent/config says about Way 2 when its settings cannot be read. */
+const CLIENTS_OFF: AgentClientsConfig = {
+  enabled: false,
+  draftLimit: null,
+  expiryDays: null,
+};
+
+/**
+ * Thrown when a required setting or policy value is not set (`missing`) or
+ * is set to a value that cannot be used (`invalid`). Answered as 503
+ * AGENT_PROGRAM_UNAVAILABLE; the message names keys only, never values.
+ */
 export class AgentConfigError extends Error {
-  constructor(public readonly missing: string[]) {
-    super(`Agent config is not available: missing ${missing.join(', ')}.`);
+  constructor(
+    public readonly missing: string[],
+    public readonly invalid: string[] = [],
+  ) {
+    const parts = [
+      ...(missing.length > 0 ? [`missing ${missing.join(', ')}`] : []),
+      ...(invalid.length > 0 ? [`invalid ${invalid.join(', ')}`] : []),
+    ];
+    super(`Agent config is not available: ${parts.join('; ')}.`);
     this.name = 'AgentConfigError';
   }
 }
@@ -69,33 +110,37 @@ export class AgentConfigService {
   ) {}
 
   /**
-   * Throws `AgentConfigError` listing every missing value, or a RangeError
-   * naming the setting when one is present but invalid. Never supplies a
+   * Throws `AgentConfigError` listing every value that is missing or
+   * present but unusable (a 503 that names the keys). Never supplies a
    * default.
    */
   async getConfig(): Promise<AgentConfig> {
-    const [raw, holdDays, content] = await Promise.all([
+    const [raw, holdDays, content, clients] = await Promise.all([
       this.settings.getMany(REQUIRED_SETTING_KEYS),
       this.commissionPolicy.getActiveHoldDays(),
       this.content.getContent(),
+      this.clientsConfig(),
     ]);
 
     // Only the keys this response needs are read, so an unrelated setting
     // that is wrong cannot break the config.
-    const parsed = parseAgentProgramSettings(raw);
-    const missing: string[] = REQUIRED_SETTING_KEYS.filter((key) =>
-      parsed.missing.includes(key),
-    );
+    const missing: string[] = [];
+    const invalid: string[] = [];
+    for (const key of REQUIRED_SETTING_KEYS) {
+      const value = raw[key];
+      if (value === undefined || value === null) missing.push(key);
+      else if (agentProgramSettingProblem(key, value) !== null)
+        invalid.push(key);
+    }
     if (holdDays === null) missing.push(HOLD_DAYS_SOURCE);
-    if (holdDays === null || missing.length > 0) {
-      throw new AgentConfigError(missing);
+    else if (!Number.isSafeInteger(holdDays) || holdDays < 0) {
+      invalid.push(HOLD_DAYS_SOURCE);
+    }
+    if (missing.length > 0 || invalid.length > 0 || holdDays === null) {
+      throw new AgentConfigError(missing, invalid);
     }
 
-    if (!Number.isSafeInteger(holdDays) || holdDays < 0) {
-      throw new RangeError(`The ${HOLD_DAYS_SOURCE} must be an integer >= 0.`);
-    }
-
-    const { settings } = parsed;
+    const { settings } = parseAgentProgramSettings(raw);
     const discountPercent =
       settings.referralMemberDiscountBps! / BASIS_POINTS_PER_PERCENT;
 
@@ -117,7 +162,40 @@ export class AgentConfigService {
         minPayoutPaise: settings.payoutMinimumAmountPaise!,
         referredMemberDiscountPercent: discountPercent,
       },
+      clientStatusLabels: content.clientStatusLabels,
+      clients,
     };
+  }
+
+  /** Way 2's part of the config. Never rejects. */
+  private async clientsConfig(): Promise<AgentClientsConfig> {
+    try {
+      const raw = await this.settings.getMany([
+        AGENT_CLIENTS_ENABLED_KEY,
+        AGENT_CLIENT_DRAFT_LIMIT_KEY,
+        AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY,
+      ]);
+      const usable = (key: string): number | null => {
+        const value = raw[key];
+        return value === undefined ||
+          value === null ||
+          agentProgramSettingProblem(key, value) !== null
+          ? null
+          : (value as number);
+      };
+      const draftLimit = usable(AGENT_CLIENT_DRAFT_LIMIT_KEY);
+      const expiryDays = usable(AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY);
+      return {
+        enabled:
+          isAgentClientsEnabled(raw) &&
+          draftLimit !== null &&
+          expiryDays !== null,
+        draftLimit,
+        expiryDays,
+      };
+    } catch {
+      return { ...CLIENTS_OFF };
+    }
   }
 }
 

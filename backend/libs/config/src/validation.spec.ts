@@ -138,6 +138,152 @@ describe('validationSchema', () => {
       expect(withKey(Buffer.alloc(16, 7).toString('base64'))).toBeDefined();
     });
   });
+
+  describe('IDENTIFIER_HASH_PEPPERS', () => {
+    const secret = 'k'.repeat(32);
+    const withPeppers = (peppers: string) =>
+      validationSchema.validate(
+        { ...validEnv, IDENTIFIER_HASH_PEPPERS: peppers },
+        { abortEarly: false },
+      ).error;
+
+    it('is optional, and takes "v1:<secret>" lists newest first', () => {
+      expect(withPeppers('')).toBeUndefined();
+      expect(withPeppers(`v1:${secret}`)).toBeUndefined();
+      expect(withPeppers(`v2:${secret}, v1:${secret}x`)).toBeUndefined();
+    });
+
+    it('refuses a short secret or a missing version', () => {
+      expect(withPeppers('v1:short')).toBeDefined();
+      expect(withPeppers(secret)).toBeDefined();
+    });
+  });
+
+  describe('secrets never appear in a validation error', () => {
+    const messageFor = (env: Record<string, string>) =>
+      validationSchema.validate({ ...validEnv, ...env }, { abortEarly: false })
+        .error?.message ?? '';
+
+    it.each([
+      [
+        'IDENTIFIER_HASH_PEPPERS',
+        {
+          IDENTIFIER_HASH_PEPPERS:
+            'secret-pepper-value-that-is-long-enough-123',
+        },
+        'secret-pepper-value',
+      ],
+      [
+        'IDENTIFIER_HASH_PEPPERS',
+        {
+          IDENTIFIER_HASH_PEPPERS:
+            'IDENTIFIER_HASH_PEPPERS=v1:abcdefghijklmnopqrstuvwxyz0123456789',
+        },
+        'abcdefghijklmnop',
+      ],
+      [
+        'AGENT_OTP_DUMMY_CODE',
+        { AGENT_OTP_DUMMY_ENABLED: 'true', AGENT_OTP_DUMMY_CODE: '98765 ' },
+        '98765',
+      ],
+      [
+        'AGENT_OTP_DUMMY_PHONES',
+        {
+          NODE_ENV: 'production',
+          AGENT_OTP_DUMMY_ENABLED: 'true',
+          AGENT_OTP_DUMMY_CODE: '123456',
+          AGENT_OTP_DUMMY_PHONES: '44556-11223',
+        },
+        '44556',
+      ],
+    ])('%s: names the variable, never shows the value', (name, env, secret) => {
+      const message = messageFor(env);
+      expect(message).toContain(name);
+      expect(message).not.toContain(secret);
+    });
+  });
+
+  describe('AGENT_PII_ENCRYPTION_KEY', () => {
+    const key = Buffer.alloc(32, 9).toString('base64');
+    const errorFor = (value: string) =>
+      validationSchema.validate(
+        { ...validEnv, AGENT_PII_ENCRYPTION_KEY: value },
+        { abortEarly: false },
+      ).error;
+
+    it('is optional: absent or blank boots (the sealing routes answer 503)', () => {
+      expect(
+        validationSchema.validate(validEnv, { abortEarly: false }).error,
+      ).toBeUndefined();
+      expect(errorFor('')).toBeUndefined();
+    });
+
+    it('accepts every key the runtime accepts: padded, unpadded, surrounding spaces', () => {
+      expect(errorFor(key)).toBeUndefined();
+      expect(errorFor(key.replace(/=+$/, ''))).toBeUndefined();
+      expect(errorFor(` ${key} `)).toBeUndefined();
+    });
+
+    it('refuses a key that is not 32 bytes, without showing it', () => {
+      const short = Buffer.alloc(16, 9).toString('base64');
+      const error = errorFor(short);
+      expect(error?.message).toContain('AGENT_PII_ENCRYPTION_KEY');
+      expect(error?.message).not.toContain(short);
+      expect(errorFor('not-a-key-at-all')).toBeDefined();
+    });
+  });
+
+  describe('JOBS_SECRET', () => {
+    const withSecret = (secret: string) =>
+      validationSchema.validate(
+        { ...validEnv, JOBS_SECRET: secret },
+        { abortEarly: false },
+      ).error;
+
+    it('is optional, and at least 32 characters when set', () => {
+      expect(withSecret('')).toBeUndefined();
+      expect(withSecret('x'.repeat(32))).toBeUndefined();
+      expect(withSecret('too-short')).toBeDefined();
+    });
+  });
+
+  describe('AGENT_OTP_DUMMY_*', () => {
+    const withDummy = (env: Record<string, string>) =>
+      validationSchema.validate({ ...validEnv, ...env }, { abortEarly: false })
+        .error;
+
+    it('is off by default and needs nothing then', () => {
+      expect(withDummy({})).toBeUndefined();
+    });
+
+    it('needs a 6-digit code when on', () => {
+      expect(withDummy({ AGENT_OTP_DUMMY_ENABLED: 'true' })).toBeDefined();
+      expect(
+        withDummy({
+          AGENT_OTP_DUMMY_ENABLED: 'true',
+          AGENT_OTP_DUMMY_CODE: '12345',
+        }),
+      ).toBeDefined();
+      expect(
+        withDummy({
+          AGENT_OTP_DUMMY_ENABLED: 'true',
+          AGENT_OTP_DUMMY_CODE: '123456',
+        }),
+      ).toBeUndefined();
+    });
+
+    it('needs an allow-list when on in production', () => {
+      const on = {
+        NODE_ENV: 'production',
+        AGENT_OTP_DUMMY_ENABLED: 'true',
+        AGENT_OTP_DUMMY_CODE: '123456',
+      };
+      expect(withDummy(on)).toBeDefined();
+      expect(
+        withDummy({ ...on, AGENT_OTP_DUMMY_PHONES: '+919876543210' }),
+      ).toBeUndefined();
+    });
+  });
 });
 
 describe('validationSchema: face verification', () => {

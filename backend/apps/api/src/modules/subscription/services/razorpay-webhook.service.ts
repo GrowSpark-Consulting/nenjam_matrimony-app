@@ -5,6 +5,9 @@ import type {
   PaymentWebhookStatus,
   Prisma,
 } from '../../../../../../libs/database/generated/client';
+import { IdentifierHashService } from '../../platform/identifier-hash.service';
+import { PaymentEventDispatcher } from '../events/payment-event-outbox';
+import { paymentSourceHashOf } from '../events/payment-events';
 import { SubscriptionLifecycleService } from './subscription-lifecycle.service';
 
 const PROVIDER = 'RAZORPAY';
@@ -22,6 +25,8 @@ interface RazorpayWebhookBody {
         currency?: string;
         error_code?: string;
         error_description?: string;
+        /** The payer's UPI id on UPI payments. */
+        vpa?: string;
       };
     };
     order?: {
@@ -59,6 +64,8 @@ export class RazorpayWebhookService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly lifecycle: SubscriptionLifecycleService,
+    private readonly dispatcher: PaymentEventDispatcher,
+    private readonly hasher: IdentifierHashService,
   ) {}
 
   async handle(
@@ -79,7 +86,7 @@ export class RazorpayWebhookService {
     const order = event.payload?.order?.entity;
     const refund = event.payload?.refund?.entity;
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.paymentWebhookEvent.createMany({
         data: [
           {
@@ -110,6 +117,9 @@ export class RazorpayWebhookService {
       }
       return result;
     });
+    // Deliver any payment event the change wrote, now that it has committed.
+    if (result.status === 'PROCESSED') this.dispatcher.dispatchSoon();
+    return result;
   }
 
   private async apply(
@@ -148,6 +158,7 @@ export class RazorpayWebhookService {
           currency,
           actorId: null,
           via: 'WEBHOOK',
+          paymentSourceHash: paymentSourceHashOf(this.hasher, payment.vpa),
         });
         return outcome === 'UNKNOWN_ORDER'
           ? { status: 'IGNORED', detail: 'unknown order' }

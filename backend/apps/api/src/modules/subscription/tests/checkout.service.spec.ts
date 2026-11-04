@@ -1,9 +1,12 @@
 import {
   BadRequestException,
+  HttpException,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { createHmac } from 'node:crypto';
+import type { ReferralQuoteProvider, ReferralQuoteResult } from '@app/common';
+import type { AgentReferralQuote } from '../../agents/agent-referral-quote.token';
 import { CheckoutService } from '../services/checkout.service';
 import { RazorpayService } from '../services/razorpay.service';
 import {
@@ -14,9 +17,21 @@ import {
 const NOW = new Date('2026-10-27T06:00:00.000Z');
 const KEYS = { keyId: 'rzp_test_key', keySecret: 'key-secret' };
 
-function build(options: { configured?: boolean; purchasable?: boolean } = {}) {
+function build(
+  options: {
+    configured?: boolean;
+    purchasable?: boolean;
+    keyId?: string;
+    /** The stored `payment.gst_rate_bps`; `undefined` leaves the key out. */
+    gstRateBps?: unknown;
+    quote?: ReferralQuoteProvider;
+  } = {},
+) {
   const razorpay = new RazorpayService({
-    razorpay: options.configured === false ? {} : KEYS,
+    razorpay:
+      options.configured === false
+        ? {}
+        : { ...KEYS, keyId: options.keyId ?? KEYS.keyId },
   } as never);
   const createOrder = jest
     .spyOn(razorpay, 'createOrder')
@@ -56,7 +71,25 @@ function build(options: { configured?: boolean; purchasable?: boolean } = {}) {
     amount: 300_000,
     currency: 'INR',
     status: 'captured',
+    vpa: null,
   });
+  const settings = {
+    getMany: jest
+      .fn()
+      .mockResolvedValue(
+        'gstRateBps' in options && options.gstRateBps === undefined
+          ? {}
+          : { 'payment.gst_rate_bps': options.gstRateBps ?? 0 },
+      ),
+    registerValidator: jest.fn(),
+  };
+  const hasher = {
+    available: true,
+    hashIdentifier: jest.fn(
+      (kind: string, value: string) => `v1:${kind}:${value}`,
+    ),
+  };
+  const dispatcher = { dispatchSoon: jest.fn() };
   const service = new CheckoutService(
     {
       $transaction: jest.fn((cb: (t: unknown) => unknown) => cb(tx)),
@@ -66,11 +99,51 @@ function build(options: { configured?: boolean; purchasable?: boolean } = {}) {
     razorpay,
     lifecycle as never,
     repository as never,
+    settings as never,
+    hasher as never,
+    dispatcher as never,
+    options.quote,
   );
-  return { service, createOrder, fetchPayment, tx, repository, lifecycle };
+  return {
+    service,
+    createOrder,
+    fetchPayment,
+    tx,
+    repository,
+    lifecycle,
+    settings,
+    dispatcher,
+  };
 }
 
+async function refusal(promise: Promise<unknown>) {
+  try {
+    await promise;
+  } catch (error) {
+    return error as HttpException;
+  }
+  throw new Error('expected checkout to refuse');
+}
+
+function quoting(result: Partial<ReferralQuoteResult>) {
+  const quote = jest.fn().mockResolvedValue({
+    discountPaise: 0,
+    discountSource: 'NONE',
+    taxableAfterDiscountPaise: 300_000,
+    ...result,
+  });
+  return { quote, provider: { quote } as ReferralQuoteProvider };
+}
+
+// The agent program's quote service is what gets injected under
+// AGENT_REFERRAL_QUOTE; this fails to compile if it stops fitting.
+const agentQuoteFits = (q: AgentReferralQuote): ReferralQuoteProvider => q;
+
 describe('CheckoutService.start', () => {
+  it('takes the agent program’s quote service as its quote provider', () => {
+    expect(typeof agentQuoteFits).toBe('function');
+  });
+
   it('answers 503 until payments are configured, before touching anything', async () => {
     const { service, createOrder } = build({ configured: false });
     await expect(
@@ -119,6 +192,16 @@ describe('CheckoutService.start', () => {
       razorpayOrderId: 'order_1',
       amountInr: 300_000,
       status: 'PENDING',
+      paidBy: 'MEMBER',
+      // Test keys: no money moves, and the payment says so.
+      livemode: false,
+      listAmountPaise: 300_000,
+      discountPaise: 0,
+      discountSource: 'NONE',
+      heldReferralCodeId: null,
+      taxableAmountPaise: 300_000,
+      taxRateBps: 0,
+      taxPaise: 0,
     });
     expect(repository.recordEvent).toHaveBeenCalledWith(
       tx,
@@ -131,7 +214,188 @@ describe('CheckoutService.start', () => {
       orderId: 'order_1',
       keyId: 'rzp_test_key',
       months: 3,
+      amountInPaise: 300_000,
+      pricing: { totalPaise: 300_000, taxPaise: 0 },
+      referral: null,
     });
+  });
+
+  it('adds GST on top of the price when the rate is set', async () => {
+    const { service, createOrder, tx } = build({ gstRateBps: 1800 });
+    const result = await service.start(
+      'u1',
+      { planCode: 'GOLD', months: 3 },
+      NOW,
+    );
+    expect(createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ amountInPaise: 354_000 }),
+    );
+    const [[payment]] = tx.paymentTransaction.create.mock.calls as [
+      [{ data: Record<string, unknown> }],
+    ];
+    expect(payment.data).toMatchObject({
+      amountInr: 354_000,
+      taxableAmountPaise: 300_000,
+      taxRateBps: 1800,
+      taxPaise: 54_000,
+    });
+    expect(result.pricing).toEqual({
+      listAmountPaise: 300_000,
+      discountPaise: 0,
+      discountSource: 'NONE',
+      taxableAmountPaise: 300_000,
+      taxRateBps: 1800,
+      taxPaise: 54_000,
+      totalPaise: 354_000,
+    });
+  });
+
+  it.each([
+    ['missing', undefined],
+    ['not a whole number of basis points', 18.5],
+    ['above 100%', 10_001],
+  ])(
+    'refuses to charge (503) while the GST setting is %s',
+    async (_label, rate) => {
+      const { service, createOrder } = build({ gstRateBps: rate });
+      const error = await refusal(
+        service.start('u1', { planCode: 'GOLD', months: 3 }, NOW),
+      );
+      expect(error.getStatus()).toBe(503);
+      expect(error.getResponse()).toMatchObject({
+        code: 'CHECKOUT_UNAVAILABLE',
+      });
+      expect(createOrder).not.toHaveBeenCalled();
+    },
+  );
+
+  it('marks a payment made with live keys as live', async () => {
+    const { service, tx } = build({ keyId: 'rzp_live_abc' });
+    await service.start('u1', { planCode: 'GOLD', months: 3 }, NOW);
+    const [[payment]] = tx.paymentTransaction.create.mock.calls as [
+      [{ data: Record<string, unknown> }],
+    ];
+    expect(payment.data.livemode).toBe(true);
+  });
+
+  it('refuses a typed code while the agent program is not wired (422)', async () => {
+    const { service, createOrder } = build();
+    const error = await refusal(
+      service.start(
+        'u1',
+        { planCode: 'GOLD', months: 3, promoCode: 'NM7K2P9X' },
+        NOW,
+      ),
+    );
+    expect(error.getStatus()).toBe(422);
+    expect(error.getResponse()).toMatchObject({
+      code: 'PROMO_CODES_UNAVAILABLE',
+    });
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it('applies the quoted referral discount, then GST, and holds the code', async () => {
+    const { quote, provider } = quoting({
+      discountPaise: 15_000,
+      discountSource: 'REFERRAL_FIRST_PLAN',
+      taxableAfterDiscountPaise: 285_000,
+      heldReferralCodeId: 'code-1',
+      agentDisplayName: 'Ravi K.',
+    });
+    const { service, createOrder, tx } = build({
+      quote: provider,
+      gstRateBps: 1800,
+    });
+    const result = await service.start(
+      'u1',
+      { planCode: 'GOLD', months: 3, promoCode: ' NM7K2P9X ' },
+      NOW,
+    );
+    expect(quote).toHaveBeenCalledWith({
+      memberId: 'u1',
+      promoCode: 'NM7K2P9X',
+      planPriceId: expect.any(String) as string,
+      listAmountPaise: 300_000,
+    });
+    // 285000 + 18% (51300) = 336300
+    expect(createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ amountInPaise: 336_300 }),
+    );
+    const [[payment]] = tx.paymentTransaction.create.mock.calls as [
+      [{ data: Record<string, unknown> }],
+    ];
+    expect(payment.data).toMatchObject({
+      amountInr: 336_300,
+      listAmountPaise: 300_000,
+      discountPaise: 15_000,
+      discountSource: 'REFERRAL_FIRST_PLAN',
+      heldReferralCodeId: 'code-1',
+      taxableAmountPaise: 285_000,
+      taxPaise: 51_300,
+    });
+    expect(result.referral).toEqual({ agentDisplayName: 'Ravi K.' });
+  });
+
+  it('asks for a discount without a typed code too (signup attribution)', async () => {
+    const { quote, provider } = quoting({});
+    const { service } = build({ quote: provider });
+    await service.start('u1', { planCode: 'GOLD', months: 3 }, NOW);
+    expect(quote).toHaveBeenCalledWith(
+      expect.objectContaining({ promoCode: null }),
+    );
+  });
+
+  it('refuses a typed code that gives no discount, saying why (422)', async () => {
+    const { provider } = quoting({ rejectedReason: 'NOT_FIRST_PLAN' });
+    const { service, createOrder } = build({ quote: provider });
+    const error = await refusal(
+      service.start(
+        'u1',
+        { planCode: 'GOLD', months: 3, promoCode: 'NM7K2P9X' },
+        NOW,
+      ),
+    );
+    expect(error.getStatus()).toBe(422);
+    expect(error.getResponse()).toMatchObject({
+      code: 'PROMO_CODE_REJECTED',
+      reason: 'NOT_FIRST_PLAN',
+    });
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it('never charges on a quote that does not add up (503)', async () => {
+    const { provider } = quoting({
+      discountPaise: 15_000,
+      discountSource: 'REFERRAL_FIRST_PLAN',
+      taxableAfterDiscountPaise: 290_000,
+    });
+    const { service, createOrder } = build({ quote: provider });
+    const error = await refusal(
+      service.start('u1', { planCode: 'GOLD', months: 3 }, NOW),
+    );
+    expect(error.getStatus()).toBe(503);
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it('refuses (503) rather than guessing when the quote service fails', async () => {
+    const quote = jest.fn().mockRejectedValue(new Error('db down'));
+    const { service, createOrder } = build({ quote: { quote } });
+    const error = await refusal(
+      service.start('u1', { planCode: 'GOLD', months: 3 }, NOW),
+    );
+    expect(error.getResponse()).toMatchObject({ code: 'CHECKOUT_UNAVAILABLE' });
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it('registers the GST validator for the admin settings API', () => {
+    const { service, settings } = build();
+    service.onModuleInit();
+    const [[key, validate]] = settings.registerValidator.mock.calls as [
+      [string, (v: unknown) => string | null],
+    ];
+    expect(key).toBe('payment.gst_rate_bps');
+    expect(validate(1800)).toBeNull();
+    expect(validate(-1)).toMatch(/0 to 10000/);
   });
 });
 
@@ -187,8 +451,27 @@ describe('CheckoutService.verify', () => {
       currency: 'INR',
       actorId: 'u1',
       via: 'CHECKOUT_VERIFY',
+      paymentSourceHash: null,
     });
     expect(result).toMatchObject({ outcome: 'ACTIVATED', status: 'ACTIVE' });
+  });
+
+  it('hashes the payer’s UPI id, and delivers the payment event after commit', async () => {
+    const { service, lifecycle, fetchPayment, dispatcher } = build();
+    fetchPayment.mockResolvedValueOnce({
+      id: 'pay_1',
+      orderId: 'order_1',
+      amount: 300_000,
+      currency: 'INR',
+      status: 'captured',
+      vpa: 'priya@okicici',
+    });
+    await verify(service);
+    expect(lifecycle.confirmPayment).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ paymentSourceHash: 'v1:UPI:priya@okicici' }),
+    );
+    expect(dispatcher.dispatchSoon).toHaveBeenCalledTimes(1);
   });
 
   it('grants nothing for a payment that is only authorized, not captured', async () => {
@@ -199,6 +482,7 @@ describe('CheckoutService.verify', () => {
       amount: 300_000,
       currency: 'INR',
       status: 'authorized',
+      vpa: null,
     });
     tx.userSubscription.findUnique.mockResolvedValueOnce({
       status: 'PENDING',
@@ -230,6 +514,7 @@ describe('CheckoutService.verify', () => {
       amount: 300_000,
       currency: 'INR',
       status: 'captured',
+      vpa: null,
     });
     await expect(verify(service)).rejects.toBeInstanceOf(BadRequestException);
     expect(lifecycle.confirmPayment).not.toHaveBeenCalled();
@@ -246,6 +531,7 @@ describe('CheckoutService.verify', () => {
       amount: 300_000,
       currency: 'INR',
       status,
+      vpa: null,
     });
     expect((await verify(service)).outcome).toBe(outcome);
     expect(lifecycle.confirmPayment).not.toHaveBeenCalled();

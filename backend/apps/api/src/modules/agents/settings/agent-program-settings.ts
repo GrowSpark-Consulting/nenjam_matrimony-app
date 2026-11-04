@@ -37,6 +37,9 @@ export const REFERRAL_CODE_VALIDATION_CODE_LIMIT_KEY =
   'referral.code_validation_code_limit';
 export const REFERRAL_CODE_VALIDATION_WINDOW_SECONDS_KEY =
   'referral.code_validation_window_seconds';
+/** Days an agent-added client draft stays open (from creation, and again from submit). */
+export const AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY =
+  'agent.client_draft_expiry_days';
 
 export type CommissionBase = 'AMOUNT_PAID' | 'AMOUNT_PAID_EXCLUDING_GST';
 
@@ -62,6 +65,7 @@ export interface AgentProgramSettings {
   codeValidationIpLimit?: number;
   codeValidationCodeLimit?: number;
   codeValidationWindowSeconds?: number;
+  agentClientDraftExpiryDays?: number;
 }
 
 export interface ParsedAgentProgramSettings {
@@ -201,11 +205,34 @@ const RULES: readonly Rule[] = [
     check: isPositiveInteger,
     expected: 'an integer >= 1',
   },
+  {
+    key: AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY,
+    field: 'agentClientDraftExpiryDays',
+    check: isPositiveInteger,
+    expected: 'an integer >= 1',
+  },
 ];
 
 export const AGENT_PROGRAM_SETTING_KEYS: readonly string[] = RULES.map(
   (rule) => rule.key,
 );
+
+/**
+ * Why [value] is not acceptable for the agent-program setting [key], or null
+ * when it is. For refusing a bad value when an admin enters it. Stricter than
+ * `parseAgentProgramSettings` in one way: null is refused for a key where
+ * null is not a real value (the parser would treat it as missing, which turns
+ * the feature off). A key that is not one of ours is a programming error.
+ */
+export function agentProgramSettingProblem(
+  key: string,
+  value: unknown,
+): string | null {
+  const rule = RULES.find((r) => r.key === key);
+  if (!rule) throw new RangeError(`${key} is not an agent-program setting.`);
+  const ok = value === null ? rule.nullIsValue === true : rule.check(value);
+  return ok ? null : `Setting ${key} must be ${rule.expected}.`;
+}
 
 export function parseAgentProgramSettings(
   raw: Record<string, unknown>,

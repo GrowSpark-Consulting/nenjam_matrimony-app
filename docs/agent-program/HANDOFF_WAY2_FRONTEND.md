@@ -1,0 +1,698 @@
+# Agent-added clients ("Way 2"): frontend handoff
+
+For the frontend developer building the **Agent Portal** (React) and the
+**member app** (Flutter). Everything here is on `main` (merged from
+`feat/agent-clients-routes`, the flow, and `feat/agent-clients-full-profile`,
+the full profile, PR #204), and is described formally in
+`docs/agent-program/agent-api.openapi.yaml` (tags **Clients** and **Client
+invites**). If this file and the contract ever disagree, the contract wins;
+please tell the backend owner.
+
+---
+
+## 1. The flow in plain words
+
+An agent meets someone who wants to join Nenjam. Instead of sharing a
+referral code, the agent ticks "the client (or her family) agreed", types
+the person's phone number and fills in her **profile**: the same sections
+and fields the member app's registration asks (basic details, religion,
+location, education and work, height, lifestyle, family, horoscope) plus
+her **partner preferences**. That is a **draft**. The agent can save it
+half-filled, come back, change it or throw it away. The profile is always
+the client's own: there is no "who is this profile for" question.
+
+When the required fields are filled (section 5a), the agent **submits** it.
+From that moment the draft is locked: the agent can no longer change
+anything. The person (we call her the **client**) now has an
+**invitation** waiting.
+
+The client opens the member app, taps "Added by an agent? Confirm here",
+types her phone number, receives a one-time code, and types it. She sees
+who invited her and the details the agent entered. She either:
+
+- **Accepts**: her member account is created right then, and every section
+  the agent filled becomes her own registration draft, exactly as if she
+  had typed it. She is signed in and the member app continues her
+  registration from the first question that is still unanswered, like
+  for any other member. The agent gets credit for her exactly as if she
+  had used the agent's referral code (same discount on her first plan,
+  same commission rules).
+- **Rejects**: nothing is created. That agent can never add her number
+  again.
+
+If she does nothing, the invitation **expires** after a number of days (a
+setting, `agent.client_draft_expiry_days`, 14 today). An unsubmitted
+**draft expires too**: it is open for the same number of days counted from
+when it was added, and **editing it does not extend that**. Submitting
+starts a fresh count from the moment of submit. A phone that already has a
+member account can never be added.
+
+### Worked example
+
+1. Ravi Kumar (an ACTIVE agent) ticks "Priya's family agreed", types
+   Priya Sundaram's number and her name, gender and date of birth, and
+   saves. The portal shows "Priya S. · +91 98***210 · Draft · 5 required
+   fields left" (from `missingRequired`: marital status, religion, state,
+   city, highest education).
+2. Later he fills in her religion, city, education and partner
+   preferences, then taps **Submit**. The row becomes "Waiting for
+   client", with "open until 11 Nov 2026".
+3. Priya opens the member app, taps "Added by an agent?", enters her number,
+   then the code. She sees one card: "Ravi K. added you", her whole
+   profile and partner preferences, "5% off your first plan", "Answer by
+   11 Nov 2026".
+4. Priya taps **Accept**. The app receives a Firebase custom token, signs
+   her in with it, loads her registration draft and continues at the first
+   question Ravi left empty (for example her height or her income).
+5. Ravi's portal row now reads "Accepted · 28 Oct 2026". It links to her
+   entry in **My referrals** (the `referralId`).
+
+---
+
+## 2. Things every request needs
+
+- Base URL: the same API as the rest of the agent portal / member app.
+- Send `Accept-Version: 1` on every request (missing is treated as 1).
+- Bodies are JSON. Unknown fields are refused (`400 VALIDATION_FAILED`).
+- **Errors** always look like this. Branch on `code`, never on `message`:
+
+  ```json
+  { "statusCode": 409, "error": "Conflict", "code": "CLIENT_DRAFT_EXISTS",
+    "message": "You have already added this client." }
+  ```
+
+  For `VALIDATION_FAILED`, `message` is a list naming the bad fields, for
+  example `["details.dob is not valid"]`. It never contains what was typed.
+- **Dates** you show (`expiresOn`, `submittedOn`, `acceptedOn`,
+  `windowEndsAt`) are Indian calendar dates `YYYY-MM-DD`. Show them as they
+  are; do not convert time zones. `createdAt` is an ISO timestamp (UTC).
+- Every Way 2 route may also answer:
+
+  | HTTP | `code` | What the UI should say / do |
+  |---|---|---|
+  | 403 | `CLIENT_INVITES_DISABLED` | The feature is switched off on the server. Hide the feature (see section 4); if a screen is already open: "This isn't available right now." |
+  | 503 | `AGENT_PROGRAM_UNAVAILABLE` | "Not available right now. Please try again later." |
+  | 409 | `CONCURRENT_CHANGE` | Something changed at the same moment: retry once, then reload. |
+  | 429 | `RATE_LIMITED` | "Too many attempts. Try again in N seconds." N is the `Retry-After` header (seconds). |
+
+---
+
+## 3. Statuses and labels
+
+A draft is in exactly one of these. The **labels** come from
+`GET /agent/config` → `clientStatusLabels` (English and Tamil). Always use
+those; do not hard-code the words. Tamil is still `<to be supplied>` today.
+
+| `status` | English label today | Meaning | Agent can |
+|---|---|---|---|
+| `DRAFT` | Draft | Not sent yet | edit, discard, submit |
+| `WAITING_FOR_CLIENT` | Waiting for client | Submitted, locked | only look |
+| `ACCEPTED` | Accepted | She joined; she is the agent's referral | open the referral |
+| `REJECTED` | Declined | She said no; this agent can never add her number again | only look |
+| `EXPIRED` | Expired | Ran out of time, or closed (for example she joined another way) | only look; may add her again |
+
+`editable` in the response is `true` only for `DRAFT`. `details` is `null`
+once the draft is closed (accepted, declined or expired): the agent's copy
+of her details is deleted then. A draft whose time has run out is shown as
+`EXPIRED` immediately, even before the nightly job runs.
+
+---
+
+## 4. How `/agent/config` drives the feature (Agent Portal)
+
+`GET /agent/config` (agent token) now also returns:
+
+```json
+{
+  "clientStatusLabels": {
+    "DRAFT": { "en": "Draft", "ta": "<to be supplied>" },
+    "WAITING_FOR_CLIENT": { "en": "Waiting for client", "ta": "<to be supplied>" },
+    "ACCEPTED": { "en": "Accepted", "ta": "<to be supplied>" },
+    "REJECTED": { "en": "Declined", "ta": "<to be supplied>" },
+    "EXPIRED": { "en": "Expired", "ta": "<to be supplied>" }
+  },
+  "clients": { "enabled": true, "draftLimit": 10, "expiryDays": 14 }
+}
+```
+
+(alongside everything it returned before).
+
+- **`clients.enabled` is `false` → hide everything about clients**: the
+  menu entry, the "Add a client" button, the list. Today it is `false` in
+  every environment until the business switches it on.
+- Treat a missing `clients` object (an older server) as `enabled: false`.
+- `draftLimit` is the most open clients (`DRAFT` plus `WAITING_FOR_CLIENT`)
+  at once: show "7 of 10" by counting those in the list. `expiryDays` is
+  for help text ("Your client has 14 days to answer"). Either may be
+  `null`; then `enabled` is `false` too.
+- This call never fails because of the client feature.
+
+**Which agents see it:** an `ACTIVE` agent can do everything. A
+`SUSPENDED` ("Paused") agent can see the list and the details but every
+change answers `403 AGENT_NOT_ACTIVE` (`agentStatus: "SUSPENDED"`): show
+the list read-only with the usual paused banner. `PENDING_APPROVAL`,
+`REJECTED` and `TERMINATED` agents get `403 AGENT_NOT_ACTIVE` on every
+client route: hide the feature for them (their status is in `GET /agent/me`).
+
+---
+
+## 5. Agent Portal routes (React)
+
+All with the agent access token: `Authorization: Bearer <agent access token>`.
+On `401 TOKEN_EXPIRED`, refresh once and retry, as everywhere else.
+
+### `POST /agent/clients`: add a client (creates a DRAFT)
+
+Request (`details` may be partial or left out; see section 5a for every
+field):
+
+```json
+{
+  "phone": "+919876543210",
+  "consentConfirmed": true,
+  "details": {
+    "basicDetails": {
+      "firstName": "Priya",
+      "lastName": "Sundaram",
+      "gender": "FEMALE",
+      "dob": "1998-04-12",
+      "maritalStatus": "NEVER_MARRIED"
+    },
+    "religionDetails": { "religionCode": "HINDU", "communityCode": "HINDU-VELLALAR" },
+    "locationDetails": { "countryCode": "IN", "stateCode": "IN-TN", "cityCode": "IN-TN-MADURAI" },
+    "educationDetails": { "qualification": "B.E / B.Tech", "annualIncome": "10 - 20 Lakhs" },
+    "partnerPreference": { "preferredAgeRange": "26-30", "extended": { "diet": "Vegetarian" } }
+  }
+}
+```
+
+- `phone`: E.164, for example `+919876543210`. It is the client's own
+  mobile number (required, and it can't be changed later).
+- `consentConfirmed`: **must be `true`**. Show a required checkbox: "The
+  client (or her family) agreed to be added." Anything else is
+  `400 VALIDATION_FAILED` naming `consentConfirmed`. Only the fact that it
+  was ticked is kept.
+
+Response `201`:
+
+```json
+{
+  "id": "5b0f6a52-4f0e-4c6e-9d6b-2f1a3c7e8d90",
+  "status": "DRAFT",
+  "statusLabel": { "en": "Draft", "ta": "<to be supplied>" },
+  "displayName": "Priya S.",
+  "phoneMasked": "+91 98***210",
+  "details": {
+    "basicDetails": { "firstName": "Priya", "lastName": "Sundaram", "gender": "FEMALE",
+                      "dob": "1998-04-12", "maritalStatus": "NEVER_MARRIED" },
+    "religionDetails": { "religionCode": "HINDU", "religion": "Hindu",
+                         "communityCode": "HINDU-VELLALAR", "community": "Vellalar" },
+    "locationDetails": { "countryCode": "IN", "country": "India", "stateCode": "IN-TN",
+                         "state": "Tamil Nadu", "cityCode": "IN-TN-MADURAI", "city": "Madurai" },
+    "educationDetails": { "qualification": "B.E / B.Tech", "annualIncome": "10 - 20 Lakhs" },
+    "partnerPreference": { "preferredAgeRange": "26-30", "extended": { "diet": "Vegetarian" } }
+  },
+  "missingRequired": [],
+  "editable": true,
+  "createdAt": "2026-10-28T10:00:00.000Z",
+  "submittedOn": null,
+  "expiresOn": "2026-11-11",
+  "acceptedOn": null,
+  "referralId": null
+}
+```
+
+- `missingRequired`: the required fields still empty (section 5a). Show
+  them as "N fields left" and disable **Submit** until it is `[]`.
+- `displayName` is "first name + last initial", or the masked phone while
+  no name is filled in yet.
+- The labels (`religion`, `city`, ...) are filled in by the server from
+  the codes.
+
+Errors:
+
+| HTTP | `code` | What the UI should say |
+|---|---|---|
+| 400 | `VALIDATION_FAILED` | Highlight the named fields (`consentConfirmed`, `phone`, or `details.<section>.<field>`; a wrong master-data code names just its section, for example `details.locationDetails`). |
+| 403 | `AGENT_NOT_ACTIVE` | "Your account is paused; you can't add clients right now." |
+| 409 | `CLIENT_DRAFT_EXISTS` | "You have already added this number." Offer to open the list. |
+| 422 | `CLIENT_DRAFT_LIMIT_REACHED` | "You can have at most {draftLimit} open clients. Submit, discard or wait for one to close." |
+| 422 | `CLIENT_PHONE_UNAVAILABLE` | "This number can't be added." Give no reason: the server deliberately doesn't say why. |
+| 503 | `OTP_DELIVERY_UNAVAILABLE` | "Only test numbers can be added for now." (No SMS yet, see section 9.) |
+
+### `GET /agent/clients?status=&cursor=&limit=`: the list, newest first
+
+- `status`: optional, one of the five statuses.
+- `limit`: 1 to 50 (default 20).
+- `cursor`: the previous page's `nextCursor`.
+
+Response `200`:
+
+```json
+{ "items": [ { "...": "ClientDraft as above" } ], "nextCursor": "eyJ0Ijoi..." }
+```
+
+`nextCursor` is `null` on the last page. Errors: `400` (bad query), `403`.
+
+### `GET /agent/clients/{id}`: one draft
+
+Response `200`: a `ClientDraft`. Errors: `404 CLIENT_DRAFT_NOT_FOUND`
+("This client no longer exists." Another agent's draft also looks like
+this), `403`.
+
+### `PATCH /agent/clients/{id}`: edit a DRAFT
+
+Request `{ "details": { ...the whole profile... } }`. This **replaces the
+whole profile**: a section (or a field) you leave out is **deleted**, not
+kept. Send every section you want to keep (it may still be partial).
+`details` itself is required (leaving it out is `400` naming `details`);
+`"details": {}` empties the whole profile. You can send back exactly what
+you read, labels included (the server ignores the labels and fills them in
+again). The phone cannot be changed: to change it, discard the draft and
+add the client again. Editing does not change `expiresOn`.
+
+Response `200`: the updated `ClientDraft`.
+
+Errors:
+
+- `400 VALIDATION_FAILED`.
+- `404 CLIENT_DRAFT_NOT_FOUND`.
+- `409 CLIENT_DRAFT_LOCKED`: "This client was already submitted (or has
+  closed) and can't be changed." Reload the draft.
+- `403`.
+
+### `DELETE /agent/clients/{id}`: discard a DRAFT
+
+Response `204`, no body. Errors: `404`, `409 CLIENT_DRAFT_LOCKED` (only a
+DRAFT can be discarded; a submitted invitation cannot be withdrawn), `403`.
+
+### `POST /agent/clients/{id}/submit`: send it to the client
+
+No body. Response `200`: the `ClientDraft`, now `WAITING_FOR_CLIENT`, with
+`submittedOn` set and a new `expiresOn` (counted from now). Ask "Once
+submitted you can't change it. Submit?" before calling.
+
+Errors:
+
+- `404`.
+- `409 CLIENT_DRAFT_LOCKED`.
+- `422 CLIENT_PROFILE_INCOMPLETE`: a required field is empty. The body
+  carries `missingFields`, for example
+  `["religionDetails.religionCode", "educationDetails.qualification"]`.
+  Open the form at the first one: "Please fill in: Religion, Highest
+  education." Nothing was changed and nothing was sent to the client.
+- `422 CLIENT_PHONE_UNAVAILABLE`: the number joined in the meantime. Say
+  "This number can no longer be added." The draft stays a DRAFT; offer to
+  discard it.
+- `503 OTP_DELIVERY_UNAVAILABLE`.
+- `403`.
+
+The server also sends the client a one-time code at submit (with the test
+code nothing is really sent). The client can always ask for a fresh code in
+the app, so do not promise "she got an SMS".
+
+---
+
+## 5a. The client profile: every field
+
+`details` uses the member app's own registration sections and field names,
+so whatever the agent enters becomes her registration draft unchanged.
+
+**Required to submit (★): exactly nine fields** (plus her mobile number,
+which is the draft's phone). These are the nine paths, in the server's
+order (`CLIENT_PROFILE_REQUIRED_AT_SUBMIT` in
+`backend/apps/api/src/modules/agents/clients/client-profile-required.ts`),
+and the nine rows marked ★ in the table below:
+
+1. `basicDetails.firstName`
+2. `basicDetails.lastName`
+3. `basicDetails.gender`
+4. `basicDetails.dob`
+5. `basicDetails.maritalStatus`
+6. `religionDetails.religionCode`
+7. `locationDetails.stateCode`
+8. `locationDetails.cityCode`
+9. `educationDetails.qualification`
+
+(The plan's "Full name" is two of them, first and last name; the plan's
+"current city and state" is two more.) **Every other field is optional**,
+so you can put a "Skip" on it now or later without any backend change. The
+list lives in one place on the server; if it changes, `missingRequired` and
+the `422 CLIENT_PROFILE_INCOMPLETE` body change with it, so drive the
+"required" markers from `missingRequired` rather than hard-coding them.
+
+### Empty, partial and missing answers
+
+- **Leaving a field out, sending `null` and (for text and choice fields)
+  sending `""` or only spaces all mean the same: "not answered".** The
+  server drops it; it is never stored and never comes back in the
+  response. Text is trimmed.
+- **Siblings' `age` is a number**: leave it out or send `null`. A string,
+  even `""`, is `400`.
+- **A section whose fields are all empty is accepted and dropped**, for
+  example `"partnerPreference": {}` or `"physicalDetails": { "height": null }`.
+  The same for `familyDetails.father` / `.mother` and
+  `partnerPreference.extended`, and for `"siblings": []`.
+- **A sibling row must say `relation`** (`BROTHER` or `SISTER`): a row
+  with nothing in it is `400` naming `details.familyDetails.siblings[i].relation`.
+  Don't send empty rows; leave them out.
+- **Simplest for the portal:** send only what the agent answered, and leave
+  out empty fields and empty sections. Sending them as `null` or `""` is
+  also fine, but it is never needed.
+- An unknown section is `400` naming `details`; an unknown field is `400`
+  naming its section, for example `details.basicDetails`. A value of the wrong type
+  (a number for a text field, an object for a choice) is `400` naming the
+  field.
+
+### Sections the portal should show (in this order)
+
+1. **Basic details**: name, gender, date of birth, marital status.
+2. **Religion**: religion, community, sub-community.
+3. **Language**: mother tongue.
+4. **Location**: country, state, city, native place.
+5. **Education and work**: highest education, occupation, employer type, yearly income.
+6. **Physical**: height.
+7. **Lifestyle**: diet, about the client.
+8. **Family**: father's and mother's occupation, siblings, family type.
+9. **Horoscope**: zodiac (rashi), star.
+10. **Partner preferences**.
+
+### Field by field
+
+| Section · field (send as) | Plan field | ★ | Input | Allowed values |
+|---|---|---|---|---|
+| `basicDetails.firstName` | Full name | ★ | text | 1 to 50 characters |
+| `basicDetails.lastName` | Full name | ★ | text | 1 to 50 characters |
+| `basicDetails.gender` | Gender | ★ | choice | `MALE`, `FEMALE` |
+| `basicDetails.dob` | Date of birth | ★ | date | `YYYY-MM-DD`, at least 21 years ago |
+| `basicDetails.maritalStatus` | Marital status | ★ | choice | `NEVER_MARRIED`, `DIVORCED`, `WIDOWED`, `AWAITING_DIVORCE` |
+| `religionDetails.religionCode` | Religion | ★ | dropdown | a code from `GET /reference-data/religions` |
+| `religionDetails.communityCode` | Community | | dropdown | a code from `GET /reference-data/communities?religionCode=` (of that religion) |
+| `religionDetails.subCaste` | Sub-community | | text or dropdown | up to 50 characters; the member app suggests Iyer, Iyengar, Mudaliar, Pillai, Chettiar, Gounder, Nadar, Vanniyar, Don't Wish to Specify |
+| `languageDetails.motherTongue` | Mother tongue | | text | up to 50 characters |
+| `locationDetails.countryCode` | Country | | dropdown | a code from `GET /reference-data/countries`; **needed whenever a state is given** |
+| `locationDetails.stateCode` | Current state | ★ | dropdown | a code from `GET /reference-data/states?countryCode=` |
+| `locationDetails.cityCode` | Current city | ★ | searchable dropdown | a code from `GET /reference-data/cities?stateCode=` |
+| `locationDetails.nativePlace` | Native place | | text | up to 100 characters |
+| `educationDetails.qualification` | Highest education | ★ | dropdown + "Other" text | up to 100 characters; the app offers B.E / B.Tech, M.Tech / M.E, MBBS / MD, MBA / PGDM, B.Sc / M.Sc, CA / CFA, B.Com / M.Com, Ph.D, Diploma |
+| `educationDetails.occupation` | Occupation | | dropdown + "Other" text | up to 100 characters; the app offers Software Engineer, Doctor, IAS / IPS / Govt, Business Owner, Finance / Banking, Civil / Mechanical Engg, Teacher / Professor, Lawyer, Architect |
+| `educationDetails.employmentType` | Employer type | | choice | Private, Government, Business, Self-Employed, Not Working, Student, Retired |
+| `educationDetails.annualIncome` | Yearly income range | | choice | Below 5 Lakhs, 5 - 10 Lakhs, 10 - 20 Lakhs, 20 - 50 Lakhs, 50 Lakhs - 1 Crore, 1 Crore+ |
+| `physicalDetails.height` | Height | | dropdown | one of the app's 92 labels, 122 to 213 cm, as a **string**, exactly like `5'9" (175 cm)` (see "Height" below) |
+| `lifestyleDetails.eatingHabit` | Diet | | choice | Vegetarian, Non-Vegetarian, Eggetarian, Vegan, Jain |
+| `lifestyleDetails.aboutMe` | About | | long text | up to 1000 characters |
+| `familyDetails.father.occupation` | Parents' occupation | | text | up to 100 characters |
+| `familyDetails.mother.occupation` | Parents' occupation | | text | up to 100 characters |
+| `familyDetails.siblings[]` | Siblings | | repeatable rows | up to 10 rows; each `relation` (`BROTHER` or `SISTER`, required in a row), optional `name` (50), `age` (0 to 120), `occupation` (100) |
+| `familyDetails.familyType` | Family type | | choice | Joint Family, Nuclear Family |
+| `horoscopeDetails.rashi` | Zodiac | | dropdown | Mesha, Vrishabha, Mithuna, Kataka, Simha, Kanya, Tula, Vrischika, Dhanu, Makara, Kumbha, Meena, Don't Know |
+| `horoscopeDetails.star` | Star | | dropdown | Aswini, Bharani, Karthigai, Rohini, Mrigasheersham, Thiruvaathirai, Punarpoosam, Poosam, Aayilyam, Magam, Pooram, Uthiram, Hastham, Chithirai, Swaathi, Visaagam, Anusham, Kettai, Moolam, Pooraadam, Uthiraadam, Thiruvonam, Avittam, Sadhayam, Poorattathi, Uthirattathi, Revathi, Don't Know |
+| `partnerPreference.preferredAgeRange` | Partner: age range | | choice | 18-22, 22-26, 26-30, 30-35, 35-40, 40-50, Any |
+| `partnerPreference.preferredHeightRange` | Partner: height range | | choice | 4'6"-5'0", 5'0"-5'4", 5'4"-5'8", 5'8"-6'0", 6'0"+, Any |
+| `partnerPreference.maritalStatusPref` | Partner: marital status | | choice | Never Married, Doesn't Matter, Any |
+| `partnerPreference.religionPref` | Partner: religion, or open to all | | choice | Hindu, Christian, Muslim, Jain, Sikh, Any ("Any" = open to all) |
+| `partnerPreference.castePref` | Partner: communities | | choice | Same Caste, Any Caste, Inter-Caste OK |
+| `partnerPreference.extended.minEducation` | Partner: minimum education | | choice | High School, Bachelors, Masters, Doctorate, Any |
+| `partnerPreference.occupationPref` | Partner: occupation type | | choice | Software / IT, Doctor, Government, Business, Any |
+| `partnerPreference.incomePref` | Partner: income range | | choice | 5-10 Lakhs, 10-20 Lakhs, 20-50 Lakhs, 50 Lakhs+, Any |
+| `partnerPreference.locationPref` | Partner: locations, or anywhere | | choice | Same City, Same State, Anywhere in India, NRI OK, Any |
+| `partnerPreference.extended.diet` | Partner: diet | | choice | Vegetarian, Eggetarian, Vegan, Non-Vegetarian, Doesn't Matter |
+
+Each partner preference is **one** choice, as in the member app, and each
+is optional on its own: send any of them, none, or leave
+`partnerPreference` out altogether.
+
+**Height.** The value is the member app's label for one whole centimetre
+from 122 to 213, as text: feet, a straight apostrophe `'`, inches, a
+straight double quote `"`, a space, then the centimetres in brackets. The
+inches are the centimetres divided by 2.54, rounded. For example
+`4'0" (122 cm)`, `5'3" (160 cm)`, `5'9" (175 cm)`, `7'0" (213 cm)`. It is
+the same list as `ProfileOptions.heightLabel` in the member app
+(`Frontend/lib/core/constants/profile_options.dart`), so build the
+dropdown from the same formula. A number (`175`), `"175"`, `"175 cm"`,
+`"5 ft 9"` or curly quotes are `400` naming
+`details.physicalDetails.height`.
+
+**Master data.** The five reference-data lists need no token. Send the
+`code`; the server checks it exactly as it does for a member's own profile
+and returns the `label` next to it. Refused with
+`400 VALIDATION_FAILED` naming the section: an unknown code, a city
+outside its state, a state outside its country, a community outside its
+religion, a state without a country code, a city without a state code, a
+community without a religion code. When the country or religion changes,
+clear the state/city or community, as the member app does.
+
+**Community is always optional**, for every religion: the server never
+asks for one, even when the religion has communities. It is only checked
+when you send it (it must belong to the religion sent with it).
+
+**Photos** cannot be added by the agent (not built; see section 10).
+
+---
+
+## 6. Member app routes (Flutter)
+
+The client is **not** a member yet and has **no Firebase session** while she
+looks at invitations. She uses a separate, short-lived **client token**.
+
+### The exact sign-in sequence
+
+1. **Phone screen.** `POST /client-invites/otp/request` with
+   `{ "phone": "+919876543210" }` → `200`
+   `{ "expiresInSeconds": 300, "resendAfterSeconds": 30 }`. The answer is
+   the same whether or not anyone invited this number.
+2. **Code screen.** `POST /client-invites/otp/verify` with
+   `{ "phone": "+919876543210", "code": "123456" }` → `200`
+   `{ "accessToken": "eyJ...", "expiresInSeconds": 900, "scope": "CLIENT" }`.
+   Enable "Resend" after `resendAfterSeconds` (call step 1 again; the
+   newest code is the one that counts).
+3. **Invitations.** `GET /client-invites` with
+   `Authorization: Bearer <client token>` → `200`:
+
+   ```json
+   { "items": [ {
+       "id": "5b0f6a52-4f0e-4c6e-9d6b-2f1a3c7e8d90",
+       "agentDisplayName": "Ravi K.",
+       "details": {
+         "basicDetails": { "firstName": "Priya", "lastName": "Sundaram", "gender": "FEMALE",
+                           "dob": "1998-04-12", "maritalStatus": "NEVER_MARRIED" },
+         "religionDetails": { "religionCode": "HINDU", "religion": "Hindu",
+                              "communityCode": "HINDU-VELLALAR", "community": "Vellalar" },
+         "locationDetails": { "countryCode": "IN", "country": "India", "stateCode": "IN-TN",
+                              "state": "Tamil Nadu", "cityCode": "IN-TN-MADURAI", "city": "Madurai" },
+         "educationDetails": { "qualification": "B.E / B.Tech", "annualIncome": "10 - 20 Lakhs" },
+         "partnerPreference": { "preferredAgeRange": "26-30", "extended": { "diet": "Vegetarian" } }
+       },
+       "expiresOn": "2026-11-11",
+       "referredMemberDiscountPercent": 5
+   } ] }
+   ```
+
+   `details` is the whole profile the agent entered, in the same sections
+   and fields as section 5a (with the labels filled in). Show every
+   section that has an answer, read-only, with the partner preferences
+   last, so she can check it before she accepts. There are no photos.
+
+   An empty `items` means nobody has invited this number (or the
+   invitations ran out). Show "There's no invitation for this number." and
+   offer the normal sign-up. Usually there is one; there can be more (two
+   agents added her). Show each as a card.
+4. **Accept.** `POST /client-invites/{id}/accept` (client token, no body) →
+   `200`:
+
+   ```json
+   { "firebaseCustomToken": "eyJ...", "agentDisplayName": "Ravi K.",
+     "windowEndsAt": "2026-12-27" }
+   ```
+
+5. **Sign in.** `FirebaseAuth.instance.signInWithCustomToken(firebaseCustomToken)`.
+   From here on she is an ordinary member, and every request uses her
+   Firebase ID token exactly like any other member. Forget the client token.
+6. **Resume registration.** `GET /profiles/draft` (member token). It returns
+   her draft with every section the agent filled in `data` (the same
+   section and field names as section 5a, labels included, and
+   `basicDetails.profileCreatedFor: "Myself"`), `completedSteps` listing
+   those sections' step numbers and `currentStep` the highest of them:
+   exactly what the app would hold had she saved each of them herself.
+   Send her through the app's normal routing for a signed-in member with a
+   draft: it opens the first onboarding question still unanswered (the
+   agent may have skipped her height, income, community, country or
+   "about me"), and lands in the app when nothing is left.
+
+**Reject** instead: ask first ("Decline {agentDisplayName}'s invitation?
+They won't be able to add your number again."), then
+`POST /client-invites/{id}/reject` → `204`. Rejecting twice also answers
+`204`. Remove the card. No account is created, so she stays signed out.
+
+### What to verify about resuming a draft for an already-signed-in account
+
+The usual member path collects the profile while signed out and signs in
+at the end. Here she arrives **already signed in, with the agent's whole
+profile already saved**.
+Please check, and tell the backend owner about anything that doesn't hold:
+
+- Nothing in the app overwrites a section with an empty or locally cached
+  copy (an older half-filled local draft on the same phone, for example).
+  The server's draft is the truth.
+- The app goes straight to the first unanswered question. It does not
+  show the registration landing page, the "who is this profile for"
+  screen (it is `Myself`), or questions the agent already answered.
+- She can still open any section in Edit Profile and correct what the
+  agent typed. Saving uses the normal `PATCH /profiles/draft/<section>`.
+- If the agent started a section the wizard wants complete before
+  finishing (for example education without income), the app's normal
+  "finish it or clear it" check at the end applies, as for any member.
+- Her account email is a placeholder (`<uid>@firebase.invalid`), as for
+  every phone-only signup today. If the wizard asks for an email later,
+  that is the normal path.
+- On app restart before she finishes, the normal "resume my draft"
+  behaviour applies (she is a signed-in member with a draft).
+- The referral is already attached. Do not ask her for a referral code;
+  `POST /registration/referral-code` would answer `409 ALREADY_ATTRIBUTED`.
+
+### Errors on the client routes
+
+| Route | HTTP | `code` | What the UI should say / do |
+|---|---|---|---|
+| request | 400 | `VALIDATION_FAILED` | "Enter a valid mobile number." |
+| request | 503 | `OTP_DELIVERY_UNAVAILABLE` | "We can't send a code to this number yet." (Only test numbers today.) |
+| request | 429 | `RATE_LIMITED` | "Too many codes requested. Try again in N seconds" (`Retry-After`). |
+| verify | 400 | `VALIDATION_FAILED` | "Enter the code we sent." |
+| verify | 401 | `OTP_INVALID` | "That code isn't right." (Also a used code, or no code requested.) |
+| verify | 401 | `OTP_EXPIRED` | "That code has expired. Request a new one." |
+| verify | 429 | `RATE_LIMITED` | Too many wrong codes: "Request a new code." |
+| list / accept / reject | 401 | `UNAUTHORIZED` / `TOKEN_EXPIRED` | The client token is missing or expired (it lives 15 minutes): go back to the phone screen and verify again. |
+| accept / reject | 404 | `INVITE_NOT_FOUND` | "This invitation isn't available." Reload the list. |
+| accept / reject | 409 | `INVITE_UNAVAILABLE` | "This invitation has expired or was closed." Reload the list. (Also: the agent is paused right now.) |
+| accept | 409 | `ALREADY_MEMBER` | "This number already has a Nenjam account. Please sign in." Go to the normal sign-in. |
+| any | 403 | `CLIENT_INVITES_DISABLED` | Hide the "Added by an agent?" entry; on an open screen: "This isn't available right now." |
+
+**Accept is safe to retry.** If the network drops after she taps Accept,
+just call accept again with the same client token. If it had already gone
+through, the server answers `200` again with a fresh custom token and
+creates nothing new.
+
+### The client token lives in memory only
+
+Never write it to disk (no SharedPreferences, no secure storage, no local
+DB) and never log it. Keep it in the screen's / provider's state; when the
+app is closed or she goes back past the phone screen, it is gone, and she
+verifies again. It is useless anywhere else: every agent and member route
+refuses it.
+
+---
+
+## 7. Where to put the entry point (member app)
+
+"Added by an agent? Confirm here" belongs where a new person starts:
+beside the normal sign-up / sign-in choice. The exact place is a product
+decision for the frontend owner. Hide it when any client route answers
+`403 CLIENT_INVITES_DISABLED`. There is no config call for members, so
+the first `otp/request` tells you.
+
+---
+
+## 8. How to test
+
+- Ask the backend owner **privately** for an approved test number and the
+  test code. Do not put them in code, tests, screenshots, tickets or chat
+  channels. Only approved test numbers can be added or receive a code (any
+  other number answers `503 OTP_DELIVERY_UNAVAILABLE`), in every
+  environment, until real SMS exists.
+- **The feature switch `agent.clients_enabled`** is a platform setting,
+  seeded `false`. Only a stored `true` turns it on; missing, `false` or
+  anything else is off, and every Way 2 route then answers
+  `403 CLIENT_INVITES_DISABLED` (`GET /agent/config` shows
+  `clients.enabled: false`). A Super Admin switches it in the admin
+  settings; it is read on every request, so no deploy or restart is
+  needed. Ask the backend owner to switch it on in the environment you
+  test against, and to set it back afterwards. The switch is for the whole
+  environment, not per agent.
+- **The test agent must be `ACTIVE`**: sign in to the portal as usual
+  (with a phone the test code reaches), apply, and have a staff member
+  with `agent.approve` approve the application in the admin panel
+  (`POST /admin/agents/{id}/approve`). Until then the agent is
+  `PENDING_APPROVAL` and every client route answers `403 AGENT_NOT_ACTIVE`.
+  A `SUSPENDED` agent can only look.
+- **The client's number** must be a different approved test number from the
+  agent's own (an agent cannot add their own phone), with no member
+  account yet.
+- Accepting creates a real member account for the test number. To run the
+  flow again you need a fresh test number, or the backend owner has to
+  remove that account.
+
+---
+
+## 9. What changes when real SMS arrives
+
+Today the code is the dummy (test) code checked by our own server. When SMS
+is switched on, the plan is Firebase phone sign-in in the app. Build the
+code screen so either works:
+
+- Keep "send a code" and "check the code" as separate steps behind one
+  interface ("I need proof of this phone" → "here is the proof"). Today
+  the proof is `{ phone, code }` sent to `POST /client-invites/otp/verify`.
+- Later: the app runs Firebase `verifyPhoneNumber` / `signInWithCredential`,
+  then sends `{ "firebaseIdToken": "..." }` to the same
+  `POST /client-invites/otp/verify` (planned; **not built**) and gets the
+  same client token back. `otp/request` will not be used then.
+- With real SMS she may already have a Firebase session before she
+  accepts, so `firebaseCustomToken` in the accept answer may become
+  `null`. When it is `null`, do not call `signInWithCustomToken`; keep the
+  current session and go straight to `GET /profiles/draft`.
+- The invitation, accept and reject screens do not change.
+
+---
+
+## 10. What is NOT built
+
+**Plan fields with no place in the member app** (not stored at all, so
+the portal must not ask for them): number of children, the client's own
+"willing to relocate" (the app only has it as a partner filter), field of
+study, a family note, an alternate phone number, and a free-text partner
+preference note. **Photos from the agent** are not built either: the app's
+photos belong to a member account, which does not exist until she
+accepts; it needs a decision first.
+
+
+- **Real SMS** for clients (only approved test numbers, with the test code).
+- **Verifying by Firebase ID token** at `otp/verify` (section 9).
+- **Photo verification** of the client.
+- **Report-a-partner**: a client cannot report an agent from these screens.
+- **Admin screens** for client drafts (nothing in the admin panel yet).
+- **A cap on refused numbers per agent per day** (`agent.client_phone_refusals_per_day`):
+  not built, waiting for a decision.
+- No notice (SMS, push, email) tells the client that she was added; the agent
+  tells her.
+- The agent cannot withdraw a submitted invitation, and cannot change the
+  phone of a draft (discard and add again).
+
+---
+
+## 11. Checklist of screens and states
+
+**Agent Portal**
+
+- [ ] Hide the whole feature when `clients.enabled` is false, `clients` is missing, or the agent is not ACTIVE/SUSPENDED.
+- [ ] Clients list: tabs or a filter for the five statuses (labels from `clientStatusLabels`), name, masked phone, "open until {expiresOn}", "N of {draftLimit}" open, paging with `nextCursor`, empty state.
+- [ ] Add client form: the required "client or family agreed" checkbox (`consentConfirmed`), the phone, and the ten profile sections of section 5a (★ marked, everything else skippable), save at any point, every error in section 5.
+- [ ] Master-data dropdowns from `/reference-data` (country → state → city, religion → community), clearing the children when a parent changes.
+- [ ] Draft detail (DRAFT): edit, discard (confirm), "N required fields left" from `missingRequired`, submit disabled until it is `[]`, `422 CLIENT_PROFILE_INCOMPLETE` opens the first missing field, confirm "can't change after".
+- [ ] Waiting detail: read-only, "waiting until {expiresOn}".
+- [ ] Accepted detail: accepted date, link to the referral (`referralId`).
+- [ ] Declined / Expired detail: read-only, no details shown (they are deleted).
+- [ ] Paused agent: list read-only, every change disabled, paused banner.
+- [ ] `503 OTP_DELIVERY_UNAVAILABLE`: "Only test numbers for now."
+
+**Member app**
+
+- [ ] "Added by an agent? Confirm here" entry (hidden on `403 CLIENT_INVITES_DISABLED`).
+- [ ] Phone screen: E.164 input, send code, every error in section 6.
+- [ ] Code screen: code input, resend after `resendAfterSeconds`, wrong / expired / too many.
+- [ ] Invitations: loading, empty ("no invitation for this number"), one or more cards (agent name, the full profile and partner preferences read-only, discount, answer-by date).
+- [ ] Accept: confirm, call, `signInWithCustomToken`, `GET /profiles/draft`, continue at the first unanswered question; retry-safe on network loss.
+- [ ] Reject: confirm dialog, `204`, card removed, stays signed out.
+- [ ] `ALREADY_MEMBER`: send her to normal sign-in.
+- [ ] Client token expired: back to the phone screen.
+- [ ] Client token in memory only, never stored or logged.
+- [ ] Resume checks from section 6 done on a real device.

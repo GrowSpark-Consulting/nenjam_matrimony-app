@@ -5235,6 +5235,86 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t start the payment, try again.';
 
   @override
+  String get membershipCheckoutPlanPrice => 'Plan price';
+
+  @override
+  String get membershipCheckoutReferralDiscount => 'Referral discount';
+
+  @override
+  String membershipCheckoutGst(String rate) {
+    return 'GST ($rate%)';
+  }
+
+  @override
+  String get membershipCheckoutTotal => 'Total payable';
+
+  @override
+  String membershipCheckoutPay(String amount) {
+    return 'Pay $amount';
+  }
+
+  @override
+  String get membershipCheckoutVerifying => 'Confirming your payment…';
+
+  @override
+  String get membershipCheckoutUnavailable =>
+      'Checkout isn\'t available right now. Try again shortly.';
+
+  @override
+  String get membershipPromoCodesUnavailable =>
+      'Referral codes can\'t be used yet.';
+
+  @override
+  String membershipPromoCodeApplied(String code) {
+    return 'Code $code applied';
+  }
+
+  @override
+  String get membershipVerificationUncertain =>
+      'We couldn\'t confirm your payment yet. Please don\'t pay again: if money was taken, your plan will be activated.';
+
+  @override
+  String get membershipCheckAgain => 'Check again';
+
+  @override
+  String get membershipCheckoutContinue => 'Continue';
+
+  @override
+  String get membershipCheckoutActivating =>
+      'Payment received, activating your plan…';
+
+  @override
+  String get membershipPurchaseAlreadyApplied =>
+      'This payment has already been applied to your membership.';
+
+  @override
+  String get membershipPurchaseRefunded =>
+      'This payment was refunded, so no plan was added. Please contact support if you need help.';
+
+  @override
+  String get membershipPromoInvalid => 'Code not found.';
+
+  @override
+  String get membershipPromoNotFirstPlan =>
+      'Codes apply to your first plan only.';
+
+  @override
+  String get membershipPromoAlreadyAttributed =>
+      'You\'re already linked to an agent; their discount applies automatically.';
+
+  @override
+  String get membershipPromoSelfReferral =>
+      'You can\'t use your own referral code.';
+
+  @override
+  String get membershipPromoAgentPaused =>
+      'This referral code can\'t be used right now.';
+
+  @override
+  String get membershipPromoPhoneNotVerified =>
+      'Verify your mobile number to use a referral code.';
+
+  @override
   String get membershipDenialTitle => 'Your membership plan';
 
   @override

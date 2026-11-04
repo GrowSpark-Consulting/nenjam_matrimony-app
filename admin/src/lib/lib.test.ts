@@ -71,3 +71,54 @@ describe('entitlements', () => {
     expect(sameValue({ limit: 5 }, { limit: 6 })).toBe(false);
   });
 });
+
+describe('agents', () => {
+  it('labels statuses the way the agent program does (SUSPENDED is "paused")', async () => {
+    const { agentStatusLabel } = await import('./agents');
+    expect(agentStatusLabel('SUSPENDED')).toBe('paused');
+    expect(agentStatusLabel('PENDING_APPROVAL')).toBe('awaiting approval');
+  });
+
+  it('offers approve and reject only for an application awaiting approval', async () => {
+    const { canDecide, AGENT_STATUSES } = await import('./agents');
+    expect(AGENT_STATUSES.filter(canDecide)).toEqual(['PENDING_APPROVAL']);
+  });
+});
+
+describe('agent actions', () => {
+  it('offers only moves the API allows', async () => {
+    const { manageActions } = await import('./agents');
+    expect(manageActions('ACTIVE')).toEqual(['pause', 'terminate', 'replaceCode']);
+    expect(manageActions('SUSPENDED')).toEqual(['resume', 'terminate']);
+    for (const status of ['PENDING_APPROVAL', 'REJECTED', 'TERMINATED'] as const) {
+      expect(manageActions(status)).toEqual([]);
+    }
+  });
+});
+
+describe('money helpers', () => {
+  it('offers commission actions only while they can still change', async () => {
+    const { commissionActions } = await import('./money');
+    expect(commissionActions('READY')).toEqual(['approve', 'cancel', 'override']);
+    expect(commissionActions('APPROVED')).toEqual(['cancel', 'override']);
+    for (const status of ['PAID', 'CANCELLED', 'REVERSED'] as const) {
+      expect(commissionActions(status)).toEqual([]);
+    }
+  });
+
+  it('works out payout periods in Indian time', async () => {
+    const { periodOf, previousPeriod, PERIOD_PATTERN } = await import('./money');
+    // 31 Oct 20:00 UTC is already 1 Nov in India.
+    expect(periodOf(new Date('2026-10-31T20:00:00Z'))).toBe('2026-11');
+    expect(previousPeriod(new Date('2026-10-31T20:00:00Z'))).toBe('2026-10');
+    expect(previousPeriod(new Date('2027-01-15T10:00:00Z'))).toBe('2026-12');
+    expect(PERIOD_PATTERN.test('2026-11')).toBe(true);
+    expect(PERIOD_PATTERN.test('2026-13')).toBe(false);
+  });
+
+  it('shows basis points as a percentage', async () => {
+    const { formatBps } = await import('./money');
+    expect(formatBps(1000)).toBe('10%');
+    expect(formatBps(550)).toBe('5.5%');
+  });
+});

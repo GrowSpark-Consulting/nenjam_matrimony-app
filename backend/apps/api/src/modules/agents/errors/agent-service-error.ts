@@ -27,6 +27,20 @@ export type AgentServiceErrorCode =
   | 'SELF_REFERRAL'
   | 'ALREADY_PAID'
   | 'PHONE_NOT_VERIFIED'
+  // Agent-added clients (Way 2).
+  | 'CLIENT_INVITES_DISABLED'
+  | 'CLIENT_DRAFT_NOT_FOUND'
+  | 'CLIENT_DRAFT_EXISTS'
+  | 'CLIENT_DRAFT_LOCKED'
+  | 'CLIENT_DRAFT_LIMIT_REACHED'
+  | 'CLIENT_PHONE_UNAVAILABLE'
+  | 'INVITE_NOT_FOUND'
+  | 'INVITE_UNAVAILABLE'
+  | 'ALREADY_MEMBER'
+  /** Submit: a field of CLIENT_PROFILE_REQUIRED_AT_SUBMIT is missing (see `missingFields`). */
+  | 'CLIENT_PROFILE_INCOMPLETE'
+  /** No one-time code can reach the phone (only approved test numbers while the code is the dummy one). */
+  | 'OTP_DELIVERY_UNAVAILABLE'
   | ApplicationSubmitRejectReason;
 
 export interface AgentServiceErrorOptions {
@@ -36,12 +50,15 @@ export interface AgentServiceErrorOptions {
   agentStatus?: string;
   /** For VALIDATION_FAILED: which fields, never their values. */
   fields?: string[];
+  /** For CLIENT_PROFILE_INCOMPLETE: the required fields still empty. */
+  missingFields?: string[];
 }
 
 export class AgentServiceError extends Error {
   readonly retryAfterSeconds?: number;
   readonly agentStatus?: string;
   readonly fields?: string[];
+  readonly missingFields?: string[];
 
   constructor(
     public readonly code: AgentServiceErrorCode,
@@ -52,5 +69,6 @@ export class AgentServiceError extends Error {
     this.retryAfterSeconds = options.retryAfterSeconds;
     this.agentStatus = options.agentStatus;
     this.fields = options.fields;
+    this.missingFields = options.missingFields;
   }
 }

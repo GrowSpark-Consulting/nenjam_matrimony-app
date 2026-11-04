@@ -9,6 +9,7 @@
  */
 import { Prisma, type PrismaClient } from '@app/database';
 import type {
+  AgentListFilter,
   AgentRecord,
   AgentRepository,
   NewAgentRecord,
@@ -65,6 +66,33 @@ export class PrismaAgentRepository implements AgentRepository {
       where: { id },
     });
     return row ? toRecord(row) : null;
+  }
+
+  async listPage(
+    filter: AgentListFilter,
+    page: { limit: number; after?: { at: Date; id: string } },
+    tx?: AgentTx,
+  ): Promise<AgentRecord[]> {
+    const { after } = page;
+    const rows = await dbFor(this.prisma, tx).agent.findMany({
+      where: {
+        ...(filter.status !== undefined && { status: filter.status }),
+        ...(filter.namePrefix !== undefined && {
+          name: { startsWith: filter.namePrefix, mode: 'insensitive' as const },
+        }),
+        ...(filter.phoneHash !== undefined && { phoneHash: filter.phoneHash }),
+        ...(filter.ids !== undefined && { id: { in: filter.ids } }),
+        ...(after !== undefined && {
+          OR: [
+            { createdAt: { lt: after.at } },
+            { createdAt: after.at, id: { lt: after.id } },
+          ],
+        }),
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: page.limit,
+    });
+    return rows.map(toRecord);
   }
 
   async findByPhoneHash(

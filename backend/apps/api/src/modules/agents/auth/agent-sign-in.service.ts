@@ -28,7 +28,10 @@ import {
   AgentSettingsPort,
   AgentOtpVerifyFailure,
 } from '../ports/agent-platform-ports';
-import type { AgentSecretSealer } from '../ports/agent-secret-sealer.port';
+import {
+  AGENT_SEAL_PURPOSES,
+  type AgentSecretSealer,
+} from '../ports/agent-secret-sealer.port';
 import type { AgentUnitOfWork } from '../ports/agent-unit-of-work.port';
 import {
   AGENT_OTP_RESEND_AFTER_SECONDS_KEY,
@@ -141,9 +144,15 @@ export class AgentSignInService {
         await this.deps.applicants.save(
           {
             phoneHash,
-            phoneSealed: this.deps.sealer.seal(phone),
+            phoneSealed: this.deps.sealer.seal(
+              AGENT_SEAL_PURPOSES.applicantPhone,
+              phone,
+            ),
             expiresAt: new Date(
-              now.getTime() + this.deps.options.applicantPhoneTtlSeconds * 1000,
+              now.getTime() +
+                (this.deps.options.applicantPhoneTtlSeconds ??
+                  lifetimes.accessTtlSeconds) *
+                  1000,
             ),
           },
           tx,

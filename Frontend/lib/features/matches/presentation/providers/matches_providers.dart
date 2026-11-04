@@ -19,35 +19,35 @@ final matchCategoryProvider = StateProvider<MatchCategory>(
 /// requires changing the branch bodies below.
 final matchCategoryFeedProvider =
     Provider<AsyncValue<List<DiscoveryProfileEntity>>>((ref) {
-  final category = ref.watch(matchCategoryProvider);
-  final feedAsync = ref.watch(discoverFeedProvider);
+      final category = ref.watch(matchCategoryProvider);
+      final feedAsync = ref.watch(discoverFeedProvider);
 
-  return feedAsync.whenData((feed) {
-    switch (category) {
-      case MatchCategory.newProfiles:
-        return feed.recentlyJoined;
-      case MatchCategory.daily:
-        // TODO(backend): no dedicated daily-recommendations endpoint exists
-        // yet — temporarily reuse the shared discover feed so the reel never
-        // shows an empty state; swap this branch for a real call once one
-        // exists.
-        return [
-          ...feed.aiRecommended,
-          ...feed.verifiedProfiles,
-          ...feed.premiumMembers,
-        ];
-      case MatchCategory.myMatches:
-        return feed.aiRecommended;
-      case MatchCategory.nearMe:
-        // Unreachable in practice: the Near Me chip opens the dedicated
-        // location-based screen (features/nearby) instead of selecting this
-        // category, so this state is never entered from the UI. Kept as a
-        // defensive default rather than deleted, because removing the enum
-        // value would ripple through the chip bar, its GlobalKey map and the
-        // notification deep-link service for no behavioural gain.
-        return feed.nearYou;
-      case MatchCategory.moreMatches:
-        return [...feed.verifiedProfiles, ...feed.premiumMembers];
-    }
-  });
-});
+      return feedAsync.whenData((feed) {
+        switch (category) {
+          case MatchCategory.newProfiles:
+            return feed.recentlyJoined;
+          case MatchCategory.daily:
+            // TODO(backend): no dedicated daily-recommendations endpoint exists
+            // yet — temporarily reuse the shared discover feed so the reel never
+            // shows an empty state; swap this branch for a real call once one
+            // exists.
+            return [
+              ...feed.aiRecommended,
+              ...feed.verifiedProfiles,
+              ...feed.premiumMembers,
+            ];
+          case MatchCategory.myMatches:
+            return feed.aiRecommended;
+          case MatchCategory.nearMe:
+            // Unreachable in practice: the Near Me chip opens the dedicated
+            // location-based screen (features/nearby) instead of selecting this
+            // category, so this state is never entered from the UI. Kept as a
+            // defensive default rather than deleted, because removing the enum
+            // value would ripple through the chip bar, its GlobalKey map and the
+            // notification deep-link service for no behavioural gain.
+            return feed.nearYou;
+          case MatchCategory.moreMatches:
+            return [...feed.verifiedProfiles, ...feed.premiumMembers];
+        }
+      });
+    });

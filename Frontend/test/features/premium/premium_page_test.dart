@@ -3,9 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nenjam_matrimony/core/widgets/buttons/gradient_button.dart';
 import 'package:nenjam_matrimony/core/widgets/cards/subscription_card.dart';
 import 'package:nenjam_matrimony/features/membership/data/repositories/mock_membership_repository.dart';
+import 'package:nenjam_matrimony/features/membership/domain/models/checkout_models.dart';
 import 'package:nenjam_matrimony/features/membership/domain/models/membership_models.dart';
 import 'package:nenjam_matrimony/features/membership/domain/repositories/membership_repository.dart';
 import 'package:nenjam_matrimony/features/membership/presentation/providers/membership_providers.dart';
+import 'package:nenjam_matrimony/features/membership/presentation/purchase/membership_purchase.dart';
+import 'package:nenjam_matrimony/features/membership/presentation/widgets/membership_checkout_sheet.dart';
 import 'package:nenjam_matrimony/features/premium/presentation/pages/premium_page.dart';
 import 'package:nenjam_matrimony/l10n/app_localizations.dart';
 
@@ -45,6 +48,7 @@ void main() {
     MembershipRepository? repo,
     Size size = const Size(390, 800),
     Locale locale = const Locale('en'),
+    PaymentGateway gateway = const UnsupportedPaymentGateway(),
   }) => pumpAtSize(
     tester,
     size,
@@ -54,6 +58,7 @@ void main() {
       membershipRepositoryProvider.overrideWithValue(
         repo ?? MockMembershipRepository(),
       ),
+      paymentGatewayProvider.overrideWithValue(gateway),
     ],
   );
 
@@ -180,6 +185,37 @@ void main() {
       expect(buy.onPressed, isNull);
       expect(find.text(l10n.membershipPurchaseUnavailableHere), findsOneWidget);
     });
+
+    testWidgets('with a payment provider, Buy opens the order summary', (
+      tester,
+    ) async {
+      final repo = _CheckoutRepository(onSale());
+      await pump(tester, repo: repo, gateway: const _SupportedGateway());
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final label =
+          '${l10n.membershipBuy} · ${l10n.membershipMonths(3)} · ₹3,999';
+      final buy = tester.widget<NmGradientButton>(
+        find.widgetWithText(NmGradientButton, label),
+      );
+      expect(buy.onPressed, isNotNull);
+      expect(find.text(l10n.membershipPurchaseUnavailableHere), findsNothing);
+
+      await tester.tap(find.widgetWithText(NmGradientButton, label));
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 150));
+      }
+      expect(find.byType(MembershipCheckoutSheet), findsOneWidget);
+      // No order exists until the member continues from the summary.
+      expect(repo.checkouts, 0);
+      await tester.tap(
+        find.widgetWithText(NmGradientButton, l10n.membershipCheckoutContinue),
+      );
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 150));
+      }
+      expect(find.text(l10n.membershipCheckoutTotal), findsOneWidget);
+      expect(repo.checkouts, 1);
+    });
   });
 
   testWidgets('a failed load offers a retry instead of plans', (tester) async {
@@ -189,6 +225,45 @@ void main() {
     expect(find.text(l10n.commonRetry), findsOneWidget);
     expect(find.byType(NmGradientButton), findsNothing);
   });
+}
+
+/// [onSale]'s catalogue and `/me`, plus a checkout that prices Gold.
+class _CheckoutRepository extends MockMembershipRepository {
+  _CheckoutRepository(MockMembershipRepository base) : _base = base;
+
+  final MockMembershipRepository _base;
+  int checkouts = 0;
+
+  @override
+  Future<MembershipCatalog> getPlans() => _base.getPlans();
+
+  @override
+  Future<MyMembership> getMe() => _base.getMe();
+
+  @override
+  Future<CheckoutSession> startCheckout(CheckoutRequest request) async {
+    checkouts++;
+    return CheckoutSession.fromJson(const {
+      'subscriptionId': 'sub_1',
+      'orderId': 'order_1',
+      'amountInPaise': 399900,
+      'currency': 'INR',
+      'keyId': 'rzp_test_x',
+      'plan': {'code': 'GOLD', 'name': 'Gold'},
+      'months': 3,
+    });
+  }
+}
+
+class _SupportedGateway implements PaymentGateway {
+  const _SupportedGateway();
+
+  @override
+  bool get isSupported => true;
+
+  @override
+  Future<PaymentResult> pay(CheckoutSession session) async =>
+      const PaymentCancelled();
 }
 
 class _FailingRepository extends MockMembershipRepository {

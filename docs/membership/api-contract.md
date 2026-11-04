@@ -14,18 +14,21 @@ After any purchase or plan change, re-read `GET /membership/me`.
 
 ## Errors (all routes)
 
-Nest's default shape: `{ "statusCode": n, "message": string | string[], "error": string }`.
+Nest's default shape: `{ "statusCode": n, "message": string | string[], "error": string }`,
+plus a stable **`code`** where one exists. Every validation failure is `400` with
+`code: "VALIDATION_FAILED"` (`message` stays the string array).
 
 | Status | When | How to tell / handle |
 |---|---|---|
-| 400 | Body failed validation (`message` is a **string array**), or a business rule (`message` is a string, e.g. "Gold is not available for 3 months.") | Show `message` |
+| 400 | Body failed validation (`code: VALIDATION_FAILED`, `message` is a **string array**), or a business rule (`message` is a string, e.g. "Gold is not available for 3 months.") | Show `message` |
 | 401 | Missing/expired token | Existing `AuthInterceptor` refresh-and-retry |
 | 403 **account** | Suspended/banned/deleted account (auth guard) | **No `code`** — "This account is no longer active…" |
 | 403 **membership** | Plan doesn't include it / allowance used up (only when `limitsEnforced` is true) | **`code` starts with `MEMBERSHIP_`** — see below |
 | 404 | Not found / not yours (deliberately indistinguishable) | Show `message` |
 | 429 | Rate limit (per IP) | Back off and retry later |
 | 502 | Razorpay rejected or returned something unexpected | "Couldn't start the payment, try again" |
-| 503 | Payments not configured (checkout/verify) | Hide/disable buying; `checkoutAvailable` says so up front |
+| 422 | Checkout: a typed referral code can't be used (`code: PROMO_CODE_REJECTED` with `reason`, or `PROMO_CODES_UNAVAILABLE`) | Show `message`, let the member remove the code |
+| 503 | Payments not configured (checkout/verify), or checkout temporarily unable to price (`code: CHECKOUT_UNAVAILABLE`) | Hide/disable buying; `checkoutAvailable` says so up front. On `CHECKOUT_UNAVAILABLE`, "try again shortly" |
 
 ### Membership 403 body
 
@@ -163,18 +166,40 @@ see today: **don't expose it in the app until recurring billing exists.**
 
 ## `POST /membership/checkout`
 
-Request: `{ "planCode": "GOLD" | "PLATINUM", "months": 3 }` (extra fields → 400).
+Request: `{ "planCode": "GOLD" | "PLATINUM", "months": 3, "promoCode"?: "NM7K2P9X" }`
+(extra fields → 400). Send `promoCode` only when the member typed a referral code.
 
 Response `201`:
 
 ```json
 { "subscriptionId": "…", "orderId": "order_…", "amountInPaise": 399900, "currency": "INR",
-  "keyId": "rzp_live_…", "plan": { "code": "GOLD", "name": "Gold" }, "months": 3 }
+  "keyId": "rzp_test_…", "plan": { "code": "GOLD", "name": "Gold" }, "months": 3,
+  "pricing": { "listAmountPaise": 399900, "discountPaise": 0, "discountSource": "NONE",
+               "taxableAmountPaise": 399900, "taxRateBps": 0, "taxPaise": 0,
+               "totalPaise": 399900 },
+  "referral": null }
 ```
 
-The price is computed on the server from the catalogue; the client never sends an amount.
-Open Razorpay Checkout with `key: keyId`, `order_id: orderId`, `amount`, `currency`.
-Nothing is granted yet (`PENDING`). Errors: 400 not on sale, 502 Razorpay, 503 not configured.
+The price is computed on the server; the client never sends an amount.
+- **Prices exclude GST; GST is added on top:**
+  `totalPaise = listAmountPaise − discountPaise + taxPaise`, and `amountInPaise` = `totalPaise`.
+- **Show the breakdown before paying:** plan price, referral discount (when
+  `discountPaise > 0`), GST (when `taxPaise > 0`), total.
+- **GST today:** the rate is 0 until the business is GST-registered, so the total is the plan
+  price (less any referral discount).
+- **Referral:** `referral.agentDisplayName` names the agent when a referral discount applies.
+  It can apply without a typed code: a member referred at signup gets it on their first plan.
+
+Open Razorpay Checkout with `key: keyId`, `order_id: orderId`, `amount: amountInPaise`, `currency`.
+Nothing is granted yet (`PENDING`).
+
+**Errors:**
+- 400: not on sale.
+- 422 `PROMO_CODE_REJECTED` (`reason`: e.g. `INVALID`, `NOT_FIRST_PLAN`, `ALREADY_ATTRIBUTED`,
+  `SELF_REFERRAL`, `AGENT_PAUSED`, `PHONE_NOT_VERIFIED`).
+- 422 `PROMO_CODES_UNAVAILABLE`: referral codes not live yet.
+- 502: Razorpay.
+- 503: not configured, or `CHECKOUT_UNAVAILABLE`.
 
 ## `POST /membership/checkout/verify`
 

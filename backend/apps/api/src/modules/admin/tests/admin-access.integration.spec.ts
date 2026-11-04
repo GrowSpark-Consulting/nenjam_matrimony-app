@@ -175,6 +175,8 @@ describeIntegration('admin access over HTTP', () => {
       .overrideProvider(AppConfigService)
       .useValue({
         admin: { mfaEncryptionKey: randomBytes(32).toString('base64') },
+        identifierHash: {},
+        agentOtp: { dummyEnabled: false, dummyPhones: [] },
       })
       .compile();
     app = moduleRef.createNestApplication();

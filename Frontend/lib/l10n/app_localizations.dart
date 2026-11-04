@@ -9566,6 +9566,132 @@ abstract class AppLocalizations {
   /// **'Couldn\'t start the payment, try again.'**
   String get membershipPurchaseStartFailed;
 
+  /// No description provided for @membershipCheckoutPlanPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan price'**
+  String get membershipCheckoutPlanPrice;
+
+  /// No description provided for @membershipCheckoutReferralDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'Referral discount'**
+  String get membershipCheckoutReferralDiscount;
+
+  /// No description provided for @membershipCheckoutGst.
+  ///
+  /// In en, this message translates to:
+  /// **'GST ({rate}%)'**
+  String membershipCheckoutGst(String rate);
+
+  /// No description provided for @membershipCheckoutTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total payable'**
+  String get membershipCheckoutTotal;
+
+  /// No description provided for @membershipCheckoutPay.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay {amount}'**
+  String membershipCheckoutPay(String amount);
+
+  /// No description provided for @membershipCheckoutVerifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirming your payment…'**
+  String get membershipCheckoutVerifying;
+
+  /// No description provided for @membershipCheckoutUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Checkout isn\'t available right now. Try again shortly.'**
+  String get membershipCheckoutUnavailable;
+
+  /// No description provided for @membershipPromoCodesUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Referral codes can\'t be used yet.'**
+  String get membershipPromoCodesUnavailable;
+
+  /// No description provided for @membershipPromoCodeApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Code {code} applied'**
+  String membershipPromoCodeApplied(String code);
+
+  /// No description provided for @membershipVerificationUncertain.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t confirm your payment yet. Please don\'t pay again: if money was taken, your plan will be activated.'**
+  String get membershipVerificationUncertain;
+
+  /// No description provided for @membershipCheckAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Check again'**
+  String get membershipCheckAgain;
+
+  /// No description provided for @membershipCheckoutContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get membershipCheckoutContinue;
+
+  /// No description provided for @membershipCheckoutActivating.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment received, activating your plan…'**
+  String get membershipCheckoutActivating;
+
+  /// No description provided for @membershipPurchaseAlreadyApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'This payment has already been applied to your membership.'**
+  String get membershipPurchaseAlreadyApplied;
+
+  /// No description provided for @membershipPurchaseRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'This payment was refunded, so no plan was added. Please contact support if you need help.'**
+  String get membershipPurchaseRefunded;
+
+  /// No description provided for @membershipPromoInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Code not found.'**
+  String get membershipPromoInvalid;
+
+  /// No description provided for @membershipPromoNotFirstPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Codes apply to your first plan only.'**
+  String get membershipPromoNotFirstPlan;
+
+  /// No description provided for @membershipPromoAlreadyAttributed.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re already linked to an agent; their discount applies automatically.'**
+  String get membershipPromoAlreadyAttributed;
+
+  /// No description provided for @membershipPromoSelfReferral.
+  ///
+  /// In en, this message translates to:
+  /// **'You can\'t use your own referral code.'**
+  String get membershipPromoSelfReferral;
+
+  /// No description provided for @membershipPromoAgentPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'This referral code can\'t be used right now.'**
+  String get membershipPromoAgentPaused;
+
+  /// No description provided for @membershipPromoPhoneNotVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your mobile number to use a referral code.'**
+  String get membershipPromoPhoneNotVerified;
+
   /// No description provided for @membershipDenialTitle.
   ///
   /// In en, this message translates to:

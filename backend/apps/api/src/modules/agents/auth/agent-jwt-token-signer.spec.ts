@@ -383,3 +383,67 @@ describe('AgentJwtTokenSigner', () => {
     });
   });
 });
+
+describe('the client-token signer (own audience, CLIENT only)', () => {
+  const CLIENT_AUDIENCE = 'nenjam-client-invite';
+  const clock = new FakeAgentClock(NOW);
+  const agentSigner = new AgentJwtTokenSigner(
+    { secret: SECRET, issuer: ISSUER, audience: AUDIENCE },
+    clock,
+  );
+  const clientSigner = new AgentJwtTokenSigner(
+    {
+      secret: SECRET,
+      issuer: ISSUER,
+      audience: CLIENT_AUDIENCE,
+      scopes: ['CLIENT'],
+    },
+    clock,
+  );
+  const clientClaims = buildAgentAccessClaims({
+    agentId: null,
+    phoneHash: '',
+    clientRef: 'sealed-phone',
+    scope: 'CLIENT',
+    now: NOW,
+    ttlSeconds: 900,
+    issuer: ISSUER,
+    audience: CLIENT_AUDIENCE,
+  });
+
+  it('signs and accepts a CLIENT token', async () => {
+    const token = await clientSigner.sign(clientClaims);
+    await expect(clientSigner.verify(token)).resolves.toEqual(clientClaims);
+  });
+
+  it('a client token is refused by the agent signer and an agent token by the client signer, with the same secret', async () => {
+    const clientToken = await clientSigner.sign(clientClaims);
+    const agentToken = await agentSigner.sign(claimsFor());
+    await expect(agentSigner.check(clientToken)).resolves.toEqual({
+      ok: false,
+      reason: 'INVALID',
+    });
+    await expect(clientSigner.check(agentToken)).resolves.toEqual({
+      ok: false,
+      reason: 'INVALID',
+    });
+  });
+
+  it('a CLIENT scope forged under the agent audience is still refused by both', async () => {
+    const forged = await new JwtService({ secret: SECRET }).signAsync(
+      { ...clientClaims, aud: AUDIENCE },
+      { algorithm: 'HS256' },
+    );
+    await expect(agentSigner.verify(forged)).resolves.toBeNull();
+    await expect(clientSigner.verify(forged)).resolves.toBeNull();
+  });
+
+  it('will not sign a scope it does not issue (a programming error)', async () => {
+    await expect(
+      clientSigner.sign({ ...claimsFor(), aud: CLIENT_AUDIENCE }),
+    ).rejects.toThrow('This signer does not issue that scope.');
+    await expect(
+      agentSigner.sign({ ...clientClaims, aud: AUDIENCE }),
+    ).rejects.toThrow('This signer does not issue that scope.');
+  });
+});

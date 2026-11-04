@@ -93,6 +93,18 @@ export class AppConfigService implements OnModuleInit {
     return this.configService.get('razorpay', { infer: true });
   }
 
+  get jobs(): AppConfig['jobs'] {
+    return this.configService.get('jobs', { infer: true });
+  }
+
+  get identifierHash(): AppConfig['identifierHash'] {
+    return this.configService.get('identifierHash', { infer: true });
+  }
+
+  get agentOtp(): AppConfig['agentOtp'] {
+    return this.configService.get('agentOtp', { infer: true });
+  }
+
   get admin(): AppConfig['admin'] {
     return this.configService.get('admin', { infer: true });
   }

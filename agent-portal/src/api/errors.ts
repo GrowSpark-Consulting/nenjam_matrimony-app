@@ -49,6 +49,16 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Nest's own "Cannot GET /..." 404: every documented 404 carries a `code`, so
+ * one without it means the route isn't deployed yet (the money routes
+ * /agent/balance, /commissions and /payouts, until they are merged). Screens
+ * show a "coming soon" state for it, not an error.
+ */
+export function isRouteNotDeployed(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 404 && error.code === null;
+}
+
 /** Builds an ApiError from a non-2xx response and its parsed body. */
 export function toApiError(
   status: number,
