@@ -560,12 +560,24 @@ paths:
         Needs `ACTIVE`; a `SUSPENDED` agent gets the list with
         `shareable: false` on every item.
 
-        The public web address is not decided yet, so `link` and `qrPayload`
-        are **nullable** and are `null` until it is. The `code` and the
-        `shareMessages` are **always** returned. While `link` is null the
-        share messages are the code-only wording; once a link exists they
-        include it. Clients must render the code (and a "copy code" action)
-        whether or not a link is present, and hide QR when `qrPayload` is null.
+        `link` is `{base}/?ref={code}`: `base` is the platform setting
+        `referral.share_link_base_url` (an https web address with no path,
+        query, fragment or trailing slash, never containing "agent"), and the
+        code is URL-encoded. `qrPayload` is exactly `link`. The setting is
+        seeded `null` and read on every call: while it is `null` (or not
+        usable) both are `null`; once a Super Admin sets it, every link
+        appears with no deploy. A link that would contain "agent" in any case
+        is never returned (the item's `link` and `qrPayload` are `null`).
+
+        The member web app reads `?ref=` and fills its referral code box with
+        it; the member still confirms it there.
+
+        The `code` and the `shareMessages` are **always** returned. While
+        `link` is null the share messages are the code-only wording; once a
+        link exists they end with it on its own line. Clients must render the
+        code (and a "Copy code" action) whether or not a link is present,
+        show "Copy link" for `link` and "Download QR" for a QR image drawn
+        from `qrPayload`, and hide both when they are null.
       operationId: agentReferralLinks
       security:
         - agentBearer: []
@@ -583,6 +595,37 @@ paths:
                   items:
                     type: array
                     items: { $ref: '#/components/schemas/ReferralLink' }
+              examples:
+                withLink:
+                  summary: The web address is set (https://testapp.nenjammatrimony.com)
+                  value:
+                    items:
+                      - codeId: 7c2e9a14-5b3d-4f6e-8a10-2d4c6e8f0a12
+                        code: NM7K2P9X
+                        isPrimary: true
+                        link: 'https://testapp.nenjammatrimony.com/?ref=NM7K2P9X'
+                        qrPayload: 'https://testapp.nenjammatrimony.com/?ref=NM7K2P9X'
+                        shareMessages:
+                          - id: default
+                            text:
+                              en: "Hi! I'm Ravi Kumar. Join Nenjam, a trusted matrimony app, and use my referral code NM7K2P9X when you sign up to get 5% off your first plan.\nhttps://testapp.nenjammatrimony.com/?ref=NM7K2P9X"
+                              ta: "வணக்கம்! நான் Ravi Kumar. நம்பகமான திருமண வரன் தேடல் செயலியான \"நெஞ்சம்\" (Nenjam)-இல் இணையுங்கள். பதிவு செய்யும்போது என் பரிந்துரைக் குறியீடு NM7K2P9X பயன்படுத்தினால், உங்கள் முதல் திட்டத்தில் 5% தள்ளுபடி கிடைக்கும்.\nhttps://testapp.nenjammatrimony.com/?ref=NM7K2P9X"
+                        shareable: true
+                noLink:
+                  summary: The web address is not set yet (the seeded null)
+                  value:
+                    items:
+                      - codeId: 7c2e9a14-5b3d-4f6e-8a10-2d4c6e8f0a12
+                        code: NM7K2P9X
+                        isPrimary: true
+                        link: null
+                        qrPayload: null
+                        shareMessages:
+                          - id: default
+                            text:
+                              en: "Hi! I'm Ravi Kumar. Join Nenjam, a trusted matrimony app, and use my referral code NM7K2P9X when you sign up to get 5% off your first plan."
+                              ta: "வணக்கம்! நான் Ravi Kumar. நம்பகமான திருமண வரன் தேடல் செயலியான \"நெஞ்சம்\" (Nenjam)-இல் இணையுங்கள். பதிவு செய்யும்போது என் பரிந்துரைக் குறியீடு NM7K2P9X பயன்படுத்தினால், உங்கள் முதல் திட்டத்தில் 5% தள்ளுபடி கிடைக்கும்."
+                        shareable: true
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/AgentNotActive' }
 
@@ -1748,11 +1791,17 @@ components:
           type: string
           format: uri
           nullable: true
-          description: Null until the public web address is decided.
+          example: 'https://testapp.nenjammatrimony.com/?ref=NM7K2P9X'
+          description: |
+            `{base}/?ref={code}` (code URL-encoded), `base` being the setting
+            `referral.share_link_base_url`. Null while that setting is null or
+            not usable, and whenever the link would contain "agent". Never
+            contains "agent". The portal shows it with a "Copy link" button.
         qrPayload:
           type: string
           nullable: true
-          description: The string to encode into a QR code (the same as `link`). Null whenever `link` is null.
+          example: 'https://testapp.nenjammatrimony.com/?ref=NM7K2P9X'
+          description: The string to encode into a QR code, always exactly `link`; null whenever `link` is null. The portal draws the QR from it and offers "Download QR".
         shareMessages:
           type: array
           description: |
