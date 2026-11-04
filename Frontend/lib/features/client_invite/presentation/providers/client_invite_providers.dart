@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
@@ -20,6 +21,17 @@ final clientInviteRepositoryProvider = Provider<ClientInviteRepository>(
 /// entry point on the landing screen hides itself on it. There is no config
 /// call for members, so the first request is what tells us.
 final clientInvitesDisabledProvider = StateProvider<bool>((ref) => false);
+
+/// Receives structured, NON-PERSONAL diagnostic events from the invitation
+/// flow: an event name and a few booleans/counters. Never a phone number,
+/// name, token, invitation id or profile detail. Overridable in tests.
+typedef ClientInviteWarningSink =
+    void Function(String event, Map<String, Object> fields);
+
+final clientInviteWarningSinkProvider = Provider<ClientInviteWarningSink>(
+  (ref) =>
+      (event, fields) => debugPrint('[CLIENT-INVITE] WARN $event $fields'),
+);
 
 enum ClientInviteStep { phone, code, invites, signedIn }
 
@@ -99,9 +111,9 @@ class ClientInviteState {
 
 /// Phone → code → invitations → accept / reject → Firebase sign-in.
 ///
-/// **Stops at sign-in.** Nothing here fetches `/profiles/draft`, resumes the
-/// registration wizard or navigates anywhere after sign-in: the destination
-/// after acceptance is a pending product/backend decision.
+/// After a successful sign-in the state becomes [ClientInviteStep.signedIn]
+/// and the page opens the member home. Nothing here fetches `/profiles/draft`
+/// or resumes the registration wizard: the backend already made her profile.
 ///
 /// The CLIENT token lives only in [_token] — a private field of this
 /// notifier, not in [state], not in storage, never logged.
@@ -187,21 +199,51 @@ class ClientInviteController extends AutoDisposeNotifier<ClientInviteState> {
     }
   }
 
-  /// Accept, then exchange the custom token. Safe to call again after any
-  /// failure with the same CLIENT token: the server answers 200 with a fresh
-  /// custom token for an invitation she already accepted.
+  /// Accept, then sign in with the custom token.
+  ///
+  /// At most TWO accept calls per attempt. When the first answer is not
+  /// `profileReady == true` (false or missing) the same endpoint is called
+  /// once more (the backend documents that as safe). Whatever the second
+  /// answer says, sign-in proceeds with the token of the LATEST successful
+  /// answer and the router decides what to show; she is never asked to retry
+  /// the profile. A failed network/API call still lets her tap Accept again.
   Future<void> accept(String id) async {
     final token = _token;
     if (token == null || state.busy) return;
     state = state.copyWith(busy: true, busyInviteId: id, clearIssue: true);
     try {
-      final result = await _repo.accept(token, id);
+      var result = await _repo.accept(token, id);
+      if (result.profileReady != true) {
+        String secondCall;
+        try {
+          final second = await _repo.accept(token, id);
+          secondCall = second.profileReady == true ? 'ready' : 'not_ready';
+          // Use the second response's token; fall back to the first only
+          // when the second carries none.
+          result = ClientAcceptResult(
+            firebaseCustomToken:
+                second.firebaseCustomToken ?? result.firebaseCustomToken,
+            agentDisplayName:
+                second.agentDisplayName ?? result.agentDisplayName,
+            windowEndsAt: second.windowEndsAt ?? result.windowEndsAt,
+            profileReady: second.profileReady,
+          );
+        } catch (_) {
+          secondCall = 'failed';
+        }
+        if (secondCall != 'ready') {
+          ref.read(clientInviteWarningSinkProvider)(
+            'client_invite.accept_profile_not_ready',
+            {'acceptCalls': 2, 'secondCall': secondCall},
+          );
+        }
+      }
       final custom = result.firebaseCustomToken;
       if (custom == null) {
         // Contract: only valid once she already holds a Firebase session.
         // No other way to sign her in is invented here.
         if (_alreadySignedIn()) {
-          _signedIn(result);
+          await _signedIn(result);
         } else {
           state = state.copyWith(
             busy: false,
@@ -223,7 +265,7 @@ class ClientInviteController extends AutoDisposeNotifier<ClientInviteState> {
         );
         return;
       }
-      _signedIn(result);
+      await _signedIn(result);
     } catch (e) {
       _fail(e);
     }
@@ -263,15 +305,18 @@ class ClientInviteController extends AutoDisposeNotifier<ClientInviteState> {
   }
 
   /// She is an ordinary member now: the temporary CLIENT state is dropped.
-  /// No navigation, no profile loading: see the class comment.
-  void _signedIn(ClientAcceptResult result) {
+  /// The page then opens the home page (see ClientInvitePage).
+  Future<void> _signedIn(ClientAcceptResult result) async {
     _token = null;
-    // The backend accepted: this profile was created for her by an agent, so
-    // it never asks her for a selfie. Best-effort — storage not initialised
-    // (a test harness) must not break sign-in.
-    unawaited(
-      storageService.setReferralCreatedProfile(true).catchError((Object _) {}),
-    );
+    // This profile was created for her by an agent, so it never asks her for
+    // a selfie, and she has nothing left to onboard: the same local flag the
+    // normal signup's last step sets, so the router does not ask the
+    // registration resolver (which reads /profiles/draft). Best-effort —
+    // storage not initialised (a test harness) must not break sign-in.
+    try {
+      await storageService.setReferralCreatedProfile(true);
+      await storageService.setOnboardingCompleted(true);
+    } catch (_) {}
     state = ClientInviteState(
       step: ClientInviteStep.signedIn,
       agentDisplayName: result.agentDisplayName,

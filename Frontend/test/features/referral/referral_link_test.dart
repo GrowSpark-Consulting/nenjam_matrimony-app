@@ -276,6 +276,24 @@ void main() {
     expect(linkStore.read(), isNull);
   });
 
+  testWidgets('a lower-case ?ref is normalised and validated once', (
+    tester,
+  ) async {
+    linkStore.write('nm7k2p9x');
+    await open(tester);
+    expect(repository.validated, ['NM7K2P9X']);
+    expect(find.text('Referred by Ravi K.'), findsOneWidget);
+  });
+
+  test('contract format: NM + 6 of [2-9A-HJKMNP-Z], case-insensitive', () {
+    expect(normalizeReferralCode('NM7K2P9X'), 'NM7K2P9X');
+    expect(normalizeReferralCode('nm7k2p9x'), 'NM7K2P9X');
+    expect(normalizeReferralCode('NM0K2P9X'), isNull); // 0 excluded
+    expect(normalizeReferralCode('NM1K2P9X'), isNull); // 1 excluded
+    expect(normalizeReferralCode('NMOK2P9X'), isNull); // O excluded
+    expect(normalizeReferralCode('NM7K2P9'), isNull); // too short
+  });
+
   testWidgets('no ?ref: box stays collapsed and nothing is validated', (
     tester,
   ) async {
