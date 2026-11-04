@@ -9,10 +9,11 @@ Admin Architecture v3* (sections 4, 11 and 13), adapted to what the repository a
 TOTP second factor with admin sessions, the audit writer, operator provisioning,
 protection of staff accounts from the member sign-in paths, plan drafts with two-admin
 publishing, subscription lookup/extend/revoke, audit search, overview and roles, and the
-Next.js web app for all of it.
-**Not built yet:** agent screens (they need Ishu's `/admin/agents/*`), complimentary grants
-and extensions over 30 days (need a second-approver workflow), payments/refunds screens
-(no live payments yet), platform settings, role editing in the UI.
+Next.js web app for all of it, including the agent, commission and payout screens and a
+Settings screen (view with `system.view`; change a value with `config.edit`, a reason and a
+fresh code).
+**Not built yet:** complimentary grants and extensions over 30 days (need a second-approver
+workflow), payments/refunds screens (no live payments yet), role editing in the UI.
 
 ## How a request to `/admin/*` is authorised
 

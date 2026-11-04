@@ -44,6 +44,7 @@ export const NAV: readonly NavItem[] = [
     permission: 'rbac.manage',
     group: 'Platform',
   },
+  { href: '/settings/', label: 'Settings', permission: 'system.view', group: 'Platform' },
 ];
 
 export function can(
