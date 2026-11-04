@@ -6,6 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { Loading } from './components/Loading';
 import { ApplyPage } from './pages/ApplyPage';
+import { AddClientPage, ClientDetailPage, ClientsPage } from './pages/ClientPages';
 import { HelpPage } from './pages/HelpPage';
 import { HomePage } from './pages/HomePage';
 import { EarningsPage, PayoutsPage } from './pages/MoneyPages';
@@ -65,6 +66,9 @@ export function AppRoutes() {
       <Route element={stored ? <Guard><Layout /></Guard> : undefined}>
         <Route path="/" element={<Guard allow={REFERRAL_STATUSES}><HomePage /></Guard>} />
         <Route path="/referrals" element={<Guard allow={REFERRAL_STATUSES}><ReferralsPage /></Guard>} />
+        <Route path="/clients" element={<Guard allow={REFERRAL_STATUSES}><ClientsPage /></Guard>} />
+        <Route path="/clients/new" element={<Guard allow={REFERRAL_STATUSES}><AddClientPage /></Guard>} />
+        <Route path="/clients/:id" element={<Guard allow={REFERRAL_STATUSES}><ClientDetailPage /></Guard>} />
         <Route path="/earnings" element={<Guard allow={MONEY_STATUSES}><EarningsPage /></Guard>} />
         <Route path="/payouts" element={<Guard allow={MONEY_STATUSES}><PayoutsPage /></Guard>} />
         <Route path="/payout-details" element={<Guard allow={['ACTIVE']}><PayoutDetailsPage /></Guard>} />

@@ -2,6 +2,11 @@ import type { AgentApi, PageQuery } from './agentApi';
 import { ApiError } from './errors';
 import type { SessionStore } from './session';
 import type {
+  ClientDetails,
+  ClientDraft,
+  ClientStatus,
+  CreateClientInput,
+  RefItem,
   AgentConfig,
   AgentProfile,
   AgentSession,
@@ -250,6 +255,45 @@ export class MockAgentApi implements AgentApi {
   async getPayouts(_query: PageQuery): Promise<Page<Payout>> {
     this.requireStatus(['ACTIVE', 'SUSPENDED', 'TERMINATED']);
     return { items: [], nextCursor: null };
+  }
+
+  // Way 2 is not mocked: the mock config switches it off (`clients.enabled`
+  // is absent), and no fake client data may stand in for the live backend.
+  private clientsOff(): never {
+    throw new ApiError(403, "This isn't available right now.", { code: 'CLIENT_INVITES_DISABLED' });
+  }
+  async listClients(_q: PageQuery & { status?: ClientStatus }): Promise<Page<ClientDraft>> {
+    return this.clientsOff();
+  }
+  async getClient(_id: string): Promise<ClientDraft> {
+    return this.clientsOff();
+  }
+  async createClient(_i: CreateClientInput): Promise<ClientDraft> {
+    return this.clientsOff();
+  }
+  async updateClient(_id: string, _d: ClientDetails): Promise<ClientDraft> {
+    return this.clientsOff();
+  }
+  async deleteClient(_id: string): Promise<void> {
+    return this.clientsOff();
+  }
+  async submitClient(_id: string): Promise<ClientDraft> {
+    return this.clientsOff();
+  }
+  async getReligions(): Promise<RefItem[]> {
+    return [];
+  }
+  async getCommunities(_r: string): Promise<RefItem[]> {
+    return [];
+  }
+  async getCountries(): Promise<RefItem[]> {
+    return [];
+  }
+  async getStates(_c: string): Promise<RefItem[]> {
+    return [];
+  }
+  async getCities(_s: string): Promise<RefItem[]> {
+    return [];
   }
 
   async updatePayoutDetails(input: PayoutDetailsInput): Promise<PayoutDetailsSummary> {

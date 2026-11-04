@@ -5,13 +5,18 @@ import type {
   AgentSession,
   ApplicationInput,
   Balance,
+  ClientDetails,
+  ClientDraft,
+  ClientStatus,
   Commission,
+  CreateClientInput,
   CommissionStatus,
   OtpRequestResponse,
   Page,
   Payout,
   PayoutDetailsInput,
   PayoutDetailsSummary,
+  RefItem,
   ReferralLink,
   ReferralStage,
   ReferralView,
@@ -45,6 +50,22 @@ export interface AgentApi {
   getBalance(): Promise<Balance>;
   getPayouts(query: PageQuery): Promise<Page<Payout>>;
   updatePayoutDetails(input: PayoutDetailsInput): Promise<PayoutDetailsSummary>;
+
+  // Way 2: agent-added clients (docs/agent-program/HANDOFF_WAY2_FRONTEND.md).
+  listClients(query: PageQuery & { status?: ClientStatus }): Promise<Page<ClientDraft>>;
+  getClient(id: string): Promise<ClientDraft>;
+  createClient(input: CreateClientInput): Promise<ClientDraft>;
+  /** Replaces the WHOLE `details`: always send the complete merged profile. */
+  updateClient(id: string, details: ClientDetails): Promise<ClientDraft>;
+  deleteClient(id: string): Promise<void>;
+  submitClient(id: string): Promise<ClientDraft>;
+
+  // Master data for the profile form. No token needed.
+  getReligions(): Promise<RefItem[]>;
+  getCommunities(religionCode: string): Promise<RefItem[]>;
+  getCountries(): Promise<RefItem[]>;
+  getStates(countryCode: string): Promise<RefItem[]>;
+  getCities(stateCode: string): Promise<RefItem[]>;
 }
 
 export class HttpAgentApi implements AgentApi {
@@ -108,6 +129,64 @@ export class HttpAgentApi implements AgentApi {
   updatePayoutDetails(input: PayoutDetailsInput) {
     return this.http.request<PayoutDetailsSummary>('PATCH', '/agent/me/payout-details', {
       body: input,
+    });
+  }
+
+  listClients(query: PageQuery & { status?: ClientStatus }) {
+    return this.http.request<Page<ClientDraft>>('GET', '/agent/clients', { query: { ...query } });
+  }
+
+  getClient(id: string) {
+    return this.http.request<ClientDraft>('GET', `/agent/clients/${encodeURIComponent(id)}`);
+  }
+
+  createClient(input: CreateClientInput) {
+    return this.http.request<ClientDraft>('POST', '/agent/clients', { body: input });
+  }
+
+  updateClient(id: string, details: ClientDetails) {
+    return this.http.request<ClientDraft>('PATCH', `/agent/clients/${encodeURIComponent(id)}`, {
+      body: { details },
+    });
+  }
+
+  deleteClient(id: string) {
+    return this.http.request<void>('DELETE', `/agent/clients/${encodeURIComponent(id)}`);
+  }
+
+  submitClient(id: string) {
+    return this.http.request<ClientDraft>(
+      'POST',
+      `/agent/clients/${encodeURIComponent(id)}/submit`,
+    );
+  }
+
+  getReligions() {
+    return this.http.request<RefItem[]>('GET', '/reference-data/religions', { auth: false });
+  }
+
+  getCommunities(religionCode: string) {
+    return this.http.request<RefItem[]>('GET', '/reference-data/communities', {
+      auth: false,
+      query: { religionCode },
+    });
+  }
+
+  getCountries() {
+    return this.http.request<RefItem[]>('GET', '/reference-data/countries', { auth: false });
+  }
+
+  getStates(countryCode: string) {
+    return this.http.request<RefItem[]>('GET', '/reference-data/states', {
+      auth: false,
+      query: { countryCode },
+    });
+  }
+
+  getCities(stateCode: string) {
+    return this.http.request<RefItem[]>('GET', '/reference-data/cities', {
+      auth: false,
+      query: { stateCode },
     });
   }
 }

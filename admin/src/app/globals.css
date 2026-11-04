@@ -239,7 +239,7 @@ button.link {
 
 .shell {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 240px minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -298,6 +298,7 @@ button.link {
 }
 
 .topbar-who {
+  min-width: 0;
   margin-left: auto;
   display: flex;
   flex-direction: column;
@@ -318,11 +319,12 @@ button.link {
   padding: 1.5rem;
   max-width: 1200px;
   width: 100%;
+  min-width: 0;
 }
 
 @media (max-width: 900px) {
   .shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .sidebar {
@@ -341,6 +343,17 @@ button.link {
 
   .content {
     padding: 1rem;
+  }
+
+  .topbar-who span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar .btn {
+    flex: none;
+    white-space: nowrap;
   }
 
   .topbar {
@@ -379,6 +392,7 @@ button.link {
   box-shadow: var(--shadow);
   padding: 1rem 1.25rem;
   margin-bottom: 1rem;
+  min-width: 0;
 }
 
 .card-head {
@@ -392,7 +406,7 @@ button.link {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
   gap: 1rem;
 }
 
@@ -414,7 +428,7 @@ button.link {
 
 @media (max-width: 1000px) {
   .split {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .sticky {
@@ -526,6 +540,8 @@ button.link {
 
 .table-wrap {
   overflow-x: auto;
+  /* Containing block for visually-hidden (absolutely positioned) cell text. */
+  position: relative;
 }
 
 table {
@@ -563,7 +579,7 @@ td input {
 
 .filters {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
   gap: 0 1rem;
   align-items: end;
 }
@@ -613,7 +629,7 @@ td input {
 
 @media (max-width: 600px) {
   .feature-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -795,4 +811,51 @@ ul.plain {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+/* --- Responsive hardening ------------------------------------------------- */
+
+/* Long names, emails and ids wrap instead of widening the page. (Not on
+   .card as a whole: "anywhere" would collapse table columns to one letter.) */
+td {
+  overflow-wrap: break-word;
+}
+
+.kv li,
+.page-header > div {
+  overflow-wrap: anywhere;
+}
+
+.kv li > span:last-child {
+  text-align: right;
+  min-width: 0;
+}
+
+/* Inline links in lists and tables get a comfortable tap height. */
+td a,
+.card-head a,
+.page-header a {
+  display: inline-block;
+  padding-block: 0.4rem;
+}
+
+.menu-toggle {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+@media (max-width: 900px) {
+  .sidebar.open {
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+  }
+
+  .nav-link {
+    padding-block: 0.75rem;
+  }
+
+  .row-actions .btn,
+  .page-actions .btn {
+    min-height: 44px;
+  }
 }

@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { clientsAvailable } from '../lib/clientsFeature';
 import { pickLabel, statusTone } from '../lib/labels';
 import { usePortal } from '../state/PortalContext';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -40,6 +41,9 @@ export function Layout() {
       items: [
         { to: '/', label: 'Home', icon: 'home', end: true },
         { to: '/referrals', label: 'People who joined', icon: 'people' },
+        ...(clientsAvailable(config, agent)
+          ? [{ to: '/clients', label: 'Your clients', icon: 'people' as IconName }]
+          : []),
       ],
     });
   }
