@@ -26,7 +26,12 @@
  *     agent (`ADDED_BY_AGENT`, ACTIVE, the credit window from now), mark it
  *     ACCEPTED (its PII deleted), close every other open invitation for the
  *     phone, and audit.
- *  4. A Firebase custom token for `signInWithCustomToken`.
+ *  4. After the commit: her member profile (`user_profiles`) from that
+ *     draft, through the member side's own `syncMatchableFromDraft`, so the
+ *     member app opens the home page, not the registration wizard. It never
+ *     fails the accept: `profileReady: false` says it is not there yet, and
+ *     every repeat accept tries again while it is missing.
+ *  5. A Firebase custom token for `signInWithCustomToken`.
  *
  * | code                     | when                                                | HTTP |
  * |--------------------------|-----------------------------------------------------|------|
@@ -41,6 +46,7 @@
  * | ALREADY_MEMBER           | the phone has (or had) a member account             | 409  |
  */
 import { randomUUID } from 'node:crypto';
+import type { Logger } from '@nestjs/common';
 import { toIstDate } from '../agent/ist-date';
 import {
   buildAgentAccessClaims,
@@ -51,6 +57,7 @@ import { AgentServiceError } from '../errors/agent-service-error';
 import type {
   AgentClientAccountPort,
   AgentClientDraftRecord,
+  AgentClientMemberProfilePort,
   AgentClientDraftRepository,
   ClientPhoneProofFailure,
   ClientPhoneProofPort,
@@ -124,6 +131,8 @@ export interface ClientAcceptResult {
   agentDisplayName: string;
   /** The last day the credit window covers, YYYY-MM-DD (IST). */
   windowEndsAt: string;
+  /** Her member profile exists, so the app can open the home page. False: accept again. */
+  profileReady: boolean;
 }
 
 export interface ClientTokenOptions {
@@ -142,6 +151,8 @@ export interface ClientInviteServiceDeps {
     'create' | 'findById' | 'isPhoneHashCredited'
   >;
   accounts: AgentClientAccountPort;
+  /** Her `user_profiles` row, made after the accept has committed. */
+  memberProfiles: AgentClientMemberProfilePort;
   sealer: AgentSecretSealer;
   uow: AgentUnitOfWork;
   audit: AgentAuditPort;
@@ -151,10 +162,16 @@ export interface ClientInviteServiceDeps {
   options: ClientTokenOptions;
   /** Injectable so tests are deterministic. */
   newId?: () => string;
+  logger?: Pick<Logger, 'warn'>;
 }
 
 type AcceptOutcome =
-  | { kind: 'ACCEPTED'; windowEndsAt: Date; agentName: string }
+  | {
+      kind: 'ACCEPTED';
+      windowEndsAt: Date;
+      agentName: string;
+      memberId: string;
+    }
   | { kind: 'LOST_RACE' }
   | Extract<ClientAcceptDecision, { kind: 'REFUSE' }>;
 
@@ -301,6 +318,13 @@ export class ClientInviteService {
     if (first.kind === 'REPEAT') return this.signInAgain(row);
     if (first.kind === 'REFUSE') {
       if (first.reason === 'ALREADY_MEMBER') {
+        // Read just before another accept of this invitation by this phone
+        // committed: the "member" is the account that accept made. Sign her
+        // in, as for any repeat.
+        const again = await drafts.findForPhone(id, hashes);
+        if (again !== null && (await this.acceptedByThisPhone(again))) {
+          return this.signInAgain(again);
+        }
         await this.deps.uow.run((tx) => this.closeAsMember(row.id, now, tx));
       }
       throw refusal(first.reason);
@@ -329,20 +353,18 @@ export class ClientInviteService {
     if (outcome.kind === 'LOST_RACE') {
       // Someone answered first: if it was this phone accepting, sign in again.
       const again = await drafts.findForPhone(id, hashes);
-      if (
-        again?.status === 'ACCEPTED' &&
-        again.memberId !== null &&
-        (await accounts.findMemberById(again.memberId)) !== null
-      ) {
+      if (again !== null && (await this.acceptedByThisPhone(again))) {
         return this.signInAgain(again);
       }
       throw new AgentServiceError('INVITE_UNAVAILABLE');
     }
     if (outcome.kind === 'REFUSE') throw refusal(outcome.reason);
+    const profileReady = await this.ensureMemberProfile(outcome.memberId, id);
     return {
       firebaseCustomToken: await accounts.mintSessionToken(uid),
       agentDisplayName: agentDisplayName(outcome.agentName),
       windowEndsAt: toIstDate(outcome.windowEndsAt),
+      profileReady,
     };
   }
 
@@ -489,6 +511,7 @@ export class ClientInviteService {
       kind: 'ACCEPTED',
       windowEndsAt: decision.windowEndsAt,
       agentName: agent.name,
+      memberId,
     };
   }
 
@@ -508,7 +531,22 @@ export class ClientInviteService {
     }
   }
 
-  /** A repeated accept by the same phone: a fresh custom token, nothing written. */
+  /** This invitation was accepted by this phone, and her account is still there. */
+  private async acceptedByThisPhone(
+    row: AgentClientDraftRecord,
+  ): Promise<boolean> {
+    return (
+      row.status === 'ACCEPTED' &&
+      row.memberId !== null &&
+      (await this.deps.accounts.findMemberById(row.memberId)) !== null
+    );
+  }
+
+  /**
+   * A repeated accept by the same phone: a fresh custom token, nothing
+   * written about the invitation; her member profile is made if it is
+   * still missing.
+   */
   private async signInAgain(
     row: AgentClientDraftRecord,
   ): Promise<ClientAcceptResult> {
@@ -524,13 +562,44 @@ export class ClientInviteService {
     if (member?.firebaseUid == null || attribution === null || agent === null) {
       throw new AgentServiceError('INVITE_UNAVAILABLE');
     }
+    const profileReady = await this.ensureMemberProfile(
+      member.memberId,
+      row.id,
+    );
     return {
       firebaseCustomToken: await this.deps.accounts.mintSessionToken(
         member.firebaseUid,
       ),
       agentDisplayName: agentDisplayName(agent.name),
       windowEndsAt: toIstDate(attribution.windowEndsAt),
+      profileReady,
     };
+  }
+
+  /**
+   * Her member profile, made from her registration draft when it is not
+   * there yet. Never throws: the accept has already committed, so a failure
+   * is logged (the draft id and the kind of failure, nothing about her) and
+   * answered as `profileReady: false`; the next accept tries again.
+   */
+  private async ensureMemberProfile(
+    memberId: string,
+    draftId: string,
+  ): Promise<boolean> {
+    const { memberProfiles } = this.deps;
+    try {
+      if (await memberProfiles.exists(memberId)) return true;
+      await memberProfiles.createFromDraft(memberId);
+      if (await memberProfiles.exists(memberId)) return true;
+      this.deps.logger?.warn(
+        `No member profile was made for accepted client draft ${draftId} (her draft lacks what a profile needs); the next accept tries again.`,
+      );
+    } catch (error) {
+      this.deps.logger?.warn(
+        `No member profile was made for accepted client draft ${draftId} (${(error as Error).name}); the next accept tries again.`,
+      );
+    }
+    return false;
   }
 
   private async isCredited(hashes: readonly string[], tx?: AgentTx) {

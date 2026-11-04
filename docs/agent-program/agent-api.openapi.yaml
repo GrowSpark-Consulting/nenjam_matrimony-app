@@ -1293,10 +1293,22 @@ paths:
         anything, and any other agent's open invitation for this phone is
         closed.
 
+        After that commits, her **member profile** is made from that draft
+        exactly as a member's own registration save makes it (the same
+        profile row, the same rules; nothing about who can see her is
+        different from any other member). She does **not** go through the
+        registration wizard.
+
         Returns a Firebase **custom token**: exchange it with
-        `signInWithCustomToken()` and continue the registration as the new
-        member. Calling accept again for an invitation this phone already
-        accepted returns a fresh custom token (safe to retry).
+        `signInWithCustomToken()` and go to the **home page**, like any
+        member who finished registration; the home page's profile-completion
+        card asks for whatever is still missing.
+
+        `profileReady` is `true` when her profile exists. It is `false` only
+        if making it failed (the accept itself still stands): call accept
+        again (it is safe to retry, creates nothing new and tries to make the
+        profile again), then go to the home page. Calling accept again for an
+        invitation this phone already accepted returns a fresh custom token.
       operationId: clientInviteAccept
       security:
         - clientBearer: []
@@ -1897,7 +1909,8 @@ components:
       description: |
         The client's profile, in the member registration's own sections and
         field names: on accept it becomes her registration draft exactly as
-        if she had typed it (with "who is this profile for" = `Myself`).
+        if she had typed it (with "who is this profile for" = `Myself`), and
+        her member profile is made from it as a member's own save makes it.
         Every field may be left out while drafting. **Required to submit**
         (and only these; the client's mobile number is the draft's own
         phone): `basicDetails.firstName`, `basicDetails.lastName`,
@@ -2158,13 +2171,25 @@ components:
 
     ClientAcceptResult:
       type: object
-      required: [firebaseCustomToken, agentDisplayName, windowEndsAt]
+      required: [firebaseCustomToken, agentDisplayName, windowEndsAt, profileReady]
+      example:
+        firebaseCustomToken: '<firebase custom token>'
+        agentDisplayName: Ravi K.
+        windowEndsAt: '2026-12-27'
+        profileReady: true
       properties:
         firebaseCustomToken:
           type: string
-          description: Exchange with `signInWithCustomToken()`; she is then signed in as the new member.
+          description: Exchange with `signInWithCustomToken()`; she is then signed in as the new member and goes to the home page.
         agentDisplayName: { type: string, example: Ravi K. }
         windowEndsAt:
           type: string
           format: date
           description: Last day the credit window covers (IST).
+        profileReady:
+          type: boolean
+          description: |
+            True when her member profile exists, so the home page has a
+            profile to show. False only if making it failed after the accept
+            committed: accept again once (safe), then go to the home page
+            either way.

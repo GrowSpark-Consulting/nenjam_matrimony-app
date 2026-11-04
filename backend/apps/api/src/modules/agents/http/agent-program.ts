@@ -80,7 +80,9 @@ import {
 } from '../adapters/platform/dummy-client-phone-proof';
 import { PrismaAgentClientAccount } from '../adapters/prisma/prisma-agent-client-account';
 import { ReferenceDataClientLabels } from '../adapters/platform/reference-data-client-labels';
+import { MemberProfileFromDraft } from '../adapters/platform/member-profile-from-draft';
 import type { LocationService } from '../../reference-data/services/location.service';
+import type { ProfileService } from '../../profiles/services/profile.service';
 import type { ReligionService } from '../../reference-data/services/religion.service';
 import { PrismaAgentClientConsentCodeStore } from '../adapters/prisma/prisma-agent-client-consent-code.store';
 import { PrismaAgentClientDraftRepository } from '../adapters/prisma/prisma-agent-client-draft.repository';
@@ -167,6 +169,8 @@ export interface AgentProgramDeps {
   /** The member side's master data: client profile codes are checked against it. */
   locations: Pick<LocationService, 'resolve'>;
   religions: Pick<ReligionService, 'resolve'>;
+  /** The member side's profile writer: an accepted client's profile row. */
+  profiles: Pick<ProfileService, 'syncMatchableFromDraft'>;
   env: Record<string, string | undefined>;
   logger?: Pick<Logger, 'warn'>;
 }
@@ -360,10 +364,12 @@ export function buildAgentProgram(deps: AgentProgramDeps): AgentProgram {
       agents,
       attributions,
       accounts: clientAccounts,
+      memberProfiles: new MemberProfileFromDraft(prisma, deps.profiles),
       sealer,
       uow,
       audit,
       clock,
+      logger,
       signer: clientJwt ?? UNAVAILABLE_SIGNER,
       options: { issuer: AGENT_TOKEN_ISSUER, audience: CLIENT_TOKEN_AUDIENCE },
     }),

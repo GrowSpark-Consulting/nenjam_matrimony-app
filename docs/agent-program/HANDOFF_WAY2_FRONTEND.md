@@ -30,13 +30,14 @@ The client opens the member app, taps "Added by an agent? Confirm here",
 types her phone number, receives a one-time code, and types it. She sees
 who invited her and the details the agent entered. She either:
 
-- **Accepts**: her member account is created right then, and every section
-  the agent filled becomes her own registration draft, exactly as if she
-  had typed it. She is signed in and the member app continues her
-  registration from the first question that is still unanswered, like
-  for any other member. The agent gets credit for her exactly as if she
-  had used the agent's referral code (same discount on her first plan,
-  same commission rules).
+- **Accepts**: her member account and her **member profile** are created
+  right then from what the agent filled, exactly as if she had saved
+  those answers herself. She is signed in and goes straight to the
+  **home page**, like any member who finished registration. She does
+  **not** go through the registration wizard; the home page's
+  profile-completion card asks her for whatever is still missing. The
+  agent gets credit for her exactly as if she had used the agent's
+  referral code (same discount on her first plan, same commission rules).
 - **Rejects**: nothing is created. That agent can never add her number
   again.
 
@@ -62,8 +63,9 @@ member account can never be added.
    profile and partner preferences, "5% off your first plan", "Answer by
    11 Nov 2026".
 4. Priya taps **Accept**. The app receives a Firebase custom token, signs
-   her in with it, loads her registration draft and continues at the first
-   question Ravi left empty (for example her height or her income).
+   her in with it and opens the home page. The profile-completion card
+   there shows what Ravi left empty (for example her height, her college
+   or a photo).
 5. Ravi's portal row now reads "Accepted · 28 Oct 2026". It links to her
    entry in **My referrals** (the `referralId`).
 
@@ -502,53 +504,67 @@ looks at invitations. She uses a separate, short-lived **client token**.
 
    ```json
    { "firebaseCustomToken": "eyJ...", "agentDisplayName": "Ravi K.",
-     "windowEndsAt": "2026-12-27" }
+     "windowEndsAt": "2026-12-27", "profileReady": true }
    ```
 
-5. **Sign in.** `FirebaseAuth.instance.signInWithCustomToken(firebaseCustomToken)`.
-   From here on she is an ordinary member, and every request uses her
-   Firebase ID token exactly like any other member. Forget the client token.
-6. **Resume registration.** `GET /profiles/draft` (member token). It returns
-   her draft with every section the agent filled in `data` (the same
-   section and field names as section 5a, labels included, and
-   `basicDetails.profileCreatedFor: "Myself"`), `completedSteps` listing
-   those sections' step numbers and `currentStep` the highest of them:
-   exactly what the app would hold had she saved each of them herself.
-   Send her through the app's normal routing for a signed-in member with a
-   draft: it opens the first onboarding question still unanswered (the
-   agent may have skipped her height, income, community, country or
-   "about me"), and lands in the app when nothing is left.
+   `profileReady` is `true` when her member profile has been made. It is
+   `false` only if making it failed after the accept went through (rare: a
+   database hiccup). Then call accept **once more** with the same client
+   token, before signing in: it is safe, creates nothing new and makes the
+   profile. Whatever the second answer says, go on to step 5.
+5. **Sign in with the custom token and go to the home page.**
+   `FirebaseAuth.instance.signInWithCustomToken(firebaseCustomToken)`, then
+   open the home page exactly as for a member who has just finished
+   registration. From here on she is an ordinary member, and every request
+   uses her Firebase ID token exactly like any other member. Forget the
+   client token. Do **not** send her through the registration wizard and
+   do not call `GET /profiles/draft` to resume it: `GET /profiles/me`
+   already answers `200` with her profile, which is what the app's own
+   "has this member finished registration?" check reads.
+6. **The profile-completion card** on the home page is the place to fill
+   in the rest, as for every member. It is computed from her registration
+   answers (`GET /profiles/draft`'s `completionPercentage` /
+   `completionBreakdown`, as today). It will **always** show these as
+   missing for an agent-added client, because the agent cannot enter
+   them: **college, work industry, company and a photo**. It also shows
+   anything the agent skipped (for example height, income, community or
+   diet).
 
 **Reject** instead: ask first ("Decline {agentDisplayName}'s invitation?
 They won't be able to add your number again."), then
 `POST /client-invites/{id}/reject` → `204`. Rejecting twice also answers
 `204`. Remove the card. No account is created, so she stays signed out.
 
-### What to verify about resuming a draft for an already-signed-in account
+### What to verify for a client who arrives already signed in
 
 The usual member path collects the profile while signed out and signs in
-at the end. Here she arrives **already signed in, with the agent's whole
-profile already saved**.
-Please check, and tell the backend owner about anything that doesn't hold:
+at the end. Here she arrives **already signed in, with her member profile
+already made**. Please check, and tell the backend owner about anything
+that doesn't hold:
 
+- After `signInWithCustomToken` the app opens the home page, never the
+  registration landing page, the "who is this profile for" screen (it is
+  `Myself`) or any onboarding question. The app's routing
+  (`PostAuthDestination`) sends a signed-in member home when
+  `GET /profiles/me` answers `200`, which it now does. While this
+  device's local "onboarding completed" flag is not set, the router asks
+  that again on each navigation; setting the flag after accept, as the
+  normal signup's last step does, is the app's choice.
 - Nothing in the app overwrites a section with an empty or locally cached
   copy (an older half-filled local draft on the same phone, for example).
-  The server's draft is the truth.
-- The app goes straight to the first unanswered question. It does not
-  show the registration landing page, the "who is this profile for"
-  screen (it is `Myself`), or questions the agent already answered.
-- She can still open any section in Edit Profile and correct what the
-  agent typed. Saving uses the normal `PATCH /profiles/draft/<section>`.
-- If the agent started a section the wizard wants complete before
-  finishing (for example education without income), the app's normal
-  "finish it or clear it" check at the end applies, as for any member.
+  The server's answers are the truth.
+- The profile-completion card shows the missing items above, and each
+  opens the usual Edit Profile section. She can correct anything the
+  agent typed there; saving uses the normal `PATCH /profiles/draft/<section>`.
 - Her account email is a placeholder (`<uid>@firebase.invalid`), as for
-  every phone-only signup today. If the wizard asks for an email later,
-  that is the normal path.
-- On app restart before she finishes, the normal "resume my draft"
-  behaviour applies (she is a signed-in member with a draft).
+  every phone-only signup today.
+- On app restart she is a signed-in member with a profile: the home page
+  again.
 - The referral is already attached. Do not ask her for a referral code;
   `POST /registration/referral-code` would answer `409 ALREADY_ATTRIBUTED`.
+- Her profile follows exactly the same rules as any other member's
+  (Discover, search, privacy, face verification): nothing about it is
+  special because an agent added her.
 
 ### Errors on the client routes
 
@@ -570,7 +586,8 @@ Please check, and tell the backend owner about anything that doesn't hold:
 **Accept is safe to retry.** If the network drops after she taps Accept,
 just call accept again with the same client token. If it had already gone
 through, the server answers `200` again with a fresh custom token and
-creates nothing new.
+creates nothing new (it only makes her member profile if that is still
+missing, see `profileReady`).
 
 ### The client token lives in memory only
 
@@ -639,7 +656,7 @@ code screen so either works:
 - With real SMS she may already have a Firebase session before she
   accepts, so `firebaseCustomToken` in the accept answer may become
   `null`. When it is `null`, do not call `signInWithCustomToken`; keep the
-  current session and go straight to `GET /profiles/draft`.
+  current session and go straight to the home page.
 - The invitation, accept and reject screens do not change.
 
 ---
@@ -690,9 +707,10 @@ accepts; it needs a decision first.
 - [ ] Phone screen: E.164 input, send code, every error in section 6.
 - [ ] Code screen: code input, resend after `resendAfterSeconds`, wrong / expired / too many.
 - [ ] Invitations: loading, empty ("no invitation for this number"), one or more cards (agent name, the full profile and partner preferences read-only, discount, answer-by date).
-- [ ] Accept: confirm, call, `signInWithCustomToken`, `GET /profiles/draft`, continue at the first unanswered question; retry-safe on network loss.
+- [ ] Accept: confirm, call (once more if `profileReady` is `false`), `signInWithCustomToken`, open the home page (never the wizard); retry-safe on network loss.
+- [ ] Home page: the profile-completion card shows college, work industry, company and photo (always) plus anything the agent skipped.
 - [ ] Reject: confirm dialog, `204`, card removed, stays signed out.
 - [ ] `ALREADY_MEMBER`: send her to normal sign-in.
 - [ ] Client token expired: back to the phone screen.
 - [ ] Client token in memory only, never stored or logged.
-- [ ] Resume checks from section 6 done on a real device.
+- [ ] The "already signed in" checks from section 6 done on a real device.

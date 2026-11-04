@@ -236,6 +236,7 @@ describe('agent-added clients over HTTP', () => {
         firebaseCustomToken: 'custom-token-firebase-uid-1-1',
         agentDisplayName: 'Ravi K.',
         windowEndsAt: '2026-12-27',
+        profileReady: true,
       });
       const seen = await http(w)
         .get(`/agent/clients/${id}`)
@@ -644,6 +645,38 @@ describe('agent-added clients over HTTP', () => {
         .set(bearer(client))
         .expect(409);
       expect(closed.body).toMatchObject({ code: 'INVITE_UNAVAILABLE' });
+    });
+
+    it('accept answers 200 with profileReady false when her profile could not be made, and true on the repeat', async () => {
+      const agent = await agentToken(w);
+      const id = await addClient(w, agent);
+      await http(w)
+        .post(`/agent/clients/${id}/submit`)
+        .set(bearer(agent))
+        .expect(200);
+      const client = await clientToken(w);
+      w.h.memberProfiles.failCreate = new Error('database unavailable');
+      const first = await http(w)
+        .post(`/client-invites/${id}/accept`)
+        .set(bearer(client))
+        .expect(200);
+      expect(first.body).toMatchObject({ profileReady: false });
+      expect(
+        typeof (first.body as { firebaseCustomToken: unknown })
+          .firebaseCustomToken,
+      ).toBe('string');
+      w.h.memberProfiles.failCreate = null;
+      const again = await http(w)
+        .post(`/client-invites/${id}/accept`)
+        .set(bearer(client))
+        .expect(200);
+      expect(again.body).toMatchObject({ profileReady: true });
+      expect(Object.keys(again.body as object).sort()).toEqual([
+        'agentDisplayName',
+        'firebaseCustomToken',
+        'profileReady',
+        'windowEndsAt',
+      ]);
     });
 
     it('no response body ever carries the plain phone', async () => {

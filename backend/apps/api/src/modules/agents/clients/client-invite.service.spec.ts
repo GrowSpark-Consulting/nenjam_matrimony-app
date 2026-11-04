@@ -262,6 +262,7 @@ describe('ClientInviteService.accept', () => {
       firebaseCustomToken: 'custom-token-firebase-uid-1-1',
       agentDisplayName: 'Ravi K.',
       windowEndsAt: '2026-12-28',
+      profileReady: true,
     });
 
     const memberId = 'new-member-1';
@@ -330,8 +331,11 @@ describe('ClientInviteService.accept', () => {
       firebaseCustomToken: 'custom-token-firebase-uid-1-2',
       agentDisplayName: 'Ravi K.',
       windowEndsAt: '2026-12-27',
+      profileReady: true,
     });
     expect(h.clientAccount.calls.createMember).toBe(1);
+    // Her profile was made by the first accept; the repeat only checks it.
+    expect(h.memberProfiles.calls.createFromDraft).toEqual(['new-member-1']);
     expect(h.audit.entries).toHaveLength(audits);
   });
 
@@ -646,5 +650,161 @@ describe('ClientInviteService: the full profile', () => {
     ).toEqual(seen);
     await h.clientInvites.accept(client, draft.id);
     expect(h.clientAccount.member('new-member-1')?.profile).toEqual(seen);
+  });
+});
+
+describe('ClientInviteService.accept: her member profile (she lands on the home page)', () => {
+  it('is made from her registration draft after the accept has committed', async () => {
+    const { h, agent } = await world();
+    const id = await invite(h, agent);
+    const client = await signedIn(h);
+    const statusWhenMade: Array<string | undefined> = [];
+    const membersWhenMade: number[] = [];
+    h.memberProfiles.onCreate = () => {
+      statusWhenMade.push(h.drafts.peek(id)?.status);
+      membersWhenMade.push(h.clientAccount.count());
+    };
+    const result = await h.clientInvites.accept(client, id);
+    expect(result.profileReady).toBe(true);
+    expect(h.memberProfiles.has('new-member-1')).toBe(true);
+    // The member, her draft and the credit were already there.
+    expect(statusWhenMade).toEqual(['ACCEPTED']);
+    expect(membersWhenMade).toEqual([1]);
+  });
+
+  it('a failure never fails the accept: profileReady false, logged without her details, and the next accept makes it', async () => {
+    const { h, agent } = await world();
+    const id = await invite(h, agent);
+    const client = await signedIn(h);
+    class ProfileWriteError extends Error {
+      override name = 'ProfileWriteError';
+    }
+    h.memberProfiles.failCreate = new ProfileWriteError(
+      `could not write ${CLIENT_PHONE} Priya`,
+    );
+    const first = await h.clientInvites.accept(client, id);
+    expect(first).toMatchObject({
+      firebaseCustomToken: 'custom-token-firebase-uid-1-1',
+      profileReady: false,
+    });
+    expect(h.drafts.peek(id)?.status).toBe('ACCEPTED');
+    expect(h.memberProfiles.has('new-member-1')).toBe(false);
+    const logged = h.clientLog.warn.mock.calls.map((c) => c[0]);
+    expect(logged).toContain(
+      `No member profile was made for accepted client draft ${id} (ProfileWriteError); the next accept tries again.`,
+    );
+    expect(JSON.stringify(logged)).not.toContain(CLIENT_PHONE);
+    expect(JSON.stringify(logged)).not.toContain('Priya');
+
+    h.memberProfiles.failCreate = null;
+    const second = await h.clientInvites.accept(client, id);
+    expect(second.profileReady).toBe(true);
+    expect(h.memberProfiles.has('new-member-1')).toBe(true);
+    expect(h.clientAccount.calls.createMember).toBe(1);
+    expect(h.memberProfiles.calls.createFromDraft).toEqual([
+      'new-member-1',
+      'new-member-1',
+    ]);
+  });
+
+  it('a failing existence check is a failure too, not an error', async () => {
+    const { h, agent } = await world();
+    const id = await invite(h, agent);
+    const client = await signedIn(h);
+    h.memberProfiles.failExists = new TypeError('connection reset');
+    await expect(h.clientInvites.accept(client, id)).resolves.toMatchObject({
+      profileReady: false,
+    });
+    expect(h.clientLog.warn.mock.calls.map((c) => c[0])).toContain(
+      `No member profile was made for accepted client draft ${id} (TypeError); the next accept tries again.`,
+    );
+  });
+
+  it('a draft that does not make a profile row: profileReady false and logged', async () => {
+    const { h, agent } = await world();
+    const id = await invite(h, agent);
+    const client = await signedIn(h);
+    h.memberProfiles.makesNothing = true;
+    await expect(h.clientInvites.accept(client, id)).resolves.toMatchObject({
+      profileReady: false,
+    });
+    expect(h.clientLog.warn.mock.calls.map((c) => c[0])).toContain(
+      `No member profile was made for accepted client draft ${id} (her draft lacks what a profile needs); the next accept tries again.`,
+    );
+  });
+
+  it('a mint that fails after the profile was made: the repeat signs her in and does not make it again', async () => {
+    const { h, agent } = await world();
+    const id = await invite(h, agent);
+    const client = await signedIn(h);
+    h.clientAccount.failMint = new Error('mint timed out');
+    await expect(h.clientInvites.accept(client, id)).rejects.toThrow(
+      'mint timed out',
+    );
+    expect(h.memberProfiles.has('new-member-1')).toBe(true);
+    h.clientAccount.failMint = null;
+    await expect(h.clientInvites.accept(client, id)).resolves.toMatchObject({
+      profileReady: true,
+    });
+    expect(h.memberProfiles.calls.createFromDraft).toEqual(['new-member-1']);
+  });
+
+  it('a refused accept makes no profile', async () => {
+    const { h, agent } = await world();
+    const id = await invite(h, agent);
+    const client = await signedIn(h);
+    h.clock.set(h.drafts.peek(id)!.expiresAt);
+    await expect(h.clientInvites.accept(client, id)).rejects.toMatchObject({
+      code: 'INVITE_UNAVAILABLE',
+    });
+    expect(h.memberProfiles.calls.createFromDraft).toEqual([]);
+  });
+
+  it('a second accept that read the invitation just before the first committed signs her in, and closes nothing', async () => {
+    const { h, agent } = await world();
+    const id = await invite(h, agent);
+    const client = await signedIn(h);
+    const stale = h.drafts.peek(id)!;
+    await h.clientInvites.accept(client, id);
+    // The second request read the row while it was still WAITING_FOR_CLIENT.
+    jest.spyOn(h.drafts, 'findForPhone').mockResolvedValueOnce(stale);
+    await expect(h.clientInvites.accept(client, id)).resolves.toMatchObject({
+      agentDisplayName: 'Ravi K.',
+      profileReady: true,
+    });
+    expect(h.drafts.peek(id)).toMatchObject({
+      status: 'ACCEPTED',
+      memberId: 'new-member-1',
+    });
+    expect(h.clientAccount.calls.createMember).toBe(1);
+  });
+
+  it('a stale read of an invitation whose accepted account is gone, with the phone now on another account: ALREADY_MEMBER, not a sign-in', async () => {
+    const { h, agent } = await world();
+    const id = await invite(h, agent);
+    const client = await signedIn(h);
+    const stale = h.drafts.peek(id)!;
+    await h.clientInvites.accept(client, id);
+    h.clientAccount.deleteMember('new-member-1');
+    h.clientAccount.addMember('later-member', CLIENT_PHONE);
+    jest.spyOn(h.drafts, 'findForPhone').mockResolvedValueOnce(stale);
+    await expect(h.clientInvites.accept(client, id)).rejects.toMatchObject({
+      code: 'ALREADY_MEMBER',
+    });
+  });
+
+  it("a phone that is really someone else's member account is still ALREADY_MEMBER", async () => {
+    const { h, agent } = await world();
+    const id = await invite(h, agent);
+    const client = await signedIn(h);
+    h.clientAccount.addMember('earlier-member', CLIENT_PHONE);
+    await expect(h.clientInvites.accept(client, id)).rejects.toMatchObject({
+      code: 'ALREADY_MEMBER',
+    });
+    expect(h.drafts.peek(id)).toMatchObject({
+      status: 'EXPIRED',
+      closedReason: 'CLIENT_ALREADY_MEMBER',
+    });
+    expect(h.memberProfiles.calls.createFromDraft).toEqual([]);
   });
 });

@@ -21,6 +21,8 @@ import { FirebaseService } from '@app/firebase';
 import { LocationService } from '../../reference-data/services/location.service';
 import { ReligionService } from '../../reference-data/services/religion.service';
 import { AdminModule } from '../../admin/admin.module';
+import { ProfilesModule } from '../../profiles/profiles.module';
+import { ProfileService } from '../../profiles/services/profile.service';
 import { AdminAuditService } from '../../admin/services/admin-audit.service';
 import { IdentifierHashService } from '../../platform/identifier-hash.service';
 import { DailyJobRegistry } from '../../platform/jobs/daily-job.registry';
@@ -86,6 +88,13 @@ class StandInAdminModule {}
 })
 class StandInPlatformModule {}
 
+/** The config route never writes a member profile; the factory only needs it. */
+@Module({
+  providers: [{ provide: ProfileService, useValue: {} }],
+  exports: [ProfileService],
+})
+class StandInProfilesModule {}
+
 /** The config route reads neither; the factory only needs them to exist. */
 @Global()
 @Module({
@@ -123,6 +132,8 @@ beforeAll(async () => {
     .useModule(StandInPlatformModule)
     .overrideModule(AppConfigModule)
     .useModule(StandInConfigModule)
+    .overrideModule(ProfilesModule)
+    .useModule(StandInProfilesModule)
     .overrideGuard(FirebaseAuthGuard)
     .useValue({ canActivate: () => false })
     .compile();

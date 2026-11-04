@@ -37,13 +37,23 @@ import {
   FakeAgentSettings,
 } from '../testing/fake-agent-platform';
 import { FakeAgentSecretSealer } from '../testing/fake-agent-secret-sealer';
+import {
+  realMemberProfiles,
+  realProfileService,
+  seedClientLocation,
+} from '../testing/real-member-profiles';
 import { ClientInviteService } from './client-invite.service';
 
 const db = openTestDatabase();
 const prisma = db.prisma;
 
 afterAll(() => db.close());
-beforeEach(() => freshTestDatabase(prisma));
+beforeEach(async () => {
+  await freshTestDatabase(prisma);
+  // Her member profile is written by the real ProfileService, which checks
+  // the location codes against the master data.
+  await seedClientLocation(prisma);
+});
 
 const PHONE = '+919000000001';
 const T0 = new Date('2026-11-03T09:00:00.000Z');
@@ -85,6 +95,7 @@ class OverlappingDrafts extends PrismaAgentClientDraftRepository {
 function service(
   clock: FakeAgentClock,
   drafts = new PrismaAgentClientDraftRepository(prisma),
+  memberProfiles = realMemberProfiles(prisma),
 ) {
   const proofUnused = {
     canReach: () => true,
@@ -106,6 +117,7 @@ function service(
         Promise.resolve({ uid: `uid-${phone.slice(1)}`, created: true }),
       createCustomToken: (uid) => Promise.resolve(`custom-token-${uid}`),
     }),
+    memberProfiles,
     sealer,
     uow: new PrismaAgentUnitOfWork(prisma),
     audit: new PrismaTestAudit(prisma),
@@ -297,5 +309,121 @@ describe('accept on the real database writes the whole profile', () => {
       (user.registrationStep?.draftData as { basicDetails: unknown })
         .basicDetails,
     ).toMatchObject({ profileCreatedFor: 'Myself' });
+  });
+});
+
+describe('accept on the real database makes her member profile (the home page, not the wizard)', () => {
+  it('writes her user_profiles row from the draft through the real ProfileService, and the profile reads back', async () => {
+    await seedAgent('agent-1');
+    await waitingInvite(
+      'draft-1',
+      'agent-1',
+      undefined,
+      PHONE,
+      CLIENT_DETAILS_SEEN,
+    );
+    const result = await service(new FakeAgentClock(T0)).accept(
+      clientClaims(),
+      'draft-1',
+    );
+    expect(result.profileReady).toBe(true);
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { phone: PHONE },
+      include: {
+        profile: true,
+        registrationStep: true,
+        partnerPreference: true,
+      },
+    });
+    // What a member's own registration save writes from the same draft.
+    expect(user.profile).toMatchObject({
+      firstName: 'Priya',
+      lastName: 'Sundaram',
+      gender: 'FEMALE',
+      maritalStatus: 'NEVER_MARRIED',
+      religion: 'Hindu',
+      community: 'Vellalar',
+      currentCity: 'Madurai',
+      currentState: 'Tamil Nadu',
+      countryCode: 'IN',
+      stateCode: 'IN-TN',
+      cityCode: 'IN-TN-MADURAI',
+      highestEducation: 'B.E / B.Tech',
+      dietaryHabits: 'Vegetarian',
+      isProfileComplete: true,
+    });
+    expect(user.profile?.dob.toISOString()).toBe('1998-04-12T00:00:00.000Z');
+    // Seeded from her draft's partner preferences, as for a member.
+    expect(user.partnerPreference).toMatchObject({ minAge: 26, maxAge: 30 });
+    // Not finalized: nothing about registration is marked done beyond what
+    // a member's own save marks.
+    expect(user.registrationStep?.isComplete).toBe(false);
+    // GET /profiles/me's own read answers (it 404s without the row).
+    await expect(
+      realProfileService(prisma).getOwn(user.id),
+    ).resolves.toMatchObject({ firstName: 'Priya' });
+  });
+
+  it('a repeat accept does not write a second profile; two accepts at once make one', async () => {
+    await seedAgent('agent-1');
+    await waitingInvite(
+      'draft-1',
+      'agent-1',
+      undefined,
+      PHONE,
+      CLIENT_DETAILS_SEEN,
+    );
+    const invites = service(new FakeAgentClock(T0));
+    const [a, b] = await Promise.all([
+      invites.accept(clientClaims(), 'draft-1'),
+      invites.accept(clientClaims(), 'draft-1'),
+    ]);
+    const again = await invites.accept(clientClaims(), 'draft-1');
+    expect([a.profileReady, b.profileReady, again.profileReady]).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(await prisma.userProfile.count()).toBe(1);
+    expect(await prisma.partnerPreference.count()).toBe(1);
+  });
+
+  it('when the profile write fails the accept still commits and answers profileReady false; the next accept makes it', async () => {
+    await seedAgent('agent-1');
+    await waitingInvite(
+      'draft-1',
+      'agent-1',
+      undefined,
+      PHONE,
+      CLIENT_DETAILS_SEEN,
+    );
+    const real = realProfileService(prisma);
+    let failing = true;
+    const flaky = {
+      syncMatchableFromDraft: (memberId: string) =>
+        failing
+          ? Promise.reject(new Error('profile write failed'))
+          : real.syncMatchableFromDraft(memberId),
+    };
+    const invites = service(
+      new FakeAgentClock(T0),
+      undefined,
+      realMemberProfiles(prisma, flaky),
+    );
+    const first = await invites.accept(clientClaims(), 'draft-1');
+    expect(first.profileReady).toBe(false);
+    expect(
+      await prisma.agentClientDraft.findUniqueOrThrow({
+        where: { id: 'draft-1' },
+        select: { status: true },
+      }),
+    ).toEqual({ status: 'ACCEPTED' });
+    expect(await prisma.user.count()).toBe(1);
+    expect(await prisma.userProfile.count()).toBe(0);
+    failing = false;
+    const second = await invites.accept(clientClaims(), 'draft-1');
+    expect(second.profileReady).toBe(true);
+    expect(await prisma.userProfile.count()).toBe(1);
+    expect(await prisma.user.count()).toBe(1);
   });
 });
