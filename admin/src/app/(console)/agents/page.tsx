@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
 import { RequirePermission } from '@/components/AppShell';
 import {
   Badge,
@@ -15,6 +16,7 @@ import {
 } from '@/components/ui';
 import { AGENT_STATUSES, agentStatusLabel } from '@/lib/agents';
 import { formatDate } from '@/lib/format';
+import { readFilter } from '@/lib/links';
 import type { AgentRow, AgentsSummary, Page } from '@/lib/types';
 import { useApi } from '@/lib/use-api';
 
@@ -32,13 +34,22 @@ interface Filters {
 export default function AgentsPage() {
   return (
     <RequirePermission permission="agent.view">
-      <Agents />
+      <Suspense fallback={<Loading />}>
+        <AgentsFromAddress />
+      </Suspense>
     </RequirePermission>
   );
 }
 
-function Agents() {
-  const [draft, setDraft] = useState<Filters>({ q: '', status: 'PENDING_APPROVAL' });
+/** ?status=ACTIVE (from the Overview) opens that status; the default is applications. */
+function AgentsFromAddress() {
+  const params = useSearchParams();
+  const status = readFilter(params, 'status', AGENT_STATUSES, 'PENDING_APPROVAL');
+  return <Agents key={params.toString()} initialStatus={status} />;
+}
+
+function Agents({ initialStatus }: { initialStatus: string }) {
+  const [draft, setDraft] = useState<Filters>({ q: '', status: initialStatus });
   const [filters, setFilters] = useState<Filters>(draft);
   const [cursors, setCursors] = useState<Array<string | null>>([null]);
   const cursor = cursors[cursors.length - 1] ?? null;
