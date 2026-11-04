@@ -14,6 +14,8 @@ Companion documents:
 - [flutter-integration-plan.md](flutter-integration-plan.md) — what the app needs, in order.
 - [production-readiness.md](production-readiness.md) — pricing decisions, Razorpay sandbox
   checklist, deployment, monitoring, rollback, and the preconditions for `enforce`.
+- [razorpay-test-mode.md](razorpay-test-mode.md) — step by step: test keys on Render,
+  the dashboard settings, putting prices on sale, test purchases, and going live later.
 
 ---
 
