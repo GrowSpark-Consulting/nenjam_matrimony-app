@@ -30,6 +30,11 @@ import { OtpService } from '../../platform/otp/otp.service';
 import { PlatformModule } from '../../platform/platform.module';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 import { PrismaAgentRepository } from '../adapters/prisma/prisma-agent.repository';
+import { PrismaReferralCodeRepository } from '../adapters/prisma/prisma-referral-code.repository';
+import {
+  REFERRAL_SHARE_LINK_BASE_URL_KEY,
+  referralShareLinkBaseUrlProblem,
+} from '../settings/agent-share-link';
 import {
   freshTestDatabase,
   openTestDatabase,
@@ -300,5 +305,108 @@ describe('GET /agent/config with the real wiring', () => {
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+describe('GET /agent/referral-links with the real wiring', () => {
+  const codes = new PrismaReferralCodeRepository(prisma);
+  const BASE = 'https://testapp.nenjammatrimony.com';
+
+  async function linksOf(token: string) {
+    const res = await request(app.getHttpServer())
+      .get('/agent/referral-links')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Accept-Version', '1');
+    expect(res.status).toBe(200);
+    return (
+      res.body as {
+        items: Array<{
+          link: string | null;
+          qrPayload: string | null;
+          shareMessages: Array<{ text: { en: string } }>;
+        }>;
+      }
+    ).items;
+  }
+
+  async function activeAgentWithCode(): Promise<string> {
+    const token = await agentToken('ACTIVE');
+    await codes.create({
+      id: '22222222-2222-4222-8222-000000000001',
+      agentId: '11111111-1111-4111-8111-000000000001',
+      code: 'NM7K2P9X',
+      isPrimary: true,
+      isActive: true,
+      createdAt: T0,
+    });
+    return token;
+  }
+
+  it('the web address is seeded as JSON null, so link and qrPayload are null', async () => {
+    const row = await prisma.platformSetting.findUnique({
+      where: { key: REFERRAL_SHARE_LINK_BASE_URL_KEY },
+    });
+    expect(row?.value).toBeNull();
+    const [item] = await linksOf(await activeAgentWithCode());
+    expect(item).toMatchObject({ link: null, qrPayload: null });
+    expect(item.shareMessages[0].text.en).not.toContain('https://');
+  });
+
+  it('once set, every link is {base}/?ref={code} and qrPayload equals it', async () => {
+    await prisma.platformSetting.update({
+      where: { key: REFERRAL_SHARE_LINK_BASE_URL_KEY },
+      data: { value: BASE },
+    });
+    const [item] = await linksOf(await activeAgentWithCode());
+    expect(item.link).toBe(`${BASE}/?ref=NM7K2P9X`);
+    expect(item.qrPayload).toBe(item.link);
+    expect(
+      item.shareMessages[0].text.en.endsWith(`
+${BASE}/?ref=NM7K2P9X`),
+    ).toBe(true);
+  });
+
+  it('a stored value the rule refuses (written around the admin route) gives no link, not an error', async () => {
+    const token = await activeAgentWithCode();
+    for (const value of [
+      'https://agent.nenjammatrimony.com',
+      'http://testapp.nenjammatrimony.com',
+      `${BASE}/join`,
+      `${BASE}/`,
+    ]) {
+      await prisma.platformSetting.update({
+        where: { key: REFERRAL_SHARE_LINK_BASE_URL_KEY },
+        data: { value },
+      });
+      const [item] = await linksOf(token);
+      expect([value, item.link, item.qrPayload]).toEqual([value, null, null]);
+    }
+  });
+
+  it('the admin settings refuse a bad value with the registered validator and keep the stored null', async () => {
+    const settings = new PlatformSettingsService(prisma as PrismaService);
+    settings.registerValidator(
+      REFERRAL_SHARE_LINK_BASE_URL_KEY,
+      referralShareLinkBaseUrlProblem,
+    );
+    for (const value of [
+      'https://agent.nenjammatrimony.com',
+      `${BASE}/join`,
+      'http://testapp.nenjammatrimony.com',
+    ]) {
+      await expect(
+        settings.update({
+          key: REFERRAL_SHARE_LINK_BASE_URL_KEY,
+          value,
+          expectedVersion: 1,
+          reason: 'test',
+          actorId: 'not-used',
+        }),
+      ).rejects.toMatchObject({ status: 400 });
+    }
+    const row = await prisma.platformSetting.findUnique({
+      where: { key: REFERRAL_SHARE_LINK_BASE_URL_KEY },
+    });
+    expect([row?.value, row?.version]).toEqual([null, 1]);
   });
 });

@@ -38,6 +38,10 @@ import {
   parseAgentProgramSettings,
   REFERRAL_MEMBER_DISCOUNT_BPS_KEY,
 } from '../settings/agent-program-settings';
+import {
+  REFERRAL_SHARE_LINK_BASE_URL_KEY,
+  referralShareLink,
+} from '../settings/agent-share-link';
 
 /** The page size rules of the API contract (`Limit` parameter). */
 export const DEFAULT_REFERRALS_PAGE_LIMIT = 20;
@@ -58,7 +62,7 @@ export interface AgentReferralLink {
   codeId: string;
   code: string;
   isPrimary: boolean;
-  /** Null until the public web address is decided. */
+  /** `{base}/?ref={code}`; null while `referral.share_link_base_url` is not set. */
   link: string | null;
   /** The string to encode into a QR code (the same as `link`). */
   qrPayload: string | null;
@@ -88,8 +92,6 @@ export interface AgentReferralServiceDeps {
   commissions: Pick<CommissionRepository, 'findByAttributionId'>;
   content: AgentContentPort;
   settings: AgentSettingsPort;
-  /** The public link for a code; null while the web address is not decided. */
-  linkFor?: (code: string) => string | null;
 }
 
 export class AgentReferralService {
@@ -101,10 +103,12 @@ export class AgentReferralService {
   ): Promise<{ items: AgentReferralLink[] }> {
     const agent = await this.deps.access.assertCan(claims, 'viewReferralLinks');
     const shareable = agentCapabilitiesFor(agent.status).shareReferralLinks;
-    const [codes, content, discountPercent] = await Promise.all([
+    const [codes, content, discountPercent, linkSettings] = await Promise.all([
       this.deps.codes.listByAgent(agent.id),
       this.deps.content.getContent(),
       this.discountPercent(),
+      // Read on every call, so setting the web address needs no deploy.
+      this.deps.settings.getMany([REFERRAL_SHARE_LINK_BASE_URL_KEY]),
     ]);
 
     const items = codes
@@ -115,7 +119,7 @@ export class AgentReferralService {
           a.createdAt.getTime() - b.createdAt.getTime(),
       )
       .map((code): AgentReferralLink => {
-        const link = this.deps.linkFor?.(code.code) ?? null;
+        const link = referralShareLink(linkSettings, code.code);
         const render = (template: string) =>
           renderShareMessage(template, {
             agentName: agent.name,

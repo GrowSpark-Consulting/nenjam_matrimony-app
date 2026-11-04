@@ -60,8 +60,9 @@ describe('agent.quote_enabled', () => {
         registered.set(key, fn),
     } as unknown as PlatformSettingsService;
     new AgentSettingValidators(settings).onModuleInit();
-    // 19 parsed keys, the quote switch and the clients switch.
-    expect(registered.size).toBe(21);
+    // 19 parsed keys, the quote switch, the clients switch and the share
+    // link's web address.
+    expect(registered.size).toBe(22);
     const fn = registered.get(AGENT_QUOTE_ENABLED_KEY);
     expect(fn?.(false)).toBeNull();
     expect(fn?.('no')).not.toBeNull();

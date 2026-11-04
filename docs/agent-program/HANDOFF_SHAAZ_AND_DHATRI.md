@@ -120,7 +120,7 @@ The referral discount is the only discount we handle.
 | TDS | CA | `planPayout()` refuses any set tax value with `TAX_RULE_UNSUPPORTED` |
 | Partial refund before approval | **Decided (Ishu, 29 Oct)** | A full refund cancels; a partial refund before approval reduces the commission in proportion to what is still paid (running total, idempotent per refund; the ledger is not touched before approval). `planRefundEffect()` in `commission/plan-refund-effect.ts` |
 | Tamil wording for the other labels (statuses, stages) | Raja | Comes from `GET /agent/config` (live since #184). The share messages are approved and final (28 Oct); see `FRONTEND_HANDOFF_DHATRI.md` section 6 |
-| Referral link web address | Raja | `link` and `qrPayload` are `null` until decided |
+| Referral link web address | **Decided 4 Nov** | `link` = `qrPayload` = `{base}/?ref={code}`; base is the setting `referral.share_link_base_url` (seeded `null` by `20261104090000_agent_share_link_setting`; a Super Admin sets `https://testapp.nenjammatrimony.com` after merge). Its validator: https, no path/query/fragment, never "agent". Shaaz: the seed is one data-only row for the next migration window |
 | Will agents need KYC later? | Raja | **Answered 29 Oct: no separate KYC, the PAN is enough** |
 
 **Decided by Raja (28 Oct, evening), no longer pending:**

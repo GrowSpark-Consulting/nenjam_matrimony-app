@@ -1,13 +1,13 @@
 import { AgentConfigError } from '../config/agent-config.service';
 import type { CommissionStatusValue } from '../ports/agent-commission-ports';
 import { REFERRAL_MEMBER_DISCOUNT_BPS_KEY } from '../settings/agent-program-settings';
+import { REFERRAL_SHARE_LINK_BASE_URL_KEY } from '../settings/agent-share-link';
 import {
   AgentHarness,
   expectServiceError,
   makeAgentHarness,
   START,
 } from '../testing/agent-test-harness';
-import { AgentReferralService } from './agent-referral.service';
 
 const DAY = 86_400_000;
 
@@ -87,27 +87,66 @@ describe('AgentReferralService', () => {
       expect(item.shareMessages[0].text.ta).not.toContain('{');
     });
 
-    it('with a link: qrPayload equals the link and the message ends with it on its own line', async () => {
+    it('with a web address set: link is {base}/?ref={code}, qrPayload equals it, and the message ends with it on its own line', async () => {
       const claims = await asAgent();
       await addCode('c1', 'NM7K2P9X', { isPrimary: true });
-      const service = new AgentReferralService({
-        access: h.me,
-        codes: h.codes,
-        attributions: h.attributions,
-        members: h.members,
-        commissions: h.commissions,
-        content: h.content,
-        settings: h.settings,
-        linkFor: (code) => `https://portal.example.invalid/r/${code}`,
-      });
-      const [item] = (await service.getLinks(claims)).items;
-      expect(item.link).toBe('https://portal.example.invalid/r/NM7K2P9X');
-      expect(item.qrPayload).toBe(item.link);
-      expect(
-        item.shareMessages[0].text.en.endsWith(
-          '\nhttps://portal.example.invalid/r/NM7K2P9X',
-        ),
-      ).toBe(true);
+      await addCode('c2', 'NM2222AA');
+      h.settings.set(
+        REFERRAL_SHARE_LINK_BASE_URL_KEY,
+        'https://testapp.nenjammatrimony.com',
+      );
+      const items = (await h.referrals.getLinks(claims)).items;
+      expect(items.map((i) => [i.link, i.qrPayload])).toEqual([
+        [
+          'https://testapp.nenjammatrimony.com/?ref=NM7K2P9X',
+          'https://testapp.nenjammatrimony.com/?ref=NM7K2P9X',
+        ],
+        [
+          'https://testapp.nenjammatrimony.com/?ref=NM2222AA',
+          'https://testapp.nenjammatrimony.com/?ref=NM2222AA',
+        ],
+      ]);
+      const { en, ta } = items[0].shareMessages[0].text;
+      for (const text of [en, ta]) {
+        expect(
+          text.endsWith('\nhttps://testapp.nenjammatrimony.com/?ref=NM7K2P9X'),
+        ).toBe(true);
+      }
+      expect(JSON.stringify(items).toLowerCase()).not.toContain('agent');
+    });
+
+    it('reads the web address on every call; null or a refused value means no link', async () => {
+      const claims = await asAgent();
+      await addCode('c1', 'NM7K2P9X', { isPrimary: true });
+      const linkOf = async () => (await h.referrals.getLinks(claims)).items[0];
+      h.settings.set(REFERRAL_SHARE_LINK_BASE_URL_KEY, 'https://a.example.com');
+      expect((await linkOf()).link).toBe('https://a.example.com/?ref=NM7K2P9X');
+      for (const value of [
+        null,
+        'https://agent.example.com',
+        'https://a.example.com/',
+        'http://a.example.com',
+      ]) {
+        h.settings.set(REFERRAL_SHARE_LINK_BASE_URL_KEY, value);
+        const item = await linkOf();
+        expect([value, item.link, item.qrPayload]).toEqual([value, null, null]);
+        expect(item.shareMessages[0].text.en).not.toContain('\n');
+      }
+      h.settings.remove(REFERRAL_SHARE_LINK_BASE_URL_KEY);
+      expect((await linkOf()).link).toBeNull();
+    });
+
+    it('a code that would put "agent" in the link gets no link, but is still listed with its message', async () => {
+      const claims = await asAgent();
+      await addCode('c1', 'NMAGENT2', { isPrimary: true });
+      h.settings.set(REFERRAL_SHARE_LINK_BASE_URL_KEY, 'https://a.example.com');
+      const [item] = (await h.referrals.getLinks(claims)).items;
+      expect([item.code, item.link, item.qrPayload]).toEqual([
+        'NMAGENT2',
+        null,
+        null,
+      ]);
+      expect(item.shareMessages[0].text.en).toContain('NMAGENT2');
     });
 
     it('takes the discount from the settings on every call', async () => {

@@ -194,9 +194,30 @@ Each item: `codeId`, `code`, `isPrimary`, `link`, `qrPayload`,
 `shareMessages` (`[{ id, text: { en, ta } }]`), `shareable`.
 
 - Show the **code** with a "Copy code" button — always.
-- `link` and `qrPayload` are **`null`** until the web address is decided:
-  hide the link and the QR code when they are `null`.
+- **`link`** is `{base}/?ref={code}`, for example
+  `https://testapp.nenjammatrimony.com/?ref=NM7K2P9X`. Show it with a
+  **"Copy link"** button (copy `link` exactly as received; do not build or
+  change it in the portal).
+- **`qrPayload`** is exactly the same string as `link`. Draw a QR code from
+  it in the portal and offer **"Download QR"** (an image file of that same QR; the portal's `ReferralCodeCard` already does this, saving an SVG).
+  The backend sends only the string, not an image.
+- Both are **`null`** until the web address is set (the platform setting
+  `referral.share_link_base_url`, seeded empty; a Super Admin sets it in
+  the admin settings, no deploy). While they are `null`, hide "Copy link",
+  the QR code and "Download QR"; the code and "Copy code" stay. Read them
+  on every load: they appear as soon as the address is set.
+- The link never contains the word "agent". In the rare case a code's
+  letters would put it there, that one item comes back with `link` and
+  `qrPayload` `null`: hide them for that item only.
 - Disable sharing when `shareable` is `false` (Paused).
+
+**Member web app: opening the link.** The link opens the member web app
+at `/?ref=NM7K2P9X`. The web app reads the `ref` query parameter and fills
+the **referral code box** with it (the same box a member types a code
+into, so the same validate-and-store path applies; see
+`FRONTEND_LIVE_TEST_AND_DEEPLINK_PREP.md`). The member can still see and
+change it; nothing is attached until the usual attach points. Ignore a
+missing or empty `ref`.
 - Show a balance summary from `GET /agent/balance`.
 
 ### 4.5 People who joined → `GET /agent/referrals`, `GET /agent/referrals/{id}`
@@ -304,8 +325,9 @@ No WhatsApp API is needed.
   share sheet. The app has no share package in `pubspec.yaml` today, so that
   would be a new dependency — check with the team first.
 - The message text comes ready-made in `shareMessages` on each referral link
-  (with the code already filled in). While there is no web address, the link
-  line is left out automatically.
+  (with the code and, once the web address is set, the link already filled
+  in). While there is no web address, the link line is left out
+  automatically.
 - The wording is **approved and final** (Raja, 28 Oct). It is served by
   `GET /agent/config` — never type it into the portal or the app — with
   `{discount_percent}` filled in from the settings. Each message ends with
@@ -351,7 +373,7 @@ states arrive as `ON_HOLD`.
 | Thing | State |
 |---|---|
 | All agent endpoints | Contract agreed, **not built yet**. Use mock data shaped like the contract examples. |
-| Referral `link` and `qrPayload` | `null` until the web address is decided |
+| Referral `link` and `qrPayload` | Built as `{base}/?ref={code}`; `null` until a Super Admin sets `referral.share_link_base_url` (planned: `https://testapp.nenjammatrimony.com`) |
 | Share messages | Wording final (English and Tamil, see section 6); `GET /agent/config` is not built yet |
 | Other Tamil labels (statuses, stages) | `'<to be supplied>'` until Raja supplies them |
 | Payments, commissions, payouts | Waiting on Shaaz's payments work; lists will be empty |
@@ -363,7 +385,7 @@ states arrive as `ON_HOLD`.
 
 ## 9. Open decisions that may change your screens
 
-- The referral link web address (shows the link and QR).
+- ~~The referral link web address~~ **Decided 4 Nov: links are `{base}/?ref={code}`, base `https://testapp.nenjammatrimony.com` for now, set in the admin settings after the backend change merges.**
 - Tamil wording for the other labels (statuses, stages).
 - ~~How an agent can pay for a client's plan~~ **Answered 30 Oct: agents never pay for a client's plan (the member always pays), so no such screen is planned.**
 - ~~Whether agents will need KYC later~~ **Answered 29 Oct: no separate KYC, the PAN is enough.**
@@ -397,7 +419,8 @@ Portal
 - [ ] Error handling by `code`, including `AGENT_NOT_ACTIVE` and `429`
 - [ ] Application form with the field rules and the PAN note
 - [ ] Status screens: Pending, Rejected (with reason), Paused, Terminated
-- [ ] Home: code, copy button, hide link/QR when `null`, share disabled when not `shareable`
+- [ ] Home: code + "Copy code", "Copy link" for `link`, QR from `qrPayload` + "Download QR", hide link/QR when `null`, share disabled when not `shareable`
+- [ ] Member web app: `?ref=` fills the referral code box
 - [ ] WhatsApp button via `wa.me`
 - [ ] People who joined, with stage filter and pagination
 - [ ] Earnings, balance, payouts (with "Processing" for `CREATED`)

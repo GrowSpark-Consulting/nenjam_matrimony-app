@@ -42,6 +42,10 @@ import {
   agentClientsEnabledProblem,
 } from '../../settings/agent-clients-switch';
 import {
+  REFERRAL_SHARE_LINK_BASE_URL_KEY,
+  referralShareLinkBaseUrlProblem,
+} from '../../settings/agent-share-link';
+import {
   AGENT_QUOTE_ENABLED_KEY,
   agentQuoteEnabledProblem,
 } from '../../settings/agent-quote-switch';
@@ -132,6 +136,11 @@ export class AgentSettingValidators implements OnModuleInit {
     this.settings.registerValidator(
       AGENT_CLIENTS_ENABLED_KEY,
       agentClientsEnabledProblem,
+    );
+    // The share link's web address (seeded null; read on its own).
+    this.settings.registerValidator(
+      REFERRAL_SHARE_LINK_BASE_URL_KEY,
+      referralShareLinkBaseUrlProblem,
     );
   }
 }

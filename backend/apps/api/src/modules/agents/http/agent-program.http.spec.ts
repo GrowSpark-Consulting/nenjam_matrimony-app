@@ -492,6 +492,40 @@ describe('agent routes over HTTP', () => {
       expect(res.body).toHaveProperty('items');
     });
 
+    it('links carry {base}/?ref={code} as link and qrPayload once the web address is set, and null before', async () => {
+      const token = await agentToken(w);
+      await w.h.codes.create({
+        id: 'code-1',
+        agentId: 'agent-1',
+        code: 'NM7K2P9X',
+        isPrimary: true,
+        isActive: true,
+        createdAt: new Date('2026-10-28T10:00:00.000Z'),
+      });
+      const links = async () =>
+        (
+          (
+            await request(w.app.getHttpServer())
+              .get('/agent/referral-links')
+              .set(bearer(token))
+              .expect(200)
+          ).body as {
+            items: Array<{ link: string | null; qrPayload: string | null }>;
+          }
+        ).items[0];
+      // Seeded as null: no link yet.
+      w.h.settings.set('referral.share_link_base_url', null);
+      expect(await links()).toMatchObject({ link: null, qrPayload: null });
+      w.h.settings.set(
+        'referral.share_link_base_url',
+        'https://testapp.nenjammatrimony.com',
+      );
+      expect(await links()).toMatchObject({
+        link: 'https://testapp.nenjammatrimony.com/?ref=NM7K2P9X',
+        qrPayload: 'https://testapp.nenjammatrimony.com/?ref=NM7K2P9X',
+      });
+    });
+
     it('the list and the detail show only the caller own referrals', async () => {
       const token = await agentToken(w);
       await w.h.seedReferral({ id: REF_OWN, agentId: 'agent-1' });
