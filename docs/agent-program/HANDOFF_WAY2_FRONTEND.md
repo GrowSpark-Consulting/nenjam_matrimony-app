@@ -1,9 +1,9 @@
 # Agent-added clients ("Way 2"): frontend handoff
 
 For the frontend developer building the **Agent Portal** (React) and the
-**member app** (Flutter). Everything here is on the backend branch
-`feat/agent-clients-routes` (the flow) and `feat/agent-clients-full-profile`
-(the full profile), and is described formally in
+**member app** (Flutter). Everything here is on `main` (merged from
+`feat/agent-clients-routes`, the flow, and `feat/agent-clients-full-profile`,
+the full profile, PR #204), and is described formally in
 `docs/agent-program/agent-api.openapi.yaml` (tags **Clients** and **Client
 invites**). If this file and the contract ever disagree, the contract wins;
 please tell the backend owner.
@@ -41,15 +41,19 @@ who invited her and the details the agent entered. She either:
   again.
 
 If she does nothing, the invitation **expires** after a number of days (a
-setting, 14 today). A phone that already has a member account can never be
-added.
+setting, `agent.client_draft_expiry_days`, 14 today). An unsubmitted
+**draft expires too**: it is open for the same number of days counted from
+when it was added, and **editing it does not extend that**. Submitting
+starts a fresh count from the moment of submit. A phone that already has a
+member account can never be added.
 
 ### Worked example
 
 1. Ravi Kumar (an ACTIVE agent) ticks "Priya's family agreed", types
    Priya Sundaram's number and her name, gender and date of birth, and
-   saves. The portal shows "Priya S. · +91 98***210 · Draft · 4 required
-   fields left" (from `missingRequired`).
+   saves. The portal shows "Priya S. · +91 98***210 · Draft · 5 required
+   fields left" (from `missingRequired`: marital status, religion, state,
+   city, highest education).
 2. Later he fills in her religion, city, education and partner
    preferences, then taps **Submit**. The row becomes "Waiting for
    client", with "open until 11 Nov 2026".
@@ -259,10 +263,13 @@ this), `403`.
 ### `PATCH /agent/clients/{id}`: edit a DRAFT
 
 Request `{ "details": { ...the whole profile... } }`. This **replaces the
-whole profile**: send every section you want to keep (it may still be
-partial). You can send back exactly what you read, labels included (the
-server ignores the labels and fills them in again). The phone cannot be
-changed: to change it, discard the draft and add the client again.
+whole profile**: a section (or a field) you leave out is **deleted**, not
+kept. Send every section you want to keep (it may still be partial).
+`details` itself is required (leaving it out is `400` naming `details`);
+`"details": {}` empties the whole profile. You can send back exactly what
+you read, labels included (the server ignores the labels and fills them in
+again). The phone cannot be changed: to change it, discard the draft and
+add the client again. Editing does not change `expiresOn`.
 
 Response `200`: the updated `ClientDraft`.
 
@@ -312,14 +319,50 @@ the app, so do not promise "she got an SMS".
 so whatever the agent enters becomes her registration draft unchanged.
 
 **Required to submit (★): exactly nine fields** (plus her mobile number,
-which is the draft's phone). **Every other field is optional**, so you can
-put a "Skip" on it now or later without any backend change. The list
-lives in one place on the server; if it changes, `missingRequired` and the
-`422 CLIENT_PROFILE_INCOMPLETE` body change with it, so drive the "required"
-markers from `missingRequired` rather than hard-coding them.
+which is the draft's phone). These are the nine paths, in the server's
+order (`CLIENT_PROFILE_REQUIRED_AT_SUBMIT` in
+`backend/apps/api/src/modules/agents/clients/client-profile-required.ts`),
+and the nine rows marked ★ in the table below:
 
-Rules for every field: an empty string or `null` means "not answered"
-(it is dropped). An unknown section or field is `400`. Text is trimmed.
+1. `basicDetails.firstName`
+2. `basicDetails.lastName`
+3. `basicDetails.gender`
+4. `basicDetails.dob`
+5. `basicDetails.maritalStatus`
+6. `religionDetails.religionCode`
+7. `locationDetails.stateCode`
+8. `locationDetails.cityCode`
+9. `educationDetails.qualification`
+
+(The plan's "Full name" is two of them, first and last name; the plan's
+"current city and state" is two more.) **Every other field is optional**,
+so you can put a "Skip" on it now or later without any backend change. The
+list lives in one place on the server; if it changes, `missingRequired` and
+the `422 CLIENT_PROFILE_INCOMPLETE` body change with it, so drive the
+"required" markers from `missingRequired` rather than hard-coding them.
+
+### Empty, partial and missing answers
+
+- **Leaving a field out, sending `null` and (for text and choice fields)
+  sending `""` or only spaces all mean the same: "not answered".** The
+  server drops it; it is never stored and never comes back in the
+  response. Text is trimmed.
+- **Siblings' `age` is a number**: leave it out or send `null`. A string,
+  even `""`, is `400`.
+- **A section whose fields are all empty is accepted and dropped**, for
+  example `"partnerPreference": {}` or `"physicalDetails": { "height": null }`.
+  The same for `familyDetails.father` / `.mother` and
+  `partnerPreference.extended`, and for `"siblings": []`.
+- **A sibling row must say `relation`** (`BROTHER` or `SISTER`): a row
+  with nothing in it is `400` naming `details.familyDetails.siblings[i].relation`.
+  Don't send empty rows; leave them out.
+- **Simplest for the portal:** send only what the agent answered, and leave
+  out empty fields and empty sections. Sending them as `null` or `""` is
+  also fine, but it is never needed.
+- An unknown section is `400` naming `details`; an unknown field is `400`
+  naming its section, for example `details.basicDetails`. A value of the wrong type
+  (a number for a text field, an object for a choice) is `400` naming the
+  field.
 
 ### Sections the portal should show (in this order)
 
@@ -355,7 +398,7 @@ Rules for every field: an empty string or `null` means "not answered"
 | `educationDetails.occupation` | Occupation | | dropdown + "Other" text | up to 100 characters; the app offers Software Engineer, Doctor, IAS / IPS / Govt, Business Owner, Finance / Banking, Civil / Mechanical Engg, Teacher / Professor, Lawyer, Architect |
 | `educationDetails.employmentType` | Employer type | | choice | Private, Government, Business, Self-Employed, Not Working, Student, Retired |
 | `educationDetails.annualIncome` | Yearly income range | | choice | Below 5 Lakhs, 5 - 10 Lakhs, 10 - 20 Lakhs, 20 - 50 Lakhs, 50 Lakhs - 1 Crore, 1 Crore+ |
-| `physicalDetails.height` | Height | | dropdown | the app's labels, 122 to 213 cm, exactly like `5'9" (175 cm)` |
+| `physicalDetails.height` | Height | | dropdown | one of the app's 92 labels, 122 to 213 cm, as a **string**, exactly like `5'9" (175 cm)` (see "Height" below) |
 | `lifestyleDetails.eatingHabit` | Diet | | choice | Vegetarian, Non-Vegetarian, Eggetarian, Vegan, Jain |
 | `lifestyleDetails.aboutMe` | About | | long text | up to 1000 characters |
 | `familyDetails.father.occupation` | Parents' occupation | | text | up to 100 characters |
@@ -375,7 +418,20 @@ Rules for every field: an empty string or `null` means "not answered"
 | `partnerPreference.locationPref` | Partner: locations, or anywhere | | choice | Same City, Same State, Anywhere in India, NRI OK, Any |
 | `partnerPreference.extended.diet` | Partner: diet | | choice | Vegetarian, Eggetarian, Vegan, Non-Vegetarian, Doesn't Matter |
 
-Each partner preference is **one** choice, as in the member app.
+Each partner preference is **one** choice, as in the member app, and each
+is optional on its own: send any of them, none, or leave
+`partnerPreference` out altogether.
+
+**Height.** The value is the member app's label for one whole centimetre
+from 122 to 213, as text: feet, a straight apostrophe `'`, inches, a
+straight double quote `"`, a space, then the centimetres in brackets. The
+inches are the centimetres divided by 2.54, rounded. For example
+`4'0" (122 cm)`, `5'3" (160 cm)`, `5'9" (175 cm)`, `7'0" (213 cm)`. It is
+the same list as `ProfileOptions.heightLabel` in the member app
+(`Frontend/lib/core/constants/profile_options.dart`), so build the
+dropdown from the same formula. A number (`175`), `"175"`, `"175 cm"`,
+`"5 ft 9"` or curly quotes are `400` naming
+`details.physicalDetails.height`.
 
 **Master data.** The five reference-data lists need no token. Send the
 `code`; the server checks it exactly as it does for a member's own profile
@@ -385,6 +441,10 @@ outside its state, a state outside its country, a community outside its
 religion, a state without a country code, a city without a state code, a
 community without a religion code. When the country or religion changes,
 clear the state/city or community, as the member app does.
+
+**Community is always optional**, for every religion: the server never
+asks for one, even when the religion has communities. It is only checked
+when you send it (it must belong to the religion sent with it).
 
 **Photos** cannot be added by the agent (not built; see section 10).
 
@@ -539,13 +599,27 @@ the first `otp/request` tells you.
   channels. Only approved test numbers can be added or receive a code (any
   other number answers `503 OTP_DELIVERY_UNAVAILABLE`), in every
   environment, until real SMS exists.
-- The feature switch (`agent.clients_enabled`) is off by default: ask the
-  backend owner to switch it on in the environment you test against, and
-  to set it back afterwards.
+- **The feature switch `agent.clients_enabled`** is a platform setting,
+  seeded `false`. Only a stored `true` turns it on; missing, `false` or
+  anything else is off, and every Way 2 route then answers
+  `403 CLIENT_INVITES_DISABLED` (`GET /agent/config` shows
+  `clients.enabled: false`). A Super Admin switches it in the admin
+  settings; it is read on every request, so no deploy or restart is
+  needed. Ask the backend owner to switch it on in the environment you
+  test against, and to set it back afterwards. The switch is for the whole
+  environment, not per agent.
+- **The test agent must be `ACTIVE`**: sign in to the portal as usual
+  (with a phone the test code reaches), apply, and have a staff member
+  with `agent.approve` approve the application in the admin panel
+  (`POST /admin/agents/{id}/approve`). Until then the agent is
+  `PENDING_APPROVAL` and every client route answers `403 AGENT_NOT_ACTIVE`.
+  A `SUSPENDED` agent can only look.
+- **The client's number** must be a different approved test number from the
+  agent's own (an agent cannot add their own phone), with no member
+  account yet.
 - Accepting creates a real member account for the test number. To run the
   flow again you need a fresh test number, or the backend owner has to
   remove that account.
-- The agent side needs an ACTIVE test agent (the usual agent sign-in).
 
 ---
 
