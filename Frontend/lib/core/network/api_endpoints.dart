@@ -177,6 +177,15 @@ abstract final class ApiEndpoints {
   /// Agent endpoint (the agent's own access token, not Firebase).
   static const String agentReferralLinks = '/agent/referral-links';
 
+  // ─── Way 2: client invitations (agent-added clients) ───────────────
+  static const String clientInviteOtpRequest = '/client-invites/otp/request';
+  static const String clientInviteOtpVerify = '/client-invites/otp/verify';
+  static const String clientInvites = '/client-invites';
+  static String clientInviteAccept(String id) =>
+      '/client-invites/${Uri.encodeComponent(id)}/accept';
+  static String clientInviteReject(String id) =>
+      '/client-invites/${Uri.encodeComponent(id)}/reject';
+
   /// The `Accept-Version` header the agent-program contract asks for, sent
   /// per request on its calls only — never added to the client globally.
   static const Map<String, String> agentApiVersionHeaders = {

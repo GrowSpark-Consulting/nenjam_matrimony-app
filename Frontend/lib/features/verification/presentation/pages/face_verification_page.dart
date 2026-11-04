@@ -14,6 +14,7 @@ import '../../../profile_photos/presentation/providers/primary_photo_updater.dar
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/face_verification.dart';
 import '../providers/face_verification_providers.dart';
+import '../providers/selfie_requirement_provider.dart';
 
 /// "Account on hold" — the mandatory selfie-verification screen a member
 /// with an unresolved required verification lands on after OTP, before
@@ -26,6 +27,20 @@ class FaceVerificationPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final flow = ref.watch(faceVerificationFlowProvider);
     final l10n = AppLocalizations.of(context);
+
+    // Only a "Myself" profile owes a selfie. Anyone else who lands here (a
+    // stale route, a restored navigation state) is sent on, and no session or
+    // status request is ever made for them.
+    if (ref.watch(selfieVerificationRequiredProvider).valueOrNull == false) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go(RouteNames.discover);
+        }
+      });
+    }
 
     ref.listen(faceVerificationFlowProvider, (previous, next) {
       if (next.phase == FaceVerificationFlowPhase.verified) {

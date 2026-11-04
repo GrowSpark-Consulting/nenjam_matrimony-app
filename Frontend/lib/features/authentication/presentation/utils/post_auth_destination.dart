@@ -7,6 +7,7 @@ import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../domain/services/local_auth_session.dart';
 import '../../../registration/domain/models/profile_draft.dart';
 import '../../../registration/domain/models/profile_flow_mode.dart';
+import '../../../registration/domain/models/selfie_verification_requirement.dart';
 import '../../../registration/presentation/providers/registration_provider.dart';
 import '../../../registration/presentation/utils/onboarding_draft_gate.dart';
 import '../../../verification/presentation/providers/face_verification_providers.dart';
@@ -225,7 +226,7 @@ class PostAuthDestination {
     }
 
     // Every step that leaves a durable answer has one. Onboarding is done.
-    final gated = await _faceVerificationGate();
+    final gated = await _faceVerificationGate(draft: restored);
     if (gated != null) return gated;
     AuthTrace.profileState('COMPLETED');
     AuthTrace.destination(RouteNames.discover);
@@ -269,7 +270,7 @@ class PostAuthDestination {
     // reimplemented so the two paths cannot silently drift apart.
     final step = firstUnansweredOnboardingStep(restored);
     if (step != null) return step;
-    return await _faceVerificationGate() ?? RouteNames.discover;
+    return await _faceVerificationGate(draft: restored) ?? RouteNames.discover;
   }
 
   /// Whether the backend already holds a finalized profile for this member.
@@ -356,8 +357,27 @@ class PostAuthDestination {
   /// (returns `null`) rather than blocking a member on a state it could not
   /// confirm — matching this resolver's "never blocks on an unknown" policy
   /// elsewhere ([_hasFinalizedProfile]).
-  Future<String?> _faceVerificationGate() async {
+  ///
+  /// **Only a profile created for "Myself" is gated** (see
+  /// [selfieVerificationRequired]); every other relation, and a profile a
+  /// referral partner created, skips this gate entirely — before
+  /// `GET /verification/face` is even requested, so no verification API is
+  /// touched for them. [draft] is the draft the caller already restored, if
+  /// any; otherwise the saved draft is read (bounded by [_draftLookupTimeout]).
+  ///
+  /// **Unreadable draft = fail OPEN** (ownership unknown → no gate). Product:
+  /// a member whose draft request merely timed out is not locked out of the
+  /// app on a guess, matching the status lookup's own fail-open policy.
+  /// Security: a Myself member can skip the gate only for that one launch
+  /// while offline/erroring — the next resolve re-checks, the backend does not
+  /// treat unverified as unauthorised (it only withholds the badge), and
+  /// `FACE_VERIFICATION_ENABLED` is currently off everywhere, so nothing is
+  /// weakened today. Failing closed would instead trap offline Myself members
+  /// on a screen that cannot work offline. Revisit if the backend ever makes
+  /// verification a hard entitlement.
+  Future<String?> _faceVerificationGate({ProfileDraft? draft}) async {
     try {
+      if (!await _selfieRequired(draft)) return null;
       final state = await _ref
           .read(faceVerificationStatusProvider.future)
           .timeout(_draftLookupTimeout);
@@ -366,6 +386,32 @@ class PostAuthDestination {
       return RouteNames.faceVerification;
     } catch (_) {
       return null;
+    }
+  }
+
+  Future<bool> _selfieRequired(ProfileDraft? known) async {
+    final referralCreated = _referralCreated();
+    if (referralCreated) return false;
+    final draft = known ??
+        ProfileDraft.fromJson(
+          await _ref
+              .read(registrationRepositoryProvider)
+              .getDraft()
+              .timeout(_draftLookupTimeout),
+        );
+    return selfieVerificationRequired(
+      profileCreatedFor: draft.basicDetails.profileCreatedFor,
+      referralCreated: referralCreated,
+    );
+  }
+
+  /// Whether this device's member accepted an agent's client invitation.
+  /// Guarded like [_pendingEmail].
+  bool _referralCreated() {
+    try {
+      return storageService.referralCreatedProfile;
+    } catch (_) {
+      return false;
     }
   }
 

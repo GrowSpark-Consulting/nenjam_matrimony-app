@@ -35,6 +35,12 @@ class _ReferralCodeBoxState extends ConsumerState<ReferralCodeBox> {
   /// The one line under the field: invalid, rate-limited or unreachable.
   String? _error;
 
+  /// The code that arrived with a shared link (`?ref=`) and was put in the
+  /// field for the member. While the field still holds exactly this, the
+  /// member has not touched it; any edit or removal drops the link copy so
+  /// it can never overwrite what they chose.
+  String? _linkCode;
+
   @override
   void initState() {
     super.initState();
@@ -44,7 +50,27 @@ class _ReferralCodeBoxState extends ConsumerState<ReferralCodeBox> {
     if (stored != null) {
       _applied = stored;
       _state = _BoxState.applied;
+      return;
     }
+    // A code from a shared link: fill the field and run the SAME apply the
+    // Apply button runs, once. Not when the feature is off.
+    final link = ref.read(linkReferralStoreProvider).read();
+    if (link != null && ref.read(referralCodeEntryEnabledProvider)) {
+      _linkCode = link;
+      _controller.text = link;
+      _state = _BoxState.editing;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _state == _BoxState.editing) _apply();
+      });
+    }
+  }
+
+  /// The member changed or removed the code themselves, or it has been
+  /// handled: forget the link copy so it is never re-applied.
+  void _dropLinkCode() {
+    if (_linkCode == null) return;
+    _linkCode = null;
+    ref.read(linkReferralStoreProvider).clear();
   }
 
   @override
@@ -57,6 +83,7 @@ class _ReferralCodeBoxState extends ConsumerState<ReferralCodeBox> {
     final l10n = AppLocalizations.of(context);
     final code = normalizeReferralCode(_controller.text);
     if (code == null) {
+      _dropLinkCode();
       // A code that cannot match the contract's pattern is "not valid" —
       // the same single message, without spending an attempt on it.
       setState(() => _error = l10n.referralCodeInvalid);
@@ -69,6 +96,7 @@ class _ReferralCodeBoxState extends ConsumerState<ReferralCodeBox> {
 
     String? error;
     PendingReferralCode? applied;
+    bool? transientFailure;
     try {
       final result = await ref
           .read(referralRepositoryProvider)
@@ -83,6 +111,7 @@ class _ReferralCodeBoxState extends ConsumerState<ReferralCodeBox> {
         error = l10n.referralCodeInvalid;
       }
     } on ApiException catch (e) {
+      transientFailure = e.statusCode != 400;
       if (e.statusCode == 429) {
         final seconds = e.retryAfterSeconds;
         error = seconds != null
@@ -94,8 +123,13 @@ class _ReferralCodeBoxState extends ConsumerState<ReferralCodeBox> {
         error = l10n.referralCodeCheckFailed;
       }
     } catch (_) {
+      transientFailure = true;
       error = l10n.referralCodeCheckFailed;
     }
+    // Valid -> the persistent store owns it now. Definitively invalid -> do
+    // not re-validate it on every return. Only a transient failure (rate
+    // limit, network, 5xx) keeps the link copy, so it can be tried again.
+    if (applied != null || transientFailure != true) _dropLinkCode();
     if (!mounted) return;
     setState(() {
       _error = error;
@@ -105,6 +139,7 @@ class _ReferralCodeBoxState extends ConsumerState<ReferralCodeBox> {
   }
 
   Future<void> _remove() async {
+    _dropLinkCode();
     await ref.read(pendingReferralStoreProvider).clear();
     if (!mounted) return;
     setState(() {
@@ -184,7 +219,8 @@ class _ReferralCodeBoxState extends ConsumerState<ReferralCodeBox> {
                 textCapitalization: TextCapitalization.characters,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _apply(),
-                onChanged: (_) {
+                onChanged: (v) {
+                  if (v != _linkCode) _dropLinkCode();
                   if (_error != null) setState(() => _error = null);
                 },
               ),

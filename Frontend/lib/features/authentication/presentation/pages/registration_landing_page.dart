@@ -14,6 +14,7 @@ import '../../../../core/widgets/buttons/outlined_button.dart';
 import '../../../../core/widgets/buttons/social_button.dart';
 import '../../../../core/widgets/system_ui/nm_status_bar_style.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../client_invite/presentation/providers/client_invite_providers.dart';
 import '../../../registration/presentation/providers/registration_provider.dart';
 
 /// Breakpoint above which the hero moves beside the actions rather than
@@ -317,6 +318,7 @@ class _LandingActions extends StatelessWidget {
                         ),
                         const SizedBox(height: AppSpacing.xl),
                         _LoginSection(l10n: l10n, onLogin: onLogin),
+                        const _ClientInviteEntry(),
                       ],
                     ),
                   ),
@@ -419,6 +421,23 @@ class _LoginSection extends StatelessWidget {
           onPressed: onLogin,
         ),
       ],
+    );
+  }
+}
+
+/// "Added by an agent? Confirm here": hidden once any client route has said
+/// the feature is switched off (`CLIENT_INVITES_DISABLED`).
+class _ClientInviteEntry extends ConsumerWidget {
+  const _ClientInviteEntry();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(clientInvitesDisabledProvider)) {
+      return const SizedBox.shrink();
+    }
+    return TextButton(
+      onPressed: () => context.go(RouteNames.clientInvite),
+      child: const Text('Added by an agent? Confirm here'),
     );
   }
 }

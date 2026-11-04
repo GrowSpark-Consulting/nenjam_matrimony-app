@@ -7,6 +7,7 @@ import '../../../../core/layout/content_width.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../verification/domain/models/face_verification.dart';
 import '../../../verification/presentation/providers/face_verification_providers.dart';
+import '../../../verification/presentation/providers/selfie_requirement_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/relationship_intelligence/horoscope_compatibility_section.dart';
@@ -114,7 +115,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     // supply elegant fallbacks for anything still null.
     final authUser = ref.watch(currentAuthUserProvider);
     final ProfileDraft? draft = ref.watch(myProfileDraftProvider).valueOrNull;
-    final faceVerificationStatus = ref.watch(faceVerificationStatusProvider);
+    // Only a "Myself" profile owes a selfie: for anyone else the Face Match
+    // tile is absent and the face-verification API is never requested.
+    final selfieRequired =
+        ref.watch(selfieVerificationRequiredProvider).valueOrNull ?? false;
+    final faceVerificationStatus = selfieRequired
+        ? ref.watch(faceVerificationStatusProvider)
+        : null;
     final completeness = ref
         .watch(profileCompletenessSnapshotProvider)
         .valueOrNull;
@@ -444,6 +451,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             : NmVerificationStatus.incomplete,
                         onTap: () => context.push(RouteNames.verification),
                       ),
+                      if (selfieRequired)
                       NmVerificationItem(
                         icon: Icons.face_rounded,
                         label: l10n.fieldFaceMatch,
@@ -453,7 +461,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         // (see docs/development/
                         // selfie-verification-frontend-handoff.md §6.1).
                         status:
-                            faceVerificationStatus.valueOrNull?.status ==
+                            faceVerificationStatus?.valueOrNull?.status ==
                                 FaceVerificationStatus.verified
                             ? NmVerificationStatus.verified
                             : NmVerificationStatus.incomplete,

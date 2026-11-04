@@ -76,6 +76,12 @@ abstract final class AppConstants {
   /// signed in — see `PendingReferralStore`. Local-only and transient.
   static const String keyPendingReferralCode = 'pending_referral_code';
 
+  /// Set when this device's member accepted an agent's client invitation —
+  /// i.e. the profile was created for them by a referral partner. Read only
+  /// by the selfie-verification requirement; see
+  /// `selfieVerificationRequired`.
+  static const String keyReferralCreatedProfile = 'referral_created_profile';
+
   /// Set once the new signup onboarding reaches its end. Paired with the
   /// static development OTP verifier — see StorageService.onboardingCompleted.
   static const String keyOnboardingCompleted = 'onboarding_completed';
