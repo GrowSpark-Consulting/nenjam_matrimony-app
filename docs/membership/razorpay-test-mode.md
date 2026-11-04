@@ -74,17 +74,17 @@ without a deploy:
 Use the intended prices if they are decided. Otherwise any price of at least ₹1 works
 for testing, and you change it later with another draft.
 
-GST is added on top of these prices by the platform setting `payment.gst_rate_bps`. The
-setting arrives with the Payments PR and is **0 until the business is GST-registered**,
-so members pay exactly the plan price.
+GST is added on top of these prices by the platform setting `payment.gst_rate_bps`. It
+is live on production and stays **0 until the business is GST-registered**, so members
+pay exactly the plan price.
 
 ## 4. Test purchases (Android app)
 
-> **Blocked until the app has Razorpay.** As of 29 Oct the Flutter app ships no payment
-> SDK: `UnsupportedPaymentGateway` hides every Buy button. A `RazorpayPaymentGateway` (the
-> `razorpay_flutter` package) must open Razorpay with the checkout response's
-> `key: keyId`, `order_id: orderId`, `amount: amountInPaise`, `currency`. Until then the
-> server side is ready but nothing can start a purchase.
+> **Use an Android or iOS build made from main on or after 30 Oct.** Those builds open
+> Razorpay Checkout through `RazorpayPaymentGateway` (the `razorpay_flutter` package)
+> with the checkout response's `key: keyId`, `order_id: orderId`,
+> `amount: amountInPaise`, `currency`. Older builds, the web app and desktop builds get
+> `UnsupportedPaymentGateway`, which hides every Buy button.
 
 Razorpay's test credentials (the dashboard's *Test Card Details* page has the current
 list):
