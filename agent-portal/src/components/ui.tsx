@@ -15,9 +15,17 @@ export type IconName =
   | 'download'
   | 'clock'
   | 'alert'
-  | 'whatsapp';
+  | 'whatsapp'
+  | 'menu'
+  | 'close'
+  | 'edit'
+  | 'chevron';
 
 const PATHS: Record<IconName, string> = {
+  menu: 'M4 7h16M4 12h16M4 17h16',
+  close: 'M6 6l12 12M18 6L6 18',
+  edit: 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4',
+  chevron: 'M9 6l6 6-6 6',
   home: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',
   people: 'M9 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5.5a3 3 0 010 5.5M18 14c2 .7 3 2.6 3 6',
   coins: 'M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3zM4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6',
@@ -169,20 +177,28 @@ export function FormField({
   label,
   hint,
   error,
+  required = false,
+  className = '',
   children,
 }: {
   id: string;
   label: string;
   hint?: string;
   error?: string | null;
+  /** Adds a visible "(required)" to the label. */
+  required?: boolean;
+  className?: string;
   children: (props: { id: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean }) => ReactNode;
 }) {
   const describedBy = [hint ? `${id}-hint` : null, error ? `${id}-error` : null]
     .filter(Boolean)
     .join(' ');
   return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
+    <div className={`field ${className}`.trim()} data-field={id}>
+      <label htmlFor={id}>
+        {label}
+        {required && <span className="req"> (required)</span>}
+      </label>
       {children({
         id,
         'aria-describedby': describedBy || undefined,

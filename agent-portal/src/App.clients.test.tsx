@@ -183,15 +183,19 @@ describe('required count comes from the backend', () => {
   });
 
   it('9 missing on an empty draft; Submit is disabled', async () => {
+    const user = userEvent.setup();
     await renderAt('/clients/c1');
     expect(await screen.findByLabelText('Required fields left')).toHaveTextContent('9 required fields left');
+    await user.click(screen.getByRole('button', { name: 'Review' }));
     expect(screen.getByRole('button', { name: 'Submit to client' })).toBeDisabled();
   });
 
   it('marks required fields from missingRequired', async () => {
+    const user = userEvent.setup();
     await renderAt('/clients/c1', (a) => (a.draft = makeDraft(COMPLETE)));
     await screen.findByLabelText('Required fields left');
     expect(screen.getByLabelText('Required fields left')).toHaveTextContent('All required details are filled in');
+    await user.click(screen.getByRole('button', { name: 'Review' }));
     expect(screen.getByRole('button', { name: 'Submit to client' })).toBeEnabled();
     expect(screen.queryByText(/\(required\)/)).toBeNull();
   });
@@ -331,6 +335,7 @@ describe('expiry', () => {
     await waitFor(() => expect(api.patches).toHaveLength(1));
     expect(screen.getByText(/Open until 2026-11-20/)).toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: 'Review' }));
     await user.click(screen.getByRole('button', { name: 'Submit to client' }));
     expect(screen.getByText(/can't change it/)).toBeInTheDocument();
     expect(api.submits).toBe(0);
@@ -348,10 +353,11 @@ describe('submit errors', () => {
       a.draft = makeDraft(COMPLETE);
       a.submitError = err;
     });
-    await user.click(await screen.findByRole('button', { name: 'Submit to client' }));
+    await user.click(await screen.findByRole('button', { name: 'Review' }));
+    await user.click(screen.getByRole('button', { name: 'Submit to client' }));
     await user.click(screen.getByRole('button', { name: 'Yes, submit' }));
     expect(await screen.findByRole('heading', { name: 'Education and work' })).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent('educationDetails.qualification');
+    expect(screen.getByRole('alert')).toHaveTextContent('Highest education');
   });
 
   it('CLIENT_PHONE_UNAVAILABLE keeps the draft (nothing is deleted)', async () => {
@@ -360,7 +366,8 @@ describe('submit errors', () => {
       a.draft = makeDraft(COMPLETE);
       a.submitError = new ApiError(422, 'x', { code: 'CLIENT_PHONE_UNAVAILABLE' });
     });
-    await user.click(await screen.findByRole('button', { name: 'Submit to client' }));
+    await user.click(await screen.findByRole('button', { name: 'Review' }));
+    await user.click(screen.getByRole('button', { name: 'Submit to client' }));
     await user.click(screen.getByRole('button', { name: 'Yes, submit' }));
     expect(await screen.findByRole('alert')).toHaveTextContent("can't be added");
     expect(api.deleted).toBe(0);
@@ -376,7 +383,7 @@ describe('closed drafts', () => {
     expect(await screen.findByText(/Waiting until 2026-12-04/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Submit to client' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
-    const profile = screen.getByText('Religion: Religion').closest('dl')!;
+    const profile = screen.getByRole('region', { name: 'Religion' });
     expect(within(profile).getByText('Hindu')).toBeInTheDocument();
   });
 });
