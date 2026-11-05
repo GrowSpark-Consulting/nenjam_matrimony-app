@@ -5,6 +5,7 @@ import { App } from './App';
 import { ConfigErrorScreen } from './components/ConfigErrorScreen';
 import { PortalProvider } from './state/PortalContext';
 import './styles.css';
+import './clients.css';
 
 const root = createRoot(document.getElementById('root')!);
 const config = resolveApiConfig({

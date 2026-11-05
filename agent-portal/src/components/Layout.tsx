@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { clientsAvailable } from '../lib/clientsFeature';
 import { pickLabel, statusTone } from '../lib/labels';
@@ -14,7 +15,23 @@ interface NavItem {
   end?: boolean;
 }
 
-/** Signed-in agent shell: sidebar on wide screens, header + tab bar on phones. */
+const WIDE = '(min-width: 900px)';
+
+/** True below the breakpoint where the sidebar turns into a drawer. */
+function useDrawerMode(): boolean {
+  const query = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(WIDE) : null;
+  const [wide, setWide] = useState(query ? query.matches : true);
+  useEffect(() => {
+    if (!query) return;
+    const on = () => setWide(query.matches);
+    on();
+    query.addEventListener('change', on);
+    return () => query.removeEventListener('change', on);
+  }, [query]);
+  return !wide;
+}
+
+/** Signed-in agent shell: sidebar on wide screens, top bar + drawer below 900px. */
 export function Layout() {
   const {
     agent,
@@ -63,6 +80,33 @@ export function Layout() {
   const statusText = agent
     ? pickLabel(config?.statusLabels[agent.status] ?? agent.statusLabel, agent.status)
     : null;
+  const drawerMode = useDrawerMode();
+  // Open is tied to the route it was opened on, so navigating closes it.
+  const [openAt, setOpenAt] = useState<string | null>(null);
+  const open = openAt === location.pathname;
+  const setOpen = (v: boolean | ((o: boolean) => boolean)) =>
+    setOpenAt((cur) => ((typeof v === 'function' ? v(cur === location.pathname) : v) ? location.pathname : null));
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const drawerOpen = drawerMode && open;
+
+  // Lock page scroll behind the open drawer; Escape closes it and returns focus.
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        menuButton.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [drawerOpen]);
+
   const doSignOut = () => void signOut().then(() => navigate('/sign-in', { replace: true }));
 
   return (
@@ -70,7 +114,33 @@ export function Layout() {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <header className="sidebar">
+      {drawerMode && (
+        <header className="topbar">
+          <button
+            ref={menuButton}
+            type="button"
+            className="menu-button"
+            aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={drawerOpen}
+            aria-controls="portal-nav"
+            onClick={() => setOpen((o) => !o)}
+          >
+            <Icon name={drawerOpen ? 'close' : 'menu'} size={22} />
+          </button>
+          <div className="brand">
+            <span className="brand-mark" aria-hidden="true">N</span>
+            <span className="brand-title">Nenjam Partner</span>
+          </div>
+        </header>
+      )}
+      {drawerOpen && <div className="backdrop" onClick={() => setOpen(false)} aria-hidden="true" />}
+      <aside
+        id="portal-nav"
+        className={`sidebar${drawerMode ? ' drawer' : ''}${drawerOpen ? ' open' : ''}`}
+        aria-label="Menu"
+        // A closed drawer is off-screen: keep it out of the tab order too.
+        inert={drawerMode && !drawerOpen ? true : undefined}
+      >
         <div className="brand">
           <span className="brand-mark" aria-hidden="true">N</span>
           <span className="brand-name">Nenjam Partner Program</span>
@@ -101,7 +171,7 @@ export function Layout() {
           <Icon name="signout" size={18} />
           Sign out
         </button>
-      </header>
+      </aside>
       <div className="content">
         {usingMocks && <MockBanner />}
         <main className="main" id="main" tabIndex={-1}>
