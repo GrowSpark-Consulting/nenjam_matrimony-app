@@ -80,7 +80,7 @@ import type {
   AgentTx,
   AgentUnitOfWork,
 } from '../ports/agent-unit-of-work.port';
-import { maskPhone } from '../referral/agent-referral-view';
+import { maskPhone, toDisplayName } from '../referral/agent-referral-view';
 import {
   AGENT_CLIENT_DRAFT_EXPIRY_DAYS_KEY,
   AGENT_CLIENT_DRAFT_LIMIT_KEY,
@@ -607,24 +607,17 @@ export class AgentClientDraftService {
 }
 
 /**
- * The client's full name as entered ("Priya Sharma"), shown only to the agent
- * who entered it. Falls back to the masked phone while no name is filled in
- * (a draft may be saved before them); a missing first or last name is skipped
- * so there is never a stray space.
+ * "Priya S.", or the masked phone while the names are not filled in yet (a
+ * draft may be saved before them). This is what is stored and kept after the
+ * draft closes; the agent sees the full name only while the draft is open
+ * (see `clientDraftView`).
  */
-export function displayNameOf(
-  profile: ClientProfile,
-  phoneMasked: string,
-): string {
-  const part = (value: unknown): string =>
-    typeof value === 'string' ? value.trim() : '';
-  const full = [
-    part(profile.basicDetails?.firstName),
-    part(profile.basicDetails?.lastName),
-  ]
-    .filter((p) => p !== '')
-    .join(' ');
-  return full !== '' ? full : phoneMasked;
+function displayNameOf(profile: ClientProfile, phoneMasked: string): string {
+  const first = profile.basicDetails?.firstName;
+  const last = profile.basicDetails?.lastName;
+  return typeof first === 'string' && first !== ''
+    ? toDisplayName(first, typeof last === 'string' ? last : null)
+    : phoneMasked;
 }
 
 /** The agent hears one code per refusal; the phone reasons stay internal. */

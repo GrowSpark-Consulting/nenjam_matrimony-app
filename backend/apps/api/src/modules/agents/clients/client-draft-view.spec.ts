@@ -1,6 +1,6 @@
 import { AGENT_CONTENT } from '../content/agent-content';
 import type { AgentClientDraftRecord } from '../ports/agent-client-ports';
-import { clientDraftView } from './client-draft-view';
+import { clientDraftView, fullNameOf } from './client-draft-view';
 
 const NOW = new Date('2026-11-03T10:00:00.000Z');
 const DAY = 86_400_000;
@@ -49,7 +49,7 @@ describe('clientDraftView', () => {
       id: 'draft-1',
       status: 'DRAFT',
       statusLabel: AGENT_CONTENT.clientStatusLabels.DRAFT,
-      displayName: 'Priya S.',
+      displayName: 'Priya Sundaram',
       phoneMasked: '+91 98***210',
       details: DETAILS,
       // The required fields this partial profile still lacks.
@@ -94,6 +94,28 @@ describe('clientDraftView', () => {
       });
       expect(v.statusLabel).toEqual(AGENT_CONTENT.clientStatusLabels.EXPIRED);
     }
+  });
+
+  it('shows the full name only while open; closed drafts keep the stored short form', () => {
+    expect(view(row()).displayName).toBe('Priya Sundaram');
+    for (const status of ['REJECTED', 'EXPIRED'] as const) {
+      expect(view(row({ status, detailsSealed: null })).displayName).toBe(
+        'Priya S.',
+      );
+    }
+  });
+
+  it('fullNameOf keeps long names, skips blank parts and never prints undefined', () => {
+    const name = (b: Record<string, unknown>) =>
+      fullNameOf({ basicDetails: b } as never);
+    expect(name({ firstName: 'Gh', lastName: 'Ty' })).toBe('Gh Ty');
+    expect(
+      name({ firstName: 'Mary Ann', lastName: 'Venkataraghavan Iyer' }),
+    ).toBe('Mary Ann Venkataraghavan Iyer');
+    expect(name({ firstName: ' Gh ', lastName: '  ' })).toBe('Gh');
+    expect(name({ firstName: null, lastName: 'Ty' })).toBe('Ty');
+    expect(name({ firstName: null, lastName: undefined })).toBe('');
+    expect(fullNameOf({} as never)).toBe('');
   });
 
   it('a closed draft never shows details, even if the caller passed them', () => {

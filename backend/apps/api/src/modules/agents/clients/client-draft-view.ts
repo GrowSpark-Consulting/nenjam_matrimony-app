@@ -39,6 +39,23 @@ export interface ClientDraftView {
   referralId: string | null;
 }
 
+/**
+ * The client's full name as entered ("Priya Sharma"), from the opened profile.
+ * A blank part is skipped; '' when neither is filled in. The stored
+ * `displayName` stays short, so nothing but the sealed profile holds the full
+ * name, and it goes away when the draft closes.
+ */
+export function fullNameOf(profile: ClientProfile): string {
+  const part = (value: unknown): string =>
+    typeof value === 'string' ? value.trim() : '';
+  return [
+    part(profile.basicDetails?.firstName),
+    part(profile.basicDetails?.lastName),
+  ]
+    .filter((p) => p !== '')
+    .join(' ');
+}
+
 export function clientDraftView(
   row: AgentClientDraftRecord,
   now: Date,
@@ -55,7 +72,7 @@ export function clientDraftView(
     id: row.id,
     status,
     statusLabel: options.labels[status],
-    displayName: row.displayName,
+    displayName: (details && fullNameOf(details)) || row.displayName,
     phoneMasked: row.phoneMasked,
     details,
     missingRequired: details ? missingRequiredClientFields(details) : [],
