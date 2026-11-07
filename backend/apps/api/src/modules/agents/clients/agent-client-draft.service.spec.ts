@@ -1,3 +1,4 @@
+import { displayNameOf } from './agent-client-draft.service';
 import { AGENT_SEAL_PURPOSES } from '../ports/agent-secret-sealer.port';
 import { AGENT_CLIENTS_ENABLED_KEY } from '../settings/agent-clients-switch';
 import {
@@ -134,7 +135,7 @@ describe('AgentClientDraftService.create', () => {
       id: 'draft-1',
       status: 'DRAFT',
       statusLabel: expect.objectContaining({ en: 'Draft' }) as unknown,
-      displayName: 'Priya S.',
+      displayName: 'Priya Sundaram',
       phoneMasked: '+91 90***001',
       details: CLIENT_DETAILS_SEEN,
       missingRequired: [],
@@ -399,7 +400,7 @@ describe('AgentClientDraftService.update and discard', () => {
       },
     });
     expect(view).toMatchObject({
-      displayName: 'Meena R.',
+      displayName: 'Meena Raman',
       details: { basicDetails: { firstName: 'Meena', lastName: 'Raman' } },
     });
     expect(h.audit.entries[1]).toMatchObject({
@@ -809,5 +810,36 @@ describe('AgentClientDraftService: the full profile', () => {
     expect(view.details).toEqual({ basicDetails: { firstName: 'Meena' } });
     expect(view.displayName).toBe('Meena');
     expect(view.missingRequired).toContain('basicDetails.lastName');
+  });
+
+  describe('displayNameOf', () => {
+    const phone = '+91 90***001';
+    it('keeps the full name as entered, however long', () => {
+      expect(
+        displayNameOf(
+          { basicDetails: { firstName: 'Gh', lastName: 'Ty' } },
+          phone,
+        ),
+      ).toBe('Gh Ty');
+      expect(
+        displayNameOf(
+          {
+            basicDetails: {
+              firstName: 'Mary Ann',
+              lastName: 'Venkataraghavan Iyer',
+            },
+          },
+          phone,
+        ),
+      ).toBe('Mary Ann Venkataraghavan Iyer');
+    });
+    it('skips a missing part without stray spaces, and falls back to the phone', () => {
+      const name = (b: Record<string, unknown>) =>
+        displayNameOf({ basicDetails: b } as never, phone);
+      expect(name({ firstName: ' Gh ', lastName: '  ' })).toBe('Gh');
+      expect(name({ firstName: '', lastName: 'Ty' })).toBe('Ty');
+      expect(name({ firstName: null, lastName: undefined })).toBe(phone);
+      expect(displayNameOf({} as never, phone)).toBe(phone);
+    });
   });
 });

@@ -229,12 +229,12 @@ export function ClientEditor({ initial: initialDraft, paused }: { initial: Clien
       </header>
       {draft.status === 'ACCEPTED' && draft.referralId && (
         <p>
-          <Link to="/referrals">See her in People who joined</Link>
+          <Link to="/referrals">See them in People who joined</Link>
         </p>
       )}
       {justSubmitted && draft.status === 'WAITING_FOR_CLIENT' && (
         <p className="notice success-notice" role="status">
-          Submitted. Her invitation has been sent, and this profile is now locked.
+          Submitted. Their invitation has been sent, and this profile is now locked.
         </p>
       )}
       {paused && <p className="notice">Your account is paused. You can look, but not change anything.</p>}
@@ -247,7 +247,7 @@ export function ClientEditor({ initial: initialDraft, paused }: { initial: Clien
         </p>
       )}
 
-      {draft.details === null && <p className="hint">Her details are no longer kept on this screen.</p>}
+      {draft.details === null && <p className="hint">Their details are no longer kept on this screen.</p>}
 
       {draft.details !== null && !editable && <ReadOnlyProfile details={draft.details} />}
 
@@ -405,7 +405,7 @@ export function ClientEditor({ initial: initialDraft, paused }: { initial: Clien
           onCancel={() => setDialog(null)}
         >
           <p>
-            This sends {draft.displayName}&rsquo;s profile to her as an invitation. Once submitted you can't change it, and
+            This sends {draft.displayName}&rsquo;s profile to them as an invitation. Once submitted you can't change it, and
             you can't withdraw it.
           </p>
         </ConfirmDialog>
