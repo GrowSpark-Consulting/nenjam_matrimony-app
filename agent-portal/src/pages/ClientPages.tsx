@@ -152,12 +152,12 @@ function AddClientForm() {
 
   return (
     <>
-      <PageHeader title="Add a client" description="Her profile is always her own. Start with her mobile number." />
+      <PageHeader title="Add a client" description="Their profile is always their own. Start with their mobile number." />
       <p className="hint">
         <Link to="/clients">← All clients</Link>
       </p>
       <form onSubmit={(e) => void submit(e)} className="card form-card" noValidate>
-        <FormField id="client-phone" label="Her mobile number" hint="With country code, like +919876543210." error={phoneError} required>
+        <FormField id="client-phone" label="Their mobile number" hint="With country code, like +919876543210." error={phoneError} required>
           {(p) => (
             <input
               {...p}
@@ -173,7 +173,7 @@ function AddClientForm() {
         </FormField>
         <label className="check">
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-          The client (or her family) agreed to be added.
+          The client (or their family) agreed to be added.
         </label>
         {error != null && (
           <p className="error" role="alert">

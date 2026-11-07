@@ -108,7 +108,7 @@ function makeDraft(details: ClientDetails, over: Partial<ClientDraft> = {}): Cli
     id: 'c1',
     status: 'DRAFT',
     statusLabel: { en: 'Draft', ta: '<to be supplied>' },
-    displayName: 'Priya S.',
+    displayName: 'Priya Sundaram',
     phoneMasked: '+91 98***210',
     details,
     missingRequired: REQUIRED_PATHS.filter((p) => !isAnswered(details, p)),
