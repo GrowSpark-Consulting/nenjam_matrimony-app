@@ -178,7 +178,7 @@ describe('agent-added clients over HTTP', () => {
       expect(created.headers['content-version']).toBe('1');
       expect(created.body).toMatchObject({
         status: 'DRAFT',
-        displayName: 'Priya S.',
+        displayName: 'Priya Sundaram',
         phoneMasked: '+91 90***001',
         details: CLIENT_DETAILS,
         editable: true,
@@ -196,7 +196,7 @@ describe('agent-added clients over HTTP', () => {
         .expect(200);
       expect(submitted.body).toMatchObject({
         status: 'WAITING_FOR_CLIENT',
-        displayName: 'Priya R.',
+        displayName: 'Priya Raman',
         editable: false,
       });
 
