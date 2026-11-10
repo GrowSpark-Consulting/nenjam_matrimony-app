@@ -1,5 +1,5 @@
 import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
@@ -54,7 +54,11 @@ export class AdminUserListQueryDto {
 
   @ApiPropertyOptional({ description: 'Filter by profile completeness' })
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value;
+  })
   @IsBoolean()
   profileComplete?: boolean;
 
@@ -108,4 +112,8 @@ export class RevealPiiDto {
   @MaxLength(500)
   reason?: string;
 }
+
+/** Alias for AdminUserListQueryDto to satisfy B-2 naming requirement */
+export class AdminUserListDto extends AdminUserListQueryDto {}
+
 

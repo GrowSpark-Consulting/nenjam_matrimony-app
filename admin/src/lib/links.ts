@@ -26,6 +26,19 @@ export function agentsHref(status?: string): string {
   return withQuery('/agents/', { status });
 }
 
+export const USER_STATUSES = [
+  'ACTIVE',
+  'BLOCKED',
+  'SUSPENDED',
+  'PENDING_VERIFICATION',
+  'DEACTIVATED',
+  'BANNED',
+] as const;
+
+export function usersHref(filter: { status?: string; search?: string } = {}): string {
+  return withQuery('/users/', { status: filter.status, search: filter.search });
+}
+
 /** [key] from the address if it is one of [allowed], otherwise [fallback]. */
 export function readFilter(
   params: Params | null | undefined,

@@ -103,6 +103,11 @@ const BADGE_TONES: Record<string, string> = {
   TERMINATED: 'bad',
   FAILED: 'bad',
   REFUNDED: 'bad',
+  BLOCKED: 'bad',
+  BANNED: 'bad',
+  DEACTIVATED: 'neutral',
+  COMPLETE: 'good',
+  INCOMPLETE: 'warn',
 };
 
 export function Badge({ value, label }: { value: string; label?: string }) {

@@ -415,3 +415,264 @@ export interface PayoutDetail extends PayoutRow {
     bank?: { accountHolderName: string; accountNumber: string; ifsc: string };
   };
 }
+
+// --- User Management ---------------------------------------------------------
+
+export interface AdminUserStats {
+  totalUsers: number;
+  activeUsers: number;
+  blockedUsers: number;
+  registeredToday: number;
+  incompleteProfiles: number;
+  premiumMembers: number;
+}
+
+export interface AdminUserListItem {
+  id: string;
+  fullName: string;
+  gender: 'MALE' | 'FEMALE' | null;
+  age: number | null;
+  location: string | null;
+  phone: string | null;
+  email: string | null;
+  membership: string;
+  membershipCode: string;
+  profileStatus: 'COMPLETE' | 'INCOMPLETE';
+  profileCompletePct: number;
+  accountStatus:
+    | 'ACTIVE'
+    | 'BLOCKED'
+    | 'SUSPENDED'
+    | 'PENDING_VERIFICATION'
+    | 'DEACTIVATED'
+    | 'BANNED';
+  primaryPhotoUrl: string | null;
+  photoApproved: boolean;
+  registrationDate: string;
+}
+
+export interface AdminUserListResponse {
+  items: AdminUserListItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface AdminUserDetail {
+  id: string;
+  firebaseUid: string;
+  status:
+    | 'ACTIVE'
+    | 'BLOCKED'
+    | 'SUSPENDED'
+    | 'PENDING_VERIFICATION'
+    | 'DEACTIVATED'
+    | 'BANNED';
+  role: string;
+  trustScore: number;
+  createdAt: string;
+  updatedAt: string;
+
+  basicInfo: {
+    fullName: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    dob: string | null;
+    age: number | null;
+    gender: 'MALE' | 'FEMALE' | null;
+    maritalStatus: string | null;
+    religion: string | null;
+    caste: string | null;
+    subCaste: string | null;
+    community: string | null;
+    motherTongue: string | null;
+    languagesKnown: string[];
+    heightCm: number | null;
+    weightKg: number | null;
+    isProfileComplete: boolean;
+    profileCompletePct: number;
+    bio: string | null;
+    profileCreatedAt: string | null;
+    profileUpdatedAt: string | null;
+  };
+
+  contactInfo: {
+    phone: string | null;
+    email: string | null;
+    isPhoneMasked: boolean;
+    isEmailMasked: boolean;
+    currentCity: string | null;
+    currentState: string | null;
+    country: string | null;
+    nativeCity: string | null;
+    area: string | null;
+    pinCode: string | null;
+  };
+
+  careerAndFamily: {
+    highestEducation: string | null;
+    college: string | null;
+    educationDetails: string | null;
+    profession: string | null;
+    employerName: string | null;
+    workIndustry: string | null;
+    annualIncomeLakhs: number | null;
+    familyType: string | null;
+    familyValues: string | null;
+    familyStatus: string | null;
+    fatherOccupation: string | null;
+    motherOccupation: string | null;
+    siblings: number;
+    siblingDetails: string[];
+    dietaryHabits: string | null;
+    smokingHabits: string | null;
+    drinkingHabits: string | null;
+  };
+
+  partnerPreferences: {
+    minAge: number | null;
+    maxAge: number | null;
+    minHeightCm: number | null;
+    maxHeightCm: number | null;
+    preferredReligions: string[];
+    preferredCastes: string[];
+    minIncomeLakhs: number | null;
+    preferredCities: string[];
+    preferredStates: string[];
+  } | null;
+
+  astrologyProfile: {
+    rasi: string | null;
+    nakshatra: string | null;
+    dosham: string | null;
+    lagnam: string | null;
+    gotram: string | null;
+    birthDate: string | null;
+    birthTime: string | null;
+    birthPlace: string | null;
+  } | null;
+
+  membership: {
+    currentPlan: string;
+    currentPlanCode: string;
+    subscriptionStatus: string;
+    startDate: string | null;
+    expiryDate: string | null;
+    autoRenew: boolean;
+    history: Array<{
+      id: string;
+      planName: string;
+      planCode: string;
+      tier: number;
+      status: string;
+      startDate: string;
+      endDate: string;
+      autoRenew: boolean;
+      createdAt: string;
+      payments: Array<{
+        id: string;
+        amountInr: string | number;
+        currency: string;
+        status: string;
+        paidAt: string | null;
+        createdAt: string;
+      }>;
+    }>;
+  };
+
+  photosAndMedia: {
+    primaryPhotoUrl: string | null;
+    photos: Array<{
+      id: string;
+      cdnUrl: string;
+      isPrimary: boolean;
+      order: number;
+      isApproved: boolean;
+      createdAt: string;
+    }>;
+    verification: {
+      faceVerified: boolean;
+      faceVerificationStatus: string;
+      kycVerifications: Array<{
+        id: string;
+        docType: string;
+        status: string;
+        rejectionReason: string | null;
+        createdAt: string;
+      }>;
+    };
+  };
+
+  internalNotes: Array<{
+    id: string;
+    authorId: string;
+    authorName: string | null;
+    note: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+
+  supportTickets: Array<{
+    id: string;
+    type: string;
+    subject: string;
+    status: string;
+    adminResponse: string | null;
+    createdAt: string;
+  }>;
+
+  accountActivity: {
+    registrationDate: string;
+    lastProfileUpdate: string;
+    trustScore: number;
+    trustScoreHistory: Array<{
+      id: string;
+      oldScore: number;
+      newScore: number;
+      reason: string;
+      createdAt: string;
+    }>;
+    blocksMadeCount: number;
+    blocksReceivedCount: number;
+    reportsMadeCount: number;
+    reportsAgainstCount: number;
+  };
+}
+
+export interface BlockUserResult {
+  success: boolean;
+  userId: string;
+  previousStatus: string;
+  status: 'BLOCKED';
+  reason: string;
+}
+
+export interface UnblockUserResult {
+  success: boolean;
+  userId: string;
+  previousStatus: 'BLOCKED';
+  status: 'ACTIVE';
+}
+
+export interface RevealPiiResult {
+  userId: string;
+  email: string | null;
+  phone: string | null;
+  location: {
+    city: string | null;
+    state: string | null;
+    country: string | null;
+    pinCode: string | null;
+  } | null;
+}
+
+export interface MemberNoteResult {
+  id: string;
+  userId: string;
+  authorId: string;
+  authorName: string | null;
+  note: string;
+  createdAt: string;
+}
+
