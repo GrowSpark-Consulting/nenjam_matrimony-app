@@ -19,6 +19,7 @@ import {
   AdminPlansController,
 } from './controllers/admin-plans.controller';
 import { AdminSettingsController } from './controllers/admin-settings.controller';
+import { AdminUsersController } from './controllers/admin-users.controller';
 import { AdminAccessService } from './services/admin-access.service';
 import { AdminAuditService } from './services/admin-audit.service';
 import { AdminMfaService } from './services/admin-mfa.service';
@@ -56,6 +57,7 @@ import { AdminUsersService } from './services/admin-users.service';
     AdminAuditLogsController,
     AdminRolesController,
     AdminSettingsController,
+    AdminUsersController,
   ],
   providers: [
     AdminAccessService,
