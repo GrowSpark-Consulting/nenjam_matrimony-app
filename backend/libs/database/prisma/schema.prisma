@@ -70,6 +70,7 @@ model User {
   emailLogs         EmailLog[]
   settings          UserSettings?
   recommendationDismissals ProfileRecommendationDismissal[]
+  memberNotes       MemberNote[]         @relation("UserMemberNotes")
 
   @@index([firebaseUid])
   @@index([email])
@@ -1366,6 +1367,23 @@ model UserBlock {
   @@map("user_blocks")
 }
 
+/// Internal staff / admin notes recorded on a member profile.
+model MemberNote {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  authorId   String   @map("author_id")
+  authorName String?  @map("author_name")
+  note       String
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation("UserMemberNotes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([authorId])
+  @@map("member_notes")
+}
+
 /// Customer support tickets.
 model SupportTicket {
   id            String            @id @default(uuid())
@@ -1467,6 +1485,7 @@ enum UserStatus {
   SUSPENDED
   DEACTIVATED
   BANNED
+  BLOCKED
 
   @@map("user_status")
 }

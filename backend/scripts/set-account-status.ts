@@ -41,6 +41,7 @@ const STATUSES = [
   'SUSPENDED',
   'DEACTIVATED',
   'BANNED',
+  'BLOCKED',
 ] as const;
 type Status = (typeof STATUSES)[number];
 

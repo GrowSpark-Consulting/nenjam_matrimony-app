@@ -145,6 +145,7 @@ export const BLOCKED_ACCOUNT_STATUSES: readonly string[] = [
   'SUSPENDED',
   'BANNED',
   'DEACTIVATED',
+  'BLOCKED',
 ];
 
 /** Whether this account may make authenticated requests. */
