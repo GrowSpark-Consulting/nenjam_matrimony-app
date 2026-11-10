@@ -26,7 +26,7 @@ const CONNECT_TIMEOUT_MS = 5000;
  * still works for a single instance. Call [connect] before `useWebSocketAdapter`.
  */
 export class RedisIoAdapter extends IoAdapter {
-  protected override readonly logger = new Logger(RedisIoAdapter.name);
+  private readonly adapterLogger = new Logger(RedisIoAdapter.name);
   private adapterConstructor?: ReturnType<typeof createAdapter>;
   private pubClient?: Redis;
   private subClient?: Redis;
@@ -65,11 +65,11 @@ export class RedisIoAdapter extends IoAdapter {
       this.pubClient = pubClient;
       this.subClient = subClient;
       this.adapterConstructor = createAdapter(pubClient, subClient);
-      this.logger.log(
+      this.adapterLogger.log(
         'WebSocket Redis adapter connected (multi-instance ready).',
       );
     } catch (error) {
-      this.logger.warn(
+      this.adapterLogger.warn(
         `WebSocket Redis adapter unavailable — using in-memory (single-instance only): ${(error as Error).message}`,
       );
       // Don't leave orphaned clients reconnecting in the background.
