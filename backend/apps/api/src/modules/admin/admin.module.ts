@@ -24,6 +24,7 @@ import { AdminAuditService } from './services/admin-audit.service';
 import { AdminMfaService } from './services/admin-mfa.service';
 import { AdminQueriesService } from './services/admin-queries.service';
 import { AdminSessionService } from './services/admin-session.service';
+import { AdminUsersService } from './services/admin-users.service';
 
 /**
  * Staff access — RBAC (roles → permissions), the authenticator second factor,
@@ -62,6 +63,7 @@ import { AdminSessionService } from './services/admin-session.service';
     AdminSessionService,
     AdminMfaService,
     AdminQueriesService,
+    AdminUsersService,
     AdminGuard,
     AdminRouteCheck,
   ],
@@ -69,6 +71,7 @@ import { AdminSessionService } from './services/admin-session.service';
     AdminAccessService,
     AdminAuditService,
     AdminSessionService,
+    AdminUsersService,
     AdminGuard,
   ],
 })

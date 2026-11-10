@@ -45,6 +45,8 @@ export const NAV: readonly NavItem[] = [
     group: 'Platform',
   },
   { href: '/settings/', label: 'Settings', permission: 'system.view', group: 'Platform' },
+  // New User Management entry
+  { href: '/users/', label: 'User Management', permission: 'member.view', group: 'Membership' },
 ];
 
 export function can(
