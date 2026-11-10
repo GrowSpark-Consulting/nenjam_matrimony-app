@@ -404,7 +404,7 @@ function UserManagement({ initial }: { initial: UserFilters }) {
                   <tr key={user.id}>
                     <td>
                       <Link
-                        href={`/users/${user.id}`}
+                        href={`/users/view/?id=${user.id}`}
                         style={{ fontWeight: 600, textDecoration: 'none' }}
                       >
                         {user.fullName || 'Incomplete Profile'}
@@ -446,7 +446,7 @@ function UserManagement({ initial }: { initial: UserFilters }) {
                           justifyContent: 'flex-end',
                         }}
                       >
-                        <Link href={`/users/${user.id}`}>
+                        <Link href={`/users/view/?id=${user.id}`}>
                           <Button tone="ghost" className="small">
                             View
                           </Button>
