@@ -26,7 +26,7 @@ const CONNECT_TIMEOUT_MS = 5000;
  * still works for a single instance. Call [connect] before `useWebSocketAdapter`.
  */
 export class RedisIoAdapter extends IoAdapter {
-  private readonly logger = new Logger(RedisIoAdapter.name);
+  protected override readonly logger = new Logger(RedisIoAdapter.name);
   private adapterConstructor?: ReturnType<typeof createAdapter>;
   private pubClient?: Redis;
   private subClient?: Redis;
@@ -99,7 +99,7 @@ export class RedisIoAdapter extends IoAdapter {
 
   /** Release the adapter's Redis pub/sub connections on app shutdown so they
    *  don't linger (or keep reconnecting) after the server closes. */
-  async close(server: Server): Promise<void> {
+  async close(server: any): Promise<void> {
     await super.close(server);
     // quit() drains in flight commands then closes; allSettled so one failing
     // never masks the other and shutdown always proceeds.
